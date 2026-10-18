@@ -17,3 +17,13 @@ export { typographize, typographizeText } from './typography/typography';
 export { declineToken, type Confidence, type DeclinedToken } from './names/decline';
 export { splitFullName, suggestGenitive, type GenitiveSuggestion } from './names/genitive';
 export { formatName, SALUTATION, type PersonName, type Salutation, type Sex } from './names/person';
+export {
+  compareClass,
+  compareStudents,
+  csCollator,
+  normalizeClass,
+  parseClass,
+  type ClassKey,
+  type ClassOrder,
+  type SortableStudent,
+} from './sort/class-code';
