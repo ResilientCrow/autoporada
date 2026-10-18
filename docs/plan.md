@@ -377,8 +377,9 @@ The DOCX can be downloaded immediately.
 **PDF.** The worker sends the file to Gotenberg (internal, concurrency 1, 60 s timeout, retries). Its image includes `fonts-opensymbol` for the bullet glyphs and pins the LibreOffice version.
 
 **Golden tests**
-- Snapshot fixtures: `empty`, `template-replica`, `full-week`, `no-optional`, `escape-hell`, `400-students`, `dst-week`, `year-boundary`, `reopen-v2`, plus with and without Příloha 2.
-- Compared outputs: canonicalised XML (`document`, `numbering`, `styles`, `footer`), `model.json` and the preview HTML.
+- Snapshot variants (`test/support/variants.ts`): `template-replica`, `lean` (no optional parts), `empty`, `full-week` (every window boundary), `year-boundary`, `many-students` (150), `annex2`, `escape-hell`. Regeneration of an older issue (`reopen-v2`) is covered with the generation use case in M10.
+- Compared outputs: pretty-printed XML (`document`, `numbering`, `styles`, `settings`, `footer`), `model.json` and the preview HTML.
+- PDF render check (`pnpm test:render`, CI job): page footers, bold page numbers, point order, only the expected fonts, a header at every Příloha 1 column top and none at a column bottom, no page ending in a big heading.
 - A template-parity test checks the pinned template's SHA-256 and asserts numbering geometry, glyphs, page setup and styles against it.
 
 ## 7. Czech module (`domain/cs`, pure, table-driven tests)

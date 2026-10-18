@@ -11,9 +11,18 @@ spacer paragraphs, and its Příloha 1 is one table padded with empty rows. A
 generator needs one consistent rule for each element.
 
 What stays exactly as in the template is pinned by the parity test against
-`test/fixtures/template/format-facts.json`. That covers page and margins,
-fonts and sizes, all numbering definitions (including the Symbol/Wingdings
-glyphs), the footer fields, and the Příloha 1 table geometry.
+`test/fixtures/template/format-facts.json`, and the test also checks the
+template's SHA-256. It covers:
+
+- page and margins, the default tab stop (708) and the two-column annex section;
+- the body font and size, and the sizes of the title, big headings,
+  „PŘÍLOHA n“ and the Příloha 1 heading;
+- all numbering definitions, including the Symbol/Wingdings glyphs;
+- the footer fields;
+- the Příloha 1 table geometry.
+
+Paragraph indents and paragraph-mark formatting are pinned by the golden
+tests in `test/golden/`.
 
 ## Deviations to confirm at the checkpoint
 
@@ -34,6 +43,10 @@ Tick each box after checking it in Word.
       (o at 1068, o at 1788, ■ at 2345). The template had a separate, less
       indented list (720 / 1440).
 - [ ] **Příloha 2** always starts on a new page.
+- [ ] **Body paragraphs** have their first line at 708 and their other lines at
+      the margin, everywhere. In the template, the first report used left 170
+      + first line 538, and the placeholders under points 6–9 used a first
+      line of 527.
 
 ### Empty parts
 
@@ -56,7 +69,8 @@ Tick each box after checking it in Word.
       always Czech „…“: the template's partners line used “…”. A spaced hyphen
       becomes an en dash.
 - [ ] **Times.** Bullets use "10:00–11:00"; prose uses "od 10.00 do 12.00
-      hodin". Both styles appear in the template.
+      hodin". Both styles appear in the template. Bullets for multi-day items
+      show the dates only ("27.–29. 10. 2026"), no times.
 - [ ] **Point 4.** The students follow the label on the same line: "Tomáš
       Černý (1.A), Eva Malá (2.B)". Students new since the last issue are bold.
 - [ ] **Statement lines.** "- vyjádření pana … (1.A):" is bold italic as a
@@ -70,6 +84,9 @@ These change the markup but not the printed result:
   justified paragraph with a tab and a line break.
 - First-line indents are paragraph indents instead of leading tab
   characters.
+- Every section break sits in an empty paragraph of its own, as in the
+  template. The footer fields carry a cached value ("1") that Word and
+  LibreOffice replace when they lay the page out.
 
 ### PDF only
 
