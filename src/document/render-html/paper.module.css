@@ -2,14 +2,12 @@
  * A paper-like preview of the generated document. Lengths are written in
  * twips (1/1440 in) through --tw, the unit of the DOCX renderer, so indents
  * match the Word file exactly. The font falls back to Times New Roman.
+ *
+ * .blocks carries the text styling, so a few blocks previewed on their own
+ * (the live form preview) look the same as inside the full page (.paper).
  */
-.paper {
+.blocks {
   --tw: calc(1in / 1440);
-  box-sizing: border-box;
-  width: calc(11906 * var(--tw));
-  max-width: 100%;
-  padding: calc(720 * var(--tw));
-  background: white;
   color: black;
   font-family: Tinos, 'Times New Roman', Times, serif;
   font-size: 12pt;
@@ -18,14 +16,23 @@
   hyphens: none;
 }
 
+.paper {
+  box-sizing: border-box;
+  width: calc(11906 * var(--tw));
+  max-width: 100%;
+  padding: calc(720 * var(--tw));
+  background: white;
+}
+
 /* Zero specificity, so the block classes below always win. */
-:where(.paper p, .paper h2, .paper h3) {
+:where(.blocks p, .blocks h2, .blocks h3) {
   margin: 0;
   font-size: inherit;
   font-weight: inherit;
 }
 
-.spacer::after {
+/* An empty paragraph still takes one line, as in Word: spacers, empty list lines, empty body lines. */
+:where(.blocks p:empty)::after {
   content: '\00a0';
 }
 
@@ -76,11 +83,6 @@
 .item::before {
   position: absolute;
   left: calc(-360 * var(--tw));
-}
-
-/* An empty list line still takes one line, as an empty paragraph does in Word. */
-.item:empty::after {
-  content: '\00a0';
 }
 
 .bullet {

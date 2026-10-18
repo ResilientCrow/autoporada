@@ -48,8 +48,13 @@ describe('paper preview', () => {
       }),
     );
     expect(html).not.toContain('<article');
+    expect(html).toMatch(/^<div class="[^"]*blocks[^"]*">/);
     expect(html).toContain('15).');
     expect(html).toContain('<b><i>- účast studentů:</i></b>');
+  });
+
+  it('breaks the page before Příloha 2, as Word does', () => {
+    expect(render('annex2')).toMatch(/<hr class="[^"]*pageBreak[^"]*"\/><h2[^>]*>PŘÍLOHA 2/);
   });
 
   it('marks new students in the Příloha 1 table', () => {

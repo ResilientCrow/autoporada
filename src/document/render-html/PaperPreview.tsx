@@ -106,7 +106,7 @@ function BlockView({ block }: { readonly block: Block }): ReactNode {
         </p>
       );
     case 'spacer':
-      return <p className={styles['spacer']} />;
+      return <p />;
     case 'pageBreak':
       return <hr className={styles['pageBreak']} />;
     case 'closing':
@@ -125,9 +125,17 @@ function BlockView({ block }: { readonly block: Block }): ReactNode {
   }
 }
 
-/** Blocks on paper, without the page: for the live preview of a single point. */
-export function PaperBlocks({ blocks }: { readonly blocks: readonly Block[] }): ReactNode {
+function Blocks({ blocks }: { readonly blocks: readonly Block[] }): ReactNode {
   return blocks.map((block, i) => <BlockView key={i} block={block} />);
+}
+
+/** Blocks without the page: for the live preview of a single point. */
+export function PaperBlocks({ blocks }: { readonly blocks: readonly Block[] }): ReactNode {
+  return (
+    <div className={styles['blocks']}>
+      <Blocks blocks={blocks} />
+    </div>
+  );
 }
 
 /** The whole document as it will print. `label` names it for screen readers. */
@@ -139,10 +147,12 @@ export function PaperPreview({
   readonly label: string;
 }): ReactNode {
   return (
-    <article className={styles['paper']} aria-label={label}>
+    <article className={`${styles['paper']} ${styles['blocks']}`} aria-label={label}>
       {model.sections.map((section, s) => (
         <section key={s}>
-          <PaperBlocks blocks={section.blocks} />
+          {/* Příloha 2 starts a new page in Word; show the same break here. */}
+          {section.layout === 'nextPage' && <hr className={styles['pageBreak']} />}
+          <Blocks blocks={section.blocks} />
         </section>
       ))}
     </article>
