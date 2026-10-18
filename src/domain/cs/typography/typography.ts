@@ -5,6 +5,9 @@
  * „v “ + bold „Příloze“ still gets its non-breaking space.
  */
 
+import { MONTH_GENITIVE } from '../dates/tables';
+import { TITLES_BEFORE } from '../names/titles';
+
 const NBSP = '\u00A0';
 
 /** After these a quote opens. An opening quote of the same kind closes an empty pair. */
@@ -12,9 +15,9 @@ const OPENS_DOUBLE = /[\s([{/–—‚]/;
 const OPENS_SINGLE = /[\s([{/–—„]/;
 const LETTER = /\p{L}/u;
 
-const MONTHS =
-  'ledna|února|března|dubna|května|června|července|srpna|září|října|listopadu|prosince';
-const TITLES = 'Bc|BcA|Mgr|MgA|Ing|arch|MUDr|MVDr|PhDr|RNDr|PaedDr|JUDr|ThDr|doc|Doc|prof|Prof|č';
+const MONTHS = MONTH_GENITIVE.join('|');
+/** Titles plus „č.“ (číslo): „Mgr. Jana“, „č. 12“. */
+const TITLES = [...TITLES_BEFORE, 'č'].join('|');
 
 const LENGTH_PRESERVING: readonly [RegExp, string][] = [
   // „a v Praze“ → a v Praze: one-letter words never end a line (chains too).
@@ -29,6 +32,8 @@ const LENGTH_PRESERVING: readonly [RegExp, string][] = [
   ],
   // „Mgr. Jana“, „Ing. arch. Klára“, „č. 12“
   [new RegExp(`(?<=(?:^|[\\s(])(?:${TITLES})\\.) (?=\\S)`, 'g'), NBSP],
+  // Initials stay with the surname: „O. Novák“ (ČSN 01 6910).
+  [/(?<=(?:^|[\s(„])\p{Lu}\.) (?=\p{Lu})/gu, NBSP],
   // A spaced hyphen in prose is a dash. A line-initial „- “ marker is kept.
   [/(?<=\s)-(?=\s)/g, '–'],
   // Time and day ranges: 10:00-12:00, 27.-29.

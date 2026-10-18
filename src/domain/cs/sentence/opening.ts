@@ -6,9 +6,11 @@ import { renderPeople, type Person } from '../people/list';
 
 /**
  * Grammatical gender and number of an event title, chosen by an admin per
- * point type through the verb form: proběhl / proběhla / proběhlo / proběhly.
+ * point type through a sample: proběhl … který / proběhla … kterou /
+ * proběhlo … které / proběhly … které / proběhla … která (neuter plural,
+ * „Školní kola olympiády“).
  */
-export type TitleGender = 'm' | 'f' | 'n' | 'pl';
+export type TitleGender = 'm' | 'f' | 'n' | 'pl' | 'npl';
 
 export type Campus = 'smichov' | 'radlice' | 'na-vidouli' | 'jinde';
 
@@ -17,6 +19,7 @@ const PAST_TENSE: Readonly<Record<TitleGender, string>> = {
   f: 'proběhla',
   n: 'proběhlo',
   pl: 'proběhly',
+  npl: 'proběhla',
 };
 
 /** The relative pronoun as the object of „organizovali“ (accusative, inanimate). */
@@ -25,6 +28,7 @@ const WHICH: Readonly<Record<TitleGender, string>> = {
   f: 'kterou',
   n: 'které',
   pl: 'které',
+  npl: 'která',
 };
 
 const CAMPUS: Readonly<Record<Exclude<Campus, 'jinde'>, string>> = {

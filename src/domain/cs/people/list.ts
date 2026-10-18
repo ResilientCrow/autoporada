@@ -1,5 +1,5 @@
 import { formatName, SALUTATION, type PersonName, type Salutation } from '../names/person';
-import { compareStudents } from '../sort/class-code';
+import { compareStudents, parseClass } from '../sort/class-code';
 
 export interface Person extends PersonName {
   /** Class („1.A“) or role („učitelka fyziky“), shown in parentheses. */
@@ -25,9 +25,19 @@ export function renderPerson(p: Person, withAffiliation = true): string {
   return withAffiliation && affiliation ? `${formatName(p)} (${affiliation})` : formatName(p);
 }
 
-function sharedAffiliation(people: readonly Person[]): string | undefined {
+/**
+ * A class code everyone shares. Roles are never merged: „(obě učitelka
+ * fyziky)“ would need the plural noun.
+ */
+function sharedClass(people: readonly Person[]): string | undefined {
   const first = people[0]?.affiliation?.trim();
-  return first && people.every((p) => p.affiliation?.trim() === first) ? first : undefined;
+  if (!first || parseClass(first) === null) return undefined;
+  return people.every((p) => p.affiliation?.trim() === first) ? first : undefined;
+}
+
+/** The requested order, de-duplicated and completed, so nobody is dropped or repeated. */
+function completeGroupOrder(order: readonly Salutation[] | undefined): Salutation[] {
+  return [...new Set([...(order ?? []), ...DEFAULT_GROUP_ORDER])];
 }
 
 /** „oba“, „obě“, „všichni“, „všechny“ — by count and whether all are women. */
@@ -48,8 +58,8 @@ function joinItems(items: readonly string[], join: ListOptions['join']): string 
  */
 export function renderPeople(people: readonly Person[], options: ListOptions): string {
   if (people.length === 0) return '';
-  const shared = options.compress && people.length >= 2 ? sharedAffiliation(people) : undefined;
-  const groupOrder = options.groupOrder ?? DEFAULT_GROUP_ORDER;
+  const shared = options.compress && people.length >= 2 ? sharedClass(people) : undefined;
+  const groupOrder = completeGroupOrder(options.groupOrder);
 
   const items: string[] = [];
   for (const salutation of groupOrder) {

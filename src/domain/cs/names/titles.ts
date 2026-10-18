@@ -2,7 +2,7 @@
  * Academic and professional titles, written without the final dot. Shared by
  * name parsing (never declined) and typography (bound to the name by NBSP).
  */
-const TITLES_BEFORE: readonly string[] = [
+export const TITLES_BEFORE: readonly string[] = [
   'Bc',
   'BcA',
   'Mgr',

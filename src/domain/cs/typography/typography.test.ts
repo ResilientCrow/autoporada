@@ -21,6 +21,9 @@ describe('typographizeText', () => {
     ['Mgr. Jana Nováková', `Mgr.${NB}Jana Nováková`],
     ['Ing. arch. Klára', `Ing.${NB}arch.${NB}Klára`],
     ['učebna č. 12', `učebna č.${NB}12`],
+    ['MDDr. Jana', `MDDr.${NB}Jana`],
+    ['PharmDr. Petr', `PharmDr.${NB}Petr`],
+    ['zapsal O. Novák', `zapsal O.${NB}Novák`],
   ])('binds dates, titles and „č.“: %j', (input, output) => {
     expect(ty(input)).toBe(output);
   });

@@ -1,4 +1,7 @@
-/** Czech alphabetical order: ch after h, diacritics as secondary differences. */
+/**
+ * Czech alphabetical order (IJP id 900): ch after h; č, ř, š, ž are letters
+ * of their own; á ď é ě í ň ó ť ú ů ý differ only at the second level.
+ */
 export const csCollator = new Intl.Collator('cs', { sensitivity: 'variant', numeric: true });
 
 /** „1.A“ → { year: 1, program: '', letter: 'A' }; „L1B“ → { year: 1, program: 'L', letter: 'B' }. */

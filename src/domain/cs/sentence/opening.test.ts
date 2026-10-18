@@ -52,6 +52,7 @@ describe('openingSentence', () => {
     ['f', 'Matematická soutěž', 'proběhla Matematická soutěž, kterou organizovali'],
     ['n', 'Setkání absolventů', 'proběhlo Setkání absolventů, které organizovali'],
     ['pl', 'Dny otevřených dveří', 'proběhly Dny otevřených dveří, které organizovali'],
+    ['npl', 'Školní kola olympiády', 'proběhla Školní kola olympiády, která organizovali'],
   ] as const)('agrees with a %s title', (titleGender, title, phrase) => {
     expect(openingSentence({ ...base, title, titleGender })).toContain(phrase);
   });

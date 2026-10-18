@@ -77,6 +77,16 @@ describe('participant lists', () => {
     );
   });
 
+  it('never drops or repeats anyone, whatever group order it is given', () => {
+    const three = [p('slecna', 'Eva', 'Malá'), p('pan', 'Jan', 'Novák'), p('pani', 'Jana', 'Bílá')];
+    expect(renderPeople(three, { join: 'comma', groupOrder: ['pan'] })).toBe(
+      'pan Jan Novák, slečna Eva Malá, paní Jana Bílá',
+    );
+    expect(
+      renderPeople(three, { join: 'comma', groupOrder: ['pan', 'pan', 'pani', 'slecna'] }),
+    ).toBe('pan Jan Novák, paní Jana Bílá, slečna Eva Malá');
+  });
+
   it('renders nothing for nobody', () => {
     expect(renderPeople([], participants)).toBe('');
   });
@@ -109,6 +119,10 @@ describe('organiser phrases', () => {
       'paní Jana Bílá (učitelka) a pan Jan Novák (1.A)',
     ],
     [[p('pan', 'Jan', 'Novák', '1.A')], 'pan Jan Novák (1.A)'],
+    [
+      [p('pani', 'Jana', 'Bílá', 'učitelka fyziky'), p('pani', 'Eva', 'Malá', 'učitelka fyziky')],
+      'paní Jana Bílá (učitelka fyziky) a Eva Malá (učitelka fyziky)',
+    ],
   ])('%#: %s', (people, text) => {
     expect(renderPeople(people, organisers)).toBe(text);
   });
