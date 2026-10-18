@@ -4,7 +4,7 @@ import { snapshotFixture } from '../../../test/support/snapshots';
 import type { Block, DocumentModel } from '../model';
 import { composeDocument } from './index';
 
-const NB = ' ';
+const NB = '\u00A0';
 const replica = composeDocument(snapshotFixture('template-replica'));
 
 const allBlocks = (m: DocumentModel) => m.sections.flatMap((s) => s.blocks);

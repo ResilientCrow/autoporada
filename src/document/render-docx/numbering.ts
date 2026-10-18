@@ -28,8 +28,8 @@ const bullet = (
 });
 
 /** Symbol „•“ and Wingdings „■“ are Private Use Area code points, as in the template. */
-const BULLET = '';
-const SQUARE = '';
+const BULLET = '\uF0B7';
+const SQUARE = '\uF0A7';
 
 /**
  * The template's numbering definitions (numIds 5, 1, 2, 3, 8). Points use one
