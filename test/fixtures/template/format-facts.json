@@ -18,6 +18,13 @@
       "count": 2,
       "space": 708
     },
+    "defaultTabStop": 708,
+    "sizes": {
+      "title": 28,
+      "section": 32,
+      "annex": 36,
+      "annexTitle": 28
+    },
     "normal": {
       "font": "Times New Roman",
       "size": 24,

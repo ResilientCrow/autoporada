@@ -37,6 +37,7 @@ export function renderBlock(block: Exclude<Block, { kind: 'studentTable' }>): Pa
     case 'section':
       return [
         new Paragraph({
+          keepNext: true,
           children: [new TextRun({ text: block.text, bold: true, size: SIZE.section })],
         }),
       ];
@@ -86,13 +87,13 @@ export function renderBlock(block: Exclude<Block, { kind: 'studentTable' }>): Pa
     case 'partner':
       return [
         new Paragraph({
+          // The template's partner glyph is bold upright: no paragraph-mark italic here.
           numbering: { reference: NUMBERING_REF.partners, level: 0 },
-          run: BOLD_ITALIC_MARK,
           children: [boldItalic(block.label), new TextRun(` ${block.quote}`)],
         }),
       ];
     case 'spacer':
-      return [new Paragraph({})];
+      return [new Paragraph(block.keepNext ? { keepNext: true } : {})];
     case 'pageBreak':
       return [new Paragraph({ children: [new PageBreak()] })];
     case 'closing':

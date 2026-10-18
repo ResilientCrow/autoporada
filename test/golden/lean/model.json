@@ -35,10 +35,12 @@
           "text": "POKYNY PRO ZAMĚSTNANCE, ORGANIZAČNÍ ZÁLEŽITOSTI"
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
           "kind": "point",

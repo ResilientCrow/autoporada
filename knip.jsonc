@@ -11,6 +11,6 @@
     "src/document/index.ts",
   ],
   // System tools used by the PDF render check (poppler-utils), not npm packages.
-  "ignoreBinaries": ["pdftotext", "pdffonts"],
+  "ignoreBinaries": ["pdftotext", "pdffonts", "pdftohtml"],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{mjs,ts}", "test/**/*.ts"],
 }

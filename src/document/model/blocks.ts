@@ -38,8 +38,11 @@ export type Block =
   | { readonly kind: 'rich'; readonly level: 0 | 1 | 2; readonly runs: readonly Run[] }
   /** „o vyjádření pana …: „…““ in Ohlasy sociálních partnerů. */
   | { readonly kind: 'partner'; readonly label: string; readonly quote: string }
-  /** One empty line: the template spaces blocks with empty paragraphs. */
-  | { readonly kind: 'spacer' }
+  /**
+   * One empty line: the template spaces blocks with empty paragraphs.
+   * `keepNext` holds it on the page of what follows (under a big heading).
+   */
+  | { readonly kind: 'spacer'; readonly keepNext?: boolean }
   | { readonly kind: 'pageBreak' }
   /** „V Praze dne …“ / „Zpracoval Autonomní systém Autoporada“ */
   | { readonly kind: 'closing'; readonly place: string; readonly signature: string }

@@ -40,6 +40,9 @@
     </w:p>
     <w:p/>
     <w:p>
+      <w:pPr>
+        <w:keepNext/>
+      </w:pPr>
       <w:r>
         <w:rPr>
           <w:b/>
@@ -50,8 +53,16 @@
         <w:t xml:space="preserve">POKYNY PRO ZAMĚSTNANCE, ORGANIZAČNÍ ZÁLEŽITOSTI</w:t>
       </w:r>
     </w:p>
-    <w:p/>
-    <w:p/>
+    <w:p>
+      <w:pPr>
+        <w:keepNext/>
+      </w:pPr>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:keepNext/>
+      </w:pPr>
+    </w:p>
     <w:p>
       <w:pPr>
         <w:pStyle w:val="Heading1"/>
@@ -870,6 +881,7 @@
         <w:t xml:space="preserve">Tučně označení jsou vždy studenti, kteří byli do programu na podporu talentovaným a aktivním studentům zařazeni v průběhu předchozího týdne a jsou nyní uvedeni do této přílohy číslo 1 v rámci porady vedení.</w:t>
       </w:r>
     </w:p>
+    <w:p/>
     <w:p>
       <w:pPr>
         <w:sectPr>

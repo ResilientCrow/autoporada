@@ -27,6 +27,9 @@ export interface FormatFacts {
     margins: Record<'top' | 'right' | 'bottom' | 'left' | 'header' | 'footer', number>;
   };
   annexColumns: { count: number; space: number };
+  defaultTabStop: number;
+  /** Half-point sizes of the title, big headings, „PŘÍLOHA n“ and the Příloha 1 heading. */
+  sizes: { title: number; section: number; annex: number; annexTitle: number };
   normal: {
     font: string;
     size: number;
@@ -96,11 +99,13 @@ const flag = (parent: Node, tag: string): boolean => {
   return val === undefined || val === 'true' || val === '1';
 };
 
+/** A paragraph's text; no-break spaces read as spaces, so anchor texts match either way. */
 const textOf = (p: Node): string =>
   arr(p['w:r'])
     .flatMap((r) => arr(r['w:t']))
     .map((t) => (typeof t === 'object' ? String((t as Node)['#text'] ?? '') : String(t)))
-    .join('');
+    .join('')
+    .replaceAll('\u00A0', ' ');
 
 const numIdOf = (p: Node): string | undefined =>
   attr(obj(obj(obj(p['w:pPr'])['w:numPr'])['w:numId']), 'val');
@@ -143,11 +148,19 @@ function numIdWhere(
   return id;
 }
 
+/** The font size of the first text run of the first unnumbered paragraph whose text matches. */
+function runSize(paragraphs: Node[], match: (text: string) => boolean): number {
+  const p = paragraphs.find((x) => match(textOf(x)) && numIdOf(x) === undefined);
+  const run = arr(obj(p)['w:r']).find((r) => textOf({ 'w:r': [r] }).trim() !== '');
+  return Number(attr(obj(obj(run)['w:rPr'])['w:sz'], 'val') ?? 0);
+}
+
 export async function extractFacts(docx: Uint8Array | Buffer): Promise<FormatFacts> {
   const zip = await JSZip.loadAsync(docx);
   const document = await read(zip, 'word/document.xml');
   const styles = await read(zip, 'word/styles.xml');
   const numbering = await read(zip, 'word/numbering.xml');
+  const settings = await read(zip, 'word/settings.xml');
   const body = obj(obj(document['w:document'])['w:body']);
   const paragraphs = arr(body['w:p']);
 
@@ -241,6 +254,15 @@ export async function extractFacts(docx: Uint8Array | Buffer): Promise<FormatFac
     annexColumns: {
       count: num(twoColumn['w:cols'], 'num'),
       space: num(twoColumn['w:cols'], 'space'),
+    },
+    defaultTabStop: num(obj(settings['w:settings'])['w:defaultTabStop'], 'val'),
+    sizes: {
+      title: runSize(paragraphs, (t) => t.startsWith('PORADA VEDENÍ ŠKOLY')),
+      section: runSize(paragraphs, (t) => t.startsWith('POKYNY PRO ZAMĚSTNANCE')),
+      annex: runSize(paragraphs, (t) => t.startsWith('PŘÍLOHA 1')),
+      annexTitle: runSize(paragraphs, (t) =>
+        t.startsWith('Studenti v ředitelském „Programu na podporu talentovaným'),
+      ),
     },
     normal: {
       font: attr(normalRun['w:rFonts'], 'ascii') ?? attr(defaultRun['w:rFonts'], 'ascii') ?? '',

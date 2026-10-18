@@ -35,10 +35,12 @@
           "text": "POKYNY PRO ZAMĚSTNANCE, ORGANIZAČNÍ ZÁLEŽITOSTI"
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
           "kind": "point",
@@ -332,10 +334,12 @@
           "text": "INFORMACE Z HOSPODAŘENÍ"
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
           "kind": "point",
@@ -353,10 +357,12 @@
           "text": "INFORMACE Z PROVOZU ŠKOLY"
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
-          "kind": "spacer"
+          "kind": "spacer",
+          "keepNext": true
         },
         {
           "kind": "point",

@@ -12,6 +12,16 @@ export const PAGE = {
 /** Word 2003 compatibility, as in the template, so both lay text out the same way. */
 export const COMPATIBILITY_MODE = 11;
 
+/** Tab stops every 708 twips (1.25 cm), as in the template. */
+export const DEFAULT_TAB_STOP = 708;
+
+/**
+ * SHA-256 of the headmaster's template the formatting was taken from
+ * (test/fixtures/template/format-facts.json). Stored with every generated
+ * version, so the archive says which template it follows.
+ */
+export const TEMPLATE_SHA256 = '9c082b1215cf0913532c25195dcbfdca7eb805e65fa7fb27f8d5b03f58ab5d8f';
+
 export const FONT = 'Times New Roman';
 export const TABLE_FONT = 'Aptos Narrow';
 

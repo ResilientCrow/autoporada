@@ -9,11 +9,15 @@ import { composeHospodareni, composePokyny } from './pokyny';
 import { composeProvoz } from './provoz';
 import { finalText, spacer } from './text';
 
-/** A big section heading with the template's spacing, or nothing when it has no points. */
+/**
+ * A big section heading with the template's spacing, or nothing when it has
+ * no points. The heading and its spacers keep with the first point, so a
+ * heading never ends a page on its own.
+ */
 function bigSection(text: string, points: readonly Block[]): Block[] {
-  return points.length === 0
-    ? []
-    : [...spacer(), { kind: 'section', text: finalText(text) }, ...spacer(2), ...points];
+  if (points.length === 0) return [];
+  const held: Block = { kind: 'spacer', keepNext: true };
+  return [...spacer(), { kind: 'section', text: finalText(text) }, held, held, ...points];
 }
 
 /** Points are numbered 1, 2, 3 … straight through all three big sections. */
