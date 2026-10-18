@@ -36,9 +36,9 @@ module.exports = {
     },
     {
       name: 'domain-is-pure',
-      comment: 'domain/ is pure TypeScript: it imports only domain/.',
+      comment: 'domain/ is pure TypeScript: it imports only domain/ (tests may use test tools).',
       severity: 'error',
-      from: { path: '^src/domain/' },
+      from: { path: '^src/domain/', pathNot: TESTS },
       to: { pathNot: '^src/domain/' },
     },
     {

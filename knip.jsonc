@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // Domain modules are built bottom-up, before their consumers (plan §10), so
+  // each module's index.ts is a public API: its exports are not reported as
+  // unused. Dead files and dead internal code are still reported.
+  "entry": ["scripts/*.mjs", "src/domain/*/index.ts"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
+}
