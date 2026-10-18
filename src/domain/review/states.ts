@@ -35,16 +35,27 @@ export const POINT_MACHINE: Machine<PointState, PointEvent, ReviewActor> = {
     allowed: reviewer,
     requiresNote: true,
   },
-  reject: { from: ['submitted'], to: 'rejected', allowed: reviewer, requiresNote: true },
+  reject: {
+    from: ['submitted', 'approved'],
+    to: 'rejected',
+    allowed: reviewer,
+    requiresNote: true,
+  },
   publish: { from: ['approved'], to: 'published', allowed: system },
   /** „Odebrat z čísla“ — only while that issue is reopened (checked by the use case). */
   unpublish: { from: ['published'], to: 'approved', allowed: headmaster },
 };
 
-/** Authors edit drafts and returned points; reviewers edit what is waiting or approved. */
+/**
+ * Authors edit drafts and returned points; reviewers edit what is waiting.
+ * An approved point may be changed only by someone who could have approved
+ * it — otherwise a reviewer could rewrite their own point after a colleague
+ * approved it, which is self-approval by another route.
+ */
 export function canEditPoint(state: PointState, actor: ReviewActor): boolean {
   if (author(actor) && (state === 'draft' || state === 'returned')) return true;
-  return reviewer(actor) && (state === 'submitted' || state === 'approved');
+  if (state === 'approved') return approver(actor);
+  return reviewer(actor) && state === 'submitted';
 }
 
 // ── Future items (jednání, akce) ───────────────────────────────────────────
@@ -66,11 +77,31 @@ export const FUTURE_MACHINE: Machine<FutureState, FutureEvent, ReviewActor> = {
     allowed: reviewer,
     requiresNote: true,
   },
-  reject: { from: ['submitted'], to: 'rejected', allowed: reviewer, requiresNote: true },
+  reject: {
+    from: ['submitted', 'approved'],
+    to: 'rejected',
+    allowed: reviewer,
+    requiresNote: true,
+  },
   /** An author's change to an approved item goes back to review. */
   revise: { from: ['approved'], to: 'submitted', allowed: author },
   cancel: { from: ['approved'], to: 'cancelled', allowed: (a) => author(a) || reviewer(a) },
 };
+
+/**
+ * Authors edit drafts, returned items and approved ones — an author's change
+ * to an approved item sends it back to review (see futureEditNeedsReview).
+ * Other reviewers edit what is waiting or approved.
+ */
+export function canEditFuture(state: FutureState, actor: ReviewActor): boolean {
+  if (author(actor)) return state === 'draft' || state === 'returned' || state === 'approved';
+  return reviewer(actor) && (state === 'submitted' || state === 'approved');
+}
+
+/** True when saving this edit must fire `revise` (approved → submitted). */
+export function futureEditNeedsReview(state: FutureState, actor: ReviewActor): boolean {
+  return state === 'approved' && author(actor);
+}
 
 export type ReportState = 'none' | 'prompted' | 'written' | 'declined';
 export type ReportEvent = 'prompt' | 'write' | 'decline';

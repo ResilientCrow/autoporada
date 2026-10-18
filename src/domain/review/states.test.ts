@@ -5,8 +5,10 @@ import { ROLES, type Role } from '@/domain/actor';
 import {
   ACCESS_MACHINE,
   availableEvents,
+  canEditFuture,
   canEditPoint,
   FUTURE_MACHINE,
+  futureEditNeedsReview,
   ISSUE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,
@@ -107,9 +109,78 @@ describe('point lifecycle', () => {
     ['approved', headmaster, true],
     ['draft', reviewer, false],
     ['published', headmaster, false],
+    ['approved', user('reviewer', true), false],
+    ['approved', user('headmaster', true), true],
+    ['approved', reviewer, true],
   ] as const)('editing a %s point: %o → %s', (state, actor, allowed) => {
     expect(canEditPoint(state, actor)).toBe(allowed);
   });
+});
+
+describe('rejecting approved work (plan §5)', () => {
+  it.each([POINT_MACHINE, FUTURE_MACHINE] as const)(
+    'rejects an approved, unpublished item with a note',
+    (machine) => {
+      expect(transition(machine, 'approved', 'reject', reviewer, 'Akce se nekonala.')).toEqual({
+        ok: true,
+        to: 'rejected',
+      });
+      expect(transition(machine, 'approved', 'reject', reviewer)).toMatchObject({
+        reason: 'note-required',
+      });
+      expect(transition(machine, 'approved', 'reject', author).ok).toBe(false);
+    },
+  );
+
+  it('cannot reject what is already published', () => {
+    expect(transition(POINT_MACHINE, 'published', 'reject', headmaster, 'x').ok).toBe(false);
+  });
+});
+
+describe('future item lifecycle', () => {
+  it.each([
+    ['draft', 'submit', author, 'submitted'],
+    ['returned', 'submit', author, 'submitted'],
+    ['submitted', 'retract', author, 'draft'],
+    ['submitted', 'withdraw', author, 'withdrawn'],
+    ['submitted', 'approve', reviewer, 'approved'],
+    ['submitted', 'approve', user('headmaster', true), 'approved'],
+  ] as const)('%s --%s--> %s', (from, event, actor, to) => {
+    expect(transition(FUTURE_MACHINE, from, event, actor)).toEqual({ ok: true, to });
+  });
+
+  it('keeps reviewers from approving their own items', () => {
+    expect(
+      transition(FUTURE_MACHINE, 'submitted', 'approve', user('reviewer', true)),
+    ).toMatchObject({
+      reason: 'not-allowed',
+    });
+  });
+
+  it('requires a note to return or reject', () => {
+    expect(transition(FUTURE_MACHINE, 'submitted', 'return', reviewer)).toMatchObject({
+      reason: 'note-required',
+    });
+    expect(transition(FUTURE_MACHINE, 'submitted', 'reject', reviewer)).toMatchObject({
+      reason: 'note-required',
+    });
+  });
+
+  it.each([
+    ['approved', author, true, true],
+    ['draft', author, true, false],
+    ['submitted', author, false, false],
+    ['approved', user('reviewer', true), true, true],
+    ['submitted', reviewer, true, false],
+    ['approved', reviewer, true, false],
+    ['cancelled', reviewer, false, false],
+  ] as const)(
+    'editing a %s item as %o: allowed %s, back to review %s',
+    (state, actor, allowed, review) => {
+      expect(canEditFuture(state, actor)).toBe(allowed);
+      expect(futureEditNeedsReview(state, actor)).toBe(review);
+    },
+  );
 });
 
 describe('future items', () => {

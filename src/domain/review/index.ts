@@ -7,8 +7,10 @@ export {
 } from './machine';
 export {
   ACCESS_MACHINE,
+  canEditFuture,
   canEditPoint,
   FUTURE_MACHINE,
+  futureEditNeedsReview,
   ISSUE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,

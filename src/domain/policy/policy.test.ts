@@ -66,6 +66,27 @@ describe('permission matrix', () => {
     expect(can(actor('headmaster', { isStudent: true }), { action: 'users.manage' })).toBe(false);
   });
 
+  it.each(ROLES)('refuses an action it does not know, as %s', (role) => {
+    expect(can(actor(role), { action: 'bogus' } as unknown as Check)).toBe(false);
+  });
+
+  it('treats a student as a submitter even if the stored role is higher', () => {
+    for (const role of ['reviewer', 'headmaster'] as const) {
+      const student = actor(role, { isStudent: true });
+      expect(can(student, { action: 'issue.preview' })).toBe(false);
+      expect(can(student, { action: 'review.queue' })).toBe(false);
+      expect(can(student, { action: 'point.view', point: { authorId: 'other' } })).toBe(false);
+      expect(
+        can(student, {
+          action: 'point.transition',
+          point: { authorId: 'other', state: 'submitted' },
+          event: 'approve',
+        }),
+      ).toBe(false);
+      expect(can(student, { action: 'point.create' })).toBe(true);
+    }
+  });
+
   it('asks for a fresh sign-in only for user management and the new school year', () => {
     const stepUp = (Object.keys(MATRIX) as Simple[]).filter(requiresStepUp);
     expect(stepUp.sort()).toEqual(['registry.newSchoolYear', 'users.manage']);
@@ -144,6 +165,46 @@ describe('future items', () => {
     expect(
       can(submitter, { action: 'future.view', item: item(submitter.id, 'jednani', 'submitted') }),
     ).toBe(true);
+  });
+
+  it('applies the lifecycle to future-item transitions', () => {
+    const reviewer = actor('reviewer');
+    const headmaster = actor('headmaster');
+    const submitted = (authorId: string) => ({
+      authorId,
+      kind: 'akce' as const,
+      state: 'submitted' as const,
+    });
+    const approved = (authorId: string) => ({
+      authorId,
+      kind: 'akce' as const,
+      state: 'approved' as const,
+    });
+    expect(
+      can(reviewer, {
+        action: 'future.transition',
+        item: submitted(reviewer.id),
+        event: 'approve',
+      }),
+    ).toBe(false);
+    expect(
+      can(reviewer, { action: 'future.transition', item: submitted('x'), event: 'approve' }),
+    ).toBe(true);
+    expect(
+      can(headmaster, {
+        action: 'future.transition',
+        item: submitted(headmaster.id),
+        event: 'approve',
+      }),
+    ).toBe(true);
+    for (const event of ['revise', 'cancel'] as const) {
+      expect(can(submitter, { action: 'future.transition', item: approved('x'), event })).toBe(
+        false,
+      );
+    }
+    expect(
+      can(submitter, { action: 'future.transition', item: submitted('x'), event: 'withdraw' }),
+    ).toBe(false);
   });
 
   it('lets authors and reviewers edit at the right moments', () => {

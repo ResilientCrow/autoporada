@@ -2,6 +2,7 @@ import { atLeast, type Actor, type Role } from '@/domain/actor';
 import type { FutureKind } from '@/domain/calendar';
 import {
   availableEvents,
+  canEditFuture,
   canEditPoint,
   FUTURE_MACHINE,
   POINT_MACHINE,
@@ -64,10 +65,22 @@ const has = (actor: Actor, minimum: Role) => atLeast(actor.role, minimum);
 const staffReviewer = (actor: Actor) => has(actor, 'reviewer') && !actor.isStudent;
 
 /**
- * The single authorization decision of the app. Pure and deny-by-default:
- * inactive accounts can do nothing, pending ones can only ask for access.
+ * Students are limited to the submitter role (plan §1). Enforced here as
+ * well as in the database, so bad data cannot widen a student's rights.
  */
-export function can(actor: Actor, check: Check): boolean {
+function effective(actor: Actor): Actor {
+  return actor.isStudent && atLeast(actor.role, 'reviewer')
+    ? { ...actor, role: 'submitter' }
+    : actor;
+}
+
+/**
+ * The single authorization decision of the app. Pure and deny-by-default:
+ * inactive accounts can do nothing, pending ones can only ask for access,
+ * and an action the switch does not know is refused.
+ */
+export function can(subject: Actor, check: Check): boolean {
+  const actor = effective(subject);
   if (actor.status !== 'active') return false;
   if (actor.role === 'pending')
     return check.action === 'access.request' || check.action === 'profile.manage';
@@ -96,18 +109,8 @@ export function can(actor: Actor, check: Check): boolean {
         has(actor, 'reviewer') ||
         (check.item.kind === 'akce' && check.item.state === 'approved')
       );
-    case 'future.edit': {
-      // Authors edit drafts, returned items and approved ones (which go back to review);
-      // reviewers edit what is waiting or approved, as with points.
-      const { state } = check.item;
-      if (
-        check.item.authorId === actor.id &&
-        (state === 'draft' || state === 'returned' || state === 'approved')
-      ) {
-        return true;
-      }
-      return has(actor, 'reviewer') && (state === 'submitted' || state === 'approved');
-    }
+    case 'future.edit':
+      return canEditFuture(check.item.state, reviewActor(actor, check.item));
     case 'future.transition':
       return availableEvents(
         FUTURE_MACHINE,
@@ -130,8 +133,8 @@ export function can(actor: Actor, check: Check): boolean {
     case 'access.decide':
       return actor.role === 'headmaster' && !actor.isStudent;
     default: {
-      const unhandled: never = check;
-      return unhandled;
+      const _exhaustive: never = check;
+      return false;
     }
   }
 }
