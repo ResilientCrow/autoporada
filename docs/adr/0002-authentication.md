@@ -19,7 +19,9 @@ The candidate libraries:
 - Pin the authority to the school tenant
   (`https://login.microsoftonline.com/{tenant}/v2.0`).
 - Validate the ID token claims `iss`, `aud`, `tid`, `nonce`, `exp` and `nbf`.
-  Reject guests (`acct ≠ 0` or `#EXT#` in the UPN).
+  Reject guests, failing closed: `acct` must be present and `0`, and the UPN
+  must not contain `#EXT#`. The `upn` optional claim needs the *externally
+  authenticated* property, or guests receive their home UPN without `#EXT#`.
 - Key users by `(tid, oid)`. E-mail and UPN are for display only.
 - The confidential client authenticates with a certificate
   (`private_key_jwt`), not a client secret.

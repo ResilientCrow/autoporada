@@ -39,10 +39,12 @@ After creating it:
      server (see §6). Note its thumbprint.
    - Do **not** create a client secret.
 3. **Token configuration → Add optional claim → ID token.** Add:
-   - `acct`, used to reject guest accounts;
+   - `acct`, used to reject guest accounts. The app refuses tokens without it;
    - `auth_time`, used for re-authentication before role changes;
    - `email`;
-   - `upn`.
+   - `upn`. Then edit the `upn` claim and turn on **Externally
+     authenticated** (`include_externally_authenticated_upn`). Without it,
+     guests get their home UPN and the app's second guest check cannot work.
 4. **API permissions** (Microsoft Graph):
 
    | Type | Permission | Admin consent | Why |
@@ -97,7 +99,9 @@ New-ManagementRoleAssignment -App <EnterpriseAppObjectId> `
   -Role "Application Mail.Send" -CustomResourceScope "Autoporada mailbox"
 ```
 
-Verify after 30 minutes to 2 hours (permission caching):
+Verify right away: the test cmdlet bypasses Exchange's permission cache.
+The app's real `sendMail` calls may need 30 minutes to 2 hours before the new
+scope applies.
 
 ```powershell
 Test-ServicePrincipalAuthorization -Identity <AppId> -Resource autoporada@ssps.cz
@@ -113,11 +117,13 @@ Test-ServicePrincipalAuthorization -Identity <AppId> -Resource <any-other-user>@
   pointing to the server.
 - **Inbound:** TCP 80 and 443 to the server. Port 80 serves the Let's Encrypt
   HTTP challenge and the redirect to HTTPS.
-- **Outbound from the server:**
-  - HTTPS to `login.microsoftonline.com`, `graph.microsoft.com` and
+- **Outbound from the server (HTTPS):**
+  - always: `login.microsoftonline.com`, `graph.microsoft.com`,
     `acme-v02.api.letsencrypt.org`;
-  - during installs and updates, also the container registries (`docker.io`,
-    `ghcr.io`).
+  - during installs and updates, the container registries:
+    `registry-1.docker.io`, `auth.docker.io`,
+    `production.cloudflare.docker.com`, `ghcr.io`,
+    `pkg-containers.githubusercontent.com`.
 
 ## 5. Server
 

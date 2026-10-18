@@ -75,12 +75,12 @@ These versions were checked on the web on 2026-10-18.
 | Logs | pino JSON to stdout, with redaction | |
 | Edge | Stock Caddy 2.11 (automatic HTTPS, body size limit); rate limits live in the app | No custom Caddy build |
 | Tests | Vitest, fast-check, Playwright + axe, `mock-oauth2-server` (fake IdP), Mailpit | |
-| Gates | ESLint, dependency-cruiser (layer rules), knip, gitleaks, osv-scanner, Renovate | |
+| Gates | ESLint, dependency-cruiser (layer rules), knip, palette check, gitleaks, `pnpm audit` (production deps, blocking at high), Renovate | osv-scanner cannot read pnpm 12's multi-document lockfile |
 
 ## 3. Architecture
 
 ```
- Internet ─:443─▶ caddy ──▶ web (Next.js) ───────────────▶ login.microsoftonline.com
+ Internet ─:80/:443─▶ caddy ──▶ web (Next.js) ───────────────▶ login.microsoftonline.com
                               │  (internal net)              graph.microsoft.com (search, sendMail)
                               ▼                                   ▲
                           postgres 18 ◀──── worker (pg-boss) ─────┘
@@ -98,7 +98,7 @@ src/
     calendar/      targetMonday, deadline, phase, routeFuture
     review/        state machines (points, future items, issues, access requests)
     policy/        can(actor, action, resource), deny-by-default
-    richtext/      schema and validator
+    richtext/      pure-TS validator (Zod wrapper lives in contracts/)
     registry/      isNew, carry-over planner, retention plan
   snapshot/      IssueSnapshot v1 Zod contract: the only input to the document engine
   document/      deep module: compose(snapshot) → DocumentModel → renderHtml / renderDocx
@@ -127,9 +127,11 @@ src/
 **ESLint rules**
 
 - At most 300 lines per file.
-- No hex literals in `ui/**`, and `004D8C` is banned everywhere.
 - UI strings live only in `ui/copy/cs.ts`, which is created with the first UI string.
 - `process.env` is read only in `infra/config`.
+
+**Palette check** (`scripts/check-palette.mjs`, CI `lint:palette`): hex colours only in
+`ui/theme`, and #004D8C nowhere in `src/`.
 
 **Action pipeline.** Every `"use server"` export goes through `defineAction`, in this order:
 
@@ -154,7 +156,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
   - exact `iss`, `aud`, `tid`;
   - `exp`/`nbf`;
   - `nonce`.
-- Guests are rejected: optional claim `acct ≠ 0`, or `#EXT#` in the UPN.
+- Guests are rejected, failing closed: the optional claim `acct` must be present and `0`, and the UPN must not contain `#EXT#` (the `upn` claim is configured with *externally authenticated* so guests get the `#EXT#` form).
 - Users are keyed by `(tid, oid)`. E-mail and UPN are for display only.
 - `returnTo` must be a same-origin path.
 
@@ -211,7 +213,9 @@ An inventory test fails the build if any action or route handler is not wrapped.
 
 **Secrets**
 - Docker secrets: DB passwords, the Entra certificate key and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.
-- `.env` is validated by Zod at boot.
+- `.env` is validated by Zod in `instrumentation.ts` at boot; a bad value stops the server.
+- `APP_ENV` (development / test / production) switches on production hardening. It is separate from `NODE_ENV`, which `next start` always sets to production, and is required whenever `NODE_ENV=production`.
+- A Server Actions key given as a Docker secret is copied into `process.env` at boot, because Next.js reads it only from there.
 - Three DB roles: `migrator`, `app` and `backup`.
 - An alert fires 45 days before the certificate expires.
 
@@ -461,7 +465,7 @@ Immediate notifications:
 4. `chore(next)`: Next 16 standalone skeleton (`src/`, poweredBy off)
 5. `build(lint)`: ESLint flat config, Prettier, dependency-cruiser layers (tests as entry points), knip
 6. `test(setup)`: Vitest projects (unit / integration / golden), Playwright skeleton
-7. `ci`: typecheck, lint, arch, test, gitleaks, osv-scanner
+7. `ci`: typecheck, lint, arch, test, gitleaks, `pnpm audit`
 8. `build(dev)`: `compose.dev.yaml` (Postgres 18, Mailpit, mock-oauth2-server, Gotenberg)
 9. `feat(config)`: Zod env and secrets loader
 10. `feat(log)`: pino with redaction + request id
@@ -552,7 +556,7 @@ Immediate notifications:
 
 **M9 Headmaster tools**
 1. snapshot assembler (read-only query + integration tests)
-2. restricted TipTap editor (indent levels 0–2, so levels can be skipped as in the template)
+2. restricted TipTap editor (indent 0–3: 0 = plain paragraph, 1–3 = the o / o / ■ levels, so levels can be skipped as in the template)
 3. POKYNY outline editor (reorder, standing / one-time, system slots)
 4. Přítomni/Hosté, ohlasy, Příloha 2
 5. registry lists, entries, bulk paste
@@ -629,11 +633,11 @@ Immediate notifications:
 ## 13. School IT checklist (sent at M0.2)
 
 1. Register a single-tenant web app with redirect URI `https://autoporada.ssps.cz/auth/callback` and a certificate credential.
-2. Add the optional claims `acct` and `auth_time`.
+2. Add the ID-token optional claims `acct`, `auth_time`, `email` and `upn` (with *externally authenticated* turned on).
 3. Grant admin consent for application `User.ReadBasic.All`.
 4. Create the shared mailbox `autoporada@ssps.cz`.
 5. Run `New-ServicePrincipal`, `New-ManagementScope` and `New-ManagementRoleAssignment -Role "Application Mail.Send"`. Do **not** grant Mail.Send in Entra.
-6. Create the DNS record `autoporada.ssps.cz` and open port 443 to the server.
+6. Create the DNS record `autoporada.ssps.cz` and open TCP 80 and 443 to the server.
 7. Provide an off-site backup target.
 8. Name an IT contact for alerts and patching.
 9. Provide the object ID of the first headmaster.

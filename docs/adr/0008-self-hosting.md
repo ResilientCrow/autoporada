@@ -8,7 +8,8 @@ on infrastructure it controls, and the school has little operations capacity.
 ## Decision
 
 - One `compose.yaml` with these services:
-  - `caddy` (automatic HTTPS, the only published port);
+  - `caddy` (automatic HTTPS; the only service with published ports, 80 and
+    443);
   - `web`, `worker` and `migrate` (one-shot);
   - `postgres` 18;
   - `gotenberg`;

@@ -13,9 +13,14 @@ level-0 item. ProseMirror nested lists cannot represent a skipped level.
   levels).
 - The only marks are bold and italic. No links, headings, images, HTML or
   pasted styles.
-- The stored form is JSON, validated server-side:
-  - Zod and the ProseMirror schema check;
+- The stored form is JSON, validated server-side by a pure-TypeScript
+  validator in `domain/richtext` (ADR 0004 keeps `domain/` dependency-free):
+  - structure, `indent` 0–3, bold and italic only;
   - at most 64 KB and 2,000 nodes.
+
+  `contracts/` wraps it in Zod for action inputs. The TipTap editor's
+  ProseMirror schema enforces the same rules in the browser, but the server
+  never trusts it.
 - It is rendered through components, never through `dangerouslySetInnerHTML`.
 
 ## Consequences
