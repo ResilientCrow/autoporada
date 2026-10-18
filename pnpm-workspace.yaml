@@ -5,4 +5,7 @@ minimumReleaseAgeExclude:
   # Next.js 16.4.2 is a security release (Oct 2026); take patches immediately.
   - next
   - '@next/*'
-allowBuilds: {}
+  - eslint-config-next
+allowBuilds:
+  # Ships prebuilt binaries as optional deps; its postinstall is only a check.
+  unrs-resolver: false

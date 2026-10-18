@@ -13,12 +13,24 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:arch": "depcruise src --config .dependency-cruiser.cjs",
+    "lint:palette": "node scripts/check-palette.mjs",
+    "lint:unused": "knip",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "dependency-cruiser": "18.6.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.2",
+    "eslint-config-prettier": "^10.1.8",
+    "knip": "^6.41.0",
+    "prettier": "3.9.10",
     "typescript": "6.0.3"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
-import { cs } from '@/ui/copy/cs';
+import { cs } from '@/ui/copy';
 
 export const metadata: Metadata = {
   title: cs.app.name,

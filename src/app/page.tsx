@@ -1,4 +1,4 @@
-import { cs } from '@/ui/copy/cs';
+import { cs } from '@/ui/copy';
 
 export default function HomePage() {
   return (
