@@ -1,5 +1,7 @@
 # Supply-chain hygiene: only install releases older than 3 days and never run
 # install scripts unless a package is listed in allowBuilds.
+# An urgent security fix for any other package needs a version-specific
+# exclude here (e.g. `- somepkg@1.2.3`) until it is 3 days old.
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   # Next.js 16.4.2 is a security release (Oct 2026); take patches immediately.

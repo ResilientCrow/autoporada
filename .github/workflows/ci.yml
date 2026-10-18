@@ -93,10 +93,11 @@ jobs:
       - name: gitleaks (full history)
         run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0 git /repo --redact
       - uses: pnpm/action-setup@v4
+      # No `cache: pnpm`: this job never installs, so the post-step cache save
+      # would fail on a cache miss.
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          cache: pnpm
       # osv-scanner cannot read pnpm 12's multi-document lockfile; pnpm audit can.
       - name: Audit production dependencies (blocking)
         run: pnpm audit --prod --audit-level high

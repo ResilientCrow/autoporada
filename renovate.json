@@ -6,10 +6,35 @@
   "schedule": ["before 6am on monday"],
   "packageRules": [
     {
-      "matchPackageNames": ["next", "@next/**", "eslint-config-next", "react", "react-dom"],
-      "groupName": "next and react",
+      "matchPackageNames": [
+        "next",
+        "@next/**",
+        "eslint-config-next",
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom"
+      ],
+      "groupName": "next and react"
+    },
+    {
+      "description": "Security releases of Next ship immediately (pnpm-workspace.yaml exempts the same packages).",
+      "matchPackageNames": ["next", "@next/**", "eslint-config-next"],
       "minimumReleaseAge": "0 days"
     }
   ],
-  "vulnerabilityAlerts": { "minimumReleaseAge": "0 days" }
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": "0 days"
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Container images used via `docker run` in workflows",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "docker run [^\\n]*?(?<depName>[a-z0-9./-]+/[a-z0-9.-]+):(?<currentValue>v[0-9][0-9.]*)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
 }
