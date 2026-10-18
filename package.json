@@ -23,12 +23,13 @@
     "test": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:golden": "vitest run --project golden",
-    "test:all": "vitest run",
+    "test:all": "vitest run --project unit --project integration --project golden",
     "test:e2e": "playwright test",
     "dev:services": "docker compose -f compose.dev.yaml up -d --wait",
     "dev:services:down": "docker compose -f compose.dev.yaml down",
     "facts:extract": "node scripts/extract-template-facts.ts",
-    "cli": "tsx --tsconfig tsconfig.json src/cli/main.ts"
+    "cli": "tsx --tsconfig tsconfig.json src/cli/main.ts",
+    "test:render": "vitest run --project render"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",

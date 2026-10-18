@@ -28,6 +28,16 @@ export default defineConfig({
         extends: true,
         test: { name: 'golden', include: ['test/document/**/*.test.ts'], environment: 'node' },
       },
+      {
+        // Needs Gotenberg and poppler-utils: pnpm dev:services, then pnpm test:render.
+        extends: true,
+        test: {
+          name: 'render',
+          include: ['test/render/**/*.test.ts'],
+          environment: 'node',
+          testTimeout: 60_000,
+        },
+      },
     ],
   },
 });

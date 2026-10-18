@@ -63,6 +63,25 @@ jobs:
       - run: pnpm test:integration
       - run: pnpm test:golden
 
+  render:
+    name: PDF render check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      - name: Start Gotenberg with the porada fonts
+        run: |
+          docker build -t autoporada-gotenberg docker/gotenberg
+          docker run -d --name gotenberg -p 3001:3000 autoporada-gotenberg gotenberg --chromium-auto-start=false
+          for i in $(seq 1 30); do curl -fs http://localhost:3001/health && break; sleep 2; done
+      - run: pnpm test:render
+
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest

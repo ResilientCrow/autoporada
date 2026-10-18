@@ -28,3 +28,7 @@ secrets/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# licensed fonts for the PDF renderer
+docker/gotenberg/fonts/*
+!docker/gotenberg/fonts/README.md

@@ -33,9 +33,10 @@ services:
     volumes: ['./docker/dev/mock-oauth2.json:/config/mock-oauth2.json:ro']
     ports: ['127.0.0.1:8080:8080']
 
-  # DOCX -> PDF. Replaced by the font-enabled image in milestone M2.
+  # DOCX -> PDF with the fonts the porada needs (docker/gotenberg).
   gotenberg:
-    image: gotenberg/gotenberg:8.38.1
+    build: ./docker/gotenberg
+    image: autoporada-gotenberg:dev
     command: ['gotenberg', '--chromium-auto-start=false', '--api-timeout=60s']
     ports: ['127.0.0.1:3001:3000']
 
