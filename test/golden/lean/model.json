@@ -1,0 +1,518 @@
+{
+  "meta": {
+    "title": "Porada vedení školy 12. října 2026",
+    "author": "Autonomní systém Autoporada"
+  },
+  "sections": [
+    {
+      "layout": "single",
+      "blocks": [
+        {
+          "kind": "title",
+          "text": "PORADA VEDENÍ ŠKOLY – pondělí 12. října 2026"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "label",
+          "label": "Přítomni:",
+          "text": "Mgr. Jan Novák, Ing. Petra Svobodová, Mgr. Tomáš Veselý"
+        },
+        {
+          "kind": "label",
+          "label": "Hosté:",
+          "text": "Ing. Karel Dvořák (Next Zone)"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "section",
+          "text": "POKYNY PRO ZAMĚSTNANCE, ORGANIZAČNÍ ZÁLEŽITOSTI"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 1,
+          "text": "Zatím známá jednání v týdnu od 12. října do 19. října 2026"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "zatím žádná"
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 2,
+          "text": "Zatím známé akce v týdnech od 12. října do 26. října 2026"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "zatím žádné"
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 3,
+          "text": "Studenti v ředitelském „Programu na podporu talentovaných a aktivních studentů“"
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Níže uvedení studenti byli zařazeni ředitelem školy do „Programu na podporu talentovaných a aktivních studentů“. Na níže uvedené studenty se nevztahuje pravidlo 75% docházky do výuky, studenti jsou však povinni aktivně a průběžně komunikovat s učiteli, učitelé jsou povinni jim vyjít vstříc při žádosti o domluvu na přezkoušení či dopsání testu."
+            }
+          ]
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Pokud někdo ze studentů má zájem být do programu zařazen, musí v novém školním roce 2026/2027 opět o toto požádat ředitele školy. V případě nezletilých studentů tak musí učinit jejich rodiče."
+            }
+          ]
+        },
+        {
+          "kind": "dash",
+          "label": "seznam studentů:",
+          "runs": [
+            {
+              "text": " je uveden v "
+            },
+            {
+              "text": "Příloze 1",
+              "bold": true
+            },
+            {
+              "text": " této porady vedení"
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 4,
+          "text": "Uvolnění z výuky na základě odborných certifikátů či přezkoušení"
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Níže jsou uvedeni studenti, kteří jsou uvolněni z výuky konkrétního předmětu pro školní rok 2026/2027 z důvodů vlastnictví patřičných mezinárodních certifikátů či přezkoušení, nově zařazení studenti oproti minulému týdnu jsou vždy označeni tučně."
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 5,
+          "text": "Provozní pokyny pro zaměstnance a studenty"
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "používání programu Techambition na výuku matematiky",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "nový event manager Next Zone Event Space a Ruby Hall",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "pokyny pro rezervaci a využití prostor Next Zone Event Space a Ruby Hall",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 2,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "nový vedoucí Inkubátoru startupů Coworkingového centra Smíchovské střední",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "správce Audio studia Mediálního domu Preslova v areálu Smíchova",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 2,
+          "runs": [
+            {
+              "text": "kontakt:"
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "správce 3D tiskáren na Smíchovské střední",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 2,
+          "runs": [
+            {
+              "text": "kontakt:"
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "pravidla účasti studentů a zaměstnanců na demonstracích či stávkách",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "zveřejňování grafických materiálů školy, včetně plakátů na školních televizích",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "postup při pořádání mimoškolních akcí",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 2,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "parkování na školním dvoře v areálu Smíchov:",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "hlášení závad zjištěných v prostorách areálu Smíchov",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "hlášení závad v areálech Radlice a Na Vidouli",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 6,
+          "text": "Zapsané MVOP, OSE a zapsaná témata STP a MAP, výzva ředitele"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 7,
+          "text": "Přijímání studentů do MVOP a OSE, kontrola přihlášení"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 8,
+          "text": "Studentské a Maturitní projekty, kontrola přihlášení, konzultanti"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 9,
+          "text": "Kritéria hodnocení učitelů, zadávání testů, domácích úkolů, doporučení na samostudium"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 10,
+          "text": "Výuka v oboru Hotelnictví v 1. ročníku, třída L1B v prvním ročníku"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 11,
+          "text": "Provozní pokyny k Hotelu Voyager – vedení hotelu a kontakty"
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "vedení hotelu z řad studentů zajišťují:",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "rich",
+          "level": 0,
+          "runs": [
+            {
+              "text": "požadavky a dotazy směřujte na příslušný e-mail:",
+              "bold": true,
+              "italic": true
+            }
+          ]
+        },
+        {
+          "kind": "rich",
+          "level": 1,
+          "runs": []
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "closing",
+          "place": "V Praze dne 12. října 2026",
+          "signature": "Zpracoval Autonomní systém Autoporada"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "pageBreak"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "annex",
+          "text": "PŘÍLOHA 1"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "annexTitle",
+          "text": "Studenti v ředitelském „Programu na podporu talentovaným a aktivním studentům“"
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Níže uvedení studenti byli zařazeni ředitelem školy do „Programu na podporu talentovaných a aktivních studentů“. Na níže uvedené studenty se nevztahuje pravidlo 75% docházky do výuky, studenti jsou však povinni aktivně a průběžně komunikovat s učiteli, učitelé jsou povinni jim vyjít vstříc při žádosti o domluvu na přezkoušení či dopsání testu."
+            }
+          ]
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Pokud někdo ze studentů má zájem být do programu zařazen, musí v novém školním roce 2026/2027 opět o toto požádat ředitele školy. V případě nezletilých studentů tak musí učinit jejich rodiče."
+            }
+          ]
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Tučně označení jsou vždy studenti, kteří byli do programu na podporu talentovaným a aktivním studentům zařazeni v průběhu předchozího týdne a jsou nyní uvedeni do této přílohy číslo 1 v rámci porady vedení."
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        }
+      ]
+    },
+    {
+      "layout": "twoColumn",
+      "blocks": [
+        {
+          "kind": "studentTable",
+          "rows": []
+        }
+      ]
+    }
+  ]
+}
