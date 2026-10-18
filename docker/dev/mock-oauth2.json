@@ -1,0 +1,24 @@
+{
+  "interactiveLogin": true,
+  "tokenCallbacks": [
+    {
+      "issuerId": "ssps",
+      "tokenExpiry": 3600,
+      "requestMappings": [
+        {
+          "requestParam": "client_id",
+          "match": "*",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "acct": 0,
+            "name": "Jana Nováková",
+            "preferred_username": "jana.novakova@ssps.cz",
+            "email": "jana.novakova@ssps.cz",
+            "upn": "jana.novakova@ssps.cz"
+          }
+        }
+      ]
+    }
+  ]
+}

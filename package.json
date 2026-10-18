@@ -24,7 +24,9 @@
     "test:integration": "vitest run --project integration",
     "test:golden": "vitest run --project golden",
     "test:all": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "dev:services": "docker compose -f compose.dev.yaml up -d --wait",
+    "dev:services:down": "docker compose -f compose.dev.yaml down"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
