@@ -606,7 +606,40 @@
       "title": "schůzka s rodiči 1.A",
       "date": "2026-10-14",
       "timeFrom": "14:00",
-      "place": "S206"
+      "timeTo": "16:00",
+      "campus": "smichov",
+      "place": "učebna S206",
+      "organisers": [
+        {
+          "salutation": "pani",
+          "titlesBefore": "Mgr.",
+          "givenName": "Jana",
+          "familyName": "Nováková"
+        }
+      ]
+    },
+    {
+      "id": "f-piskvorky",
+      "kind": "akce",
+      "title": "celoškolní piškvorkový turnaj, kvalifikace do oblastního kola celostátní soutěže plšQworky",
+      "date": "2026-10-12",
+      "timeFrom": "8:00",
+      "timeTo": "12:00",
+      "campus": "smichov",
+      "organisers": [
+        {
+          "salutation": "pan",
+          "givenName": "Jakub",
+          "familyName": "Svoboda",
+          "affiliation": "2.GB"
+        },
+        {
+          "salutation": "pan",
+          "givenName": "Martin",
+          "familyName": "Král",
+          "affiliation": "2.GB"
+        }
+      ]
     },
     {
       "id": "f-dod",
@@ -620,7 +653,15 @@
       "kind": "akce",
       "title": "exkurze 2.B do CERNu",
       "date": "2026-10-20",
-      "endDate": "2026-10-22"
+      "endDate": "2026-10-22",
+      "organisers": [
+        {
+          "salutation": "pan",
+          "titlesBefore": "Mgr.",
+          "givenName": "Petr",
+          "familyName": "Dvořák"
+        }
+      ]
     },
     {
       "id": "f-olymp",

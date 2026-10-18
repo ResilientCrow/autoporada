@@ -65,15 +65,24 @@ export function formatNumericRange(from: CalDate, to: CalDate): string {
   return `${from.day}.${EN_DASH}${formatNumericDate(to)}`;
 }
 
-/** „27.–29. října 2026“, „30. října – 2. listopadu 2026“, „30. prosince 2026 – 2. ledna 2027“ */
-export function formatLongRange(from: CalDate, to: CalDate): string {
+/**
+ * „27.–29. října 2026“, „30. října – 2. listopadu 2026“, „30. prosince 2026 – 2. ledna 2027“;
+ * with `joiner: 'až'` (agenda bullets): „27. až 29. října 2026“.
+ */
+export function formatLongRange(
+  from: CalDate,
+  to: CalDate,
+  { joiner = 'dash' }: { joiner?: 'dash' | 'až' } = {},
+): string {
   assertOrdered(from, to);
   if (compareDates(from, to) === 0) return formatLongDate(from);
-  if (from.year !== to.year) return `${formatLongDate(from)} ${EN_DASH} ${formatLongDate(to)}`;
-  if (from.month !== to.month) {
-    return `${from.day}. ${monthGenitive(from)} ${EN_DASH} ${formatLongDate(to)}`;
-  }
-  return `${from.day}.${EN_DASH}${formatLongDate(to)}`;
+  // The dash is unspaced between bare day numbers; „až“ is always a word.
+  const spaced = joiner === 'až' ? ' až ' : ` ${EN_DASH} `;
+  const tight = joiner === 'až' ? ' až ' : EN_DASH;
+  if (from.year !== to.year) return `${formatLongDate(from)}${spaced}${formatLongDate(to)}`;
+  if (from.month !== to.month)
+    return `${from.day}. ${monthGenitive(from)}${spaced}${formatLongDate(to)}`;
+  return `${from.day}.${tight}${formatLongDate(to)}`;
 }
 
 /**
@@ -94,9 +103,9 @@ export function formatBulletTime(t: WallTime): string {
   return `${t.hour}${BULLET_TIME_SEPARATOR}${pad2(t.minute)}`;
 }
 
-/** „10:00–11:00“ or „10:00“ */
+/** „8:00 až 12:00“ or „8:00“ — agenda bullets (points 1 and 2). */
 export function formatBulletTimeRange(from: WallTime, to?: WallTime): string {
-  return to ? `${formatBulletTime(from)}${EN_DASH}${formatBulletTime(to)}` : formatBulletTime(from);
+  return to ? `${formatBulletTime(from)} až ${formatBulletTime(to)}` : formatBulletTime(from);
 }
 
 /** „od 10.00 do 12.00 hodin“ or „od 10.00 hodin“ */

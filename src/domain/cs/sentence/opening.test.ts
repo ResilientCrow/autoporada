@@ -4,6 +4,7 @@ import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
   openingSentence,
+  organiserPresentVerb,
   organiserVerb,
   roomLocative,
   type OpeningInput,
@@ -110,6 +111,14 @@ describe('organiserVerb', () => {
     [[eva, lucie], 'organizovaly'],
   ])('%#: %s', (people, verb) => {
     expect(organiserVerb(people)).toBe(verb);
+  });
+});
+
+describe('organiserPresentVerb', () => {
+  it('agrees with the number of organisers only', () => {
+    expect(organiserPresentVerb([eva])).toBe('organizuje');
+    expect(organiserPresentVerb([jan])).toBe('organizuje');
+    expect(organiserPresentVerb([eva, jan])).toBe('organizují');
   });
 });
 

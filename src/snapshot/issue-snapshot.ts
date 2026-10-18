@@ -118,6 +118,8 @@ const futureItem = z.strictObject({
   ...dated,
   campus: campus.optional(),
   place: text.optional(),
+  /** „– organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)“ */
+  organisers: z.array(person).default([]),
 });
 
 const registryList = z.strictObject({

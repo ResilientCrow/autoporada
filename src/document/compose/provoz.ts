@@ -62,7 +62,10 @@ export function composeProvoz(ctx: ComposeContext): Block[] {
     .sort(compareReports);
   const later =
     ctx.future.later.length > 0
-      ? point('Další doposud známé akce školy', ctx.future.later.map(futureBullet))
+      ? point(
+          'Další doposud známé akce školy',
+          ctx.future.later.map((item) => futureBullet(item, ctx.snapshot.options.groupOrder)),
+        )
       : [];
   return [...reports.flatMap((r) => reportBlocks(r, ctx)), ...later];
 }

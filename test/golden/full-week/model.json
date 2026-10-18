@@ -54,7 +54,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "pondělí 12. 10. 2026, 9:00 – jednani j-M"
+              "text": "pondělí 12. října 2026, 9:00, jednani j-M"
             }
           ]
         },
@@ -62,7 +62,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "pondělí 19. 10. 2026 – jednani j-M+7"
+              "text": "pondělí 19. října 2026, jednani j-M+7"
             }
           ]
         },
@@ -81,7 +81,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "8.–12. 10. 2026 – akce a-before-M"
+              "text": "8. až 12. října 2026, akce a-before-M"
             }
           ]
         },
@@ -89,7 +89,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "úterý 13. 10. 2026 – akce a-day"
+              "text": "úterý 13. října 2026, akce a-day"
             }
           ]
         },
@@ -97,7 +97,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "úterý 13. 10. 2026, 15:00–17:00 – akce a-timed"
+              "text": "úterý 13. října 2026, 15:00 až 17:00, akce a-timed"
             }
           ]
         },
@@ -105,7 +105,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "pondělí 26. 10. 2026 – akce a-M+14"
+              "text": "pondělí 26. října 2026, akce a-M+14"
             }
           ]
         },
@@ -734,7 +734,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "úterý 27. 10. 2026 – akce a-M+15"
+              "text": "úterý 27. října 2026, akce a-M+15"
             }
           ]
         },

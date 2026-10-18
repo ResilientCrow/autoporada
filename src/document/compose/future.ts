@@ -2,8 +2,11 @@ import { routeFutureItem } from '@/domain/calendar';
 import {
   csCollator,
   formatBulletTimeRange,
-  formatNumericRange,
-  formatWeekdayNumeric,
+  formatLongRange,
+  formatTitleDate,
+  organiserPresentVerb,
+  renderPeople,
+  type Salutation,
 } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
 import type { SnapshotFutureItem } from '@/snapshot';
@@ -51,19 +54,40 @@ export function routeFuture(items: readonly SnapshotFutureItem[], monday: CalDat
 }
 
 /**
- * „pondělí 19. 10. 2026, 10:00–11:00 – jednání s MČ Praha 5 (ředitelna, Preslova)“
- * „27.–29. 10. 2026 – exkurze 2.B do CERNu“
+ * The headmaster's agenda format, every part after the date optional:
+ * „pondělí 12. října 2026, 8:00 až 12:00, areál Smíchov, učebna S8,
+ * celoškolní piškvorkový turnaj – organizují pánové Jakub Svoboda a Martin
+ * Král (oba 2.GB)“. Multi-day items: „20. až 22. října 2026, …“, no times.
  */
-export function futureBullet(item: SnapshotFutureItem): Block {
+export function futureBullet(item: SnapshotFutureItem, groupOrder?: readonly Salutation[]): Block {
   const start = parseIsoDate(item.date);
   const end = item.endDate ? parseIsoDate(item.endDate) : undefined;
-  const multiDay = end && compareDates(start, end) < 0;
-  const when = multiDay ? formatNumericRange(start, end) : formatWeekdayNumeric(start);
+  const multiDay = end !== undefined && compareDates(start, end) < 0;
   const time =
     !multiDay && item.timeFrom
-      ? `, ${formatBulletTimeRange(parseWallTime(item.timeFrom), item.timeTo ? parseWallTime(item.timeTo) : undefined)}`
+      ? formatBulletTimeRange(
+          parseWallTime(item.timeFrom),
+          item.timeTo ? parseWallTime(item.timeTo) : undefined,
+        )
+      : undefined;
+  const parts = [
+    multiDay ? formatLongRange(start, end, { joiner: 'až' }) : formatTitleDate(start),
+    time,
+    item.campus && CAMPUS_LABEL[item.campus],
+    item.place,
+    item.title,
+  ];
+  const organisers =
+    item.organisers.length > 0
+      ? ` – ${organiserPresentVerb(item.organisers)} ${renderPeople(item.organisers, {
+          join: 'and',
+          order: 'input',
+          compress: true,
+          ...(groupOrder && { groupOrder }),
+        })}`
       : '';
-  const where = [item.place, item.campus && CAMPUS_LABEL[item.campus]].filter(Boolean).join(', ');
-  const text = `${when}${time} – ${item.title}${where ? ` (${where})` : ''}`;
-  return { kind: 'bullet', runs: [{ text: finalText(text) }] };
+  return {
+    kind: 'bullet',
+    runs: [{ text: finalText(`${parts.filter(Boolean).join(', ')}${organisers}`) }],
+  };
 }

@@ -173,7 +173,8 @@ describe('IssueSnapshot v1', () => {
   });
 
   it('accepts an end time on a multi-day item, and times on reports', () => {
-    expect(errorsOf(variant(['futureItems', 3, 'timeFrom'], '18:00'))).toEqual([]);
+    // futureItems[4] is the three-day CERN excursion.
+    expect(errorsOf(variant(['futureItems', 4, 'timeFrom'], '18:00'))).toEqual([]);
   });
 
   it('rejects a future schema version', () => {

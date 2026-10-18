@@ -12,10 +12,11 @@ function futurePoint(
   heading: string,
   items: ComposeContext['future']['meetings'],
   none: string,
+  ctx: ComposeContext,
 ): Block[] {
   const bullets =
     items.length > 0
-      ? items.map(futureBullet)
+      ? items.map((item) => futureBullet(item, ctx.snapshot.options.groupOrder))
       : [{ kind: 'bullet' as const, runs: [{ text: none }] }];
   return point(heading, [...spacer(), ...bullets]);
 }
@@ -28,12 +29,14 @@ function slotBlocks(item: SnapshotItem, ctx: ComposeContext): Block[] {
         `Zatím známá jednání v týdnu ${formatWindow(ctx.meetings.from, ctx.meetings.to)}`,
         ctx.future.meetings,
         'zatím žádná',
+        ctx,
       );
     case 'events':
       return futurePoint(
         `Zatím známé akce v týdnech ${formatWindow(ctx.events.from, ctx.events.to)}`,
         ctx.future.events,
         'zatím žádné',
+        ctx,
       );
     case 'talent':
       return point(item.title, [

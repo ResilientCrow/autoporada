@@ -86,7 +86,7 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">pondělí 12. 10. 2026, 10:00–11:00 – jednání s MČ Praha 5 o rekonstrukci dvora (ředitelna, Preslova)</w:t>
+        <w:t xml:space="preserve">pondělí 12. října 2026, 10:00 až 11:00, ředitelna, Preslova, jednání s MČ Praha 5 o rekonstrukci dvora</w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -98,7 +98,7 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">středa 14. 10. 2026, 14:00 – schůzka s rodiči 1.A (S206)</w:t>
+        <w:t xml:space="preserve">středa 14. října 2026, 14:00 až 16:00, areál Smíchov, učebna S206, schůzka s rodiči 1.A – organizuje paní Mgr. Jana Nováková</w:t>
       </w:r>
     </w:p>
     <w:p/>
@@ -125,7 +125,7 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">úterý 13. 10. 2026 – Den otevřených dveří (areál Smíchov)</w:t>
+        <w:t xml:space="preserve">pondělí 12. října 2026, 8:00 až 12:00, areál Smíchov, celoškolní piškvorkový turnaj, kvalifikace do oblastního kola celostátní soutěže plšQworky – organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)</w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -137,7 +137,19 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">20.–22. 10. 2026 – exkurze 2.B do CERNu</w:t>
+        <w:t xml:space="preserve">úterý 13. října 2026, areál Smíchov, Den otevřených dveří</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="ListParagraph"/>
+        <w:numPr>
+          <w:ilvl w:val="0"/>
+          <w:numId w:val="3"/>
+        </w:numPr>
+      </w:pPr>
+      <w:r>
+        <w:t xml:space="preserve">20. až 22. října 2026, exkurze 2.B do CERNu – organizuje pan Mgr. Petr Dvořák</w:t>
       </w:r>
     </w:p>
     <w:p/>
@@ -1203,7 +1215,7 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">čtvrtek 12. 11. 2026, 8:00 – školní kolo matematické olympiády (areál Radlice)</w:t>
+        <w:t xml:space="preserve">čtvrtek 12. listopadu 2026, 8:00, areál Radlice, školní kolo matematické olympiády</w:t>
       </w:r>
     </w:p>
     <w:p/>

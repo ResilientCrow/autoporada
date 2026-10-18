@@ -68,6 +68,14 @@ describe('date ranges', () => {
     expect(formatLongRange(d(from), d(to))).toBe(long);
   });
 
+  it.each([
+    ['2026-10-20', '2026-10-22', '20. až 22. října 2026'],
+    ['2026-10-30', '2026-11-02', '30. října až 2. listopadu 2026'],
+    ['2026-12-30', '2027-01-02', '30. prosince 2026 až 2. ledna 2027'],
+  ])('writes %s..%s with „až“ for agenda bullets', (from, to, text) => {
+    expect(formatLongRange(d(from), d(to), { joiner: 'až' })).toBe(text);
+  });
+
   it('rejects a range that ends before it starts', () => {
     expect(() => formatNumericRange(d('2026-10-29'), d('2026-10-27'))).toThrow(RangeError);
   });
@@ -87,7 +95,7 @@ describe('agenda windows', () => {
 
 describe('times', () => {
   it('uses colons in bullets and dots in prose, hours without leading zeros', () => {
-    expect(formatBulletTimeRange(t('10:00'), t('11:30'))).toBe('10:00–11:30');
+    expect(formatBulletTimeRange(t('10:00'), t('11:30'))).toBe('10:00 až 11:30');
     expect(formatBulletTimeRange(t('09:05'))).toBe('9:05');
     expect(formatProseTimeRange(t('10:00'), t('12:00'))).toBe('od 10.00 do 12.00 hodin');
     expect(formatProseTimeRange(t('8:30'))).toBe('od 8.30 hodin');

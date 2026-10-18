@@ -54,7 +54,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "pondělí 12. 10. 2026, 10:00–11:00 – jednání s MČ Praha 5 o rekonstrukci dvora (ředitelna, Preslova)"
+              "text": "pondělí 12. října 2026, 10:00 až 11:00, ředitelna, Preslova, jednání s MČ Praha 5 o rekonstrukci dvora"
             }
           ]
         },
@@ -62,7 +62,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "středa 14. 10. 2026, 14:00 – schůzka s rodiči 1.A (S206)"
+              "text": "středa 14. října 2026, 14:00 až 16:00, areál Smíchov, učebna S206, schůzka s rodiči 1.A – organizuje paní Mgr. Jana Nováková"
             }
           ]
         },
@@ -81,7 +81,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "úterý 13. 10. 2026 – Den otevřených dveří (areál Smíchov)"
+              "text": "pondělí 12. října 2026, 8:00 až 12:00, areál Smíchov, celoškolní piškvorkový turnaj, kvalifikace do oblastního kola celostátní soutěže plšQworky – organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)"
             }
           ]
         },
@@ -89,7 +89,15 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "20.–22. 10. 2026 – exkurze 2.B do CERNu"
+              "text": "úterý 13. října 2026, areál Smíchov, Den otevřených dveří"
+            }
+          ]
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "20. až 22. října 2026, exkurze 2.B do CERNu – organizuje pan Mgr. Petr Dvořák"
             }
           ]
         },
@@ -650,7 +658,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "čtvrtek 12. 11. 2026, 8:00 – školní kolo matematické olympiády (areál Radlice)"
+              "text": "čtvrtek 12. listopadu 2026, 8:00, areál Radlice, školní kolo matematické olympiády"
             }
           ]
         },

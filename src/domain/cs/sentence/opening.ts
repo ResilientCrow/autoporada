@@ -44,6 +44,11 @@ export function organiserVerb(organisers: readonly Person[]): string {
   return women === organisers.length ? 'organizovaly' : 'organizovali';
 }
 
+/** „organizuje“ for one organiser, „organizují“ for more (agenda bullets, present tense). */
+export function organiserPresentVerb(organisers: readonly Person[]): 'organizuje' | 'organizují' {
+  return organisers.length === 1 ? 'organizuje' : 'organizují';
+}
+
 /** „S206“ → „v učebně S206“; anything else is used as typed. */
 export function roomLocative(room: string): string {
   const code = room.trim();

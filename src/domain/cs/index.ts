@@ -30,6 +30,7 @@ export {
 export { renderPeople, renderPerson, type ListOptions, type Person } from './people/list';
 export {
   openingSentence,
+  organiserPresentVerb,
   organiserVerb,
   roomLocative,
   type Campus,
