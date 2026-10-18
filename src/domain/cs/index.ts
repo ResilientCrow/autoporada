@@ -27,3 +27,4 @@ export {
   type ClassOrder,
   type SortableStudent,
 } from './sort/class-code';
+export { renderPeople, renderPerson, type ListOptions, type Person } from './people/list';
