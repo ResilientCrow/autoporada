@@ -18,6 +18,7 @@ const p = (
 
 const participants = { join: 'comma', order: 'class-surname' } as const;
 const organisers = { join: 'and', order: 'input', compress: true } as const;
+const NB = '\u00A0';
 
 describe('participant lists', () => {
   it.each([
@@ -96,15 +97,15 @@ describe('organiser phrases', () => {
   it.each([
     [
       [p('slecna', 'Eva', 'Malá', '3.B'), p('pan', 'Jan', 'Novák', '3.B')],
-      'slečna Eva Malá a pan Jan Novák (oba 3.B)',
+      `slečna Eva Malá a pan Jan Novák (oba${NB}3.B)`,
     ],
     [
       [p('slecna', 'Eva', 'Malá', '3.B'), p('slecna', 'Lucie', 'Králová', '3.B')],
-      'slečny Eva Malá a Lucie Králová (obě 3.B)',
+      `slečny Eva Malá a Lucie Králová (obě${NB}3.B)`,
     ],
     [
       [p('pan', 'Adam', 'A', '2.A'), p('pan', 'Bořek', 'B', '2.A'), p('pan', 'Cyril', 'C', '2.A')],
-      'pánové Adam A, Bořek B a Cyril C (všichni 2.A)',
+      `pánové Adam A, Bořek B a Cyril C (všichni${NB}2.A)`,
     ],
     [
       [
@@ -112,7 +113,7 @@ describe('organiser phrases', () => {
         p('pani', 'Běla', 'B', '2.A'),
         p('slecna', 'Cecílie', 'C', '2.A'),
       ],
-      'slečny Alena A, Cecílie C a paní Běla B (všechny 2.A)',
+      `slečny Alena A, Cecílie C a paní Běla B (všechny${NB}2.A)`,
     ],
     [
       [p('pan', 'Jan', 'Novák', '1.A'), p('pani', 'Jana', 'Bílá', 'učitelka')],

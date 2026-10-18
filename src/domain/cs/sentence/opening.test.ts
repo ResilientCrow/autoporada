@@ -45,7 +45,7 @@ describe('openingSentence', () => {
   it('writes the template sentence', () => {
     expect(openingSentence(base)).toBe(
       'Ve středu 14. října 2026 od 10.00 do 12.00 hodin v areálu Smíchov v učebně S206 ' +
-        'proběhl Vesmírný seminář, který organizovali slečna Eva Malá a pan Jan Novák (oba 3.B).',
+        'proběhl Vesmírný seminář, který organizovali slečna Eva Malá a pan Jan Novák (oba\u00A03.B).',
     );
   });
 

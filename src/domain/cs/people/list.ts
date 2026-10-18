@@ -73,5 +73,6 @@ export function renderPeople(people: readonly Person[], options: ListOptions): s
   }
 
   const text = joinItems(items, options.join);
-  return shared ? `${text} (${togetherWord(people)} ${shared})` : text;
+  // „(oba 2.GB)“ never breaks across lines.
+  return shared ? `${text} (${togetherWord(people)}\u00A0${shared})` : text;
 }
