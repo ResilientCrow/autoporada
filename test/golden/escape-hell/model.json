@@ -385,7 +385,7 @@
           "label": "vyjádření pana <b>Nikoho</b>:",
           "runs": [
             {
-              "text": " „<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ }“"
+              "text": " „<script>alert(‚x‘)</script> & ]]> { PAGE } { HYPERLINK ‚https://evil.example‘ }“"
             }
           ]
         },

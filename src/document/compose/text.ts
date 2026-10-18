@@ -27,12 +27,16 @@ export function finalRuns(runs: readonly Run[], tokens?: Tokens): Run[] {
   );
 }
 
-/** Strips quotes a submitter typed around a statement; the document adds „…“ itself. */
+/**
+ * A statement in Czech quotes. One outer pair the submitter typed is
+ * removed; quotes inside become the nested ‚…‘. The result is final: it must
+ * not go through typography again, which would re-read the wrapper.
+ */
 export function quoted(quote: string): string {
-  return `„${quote
-    .trim()
-    .replace(/^["„“”'‚‘]+|["„“”'‚‘]+$/g, '')
-    .trim()}“`;
+  const trimmed = quote.trim();
+  const inner = /^["„“”]([^"„“”]*)["“”]$/.exec(trimmed)?.[1] ?? trimmed;
+  const nested = typographizeText(inner.trim()).replaceAll('„', '‚').replaceAll('“', '‘');
+  return `„${nested}“`;
 }
 
 /**

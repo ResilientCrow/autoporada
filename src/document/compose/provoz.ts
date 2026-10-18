@@ -45,7 +45,7 @@ function reportBlocks(report: SnapshotReport, ctx: ComposeContext): Block[] {
       label: finalText(
         `vyjádření ${s.speakerGenitive}${s.affiliation ? ` (${s.affiliation})` : ''}:`,
       ),
-      runs: finalRuns([{ text: ` ${quoted(s.quote)}` }]),
+      runs: [{ text: ` ${quoted(s.quote)}` }],
     })),
   ]);
 }

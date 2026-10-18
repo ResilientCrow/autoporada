@@ -25,13 +25,13 @@ function slotBlocks(item: SnapshotItem, ctx: ComposeContext): Block[] {
   switch (item.slot) {
     case 'meetings':
       return futurePoint(
-        `Zatím známá jednání v týdnu ${formatWindow(ctx.monday, ctx.meetingsTo)}`,
+        `Zatím známá jednání v týdnu ${formatWindow(ctx.meetings.from, ctx.meetings.to)}`,
         ctx.future.meetings,
         'zatím žádná',
       );
     case 'events':
       return futurePoint(
-        `Zatím známé akce v týdnech ${formatWindow(ctx.monday, ctx.eventsTo)}`,
+        `Zatím známé akce v týdnech ${formatWindow(ctx.events.from, ctx.events.to)}`,
         ctx.future.events,
         'zatím žádné',
       );
@@ -71,7 +71,7 @@ function slotBlocks(item: SnapshotItem, ctx: ComposeContext): Block[] {
               label: finalText(
                 `vyjádření ${q.speakerGenitive}${q.affiliation ? ` (${q.affiliation})` : ''}:`,
               ),
-              quote: finalText(quoted(q.quote)),
+              quote: quoted(q.quote),
             })),
           );
     case null:

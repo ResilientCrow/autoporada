@@ -1,4 +1,5 @@
-import { addDays, parseIsoDate, type CalDate } from '@/domain/time';
+import { eventsWindow, meetingsWindow, type DateRange } from '@/domain/calendar';
+import { parseIsoDate, type CalDate } from '@/domain/time';
 import type { IssueSnapshot } from '@/snapshot';
 
 import { routeFuture, type RoutedFuture } from './future';
@@ -9,10 +10,10 @@ export interface ComposeContext {
   readonly snapshot: IssueSnapshot;
   readonly monday: CalDate;
   readonly meeting: CalDate;
-  /** Point 1 window: the meeting week. */
-  readonly meetingsTo: CalDate;
+  /** Point 1 window: the meeting week; the same window routes the items. */
+  readonly meetings: DateRange;
   /** Point 2 window: two weeks. */
-  readonly eventsTo: CalDate;
+  readonly events: DateRange;
   readonly tokens: Tokens;
   readonly future: RoutedFuture;
 }
@@ -23,8 +24,8 @@ export function composeContext(snapshot: IssueSnapshot): ComposeContext {
     snapshot,
     monday,
     meeting: parseIsoDate(snapshot.issue.meetingDate),
-    meetingsTo: addDays(monday, 7),
-    eventsTo: addDays(monday, 14),
+    meetings: meetingsWindow(monday),
+    events: eventsWindow(monday),
     tokens: { skolniRok: snapshot.issue.schoolYear },
     future: routeFuture(snapshot.futureItems, monday),
   };

@@ -680,7 +680,7 @@
         <w:t xml:space="preserve">- vyjádření pana &lt;b&gt;Nikoho&lt;/b&gt;:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"> „&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ }“</w:t>
+        <w:t xml:space="preserve"> „&lt;script&gt;alert(‚x‘)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK ‚https://evil.example‘ }“</w:t>
       </w:r>
     </w:p>
     <w:p/>

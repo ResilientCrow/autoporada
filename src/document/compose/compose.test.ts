@@ -245,6 +245,34 @@ describe('optional parts', () => {
   });
 });
 
+describe('statement quotes', () => {
+  const statementOf = (quote: string) => {
+    const model = composeDocument(
+      snapshotFixture('template-replica', (raw) => {
+        const reports = raw['reports'] as Record<string, unknown>[];
+        reports[1] = {
+          ...reports[1],
+          statements: [{ speakerGenitive: 'pana Testa', quote }],
+        };
+      }),
+    );
+    const line = allBlocks(model).find((b) => b.kind === 'reportLine' && b.label.includes('Testa'));
+    return line?.kind === 'reportLine' ? line.runs.map((r) => r.text).join('') : '';
+  };
+
+  it.each([
+    ['Super seminář', ' „Super seminář“'],
+    ['"Super seminář"', ' „Super seminář“'],
+    ['„Super seminář“', ' „Super seminář“'],
+    ['Hrál jsem "Hamleta" a bavilo mě to', ' „Hrál jsem ‚Hamleta‘ a\u00A0bavilo mě to“'],
+    ['"Hamlet" byl skvělý', ' „‚Hamlet‘ byl skvělý“'],
+    ['"Hamlet" a "Othello"', ' „‚Hamlet‘ a\u00A0‚Othello‘“'],
+    ['Viz ssps.cz/', ' „Viz ssps.cz/“'],
+  ])('%j → %j', (quote, expected) => {
+    expect(statementOf(quote)).toBe(expected);
+  });
+});
+
 describe('report eligibility', () => {
   it('leaves out reports of events that have not ended before the meeting', () => {
     const model = composeDocument(
