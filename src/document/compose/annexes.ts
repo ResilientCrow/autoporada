@@ -15,6 +15,7 @@ export function annex1Intro(ctx: ComposeContext): Block[] {
     ...spacer(2),
     { kind: 'annexTitle', text: finalText(heading) },
     ...richBlocks(intro, ctx.tokens),
+    ...spacer(),
   ];
 }
 
