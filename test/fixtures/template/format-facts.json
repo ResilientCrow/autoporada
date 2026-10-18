@@ -1,0 +1,127 @@
+{
+  "source": "porada vedení 12. 10. 2026.docx (blank template from the headmaster)",
+  "templateSha256": "9c082b1215cf0913532c25195dcbfdca7eb805e65fa7fb27f8d5b03f58ab5d8f",
+  "facts": {
+    "page": {
+      "width": 11906,
+      "height": 16838,
+      "margins": {
+        "top": 720,
+        "right": 720,
+        "bottom": 720,
+        "left": 720,
+        "header": 0,
+        "footer": 113
+      }
+    },
+    "annexColumns": {
+      "count": 2,
+      "space": 708
+    },
+    "normal": {
+      "font": "Times New Roman",
+      "size": 24,
+      "alignment": "both",
+      "spacingBefore": 0,
+      "spacingAfter": 0
+    },
+    "heading": {
+      "left": 527,
+      "hanging": 357,
+      "bold": true,
+      "keepNext": true
+    },
+    "numbering": {
+      "points": {
+        "format": "decimal",
+        "text": "%1).",
+        "font": null,
+        "left": 720,
+        "hanging": 360,
+        "bold": false,
+        "italic": false
+      },
+      "bullet": {
+        "format": "bullet",
+        "text": "\uF0B7",
+        "font": "Symbol",
+        "left": 720,
+        "hanging": 360,
+        "bold": false,
+        "italic": false
+      },
+      "rich": [
+        {
+          "format": "bullet",
+          "text": "o",
+          "font": "Courier New",
+          "left": 1068,
+          "hanging": 360,
+          "bold": true,
+          "italic": false
+        },
+        {
+          "format": "bullet",
+          "text": "o",
+          "font": "Courier New",
+          "left": 1788,
+          "hanging": 360,
+          "bold": false,
+          "italic": false
+        },
+        {
+          "format": "bullet",
+          "text": "\uF0A7",
+          "font": "Wingdings",
+          "left": 2345,
+          "hanging": 360,
+          "bold": false,
+          "italic": false
+        }
+      ],
+      "dash": {
+        "format": "bullet",
+        "text": "-",
+        "font": "Times New Roman",
+        "left": 1065,
+        "hanging": 360,
+        "bold": true,
+        "italic": true
+      },
+      "partners": {
+        "format": "bullet",
+        "text": "o",
+        "font": "Courier New",
+        "left": 1068,
+        "hanging": 360,
+        "bold": true,
+        "italic": false
+      }
+    },
+    "footer": {
+      "alignment": "center",
+      "tokens": ["Stránka ", "*{PAGE}", " z ", "*{NUMPAGES}"]
+    },
+    "table": {
+      "width": 4360,
+      "grid": [3399, 961],
+      "layout": "fixed",
+      "alignment": "center",
+      "cellMargins": {
+        "top": 0,
+        "bottom": 0,
+        "left": 108,
+        "right": 108
+      },
+      "border": {
+        "style": "single",
+        "size": 4,
+        "color": "000000"
+      },
+      "font": "Aptos Narrow",
+      "size": 22,
+      "headerHeight": 315,
+      "rowHeight": 300
+    }
+  }
+}

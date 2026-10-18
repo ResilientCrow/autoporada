@@ -28,12 +28,14 @@
         "name": "next"
       }
     ],
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",
     "src",
     "test",
+    "scripts",
     "*.ts",
     "*.mts",
     ".next/types/**/*.ts",

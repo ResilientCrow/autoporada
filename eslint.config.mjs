@@ -99,6 +99,11 @@ export default defineConfig([
     },
   },
   {
+    // Command-line scripts report to the terminal.
+    files: ['scripts/**'],
+    rules: { 'no-console': 'off' },
+  },
+  {
     // Table-driven tests are long by nature.
     files: ['**/*.test.{ts,tsx}', 'test/**'],
     rules: { 'max-lines': 'off' },

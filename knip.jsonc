@@ -5,9 +5,10 @@
   // unused. Dead files and dead internal code are still reported.
   "entry": [
     "scripts/*.mjs",
+    "scripts/*.ts",
     "src/domain/*/index.ts",
     "src/snapshot/index.ts",
     "src/document/index.ts",
   ],
-  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.mjs"],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{mjs,ts}", "test/**/*.ts"],
 }
