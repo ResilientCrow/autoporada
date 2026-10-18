@@ -68,9 +68,14 @@ Tick each box after checking it in Word.
       after titles ("Mgr. Jana") and after initials ("O. Novák"). Quotes are
       always Czech „…“: the template's partners line used “…”. A spaced hyphen
       becomes an en dash.
-- [ ] **Times.** Bullets use "10:00–11:00"; prose uses "od 10.00 do 12.00
-      hodin". Both styles appear in the template. Bullets for multi-day items
-      show the dates only ("27.–29. 10. 2026"), no times.
+- [x] **Agenda bullets (points 1, 2 and "Další doposud známé akce").** In the
+      headmaster's format, confirmed at the checkpoint: "pondělí 12. října
+      2026, 8:00 až 12:00, areál Smíchov, učebna S8, popis – organizují
+      pánové Jakub Svoboda a Martin Král (oba 2.GB)". Every part after the
+      date is optional. Multi-day items read "20. až 22. října 2026, …"
+      without times.
+- [ ] **Times in prose.** Report paragraphs use "od 10.00 do 12.00 hodin", as
+      in the template.
 - [ ] **Point 4.** The students follow the label on the same line: "Tomáš
       Černý (1.A), Eva Malá (2.B)". Students new since the last issue are bold.
 - [ ] **Statement lines.** "- vyjádření pana … (1.A):" is bold italic as a
