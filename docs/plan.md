@@ -93,13 +93,16 @@ These versions were checked on the web on 2026-10-18.
 
 ```
 src/
-  domain/        pure TS, no framework imports
+  domain/        pure TS, no framework imports (dependency order top to bottom)
+    time/          CalDate, WallTime, Prague zone conversion (Intl only)
+    actor/         Role, Actor, role ranking
     cs/            Czech dates, typography, 2nd case, people lists, opening sentence, class sort
-    calendar/      targetMonday, deadline, phase, routeFuture
+    calendar/      targetMonday, deadline, phase, routeFutureItem
     review/        state machines (points, future items, issues, access requests)
-    policy/        can(actor, action, resource), deny-by-default
+    policy/        can(actor, check), deny-by-default; step-up list
     richtext/      pure-TS validator (Zod wrapper lives in contracts/)
-    registry/      isNew, carry-over planner, retention plan
+    registry/      isNewInIssue, entriesAsOf, carry-over planner
+    retention/     what the school-year purge may delete; audit cutoff
   snapshot/      IssueSnapshot v1 Zod contract: the only input to the document engine
   document/      deep module: compose(snapshot) → DocumentModel → renderHtml / renderDocx
     model/ compose/ render-html/ render-docx/{styles,numbering,blocks,table}.ts
@@ -173,7 +176,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 
 **Step-up re-auth**
 - `prompt=login`, with `auth_time` no older than 10 min.
-- Required only for role and user changes and for "Nový školní rok". Elsewhere, destructive actions get confirmation dialogs (typed confirmation where it matters).
+- Required only for role and user changes (`users.manage`) and for "Nový školní rok". Approving an access request does not need it: it only grants the submitter role, and every submission is still reviewed. Elsewhere, destructive actions get confirmation dialogs (typed confirmation where it matters).
 - Day-to-day MFA comes from the school's Conditional Access.
 
 **Authorization**
@@ -319,7 +322,7 @@ Each renderer handles every block type exhaustively (a `switch` on `never`), so 
 
 | Item | Window | Goes to |
 |---|---|---|
-| jednání | starts in [M, M+7] | point 1 |
+| jednání | overlaps [M, M+7] | point 1 |
 | akce | overlaps [M, M+14] | point 2 |
 | akce | starts after M+14 | last PROVOZ point, "Další doposud známé akce školy" |
 
