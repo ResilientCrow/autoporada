@@ -69,11 +69,13 @@ Tick each box after checking it in Word.
       always Czech „…“: the template's partners line used “…”. A spaced hyphen
       becomes an en dash.
 - [x] **Agenda bullets (points 1, 2 and "Další doposud známé akce").** In the
-      headmaster's format, confirmed at the checkpoint: "pondělí 12. října
-      2026, 8:00 až 12:00, areál Smíchov, učebna S8, popis – organizují
-      pánové Jakub Svoboda a Martin Král (oba 2.GB)". Every part after the
-      date is optional. Multi-day items read "20. až 22. října 2026, …"
-      without times.
+      headmaster's format, confirmed at the checkpoint: "úterý 13. října 2026,
+      7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za
+      Next Zone Event Space koordinuje absolvent pan Jan Absolon". Every part
+      after the date is optional and separated by a comma. The responsible
+      part has a verb (organizuje / koordinuje / zajišťuje / vede, agreeing in
+      number), an optional "za …" and people with an optional role. Multi-day
+      items read "20. až 22. října 2026, …" without times.
 - [ ] **Times in prose.** Report paragraphs use "od 10.00 do 12.00 hodin", as
       in the template.
 - [ ] **Point 4.** The students follow the label on the same line: "Tomáš

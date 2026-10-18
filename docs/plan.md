@@ -39,7 +39,7 @@ This plan comes from six interview rounds and a 9-agent design workflow:
 | Access | Anyone in the tenant can sign in. Only allow-listed users can submit; everyone else gets "Požádat o přístup", and the headmaster approves the request and sets the student/staff flag. |
 | Roles | `pending` → `submitter` → `reviewer` (approve, edit, return, reject points) → `headmaster` (everything else, plus generating the document). Students can only ever be `submitter`. |
 | What submitters may add | Report points (PROVOZ), future items (jednání / akce), HOSPODAŘENÍ items, other POKYNY points. Ohlasy (media and partners) are headmaster-only. |
-| Future items | Placed in the document by date (§6). After an event, its author is prompted to write the report. Each line, in the headmaster's format (checkpoint M2): "pondělí 12. října 2026, 8:00 až 12:00, areál Smíchov, učebna S8, celoškolní piškvorkový turnaj – organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)". Every part after the date is optional; multi-day items read "20. až 22. října 2026, …" without times. Future items carry organisers. |
+| Future items | Placed in the document by date (§6). After an event, its author is prompted to write the report. Each line, in the headmaster's format (checkpoint M2): "úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon". Every part after the date is optional; multi-day items read "20. až 22. října 2026, …" without times. The responsible part has a verb (organizuje / koordinuje / zajišťuje / vede), an optional "za …" and people with an optional role. |
 | Standing POKYNY | Carried over from the previous issue. Edited in a restricted rich-text editor (3 indent levels: o / o / ■). Each item is standing or one-time and can be reordered. |
 | Report point form | Structured fields (title, date, from–to, areál, room, organisers) produce a pre-written opening sentence in the house style, which the submitter can edit freely. Point types are defined by admins, each with default labelled bullets. A participant list and at least one vyjádření are mandatory. No photos. |
 | Names | A person is title (pan / paní / slečna) + name + class/role. Lists group people by title with plural forms. The 2nd case is suggested and can be corrected. The picker searches the M365 directory; title, class and 2nd case are remembered locally. |
@@ -393,7 +393,7 @@ The DOCX can be downloaded immediately.
 | `typographize(runs)` | Quotes, dashes, NBSP; idempotent across run boundaries. URLs, e-mails and class codes untouched. |
 | `compareClass` / `compareStudents` | Year, then programme, then letter (L1B sits among the first years; programme rank is configurable), then surname with `Intl.Collator('cs')`; an ICU guard test checks that ch sorts after h. |
 
-Time style: "8:00 až 12:00" in agenda bullets, "od 10.00 do 12.00 hodin" in prose.
+Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda bullets, "od 10.00 do 12.00 hodin" in prose.
 
 ## 8. Screens & UX (Czech, formal "vy", WCAG 2.2 AA, mobile-first for students)
 
