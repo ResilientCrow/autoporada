@@ -93,6 +93,17 @@ describe('participant lists', () => {
   });
 });
 
+describe('people with roles', () => {
+  it('names each person on their own, role first', () => {
+    const graduate = { ...p('pan', 'Jan', 'Novák'), role: 'absolvent' };
+    const teacher = { ...p('pani', 'Jana', 'Bílá'), role: 'učitelka' };
+    expect(renderPeople([graduate], organisers)).toBe('absolvent pan Jan Novák');
+    expect(renderPeople([graduate, teacher], organisers)).toBe(
+      'absolvent pan Jan Novák a učitelka paní Jana Bílá',
+    );
+  });
+});
+
 describe('organiser phrases', () => {
   it.each([
     [

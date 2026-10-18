@@ -4,9 +4,8 @@ import { MONTH_GENITIVE, WEEKDAY_ACCUSATIVE, WEEKDAY_NOMINATIVE } from './tables
 
 const EN_DASH = '–';
 
-/** Bullets use 10:00–11:00; prose uses „od 10.00 do 12.00 hodin“ (template house style). */
-const BULLET_TIME_SEPARATOR = ':';
-const PROSE_TIME_SEPARATOR = '.';
+/** The document writes times with a dot and no leading zero: „7.00“, „14.30“. */
+const TIME_SEPARATOR = '.';
 
 const weekdayIndex = (d: CalDate) => isoWeekday(d) - 1;
 const monthGenitive = (d: CalDate) => MONTH_GENITIVE[d.month - 1] ?? '';
@@ -98,20 +97,19 @@ export function formatWindow(from: CalDate, to: CalDate): string {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-/** „10:00“ — hours without a leading zero. */
-export function formatBulletTime(t: WallTime): string {
-  return `${t.hour}${BULLET_TIME_SEPARATOR}${pad2(t.minute)}`;
+/** „7.00“, „14.30“ */
+export function formatTime(t: WallTime): string {
+  return `${t.hour}${TIME_SEPARATOR}${pad2(t.minute)}`;
 }
 
-/** „8:00 až 12:00“ or „8:00“ — agenda bullets (points 1 and 2). */
-export function formatBulletTimeRange(from: WallTime, to?: WallTime): string {
-  return to ? `${formatBulletTime(from)} až ${formatBulletTime(to)}` : formatBulletTime(from);
+/** „7.00 až 14.00 hodin“ or „8.00 hodin“ — agenda bullets (points 1 and 2). */
+export function formatAgendaTimeRange(from: WallTime, to?: WallTime): string {
+  return to ? `${formatTime(from)} až ${formatTime(to)} hodin` : `${formatTime(from)} hodin`;
 }
 
-/** „od 10.00 do 12.00 hodin“ or „od 10.00 hodin“ */
+/** „od 10.00 do 12.00 hodin“ or „od 10.00 hodin“ — report prose. */
 export function formatProseTimeRange(from: WallTime, to?: WallTime): string {
-  const prose = (t: WallTime) => `${t.hour}${PROSE_TIME_SEPARATOR}${pad2(t.minute)}`;
-  return to ? `od ${prose(from)} do ${prose(to)} hodin` : `od ${prose(from)} hodin`;
+  return to ? `od ${formatTime(from)} do ${formatTime(to)} hodin` : `od ${formatTime(from)} hodin`;
 }
 
 /** „2026/2027“ — a school year starts on 1 September. */

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
-  formatBulletTimeRange,
+  formatAgendaTimeRange,
   formatLongDate,
   formatLongRange,
   formatNumericDate,
@@ -94,9 +94,9 @@ describe('agenda windows', () => {
 });
 
 describe('times', () => {
-  it('uses colons in bullets and dots in prose, hours without leading zeros', () => {
-    expect(formatBulletTimeRange(t('10:00'), t('11:30'))).toBe('10:00 až 11:30');
-    expect(formatBulletTimeRange(t('09:05'))).toBe('9:05');
+  it('writes times with a dot and no leading zero, in bullets and prose', () => {
+    expect(formatAgendaTimeRange(t('7:00'), t('14:00'))).toBe('7.00 až 14.00 hodin');
+    expect(formatAgendaTimeRange(t('09:05'))).toBe('9.05 hodin');
     expect(formatProseTimeRange(t('10:00'), t('12:00'))).toBe('od 10.00 do 12.00 hodin');
     expect(formatProseTimeRange(t('8:30'))).toBe('od 8.30 hodin');
   });

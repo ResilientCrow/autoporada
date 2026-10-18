@@ -609,14 +609,18 @@
       "timeTo": "16:00",
       "campus": "smichov",
       "place": "učebna S206",
-      "organisers": [
-        {
-          "salutation": "pani",
-          "titlesBefore": "Mgr.",
-          "givenName": "Jana",
-          "familyName": "Nováková"
-        }
-      ]
+      "responsible": {
+        "verb": "vede",
+        "people": [
+          {
+            "salutation": "pani",
+            "titlesBefore": "Mgr.",
+            "givenName": "Jana",
+            "familyName": "Nováková",
+            "role": "třídní učitelka"
+          }
+        ]
+      }
     },
     {
       "id": "f-piskvorky",
@@ -626,20 +630,45 @@
       "timeFrom": "8:00",
       "timeTo": "12:00",
       "campus": "smichov",
-      "organisers": [
-        {
-          "salutation": "pan",
-          "givenName": "Jakub",
-          "familyName": "Svoboda",
-          "affiliation": "2.GB"
-        },
-        {
-          "salutation": "pan",
-          "givenName": "Martin",
-          "familyName": "Král",
-          "affiliation": "2.GB"
-        }
-      ]
+      "responsible": {
+        "verb": "organizuje",
+        "people": [
+          {
+            "salutation": "pan",
+            "givenName": "Jakub",
+            "familyName": "Svoboda",
+            "affiliation": "2.GB"
+          },
+          {
+            "salutation": "pan",
+            "givenName": "Martin",
+            "familyName": "Král",
+            "affiliation": "2.GB"
+          }
+        ]
+      }
+    },
+    {
+      "id": "f-vaib",
+      "kind": "akce",
+      "title": "akce Vaib",
+      "date": "2026-10-13",
+      "timeFrom": "7:00",
+      "timeTo": "14:00",
+      "campus": "smichov",
+      "place": "Next Zone Event Space",
+      "responsible": {
+        "verb": "koordinuje",
+        "behalfOf": "Next Zone Event Space",
+        "people": [
+          {
+            "salutation": "pan",
+            "givenName": "Jan",
+            "familyName": "Absolon",
+            "role": "absolvent"
+          }
+        ]
+      }
     },
     {
       "id": "f-dod",
@@ -654,14 +683,17 @@
       "title": "exkurze 2.B do CERNu",
       "date": "2026-10-20",
       "endDate": "2026-10-22",
-      "organisers": [
-        {
-          "salutation": "pan",
-          "titlesBefore": "Mgr.",
-          "givenName": "Petr",
-          "familyName": "Dvořák"
-        }
-      ]
+      "responsible": {
+        "verb": "organizuje",
+        "people": [
+          {
+            "salutation": "pan",
+            "titlesBefore": "Mgr.",
+            "givenName": "Petr",
+            "familyName": "Dvořák"
+          }
+        ]
+      }
     },
     {
       "id": "f-olymp",

@@ -1,11 +1,11 @@
 export {
-  formatBulletTime,
-  formatBulletTimeRange,
+  formatAgendaTimeRange,
   formatLongDate,
   formatLongRange,
   formatNumericDate,
   formatNumericRange,
   formatProseTimeRange,
+  formatTime,
   formatTitleDate,
   formatWeekdayNumeric,
   formatWindow,
@@ -30,10 +30,11 @@ export {
 export { renderPeople, renderPerson, type ListOptions, type Person } from './people/list';
 export {
   openingSentence,
-  organiserPresentVerb,
+  responsibleVerb,
   organiserVerb,
   roomLocative,
   type Campus,
   type OpeningInput,
+  type ResponsibleVerb,
   type TitleGender,
 } from './sentence/opening';

@@ -2,8 +2,10 @@ import { formatName, SALUTATION, type PersonName, type Salutation } from '../nam
 import { compareStudents, parseClass } from '../sort/class-code';
 
 export interface Person extends PersonName {
-  /** Class („1.A“) or role („učitelka fyziky“), shown in parentheses. */
+  /** Class („1.A“) or job („učitelka fyziky“), shown in parentheses. */
   readonly affiliation?: string;
+  /** Written before the salutation: „absolvent pan Jan Novák“. */
+  readonly role?: string;
 }
 
 export interface ListOptions {
@@ -60,6 +62,21 @@ export function renderPeople(people: readonly Person[], options: ListOptions): s
   if (people.length === 0) return '';
   const shared = options.compress && people.length >= 2 ? sharedClass(people) : undefined;
   const groupOrder = completeGroupOrder(options.groupOrder);
+
+  // With roles, everyone is named on their own: „absolvent pan X a učitelka paní Y“.
+  if (people.some((p) => p.role?.trim())) {
+    const ordered =
+      options.order === 'class-surname'
+        ? [...people].sort((a, b) => compareStudents(a, b))
+        : people;
+    const items = ordered.map((p) =>
+      [p.role?.trim(), SALUTATION[p.salutation].label, renderPerson(p, shared === undefined)]
+        .filter(Boolean)
+        .join(' '),
+    );
+    const text = joinItems(items, options.join);
+    return shared ? `${text} (${togetherWord(people)}\u00A0${shared})` : text;
+  }
 
   const items: string[] = [];
   for (const salutation of groupOrder) {

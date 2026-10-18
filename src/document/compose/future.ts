@@ -1,11 +1,11 @@
 import { routeFutureItem } from '@/domain/calendar';
 import {
   csCollator,
-  formatBulletTimeRange,
+  formatAgendaTimeRange,
   formatLongRange,
   formatTitleDate,
-  organiserPresentVerb,
   renderPeople,
+  responsibleVerb,
   type Salutation,
 } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
@@ -53,11 +53,29 @@ export function routeFuture(items: readonly SnapshotFutureItem[], monday: CalDat
   };
 }
 
+/** „za Next Zone Event Space koordinuje absolvent pan Jan Novák“, or nothing. */
+function responsiblePart(
+  item: SnapshotFutureItem,
+  groupOrder?: readonly Salutation[],
+): string | undefined {
+  const r = item.responsible;
+  if (!r) return undefined;
+  const people = renderPeople(r.people, {
+    join: 'and',
+    order: 'input',
+    compress: true,
+    ...(groupOrder && { groupOrder }),
+  });
+  return [r.behalfOf && `za ${r.behalfOf}`, responsibleVerb(r.verb, r.people.length), people]
+    .filter(Boolean)
+    .join(' ');
+}
+
 /**
  * The headmaster's agenda format, every part after the date optional:
- * „pondělí 12. října 2026, 8:00 až 12:00, areál Smíchov, učebna S8,
- * celoškolní piškvorkový turnaj – organizují pánové Jakub Svoboda a Martin
- * Král (oba 2.GB)“. Multi-day items: „20. až 22. října 2026, …“, no times.
+ * „úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event
+ * Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan
+ * Novák“. Multi-day items: „20. až 22. října 2026, …“, no times.
  */
 export function futureBullet(item: SnapshotFutureItem, groupOrder?: readonly Salutation[]): Block {
   const start = parseIsoDate(item.date);
@@ -65,7 +83,7 @@ export function futureBullet(item: SnapshotFutureItem, groupOrder?: readonly Sal
   const multiDay = end !== undefined && compareDates(start, end) < 0;
   const time =
     !multiDay && item.timeFrom
-      ? formatBulletTimeRange(
+      ? formatAgendaTimeRange(
           parseWallTime(item.timeFrom),
           item.timeTo ? parseWallTime(item.timeTo) : undefined,
         )
@@ -76,18 +94,7 @@ export function futureBullet(item: SnapshotFutureItem, groupOrder?: readonly Sal
     item.campus && CAMPUS_LABEL[item.campus],
     item.place,
     item.title,
+    responsiblePart(item, groupOrder),
   ];
-  const organisers =
-    item.organisers.length > 0
-      ? ` – ${organiserPresentVerb(item.organisers)} ${renderPeople(item.organisers, {
-          join: 'and',
-          order: 'input',
-          compress: true,
-          ...(groupOrder && { groupOrder }),
-        })}`
-      : '';
-  return {
-    kind: 'bullet',
-    runs: [{ text: finalText(`${parts.filter(Boolean).join(', ')}${organisers}`) }],
-  };
+  return { kind: 'bullet', runs: [{ text: finalText(parts.filter(Boolean).join(', ')) }] };
 }

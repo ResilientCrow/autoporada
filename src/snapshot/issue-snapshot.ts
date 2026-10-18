@@ -118,8 +118,15 @@ const futureItem = z.strictObject({
   ...dated,
   campus: campus.optional(),
   place: text.optional(),
-  /** „– organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)“ */
-  organisers: z.array(person).default([]),
+  /** „za Next Zone Event Space koordinuje absolvent pan Jan Novák“ */
+  responsible: z
+    .strictObject({
+      verb: z.enum(['organizuje', 'koordinuje', 'zajišťuje', 'vede']),
+      /** „za …“: the organisation the people act for. */
+      behalfOf: title.optional(),
+      people: z.array(person.extend({ role: text.optional() })).min(1),
+    })
+    .optional(),
 });
 
 const registryList = z.strictObject({
