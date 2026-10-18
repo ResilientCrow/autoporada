@@ -63,7 +63,6 @@ function responsiblePart(
   const people = renderPeople(r.people, {
     join: 'and',
     order: 'input',
-    compress: true,
     ...(groupOrder && { groupOrder }),
   });
   return [r.behalfOf && `za ${r.behalfOf}`, responsibleVerb(r.verb, r.people.length), people]

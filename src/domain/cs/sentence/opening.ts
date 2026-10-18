@@ -102,6 +102,6 @@ export function openingSentence(input: OpeningInput): string {
   const main = [when, time, where, PAST_TENSE[gender], what].filter(Boolean).join(' ');
 
   if (input.organisers.length === 0) return `${main}.`;
-  const people = renderPeople(input.organisers, { join: 'and', order: 'input', compress: true });
+  const people = renderPeople(input.organisers, { join: 'and', order: 'input' });
   return `${main}, ${WHICH[gender]} ${organiserVerb(input.organisers)} ${people}.`;
 }

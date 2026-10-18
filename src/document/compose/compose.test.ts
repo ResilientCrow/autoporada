@@ -140,7 +140,7 @@ describe('composeDocument on the template replica', () => {
       pointContent(replica, 16).map((b) => `${b.kind}:${text(b)}`.replaceAll(NB, ' ')),
     ).toEqual([
       'body:V pátek 9. října 2026 od 10.00 do 12.00 hodin v areálu Smíchov v Laboratoři fyziky v učebně S8 proběhl Vesmírný seminář, který organizovali slečna Lucie Králová a pan Petr Dvořák (oba 3.C).',
-      'reportLine:účast studentů: slečna Eva Malá (2.B), pánové Tomáš Černý (1.A), John Doe (1.A)',
+      'reportLine:účast studentů: slečna Eva Malá (2.B), pánové Tomáš Černý, John Doe (oba 1.A)',
       'reportLine:vyjádření pana Johna Doe (1.A): „Nejvíc mě zaujala přednáška o černých dírách.“',
     ]);
   });

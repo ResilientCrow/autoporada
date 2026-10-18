@@ -60,7 +60,72 @@ describe('participant lists', () => {
       p('pan', 'Adam', 'Čermák', '1.B'),
     ];
     expect(renderPeople(boys, participants)).toBe(
-      'pánové Adam Čermák (1.B), Petr Novák (1.B), Jan Žák (2.A)',
+      `pánové Adam Čermák, Petr Novák (oba${NB}1.B), Jan Žák (2.A)`,
+    );
+  });
+
+  it('writes neighbours from one class with the class once (checkpoint M2)', () => {
+    const people = [
+      p('slecna', 'Eva', 'Malá', '2.B'),
+      p('pan', 'Tomáš', 'Černý', '1.A'),
+      p('pan', 'John', 'Doe', '1.A'),
+    ];
+    expect(renderPeople(people, participants)).toBe(
+      `slečna Eva Malá (2.B), pánové Tomáš Černý, John Doe (oba${NB}1.A)`,
+    );
+  });
+
+  it.each([
+    [
+      [
+        p('pan', 'Adam', 'A', '1.A'),
+        p('pan', 'Bořek', 'B', '1.A'),
+        p('pan', 'Cyril', 'C', '1.A'),
+        p('slecna', 'Dana', 'D', '2.B'),
+      ],
+      `slečna Dana D (2.B), pánové Adam A, Bořek B, Cyril C (všichni${NB}1.A)`,
+    ],
+    [
+      [
+        p('slecna', 'Alena', 'A', '1.A'),
+        p('slecna', 'Běla', 'B', '1.A'),
+        p('slecna', 'Cecílie', 'C', '2.B'),
+      ],
+      `slečny Alena A, Běla B (obě${NB}1.A), Cecílie C (2.B)`,
+    ],
+    [
+      [
+        p('slecna', 'Alena', 'A', '1.A'),
+        p('slecna', 'Běla', 'B', '1.A'),
+        p('slecna', 'Cecílie', 'C', '1.A'),
+        p('pan', 'Dan', 'D', '3.C'),
+      ],
+      `slečny Alena A, Běla B, Cecílie C (všechny${NB}1.A), pan Dan D (3.C)`,
+    ],
+    [
+      [
+        p('slecna', 'Eva', 'Malá', '1.A'),
+        p('pan', 'Tomáš', 'Černý', '1.A'),
+        p('pan', 'John', 'Doe', '1.A'),
+      ],
+      `slečna Eva Malá, pánové Tomáš Černý, John Doe (všichni${NB}1.A)`,
+    ],
+    [
+      [p('pani', 'Jana', 'Bílá', 'učitelka fyziky'), p('pani', 'Eva', 'Malá', 'učitelka fyziky')],
+      'paní Jana Bílá (učitelka fyziky), Eva Malá (učitelka fyziky)',
+    ],
+  ])('compresses only class runs: %#', (people, text) => {
+    expect(renderPeople(people, participants)).toBe(text);
+  });
+
+  it('compresses only neighbours in a ranked order', () => {
+    const podium = [
+      p('pan', 'Adam', 'A', '1.A'),
+      p('pan', 'Bořek', 'B', '2.B'),
+      p('pan', 'Cyril', 'C', '1.A'),
+    ];
+    expect(renderPeople(podium, { join: 'comma', order: 'input' })).toBe(
+      'pánové Adam A (1.A), Bořek B (2.B), Cyril C (1.A)',
     );
   });
 
