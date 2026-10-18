@@ -23,7 +23,7 @@
         <w:t xml:space="preserve">Přítomni:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"> &lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl</w:t>
+        <w:t xml:space="preserve"> &lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ }</w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -35,7 +35,7 @@
         <w:t xml:space="preserve">Hosté:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"> &lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl DlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezer</w:t>
+        <w:t xml:space="preserve"> &lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } DlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezer</w:t>
       </w:r>
     </w:p>
     <w:p/>
@@ -75,7 +75,7 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">pondělí 12. 10. 2026, 10:00–11:00 – &lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl (ředitelna, Preslova)</w:t>
+        <w:t xml:space="preserve">pondělí 12. 10. 2026, 10:00–11:00 – &lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } (ředitelna, Preslova)</w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -353,7 +353,7 @@
           <w:i/>
           <w:iCs/>
         </w:rPr>
-        <w:t xml:space="preserve">&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl</w:t>
+        <w:t xml:space="preserve">&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ }</w:t>
       </w:r>
     </w:p>
     <w:p/>
@@ -638,7 +638,7 @@
         <w:ind w:left="527" w:hanging="357"/>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl</w:t>
+        <w:t xml:space="preserve">&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ }</w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -680,7 +680,7 @@
         <w:t xml:space="preserve">- vyjádření pana &lt;b&gt;Nikoho&lt;/b&gt;:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"> „&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl“</w:t>
+        <w:t xml:space="preserve"> „&lt;script&gt;alert(„x“)&lt;/script&gt; &amp; ]]&gt; { PAGE } { HYPERLINK „https://evil.example“ }“</w:t>
       </w:r>
     </w:p>
     <w:p/>

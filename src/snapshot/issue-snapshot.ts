@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-import { assertMonday } from '@/domain/calendar';
-import { parseRichDoc, type RichProfile } from '@/domain/richtext';
-import { addDays, compareDates, parseIsoDate, parseWallTime } from '@/domain/time';
+import { hasForbiddenCharacters, parseRichDoc, type RichProfile } from '@/domain/richtext';
+import { parseIsoDate, parseWallTime } from '@/domain/time';
+
+import { checkDates, checkIssueWeek, checkItems, checkRegistry } from './checks';
 
 /**
  * IssueSnapshot v1: everything the document engine needs to render one issue,
@@ -29,14 +30,22 @@ const wallTime = z.string().refine((s) => {
   }
 }, 'must be a time H:MM');
 
-/** Single-line text: XML 1.0 cannot carry control characters, and no field here spans lines. */
-const UNSAFE =
-  /[\u0000-\u001F\u007F-\u009F\u2028\u2029\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+/** Plain fields are single-line and bounded; rich text has its own 64 KB limit. */
+const MAX_TEXT = 10_000;
+const MAX_TITLE = 300;
 const text = z
   .string()
   .trim()
-  .refine((s) => !UNSAFE.test(s), 'contains control characters');
+  .max(MAX_TEXT)
+  .refine(
+    (s) => !hasForbiddenCharacters(s, { allowTab: false }),
+    'contains control or direction characters',
+  );
 const required = text.refine((s) => s.length > 0, 'must not be empty');
+const title = required.refine(
+  (s) => s.length <= MAX_TITLE,
+  `must be at most ${MAX_TITLE} characters`,
+);
 
 const richDoc = (profile: RichProfile) =>
   z.unknown().transform((value, ctx) => {
@@ -67,7 +76,7 @@ const statement = z.strictObject({
 const slot = z.enum(['meetings', 'events', 'talent', 'exemptions', 'media', 'partners']);
 
 const item = z.strictObject({
-  title: text,
+  title,
   slot: slot.nullable(),
   body: richDoc('outline'),
   /** Only for the „partners“ slot: „o vyjádření pana …: „…““. */
@@ -93,7 +102,7 @@ const dated = {
 
 const report = z.strictObject({
   id: required,
-  title: required,
+  title,
   ...dated,
   body: richDoc('paragraphs'),
   bullets: z.array(bullet),
@@ -105,7 +114,7 @@ const campus = z.enum(['smichov', 'radlice', 'na-vidouli', 'jinde']);
 const futureItem = z.strictObject({
   id: required,
   kind: z.enum(['jednani', 'akce']),
-  title: required,
+  title,
   ...dated,
   campus: campus.optional(),
   place: text.optional(),
@@ -115,7 +124,7 @@ const registryList = z.strictObject({
   key: required,
   purpose: z.enum(['annex1', 'point4']),
   /** Point 4: „seznam studentů uvolněných z Anglického jazyka na základě získaných certifikátů“ */
-  docLabel: required,
+  docLabel: title,
   entries: z.array(
     z.strictObject({
       givenName: text,
@@ -144,40 +153,16 @@ export const issueSnapshotSchema = z
     reports: z.array(report),
     futureItems: z.array(futureItem),
     registry: z.array(registryList),
-    annex1: z.strictObject({ heading: required, intro: richDoc('paragraphs') }),
+    annex1: z.strictObject({ heading: title, intro: richDoc('paragraphs') }),
     annex2: richDoc('outline').nullable(),
     options: z.strictObject({ groupOrder: z.array(salutation).optional() }).default({}),
   })
   .superRefine((s, ctx) => {
-    const monday = parseIsoDate(s.issue.monday);
-    try {
-      assertMonday(monday);
-    } catch {
-      ctx.addIssue({ code: 'custom', path: ['issue', 'monday'], message: 'must be a Monday' });
-      return;
-    }
-    const meeting = parseIsoDate(s.issue.meetingDate);
-    if (compareDates(meeting, monday) < 0 || compareDates(meeting, addDays(monday, 6)) > 0) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['issue', 'meetingDate'],
-        message: 'must be in the week of the Monday',
-      });
-    }
-    for (const [list, entries] of [
-      ['reports', s.reports],
-      ['futureItems', s.futureItems],
-    ] as const) {
-      entries.forEach((r, i) => {
-        if (r.endDate && compareDates(parseIsoDate(r.endDate), parseIsoDate(r.date)) < 0) {
-          ctx.addIssue({
-            code: 'custom',
-            path: [list, i, 'endDate'],
-            message: 'ends before it starts',
-          });
-        }
-      });
-    }
+    checkIssueWeek(s.issue, ctx);
+    checkDates('reports', s.reports, ctx);
+    checkDates('futureItems', s.futureItems, ctx);
+    checkItems(s.pokyny, s.hospodareni, ctx);
+    checkRegistry(s.registry, ctx);
   });
 
 export type IssueSnapshot = z.output<typeof issueSnapshotSchema>;

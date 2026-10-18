@@ -113,7 +113,7 @@ export const VARIANTS: Readonly<Record<string, () => IssueSnapshot>> = {
   'escape-hell': () =>
     snapshotFixture('template-replica', (raw) => {
       const hostile =
-        '<script>alert("x")</script> & ]]> { PAGE } { HYPERLINK "https://evil.example" } \u202Ertl';
+        '<script>alert("x")</script> & ]]> { PAGE } { HYPERLINK "https://evil.example" }';
       raw['presentText'] = hostile;
       raw['guestsText'] = `${hostile} ${'Dlouhéslovobezmezer'.repeat(12)}`;
       const reports = list(raw, 'reports');

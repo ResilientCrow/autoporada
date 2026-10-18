@@ -20,12 +20,12 @@
         {
           "kind": "label",
           "label": "Přítomni:",
-          "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl"
+          "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ }"
         },
         {
           "kind": "label",
           "label": "Hosté:",
-          "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl DlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezer"
+          "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } DlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezerDlouhéslovobezmezer"
         },
         {
           "kind": "spacer"
@@ -52,7 +52,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "pondělí 12. 10. 2026, 10:00–11:00 – <script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl (ředitelna, Preslova)"
+              "text": "pondělí 12. 10. 2026, 10:00–11:00 – <script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } (ředitelna, Preslova)"
             }
           ]
         },
@@ -203,7 +203,7 @@
           "level": 0,
           "runs": [
             {
-              "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl",
+              "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ }",
               "bold": true,
               "italic": true
             }
@@ -361,7 +361,7 @@
         {
           "kind": "point",
           "number": 15,
-          "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl"
+          "text": "<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ }"
         },
         {
           "kind": "body",
@@ -385,7 +385,7 @@
           "label": "vyjádření pana <b>Nikoho</b>:",
           "runs": [
             {
-              "text": " „<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ } ‮rtl“"
+              "text": " „<script>alert(„x“)</script> & ]]> { PAGE } { HYPERLINK „https://evil.example“ }“"
             }
           ]
         },

@@ -13,4 +13,5 @@ export {
   type RichText,
   type Run,
 } from './rich-doc';
+export { hasForbiddenCharacters } from './characters';
 export { parseRichDoc, type ParseResult } from './validate';

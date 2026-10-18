@@ -59,13 +59,13 @@ describe('IssueSnapshot v1', () => {
       'a control character',
       ['presentText'],
       'Mgr. Novák\u0007',
-      'presentText: contains control characters',
+      'presentText: contains control or direction characters',
     ],
     [
       'a line break in a title',
       ['reports', 0, 'title'],
       'Seminář\nMatika',
-      'reports.0.title: contains control characters',
+      'reports.0.title: contains control or direction characters',
     ],
     [
       'an empty people bullet',
@@ -92,6 +92,88 @@ describe('IssueSnapshot v1', () => {
     ],
   ])('rejects %s', (_case, path, value, error) => {
     expect(errorsOf(variant(path, value))).toContainEqual(error);
+  });
+
+  it.each<[string, Path, unknown, string]>([
+    [
+      'a bidi override',
+      ['reports', 0, 'title'],
+      `Seminář ${String.fromCharCode(0x202e)}rtl`,
+      'reports.0.title: contains control or direction characters',
+    ],
+    [
+      'a tab in a single-line field',
+      ['guestsText'],
+      'Ing.\tDvořák',
+      'guestsText: contains control or direction characters',
+    ],
+    [
+      'an over-long title',
+      ['reports', 0, 'title'],
+      'x'.repeat(301),
+      'reports.0.title: must be at most 300 characters',
+    ],
+    ['an empty point title', ['pokyny', 4, 'title'], '  ', 'pokyny.4.title: must not be empty'],
+    [
+      'a school year that is not two consecutive years',
+      ['issue', 'schoolYear'],
+      '2026/2028',
+      'issue.schoolYear: must be two consecutive years',
+    ],
+    [
+      'an end time without a start',
+      ['futureItems', 0, 'timeFrom'],
+      undefined,
+      'futureItems.0.timeTo: needs a start time',
+    ],
+    [
+      'a time range running backwards',
+      ['futureItems', 0, 'timeTo'],
+      '9:00',
+      'futureItems.0.timeTo: must be after the start time',
+    ],
+    [
+      'a system slot appearing twice',
+      ['pokyny', 1, 'slot'],
+      'meetings',
+      'pokyny.1.slot: slot meetings appears twice',
+    ],
+    [
+      'a missing agenda slot',
+      ['pokyny', 1, 'slot'],
+      'talent',
+      'pokyny: the events slot is missing',
+    ],
+    [
+      'quotes outside the partners slot',
+      ['pokyny', 4, 'quotes'],
+      [{ speakerGenitive: 'pana X', quote: 'Y' }],
+      'pokyny.4.quotes: only the partners slot has quotes',
+    ],
+    [
+      'a body on a generated slot',
+      ['pokyny', 0, 'body'],
+      { type: 'doc', content: [{ type: 'paragraph' }] },
+      'pokyny.0.body: the meetings slot has no body',
+    ],
+    [
+      'a slot in HOSPODAŘENÍ',
+      ['hospodareni', 0, 'slot'],
+      'media',
+      'hospodareni.0.slot: HOSPODAŘENÍ items have no slot',
+    ],
+    [
+      'a second Příloha 1 list',
+      ['registry', 1, 'purpose'],
+      'annex1',
+      'registry.1.purpose: only one Příloha 1 list',
+    ],
+  ])('rejects %s', (_case, path, value, error) => {
+    expect(errorsOf(variant(path, value))).toContainEqual(error);
+  });
+
+  it('accepts an end time on a multi-day item, and times on reports', () => {
+    expect(errorsOf(variant(['futureItems', 3, 'timeFrom'], '18:00'))).toEqual([]);
   });
 
   it('rejects a future schema version', () => {

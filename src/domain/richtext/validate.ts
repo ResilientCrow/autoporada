@@ -1,3 +1,4 @@
+import { hasForbiddenCharacters } from './characters';
 import {
   LIMITS,
   type Indent,
@@ -13,14 +14,6 @@ export type ParseResult =
   | { readonly ok: false; readonly errors: readonly string[] };
 
 const MARKS: ReadonlySet<string> = new Set<Mark>(['bold', 'italic']);
-/**
- * C0 and C1 control characters except tab, the Unicode line and paragraph
- * separators, and the noncharacters U+FFFE/U+FFFF. Paragraphs are separate
- * nodes, so no character may break a line inside one.
- */
-const CONTROL = /[\u0000-\u0008\u000A-\u001F\u007F-\u009F\u2028\u2029\uFFFE\uFFFF]/;
-const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
-
 /** Records a problem; returns undefined so callers can `return fail(…)`. */
 function fail(errors: string[], message: string): undefined {
   errors.push(message);
@@ -61,7 +54,7 @@ function parseText(node: unknown, path: string, errors: string[]): RichText | un
   const text = node['text'];
   if (typeof text !== 'string' || text === '')
     return fail(errors, `${path}: text must be a non-empty string`);
-  if (CONTROL.test(text) || LONE_SURROGATE.test(text))
+  if (hasForbiddenCharacters(text, { allowTab: true }))
     errors.push(`${path}: text contains control characters`);
 
   const rawMarks = node['marks'] ?? [];
