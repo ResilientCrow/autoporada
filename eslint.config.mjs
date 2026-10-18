@@ -3,6 +3,32 @@ import nextTs from 'eslint-config-next/typescript';
 import prettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
+const ENV_MESSAGE = 'Read configuration through src/infra/config (ADR 0004).';
+const COPY_MESSAGE = 'User-facing text comes from the cs copy catalogue (src/ui/copy).';
+
+/** `globalThis.process.env` — the one form no-restricted-properties cannot see. */
+const GLOBAL_ENV = {
+  selector: "MemberExpression[object.property.name='process'][property.name='env']",
+  message: ENV_MESSAGE,
+};
+
+/** Attributes that screen readers or users see: their text must come from the catalogue. */
+const TEXT_ATTRIBUTES =
+  '/^(aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|alt|title|placeholder|label)$/';
+const UI_COPY_SYNTAX = [
+  { selector: `JSXAttribute[name.name=${TEXT_ATTRIBUTES}] > Literal`, message: COPY_MESSAGE },
+  {
+    selector: `JSXAttribute[name.name=${TEXT_ATTRIBUTES}] > JSXExpressionContainer > :matches(Literal, TemplateLiteral)`,
+    message: COPY_MESSAGE,
+  },
+  {
+    // {ok ? 'Uloženo' : 'Chyba'} and {busy && 'Ukládám…'} in element children
+    selector:
+      'JSXElement > JSXExpressionContainer :matches(ConditionalExpression, LogicalExpression) > Literal[raw=/^[\'"]/]',
+    message: COPY_MESSAGE,
+  },
+];
+
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -36,17 +62,24 @@ export default defineConfig([
   },
   {
     // Configuration is read in exactly one place (ADR 0004).
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx,mts,cts,js,mjs}'],
     // instrumentation.ts reads only NEXT_RUNTIME, a constant Next inlines at build time.
     ignores: ['src/infra/config/**', 'src/instrumentation.ts'],
     rules: {
-      'no-restricted-syntax': [
+      'no-restricted-properties': [
+        'error',
+        { object: 'process', property: 'env', message: ENV_MESSAGE },
+      ],
+      'no-restricted-imports': [
         'error',
         {
-          selector: "MemberExpression[object.name='process'][property.name='env']",
-          message: 'Read configuration through src/infra/config (ADR 0004).',
+          paths: [
+            { name: 'process', message: ENV_MESSAGE },
+            { name: 'node:process', message: ENV_MESSAGE },
+          ],
         },
       ],
+      'no-restricted-syntax': ['error', GLOBAL_ENV],
     },
   },
   {
@@ -61,6 +94,8 @@ export default defineConfig([
           allowedStrings: ['→', '←', '·', '–', '—', '/', '|', '*', ':', '(', ')', '„', '“'],
         },
       ],
+      // Overrides the block above for these files, so it repeats GLOBAL_ENV.
+      'no-restricted-syntax': ['error', GLOBAL_ENV, ...UI_COPY_SYNTAX],
     },
   },
   {

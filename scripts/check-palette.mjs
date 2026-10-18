@@ -3,8 +3,9 @@
 //  - "Primární – Print" (#004D8C) is for print only and never appears in the app.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SRC = join(ROOT, 'src');
 const THEME_DIR = join('src', 'ui', 'theme') + sep;
 const SCANNED = /\.(ts|tsx|css|mjs)$/;
