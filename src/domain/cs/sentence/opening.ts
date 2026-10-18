@@ -1,0 +1,87 @@
+import { compareDates, type CalDate, type WallTime } from '@/domain/time';
+
+import { formatLongDate, formatLongRange, formatProseTimeRange, onWeekday } from '../dates/format';
+import { SALUTATION } from '../names/person';
+import { renderPeople, type Person } from '../people/list';
+
+/**
+ * Grammatical gender and number of an event title, chosen by an admin per
+ * point type through the verb form: proběhl / proběhla / proběhlo / proběhly.
+ */
+export type TitleGender = 'm' | 'f' | 'n' | 'pl';
+
+export type Campus = 'smichov' | 'radlice' | 'na-vidouli' | 'jinde';
+
+const PAST_TENSE: Readonly<Record<TitleGender, string>> = {
+  m: 'proběhl',
+  f: 'proběhla',
+  n: 'proběhlo',
+  pl: 'proběhly',
+};
+
+/** The relative pronoun as the object of „organizovali“ (accusative, inanimate). */
+const WHICH: Readonly<Record<TitleGender, string>> = {
+  m: 'který',
+  f: 'kterou',
+  n: 'které',
+  pl: 'které',
+};
+
+const CAMPUS: Readonly<Record<Exclude<Campus, 'jinde'>, string>> = {
+  smichov: 'v areálu Smíchov',
+  radlice: 'v areálu Radlice',
+  'na-vidouli': 'v areálu Na Vidouli',
+};
+
+/** organizoval / organizovala / organizovali / organizovaly */
+export function organiserVerb(organisers: readonly Person[]): string {
+  const women = organisers.filter((p) => SALUTATION[p.salutation].sex === 'f').length;
+  if (organisers.length === 1) return women === 1 ? 'organizovala' : 'organizoval';
+  return women === organisers.length ? 'organizovaly' : 'organizovali';
+}
+
+/** „S206“ → „v učebně S206“; anything else is used as typed. */
+export function roomLocative(room: string): string {
+  const code = room.trim();
+  return /^[A-Z]{0,2}\d{1,4}[A-Z]?$/.test(code) ? `v učebně ${code}` : code;
+}
+
+export interface OpeningInput {
+  readonly date: CalDate;
+  /** Last day of a multi-day event. */
+  readonly endDate?: CalDate;
+  readonly from?: WallTime;
+  readonly to?: WallTime;
+  readonly campus: Campus;
+  /** A locative phrase: „v učebně S206“, „v Laboratoři fyziky v učebně S8“, „na Pražském hradě“. */
+  readonly place?: string;
+  readonly title: string;
+  /** Unknown (type „Jiné“): the sentence says „proběhla akce „…““, always correct. */
+  readonly titleGender?: TitleGender;
+  readonly organisers: readonly Person[];
+}
+
+/**
+ * The pre-written first sentence of a report point, in the template's style:
+ * „Ve středu 14. října 2026 od 10.00 do 12.00 hodin v areálu Smíchov
+ * v učebně S206 proběhl Vesmírný seminář, který organizovali slečna Eva Malá
+ * a pan Jan Novák (oba 3.B).“ The submitter edits it freely afterwards.
+ */
+export function openingSentence(input: OpeningInput): string {
+  const multiDay = input.endDate && compareDates(input.date, input.endDate) < 0;
+  const when = multiDay
+    ? `Ve dnech ${formatLongRange(input.date, input.endDate ?? input.date)}`
+    : `${onWeekday(input.date, { capitalize: true })} ${formatLongDate(input.date)}`;
+  const time = input.from ? formatProseTimeRange(input.from, input.to) : '';
+  const where = [input.campus === 'jinde' ? '' : CAMPUS[input.campus], input.place?.trim() ?? '']
+    .filter(Boolean)
+    .join(' ');
+
+  const gender: TitleGender = input.titleGender ?? 'f';
+  const what = input.titleGender ? input.title.trim() : `akce „${input.title.trim()}“`;
+  const main = [when, time, where, PAST_TENSE[gender], what].filter(Boolean).join(' ');
+
+  if (input.organisers.length === 0) return `${main}.`;
+  const people = renderPeople(input.organisers, { join: 'and', order: 'input', compress: true });
+  return `${main}, ${WHICH[gender]} ${organiserVerb(input.organisers)} ${people}.`;
+}

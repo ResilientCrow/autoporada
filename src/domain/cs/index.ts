@@ -28,3 +28,11 @@ export {
   type SortableStudent,
 } from './sort/class-code';
 export { renderPeople, renderPerson, type ListOptions, type Person } from './people/list';
+export {
+  openingSentence,
+  organiserVerb,
+  roomLocative,
+  type Campus,
+  type OpeningInput,
+  type TitleGender,
+} from './sentence/opening';
