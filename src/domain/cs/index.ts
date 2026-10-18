@@ -13,3 +13,4 @@ export {
   schoolYear,
   weekdayName,
 } from './dates/format';
+export { typographize, typographizeText } from './typography/typography';
