@@ -60,6 +60,15 @@ describe('typographizeText', () => {
   });
 });
 
+describe('performance', () => {
+  it('handles a 300 KB paragraph in linear time', () => {
+    const long = 'Řekl: "v Praze je 12. října hezky" - a k tomu ještě něco. '.repeat(5000);
+    const started = performance.now();
+    ty(long);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+});
+
 describe('typographize (runs)', () => {
   it('applies rules across run boundaries and keeps run fields', () => {
     const runs = [{ text: 'je uveden v ' }, { text: 'Příloze 1', bold: true }];

@@ -46,20 +46,23 @@ const LENGTH_PRESERVING: readonly [RegExp, string][] = [
  * is read from the converted output, which makes the pass idempotent.
  */
 function czechQuotes(text: string): string {
-  let out = '';
+  // An array and a remembered last character keep this linear: reading the
+  // end of a growing string would flatten it on every character.
+  const out: string[] = [];
+  let before: string | undefined;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i] ?? '';
-    const before = out[out.length - 1];
+    let next = ch;
     if (ch === '"' || ch === '“' || ch === '”') {
-      out += before === undefined || OPENS_DOUBLE.test(before) ? '„' : '“';
+      next = before === undefined || OPENS_DOUBLE.test(before) ? '„' : '“';
     } else if (ch === "'" || ch === '‘' || ch === '’') {
       const between = LETTER.test(text[i - 1] ?? '') && LETTER.test(text[i + 1] ?? '');
-      out += between ? '’' : before === undefined || OPENS_SINGLE.test(before) ? '‚' : '‘';
-    } else {
-      out += ch;
+      next = between ? '’' : before === undefined || OPENS_SINGLE.test(before) ? '‚' : '‘';
     }
+    out.push(next);
+    before = next;
   }
-  return out;
+  return out.join('');
 }
 
 function typographizeJoined(text: string): string {
