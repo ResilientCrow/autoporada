@@ -1,11 +1,10 @@
 /**
- * Resolves raw settings from the environment. Any variable NAME may instead be
- * provided as NAME_FILE pointing to a file (Docker secrets in /run/secrets).
+ * Resolves raw settings from the environment. Each known variable NAME may
+ * instead be provided as NAME_FILE pointing to a file (Docker secrets in
+ * /run/secrets). Variables the app does not know are ignored.
  */
 export type Env = Readonly<Record<string, string | undefined>>;
 export type ReadFile = (path: string) => string;
-
-const FILE_SUFFIX = '_FILE';
 
 export class ConfigError extends Error {
   constructor(readonly problems: readonly string[]) {
@@ -14,25 +13,27 @@ export class ConfigError extends Error {
   }
 }
 
-export function readEnv(env: Env, readFile: ReadFile): Record<string, string> {
+export function readEnv(
+  env: Env,
+  readFile: ReadFile,
+  keys: readonly string[],
+): Record<string, string> {
   const values: Record<string, string> = {};
   const problems: string[] = [];
 
-  for (const [key, value] of Object.entries(env)) {
-    if (value === undefined || value === '') continue;
-    if (key.endsWith(FILE_SUFFIX)) {
-      const name = key.slice(0, -FILE_SUFFIX.length);
-      if (env[name]) {
-        problems.push(`${name} and ${key} are both set; use only one`);
-        continue;
-      }
+  for (const name of keys) {
+    const direct = env[name] || undefined;
+    const filePath = env[`${name}_FILE`] || undefined;
+    if (direct !== undefined && filePath !== undefined) {
+      problems.push(`${name} and ${name}_FILE are both set; use only one`);
+    } else if (filePath !== undefined) {
       try {
-        values[name] = readFile(value).replace(/\r?\n$/, '');
+        values[name] = readFile(filePath).replace(/\r?\n$/, '');
       } catch {
-        problems.push(`${key}: cannot read the file it points to`);
+        problems.push(`${name}_FILE: cannot read the file it points to`);
       }
-    } else if (values[key] === undefined) {
-      values[key] = value;
+    } else if (direct !== undefined) {
+      values[name] = direct;
     }
   }
 

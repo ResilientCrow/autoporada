@@ -2,6 +2,22 @@ import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 3100;
 
+/** Same values as .env.example; the server validates them at boot. */
+const E2E_ENV = {
+  APP_ENV: 'test',
+  PORT: String(PORT),
+  APP_ORIGIN: `http://localhost:${PORT}`,
+  DATABASE_URL: 'postgres://autoporada:autoporada@localhost:5432/autoporada',
+  OIDC_ISSUER: 'http://localhost:8080/ssps',
+  OIDC_TENANT_ID: '00000000-0000-0000-0000-000000000001',
+  OIDC_CLIENT_ID: 'autoporada-dev',
+  OIDC_CLIENT_SECRET: 'dev-secret',
+  MAIL_TRANSPORT: 'smtp',
+  MAIL_FROM: 'autoporada@ssps.cz',
+  SMTP_URL: 'smtp://localhost:1025',
+  GOTENBERG_URL: 'http://localhost:3001',
+};
+
 export default defineConfig({
   testDir: 'test/e2e',
   fullyParallel: true,
@@ -19,7 +35,8 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: `pnpm build && PORT=${PORT} pnpm start`,
+    command: 'pnpm build && pnpm start',
+    env: E2E_ENV,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env['CI'],
     timeout: 180_000,

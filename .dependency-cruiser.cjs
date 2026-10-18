@@ -27,7 +27,7 @@ module.exports = {
           '\\.d\\.ts$',
           '^src/app/',
           '^src/(worker|cli)/main\\.ts$',
-          '^src/proxy\\.ts$',
+          '^src/(proxy|instrumentation)\\.ts$',
           ...TESTS,
         ],
       },

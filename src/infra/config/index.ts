@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { ConfigError, readEnv, type Env, type ReadFile } from './read-env';
-import { rawConfigSchema, type LogLevel } from './schema';
+import { CONFIG_KEYS, rawConfigSchema, type LogLevel } from './schema';
 
 export { ConfigError } from './read-env';
 export type { LogLevel } from './schema';
@@ -32,7 +32,7 @@ export interface Config {
 
 /** Validates the environment. Error messages name keys, never values. */
 export function loadConfig(env: Env, readFile: ReadFile): Config {
-  const parsed = rawConfigSchema.safeParse(readEnv(env, readFile));
+  const parsed = rawConfigSchema.safeParse(readEnv(env, readFile, CONFIG_KEYS));
   if (!parsed.success) {
     throw new ConfigError(
       parsed.error.issues.map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`),
@@ -49,7 +49,7 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
       : { kind: 'secret', secret: c.OIDC_CLIENT_SECRET ?? '' };
 
   return {
-    environment: c.NODE_ENV,
+    environment: c.APP_ENV ?? 'development',
     appOrigin: c.APP_ORIGIN,
     databaseUrl: c.DATABASE_URL,
     oidc: {
@@ -70,10 +70,24 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
   };
 }
 
+/**
+ * Next.js reads the Server Actions key from process.env only, at first use.
+ * A key supplied as a Docker secret (NAME_FILE) is copied there at boot, so
+ * Next never falls back to the random key baked into the build output.
+ */
+export function publishNextRuntimeEnv(config: Config, env: Record<string, string | undefined>) {
+  if (config.serverActionsKey && !env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY']) {
+    env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY'] = config.serverActionsKey;
+  }
+}
+
 let cached: Config | undefined;
 
 /** The process configuration, validated once. Composition roots call this. */
 export function getConfig(): Config {
-  cached ??= loadConfig(process.env, (path) => readFileSync(path, 'utf8'));
+  if (!cached) {
+    cached = loadConfig(process.env, (path) => readFileSync(path, 'utf8'));
+    publishNextRuntimeEnv(cached, process.env);
+  }
   return cached;
 }

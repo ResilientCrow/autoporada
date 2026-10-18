@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigError, loadConfig } from './index';
+import { ConfigError, loadConfig, publishNextRuntimeEnv } from './index';
 
 const DEV_ENV = {
   APP_ORIGIN: 'http://localhost:3000',
@@ -18,6 +18,7 @@ const DEV_ENV = {
 const KEY_PEM = '-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----';
 const PROD_ENV = {
   ...DEV_ENV,
+  APP_ENV: 'production',
   NODE_ENV: 'production',
   APP_ORIGIN: 'https://autoporada.ssps.cz',
   OIDC_ISSUER: 'https://login.microsoftonline.com/3f2c1a4e-0000-4000-8000-000000000000/v2.0',
@@ -123,6 +124,85 @@ describe('loadConfig', () => {
     const env = { ...DEV_ENV, OIDC_CLIENT_SECRET: 'hunter2', DATABASE_URL: 'mysql://hunter2' };
     const problems = problemsOf(() => loadConfig(env, noFiles));
     expect(problems.join('\n')).not.toContain('hunter2');
+  });
+});
+
+describe('loadConfig hardening', () => {
+  const prodFiles = secretFiles({ '/run/secrets/entra_key': KEY_PEM });
+
+  it('requires APP_ENV when NODE_ENV=production (next start)', () => {
+    const problems = problemsOf(() => loadConfig({ ...DEV_ENV, NODE_ENV: 'production' }, noFiles));
+    expect(problems).toEqual([expect.stringMatching(/^APP_ENV: is required/)]);
+  });
+
+  it('treats a test deployment of a production build as non-production', () => {
+    const config = loadConfig({ ...DEV_ENV, NODE_ENV: 'production', APP_ENV: 'test' }, noFiles);
+    expect(config.environment).toBe('test');
+  });
+
+  it.each([
+    ['the multi-tenant endpoint', 'https://login.microsoftonline.com/common/v2.0'],
+    [
+      'another tenant',
+      'https://login.microsoftonline.com/11111111-1111-4111-8111-111111111111/v2.0',
+    ],
+    ['a foreign host', 'https://login.evil.example/3f2c1a4e-0000-4000-8000-000000000000/v2.0'],
+  ])('pins OIDC_ISSUER to the school tenant in production (%s)', (_case, issuer) => {
+    const problems = problemsOf(() => loadConfig({ ...PROD_ENV, OIDC_ISSUER: issuer }, prodFiles));
+    expect(problems).toEqual(['OIDC_ISSUER: must be the school tenant authority in production']);
+  });
+
+  it('allows only Microsoft Graph over https in production', () => {
+    const env = { ...PROD_ENV, GRAPH_BASE_URL: 'http://graph.evil.example/v1.0' };
+    expect(problemsOf(() => loadConfig(env, prodFiles))).toEqual([
+      'GRAPH_BASE_URL: must be https://graph.microsoft.com in production',
+    ]);
+  });
+
+  it.each(['file:///etc/passwd', 'javascript:alert(1)'])('rejects non-http URL %s', (url) => {
+    const problems = problemsOf(() => loadConfig({ ...DEV_ENV, GOTENBERG_URL: url }, noFiles));
+    expect(problems).toEqual(['GOTENBERG_URL: must be an http(s) URL']);
+  });
+
+  it.each([
+    ['base64url', 'bCY8-zSOx-8vlAxeA0Qybi5SPnxa4iM913JkdmTMjUw='],
+    ['junk around a valid key', `!!${Buffer.alloc(32, 1).toString('base64')}$$`],
+    ['16 bytes', Buffer.alloc(16, 1).toString('base64')],
+  ])('rejects a Server Actions key that Next cannot decode (%s)', (_case, key) => {
+    const env = { ...DEV_ENV, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: key };
+    expect(problemsOf(() => loadConfig(env, noFiles))).toEqual([
+      expect.stringMatching(/^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: must be 32 random bytes/),
+    ]);
+  });
+
+  it('reports a malformed origin as a ConfigError without echoing it', () => {
+    const problems = problemsOf(() =>
+      loadConfig({ ...DEV_ENV, APP_ORIGIN: 'skola.example.cz' }, noFiles),
+    );
+    expect(problems.every((p) => p.startsWith('APP_ORIGIN:'))).toBe(true);
+    expect(problems.join()).not.toContain('skola.example.cz');
+  });
+
+  it('ignores *_FILE variables that are not app settings', () => {
+    const env = { ...DEV_ENV, SSL_CERT_FILE: '/missing/ca.pem', OTHER_FILE: '/x' };
+    expect(() => loadConfig(env, noFiles)).not.toThrow();
+  });
+});
+
+describe('publishNextRuntimeEnv', () => {
+  const key = Buffer.alloc(32, 9).toString('base64');
+  const config = loadConfig({ ...DEV_ENV, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: key }, noFiles);
+
+  it('copies a key that came from a secret file into the runtime env', () => {
+    const env: Record<string, string | undefined> = {};
+    publishNextRuntimeEnv(config, env);
+    expect(env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY']).toBe(key);
+  });
+
+  it('never overrides a key that is already set', () => {
+    const env: Record<string, string | undefined> = { NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 'x' };
+    publishNextRuntimeEnv(config, env);
+    expect(env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY']).toBe('x');
   });
 });
 

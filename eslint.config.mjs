@@ -37,7 +37,8 @@ export default defineConfig([
   {
     // Configuration is read in exactly one place (ADR 0004).
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/infra/config/**'],
+    // instrumentation.ts reads only NEXT_RUNTIME, a constant Next inlines at build time.
+    ignores: ['src/infra/config/**', 'src/instrumentation.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
