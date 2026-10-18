@@ -8,6 +8,7 @@
 const npm = (...names) => `(^|/)node_modules/(${names.join('|')})/`;
 
 const TESTS = ['\\.test\\.tsx?$', '^test/'];
+const INDEX = '^src/[^/]+/[^/]+/index\\.tsx?$';
 
 module.exports = {
   forbidden: [
@@ -56,7 +57,7 @@ module.exports = {
       name: 'notify-deps',
       severity: 'error',
       from: { path: '^src/notify/' },
-      to: { pathNot: '^src/(notify|domain)/' },
+      to: { pathNot: ['^src/(notify|domain)/', npm('zod')] },
     },
     {
       name: 'document-deps',
@@ -78,14 +79,11 @@ module.exports = {
     },
     {
       name: 'application-is-framework-free',
-      comment: 'Use cases talk to the outside world only through ports.',
+      comment: 'Use cases talk to the outside world only through ports (no I/O, no Node core).',
       severity: 'error',
       from: { path: '^src/application/' },
       to: {
-        path: [
-          '^src/(infra|server|app|ui|worker|cli)/',
-          npm('next', 'react', 'drizzle-orm', 'pg', 'pg-boss', 'docx'),
-        ],
+        pathNot: ['^src/(application|domain|snapshot|document|contracts|notify)/', npm('zod')],
       },
     },
     {
@@ -101,8 +99,7 @@ module.exports = {
         pathNot: [
           '^src/infra/',
           '^src/server/container\\.ts$',
-          '^src/worker/',
-          '^src/cli/',
+          '^src/(worker|cli)/main\\.ts$',
           ...TESTS,
         ],
       },
@@ -121,7 +118,7 @@ module.exports = {
       from: { path: '^src/ui/' },
       to: {
         path: [
-          '^src/(server|infra|application|app|worker|cli|notify)/',
+          '^src/(server|infra|application|app|worker|cli|notify|snapshot)/',
           '^src/document/render-docx/',
         ],
       },
@@ -133,13 +130,56 @@ module.exports = {
       to: { path: '^src/(app|ui)/' },
     },
     {
+      name: 'jsx-only-in-react-layers',
+      comment: 'JSX compiles to an invisible react/jsx-runtime import, so ban .tsx files outright.',
+      severity: 'error',
+      from: {},
+      to: {
+        path: [
+          '^src/(domain|snapshot|contracts|notify|application|infra|server|worker|cli)/.+\\.tsx$',
+          '^src/document/.+\\.tsx$',
+        ],
+        pathNot: '^src/document/render-html/',
+      },
+    },
+    {
       name: 'cross-module-via-index',
       comment: 'Other modules are used through their index.ts only.',
       severity: 'error',
       from: { path: '^src/([^/]+)/([^/]+)/', pathNot: TESTS },
       to: {
         path: '^src/[^/]+/[^/]+/.+',
-        pathNot: ['^src/$1/$2/', '^src/[^/]+/[^/]+/index\\.tsx?$', '^src/app/'],
+        pathNot: ['^src/$1/$2/', INDEX, '^src/ui/features/[^/]+/index\\.tsx?$', '^src/app/'],
+      },
+    },
+    {
+      name: 'layer-root-files-via-index',
+      comment: 'Files directly in a layer (e.g. server/container.ts) obey the index rule too.',
+      severity: 'error',
+      from: { path: '^src/([^/]+)/[^/]+$', pathNot: TESTS },
+      to: {
+        path: '^src/[^/]+/[^/]+/.+',
+        pathNot: ['^src/$1/', INDEX, '^src/ui/features/[^/]+/index\\.tsx?$', '^src/app/'],
+      },
+    },
+    {
+      name: 'flat-layers-via-index',
+      comment: 'snapshot/, contracts/ and notify/ are one module each.',
+      severity: 'error',
+      from: { path: '^src/([^/]+)/', pathNot: TESTS },
+      to: {
+        path: '^src/(snapshot|contracts|notify)/[^/]+$',
+        pathNot: ['^src/$1/', '^src/[^/]+/index\\.tsx?$'],
+      },
+    },
+    {
+      name: 'features-via-index',
+      comment: 'ui/features/<feature>/ are modules of their own.',
+      severity: 'error',
+      from: { path: '^src/ui/features/([^/]+)/', pathNot: TESTS },
+      to: {
+        path: '^src/ui/features/[^/]+/',
+        pathNot: ['^src/ui/features/$1/', '^src/ui/features/[^/]+/index\\.tsx?$'],
       },
     },
   ],

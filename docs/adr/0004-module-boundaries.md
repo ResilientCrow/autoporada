@@ -16,15 +16,18 @@ Folders under `src/` are layers. dependency-cruiser enforces them in CI.
 | `snapshot/` | `domain/`, zod |
 | `document/` | `domain/`, `snapshot/`; `docx` only inside `render-docx/`, React only inside `render-html/` |
 | `contracts/`, `notify/` | `domain/`, zod |
-| `application/` | the above plus its own `ports/`; never Next.js, Drizzle or `infra/` |
+| `application/` | `domain/`, `snapshot/`, `document/`, `contracts/`, `notify/`, zod, and its own `ports/`; no Node core, no I/O libraries |
 | `infra/` | implements ports; never `app/`, `ui/`, `server/` or use cases |
-| `server/`, `worker/`, `cli/` | composition roots: the only importers of `infra/` |
+| `server/`, `worker/`, `cli/` | delivery and composition; only `server/container.ts`, `worker/main.ts` and `cli/main.ts` import `infra/` |
 | `app/` | `server/`, `ui/`, `contracts/` |
 | `ui/` | `ui/`, `contracts/`, `domain/`, `document/` (never the DOCX renderer) |
 
 Further rules:
 
-- Modules import each other only through their `index.ts`.
+- Modules import each other only through their `index.ts`. A module is a
+  folder under a layer (`domain/cs/`, `ui/features/<feature>/`); `snapshot/`,
+  `contracts/` and `notify/` are one module each.
+- `.tsx` files (JSX) exist only in `app/`, `ui/` and `document/render-html/`.
 - No circular imports anywhere.
 - ESLint limits files to 300 lines.
 - `process.env` may be read only in `infra/config`.
