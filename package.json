@@ -13,7 +13,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node scripts/start-standalone.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
     "lint:arch": "depcruise src --config .dependency-cruiser.cjs",
     "lint:palette": "node scripts/check-palette.mjs",

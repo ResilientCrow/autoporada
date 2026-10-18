@@ -5,8 +5,9 @@ const config: NextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   reactStrictMode: true,
-  // Every page is per-user and the CSP uses per-request nonces, so nothing is
-  // pre-rendered or cached (ADR 0001).
+  // Every page is per-user and the CSP uses per-request nonces: no Cache
+  // Components. The root layout calls connection(), so no route is
+  // prerendered either (ADR 0001).
   cacheComponents: false,
 };
 
