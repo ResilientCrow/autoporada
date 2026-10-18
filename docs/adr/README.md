@@ -1,0 +1,17 @@
+# Architecture decision records
+
+Each record states one decision, why it was made, and what follows from it.
+Records are never edited after acceptance. To change a decision, add a new
+record that supersedes it.
+
+| # | Decision | Status |
+|---|---|---|
+| [0001](0001-stack.md) | TypeScript full stack: Next.js 16, PostgreSQL 18, Drizzle | Accepted |
+| [0002](0002-authentication.md) | Entra ID OIDC via openid-client, own DB sessions | Accepted |
+| [0003](0003-single-entra-app.md) | One Entra app; Mail.Send scoped by Exchange RBAC | Accepted |
+| [0004](0004-module-boundaries.md) | Layered modules with enforced dependency rules | Accepted |
+| [0005](0005-document-engine.md) | Snapshot → DocumentModel → DOCX / HTML | Accepted |
+| [0006](0006-background-jobs.md) | pg-boss worker with transactional enqueue | Accepted |
+| [0007](0007-rich-text.md) | Restricted rich text as flat indented paragraphs | Accepted |
+| [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted |
+| [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Proposed |
