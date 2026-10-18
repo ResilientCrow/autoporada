@@ -99,8 +99,8 @@ export default defineConfig([
     },
   },
   {
-    // Command-line scripts report to the terminal.
-    files: ['scripts/**'],
+    // Command-line scripts and the CLI report to the terminal.
+    files: ['scripts/**', 'src/cli/**'],
     rules: { 'no-console': 'off' },
   },
   {

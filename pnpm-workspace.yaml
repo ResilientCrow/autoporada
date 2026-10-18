@@ -9,5 +9,6 @@ minimumReleaseAgeExclude:
   - '@next/*'
   - eslint-config-next
 allowBuilds:
-  # Ships prebuilt binaries as optional deps; its postinstall is only a check.
+  # Both ship prebuilt binaries as optional deps; their postinstall is only a check.
   unrs-resolver: false
+  esbuild: false
