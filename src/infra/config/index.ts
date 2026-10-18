@@ -4,6 +4,7 @@ import { ConfigError, readEnv, type Env, type ReadFile } from './read-env';
 import { rawConfigSchema, type LogLevel } from './schema';
 
 export { ConfigError } from './read-env';
+export type { LogLevel } from './schema';
 
 type OidcCredential =
   | { kind: 'certificate'; privateKeyPem: string; thumbprint: string }
