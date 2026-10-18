@@ -39,6 +39,65 @@ export const VARIANTS: Readonly<Record<string, () => IssueSnapshot>> = {
       list(raw, 'registry').forEach((l) => (l['entries'] = []));
     }),
 
+  /** The smallest valid issue: only the agenda slots, nobody, nothing. */
+  empty: () =>
+    snapshotFixture('template-replica', (raw) => {
+      raw['presentText'] = '';
+      raw['guestsText'] = '';
+      raw['pokyny'] = list(raw, 'pokyny').filter(
+        (i) => i['slot'] === 'meetings' || i['slot'] === 'events',
+      );
+      raw['hospodareni'] = [];
+      raw['reports'] = [];
+      raw['futureItems'] = [];
+      raw['registry'] = [];
+    }),
+
+  /** Dates on every window boundary of the issue of 12 October 2026, and same-day ordering. */
+  'full-week': () =>
+    snapshotFixture('template-replica', (raw) => {
+      const future = (
+        id: string,
+        kind: string,
+        date: string,
+        extra: Record<string, unknown> = {},
+      ) => ({
+        id,
+        kind,
+        title: `${kind} ${id}`,
+        date,
+        ...extra,
+      });
+      raw['futureItems'] = [
+        future('j-M', 'jednani', '2026-10-12', { timeFrom: '9:00' }),
+        future('j-M+7', 'jednani', '2026-10-19'),
+        future('j-M+8', 'jednani', '2026-10-20'),
+        future('a-before-M', 'akce', '2026-10-08', { endDate: '2026-10-12' }),
+        future('a-day', 'akce', '2026-10-13'),
+        future('a-timed', 'akce', '2026-10-13', { timeFrom: '15:00', timeTo: '17:00' }),
+        future('a-M+14', 'akce', '2026-10-26'),
+        future('a-M+15', 'akce', '2026-10-27'),
+        future('a-past', 'akce', '2026-10-09'),
+      ];
+      const [first] = list(raw, 'reports');
+      const report = (id: string, date: string, extra: Record<string, unknown> = {}) => ({
+        ...first,
+        id,
+        title: `Zpráva ${id}`,
+        date,
+        timeFrom: undefined,
+        timeTo: undefined,
+        ...extra,
+      });
+      raw['reports'] = [
+        report('r-oct-09-late', '2026-10-09', { timeFrom: '14:00' }),
+        report('r-oct-09-day', '2026-10-09'),
+        report('r-oct-05-camp', '2026-10-05', { endDate: '2026-10-07' }),
+        report('r-ends-on-M', '2026-10-10', { endDate: '2026-10-12' }),
+        report('r-oct-09-early', '2026-10-09', { timeFrom: '8:00' }),
+      ];
+    }),
+
   /** Agenda windows that cross the new year. */
   'year-boundary': () =>
     snapshotFixture('template-replica', (raw) => {

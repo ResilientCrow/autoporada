@@ -1,0 +1,156 @@
+{
+  "meta": {
+    "title": "Porada vedení školy 12. října 2026",
+    "author": "Autonomní systém Autoporada"
+  },
+  "sections": [
+    {
+      "layout": "single",
+      "blocks": [
+        {
+          "kind": "title",
+          "text": "PORADA VEDENÍ ŠKOLY – pondělí 12. října 2026"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "label",
+          "label": "Přítomni:",
+          "text": ""
+        },
+        {
+          "kind": "label",
+          "label": "Hosté:",
+          "text": ""
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "section",
+          "text": "POKYNY PRO ZAMĚSTNANCE, ORGANIZAČNÍ ZÁLEŽITOSTI"
+        },
+        {
+          "kind": "spacer",
+          "keepNext": true
+        },
+        {
+          "kind": "spacer",
+          "keepNext": true
+        },
+        {
+          "kind": "point",
+          "number": 1,
+          "text": "Zatím známá jednání v týdnu od 12. října do 19. října 2026"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "zatím žádná"
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "point",
+          "number": 2,
+          "text": "Zatím známé akce v týdnech od 12. října do 26. října 2026"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "zatím žádné"
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "closing",
+          "place": "V Praze dne 12. října 2026",
+          "signature": "Zpracoval Autonomní systém Autoporada"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "pageBreak"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "annex",
+          "text": "PŘÍLOHA 1"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "spacer"
+        },
+        {
+          "kind": "annexTitle",
+          "text": "Studenti v ředitelském „Programu na podporu talentovaným a aktivním studentům“"
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Níže uvedení studenti byli zařazeni ředitelem školy do „Programu na podporu talentovaných a aktivních studentů“. Na níže uvedené studenty se nevztahuje pravidlo 75% docházky do výuky, studenti jsou však povinni aktivně a průběžně komunikovat s učiteli, učitelé jsou povinni jim vyjít vstříc při žádosti o domluvu na přezkoušení či dopsání testu."
+            }
+          ]
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Pokud někdo ze studentů má zájem být do programu zařazen, musí v novém školním roce 2026/2027 opět o toto požádat ředitele školy. V případě nezletilých studentů tak musí učinit jejich rodiče."
+            }
+          ]
+        },
+        {
+          "kind": "body",
+          "runs": [
+            {
+              "text": "Tučně označení jsou vždy studenti, kteří byli do programu na podporu talentovaným a aktivním studentům zařazeni v průběhu předchozího týdne a jsou nyní uvedeni do této přílohy číslo 1 v rámci porady vedení."
+            }
+          ]
+        },
+        {
+          "kind": "spacer"
+        }
+      ]
+    },
+    {
+      "layout": "twoColumn",
+      "blocks": [
+        {
+          "kind": "studentTable",
+          "rows": []
+        }
+      ]
+    }
+  ]
+}

@@ -17,7 +17,7 @@ const render = (name: string) =>
   );
 
 describe('paper preview', () => {
-  it.each(['template-replica', 'lean', 'annex2'])('renders %s like the golden', async (name) => {
+  it.each(Object.keys(VARIANTS))('renders %s like the golden', async (name) => {
     await expect(prettyXml(render(name))).toMatchFileSnapshot(`../golden/${name}/preview.html`);
   });
 

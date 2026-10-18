@@ -127,26 +127,43 @@ describe('PDF render check', () => {
     expect(numbers).toEqual(Array.from({ length: 17 }, (_, i) => i + 1));
   });
 
-  it('embeds real fonts for the text, the bullet glyphs and the table (no tofu)', () => {
-    const used = fonts(pdfs['template-replica']!);
-    expect(used.some((f) => /^(TimesNewRoman|LiberationSerif)/.test(f))).toBe(true);
-    // Symbol „•“ and Wingdings „■“ come out as OpenSymbol, or as themselves when installed.
-    expect(used.some((f) => /^(OpenSymbol|Symbol|Wingdings)/.test(f))).toBe(true);
-    expect(used.some((f) => /^(AptosNarrow|PTSans-Narrow)/.test(f))).toBe(true);
+  it('embeds only the expected fonts: no fallback, no tofu', () => {
+    for (const pdf of Object.values(pdfs)) {
+      const used = fonts(pdf);
+      // Originals when licensed, otherwise the metric-compatible substitutes.
+      const allowed =
+        /^(TimesNewRoman|LiberationSerif|CourierNew|LiberationMono|OpenSymbol|Symbol|Wingdings|AptosNarrow|PTSans-Narrow)/;
+      expect(used.filter((f) => !allowed.test(f))).toEqual([]);
+      expect(used.some((f) => /^(OpenSymbol|Symbol|Wingdings)/.test(f))).toBe(true);
+    }
   });
 
-  it('starts every Příloha 1 column that has rows with the header', () => {
+  /** Splits an annex page into its two newspaper columns at the gap between them. */
+  function columns(page: string): [string[], string[]] {
+    const lines = page.split('\n').filter((l) => !l.includes('Stránka'));
+    const gap = Math.max(...lines.map((l) => l.indexOf('Jméno a příjmení', 10)));
+    const split = gap > 0 ? gap : Math.floor(Math.max(...lines.map((l) => l.length)) / 2);
+    return [lines.map((l) => l.slice(0, split).trim()), lines.map((l) => l.slice(split).trim())];
+  }
+
+  it('starts every Příloha 1 column that has rows with the header, and never ends one on it', () => {
     const all = pages(pdfs['many-students']!);
-    const annexPages = all.slice(all.findIndex((p) => p.includes('PŘÍLOHA 1')));
-    for (const page of annexPages.filter((p) => /\d\.[A-Z]|L\d[A-Z]/.test(p))) {
-      const rows = page
-        .split('\n')
-        .filter((line) => /\s(\d\.[A-Z]|L\d[A-Z])\s*(\S.*\s(\d\.[A-Z]|L\d[A-Z]))?\s*$/.test(line));
-      const twoColumns = rows.some(
-        (line) => (line.match(/\s(\d\.[A-Z]|L\d[A-Z])(\s|$)/g) ?? []).length === 2,
-      );
-      expect((page.match(/Jméno a příjmení/g) ?? []).length).toBe(twoColumns ? 2 : 1);
+    const first = all.findIndex((p) => p.includes('PŘÍLOHA 1'));
+    expect(first).toBeGreaterThanOrEqual(0);
+    const isRow = (line: string) => /\s(\d\.[A-Z]|L\d[A-Z])$/.test(line);
+    let checkedColumns = 0;
+    for (const page of all.slice(first)) {
+      for (const column of columns(page)) {
+        const content = column.filter((l) => l !== '');
+        const tableStart = content.findIndex((l) => l.startsWith('Jméno a příjmení') || isRow(l));
+        if (tableStart < 0) continue;
+        checkedColumns++;
+        expect(content[tableStart]).toMatch(/^Jméno a příjmení/);
+        expect(content.at(-1)).not.toMatch(/^Jméno a příjmení/);
+      }
     }
+    // 150 students fill both columns of at least two pages.
+    expect(checkedColumns).toBeGreaterThanOrEqual(3);
   });
 
   it('puts Příloha 2 on a page of its own', () => {

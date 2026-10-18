@@ -229,7 +229,7 @@
         <w:t xml:space="preserve">seznam studentů uvolněných z Anglického jazyka na základě získaných certifikátů:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"></w:t>
+        <w:t xml:space="preserve"> </w:t>
       </w:r>
       <w:r>
         <w:rPr>
@@ -269,7 +269,7 @@
         <w:t xml:space="preserve">seznam studentů uvolněných z Anglického jazyka na základě přezkoušení:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"></w:t>
+        <w:t xml:space="preserve"> </w:t>
       </w:r>
       <w:r>
         <w:t xml:space="preserve">Adam Čermák (1.B)</w:t>
@@ -299,7 +299,7 @@
         <w:t xml:space="preserve">seznam studentů uvolněných z Německého jazyka na základě získaných certifikátů:</w:t>
       </w:r>
       <w:r>
-        <w:t xml:space="preserve"></w:t>
+        <w:t xml:space="preserve"> </w:t>
       </w:r>
       <w:r>
         <w:t xml:space="preserve">Jan Novák (2.A)</w:t>
