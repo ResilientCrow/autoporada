@@ -34,7 +34,8 @@ const outline: RichDoc = {
 };
 
 /** Characters the validator refuses: controls except tab, surrogates, non-characters. */
-const INVALID_TEXT = /[\u0000-\u0008\u000A-\u001F\u007F\uD800-\uDFFF\uFFFE\uFFFF]/;
+const INVALID_TEXT =
+  /[\u0000-\u0008\u000A-\u001F\u007F-\u009F\u2028\u2029\uD800-\uDFFF\uFFFE\uFFFF]/;
 
 const errorsOf = (input: unknown, profile: 'paragraphs' | 'outline' = 'outline') => {
   const result = parseRichDoc(input, profile);
@@ -188,13 +189,17 @@ describe('parseRichDoc', () => {
     expect(errorsOf(many)).toEqual(['document has more than 2000 nodes']);
   });
 
-  it('never throws and normalises idempotently, whatever it is given (property)', () => {
+  it('never throws, whatever it is given (property)', () => {
     fc.assert(
       fc.property(fc.jsonValue({ maxDepth: 5 }), (input) => {
-        const first = parseRichDoc(input, 'outline');
-        if (first.ok) expect(parseRichDoc(first.doc, 'outline')).toEqual(first);
+        expect(() => parseRichDoc(input, 'outline')).not.toThrow();
       }),
     );
+  });
+
+  it('accepts every well-formed document and normalises it idempotently (property)', () => {
+    const text = fc.string({ minLength: 1 }).filter((t) => !INVALID_TEXT.test(t));
+    const mark = fc.constantFrom({ type: 'bold' }, { type: 'italic' });
     const docs = fc.record({
       type: fc.constant('doc'),
       content: fc.array(
@@ -202,10 +207,7 @@ describe('parseRichDoc', () => {
           type: fc.constant('paragraph'),
           attrs: fc.record({ indent: fc.integer({ min: 0, max: 3 }) }),
           content: fc.array(
-            fc.record({
-              type: fc.constant('text'),
-              text: fc.string({ minLength: 1 }).filter((t) => !INVALID_TEXT.test(t)),
-            }),
+            fc.record({ type: fc.constant('text'), text, marks: fc.array(mark, { maxLength: 3 }) }),
             { maxLength: 3 },
           ),
         }),
@@ -215,14 +217,46 @@ describe('parseRichDoc', () => {
     fc.assert(
       fc.property(docs, (input) => {
         const result = parseRichDoc(input, 'outline');
-        if (result.ok)
-          expect(richDocToPlainText(result.doc)).toBe(richDocToPlainText(input as RichDoc));
+        expect(result.ok).toBe(true);
+        if (!result.ok) return;
+        expect(parseRichDoc(result.doc, 'outline')).toEqual(result);
+        expect(richDocToPlainText(result.doc)).toBe(richDocToPlainText(input as RichDoc));
       }),
     );
+  });
+
+  it('returns a result for input JSON cannot represent', () => {
+    let deep: unknown = 'x';
+    for (let i = 0; i < 20_000; i++) deep = [deep];
+    const cyclic: Record<string, unknown> = { type: 'doc' };
+    cyclic['content'] = cyclic;
+    for (const input of [
+      { type: 'doc', content: [], x: deep },
+      cyclic,
+      { type: 'doc', content: [], n: 10n },
+    ]) {
+      expect(parseRichDoc(input, 'outline')).toEqual({
+        ok: false,
+        errors: ['document is not valid rich text'],
+      });
+    }
+  });
+
+  it('accepts only plain objects', () => {
+    class Doc {
+      type = 'doc';
+      content = [];
+    }
+    expect(parseRichDoc(new Doc(), 'outline').ok).toBe(false);
   });
 });
 
 describe('helpers', () => {
+  it('splits plain text on every kind of line break', () => {
+    expect(richDocFromText('a\rb\u2028c\r\nd').content).toHaveLength(4);
+    expect(parseRichDoc(richDocFromText('a\rb'), 'outline').ok).toBe(true);
+  });
+
   it('converts plain text to paragraphs and back', () => {
     const doc = richDocFromText('první\n\ndruhý');
     expect(doc.content).toHaveLength(3);

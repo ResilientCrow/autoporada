@@ -13,8 +13,12 @@ export type ParseResult =
   | { readonly ok: false; readonly errors: readonly string[] };
 
 const MARKS: ReadonlySet<string> = new Set<Mark>(['bold', 'italic']);
-/** Control characters other than tab (paragraphs are separate nodes, not newlines). */
-const CONTROL = /[\u0000-\u0008\u000A-\u001F\u007F￾￿]/;
+/**
+ * C0 and C1 control characters except tab, the Unicode line and paragraph
+ * separators, and the noncharacters U+FFFE/U+FFFF. Paragraphs are separate
+ * nodes, so no character may break a line inside one.
+ */
+const CONTROL = /[\u0000-\u0008\u000A-\u001F\u007F-\u009F\u2028\u2029\uFFFE\uFFFF]/;
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 
 /** Records a problem; returns undefined so callers can `return fail(…)`. */
@@ -23,8 +27,21 @@ function fail(errors: string[], message: string): undefined {
   return undefined;
 }
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
+/** Plain objects only: no class instances, getters behind prototypes or toJSON tricks. */
+function isRecord(v: unknown): v is Record<string, unknown> {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false;
+  const proto: unknown = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+}
+
+/** UTF-8 size of the JSON, or undefined for input JSON cannot represent (cycles, BigInt, deep nesting). */
+function jsonSize(input: unknown): number | undefined {
+  try {
+    return new TextEncoder().encode(JSON.stringify(input) ?? '').length;
+  } catch {
+    return undefined;
+  }
+}
 
 function onlyKeys(
   node: Record<string, unknown>,
@@ -103,7 +120,9 @@ function parseParagraph(
  */
 export function parseRichDoc(input: unknown, profile: RichProfile): ParseResult {
   const errors: string[] = [];
-  if (new TextEncoder().encode(JSON.stringify(input) ?? '').length > LIMITS.maxBytes) {
+  const size = jsonSize(input);
+  if (size === undefined) return { ok: false, errors: ['document is not valid rich text'] };
+  if (size > LIMITS.maxBytes) {
     return { ok: false, errors: [`document is larger than ${LIMITS.maxBytes / 1024} KB`] };
   }
   if (!isRecord(input) || input['type'] !== 'doc') return { ok: false, errors: ['expected a doc'] };

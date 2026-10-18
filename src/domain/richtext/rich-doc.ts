@@ -38,7 +38,7 @@ export function emptyRichDoc(): RichDoc {
 
 /** One paragraph per line; for seeds and plain-text fallbacks. */
 export function richDocFromText(text: string, indent: Indent = 0): RichDoc {
-  const lines = text.split(/\r?\n/).map((line) => line.trim());
+  const lines = text.split(/\r\n|[\r\n\u0085\u2028\u2029]/).map((line) => line.trim());
   return {
     type: 'doc',
     content: lines.map((line) => ({
