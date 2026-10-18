@@ -70,7 +70,13 @@ export interface Dated {
   readonly endDate?: CalDate;
 }
 
-const lastDay = (item: Dated) => item.endDate ?? item.date;
+/** The item's last day; a range that ends before it starts is a bug upstream. */
+function lastDay(item: Dated): CalDate {
+  if (item.endDate && compareDates(item.endDate, item.date) < 0) {
+    throw new RangeError('Date range ends before it starts');
+  }
+  return item.endDate ?? item.date;
+}
 
 function overlaps(item: Dated, range: DateRange): boolean {
   return compareDates(item.date, range.to) <= 0 && compareDates(lastDay(item), range.from) >= 0;

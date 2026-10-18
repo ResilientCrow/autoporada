@@ -105,6 +105,7 @@ describe('Prague wall clock', () => {
     ['2026-12-31', '23:30', '2026-12-31T22:30:00.000Z', 'winter time (+1)'],
     ['2027-03-28', '02:30', '2027-03-28T01:30:00.000Z', 'spring gap: shifted forward to 03:30'],
     ['2026-10-25', '02:30', '2026-10-25T00:30:00.000Z', 'autumn overlap: earlier occurrence'],
+    ['1980-04-06', '02:30', '1980-04-06T01:30:00.000Z', 'historic April gap (pre-1981 rule)'],
   ])('%s %s → %s (%s)', (date, time, iso) => {
     expect(wallClockToInstant(d(date), t(time)).toISOString()).toBe(iso);
   });

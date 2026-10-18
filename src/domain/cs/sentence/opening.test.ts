@@ -74,6 +74,14 @@ describe('openingSentence', () => {
     expect(sentence).toMatch(/^Ve dnech 14\.–16\. října 2026 v areálu Smíchov/);
   });
 
+  it('refuses a range that ends before it starts', () => {
+    expect(() => openingSentence({ ...base, endDate: d('2026-10-12') })).toThrow(RangeError);
+  });
+
+  it('treats an end date equal to the start as a single day', () => {
+    expect(openingSentence({ ...base, endDate: base.date })).toMatch(/^Ve středu 14\. října 2026 /);
+  });
+
   it('leaves out what is not known', () => {
     expect(
       openingSentence({

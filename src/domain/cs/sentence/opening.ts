@@ -1,4 +1,4 @@
-import { compareDates, type CalDate, type WallTime } from '@/domain/time';
+import { isSameDate, type CalDate, type WallTime } from '@/domain/time';
 
 import { formatLongDate, formatLongRange, formatProseTimeRange, onWeekday } from '../dates/format';
 import { SALUTATION } from '../names/person';
@@ -72,10 +72,11 @@ export interface OpeningInput {
  * a pan Jan Novák (oba 3.B).“ The submitter edits it freely afterwards.
  */
 export function openingSentence(input: OpeningInput): string {
-  const multiDay = input.endDate && compareDates(input.date, input.endDate) < 0;
-  const when = multiDay
-    ? `Ve dnech ${formatLongRange(input.date, input.endDate ?? input.date)}`
-    : `${onWeekday(input.date, { capitalize: true })} ${formatLongDate(input.date)}`;
+  // formatLongRange throws on a range that ends before it starts.
+  const when =
+    input.endDate && !isSameDate(input.date, input.endDate)
+      ? `Ve dnech ${formatLongRange(input.date, input.endDate)}`
+      : `${onWeekday(input.date, { capitalize: true })} ${formatLongDate(input.date)}`;
   const time = input.from ? formatProseTimeRange(input.from, input.to) : '';
   const where = [input.campus === 'jinde' ? '' : CAMPUS[input.campus], input.place?.trim() ?? '']
     .filter(Boolean)

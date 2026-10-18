@@ -95,6 +95,14 @@ describe('routeFutureItem (issue of 12 October 2026)', () => {
   });
 });
 
+describe('inverted date ranges', () => {
+  it('are refused instead of being routed or published wrongly', () => {
+    const backwards = { kind: 'akce' as const, date: d('2026-10-20'), endDate: d('2026-10-18') };
+    expect(() => routeFutureItem(backwards, d('2026-10-19'))).toThrow(RangeError);
+    expect(() => eventEndedBefore(backwards, d('2026-10-19'))).toThrow(RangeError);
+  });
+});
+
 describe('eventEndedBefore', () => {
   it('admits a report only once the event is over before the meeting', () => {
     const M = d('2026-10-19');
