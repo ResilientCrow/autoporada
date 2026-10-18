@@ -1,0 +1,764 @@
+{
+  "schema": 1,
+  "issue": {
+    "id": "issue-2026-10-12",
+    "monday": "2026-10-12",
+    "meetingDate": "2026-10-12",
+    "schoolYear": "2026/2027"
+  },
+  "presentText": "Mgr. Jan Novák, Ing. Petra Svobodová, Mgr. Tomáš Veselý",
+  "guestsText": "Ing. Karel Dvořák (Next Zone)",
+  "pokyny": [
+    {
+      "title": "Zatím známá jednání",
+      "slot": "meetings",
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Zatím známé akce",
+      "slot": "events",
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Studenti v ředitelském „Programu na podporu talentovaných a aktivních studentů“",
+      "slot": "talent",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 0
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Níže uvedení studenti byli zařazeni ředitelem školy do „Programu na podporu talentovaných a aktivních studentů“. Na níže uvedené studenty se nevztahuje pravidlo 75% docházky do výuky, studenti jsou však povinni aktivně a průběžně komunikovat s učiteli, učitelé jsou povinni jim vyjít vstříc při žádosti o domluvu na přezkoušení či dopsání testu."
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 0
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Pokud někdo ze studentů má zájem být do programu zařazen, musí v novém školním roce {skolniRok} opět o toto požádat ředitele školy. V případě nezletilých studentů tak musí učinit jejich rodiče."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Uvolnění z výuky na základě odborných certifikátů či přezkoušení",
+      "slot": "exemptions",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 0
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Níže jsou uvedeni studenti, kteří jsou uvolněni z výuky konkrétního předmětu pro školní rok {skolniRok} z důvodů vlastnictví patřičných mezinárodních certifikátů či přezkoušení, nově zařazení studenti oproti minulému týdnu jsou vždy označeni tučně."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Provozní pokyny pro zaměstnance a studenty",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "používání programu Techambition na výuku matematiky"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "nový event manager Next Zone Event Space a Ruby Hall"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "pokyny pro rezervaci a využití prostor Next Zone Event Space a Ruby Hall"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 3
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "nový vedoucí Inkubátoru startupů Coworkingového centra Smíchovské střední"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "správce Audio studia Mediálního domu Preslova v areálu Smíchova"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 3
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "kontakt:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "správce 3D tiskáren na Smíchovské střední"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 3
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "kontakt:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "pravidla účasti studentů a zaměstnanců na demonstracích či stávkách"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "zveřejňování grafických materiálů školy, včetně plakátů na školních televizích"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "postup při pořádání mimoškolních akcí"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 3
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "parkování na školním dvoře v areálu Smíchov:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "hlášení závad zjištěných v prostorách areálu Smíchov"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "hlášení závad v areálech Radlice a Na Vidouli"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          }
+        ]
+      }
+    },
+    {
+      "title": "Zapsané MVOP, OSE a zapsaná témata STP a MAP, výzva ředitele",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Přijímání studentů do MVOP a OSE, kontrola přihlášení",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Studentské a Maturitní projekty, kontrola přihlášení, konzultanti",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Kritéria hodnocení učitelů, zadávání testů, domácích úkolů, doporučení na samostudium",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Výuka v oboru Hotelnictví v 1. ročníku, třída L1B v prvním ročníku",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    },
+    {
+      "title": "Ohlasy Smíchovské střední či jejího ředitele v médiích",
+      "slot": "media",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "rozhovor s ředitelem školy v Lidových novinách o hybridní výuce"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Ohlasy sociálních partnerů",
+      "slot": "partners",
+      "body": {
+        "type": "doc",
+        "content": []
+      },
+      "quotes": [
+        {
+          "speakerGenitive": "pana Johna Doe",
+          "affiliation": "Next Zone",
+          "quote": "Spolupráce se studenty nás velmi těší."
+        }
+      ]
+    },
+    {
+      "title": "Provozní pokyny k Hotelu Voyager – vedení hotelu a kontakty",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "vedení hotelu z řad studentů zajišťují:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 1
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "požadavky a dotazy směřujte na příslušný e-mail:"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 2
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "hospodareni": [
+    {
+      "title": "Hospodaření Hotelu Voyager",
+      "slot": null,
+      "body": {
+        "type": "doc",
+        "content": []
+      }
+    }
+  ],
+  "reports": [
+    {
+      "id": "r-matika",
+      "title": "Seminář Matika Česku",
+      "date": "2026-10-07",
+      "timeFrom": "15:00",
+      "timeTo": "16:30",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 0
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "Ve středu 7. října 2026 proběhl v učebně S206 v čase 15:00–16:30 další seminář Matiky Česku. Semináře na naší škole probíhají pravidelně každou středu a jsou určeny jak pro studenty Smíchovské SPŠ, tak pro zájemce z okolních škol, kterým nabízejí možnost věnovat se matematice s pedagogickou výpomocí."
+              }
+            ]
+          }
+        ]
+      },
+      "bullets": [
+        {
+          "kind": "people",
+          "label": "účast studentů",
+          "order": "class-surname",
+          "people": [
+            {
+              "salutation": "pan",
+              "givenName": "Jan",
+              "familyName": "Novák",
+              "affiliation": "2.A"
+            },
+            {
+              "salutation": "slecna",
+              "givenName": "Eva",
+              "familyName": "Malá",
+              "affiliation": "1.B"
+            },
+            {
+              "salutation": "pan",
+              "givenName": "Adam",
+              "familyName": "Čermák",
+              "affiliation": "1.B"
+            }
+          ]
+        }
+      ],
+      "statements": [
+        {
+          "speakerGenitive": "pana Jana Nováka",
+          "affiliation": "2.A",
+          "quote": "Seminář mi pomohl s přípravou na maturitu."
+        }
+      ]
+    },
+    {
+      "id": "r-vesmir",
+      "title": "Vesmírný seminář",
+      "date": "2026-10-09",
+      "timeFrom": "10:00",
+      "timeTo": "12:00",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": {
+              "indent": 0
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "V pátek 9. října 2026 od 10.00 do 12.00 hodin v areálu Smíchov v Laboratoři fyziky v učebně S8 proběhl Vesmírný seminář, který organizovali slečna Lucie Králová a pan Petr Dvořák (oba 3.C)."
+              }
+            ]
+          }
+        ]
+      },
+      "bullets": [
+        {
+          "kind": "people",
+          "label": "účast studentů",
+          "order": "class-surname",
+          "people": [
+            {
+              "salutation": "slecna",
+              "givenName": "Eva",
+              "familyName": "Malá",
+              "affiliation": "2.B"
+            },
+            {
+              "salutation": "pan",
+              "givenName": "John",
+              "familyName": "Doe",
+              "affiliation": "1.A"
+            },
+            {
+              "salutation": "pan",
+              "givenName": "Tomáš",
+              "familyName": "Černý",
+              "affiliation": "1.A"
+            }
+          ]
+        }
+      ],
+      "statements": [
+        {
+          "speakerGenitive": "pana Johna Doe",
+          "affiliation": "1.A",
+          "quote": "Nejvíc mě zaujala přednáška o černých dírách."
+        }
+      ]
+    }
+  ],
+  "futureItems": [
+    {
+      "id": "f-mc",
+      "kind": "jednani",
+      "title": "jednání s MČ Praha 5 o rekonstrukci dvora",
+      "date": "2026-10-12",
+      "timeFrom": "10:00",
+      "timeTo": "11:00",
+      "place": "ředitelna, Preslova"
+    },
+    {
+      "id": "f-rodice",
+      "kind": "jednani",
+      "title": "schůzka s rodiči 1.A",
+      "date": "2026-10-14",
+      "timeFrom": "14:00",
+      "place": "S206"
+    },
+    {
+      "id": "f-dod",
+      "kind": "akce",
+      "title": "Den otevřených dveří",
+      "date": "2026-10-13",
+      "campus": "smichov"
+    },
+    {
+      "id": "f-cern",
+      "kind": "akce",
+      "title": "exkurze 2.B do CERNu",
+      "date": "2026-10-20",
+      "endDate": "2026-10-22"
+    },
+    {
+      "id": "f-olymp",
+      "kind": "akce",
+      "title": "školní kolo matematické olympiády",
+      "date": "2026-11-12",
+      "timeFrom": "8:00",
+      "campus": "radlice"
+    }
+  ],
+  "registry": [
+    {
+      "key": "talent",
+      "purpose": "annex1",
+      "docLabel": "Program na podporu talentovaných a aktivních studentů",
+      "entries": [
+        {
+          "givenName": "Joe",
+          "familyName": "Dohn",
+          "classCode": "1.A",
+          "isNew": true
+        },
+        {
+          "givenName": "John",
+          "familyName": "Doe",
+          "classCode": "1.A",
+          "isNew": false
+        },
+        {
+          "givenName": "Lucie",
+          "familyName": "Králová",
+          "classCode": "3.C",
+          "isNew": false
+        },
+        {
+          "givenName": "Petr",
+          "familyName": "Dvořák",
+          "classCode": "3.C",
+          "isNew": true
+        },
+        {
+          "givenName": "Ola",
+          "familyName": "Bílá",
+          "classCode": "L1B",
+          "isNew": false
+        }
+      ]
+    },
+    {
+      "key": "aj-certifikat",
+      "purpose": "point4",
+      "docLabel": "seznam studentů uvolněných z Anglického jazyka na základě získaných certifikátů",
+      "entries": [
+        {
+          "givenName": "Tomáš",
+          "familyName": "Černý",
+          "classCode": "1.A",
+          "isNew": true
+        },
+        {
+          "givenName": "Eva",
+          "familyName": "Malá",
+          "classCode": "2.B",
+          "isNew": false
+        }
+      ]
+    },
+    {
+      "key": "aj-prezkouseni",
+      "purpose": "point4",
+      "docLabel": "seznam studentů uvolněných z Anglického jazyka na základě přezkoušení",
+      "entries": [
+        {
+          "givenName": "Adam",
+          "familyName": "Čermák",
+          "classCode": "1.B",
+          "isNew": false
+        }
+      ]
+    },
+    {
+      "key": "nj-certifikat",
+      "purpose": "point4",
+      "docLabel": "seznam studentů uvolněných z Německého jazyka na základě získaných certifikátů",
+      "entries": [
+        {
+          "givenName": "Jan",
+          "familyName": "Novák",
+          "classCode": "2.A",
+          "isNew": false
+        }
+      ]
+    }
+  ],
+  "annex1": {
+    "heading": "Studenti v ředitelském „Programu na podporu talentovaným a aktivním studentům“",
+    "intro": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": {
+            "indent": 0
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Níže uvedení studenti byli zařazeni ředitelem školy do „Programu na podporu talentovaných a aktivních studentů“. Na níže uvedené studenty se nevztahuje pravidlo 75% docházky do výuky, studenti jsou však povinni aktivně a průběžně komunikovat s učiteli, učitelé jsou povinni jim vyjít vstříc při žádosti o domluvu na přezkoušení či dopsání testu."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "attrs": {
+            "indent": 0
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Pokud někdo ze studentů má zájem být do programu zařazen, musí v novém školním roce {skolniRok} opět o toto požádat ředitele školy. V případě nezletilých studentů tak musí učinit jejich rodiče."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "attrs": {
+            "indent": 0
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Tučně označení jsou vždy studenti, kteří byli do programu na podporu talentovaným a aktivním studentům zařazeni v průběhu předchozího týdne a jsou nyní uvedeni do této přílohy číslo 1 v rámci porady vedení."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "annex2": null,
+  "options": {}
+}

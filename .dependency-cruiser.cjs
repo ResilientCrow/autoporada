@@ -44,25 +44,25 @@ module.exports = {
     {
       name: 'snapshot-deps',
       severity: 'error',
-      from: { path: '^src/snapshot/' },
+      from: { path: '^src/snapshot/', pathNot: TESTS },
       to: { pathNot: ['^src/(snapshot|domain)/', npm('zod')] },
     },
     {
       name: 'contracts-deps',
       severity: 'error',
-      from: { path: '^src/contracts/' },
+      from: { path: '^src/contracts/', pathNot: TESTS },
       to: { pathNot: ['^src/(contracts|domain)/', npm('zod')] },
     },
     {
       name: 'notify-deps',
       severity: 'error',
-      from: { path: '^src/notify/' },
+      from: { path: '^src/notify/', pathNot: TESTS },
       to: { pathNot: ['^src/(notify|domain)/', npm('zod')] },
     },
     {
       name: 'document-deps',
       severity: 'error',
-      from: { path: '^src/document/' },
+      from: { path: '^src/document/', pathNot: TESTS },
       to: { pathNot: ['^src/(document|domain|snapshot)/', npm('docx', 'react', 'react-dom')] },
     },
     {
