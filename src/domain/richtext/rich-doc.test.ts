@@ -1,0 +1,238 @@
+import fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
+
+import {
+  isRichDocEmpty,
+  LIMITS,
+  paragraphRuns,
+  parseRichDoc,
+  richDocFromText,
+  richDocToPlainText,
+  type RichDoc,
+} from './index';
+
+const outline: RichDoc = {
+  type: 'doc',
+  content: [
+    {
+      type: 'paragraph',
+      attrs: { indent: 1 },
+      content: [
+        { type: 'text', text: 'parkování na dvoře', marks: [{ type: 'bold' }, { type: 'italic' }] },
+      ],
+    },
+    {
+      type: 'paragraph',
+      attrs: { indent: 3 },
+      content: [
+        { type: 'text', text: 'kontakt: ' },
+        { type: 'text', text: 'správa', marks: [{ type: 'bold' }] },
+      ],
+    },
+    { type: 'paragraph', attrs: { indent: 0 } },
+  ],
+};
+
+/** Characters the validator refuses: controls except tab, surrogates, non-characters. */
+const INVALID_TEXT = /[\u0000-\u0008\u000A-\u001F\u007F\uD800-\uDFFF\uFFFE\uFFFF]/;
+
+const errorsOf = (input: unknown, profile: 'paragraphs' | 'outline' = 'outline') => {
+  const result = parseRichDoc(input, profile);
+  return result.ok ? [] : result.errors;
+};
+
+describe('parseRichDoc', () => {
+  it('accepts an outline with skipped levels and normalises it', () => {
+    expect(parseRichDoc(outline, 'outline')).toEqual({ ok: true, doc: outline });
+  });
+
+  it('fills in a missing indent and sorts duplicate marks away', () => {
+    const input = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'x',
+              marks: [{ type: 'italic' }, { type: 'bold' }, { type: 'italic' }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(parseRichDoc(input, 'paragraphs')).toEqual({
+      ok: true,
+      doc: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            attrs: { indent: 0 },
+            content: [{ type: 'text', text: 'x', marks: [{ type: 'bold' }, { type: 'italic' }] }],
+          },
+        ],
+      },
+    });
+  });
+
+  it('keeps report bodies to plain paragraphs', () => {
+    expect(errorsOf(outline, 'paragraphs')).toEqual([
+      'doc.content[0].attrs.indent: must be an integer 0–0',
+      'doc.content[1].attrs.indent: must be an integer 0–0',
+    ]);
+  });
+
+  it.each([
+    [
+      { type: 'doc', content: [{ type: 'heading', content: [] }] },
+      'doc.content[0]: expected a paragraph',
+    ],
+    [
+      { type: 'doc', content: [{ type: 'paragraph', attrs: { indent: 4 } }] },
+      'doc.content[0].attrs.indent: must be an integer 0–3',
+    ],
+    [
+      { type: 'doc', content: [{ type: 'paragraph', attrs: { indent: 1.5 } }] },
+      'doc.content[0].attrs.indent: must be an integer 0–3',
+    ],
+    [
+      { type: 'doc', content: [{ type: 'paragraph', attrs: { indent: 0, class: 'x' } }] },
+      'doc.content[0].attrs: unexpected "class"',
+    ],
+    [
+      { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: '' }] }] },
+      'doc.content[0].content[0]: text must be a non-empty string',
+    ],
+    [
+      {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              {
+                type: 'text',
+                text: 'a',
+                marks: [{ type: 'link', attrs: { href: 'javascript:x' } }],
+              },
+            ],
+          },
+        ],
+      },
+      'doc.content[0].content[0].marks[0]: only bold and italic are allowed',
+    ],
+    [
+      {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'a', marks: [{ type: 'bold', attrs: {} }] }],
+          },
+        ],
+      },
+      'doc.content[0].content[0].marks[0]: unexpected "attrs"',
+    ],
+    [
+      { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a\nb' }] }] },
+      'doc.content[0].content[0]: text contains control characters',
+    ],
+    [
+      {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a\u0000' }] }],
+      },
+      'doc.content[0].content[0]: text contains control characters',
+    ],
+    [
+      {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: '\uD800' }] }],
+      },
+      'doc.content[0].content[0]: text contains control characters',
+    ],
+    [{ type: 'doc', content: [], html: '<b>x</b>' }, 'doc: unexpected "html"'],
+    [
+      { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'image', src: 'x' }] }] },
+      'doc.content[0].content[0]: expected a text node',
+    ],
+  ])('rejects %j', (input, error) => {
+    expect(errorsOf(input)).toContain(error);
+  });
+
+  it.each([null, 'doc', [], { type: 'paragraph' }, { type: 'doc', content: {} }])(
+    'rejects non-documents: %j',
+    (input) => {
+      expect(parseRichDoc(input, 'outline').ok).toBe(false);
+    },
+  );
+
+  it('allows tabs inside text', () => {
+    expect(
+      errorsOf({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a\tb' }] }],
+      }),
+    ).toEqual([]);
+  });
+
+  it('enforces the size and node limits', () => {
+    const huge = richDocFromText('x'.repeat(LIMITS.maxBytes));
+    expect(errorsOf(huge)).toEqual(['document is larger than 64 KB']);
+    const many = {
+      type: 'doc',
+      content: Array.from({ length: LIMITS.maxNodes + 1 }, () => ({ type: 'paragraph' })),
+    };
+    expect(errorsOf(many)).toEqual(['document has more than 2000 nodes']);
+  });
+
+  it('never throws and normalises idempotently, whatever it is given (property)', () => {
+    fc.assert(
+      fc.property(fc.jsonValue({ maxDepth: 5 }), (input) => {
+        const first = parseRichDoc(input, 'outline');
+        if (first.ok) expect(parseRichDoc(first.doc, 'outline')).toEqual(first);
+      }),
+    );
+    const docs = fc.record({
+      type: fc.constant('doc'),
+      content: fc.array(
+        fc.record({
+          type: fc.constant('paragraph'),
+          attrs: fc.record({ indent: fc.integer({ min: 0, max: 3 }) }),
+          content: fc.array(
+            fc.record({
+              type: fc.constant('text'),
+              text: fc.string({ minLength: 1 }).filter((t) => !INVALID_TEXT.test(t)),
+            }),
+            { maxLength: 3 },
+          ),
+        }),
+        { maxLength: 5 },
+      ),
+    });
+    fc.assert(
+      fc.property(docs, (input) => {
+        const result = parseRichDoc(input, 'outline');
+        if (result.ok)
+          expect(richDocToPlainText(result.doc)).toBe(richDocToPlainText(input as RichDoc));
+      }),
+    );
+  });
+});
+
+describe('helpers', () => {
+  it('converts plain text to paragraphs and back', () => {
+    const doc = richDocFromText('první\n\ndruhý');
+    expect(doc.content).toHaveLength(3);
+    expect(richDocToPlainText(doc)).toBe('první\n\ndruhý');
+    expect(isRichDocEmpty(richDocFromText('  \n '))).toBe(true);
+  });
+
+  it('turns a paragraph into renderer runs', () => {
+    expect(
+      paragraphRuns(outline.content[1] ?? { type: 'paragraph', attrs: { indent: 0 } }),
+    ).toEqual([{ text: 'kontakt: ' }, { text: 'správa', bold: true }]);
+  });
+});
