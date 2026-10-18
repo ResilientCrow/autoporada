@@ -1,0 +1,169 @@
+/*
+ * A paper-like preview of the generated document. Lengths are written in
+ * twips (1/1440 in) through --tw, the unit of the DOCX renderer, so indents
+ * match the Word file exactly. The font falls back to Times New Roman.
+ */
+.paper {
+  --tw: calc(1in / 1440);
+  box-sizing: border-box;
+  width: calc(11906 * var(--tw));
+  max-width: 100%;
+  padding: calc(720 * var(--tw));
+  background: white;
+  color: black;
+  font-family: Tinos, 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.15;
+  text-align: justify;
+  hyphens: none;
+}
+
+/* Zero specificity, so the block classes below always win. */
+:where(.paper p, .paper h2, .paper h3) {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.spacer::after {
+  content: '\00a0';
+}
+
+.title,
+.annexTitle {
+  font-size: 14pt;
+  font-weight: bold;
+}
+
+.section {
+  font-size: 16pt;
+  font-weight: bold;
+}
+
+.annex {
+  font-size: 18pt;
+  font-weight: bold;
+}
+
+.point {
+  position: relative;
+  padding-left: calc(527 * var(--tw));
+  font-weight: bold;
+}
+
+.point .number {
+  position: absolute;
+  left: calc(170 * var(--tw));
+}
+
+.body {
+  text-indent: calc(708 * var(--tw));
+}
+
+.reportLine {
+  padding-left: calc(708 * var(--tw));
+}
+
+.left {
+  text-align: left;
+}
+
+/* Lists: the glyph hangs 360 twips before the text, as in the numbering definitions. */
+.item {
+  position: relative;
+}
+
+.item::before {
+  position: absolute;
+  left: calc(-360 * var(--tw));
+}
+
+/* An empty list line still takes one line, as an empty paragraph does in Word. */
+.item:empty::after {
+  content: '\00a0';
+}
+
+.bullet {
+  margin-left: calc(720 * var(--tw));
+}
+
+.bullet::before {
+  content: '•';
+}
+
+.dash {
+  margin-left: calc(1065 * var(--tw));
+}
+
+.dash::before {
+  content: '-';
+  font-weight: bold;
+  font-style: italic;
+}
+
+.rich0 {
+  margin-left: calc(1068 * var(--tw));
+}
+
+.rich1 {
+  margin-left: calc(1788 * var(--tw));
+}
+
+.rich2 {
+  margin-left: calc(2345 * var(--tw));
+}
+
+.rich0::before,
+.rich1::before {
+  content: 'o';
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.rich0::before {
+  font-weight: bold;
+  font-style: italic;
+}
+
+.rich2::before {
+  content: '■';
+  font-size: 0.7em;
+}
+
+.pageBreak {
+  border: 0;
+  border-top: 1px dashed gray;
+  margin: calc(360 * var(--tw)) calc(-720 * var(--tw));
+}
+
+.students {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(708 * var(--tw));
+  align-items: start;
+}
+
+.students table {
+  width: calc(4360 * var(--tw));
+  max-width: 100%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-family: 'Aptos Narrow', 'Arial Narrow', Arial, sans-serif;
+  font-size: 11pt;
+}
+
+.students th,
+.students td {
+  border: 0.5pt solid black;
+  padding: 0 calc(108 * var(--tw));
+  text-align: left;
+}
+
+.students th:last-child,
+.students td:last-child {
+  width: calc(961 * var(--tw));
+  text-align: center;
+}
+
+.students .new {
+  font-weight: bold;
+}
