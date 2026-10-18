@@ -1,0 +1,4 @@
+# Supply-chain hygiene: only install releases older than 3 days and never run
+# install scripts unless a package is listed in allowBuilds.
+minimumReleaseAge: 4320
+allowBuilds: {}

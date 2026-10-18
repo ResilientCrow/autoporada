@@ -1,0 +1,19 @@
+{
+  "name": "autoporada",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generates the weekly „Porada vedení školy“ document of Smíchovská střední",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
+  }
+}
