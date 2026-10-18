@@ -1,0 +1,137 @@
+import { atLeast, type Actor, type Role } from '@/domain/actor';
+import type { FutureKind } from '@/domain/calendar';
+import {
+  availableEvents,
+  canEditPoint,
+  FUTURE_MACHINE,
+  POINT_MACHINE,
+  type FutureEvent,
+  type FutureState,
+  type PointEvent,
+  type PointState,
+  type ReviewActor,
+} from '@/domain/review';
+
+interface Owned {
+  readonly authorId: string;
+}
+type PointRef = Owned & { readonly state: PointState };
+type FutureRef = Owned & { readonly state: FutureState; readonly kind: FutureKind };
+
+/** Everything the app can be asked to do, with the resource it is done to. */
+export type Check =
+  | { readonly action: 'access.request' }
+  | { readonly action: 'profile.manage' }
+  | { readonly action: 'directory.search' }
+  | { readonly action: 'point.create' }
+  | { readonly action: 'point.view'; readonly point: Owned }
+  | { readonly action: 'point.edit'; readonly point: PointRef }
+  | { readonly action: 'point.transition'; readonly point: PointRef; readonly event: PointEvent }
+  | { readonly action: 'future.create' }
+  | { readonly action: 'future.view'; readonly item: FutureRef }
+  | { readonly action: 'future.edit'; readonly item: FutureRef }
+  | { readonly action: 'future.transition'; readonly item: FutureRef; readonly event: FutureEvent }
+  | { readonly action: 'review.queue' }
+  | { readonly action: 'issue.preview' }
+  /** Přítomni/Hosté, POKYNY, ohlasy, Příloha 2 */
+  | { readonly action: 'issue.edit' }
+  /** Generate, reopen, skip */
+  | { readonly action: 'issue.generate' }
+  | { readonly action: 'archive.view' }
+  | { readonly action: 'registry.view' }
+  | { readonly action: 'registry.edit' }
+  | { readonly action: 'registry.newSchoolYear' }
+  | { readonly action: 'pointTypes.manage' }
+  | { readonly action: 'settings.manage' }
+  | { readonly action: 'users.manage' }
+  | { readonly action: 'access.decide' };
+
+export type Action = Check['action'];
+
+/** Actions that need a fresh sign-in (≤ 10 min) on top of the session (ADR 0002). */
+const STEP_UP: ReadonlySet<Action> = new Set<Action>(['users.manage', 'registry.newSchoolYear']);
+
+export function requiresStepUp(action: Action): boolean {
+  return STEP_UP.has(action);
+}
+
+function reviewActor(actor: Actor, owned: Owned): ReviewActor {
+  return { kind: 'user', role: actor.role, isAuthor: owned.authorId === actor.id };
+}
+
+const has = (actor: Actor, minimum: Role) => atLeast(actor.role, minimum);
+/** The registry and archive name every student; students never see them. */
+const staffReviewer = (actor: Actor) => has(actor, 'reviewer') && !actor.isStudent;
+
+/**
+ * The single authorization decision of the app. Pure and deny-by-default:
+ * inactive accounts can do nothing, pending ones can only ask for access.
+ */
+export function can(actor: Actor, check: Check): boolean {
+  if (actor.status !== 'active') return false;
+  if (actor.role === 'pending')
+    return check.action === 'access.request' || check.action === 'profile.manage';
+
+  switch (check.action) {
+    case 'access.request':
+      return false;
+    case 'profile.manage':
+    case 'directory.search':
+    case 'point.create':
+    case 'future.create':
+      return has(actor, 'submitter');
+    case 'point.view':
+      return check.point.authorId === actor.id || has(actor, 'reviewer');
+    case 'point.edit':
+      return canEditPoint(check.point.state, reviewActor(actor, check.point));
+    case 'point.transition':
+      return availableEvents(
+        POINT_MACHINE,
+        check.point.state,
+        reviewActor(actor, check.point),
+      ).includes(check.event);
+    case 'future.view':
+      return (
+        check.item.authorId === actor.id ||
+        has(actor, 'reviewer') ||
+        (check.item.kind === 'akce' && check.item.state === 'approved')
+      );
+    case 'future.edit': {
+      // Authors edit drafts, returned items and approved ones (which go back to review);
+      // reviewers edit what is waiting or approved, as with points.
+      const { state } = check.item;
+      if (
+        check.item.authorId === actor.id &&
+        (state === 'draft' || state === 'returned' || state === 'approved')
+      ) {
+        return true;
+      }
+      return has(actor, 'reviewer') && (state === 'submitted' || state === 'approved');
+    }
+    case 'future.transition':
+      return availableEvents(
+        FUTURE_MACHINE,
+        check.item.state,
+        reviewActor(actor, check.item),
+      ).includes(check.event);
+    case 'review.queue':
+    case 'issue.preview':
+      return has(actor, 'reviewer');
+    case 'archive.view':
+    case 'registry.view':
+      return staffReviewer(actor);
+    case 'issue.edit':
+    case 'issue.generate':
+    case 'registry.edit':
+    case 'registry.newSchoolYear':
+    case 'pointTypes.manage':
+    case 'settings.manage':
+    case 'users.manage':
+    case 'access.decide':
+      return actor.role === 'headmaster' && !actor.isStudent;
+    default: {
+      const unhandled: never = check;
+      return unhandled;
+    }
+  }
+}
