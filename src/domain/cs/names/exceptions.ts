@@ -25,6 +25,9 @@ export const MASCULINE_GENITIVE: Readonly<Record<string, string>> = {
   švec: 'ševce',
   // established forms
   král: 'krále',
+  hus: 'husa',
+  nagy: 'nagye',
+  oto: 'oty',
   otto: 'otty',
   mráz: 'mráze',
   klaus: 'klause',

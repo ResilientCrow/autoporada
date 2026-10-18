@@ -227,7 +227,7 @@ describe('masculine surnames', () => {
     ['Klaus', 'Klause'],
     ['Kraus', 'Krause'],
     ['Dvořáček', 'Dvořáčka'],
-    ['Kos', 'Kosa'],
+    ['Kos', 'Kose'],
     ['Lorenc', 'Lorence'],
     ['Bach', 'Bacha'],
     ['Mendel', 'Mendela'],
@@ -482,5 +482,108 @@ describe('splitFullName', () => {
     ['Novák', { givenName: '', familyName: 'Novák' }],
   ])('%s', (raw, expected) => {
     expect(splitFullName(raw, 'pan')).toEqual({ salutation: 'pan', ...expected });
+  });
+});
+
+describe('review regressions (IJP ids 320, 321, 323, 324, 350)', () => {
+  describe('masculine given names', () => {
+    table('m', 'given', [
+      ['Ilya', 'Ilyi'],
+      ['Kostya', 'Kostyi'],
+      ['Duc', 'Duca'],
+      ['Eric', 'Erica'],
+      ['Isaac', 'Isaaca'],
+      ['Marc', 'Marce'],
+      ['Péťa', 'Péti'],
+      ['Láďa', 'Ládi'],
+      ['Roy', 'Roye'],
+      ['Oto', 'Oty'],
+      ['Oleksandr', 'Oleksandra'],
+      ['Ján', 'Jána'],
+    ]);
+  });
+  describe('masculine surnames', () => {
+    table('m', 'family', [
+      ['Švarc', 'Švarce'],
+      ['Bosch', 'Bosche'],
+      ['Jens', 'Jense'],
+      ['Moroz', 'Moroze'],
+      ['Hus', 'Husa'],
+      ['Váňa', 'Váni'],
+      ['Baťa', 'Bati'],
+      ['Hemingway', 'Hemingwaye'],
+      ['Nagy', 'Nagye'],
+      ['Kowalski', 'Kowalského'],
+      ['Vranitzky', 'Vranitzkého'],
+      ['Tichých', 'Tichých'],
+      ['Jakubův', 'Jakubův'],
+      ['Brus', 'Bruse'],
+      ['Rek', 'Reka'],
+      ['Smrček', 'Smrčka'],
+      ['Nguyen', 'Nguyena'],
+      ['Do', '?'],
+      ['Ngo', '?'],
+      ['Bao', '?'],
+    ]);
+  });
+  describe('feminine given names', () => {
+    table('f', 'given', [
+      ['Maya', 'Mayi'],
+      ['Sonya', 'Sonyi'],
+      ['Mariya', 'Mariyi'],
+      ['Freya', 'Freyi'],
+      ['Jessica', 'Jessicy'],
+      ['Bianca', 'Biancy'],
+      ['Rebecca', 'Rebeccy'],
+      ['Mia', 'Mii'],
+      ['Lia', 'Lii'],
+      ['Nadia', 'Nadii'],
+      ['Mária', 'Márie'],
+      ['Ha', '?'],
+      ['Nga', '?'],
+    ]);
+  });
+
+  it.each([
+    ['Mayy', 'f', 'given', 'Maya'],
+    ['Jessici', 'f', 'given', 'Jessica'],
+    ['Duce', 'm', 'given', 'Duc'],
+  ] as const)('never suggests the impossible „%s“', (wrong, sex, role, name) => {
+    expect(declineToken(name, sex, role).form).not.toBe(wrong);
+  });
+
+  it.each(['Jessica', 'Bianca', 'Maya'])(
+    'flags %s for a check instead of a silent prefill',
+    (name) => {
+      expect(suggestGenitive(splitFullName(`${name} Nováková`, 'slecna')).needsCheck).toBe(true);
+    },
+  );
+
+  it.each([
+    ['pan', 'Ben Novák', 'pana Bena Nováka'],
+    ['pan', 'Al Pacino', 'pana Ala Pacina'],
+    ['pan', 'Ludwig van Beethoven', 'pana Ludwiga van Beethovena'],
+    ['pani', 'Mgr. et Mgr. Jana Nováková', 'paní Mgr. et Mgr. Jany Novákové'],
+    ['pan', 'Dr. John Smith', 'pana Dr. Johna Smitha'],
+    ['pan', 'Petr Dvořák Ph.D.', 'pana Petra Dvořáka, Ph.D.'],
+    ['pan', 'ThMgr. Jan Kříž', 'pana ThMgr. Jana Kříže'],
+  ] as const)('%s %s → %s', (salutation, full, expected) => {
+    expect(suggestGenitive(splitFullName(full, salutation)).text).toBe(expected);
+  });
+
+  it('keeps unknown abbreviations as written and flags them', () => {
+    const result = suggestGenitive({ salutation: 'pan', givenName: 'J.', familyName: 'Novák' });
+    expect(result).toMatchObject({
+      text: 'pana J. Nováka',
+      confidence: 'medium',
+      needsCheck: true,
+    });
+  });
+
+  it('flags an empty name instead of calling it a manual correction', () => {
+    expect(suggestGenitive(splitFullName('   ', 'pan'))).toMatchObject({
+      confidence: 'low',
+      needsCheck: true,
+    });
   });
 });

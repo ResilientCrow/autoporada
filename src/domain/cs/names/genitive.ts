@@ -1,6 +1,7 @@
 import { declineToken, lowest, type Confidence, type DeclinedToken } from './decline';
 import { PARTICLES } from './exceptions';
 import { SALUTATION, type PersonName, type Salutation } from './person';
+import { isTitleAfter, isTitleBefore } from './titles';
 
 export interface GenitiveSuggestion {
   /** „pana Mgr. Jana Nováka, Ph.D.“ */
@@ -23,7 +24,9 @@ export function suggestGenitive(person: PersonName, override?: string): Genitive
     return { text: override.trim(), confidence: 'manual', needsCheck: false, tokens: [] };
   }
   const { sex, genitive } = SALUTATION[person.salutation];
-  const given = words(person.givenName).map((w) => declineToken(w, sex, 'given'));
+  const given = words(person.givenName).map((w, i) =>
+    declineToken(w, sex, 'given', { mayBeParticle: i > 0 }),
+  );
   const family = words(person.familyName).map((w) => declineToken(w, sex, 'family'));
   const tokens = [...given, ...family];
   const name = [person.titlesBefore?.trim(), ...tokens.map((t) => t.form)]
@@ -34,19 +37,27 @@ export function suggestGenitive(person: PersonName, override?: string): Genitive
   return { text, confidence, needsCheck: confidence === 'medium' || confidence === 'low', tokens };
 }
 
-const TITLE_BEFORE =
-  /^(Bc|BcA|Mgr|MgA|Ing|arch|MUDr|MDDr|MVDr|PhDr|RNDr|PaedDr|PharmDr|JUDr|ThDr|ThLic|doc|prof|Doc|Prof)\.$/;
-
 /**
  * Best-effort split of a typed full name, for people not found in the school
  * directory (which provides given name and surname separately).
  */
 export function splitFullName(raw: string, salutation: Salutation): PersonName {
   const [beforeComma = '', ...afterComma] = raw.split(',');
-  const titlesAfter = afterComma.join(',').trim();
   const all = words(beforeComma);
+  // „Mgr. et Mgr. Jana“: titles, joined by „et“.
   const titles: string[] = [];
-  while (all.length > 1 && TITLE_BEFORE.test(all[0] ?? '')) titles.push(all.shift() ?? '');
+  while (all.length > 1) {
+    const [word = '', next = ''] = all;
+    if (isTitleBefore(word) || (word === 'et' && titles.length > 0 && isTitleBefore(next))) {
+      titles.push(word);
+      all.shift();
+    } else break;
+  }
+  // „Petr Dvořák Ph.D.“ typed without the comma.
+  const trailing: string[] = [];
+  while (all.length > 1 && isTitleAfter(all[all.length - 1] ?? ''))
+    trailing.unshift(all.pop() ?? '');
+  const titlesAfter = [...trailing, afterComma.join(',').trim()].filter(Boolean).join(', ');
   const particle = all.findIndex((w, i) => i > 0 && PARTICLES.has(w.toLowerCase()));
   // A lone word is a surname: „pan Novák“.
   const familyStart = particle > 0 ? particle : Math.max(all.length - 1, 0);
