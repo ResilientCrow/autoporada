@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":pinDevDependencies"],
+  "minimumReleaseAge": "3 days",
+  "timezone": "Europe/Prague",
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    {
+      "matchPackageNames": ["next", "@next/**", "eslint-config-next", "react", "react-dom"],
+      "groupName": "next and react",
+      "minimumReleaseAge": "0 days"
+    }
+  ],
+  "vulnerabilityAlerts": { "minimumReleaseAge": "0 days" }
+}
