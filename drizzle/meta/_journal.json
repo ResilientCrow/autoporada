@@ -36,6 +36,13 @@
       "when": 1792394005529,
       "tag": "0004_audit_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792400297317,
+      "tag": "0005_pin_search_path",
+      "breakpoints": true
     }
   ]
 }

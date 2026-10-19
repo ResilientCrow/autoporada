@@ -29,7 +29,11 @@ integration tests should prove the privileges, not bypass them.
   `0000_roles`. A table that needs less (the append-only audit log) revokes
   in its own migration.
 - Rules that must also bind the owner (append-only audit, at least one
-  active headmaster) are **triggers**, not just missing grants.
+  active headmaster) are **triggers**, not just missing grants. Every
+  trigger function pins `search_path = pg_catalog, public, pg_temp` and
+  qualifies its tables, and PUBLIC has no `TEMPORARY` privilege: a
+  temporary table must never stand in for a real one. The migrator owns the
+  database, so that revoke takes effect.
 - **Tests.** Each integration test file gets its own database, cloned from a
   template that is rebuilt only when `drizzle/` changes. The app connection
   in tests runs as `autoporada_app`, so every test also exercises the grants.

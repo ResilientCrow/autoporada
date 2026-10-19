@@ -69,6 +69,8 @@ export function setupTestDatabase(): TestDatabase {
 
   beforeAll(async () => {
     await asAdmin((c) => c.query(`CREATE DATABASE ${name} TEMPLATE ${TEMPLATE}`));
+    // A clone gets the default database privileges back; repeat what migration 0005 revoked.
+    await asAdmin((c) => c.query(`REVOKE TEMPORARY ON DATABASE ${name} FROM PUBLIC`));
     handle = connectDatabase({
       url: databaseUrl(name),
       applicationName: 'autoporada-test',

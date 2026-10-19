@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { setupTestDatabase } from '../../support/database';
+import { pgErrorOf, setupTestDatabase } from '../../support/database';
 
 const database = setupTestDatabase();
 /** SQLSTATE insufficient_privilege, from the pg error Drizzle wraps. */
@@ -23,6 +23,45 @@ describe('database roles (ADR 0010)', () => {
     await expect(
       database.db.execute(sql`SELECT count(*) FROM drizzle.__drizzle_migrations`),
     ).rejects.toMatchObject(DENIED);
+  });
+
+  it('gives the app no temporary tables', async () => {
+    expect(
+      await pgErrorOf(database.db.execute(sql`CREATE TEMP TABLE users (role text)`)),
+    ).toMatchObject({
+      code: '42501',
+    });
+  });
+
+  it('pins the search path of every trigger function', async () => {
+    const functions = await database.owner<{ name: string; config: string[] | null }>(
+      `SELECT proname AS name, proconfig AS config FROM pg_proc
+        WHERE pronamespace = 'public'::regnamespace AND prorettype = 'trigger'::regtype
+        ORDER BY 1`,
+    );
+    expect(functions.length).toBeGreaterThan(0);
+    for (const fn of functions) {
+      expect(fn.config, fn.name).toContain('search_path=pg_catalog, public, pg_temp');
+    }
+  });
+
+  it('checks public.users for the last headmaster, whatever a session put in pg_temp', async () => {
+    await database.owner('TRUNCATE users CASCADE');
+    const [head] = await database.owner<{ id: string }>(
+      `INSERT INTO users (tid, oid, display_name, role)
+       VALUES (gen_random_uuid(), gen_random_uuid(), 'Ředitel', 'headmaster') RETURNING id`,
+    );
+    const shadowed = database.owner(
+      `BEGIN;
+       CREATE TEMP TABLE users (role text, status text);
+       INSERT INTO users VALUES ('headmaster', 'active');
+       UPDATE public.users SET role = 'reviewer' WHERE id = '${head!.id}';
+       COMMIT;`,
+    );
+    expect(await pgErrorOf(shadowed)).toMatchObject({
+      code: '23514',
+      constraint: 'users_active_headmaster',
+    });
   });
 
   it('grants every table exactly the default privileges, unless listed here', async () => {

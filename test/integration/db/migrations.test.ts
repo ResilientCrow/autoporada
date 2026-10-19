@@ -37,4 +37,12 @@ describe('runMigrations', () => {
     );
     expect(applied).toEqual([{ n: journal.entries.length }]);
   });
+
+  it('takes temporary tables away from the app (migration 0005)', async () => {
+    const rows = await admin(
+      `SELECT has_database_privilege('autoporada_app', current_database(), 'TEMPORARY') AS temp`,
+      name,
+    );
+    expect(rows).toEqual([{ temp: false }]);
+  });
 });
