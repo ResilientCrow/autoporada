@@ -13,7 +13,8 @@
     "src/snapshot/index.ts",
     "src/document/index.ts",
   ],
-  // System tools used by the PDF render check (poppler-utils), not npm packages.
-  "ignoreBinaries": ["pdftotext", "pdffonts", "pdftohtml"],
+  // System tools, not npm packages: poppler-utils for the PDF render check,
+  // openssl for the test certificate (made as docs/ENTRA-SETUP.md §6 says).
+  "ignoreBinaries": ["pdftotext", "pdffonts", "pdftohtml", "openssl"],
   "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{mjs,ts}", "test/**/*.ts"],
 }

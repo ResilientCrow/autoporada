@@ -35,9 +35,16 @@ const shape = z.object({
   OIDC_CLIENT_ID: z.string().min(1),
   OIDC_CLIENT_SECRET: z.string().min(1).optional(),
   OIDC_CLIENT_KEY: z.string().includes('PRIVATE KEY').optional(),
+  /** The certificate uploaded to Entra; the private key above signs the client assertion. */
+  OIDC_CLIENT_CERT: z.string().includes('BEGIN CERTIFICATE').optional(),
   OIDC_CLIENT_CERT_THUMBPRINT: z
     .string()
     .regex(/^[0-9A-Fa-f]{40}$/, 'must be the 40-character SHA-1 thumbprint')
+    .optional(),
+  /** Skips Entra's account picker for the school domain, e.g. ssps.cz. */
+  OIDC_DOMAIN_HINT: z
+    .string()
+    .regex(/^[a-z0-9.-]{1,253}$/i, 'must be a domain name')
     .optional(),
   GRAPH_BASE_URL: httpUrl.default('https://graph.microsoft.com/v1.0'),
   MAIL_TRANSPORT: z.enum(['smtp', 'graph']),
@@ -65,12 +72,11 @@ export const rawConfigSchema = shape.superRefine((c, ctx) => {
   if (c.MAIL_TRANSPORT === 'smtp' && !c.SMTP_URL) {
     problem('SMTP_URL', 'is required when MAIL_TRANSPORT=smtp');
   }
-  const hasCert = Boolean(c.OIDC_CLIENT_KEY && c.OIDC_CLIENT_CERT_THUMBPRINT);
-  if (!hasCert && !c.OIDC_CLIENT_SECRET) {
-    problem(
-      'OIDC_CLIENT_KEY',
-      'set OIDC_CLIENT_KEY + OIDC_CLIENT_CERT_THUMBPRINT (or a dev secret)',
-    );
+  const hasCert = Boolean(c.OIDC_CLIENT_KEY && c.OIDC_CLIENT_CERT);
+  if (Boolean(c.OIDC_CLIENT_KEY) !== Boolean(c.OIDC_CLIENT_CERT)) {
+    problem('OIDC_CLIENT_CERT', 'give OIDC_CLIENT_KEY and OIDC_CLIENT_CERT together');
+  } else if (!hasCert && !c.OIDC_CLIENT_SECRET) {
+    problem('OIDC_CLIENT_KEY', 'set OIDC_CLIENT_KEY + OIDC_CLIENT_CERT (or a dev secret)');
   }
 
   if (c.APP_ENV !== 'production') return;

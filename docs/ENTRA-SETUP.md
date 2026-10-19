@@ -148,7 +148,14 @@ chmod 600 autoporada-entra.key
 ```
 
 - Upload `autoporada-entra.crt` in step 1.2.
-- The key becomes a Docker secret on the server.
+- The key **and** the certificate become Docker secrets on the server
+  (`entra_key`, `entra_cert`). The key never leaves the server.
+- The app checks at start-up that the key belongs to the certificate, that
+  the key has at least 2048 bits, and that the SHA-1 thumbprint matches the
+  one the portal shows (`OIDC_CLIENT_CERT_THUMBPRINT`, recommended).
+- The app signs its client assertion with PS256 and names the certificate by
+  its SHA-256 (`x5t#S256`), as Microsoft documents for certificate
+  credentials.
 - The app warns the IT contact 45 days before the certificate expires.
   Renewal is the same two steps, done before the old certificate is removed.
 
@@ -158,7 +165,7 @@ chmod 600 autoporada-entra.key
 |---|---|
 | Directory (tenant) ID | App registration → Overview |
 | Application (client) ID | App registration → Overview |
-| Certificate thumbprint | App registration → Certificates & secrets |
+| Certificate thumbprint (SHA-1) | App registration → Certificates & secrets. The app compares it with the certificate at start-up. |
 | Enterprise application object ID | Enterprise applications → Autoporada |
 | Shared mailbox | `autoporada@ssps.cz` |
 | Headmaster's user object ID | Entra → Users → the headmaster → Object ID. It becomes the first administrator. |

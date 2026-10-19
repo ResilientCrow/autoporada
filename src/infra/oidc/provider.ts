@@ -1,12 +1,12 @@
+import { randomUUID } from 'node:crypto';
+
 import * as client from 'openid-client';
 
 import type { IdentityProvider, IdpDetail, IdpResult } from '@/application/ports';
 
 import { assertOutsideTransaction } from '../system';
+import type { ClientCredential } from './credential';
 import { mapFailure } from './failure';
-
-/** How the app proves itself to Entra. Development uses a secret; production a certificate (ADR 0002). */
-type ClientCredential = { readonly kind: 'secret'; readonly secret: string };
 
 export interface ProviderOptions {
   readonly issuer: string;
@@ -25,8 +25,22 @@ const ENTRA_ORIGIN = 'https://login.microsoftonline.com';
 
 class EndpointOutsideIssuer extends Error {}
 
+/**
+ * The client assertion as Entra wants it: PS256, typ JWT, the certificate's
+ * `x5t#S256` and no kid, the token endpoint as audience, a GUID jti.
+ */
 function clientAuth(credential: ClientCredential): client.ClientAuth {
-  return client.ClientSecretPost(credential.secret);
+  if (credential.kind === 'secret') return client.ClientSecretPost(credential.secret);
+  return (server, metadata, body, headers) =>
+    client.PrivateKeyJwt(credential.key, {
+      [client.modifyAssertion]: (header, payload) => {
+        header['typ'] = 'JWT';
+        header['x5t#S256'] = credential.x5tS256;
+        delete header['kid'];
+        payload['aud'] = server.token_endpoint;
+        payload['jti'] = randomUUID();
+      },
+    })(server, metadata, body, headers);
 }
 
 const fail = (stage: IdpDetail['stage'], error: unknown): IdpResult<never> => {

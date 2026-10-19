@@ -6,9 +6,15 @@ import { CONFIG_KEYS, databaseUrl, rawConfigSchema, type LogLevel } from './sche
 export { ConfigError } from './read-env';
 export type { LogLevel } from './schema';
 
-type OidcCredential =
-  | { kind: 'certificate'; privateKeyPem: string; thumbprint: string }
-  | { kind: 'secret'; secret: string };
+export type OidcCredential =
+  | {
+      readonly kind: 'certificate';
+      readonly privateKeyPem: string;
+      readonly certificatePem: string;
+      /** The SHA-1 thumbprint the Entra portal shows, as a cross-check. */
+      readonly thumbprint: string | undefined;
+    }
+  | { readonly kind: 'secret'; readonly secret: string };
 
 export interface Config {
   readonly environment: 'development' | 'test' | 'production';
@@ -19,6 +25,7 @@ export interface Config {
     readonly tenantId: string;
     readonly clientId: string;
     readonly credential: OidcCredential;
+    readonly domainHint: string | null;
   };
   readonly graphBaseUrl: string;
   readonly mail:
@@ -40,11 +47,12 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
   }
   const c = parsed.data;
   const credential: OidcCredential =
-    c.OIDC_CLIENT_KEY && c.OIDC_CLIENT_CERT_THUMBPRINT
+    c.OIDC_CLIENT_KEY && c.OIDC_CLIENT_CERT
       ? {
           kind: 'certificate',
           privateKeyPem: c.OIDC_CLIENT_KEY,
-          thumbprint: c.OIDC_CLIENT_CERT_THUMBPRINT,
+          certificatePem: c.OIDC_CLIENT_CERT,
+          thumbprint: c.OIDC_CLIENT_CERT_THUMBPRINT?.toUpperCase(),
         }
       : { kind: 'secret', secret: c.OIDC_CLIENT_SECRET ?? '' };
 
@@ -57,6 +65,7 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
       tenantId: c.OIDC_TENANT_ID.toLowerCase(),
       clientId: c.OIDC_CLIENT_ID,
       credential,
+      domainHint: c.OIDC_DOMAIN_HINT?.toLowerCase() ?? null,
     },
     graphBaseUrl: c.GRAPH_BASE_URL.replace(/\/$/, ''),
     mail:

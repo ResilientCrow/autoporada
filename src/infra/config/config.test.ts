@@ -16,6 +16,7 @@ const DEV_ENV = {
 };
 
 const KEY_PEM = '-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----';
+const CERT_PEM = '-----BEGIN CERTIFICATE-----\nMIIC...\n-----END CERTIFICATE-----';
 const PROD_ENV = {
   ...DEV_ENV,
   APP_ENV: 'production',
@@ -25,6 +26,7 @@ const PROD_ENV = {
   OIDC_TENANT_ID: '3F2C1A4E-0000-4000-8000-000000000000',
   OIDC_CLIENT_SECRET: undefined,
   OIDC_CLIENT_KEY_FILE: '/run/secrets/entra_key',
+  OIDC_CLIENT_CERT_FILE: '/run/secrets/entra_cert',
   OIDC_CLIENT_CERT_THUMBPRINT: 'A'.repeat(40),
   MAIL_TRANSPORT: 'graph',
   SMTP_URL: undefined,
@@ -65,10 +67,17 @@ describe('loadConfig', () => {
   });
 
   it('reads secrets from *_FILE and strips the trailing newline', () => {
-    const config = loadConfig(PROD_ENV, secretFiles({ '/run/secrets/entra_key': `${KEY_PEM}\n` }));
+    const config = loadConfig(
+      PROD_ENV,
+      secretFiles({
+        '/run/secrets/entra_key': `${KEY_PEM}\n`,
+        '/run/secrets/entra_cert': CERT_PEM,
+      }),
+    );
     expect(config.oidc.credential).toEqual({
       kind: 'certificate',
       privateKeyPem: KEY_PEM,
+      certificatePem: CERT_PEM,
       thumbprint: 'A'.repeat(40),
     });
     expect(config.oidc.tenantId).toBe('3f2c1a4e-0000-4000-8000-000000000000');
@@ -83,7 +92,8 @@ describe('loadConfig', () => {
 
   it('reports an unreadable secret file without crashing', () => {
     const env = { ...PROD_ENV, OIDC_CLIENT_KEY_FILE: '/missing' };
-    expect(problemsOf(() => loadConfig(env, secretFiles({})))).toEqual([
+    const files = secretFiles({ '/run/secrets/entra_cert': CERT_PEM });
+    expect(problemsOf(() => loadConfig(env, files))).toEqual([
       'OIDC_CLIENT_KEY_FILE: cannot read the file it points to',
     ]);
   });
@@ -110,7 +120,10 @@ describe('loadConfig', () => {
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: undefined,
     };
     const problems = problemsOf(() =>
-      loadConfig(env, secretFiles({ '/run/secrets/entra_key': KEY_PEM })),
+      loadConfig(
+        env,
+        secretFiles({ '/run/secrets/entra_key': KEY_PEM, '/run/secrets/entra_cert': CERT_PEM }),
+      ),
     );
     expect(problems).toEqual([
       'APP_ORIGIN: must use https in production',
@@ -128,7 +141,10 @@ describe('loadConfig', () => {
 });
 
 describe('loadConfig hardening', () => {
-  const prodFiles = secretFiles({ '/run/secrets/entra_key': KEY_PEM });
+  const prodFiles = secretFiles({
+    '/run/secrets/entra_key': KEY_PEM,
+    '/run/secrets/entra_cert': CERT_PEM,
+  });
 
   it('requires APP_ENV when NODE_ENV=production (next start)', () => {
     const problems = problemsOf(() => loadConfig({ ...DEV_ENV, NODE_ENV: 'production' }, noFiles));
@@ -235,5 +251,31 @@ describe('loadDatabaseUrl', () => {
   it.each([{}, { DATABASE_URL: 'mysql://hunter2@db' }])('rejects %j without echoing it', (env) => {
     const problems = problemsOf(() => loadDatabaseUrl(env, noFiles));
     expect(problems).toEqual(['DATABASE_URL: must be a postgres:// URL']);
+  });
+});
+
+describe('loadConfig: the Entra certificate', () => {
+  const prodFiles = secretFiles({
+    '/run/secrets/entra_key': KEY_PEM,
+    '/run/secrets/entra_cert': CERT_PEM,
+  });
+
+  it('needs the key and the certificate together', () => {
+    const env = { ...PROD_ENV, OIDC_CLIENT_CERT_FILE: undefined };
+    expect(problemsOf(() => loadConfig(env, prodFiles))).toEqual([
+      'OIDC_CLIENT_CERT: give OIDC_CLIENT_KEY and OIDC_CLIENT_CERT together',
+      'OIDC_CLIENT_KEY: certificate credential is required in production',
+    ]);
+  });
+
+  it('takes the thumbprint as an optional cross-check, and a domain hint', () => {
+    const env = {
+      ...PROD_ENV,
+      OIDC_CLIENT_CERT_THUMBPRINT: undefined,
+      OIDC_DOMAIN_HINT: 'SSPS.cz',
+    };
+    const config = loadConfig(env, prodFiles);
+    expect(config.oidc.credential).toMatchObject({ kind: 'certificate', thumbprint: undefined });
+    expect(config.oidc.domainHint).toBe('ssps.cz');
   });
 });

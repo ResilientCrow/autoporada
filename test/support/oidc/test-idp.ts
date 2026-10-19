@@ -4,15 +4,20 @@
  * what Entra verifies (single-use codes, the exact redirect_uri, PKCE S256,
  * the client's credential) and can forge what an attacker would send.
  */
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, X509Certificate } from 'node:crypto';
 
 import {
+  decodeProtectedHeader,
   exportJWK,
   exportSPKI,
   generateKeyPair,
+  importX509,
+  jwtVerify,
   SignJWT,
   UnsecuredJWT,
   type CryptoKey,
+  type JWTPayload,
+  type ProtectedHeaderParameters,
 } from 'jose';
 import type { CustomFetch } from 'openid-client';
 
@@ -71,8 +76,14 @@ export interface TestIdp {
   next(token: { readonly claims?: Record<string, unknown>; readonly sign?: Signing }): void;
   failToken(failure: TokenFailure): void;
   down(isDown?: boolean): void;
+  /** Accepts client assertions signed for this certificate, as Entra would after the upload. */
+  trust(certificatePem: string): void;
   readonly seen: {
     readonly tokenRequests: URLSearchParams[];
+    readonly assertions: {
+      readonly header: ProtectedHeaderParameters;
+      readonly payload: JWTPayload;
+    }[];
     jwksFetches: number;
     calledInsideTransaction: number;
   };
@@ -93,9 +104,43 @@ export async function createTestIdp(): Promise<TestIdp> {
   let isDown = false;
   const seen = {
     tokenRequests: [] as URLSearchParams[],
+    assertions: [] as { header: ProtectedHeaderParameters; payload: JWTPayload }[],
     jwksFetches: 0,
     calledInsideTransaction: 0,
   };
+  let trusted: { pem: string; x5tS256: string } | undefined;
+  const usedJtis = new Set<string>();
+  const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  /** Entra's checks of a certificate client assertion (its certificate credentials page). */
+  async function assertionValid(assertion: string): Promise<boolean> {
+    if (!trusted) return false;
+    try {
+      const header = decodeProtectedHeader(assertion);
+      const key = await importX509(trusted.pem, 'PS256');
+      const { payload } = await jwtVerify(assertion, key, {
+        algorithms: ['PS256'],
+        issuer: TEST_CLIENT,
+        subject: TEST_CLIENT,
+        audience: TOKEN,
+      });
+      seen.assertions.push({ header, payload });
+      const jti = typeof payload.jti === 'string' ? payload.jti : '';
+      const fresh = GUID.test(jti) && !usedJtis.has(jti);
+      usedJtis.add(jti);
+      const lifetime = (payload.exp ?? 0) - (payload.nbf ?? payload.iat ?? 0);
+      return (
+        header.typ === 'JWT' &&
+        header['x5t#S256'] === trusted.x5tS256 &&
+        header.kid === undefined &&
+        fresh &&
+        lifetime > 0 &&
+        lifetime <= 600
+      );
+    } catch {
+      return false;
+    }
+  }
 
   async function idToken(grant: Grant): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
@@ -146,7 +191,14 @@ export async function createTestIdp(): Promise<TestIdp> {
       });
     }
     if (tokenFailure) return json(tokenFailure.body, tokenFailure.status);
-    if (body.get('client_id') !== TEST_CLIENT || body.get('client_secret') !== TEST_SECRET) {
+    const assertion = body.get('client_assertion');
+    const authenticated =
+      assertion !== null
+        ? body.get('client_assertion_type') ===
+            'urn:ietf:params:oauth:client-assertion-type:jwt-bearer' &&
+          (await assertionValid(assertion))
+        : body.get('client_id') === TEST_CLIENT && body.get('client_secret') === TEST_SECRET;
+    if (!authenticated) {
       return json(
         { error: 'invalid_client', error_description: 'AADSTS7000215: Invalid client secret.' },
         401,
@@ -227,6 +279,13 @@ export async function createTestIdp(): Promise<TestIdp> {
     },
     failToken(failure) {
       tokenFailure = failure;
+    },
+    trust(certificatePem) {
+      const der = new X509Certificate(certificatePem).raw;
+      trusted = {
+        pem: certificatePem,
+        x5tS256: createHash('sha256').update(der).digest('base64url'),
+      };
     },
     down(value = true) {
       isDown = value;

@@ -11,8 +11,9 @@ import {
   TEST_SECRET,
   type TestIdp,
 } from '../../../test/support/oidc/test-idp';
+import { testCertificate } from '../../../test/support/oidc/cert';
 import { inTransactionScope } from '../system';
-import { createIdentityProvider, type ProviderOptions } from './index';
+import { createIdentityProvider, loadClientCredential, type ProviderOptions } from './index';
 
 const APP = 'https://autoporada.ssps.cz';
 const request = { state: 'S'.repeat(43), nonce: 'N'.repeat(43), codeVerifier: 'V'.repeat(43) };
@@ -172,5 +173,45 @@ describe('Entra over openid-client', () => {
     await expect(inTransactionScope(() => provider.authorizationUrl(request))).rejects.toThrow(
       /must not run inside a database transaction/,
     );
+  });
+
+  it('signs in with the certificate the way Entra requires', async () => {
+    const pair = testCertificate();
+    const credential = loadClientCredential({
+      kind: 'certificate',
+      privateKeyPem: pair.keyPem,
+      certificatePem: pair.certificatePem,
+      thumbprint: undefined,
+    });
+    const { idp, provider } = await setup({ credential });
+    idp.trust(pair.certificatePem);
+    value(await signIn(idp, provider));
+    value(await signIn(idp, provider));
+    const [first, second] = idp.seen.assertions;
+    expect(first?.header).toEqual({ alg: 'PS256', typ: 'JWT', 'x5t#S256': expect.any(String) });
+    expect(first?.payload).toMatchObject({
+      iss: TEST_CLIENT,
+      sub: TEST_CLIENT,
+      aud: 'https://login.microsoftonline.com/00000000-0000-0000-0000-000000000001/oauth2/v2.0/token',
+    });
+    expect(first?.payload.jti).toMatch(/^[0-9a-f-]{36}$/);
+    expect(second?.payload.jti).not.toBe(first?.payload.jti);
+    expect(idp.seen.tokenRequests[0]?.has('client_secret')).toBe(false);
+  });
+
+  it('is refused when Entra does not know the certificate', async () => {
+    const pair = testCertificate();
+    const credential = loadClientCredential({
+      kind: 'certificate',
+      privateKeyPem: pair.keyPem,
+      certificatePem: pair.certificatePem,
+      thumbprint: undefined,
+    });
+    const { idp, provider } = await setup({ credential });
+    expect(await signIn(idp, provider)).toMatchObject({
+      ok: false,
+      failure: 'idp-error',
+      detail: { error: 'invalid_client' },
+    });
   });
 });
