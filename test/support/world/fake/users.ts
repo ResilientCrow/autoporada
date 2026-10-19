@@ -77,6 +77,12 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       const user = find(id);
       if (!user || user.version !== expectedVersion) throw new StaleVersion();
       const { role = user.role, isStudent = user.isStudent, status = user.status } = patch;
+      // As the users_end_sessions trigger: a change of access ends the user's sessions.
+      if (role !== user.role || isStudent !== user.isStudent || status !== user.status) {
+        for (const [id, session] of tx.draft.sessions) {
+          if (session.userId === user.id) tx.draft.sessions.delete(id);
+        }
+      }
       return save({
         ...user,
         role,

@@ -169,3 +169,21 @@ describe('sessions', () => {
     );
   });
 });
+
+describe('ending sessions on access changes', () => {
+  it('binds the owner too: a role changed by hand signs the user out', async () => {
+    const userId = await insertUser({ role: 'submitter' });
+    const now = Date.now();
+    await database.db.insert(sessions).values({
+      userId,
+      tokenHash: randomBytes(32),
+      authTime: new Date(now),
+      idleExpiresAt: new Date(now + 3600_000),
+      absExpiresAt: new Date(now + 7200_000),
+    });
+    await database.owner(`UPDATE users SET role = 'reviewer' WHERE id = '${userId}'`);
+    expect(await database.db.select().from(sessions).where(eq(sessions.userId, userId))).toEqual(
+      [],
+    );
+  });
+});

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -8,6 +10,7 @@ import {
   type Tx,
   type UserRecord,
 } from '@/application/ports';
+import { newSessionTimes } from '@/domain/identity';
 
 import { setupWorld } from '../support/world';
 
@@ -122,5 +125,38 @@ describe('UserRepo (port contract)', () => {
       'read',
     );
     expect(result).toEqual({ heads: 3, blocked: 1, active: 2 });
+  });
+
+  it('ends a user’s sessions when their access changes, not when their name does', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const user = await world.seed.user({ role: 'submitter' });
+    const sha = (text: string) => createHash('sha256').update(text).digest('hex');
+    const live = (token: string) =>
+      world.tx(cli, async (tx) => (await tx.sessions.find(sha(token))) !== null, 'read');
+    await world.tx(cli, async (tx) => {
+      const session = await tx.sessions.create({
+        tokenSha256: sha('first'),
+        userId: user.id,
+        authTime: world.clock.now(),
+        ...newSessionTimes(world.clock.now()),
+      });
+      await tx.audit.record({ action: 'auth.login', target: { type: 'session', id: session.id } });
+    });
+    await world.tx(cli, async (tx) => {
+      await tx.users.upsertFromClaims({
+        tid: user.tid,
+        oid: user.oid,
+        displayName: 'Nové jméno',
+        email: null,
+        jobTitle: null,
+        department: null,
+      });
+      await tx.audit.record({ action: 'auth.login', target: { type: 'user', id: user.id } });
+    });
+    expect(await live('first')).toBe(true);
+    const unchanged = await change(world.as(head), user, { role: 'submitter' });
+    expect(await live('first')).toBe(true);
+    await change(world.as(head), unchanged, { role: 'reviewer' });
+    expect(await live('first')).toBe(false);
   });
 });

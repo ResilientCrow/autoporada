@@ -43,6 +43,13 @@
       "when": 1792400297317,
       "tag": "0005_pin_search_path",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792429865260,
+      "tag": "0006_end_sessions_on_access_change",
+      "breakpoints": true
     }
   ]
 }
