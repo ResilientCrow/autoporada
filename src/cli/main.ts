@@ -2,13 +2,29 @@
  * Maintenance commands, run with `pnpm cli <command> …`. A composition root:
  * the only CLI code allowed to wire infrastructure together.
  */
+import { getDatabaseUrl } from '@/infra/config';
+import { runMigrations } from '@/infra/db';
+
 import { renderSnapshot, RENDER_SNAPSHOT_USAGE } from './render-snapshot';
 
+/** Applies pending migrations as the schema owner (the one-shot migrate service). */
+async function migrate(): Promise<string[]> {
+  await runMigrations(getDatabaseUrl());
+  return ['Migrations applied.'];
+}
+
 const COMMANDS: Readonly<Record<string, (args: readonly string[]) => Promise<string[]>>> = {
+  migrate,
   'render-snapshot': renderSnapshot,
 };
 
-const USAGE = `Usage: pnpm cli <command>\n\nCommands:\n  ${RENDER_SNAPSHOT_USAGE}`;
+const USAGE = [
+  'Usage: pnpm cli <command>',
+  '',
+  'Commands:',
+  '  migrate',
+  `  ${RENDER_SNAPSHOT_USAGE}`,
+].join('\n');
 
 async function main(argv: readonly string[]): Promise<number> {
   const [name, ...args] = argv;

@@ -15,3 +15,4 @@ record that supersedes it.
 | [0007](0007-rich-text.md) | Restricted rich text as flat indented paragraphs | Accepted |
 | [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted |
 | [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Accepted |
+| [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted |

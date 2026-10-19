@@ -24,7 +24,8 @@ export default defineConfig({
           name: 'integration',
           include: ['test/integration/**/*.test.ts'],
           environment: 'node',
-          // Each worker gets its own database cloned from a migrated template.
+          // Each test file gets its own database, cloned from a migrated template.
+          globalSetup: ['test/integration/global-setup.ts'],
           fileParallelism: true,
         },
       },

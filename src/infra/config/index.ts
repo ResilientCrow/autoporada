@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { ConfigError, readEnv, type Env, type ReadFile } from './read-env';
-import { CONFIG_KEYS, rawConfigSchema, type LogLevel } from './schema';
+import { CONFIG_KEYS, databaseUrl, rawConfigSchema, type LogLevel } from './schema';
 
 export { ConfigError } from './read-env';
 export type { LogLevel } from './schema';
@@ -81,7 +81,22 @@ export function publishNextRuntimeEnv(config: Config, env: Record<string, string
   }
 }
 
+/**
+ * Only DATABASE_URL, for the one-shot migrate service: it runs as the schema
+ * owner and gets no other secrets.
+ */
+export function loadDatabaseUrl(env: Env, readFile: ReadFile): string {
+  const parsed = databaseUrl.safeParse(readEnv(env, readFile, ['DATABASE_URL'])['DATABASE_URL']);
+  if (!parsed.success) throw new ConfigError(['DATABASE_URL: must be a postgres:// URL']);
+  return parsed.data;
+}
+
 let cached: Config | undefined;
+
+/** DATABASE_URL of this process (see loadDatabaseUrl). */
+export function getDatabaseUrl(): string {
+  return loadDatabaseUrl(process.env, (path) => readFileSync(path, 'utf8'));
+}
 
 /** The process configuration, validated once. Composition roots call this. */
 export function getConfig(): Config {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigError, loadConfig, publishNextRuntimeEnv } from './index';
+import { ConfigError, loadConfig, loadDatabaseUrl, publishNextRuntimeEnv } from './index';
 
 const DEV_ENV = {
   APP_ORIGIN: 'http://localhost:3000',
@@ -218,5 +218,22 @@ describe('getConfig', () => {
     const first = getConfig();
     vi.stubEnv('APP_ORIGIN', 'not a url');
     expect(getConfig()).toBe(first);
+  });
+});
+
+describe('loadDatabaseUrl', () => {
+  it('needs only DATABASE_URL, also as a secret file', () => {
+    expect(loadDatabaseUrl({ DATABASE_URL: DEV_ENV.DATABASE_URL }, noFiles)).toBe(
+      DEV_ENV.DATABASE_URL,
+    );
+    const files = secretFiles({ '/run/secrets/db': `${DEV_ENV.DATABASE_URL}\n` });
+    expect(loadDatabaseUrl({ DATABASE_URL_FILE: '/run/secrets/db' }, files)).toBe(
+      DEV_ENV.DATABASE_URL,
+    );
+  });
+
+  it.each([{}, { DATABASE_URL: 'mysql://hunter2@db' }])('rejects %j without echoing it', (env) => {
+    const problems = problemsOf(() => loadDatabaseUrl(env, noFiles));
+    expect(problems).toEqual(['DATABASE_URL: must be a postgres:// URL']);
   });
 });
