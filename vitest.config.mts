@@ -28,8 +28,14 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'integration',
-          include: ['test/integration/**/*.test.ts'],
+          include: [
+            'test/integration/**/*.test.ts',
+            'test/contract/**/*.test.ts',
+            'src/application/use-cases/**/*.test.ts',
+          ],
           environment: 'node',
+          // The same contract and use-case suites, against PostgreSQL (ADR 0011).
+          provide: { world: 'pg' },
           // Each test file gets its own database, cloned from a migrated template.
           globalSetup: ['test/integration/global-setup.ts'],
           fileParallelism: true,

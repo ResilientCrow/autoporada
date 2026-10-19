@@ -17,9 +17,11 @@ import {
   type UserRecord,
 } from '@/application/ports';
 
+import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
 import { createFakeDb, type FakeDb } from './fake/db';
 import type { AuditRow, JobRow } from './fake/state';
+import { auditRows, resetTables } from './pg/backend';
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -122,10 +124,24 @@ function fakeBackend(db: FakeDb): Backend {
   };
 }
 
+function pgBackend(database: TestDatabase): Backend {
+  return {
+    db: database.app,
+    // pg-boss arrives in M7.1; until then jobs are checked in the fake world only.
+    supportsJobs: false,
+    audit: () => auditRows(database),
+    jobs: async () => [],
+  };
+}
+
 /** The world this test project runs in, fresh for every test. */
 export function setupWorld(): World {
   const kind = inject('world');
-  if (kind !== 'fake') throw new Error(`setupWorld: no ${kind} world yet`);
+  if (kind === 'pg') {
+    const database = setupTestDatabase();
+    beforeEach(() => resetTables(database));
+    return buildWorld(kind, () => pgBackend(database));
+  }
   let db = createFakeDb();
   beforeEach(() => {
     db = createFakeDb();

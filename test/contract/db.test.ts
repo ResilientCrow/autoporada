@@ -51,6 +51,20 @@ describe('Db (port contract)', () => {
   });
 });
 
+describe('the world', () => {
+  it('may leave rows and audit events behind', async () => {
+    const user = await world.seed.user();
+    await world.tx(cli, (tx) =>
+      tx.audit.record({ action: 'test.left', target: { type: 'user', id: user.id } }),
+    );
+  });
+
+  it('starts every test empty', async () => {
+    expect(await world.tx(cli, (tx) => tx.users.list(), 'read')).toEqual([]);
+    expect(await world.inspect.audit()).toEqual([]);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('audit coverage in the fake world', () => {
   it('fails a commit that wrote a row no audit event names', async () => {
     const user = await world.seed.user();
