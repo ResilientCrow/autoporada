@@ -120,15 +120,19 @@ Test-ServicePrincipalAuthorization -Identity <AppId> -Resource <any-other-user>@
 - **Outbound from the server (HTTPS):**
   - always: `login.microsoftonline.com`, `graph.microsoft.com`,
     `acme-v02.api.letsencrypt.org`;
-  - during installs and updates, the container registries:
-    `registry-1.docker.io`, `auth.docker.io`,
-    `production.cloudflare.docker.com`, `ghcr.io`,
+  - during installs and updates, which build the images on the server:
+    `github.com` (the source), `registry.npmjs.org` (packages), and the
+    container registries `registry-1.docker.io`, `auth.docker.io`,
+    `production.cloudflare.docker.com`, `gcr.io`, `ghcr.io`,
     `pkg-containers.githubusercontent.com`.
 
 ## 5. Server
 
-- Linux with Docker Engine 27+ and the Compose plugin.
+- Linux with Docker Engine 27+, the Compose plugin, git and openssl.
 - At least 2 vCPU, 6 GB RAM and 40 GB disk.
+- The repository is cloned to `/opt/autoporada`. Its `deploy/` directory holds
+  the compose stack; `deploy/SMOKE-TEST.md` is the checklist for the first
+  start.
 - Named people:
   - an **IT contact** e-mail for alerts (backups, certificate expiry, disk
     space);
@@ -148,8 +152,10 @@ chmod 600 autoporada-entra.key
 ```
 
 - Upload `autoporada-entra.crt` in step 1.2.
-- The key **and** the certificate become Docker secrets on the server
-  (`entra_key`, `entra_cert`). The key never leaves the server.
+- The key **and** the certificate become Docker secrets on the server: save
+  them as `/opt/autoporada/deploy/secrets/entra_key` and `…/entra_cert`, then
+  run `sudo ./install.sh` there, which sets their owner and mode. The key
+  never leaves the server.
 - The app checks at start-up that the key belongs to the certificate, that
   the key has at least 2048 bits, and that the SHA-1 thumbprint matches the
   one the portal shows (`OIDC_CLIENT_CERT_THUMBPRINT`, recommended).
