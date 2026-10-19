@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { cs } from '@/ui/copy';
+
 const nonceOf = (policy: string | undefined) => /'nonce-([^']+)'/.exec(policy ?? '')?.[1];
 
 const SECURITY_HEADERS = {
@@ -31,6 +33,16 @@ test('a page runs only its own nonced scripts, with no CSP violation', async ({ 
     .evaluateAll((all) => all.map((s) => (s as HTMLScriptElement).nonce));
   expect(scripts.length).toBeGreaterThan(0);
   expect(new Set(scripts)).toEqual(new Set([nonce]));
+  expect(
+    await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations),
+  ).toEqual([]);
+});
+
+test('an unknown page answers 404, also without a CSP violation', async ({ page }) => {
+  const response = await page.goto('/tato-stranka-neexistuje');
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.notFound.title);
+  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
   expect(
     await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations),
   ).toEqual([]);

@@ -35,6 +35,16 @@ export const cs = {
       sharedComputer: 'Na sdíleném počítači se odhlaste i z Microsoft 365.',
     },
   },
+  notFound: {
+    title: 'Stránka nenalezena',
+    text: 'Tato stránka neexistuje, nebo k ní nemáte přístup.',
+    home: 'Přejít na úvodní stránku',
+  },
+  appError: {
+    title: 'Něco se nepovedlo',
+    text: 'Stránku se nepodařilo zobrazit. Zkuste to prosím znovu; pokud potíže trvají, obraťte se na vedení školy.',
+    retry: 'Zkusit znovu',
+  },
   home: {
     signedInAs: 'Přihlášen(a):',
     pending: 'Váš účet čeká na schválení vedením školy.',
