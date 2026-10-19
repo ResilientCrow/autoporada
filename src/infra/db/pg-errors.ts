@@ -7,6 +7,7 @@ import {
   KNOWN_CONSTRAINTS,
   LockTimeout,
   TransactionConflict,
+  TxClosed,
   type KnownConstraint,
 } from '@/application/ports';
 
@@ -27,6 +28,8 @@ function driverError(error: unknown): unknown {
 
 /** Serialization failures and deadlocks: the whole transaction may simply run again. */
 export function isRetryable(error: unknown): boolean {
+  // Repository guards map errors at the method boundary already.
+  if (error instanceof TransactionConflict) return true;
   const cause = driverError(error);
   return cause instanceof DatabaseError && RETRYABLE.has(cause.code ?? '');
 }
@@ -48,7 +51,9 @@ export function toPortError(error: unknown): unknown {
   if (error instanceof DatabaseError) return fromDatabaseError(error);
   if (error instanceof DrizzleQueryError) {
     const cause = error.cause;
-    return cause instanceof DatabaseError ? fromDatabaseError(cause) : new DatabaseFailure('08000');
+    if (cause instanceof DatabaseError) return fromDatabaseError(cause);
+    // The connection guard refused the query: the transaction had ended.
+    return cause instanceof TxClosed ? cause : new DatabaseFailure('08000');
   }
   return error;
 }

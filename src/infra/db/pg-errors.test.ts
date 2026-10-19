@@ -67,5 +67,6 @@ describe('isRetryable', () => {
     expect(isRetryable(wrapped(pgError('40P01')))).toBe(true);
     expect(isRetryable(pgError('55P03'))).toBe(false);
     expect(isRetryable(new Error('40001'))).toBe(false);
+    expect(isRetryable(new TransactionConflict())).toBe(true);
   });
 });

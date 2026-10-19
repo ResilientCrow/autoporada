@@ -8,6 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { Client } from 'pg';
 import { afterAll, beforeAll } from 'vitest';
 
+import type { Db } from '@/application/ports';
 import { connectDatabase, type Database, type DatabaseHandle } from '@/infra/db';
 
 export const TEMPLATE = 'autoporada_test_template';
@@ -34,8 +35,10 @@ async function asAdmin<T>(run: (client: Client) => Promise<T>, database?: string
 }
 
 export interface TestDatabase {
-  /** The app's connection pool, running as autoporada_app. */
+  /** Drizzle over the app's connection pool, running as autoporada_app. */
   readonly db: Database;
+  /** The application's transactions over the same pool (ADR 0011). */
+  readonly app: Db;
   readonly name: string;
   /** Runs SQL as the owner, for setup and for assertions on the catalog. */
   owner<R extends object>(sql: string, params?: unknown[]): Promise<R[]>;
@@ -59,6 +62,10 @@ export async function pgErrorOf(
 export function setupTestDatabase(): TestDatabase {
   const name = `autoporada_test_${process.env['VITEST_POOL_ID'] ?? '0'}_${randomBytes(4).toString('hex')}`;
   let handle: DatabaseHandle | undefined;
+  const opened = () => {
+    if (!handle) throw new Error('setupTestDatabase: the database exists only inside tests');
+    return handle;
+  };
 
   beforeAll(async () => {
     await asAdmin((c) => c.query(`CREATE DATABASE ${name} TEMPLATE ${TEMPLATE}`));
@@ -77,8 +84,10 @@ export function setupTestDatabase(): TestDatabase {
   return {
     name,
     get db() {
-      if (!handle) throw new Error('setupTestDatabase: the database exists only inside tests');
-      return handle.db;
+      return opened().db;
+    },
+    get app() {
+      return opened().app;
     },
     owner: (sql, params) => asAdmin(async (c) => (await c.query(sql, params)).rows, name),
     async connect() {

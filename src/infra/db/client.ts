@@ -1,6 +1,9 @@
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
+import type { Db } from '@/application/ports';
+
+import { createPgDb } from './pg-db';
 import * as schema from './schema';
 
 export type Database = NodePgDatabase<typeof schema>;
@@ -18,7 +21,10 @@ export interface DatabaseOptions {
 }
 
 export interface DatabaseHandle {
+  /** The whole schema, for maintenance commands and tests. */
   readonly db: Database;
+  /** The application's transactions (ADR 0011). */
+  readonly app: Db;
   /** Waits for checked-out connections to be released, then closes the pool. */
   close(): Promise<void>;
 }
@@ -38,6 +44,7 @@ export function connectDatabase(options: DatabaseOptions): DatabaseHandle {
   });
   return {
     db: drizzle({ client: pool, schema, casing: 'snake_case' }),
+    app: createPgDb(pool),
     close: () => pool.end(),
   };
 }
