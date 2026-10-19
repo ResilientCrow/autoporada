@@ -26,6 +26,8 @@ export const cs = {
       failed:
         'Přihlášení se nepodařilo. Zkuste to prosím znovu; pokud potíže trvají, pošlete správci kód chyby.',
       unavailable: 'Přihlašovací služba Microsoft teď neodpovídá. Zkuste to prosím za chvíli.',
+      'signout-failed':
+        'Na tomto zařízení jste odhlášeni, ale odhlášení se nepodařilo zaznamenat. Pokud jste se chtěli odhlásit na všech zařízeních, přihlaste se a zkuste to prosím znovu.',
     } satisfies Record<SignInError, string>,
     loggedOut: {
       here: 'Byli jste odhlášeni.',

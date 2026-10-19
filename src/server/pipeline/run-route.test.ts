@@ -120,6 +120,25 @@ describe('runRoute', () => {
     });
   });
 
+  it('answers the route’s own failure when anything throws, the session lookup too', async () => {
+    const { routeDeps: base, lines } = deps();
+    const routeDeps = {
+      ...base,
+      resolvePrincipal: () => Promise.reject(new Error('database down')),
+    };
+    const failing = route({
+      access: 'public',
+      failure: (requestId) => new Response(null, { status: 303, headers: { Location: requestId } }),
+    });
+    const response = await runRoute(routeDeps, failing, request('/x'), segment);
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(REQUEST_ID);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
+      err: { message: 'database down' },
+    });
+  });
+
   it('limits public routes by client address, before the session lookup', async () => {
     const { routeDeps } = deps();
     const resolve = vi.spyOn(routeDeps, 'resolvePrincipal');

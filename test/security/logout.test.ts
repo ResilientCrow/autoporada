@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { system } from '@/application/ports';
+import { LockTimeout, system } from '@/application/ports';
 import { digest, newToken } from '@/server/session';
 
 import { APP_ORIGIN, setupSignInHarness } from '../support/oidc/harness';
@@ -47,6 +47,28 @@ describe('POST /auth/logout', () => {
     expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/prihlaseni?odhlaseno=vsude`);
     expect(await live(phone)).toBe(false);
   });
+
+  it.each([
+    ['looking up the session', 1, undefined],
+    ['ending it', 2, undefined],
+    ['ending it, busy', 2, new LockTimeout()],
+  ])(
+    'still clears the cookie, and says so, when the database fails while %s',
+    async (_name, n, error) => {
+      const { b, laptop } = await twoDevices();
+      harness.h.failTransaction(n, error);
+      const response = await b.send(harness.h.routes.logout, '/auth/logout', {
+        method: 'POST',
+        body: 'scope=all',
+      });
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(
+        `${APP_ORIGIN}/prihlaseni?chyba=signout-failed&kod=req-test-0001`,
+      );
+      expect(response.headers.getSetCookie()).toEqual([CLEARED]);
+      expect(await live(laptop)).toBe(true);
+    },
+  );
 
   it('clears a stale cookie even without a session', async () => {
     const b = harness.h.browser();

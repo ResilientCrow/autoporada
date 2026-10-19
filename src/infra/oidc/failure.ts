@@ -1,4 +1,9 @@
-import { AuthorizationResponseError, ClientError, ResponseBodyError } from 'openid-client';
+import {
+  AuthorizationResponseError,
+  ClientError,
+  ResponseBodyError,
+  WWWAuthenticateChallengeError,
+} from 'openid-client';
 
 import type { IdpDetail, IdpFailure } from '@/application/ports';
 
@@ -47,6 +52,15 @@ export function mapFailure(error: unknown, stage: IdpDetail['stage']): MappedFai
     };
     const down = error.status >= 500 || code === 'temporarily_unavailable';
     return { failure: down ? 'unavailable' : 'idp-error', detail };
+  }
+  // A refusal with a WWW-Authenticate header instead of an OAuth error body.
+  if (error instanceof WWWAuthenticateChallengeError) {
+    const detail = {
+      stage,
+      error: oauthError(error.cause[0]?.parameters.error),
+      status: error.status,
+    };
+    return { failure: error.status >= 500 ? 'unavailable' : 'idp-error', detail };
   }
   if (error instanceof ClientError) {
     const code =

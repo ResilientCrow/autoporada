@@ -5,6 +5,7 @@
  */
 import { afterEach, beforeEach, vi } from 'vitest';
 
+import { DatabaseFailure, type AppDeps } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { createIdentityProvider } from '@/infra/oidc';
 import { authRouteSpecs } from '@/server/auth';
@@ -38,6 +39,8 @@ export interface SignInHarness {
   browser(): Browser;
   /** Moves the world's clock and the libraries' Date together. */
   advance(ms: number): void;
+  /** The routes' n-th next transaction fails, by default as a lost connection would (both worlds). */
+  failTransaction(n?: number, error?: Error): void;
 }
 
 function applySetCookie(cookies: Map<string, string>, header: string): void {
@@ -74,10 +77,21 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
       expect: { issuer: TEST_ISSUER, clientId: TEST_CLIENT, tenantId: TENANT },
       bootstrapHeadmasterOid: options.bootstrapHeadmasterOid ?? null,
     };
+    let failIn = 0;
+    let failure: Error = new DatabaseFailure('08000');
+    const app: AppDeps = {
+      ...world.deps,
+      db: {
+        transaction: (ctx, options, work) =>
+          failIn > 0 && --failIn === 0
+            ? Promise.reject(failure)
+            : world.deps.db.transaction(ctx, options, work),
+      },
+    };
     const routeDeps: RouteDeps = {
-      app: world.deps,
+      app,
       useCases: new Set(USE_CASES),
-      resolvePrincipal: principalResolver(world.deps),
+      resolvePrincipal: principalResolver(app),
       limiter: createRateLimiter({ limits: LIMITS, now: () => world.clock.now().getTime() }),
       log,
       appOrigin: APP_ORIGIN,
@@ -92,6 +106,10 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
       advance(ms) {
         world.clock.advance(ms);
         vi.setSystemTime(world.clock.now());
+      },
+      failTransaction(n = 1, error = new DatabaseFailure('08000')) {
+        failIn = n;
+        failure = error;
       },
       browser() {
         const cookies = new Map<string, string>();

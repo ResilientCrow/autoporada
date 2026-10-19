@@ -107,6 +107,7 @@ export const SIGN_IN_ERRORS = [
   'step-up-stale',
   'failed',
   'unavailable',
+  'signout-failed',
 ] as const;
 export type SignInError = (typeof SIGN_IN_ERRORS)[number];
 

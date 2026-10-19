@@ -129,11 +129,18 @@ describe('what Entra answers', () => {
       'failed',
     ],
     ['an outage', { status: 503, body: { error: 'temporarily_unavailable' } }, 'unavailable'],
+    [
+      'a challenge header instead of a body',
+      { status: 401, body: {}, headers: { 'WWW-Authenticate': 'Bearer error="invalid_token"' } },
+      'failed',
+    ],
     ['the network', 'network', 'unavailable'],
     ['a timeout', 'timeout', 'unavailable'],
   ] as const)('maps %s at the token endpoint', async (_name, answer, error) => {
     const response = await signIn(harness.h.browser(), (idp) => idp.failToken(answer));
     expect(response.headers.get('location')).toBe(failed(error, true));
+    // Mapped by the adapter, not caught as a bug by the pipeline.
+    expect(harness.h.lines.filter((l) => l.level === 'error')).toEqual([]);
     await nothingKept();
   });
 });

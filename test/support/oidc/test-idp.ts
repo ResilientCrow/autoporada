@@ -52,7 +52,14 @@ export const MEMBER: Persona = {
 };
 
 type Signing = 'good' | 'other-key-same-kid' | 'none' | 'hs256-public-key' | 'unknown-kid';
-type TokenFailure = { readonly status: number; readonly body: object } | 'network' | 'timeout';
+type TokenFailure =
+  | {
+      readonly status: number;
+      readonly body: object;
+      readonly headers?: Readonly<Record<string, string>>;
+    }
+  | 'network'
+  | 'timeout';
 
 interface Grant {
   readonly state: string;
@@ -91,8 +98,11 @@ export interface TestIdp {
   };
 }
 
-const json = (body: object, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+const json = (body: object, status = 200, headers: Readonly<Record<string, string>> = {}) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json', ...headers },
+  });
 const s256 = (verifier: string) => createHash('sha256').update(verifier).digest('base64url');
 
 export async function createTestIdp(): Promise<TestIdp> {
@@ -193,7 +203,7 @@ export async function createTestIdp(): Promise<TestIdp> {
         signal?.addEventListener('abort', () => reject(signal.reason));
       });
     }
-    if (tokenFailure) return json(tokenFailure.body, tokenFailure.status);
+    if (tokenFailure) return json(tokenFailure.body, tokenFailure.status, tokenFailure.headers);
     const assertion = body.get('client_assertion');
     const authenticated =
       assertion !== null

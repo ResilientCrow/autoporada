@@ -95,6 +95,24 @@ describe('GET /auth/callback', () => {
     expect(b.cookies.has('__Host-ap_session')).toBe(false);
   });
 
+  it.each([
+    ['taking the sign-in', 1],
+    ['completing it', 2],
+  ])(
+    'redirects with a code and clears its cookie when the database fails while %s',
+    async (_name, n) => {
+      const b = harness.h.browser();
+      const start = await b.send(harness.h.routes.login, '/auth/login');
+      const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
+      harness.h.failTransaction(n);
+      const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(failed('failed', true));
+      expect(response.headers.getSetCookie()).toEqual([CLEARED]);
+      expect(b.cookies.has('__Host-ap_session')).toBe(false);
+    },
+  );
+
   it('refuses a callback without the browser’s sign-in cookie', async () => {
     const b = harness.h.browser();
     const start = await b.send(harness.h.routes.login, '/auth/login');

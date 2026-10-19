@@ -33,6 +33,12 @@ export interface RouteSpec {
   readonly access: 'public' | 'session';
   readonly rateLimit: LimitName | 'none';
   handle(request: Request, ctx: RouteContext): Promise<Response>;
+  /**
+   * The answer when something throws (an outage, a bug); without one, an
+   * empty 500. Sign-in routes redirect to a page that names the request
+   * id and still clear their cookies.
+   */
+  failure?(requestId: string): Response;
 }
 
 export interface Segment {
@@ -56,7 +62,7 @@ const status = (code: number, headers: HeadersInit = {}) =>
  * A route handler (ADR 0011): Origin check for unsafe methods, rate limit
  * (by client address before the session lookup, or by user after it),
  * session, then the handler. Every answer is `no-store` and names the
- * request id; an exception answers 500 with an empty body.
+ * request id; an exception is logged and answers the route's `failure`.
  */
 export async function runRoute(
   deps: RouteDeps,
@@ -122,7 +128,7 @@ export async function runRoute(
   } catch (error) {
     line.outcome = 'unavailable';
     deps.log.error({ ...line, err: errorSummary(error) }, 'route failed');
-    return finish(status(500), requestId);
+    return finish(spec.failure?.(requestId) ?? status(500), requestId);
   } finally {
     logCall(deps.log, line, performance.now() - started);
   }
