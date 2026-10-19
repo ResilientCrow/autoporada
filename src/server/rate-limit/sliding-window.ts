@@ -1,7 +1,6 @@
 import type { Limit, LimitName } from './limits';
 
-export type Decision =
-  { readonly ok: true } | { readonly ok: false; readonly retryAfterMs: number };
+type Decision = { readonly ok: true } | { readonly ok: false; readonly retryAfterMs: number };
 
 export interface RateLimiter {
   take(name: LimitName, key: string): Decision;

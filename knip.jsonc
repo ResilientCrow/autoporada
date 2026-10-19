@@ -9,7 +9,6 @@
     "src/domain/*/index.ts",
     "src/application/*/index.ts",
     "src/contracts/index.ts",
-    "src/server/*/index.ts",
     "src/snapshot/index.ts",
     "src/document/index.ts",
   ],
