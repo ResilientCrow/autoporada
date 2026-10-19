@@ -133,6 +133,19 @@ module.exports = {
       to: { path: '^src/server/', pathNot: '^src/server/(actions|routes|pages)/index\\.ts$' },
     },
     {
+      name: 'proxy-is-light',
+      comment: 'proxy.ts runs on every request: next/server and the CSP module only.',
+      severity: 'error',
+      from: { path: '^src/proxy\\.ts$' },
+      to: { pathNot: [npm('next'), '^src/server/http/index\\.ts$'] },
+    },
+    {
+      name: 'server-http-is-leaf',
+      severity: 'error',
+      from: { path: '^src/server/http/' },
+      to: { path: '^src/(?!server/http/)' },
+    },
+    {
       name: 'app-deps',
       comment: 'Routes are thin: they reach logic only through server/.',
       severity: 'error',
