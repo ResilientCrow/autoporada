@@ -7,7 +7,7 @@ import { system, type UserPrincipal } from '@/application/ports';
 import { recordingLog } from '../../../test/support/log';
 import { setupWorld } from '../../../test/support/world';
 import { createRateLimiter, LIMITS } from '../rate-limit';
-import { runRoute, type RouteDeps, type RouteSpec } from './index';
+import { defineRoute, runRoute, type RouteDeps, type RouteSpec } from './index';
 
 const world = setupWorld();
 const ORIGIN = 'https://autoporada.ssps.cz';
@@ -158,5 +158,15 @@ describe('runRoute', () => {
       segment,
     );
     expect(refused.status).toBe(500);
+  });
+});
+
+describe('defineRoute', () => {
+  it('refuses a public route limited per user, which would not limit anonymous callers', () => {
+    expect(() => defineRoute(route({ access: 'public', rateLimit: 'directory' }))).toThrow(
+      /client address/,
+    );
+    expect(() => defineRoute(route({ access: 'public', rateLimit: 'auth' }))).not.toThrow();
+    expect(() => defineRoute(route({ access: 'session', rateLimit: 'directory' }))).not.toThrow();
   });
 });
