@@ -1,6 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { signInPage } from './index';
+import { getViewer, signInPage } from './index';
+
+const request = vi.hoisted(() => ({ headers: new Headers() }));
+vi.mock('next/headers', () => ({ headers: async () => request.headers }));
+const resolvePrincipal = vi.hoisted(() => vi.fn(async () => null));
+vi.mock('../container', () => ({
+  getContainer: () => ({ resolvePrincipal, requestIdFrom: () => 'req-1' }),
+}));
 
 describe('signInPage', () => {
   it('shows known errors with their code, and links that come back to a safe path', () => {
@@ -29,5 +36,30 @@ describe('signInPage', () => {
       switchHref: '/auth/login?returnTo=%2F&account=select',
     });
     expect(signInPage({ odhlaseno: 'vsude' }).loggedOut).toBe('everywhere');
+  });
+});
+
+describe('signInPage after signing out', () => {
+  it.each([{ odhlaseno: '1' }, { odhlaseno: 'vsude' }, { chyba: 'signout-failed' }])(
+    'offers the account picker on the main button too (%o)',
+    (params) => {
+      expect(signInPage(params).loginHref).toBe('/auth/login?returnTo=%2F&account=select');
+    },
+  );
+});
+
+describe('getViewer', () => {
+  beforeEach(() => resolvePrincipal.mockClear());
+
+  it('looks up the one session cookie', async () => {
+    request.headers = new Headers({ cookie: 'a=b; __Host-ap_session=tok' });
+    await getViewer();
+    expect(resolvePrincipal).toHaveBeenCalledWith('tok', 'req-1');
+  });
+
+  it('treats a cookie sent twice as none, though Next’s cookies() keeps the last', async () => {
+    request.headers = new Headers({ cookie: '__Host-ap_session=one; __Host-ap_session=two' });
+    await getViewer();
+    expect(resolvePrincipal).toHaveBeenCalledWith(null, 'req-1');
   });
 });

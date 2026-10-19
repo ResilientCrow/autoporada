@@ -3,7 +3,7 @@ import { completeSignIn, recordRejection, takeSignIn } from '@/application/use-c
 import type { SignInError } from '@/contracts';
 import { checkEntraClaims, safeReturnTo, type ClaimRejection } from '@/domain/identity';
 
-import { cookieValue, SESSION_COOKIE, type RouteContext } from '../pipeline';
+import { cookieValue, sessionTokenFrom, type RouteContext } from '../pipeline';
 import { digest, isToken, newToken, type AuthDeps } from '../session';
 import { clearCookie, sessionCookie, SIGN_IN_COOKIE } from './cookies';
 import { seeOther, signInFailed } from './outcome';
@@ -95,7 +95,7 @@ export async function callback(
 
   const { identity } = checked;
   const token = newToken();
-  const current = cookieValue(cookies, SESSION_COOKIE);
+  const current = sessionTokenFrom(cookies);
   const completed = await ctx.run(
     completeSignIn,
     {

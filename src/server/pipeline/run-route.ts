@@ -6,7 +6,7 @@ import { safeReturnTo } from '@/domain/identity';
 import { clientIp, LIMITS, type LimitName } from '../rate-limit';
 import { errorSummary } from '../log';
 import { logCall, toActionResult, type CallLine } from './outcome';
-import { cookieValue, SESSION_COOKIE } from './request';
+import { sessionTokenFrom } from './request';
 import { runRegistered, type ActionDeps } from './run-action';
 
 export interface RouteDeps extends ActionDeps {
@@ -96,7 +96,7 @@ export async function runRoute(
       const refused = limited(clientIp(request.headers.get('x-forwarded-for')));
       if (refused) return refused;
     }
-    const token = cookieValue(request.headers.get('cookie'), SESSION_COOKIE);
+    const token = sessionTokenFrom(request.headers.get('cookie'));
     const principal = await deps.resolvePrincipal(token, requestId);
     if (principal) line.actorId = principal.actor.id;
     if (spec.access === 'session' && !principal) {

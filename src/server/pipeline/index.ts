@@ -1,7 +1,7 @@
 export { wrappedInfo, type WrappedInfo } from './brand';
 export { defineAction } from './define-action';
 export { defineRoute, type RouteHandler } from './define-route';
-export { cookieValue, SESSION_COOKIE } from './request';
+export { cookieValue, SESSION_COOKIE, sessionTokenFrom } from './request';
 export {
   runAction,
   runRegistered,

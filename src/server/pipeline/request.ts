@@ -12,3 +12,11 @@ export function cookieValue(header: string | null, name: string): string | null 
     .map(([, ...value]) => value.join('='));
   return values.length === 1 && values[0] ? values[0] : null;
 }
+
+/**
+ * This request's session token, by the rule above. Routes, actions and
+ * pages all read it from the raw header: Next's cookies() keeps only the
+ * last of two copies, so it cannot see a duplicate.
+ */
+export const sessionTokenFrom = (cookieHeader: string | null): string | null =>
+  cookieValue(cookieHeader, SESSION_COOKIE);

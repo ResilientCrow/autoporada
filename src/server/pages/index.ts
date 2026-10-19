@@ -1,5 +1,5 @@
 /** What pages under src/app read, through the same container and pipeline as actions. */
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import type { UserPrincipal } from '@/application/ports';
@@ -8,7 +8,7 @@ import { isSignInError, type SignInError } from '@/contracts';
 import { safeReturnTo } from '@/domain/identity';
 
 import { getContainer } from '../container';
-import { runRegistered, SESSION_COOKIE } from '../pipeline';
+import { runRegistered, sessionTokenFrom } from '../pipeline';
 
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
 
@@ -18,9 +18,8 @@ async function requestId(): Promise<string> {
 
 /** The signed-in user of this request, or null. A cookie sent twice counts as none. */
 export async function getViewer(): Promise<UserPrincipal | null> {
-  const sessions = (await cookies()).getAll(SESSION_COOKIE);
-  if (sessions.length !== 1) return null;
-  return getContainer().resolvePrincipal(sessions[0]?.value ?? null, await requestId());
+  const token = sessionTokenFrom((await headers()).get('cookie'));
+  return getContainer().resolvePrincipal(token, await requestId());
 }
 
 /** The signed-in user, or a redirect to the sign-in page that comes back to `path`. */
@@ -65,12 +64,16 @@ export function signInPage(params: SearchParams): SignInPageModel {
   const code = first(params['kod']);
   const loggedOut = first(params['odhlaseno']);
   const returnTo = encodeURIComponent(safeReturnTo(first(params['returnTo'])));
+  const switchHref = `/auth/login?returnTo=${returnTo}&account=select`;
+  const signedOut = loggedOut === 'vsude' ? 'everywhere' : loggedOut === '1' ? 'here' : null;
   return {
     error: isSignInError(error) ? error : null,
     code: code && REQUEST_ID.test(code) ? code : null,
-    loggedOut: loggedOut === 'vsude' ? 'everywhere' : loggedOut === '1' ? 'here' : null,
-    loginHref: `/auth/login?returnTo=${returnTo}`,
-    // After signing out, Entra still knows the browser: let the next person choose.
-    switchHref: `/auth/login?returnTo=${returnTo}&account=select`,
+    loggedOut: signedOut,
+    // After signing out, Entra still knows the browser (a shared PC): even
+    // the main button lets the next person choose the account (risk 12).
+    loginHref:
+      signedOut || error === 'signout-failed' ? switchHref : `/auth/login?returnTo=${returnTo}`,
+    switchHref,
   };
 }

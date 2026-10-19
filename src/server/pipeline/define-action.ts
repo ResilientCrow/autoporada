@@ -1,11 +1,11 @@
-import { cookies, headers } from 'next/headers';
+import { headers } from 'next/headers';
 
 import type { UseCase } from '@/application/core';
 import type { ServerAction } from '@/contracts';
 
 import { getContainer } from '../container';
 import { markWrapped } from './brand';
-import { SESSION_COOKIE } from './request';
+import { sessionTokenFrom } from './request';
 import { runAction, type ActionOptions } from './run-action';
 
 /**
@@ -22,11 +22,9 @@ export function defineAction<In, Out>(
   }
   const action = async (input: In) => {
     const container = getContainer();
-    const [jar, head] = await Promise.all([cookies(), headers()]);
-    const sessionCookies = jar.getAll(SESSION_COOKIE);
+    const head = await headers();
     const request = {
-      // A cookie sent twice counts as none (see cookieValue).
-      sessionToken: sessionCookies.length === 1 ? (sessionCookies[0]?.value ?? null) : null,
+      sessionToken: sessionTokenFrom(head.get('cookie')),
       requestId: container.requestIdFrom(head.get('x-request-id')),
     };
     return runAction(container, request, useCase, options, input);
