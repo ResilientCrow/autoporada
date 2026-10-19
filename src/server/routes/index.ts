@@ -6,4 +6,5 @@ import { defineRoute } from '../pipeline';
 const auth = authRouteSpecs(() => getContainer().auth);
 
 export const authLogin = defineRoute(auth.login);
+export const authCallback = defineRoute(auth.callback);
 export const authStepUp = defineRoute(auth.stepUp);

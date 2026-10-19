@@ -10,7 +10,7 @@ import { wrappedInfo } from '@/server/pipeline';
 import { exportsOf, ROUTE_FILES } from './entries';
 
 /** The sign-in routes; M11 adds /healthz. */
-const PUBLIC_ROUTES: readonly string[] = ['auth.login'];
+const PUBLIC_ROUTES: readonly string[] = ['auth.callback', 'auth.login'];
 
 /** Sign-in steps run before anyone is signed in; M7 adds jobs. */
 const SYSTEM_USE_CASES: readonly string[] = [
