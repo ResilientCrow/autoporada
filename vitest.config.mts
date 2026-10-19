@@ -14,8 +14,14 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['src/**/*.test.{ts,tsx}', 'test/support/**/*.test.ts'],
+          include: [
+            'src/**/*.test.{ts,tsx}',
+            'test/support/**/*.test.ts',
+            'test/contract/**/*.test.ts',
+          ],
           environment: 'node',
+          // Port contracts and use cases run against in-memory fakes (ADR 0011).
+          provide: { world: 'fake' },
         },
       },
       {
