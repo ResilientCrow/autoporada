@@ -23,8 +23,10 @@ export function defineAction<In, Out>(
   const action = async (input: In) => {
     const container = getContainer();
     const [jar, head] = await Promise.all([cookies(), headers()]);
+    const sessionCookies = jar.getAll(SESSION_COOKIE);
     const request = {
-      sessionToken: jar.get(SESSION_COOKIE)?.value ?? null,
+      // A cookie sent twice counts as none (see cookieValue).
+      sessionToken: sessionCookies.length === 1 ? (sessionCookies[0]?.value ?? null) : null,
       requestId: container.requestIdFrom(head.get('x-request-id')),
     };
     return runAction(container, request, useCase, options, input);

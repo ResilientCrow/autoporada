@@ -7,6 +7,7 @@ import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
 import { systemClock } from '@/infra/system';
 
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
+import { principalResolver } from './session';
 
 /** Everything the web process wires together, once. */
 export interface WebContainer {
@@ -36,11 +37,11 @@ export function buildWeb(config: Config): WebContainer {
     applicationName: 'autoporada-web',
     onConnectionError: (sqlstate) => log.warn({ sqlstate }, 'database connection lost'),
   });
+  const app: AppDeps = { db: database.app, clock: systemClock };
   return {
-    app: { db: database.app, clock: systemClock },
+    app,
     useCases: new Set(USE_CASES),
-    // Sessions arrive in M4.4; until then nobody is signed in.
-    resolvePrincipal: async () => null,
+    resolvePrincipal: principalResolver(app),
     limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
     log,
     appOrigin: config.appOrigin,

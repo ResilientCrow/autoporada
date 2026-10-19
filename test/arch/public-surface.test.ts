@@ -17,6 +17,7 @@ const SYSTEM_USE_CASES: readonly string[] = [
   'auth.beginLogin',
   'auth.completeSignIn',
   'auth.recordRejection',
+  'auth.resolveSession',
   'auth.takeSignIn',
 ];
 

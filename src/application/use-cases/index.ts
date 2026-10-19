@@ -1,8 +1,26 @@
 import type { AnyUseCase } from '@/application/core';
 
-import { beginLogin, beginStepUp, completeSignIn, recordRejection, takeSignIn } from './auth';
+import {
+  beginLogin,
+  beginStepUp,
+  completeSignIn,
+  recordRejection,
+  resolveSession,
+  signOut,
+  takeSignIn,
+} from './auth';
+import { me } from './profile';
 
-export { beginLogin, beginStepUp, completeSignIn, recordRejection, takeSignIn } from './auth';
+export {
+  beginLogin,
+  beginStepUp,
+  completeSignIn,
+  recordRejection,
+  resolveSession,
+  signOut,
+  takeSignIn,
+} from './auth';
+export { me } from './profile';
 
 /**
  * Every use case of the app. The inventory test proves this list is
@@ -12,6 +30,9 @@ export const USE_CASES: readonly AnyUseCase[] = [
   beginLogin,
   beginStepUp,
   completeSignIn,
+  me,
   recordRejection,
+  resolveSession,
+  signOut,
   takeSignIn,
 ];
