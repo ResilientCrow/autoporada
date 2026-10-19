@@ -192,6 +192,7 @@ describe('the pipeline', () => {
   it('runs system use cases for system principals only', async () => {
     const seedCount = defineSystemUseCase({
       name: 'test.system',
+      reasons: ['cli:test'],
       mode: 'read',
       input: z.strictObject({}),
       output: z.object({ count: z.number() }),
@@ -202,6 +203,9 @@ describe('the pipeline', () => {
     const user = await world.seed.user({ role: 'headmaster' });
     expect(await run(seedCount, system('cli:test'), {})).toEqual({ ok: true, value: { count: 1 } });
     await expect(run(seedCount, world.as(user), {})).rejects.toThrow(/runs as the system/);
+    await expect(run(seedCount, system('job:mail.send'), {})).rejects.toThrow(
+      /not for job:mail.send/,
+    );
     await expect(run(countUsers, system('cli:test'), { label: 'x' })).rejects.toThrow(
       /signed-in user/,
     );

@@ -1,6 +1,13 @@
 import type { z } from 'zod';
 
-import type { Principal, SystemPrincipal, Tx, TxOptions, UserPrincipal } from '@/application/ports';
+import type {
+  Principal,
+  SystemPrincipal,
+  SystemReason,
+  Tx,
+  TxOptions,
+  UserPrincipal,
+} from '@/application/ports';
 import type { Actor } from '@/domain/actor';
 import type { Check } from '@/domain/policy';
 
@@ -76,6 +83,8 @@ export interface SystemUseCaseSpec<S extends StrictInput, O extends z.ZodType> e
   S,
   O
 > {
+  /** The only system reasons it runs for; any other principal is a bug (ADR 0011). */
+  readonly reasons: readonly SystemReason[];
   execute(ctx: SystemContext, input: z.output<S>): Promise<Outcome<z.input<O>>>;
 }
 

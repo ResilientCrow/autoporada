@@ -156,6 +156,9 @@ export async function runSystemPipeline<S extends StrictInput, O extends z.ZodTy
 ): Promise<Result<z.output<O>, PipelineFailure>> {
   const { principal } = call;
   if (principal.kind !== 'system') throw new Error(`${spec.name}: runs as the system`);
+  if (!spec.reasons.includes(principal.reason)) {
+    throw new Error(`${spec.name}: not for ${principal.reason}`);
+  }
   const parsed = parseInput(spec.input, call.input);
   if (!parsed.ok) return parsed;
   const now = deps.clock.now();

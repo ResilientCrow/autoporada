@@ -153,6 +153,7 @@ describe('defineAction', () => {
   it('refuses system use cases', () => {
     const job = defineSystemUseCase({
       name: 'test.job',
+      reasons: ['job:test'],
       mode: 'read',
       input: z.strictObject({}),
       output: z.object({}),

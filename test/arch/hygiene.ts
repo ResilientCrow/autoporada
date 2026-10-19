@@ -69,8 +69,15 @@ export function inputProblems(schema: z.ZodType): string[] {
   return problems;
 }
 
+/**
+ * The one closed exception to the credential rule: system use cases that hand
+ * protocol state to the sign-in code on the server. defineAction refuses
+ * system use cases, so these values never reach a client.
+ */
+export const PROTOCOL_OUTPUTS: Readonly<Record<string, readonly string[]>> = {};
+
 /** Outputs return only what they name (z.object strips the rest), never a credential. */
-export function outputProblems(schema: z.ZodType): string[] {
+export function outputProblems(schema: z.ZodType, allowed: readonly string[] = []): string[] {
   const problems: string[] = [];
   walk(z.toJSONSchema(schema, { io: 'output', unrepresentable: 'any' }), '$', (node, path) => {
     if (node['type'] === 'object' && node['additionalProperties'] !== false) {
@@ -80,7 +87,9 @@ export function outputProblems(schema: z.ZodType): string[] {
     const properties = node['properties'];
     if (!properties || typeof properties !== 'object') return;
     for (const name of Object.keys(properties)) {
-      if (SECRET_NAME.test(name)) problems.push(`${path}.${name}: looks like a credential`);
+      if (SECRET_NAME.test(name) && !allowed.includes(name)) {
+        problems.push(`${path}.${name}: looks like a credential`);
+      }
     }
   });
   return problems;

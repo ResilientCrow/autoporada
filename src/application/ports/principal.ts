@@ -3,6 +3,7 @@ import { readScope, type Scope, type ScopedResource } from '@/domain/policy';
 
 /** Why the system acts on its own. Logged and written to the audit log. */
 export type SystemReason =
+  | 'auth.login'
   | 'auth.callback'
   | 'auth.session'
   /** Test data; the fake world's audit check skips it. */

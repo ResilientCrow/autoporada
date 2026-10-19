@@ -3,12 +3,18 @@ import { z } from 'zod';
 
 import { USE_CASES } from '@/application/use-cases';
 
-import { inputProblems, outputProblems } from './hygiene';
+import { inputProblems, outputProblems, PROTOCOL_OUTPUTS } from './hygiene';
 
 describe('schema hygiene of every use case', () => {
   it.each(USE_CASES.map((u) => [u.name, u] as const))('%s', (_name, useCase) => {
     expect(inputProblems(useCase.input)).toEqual([]);
-    expect(outputProblems(useCase.output)).toEqual([]);
+    expect(outputProblems(useCase.output, PROTOCOL_OUTPUTS[useCase.name])).toEqual([]);
+  });
+
+  it('allows protocol outputs to registered system use cases only', () => {
+    for (const name of Object.keys(PROTOCOL_OUTPUTS)) {
+      expect(USE_CASES.find((u) => u.name === name)?.principal, name).toBe('system');
+    }
   });
 });
 
@@ -67,6 +73,13 @@ describe('the hygiene checks themselves', () => {
     expect(outputProblems(z.object({ options: z.object({}).default({}) }))).toEqual([]);
     expect(outputProblems(z.object({ items: z.array(z.object({ id: z.string() })) }))).toEqual([]);
     expect(inputProblems(z.strictObject({}))).toEqual([]);
+  });
+
+  it('let a protocol output name exactly what it is allowed to, nothing more', () => {
+    const output = z.object({ nonce: z.string(), codeVerifier: z.string(), token: z.string() });
+    expect(outputProblems(output, ['nonce', 'codeVerifier'])).toEqual([
+      '$.token: looks like a credential',
+    ]);
   });
 
   it('report outputs that name a credential', () => {

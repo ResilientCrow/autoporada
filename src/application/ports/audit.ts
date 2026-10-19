@@ -24,7 +24,7 @@ export interface AuditEvent {
 }
 
 /** Writes that are deliberately not audited (plan §4). The list is closed. */
-export const AUDIT_EXEMPTIONS = ['author-autosave', 'retention'] as const;
+export const AUDIT_EXEMPTIONS = ['author-autosave', 'retention', 'session-touch'] as const;
 export type AuditExemption = (typeof AUDIT_EXEMPTIONS)[number];
 
 /** Records audit events in the caller's transaction. */

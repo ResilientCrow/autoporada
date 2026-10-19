@@ -6,7 +6,7 @@ import { AUDIT_EXEMPTIONS, scopeOf, system, type JobPort, type UserPrincipal } f
 
 describe('ports', () => {
   it('keep the list of unaudited writes closed', () => {
-    expect(AUDIT_EXEMPTIONS).toEqual(['author-autosave', 'retention']);
+    expect(AUDIT_EXEMPTIONS).toEqual(['author-autosave', 'retention', 'session-touch']);
   });
 
   it('type job payloads by job name', () => {
