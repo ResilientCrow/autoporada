@@ -18,6 +18,21 @@ const issues = (input: unknown) => {
 };
 
 describe('toFieldIssues', () => {
+  it('reports numbers out of range as invalid, never as missing or too long', () => {
+    const numbers = z.strictObject({
+      version: z.number().int().min(1),
+      count: z.number().nonnegative(),
+      big: z.number().max(5),
+    });
+    const parsed = numbers.safeParse({ version: 0, count: -3, big: 9 }, { reportInput: true });
+    if (parsed.success) throw new Error('expected issues');
+    expect(toFieldIssues(parsed.error)).toEqual({
+      version: 'invalid',
+      count: 'invalid',
+      big: 'invalid',
+    });
+  });
+
   it('turns Zod issues into one code per field, without messages', () => {
     expect(
       issues({

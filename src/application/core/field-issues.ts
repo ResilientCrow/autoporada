@@ -28,10 +28,15 @@ function pathOf(path: readonly PropertyKey[]): string | undefined {
   return segments.join('.');
 }
 
+/** Sizes a form shows as length: of text, of a list. A number out of range is just invalid. */
+const LENGTHS: ReadonlySet<unknown> = new Set(['string', 'array', 'set']);
+
 function codeOf(issue: z.core.$ZodIssue): FieldIssueCode {
   if (issue.code === 'invalid_type') return issue.input === undefined ? 'required' : 'invalid';
-  if (issue.code === 'too_small') return Number(issue.minimum) <= 1 ? 'required' : 'too-short';
-  if (issue.code === 'too_big') return 'too-long';
+  if (issue.code === 'too_small' && LENGTHS.has(issue.origin)) {
+    return Number(issue.minimum) <= 1 ? 'required' : 'too-short';
+  }
+  if (issue.code === 'too_big' && LENGTHS.has(issue.origin)) return 'too-long';
   if (issue.code === 'custom') {
     const code: unknown = issue.params?.['code'];
     return isFieldIssueCode(code) ? code : 'invalid';
