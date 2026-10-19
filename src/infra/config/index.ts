@@ -100,18 +100,24 @@ export function loadDatabaseUrl(env: Env, readFile: ReadFile): string {
   return parsed.data;
 }
 
-let cached: Config | undefined;
-
 /** DATABASE_URL of this process (see loadDatabaseUrl). */
 export function getDatabaseUrl(): string {
   return loadDatabaseUrl(process.env, (path) => readFileSync(path, 'utf8'));
 }
 
-/** The process configuration, validated once. Composition roots call this. */
+const CONFIG = Symbol.for('autoporada.config');
+
+/**
+ * The process configuration, validated once. Composition roots call this.
+ * Kept on globalThis: Next loads instrumentation and the app as separate
+ * module instances, and a second load would find the Server Actions key
+ * both published and in its file.
+ */
 export function getConfig(): Config {
-  if (!cached) {
-    cached = loadConfig(process.env, (path) => readFileSync(path, 'utf8'));
-    publishNextRuntimeEnv(cached, process.env);
+  const holder = globalThis as { [CONFIG]?: Config };
+  if (!holder[CONFIG]) {
+    holder[CONFIG] = loadConfig(process.env, (path) => readFileSync(path, 'utf8'));
+    publishNextRuntimeEnv(holder[CONFIG], process.env);
   }
-  return cached;
+  return holder[CONFIG];
 }

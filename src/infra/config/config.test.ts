@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigError, loadConfig, loadDatabaseUrl, publishNextRuntimeEnv } from './index';
@@ -226,6 +230,7 @@ describe('getConfig', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.resetModules();
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for('autoporada.config')];
   });
 
   it('validates process.env once and caches the result', async () => {
@@ -234,6 +239,21 @@ describe('getConfig', () => {
     const first = getConfig();
     vi.stubEnv('APP_ORIGIN', 'not a url');
     expect(getConfig()).toBe(first);
+  });
+
+  it('is the same in every module instance, after publishing a key from its file', async () => {
+    for (const [key, value] of Object.entries(DEV_ENV)) vi.stubEnv(key, value);
+    const dir = mkdtempSync(join(tmpdir(), 'autoporada-config-'));
+    writeFileSync(join(dir, 'key'), `${'k'.repeat(43)}=\n`);
+    vi.stubEnv('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_FILE', join(dir, 'key'));
+    try {
+      const first = (await import('./index')).getConfig();
+      // Next loads instrumentation and the app as two module instances.
+      vi.resetModules();
+      expect((await import('./index')).getConfig()).toBe(first);
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
   });
 });
 
