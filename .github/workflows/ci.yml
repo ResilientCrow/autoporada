@@ -110,6 +110,32 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  images:
+    name: Docker images
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: autoporada
+          POSTGRES_PASSWORD: autoporada
+          POSTGRES_DB: autoporada
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U autoporada"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - run: docker build -f docker/app/Dockerfile --target web -t autoporada-web:ci .
+      - run: docker build -f docker/app/Dockerfile --target tools -t autoporada-tools:ci .
+      - name: Migrate with the tools image (read-only, no capabilities)
+        run: >-
+          docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges
+          --network host
+          -e DATABASE_URL=postgres://autoporada:autoporada@localhost:5432/autoporada
+          autoporada-tools:ci migrate
+      - run: scripts/check-web-image.sh autoporada-web:ci
+
   security:
     name: Secrets and dependency audit
     runs-on: ubuntu-latest
