@@ -8,7 +8,7 @@ import { join, relative } from 'node:path';
 
 import { Client } from 'pg';
 
-import { MIGRATIONS_DIR, runMigrations } from '@/infra/db';
+import { MIGRATIONS_DIR, runMigrations } from '@/infra/migrate';
 
 import { adminUrl, databaseUrl, TEMPLATE } from '../support/database';
 

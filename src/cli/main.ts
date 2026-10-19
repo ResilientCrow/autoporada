@@ -3,7 +3,7 @@
  * the only CLI code allowed to wire infrastructure together.
  */
 import { getDatabaseUrl } from '@/infra/config';
-import { runMigrations } from '@/infra/db';
+import { runMigrations } from '@/infra/migrate';
 
 import { renderSnapshot, RENDER_SNAPSHOT_USAGE } from './render-snapshot';
 

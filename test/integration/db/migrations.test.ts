@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { MIGRATIONS_DIR, runMigrations } from '@/infra/db';
+import { MIGRATIONS_DIR, runMigrations } from '@/infra/migrate';
 
 import { adminUrl, databaseUrl } from '../../support/database';
 
