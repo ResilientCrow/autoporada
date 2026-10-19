@@ -1,21 +1,106 @@
 {
   "interactiveLogin": true,
+  "loginPagePath": "/config/mock-login.html",
   "tokenCallbacks": [
     {
       "issuerId": "ssps",
       "tokenExpiry": 3600,
       "requestMappings": [
         {
-          "requestParam": "client_id",
+          "requestParam": "subject",
+          "match": "ucitel",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000001",
+            "name": "Jana Nováková",
+            "preferred_username": "jana.novakova@ssps.cz",
+            "upn": "jana.novakova@ssps.cz",
+            "email": "jana.novakova@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "student",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000002",
+            "name": "Petr Svoboda",
+            "preferred_username": "petr.svoboda@ssps.cz",
+            "upn": "petr.svoboda@ssps.cz",
+            "email": "petr.svoboda@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "reditel",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000003",
+            "name": "Karel Dvořák",
+            "preferred_username": "karel.dvorak@ssps.cz",
+            "upn": "karel.dvorak@ssps.cz",
+            "email": "karel.dvorak@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "host",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000004",
+            "name": "Host Zvenku",
+            "preferred_username": "host_gmail.com#EXT#@ssps.cz",
+            "upn": "host_gmail.com#EXT#@ssps.cz",
+            "email": "host@gmail.com",
+            "acct": 1
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "bez-acct",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000005",
+            "name": "Eva Bez Acct",
+            "preferred_username": "eva.bezacct@ssps.cz",
+            "upn": "eva.bezacct@ssps.cz",
+            "email": "eva.bezacct@ssps.cz"
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "cizi-tenant",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "99999999-0000-4000-8000-000000000000",
+            "oid": "0d000000-0000-4000-8000-000000000006",
+            "name": "Tomáš Odjinud",
+            "preferred_username": "tomas@jina-skola.cz",
+            "upn": "tomas@jina-skola.cz",
+            "email": "tomas@jina-skola.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],
             "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-0000000000ff",
             "acct": 0,
-            "name": "Jana Nováková",
-            "preferred_username": "jana.novakova@ssps.cz",
-            "email": "jana.novakova@ssps.cz",
-            "upn": "jana.novakova@ssps.cz"
+            "name": "${subject}",
+            "preferred_username": "${subject}@ssps.cz",
+            "upn": "${subject}@ssps.cz",
+            "email": "${subject}@ssps.cz"
           }
         }
       ]

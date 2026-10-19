@@ -95,6 +95,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Start Postgres and the mock IdP
+        run: |
+          docker compose -f compose.dev.yaml up -d --wait postgres mock-idp
+          for i in $(seq 1 30); do curl -fs http://localhost:8080/ssps/.well-known/openid-configuration >/dev/null && break; sleep 2; done
+      - run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgres://autoporada:autoporada@localhost:5432/autoporada
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()

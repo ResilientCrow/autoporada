@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vývojové přihlášení</title>
+    <style>
+      body {
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        max-width: 32rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      button {
+        display: block;
+        width: 100%;
+        margin: 0.5rem 0;
+        padding: 0.75rem;
+        text-align: left;
+        font: inherit;
+      }
+      small {
+        display: block;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Stand-in for Entra's sign-in page (mock-oauth2-server, dev and e2e only).
+         The personas live in mock-oauth2.json; this page only adds a fresh
+         auth_time, which the mappings cannot set. -->
+    <main>
+      <h1>Vývojové přihlášení</h1>
+      <p>Toto není Microsoft. Vyberte, za koho se přihlásíte.</p>
+      <form method="post">
+        <input type="hidden" name="claims" value="{}" />
+        <button type="submit" name="username" value="ucitel">
+          Učitelka<small>Jana Nováková, člen školy</small>
+        </button>
+        <button type="submit" name="username" value="student">
+          Student<small>Petr Svoboda, člen školy</small>
+        </button>
+        <button type="submit" name="username" value="reditel">
+          Ředitel<small>Karel Dvořák, BOOTSTRAP_HEADMASTER_OID</small>
+        </button>
+        <button type="submit" name="username" value="host">
+          Host<small>acct = 1, #EXT# v UPN</small>
+        </button>
+        <button type="submit" name="username" value="bez-acct">
+          Bez acct<small>chybí volitelná deklarace acct</small>
+        </button>
+        <button type="submit" name="username" value="cizi-tenant">
+          Cizí tenant<small>jiné tid</small>
+        </button>
+      </form>
+    </main>
+    <script>
+      // Entra sends auth_time on every sign-in; step-up needs it to be recent.
+      document.querySelector('form').addEventListener('submit', (event) => {
+        event.target.elements.claims.value = JSON.stringify({
+          auth_time: Math.floor(Date.now() / 1000),
+        });
+      });
+    </script>
+  </body>
+</html>
