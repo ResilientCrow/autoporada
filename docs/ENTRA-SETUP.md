@@ -158,12 +158,23 @@ chmod 600 autoporada-entra.key
   never leaves the server.
 - The app checks at start-up that the key belongs to the certificate, that
   the key has at least 2048 bits, and that the SHA-1 thumbprint matches the
-  one the portal shows (`OIDC_CLIENT_CERT_THUMBPRINT`, recommended).
+  one the portal shows. The deploy stack requires that thumbprint
+  (`CERT_THUMBPRINT` in `deploy/.env`).
 - The app signs its client assertion with PS256 and names the certificate by
   its SHA-256 (`x5t#S256`), as Microsoft documents for certificate
   credentials.
 - The app warns the IT contact 45 days before the certificate expires.
-  Renewal is the same two steps, done before the old certificate is removed.
+- **Renewal**, before the old certificate expires:
+  1. make a new pair with the command above and upload the new certificate
+     (step 1.2), keeping the old one in Entra for now;
+  2. replace `deploy/secrets/entra_key` and `entra_cert`, set
+     `CERT_THUMBPRINT` in `deploy/.env` to the new thumbprint from the
+     portal, run `sudo ./install.sh` and `docker compose up -d`;
+  3. check with `docker compose run --rm cli auth:probe`, then remove the
+     old certificate in Entra.
+
+  A thumbprint left at the old value stops web at start-up: the boot
+  check refuses the mismatch.
 
 ## 7. Values to hand over to the deployer
 

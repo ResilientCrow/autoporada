@@ -183,7 +183,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 - `policy.can` is pure and deny-by-default, with an exhaustive action enum and a generated matrix test.
 - Repositories require an `Actor`, which closes IDOR holes.
 - Submitters see only their own points and future items, plus approved akce. Students never see the registry or the archive.
-- `proxy.ts` only sets the CSP nonce and redirects to login. It is never the security gate.
+- `proxy.ts` only sets the CSP nonce; it is never the security gate. Pages redirect to sign-in through `requireViewer`, and routes and actions check the session themselves.
 
 **Input and output safety**
 - Rich text is validated JSON: at most 3 indent levels, bold and italic only, no links, at most 64 KB. It is rendered by components, never through `dangerouslySetInnerHTML`.
