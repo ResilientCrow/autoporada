@@ -1,4 +1,4 @@
-import type { Log } from '@/server/pipeline';
+import type { Log } from '@/server/log';
 
 export interface LogLine {
   readonly level: 'info' | 'warn' | 'error';

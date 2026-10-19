@@ -3,7 +3,7 @@ import type { AppDeps, UserPrincipal } from '@/application/ports';
 import type { ActionResult } from '@/contracts';
 
 import type { LIMITS, LimitName, RateLimiter } from '../rate-limit';
-import { errorSummary, type Log } from './log';
+import { errorSummary, type Log } from '../log';
 import { logCall, toActionResult, type CallLine } from './outcome';
 
 export interface ActionDeps {

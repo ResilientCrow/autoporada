@@ -4,7 +4,7 @@ import type { ActionResult } from '@/contracts';
 import { safeReturnTo } from '@/domain/identity';
 
 import { clientIp, LIMITS, type LimitName } from '../rate-limit';
-import { errorSummary } from './log';
+import { errorSummary } from '../log';
 import { logCall, toActionResult, type CallLine } from './outcome';
 import { cookieValue, SESSION_COOKIE } from './request';
 import { runRegistered, type ActionDeps } from './run-action';

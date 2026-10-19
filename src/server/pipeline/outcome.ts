@@ -1,7 +1,7 @@
 import type { PipelineFailure, Result } from '@/application/core';
 import type { ActionResult } from '@/contracts';
 
-import type { Log } from './log';
+import type { Log } from '../log';
 
 /** One log line per call: never the input, never personal data. */
 export interface CallLine {
