@@ -2,6 +2,8 @@ import type { Pool } from 'pg';
 
 import { DatabaseFailure, type Db, type TxOptions } from '@/application/ports';
 
+import { inTransactionScope } from '../system';
+
 import { fromDriver, isRetryable, toPortError } from './pg-errors';
 import { buildTx } from './tx';
 
@@ -52,9 +54,11 @@ export function createPgDb(pool: Pool): Db {
           await driver(() => client.query(begin));
           // Nothing the work started may run once it has settled: a query sent
           // later would land after COMMIT or ROLLBACK, outside the transaction.
-          const value = await work(buildTx(client, ctx, life)).finally(() => {
-            life.open = false;
-          });
+          const value = await inTransactionScope(() => work(buildTx(client, ctx, life))).finally(
+            () => {
+              life.open = false;
+            },
+          );
           // Deferred constraint triggers run here.
           const done = await driver(() => client.query('COMMIT'));
           // An aborted transaction (a failed query the work caught) answers

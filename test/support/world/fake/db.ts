@@ -1,4 +1,5 @@
 import type { Db, Tx, TxContext, TxMode, TxOptions } from '@/application/ports';
+import { inTransactionScope } from '@/infra/system';
 
 import { fakeAudit, fakeJobs } from './effects';
 import { checkAuditCoverage } from './oracle';
@@ -50,7 +51,7 @@ export function createFakeDb(): FakeDb {
       jobs: fakeJobs(tx),
     };
     try {
-      const value = await work(view);
+      const value = await inTransactionScope(() => work(view));
       if (injected) throw injected;
       const seeding = ctx.principal.kind === 'system' && ctx.principal.reason === 'test.seed';
       if (!seeding) checkAuditCoverage(tx, auditBefore);

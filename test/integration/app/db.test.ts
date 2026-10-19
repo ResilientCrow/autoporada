@@ -13,6 +13,8 @@ import {
   type TxMode,
 } from '@/application/ports';
 
+import { insideTransaction } from '@/infra/system';
+
 import { setupTestDatabase } from '../../support/database';
 
 const database = setupTestDatabase();
@@ -206,6 +208,11 @@ describe('Db.transaction', () => {
     );
     await expect(idle).rejects.toBeInstanceOf(DatabaseFailure);
     await expect(run((tx) => tx.users.list())).resolves.toBeDefined();
+  });
+
+  it('marks its work as inside a transaction, for the no-external-calls rule', async () => {
+    expect(await run(async () => insideTransaction())).toBe(true);
+    expect(insideTransaction()).toBe(false);
   });
 
   it('uses the default for a timeout given as undefined', async () => {
