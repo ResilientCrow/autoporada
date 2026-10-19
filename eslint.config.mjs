@@ -6,6 +6,29 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 const ENV_MESSAGE = 'Read configuration through src/infra/config (ADR 0004).';
 const COPY_MESSAGE = 'User-facing text comes from the cs copy catalogue (src/ui/copy).';
 
+/** Server actions are defined only by defineAction in src/server/actions (ADR 0011). */
+const INLINE_USE_SERVER = {
+  selector: ':function > BlockStatement > ExpressionStatement[directive="use server"]',
+  message: 'Define server actions with defineAction in src/server/actions (ADR 0011).',
+};
+
+/** A use case may run twice (retry), so its result must depend only on its inputs. */
+const NONDETERMINISM = [
+  { selector: "NewExpression[callee.name='Date'][arguments.length=0]", message: 'Use ctx.now.' },
+  {
+    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message: 'Use ctx.now.',
+  },
+  {
+    selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+    message: 'Application code must be deterministic (ADR 0011).',
+  },
+  {
+    selector: "Program > VariableDeclaration[kind='let']",
+    message: 'No module state in application code (ADR 0011).',
+  },
+];
+
 /** `globalThis.process.env` — the one form no-restricted-properties cannot see. */
 const GLOBAL_ENV = {
   selector: "MemberExpression[object.property.name='process'][property.name='env']",
@@ -79,7 +102,33 @@ export default defineConfig([
           ],
         },
       ],
-      'no-restricted-syntax': ['error', GLOBAL_ENV],
+      'no-restricted-syntax': ['error', GLOBAL_ENV, INLINE_USE_SERVER],
+    },
+  },
+  {
+    // Overrides the block above for these files, so it repeats its selectors.
+    files: ['src/application/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', GLOBAL_ENV, INLINE_USE_SERVER, ...NONDETERMINISM],
+    },
+  },
+  {
+    files: ['src/application/use-cases/**/*.ts'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+    },
+  },
+  {
+    // The pipeline handles untrusted input: no `any` may flow through it.
+    files: ['src/server/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
+      '@typescript-eslint/no-unsafe-return': 'error',
     },
   },
   {
@@ -95,7 +144,7 @@ export default defineConfig([
         },
       ],
       // Overrides the block above for these files, so it repeats GLOBAL_ENV.
-      'no-restricted-syntax': ['error', GLOBAL_ENV, ...UI_COPY_SYNTAX],
+      'no-restricted-syntax': ['error', GLOBAL_ENV, INLINE_USE_SERVER, ...UI_COPY_SYNTAX],
     },
   },
   {

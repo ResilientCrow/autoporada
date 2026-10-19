@@ -81,7 +81,7 @@ module.exports = {
       name: 'application-is-framework-free',
       comment: 'Use cases talk to the outside world only through ports (no I/O, no Node core).',
       severity: 'error',
-      from: { path: '^src/application/' },
+      from: { path: '^src/application/', pathNot: TESTS },
       to: {
         pathNot: ['^src/(application|domain|snapshot|document|contracts|notify)/', npm('zod')],
       },
@@ -90,7 +90,27 @@ module.exports = {
       name: 'infra-is-a-leaf',
       severity: 'error',
       from: { path: '^src/infra/' },
-      to: { path: ['^src/(app|ui|server|worker|cli)/', '^src/application/use-cases/'] },
+      to: { path: '^src/(app|ui|server|worker|cli)/' },
+    },
+    {
+      name: 'infra-implements-ports',
+      comment: 'Infra knows the application only through its ports (ADR 0011).',
+      severity: 'error',
+      from: { path: '^src/infra/' },
+      to: { path: '^src/application/', pathNot: '^src/application/ports/' },
+    },
+    {
+      name: 'io-libraries-only-in-infra',
+      comment: 'Database and queue drivers stay behind the ports (ADR 0011).',
+      severity: 'error',
+      from: { pathNot: ['^src/infra/', ...TESTS] },
+      to: { path: npm('drizzle-orm', 'pg', 'pg-boss') },
+    },
+    {
+      name: 'no-test-helpers-in-src',
+      severity: 'error',
+      from: { path: '^src/', pathNot: TESTS },
+      to: { path: '^test/' },
     },
     {
       name: 'infra-only-from-composition-roots',
@@ -104,6 +124,13 @@ module.exports = {
         ],
       },
       to: { path: '^src/infra/' },
+    },
+    {
+      name: 'app-uses-server-entries',
+      comment: 'Routes reach the server only through its actions, routes and pages entry modules.',
+      severity: 'error',
+      from: { path: '^src/app/' },
+      to: { path: '^src/server/', pathNot: '^src/server/(actions|routes|pages)/index\\.ts$' },
     },
     {
       name: 'app-deps',

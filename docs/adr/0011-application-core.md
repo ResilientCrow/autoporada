@@ -48,6 +48,13 @@ Drizzle or Node core (ADR 0004).
   every `"use server"` module and route handler, and fails the build on
   anything not built with `defineAction` or `defineRoute`.
 
+- **Fences** (dependency-cruiser and ESLint): only `infra/` imports
+  Drizzle, `pg` or pg-boss; `infra/` sees the application only through its
+  ports; `src/` never imports test helpers; `app/` reaches `server/` only
+  through its `actions`, `routes` and `pages` entry modules; application
+  code has no module state, no clock and no randomness; use cases make no
+  type assertions; server code lets no `any` through.
+
 ## Consequences
 
 - A new repository has to be added to both the PostgreSQL and the fake
