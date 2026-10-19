@@ -4,7 +4,8 @@ import type { SignInError } from '@/contracts';
 import { checkEntraClaims, safeReturnTo, type ClaimRejection } from '@/domain/identity';
 
 import { cookieValue, sessionTokenFrom, type RouteContext } from '../pipeline';
-import { digest, isToken, newToken, type AuthDeps } from '../session';
+import type { AuthDeps } from './deps';
+import { digest, isToken, newToken } from './tokens';
 import { clearCookie, sessionCookie, SIGN_IN_COOKIE } from './cookies';
 import { seeOther, signInFailed } from './outcome';
 

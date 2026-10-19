@@ -1,5 +1,5 @@
 import type { RouteSpec } from '../pipeline';
-import type { AuthDeps } from '../session';
+import type { AuthDeps } from './deps';
 import { callback } from './callback';
 import { clearCookie, SIGN_IN_COOKIE } from './cookies';
 import { login, stepUp } from './login';

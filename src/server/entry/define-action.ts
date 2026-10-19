@@ -5,8 +5,7 @@ import type { ServerAction } from '@/contracts';
 
 import { getContainer } from '../container';
 import { markWrapped } from './brand';
-import { sessionTokenFrom } from './request';
-import { runAction, type ActionOptions } from './run-action';
+import { runAction, sessionTokenFrom, type ActionOptions } from '../pipeline';
 
 /**
  * The only way to make a server action (ADR 0011). Export the result from

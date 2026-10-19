@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { scanSource } from './scan';
 
 const ACTIONS = 'src/server/actions/access.ts';
-const IMPORT = "import { defineAction } from '@/server/pipeline';";
+const IMPORT = "import { defineAction } from '@/server/entry';";
 const findings = (file: string, text: string) => scanSource(file, text).findings;
 
 describe('scanSource', () => {
@@ -43,7 +43,7 @@ export const requestAccessAction = defineAction(requestAccess, { rateLimit: 'acc
     ['export let a = defineAction(x, o);', 'exports a let or var'],
     ["export { a } from './a';", 're-exports values (export { … } or export *)'],
     ["export * from './a';", 're-exports values (export { … } or export *)'],
-    ['export const a = other(x);', 'exports a without defineAction from @/server/pipeline'],
+    ['export const a = other(x);', 'exports a without defineAction from @/server/entry'],
   ])('refuses an action module that %s', (body, problem) => {
     expect(findings(ACTIONS, `'use server';\n${IMPORT}\n${body}`)).toContain(
       `${ACTIONS}: ${problem}`,
@@ -52,10 +52,10 @@ export const requestAccessAction = defineAction(requestAccess, { rateLimit: 'acc
 
   it('refuses defineAction from anywhere else, or renamed', () => {
     const elsewhere = `'use server';\nimport { defineAction } from './fake';\nexport const a = defineAction(x, o);`;
-    const renamed = `'use server';\nimport { defineAction as d } from '@/server/pipeline';\nexport const a = d(x, o);`;
+    const renamed = `'use server';\nimport { defineAction as d } from '@/server/entry';\nexport const a = d(x, o);`;
     for (const text of [elsewhere, renamed]) {
       expect(findings(ACTIONS, text)).toEqual([
-        `${ACTIONS}: exports a without defineAction from @/server/pipeline`,
+        `${ACTIONS}: exports a without defineAction from @/server/entry`,
       ]);
     }
     expect(findings(ACTIONS, `${IMPORT}\nexport const a = defineAction(x, o);`)).toEqual([

@@ -8,7 +8,7 @@ import { createIdentityProvider, describeCredential, loadClientCredential } from
 import { systemClock } from '@/infra/system';
 
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
-import { principalResolver, type AuthDeps } from './session';
+import { principalResolver, type AuthDeps } from './auth';
 
 /** Everything the web process wires together, once. */
 export interface WebContainer {

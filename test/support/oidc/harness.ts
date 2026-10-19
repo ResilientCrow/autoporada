@@ -10,10 +10,9 @@ import { afterEach, beforeEach, expect, vi } from 'vitest';
 import { DatabaseFailure, type AppDeps } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { createIdentityProvider } from '@/infra/oidc';
-import { authRouteSpecs } from '@/server/auth';
 import { runRoute, type RouteDeps, type RouteSpec } from '@/server/pipeline';
 import { createRateLimiter, LIMITS } from '@/server/rate-limit';
-import { principalResolver, type AuthDeps } from '@/server/session';
+import { authRouteSpecs, principalResolver, type AuthDeps } from '@/server/auth';
 
 import { recordingLog, type LogLine } from '../log';
 import { setupWorld, type World } from '../world';

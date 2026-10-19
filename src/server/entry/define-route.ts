@@ -1,7 +1,7 @@
 import { getContainer } from '../container';
 import { LIMITS } from '../rate-limit';
 import { markWrapped } from './brand';
-import { runRoute, type RouteSpec, type Segment } from './run-route';
+import { runRoute, type RouteSpec, type Segment } from '../pipeline';
 
 export type RouteHandler = (request: Request, segment: Segment) => Promise<Response>;
 

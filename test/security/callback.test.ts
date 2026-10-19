@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { system } from '@/application/ports';
 import { SIGN_IN_TTL_MS } from '@/domain/identity';
-import { digest, newToken } from '@/server/session';
+import { digest, newToken } from '@/server/auth';
 
 import { APP_ORIGIN, expectSignInFailed, setupSignInHarness } from '../support/oidc/harness';
 import { DELETE, MEMBER } from '../support/oidc/test-idp';

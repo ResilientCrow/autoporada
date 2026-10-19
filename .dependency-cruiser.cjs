@@ -133,6 +133,21 @@ module.exports = {
       to: { path: '^src/server/', pathNot: '^src/server/(actions|routes|pages)/index\\.ts$' },
     },
     {
+      name: 'container-only-at-the-edges',
+      comment:
+        'The pipeline, auth and the rest of server/ take their dependencies as arguments; only Next entry points, pages, the route table and instrumentation reach the process container.',
+      severity: 'error',
+      from: {
+        path: '^src/',
+        pathNot: [
+          '^src/server/(entry|pages|routes)/',
+          '^src/server/container(\\.test)?\\.ts$',
+          '^src/instrumentation\\.ts$',
+        ],
+      },
+      to: { path: '^src/server/container\\.ts$' },
+    },
+    {
       name: 'proxy-is-light',
       comment: 'proxy.ts runs on every request: next/server and the CSP module only.',
       severity: 'error',

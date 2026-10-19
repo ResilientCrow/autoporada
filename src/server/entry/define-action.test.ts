@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 
+import { defineSystemUseCase, ok } from '@/application/core';
 import { me } from '@/application/use-cases';
 
 import { recordingLog } from '../../../test/support/log';
+import { wrappedInfo } from './brand';
 import { defineAction } from './define-action';
 
 const request = vi.hoisted(() => ({ headers: new Headers() }));
@@ -30,5 +33,22 @@ describe('defineAction', () => {
     request.headers = new Headers({ cookie: '__Host-ap_session=one; __Host-ap_session=two' });
     expect(await action({})).toEqual({ ok: false, error: { code: 'unauthenticated' } });
     expect(resolvePrincipal).toHaveBeenCalledWith(null, 'req-1');
+  });
+
+  it('brands what it makes, and nothing else', () => {
+    expect(wrappedInfo(action)).toEqual({ kind: 'action', useCase: me, rateLimit: 'none' });
+    expect(wrappedInfo(async () => ({ ok: true }))).toBeUndefined();
+  });
+
+  it('refuses system use cases', () => {
+    const job = defineSystemUseCase({
+      name: 'test.job',
+      reasons: ['job:test'],
+      mode: 'read',
+      input: z.strictObject({}),
+      output: z.object({}),
+      execute: async () => ok({}),
+    });
+    expect(() => defineAction(job, { rateLimit: 'none' })).toThrow(/signed-in user/);
   });
 });

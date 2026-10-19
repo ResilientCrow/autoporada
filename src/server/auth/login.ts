@@ -3,7 +3,8 @@ import { beginLogin, beginStepUp } from '@/application/use-cases';
 import { safeReturnTo } from '@/domain/identity';
 
 import type { RouteContext } from '../pipeline';
-import { digest, newToken, type AuthDeps } from '../session';
+import type { AuthDeps } from './deps';
+import { digest, newToken } from './tokens';
 import { signInCookie } from './cookies';
 import { seeOther, signInFailed } from './outcome';
 

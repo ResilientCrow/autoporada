@@ -1,7 +1,7 @@
 import { signOut } from '@/application/use-cases';
 
 import { SESSION_COOKIE, type RouteContext } from '../pipeline';
-import type { AuthDeps } from '../session';
+import type { AuthDeps } from './deps';
 import { clearCookie } from './cookies';
 import { seeOther, signInFailed } from './outcome';
 

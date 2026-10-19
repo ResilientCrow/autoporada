@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { defineSystemUseCase, defineUseCase, ok } from '@/application/core';
+import { defineUseCase, ok } from '@/application/core';
 import { DatabaseFailure, type UserPrincipal } from '@/application/ports';
 
 import { recordingLog } from '../../../test/support/log';
 import { setupWorld } from '../../../test/support/world';
 import { createRateLimiter, LIMITS } from '../rate-limit';
-import { defineAction, runAction, wrappedInfo, type ActionDeps } from './index';
+import { runAction, type ActionDeps } from './index';
 
 const world = setupWorld();
 
@@ -140,25 +140,5 @@ describe('runAction and the registry', () => {
       err: { message: 'test.unlisted: not in USE_CASES' },
     });
     expect(world.fake?.history).toEqual([expect.objectContaining({ outcome: 'commit' })]);
-  });
-});
-
-describe('defineAction', () => {
-  it('brands what it makes, and nothing else', () => {
-    const action = defineAction(echo, { rateLimit: 'directory' });
-    expect(wrappedInfo(action)).toEqual({ kind: 'action', useCase: echo, rateLimit: 'directory' });
-    expect(wrappedInfo(async () => ({ ok: true }))).toBeUndefined();
-  });
-
-  it('refuses system use cases', () => {
-    const job = defineSystemUseCase({
-      name: 'test.job',
-      reasons: ['job:test'],
-      mode: 'read',
-      input: z.strictObject({}),
-      output: z.object({}),
-      execute: async () => ok({}),
-    });
-    expect(() => defineAction(job, { rateLimit: 'none' })).toThrow(/signed-in user/);
   });
 });

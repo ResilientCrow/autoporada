@@ -21,7 +21,7 @@ const NOT_TYPESCRIPT = /\.[cm]?jsx?$/;
 const HTTP_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 /** Every line that looks like a directive; the parser must have seen each one. */
 const DIRECTIVE_LINE = /^\s*(['"])use (?:server|cache)[^'"]*\1;?\s*$/gm;
-const PIPELINE = '@/server/pipeline';
+const ENTRY = '@/server/entry';
 
 /** The directive strings at the start of a file or function body. */
 function prologue(statements: ts.NodeArray<ts.Statement>): string[] {
@@ -39,13 +39,13 @@ const exported = (node: ts.Node) =>
   ts.canHaveModifiers(node) &&
   (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
-/** Whether `defineAction` is imported, unrenamed, from the pipeline. */
+/** Whether `defineAction` is imported, unrenamed, from server/entry. */
 function importsDefineAction(source: ts.SourceFile): boolean {
   return source.statements.some(
     (s) =>
       ts.isImportDeclaration(s) &&
       ts.isStringLiteral(s.moduleSpecifier) &&
-      s.moduleSpecifier.text === PIPELINE &&
+      s.moduleSpecifier.text === ENTRY &&
       s.importClause?.namedBindings !== undefined &&
       ts.isNamedImports(s.importClause.namedBindings) &&
       s.importClause.namedBindings.elements.some(
@@ -87,7 +87,7 @@ function exportProblems(source: ts.SourceFile, kind: 'action' | 'route'): string
           init.expression.text === 'defineAction' &&
           definesActions;
         if (kind === 'action' && !wrapped) {
-          problems.push(`exports ${name} without defineAction from ${PIPELINE}`);
+          problems.push(`exports ${name} without defineAction from ${ENTRY}`);
         }
       }
     }

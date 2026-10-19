@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { signedIn } from '../../../test/support/sessions';
 import { setupWorld } from '../../../test/support/world';
-import { digest, isToken, newToken, principalResolver } from './index';
+import { principalResolver } from './principal';
+import { digest, isToken, newToken } from './tokens';
 
 const world = setupWorld();
 

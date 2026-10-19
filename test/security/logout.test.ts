@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { LockTimeout, system } from '@/application/ports';
-import { digest, newToken } from '@/server/session';
+import { digest, newToken } from '@/server/auth';
 
 import { APP_ORIGIN, setupSignInHarness } from '../support/oidc/harness';
 import { signedIn } from '../support/sessions';
