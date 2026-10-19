@@ -1,23 +1,30 @@
 # The only way in (ADR 0008): TLS with Let's Encrypt, HSTS, a fresh request
 # id, and the app behind it. Stock Caddy 2.11; HSTS_MAX_AGE starts at a day
 # and goes to a year once the smoke test passes.
+
+# What Entra puts in the callback URL, removed from every log line that
+# carries the request: the access log and Caddy's own error log.
+(redact_query) {
+	request>uri query {
+		delete code
+		delete state
+		delete session_state
+		delete error_description
+	}
+}
+
 {
 	email {$ACME_EMAIL}
 	admin off
 	# An error Caddy raises itself (a 502 while web restarts) logs the
-	# request too: it goes through the same filter as the access log below.
+	# request too, so it is filtered like the access log below.
 	log default {
 		exclude http.log.error
 	}
 	log errors {
 		include http.log.error
 		format filter {
-			request>uri query {
-				delete code
-				delete state
-				delete session_state
-				delete error_description
-			}
+			import redact_query
 		}
 	}
 	servers {
@@ -49,12 +56,7 @@
 	log {
 		output stdout
 		format filter {
-			request>uri query {
-				delete code
-				delete state
-				delete session_state
-				delete error_description
-			}
+			import redact_query
 			# The sign-in redirect carries state and nonce.
 			resp_headers>Location delete
 		}
