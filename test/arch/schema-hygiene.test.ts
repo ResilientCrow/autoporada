@@ -51,6 +51,20 @@ describe('the hygiene checks themselves', () => {
       '$: object passes unnamed keys through',
     ]);
     expect(outputProblems(z.unknown())).toEqual(['$: returns anything']);
+    // Annotations constrain nothing; a field may be called "properties".
+    expect(inputProblems(z.strictObject({ body: z.unknown().describe('payload') }))).toEqual([
+      '$.properties.body: accepts anything',
+    ]);
+    expect(inputProblems(z.strictObject({ properties: z.any().meta({ title: 'x' }) }))).toEqual([
+      '$.properties.properties: accepts anything',
+    ]);
+    expect(outputProblems(z.object({ data: z.unknown().default(null) }))).toEqual([
+      '$.properties.data: returns anything',
+    ]);
+    // A default value is data, not a schema.
+    const defaulted = z.strictObject({ options: z.strictObject({}).default({}) });
+    expect(inputProblems(defaulted)).toEqual([]);
+    expect(outputProblems(z.object({ options: z.object({}).default({}) }))).toEqual([]);
     expect(outputProblems(z.object({ items: z.array(z.object({ id: z.string() })) }))).toEqual([]);
     expect(inputProblems(z.strictObject({}))).toEqual([]);
   });

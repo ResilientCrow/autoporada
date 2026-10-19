@@ -34,6 +34,11 @@ const NONDETERMINISM = [
   },
   {
     selector:
+      "MemberExpression[object.name='globalThis'][property.name=/^(crypto|performance|Date|Math)$/]",
+    message: 'Application code must be deterministic (ADR 0011).',
+  },
+  {
+    selector:
       ":matches(Program, Program > ExportNamedDeclaration) > VariableDeclaration[kind='let']",
     message: 'No module state in application code (ADR 0011).',
   },
