@@ -1,47 +1,10 @@
-import { randomUUID } from 'node:crypto';
-
 import * as client from 'openid-client';
 
 import type { IdentityProvider, IdpDetail, IdpResult } from '@/application/ports';
 
 import { assertOutsideTransaction } from '../system';
-import type { ClientCredential } from './credential';
+import { discover, EndpointOutsideIssuer, type ProviderOptions } from './discovery';
 import { mapFailure } from './failure';
-
-export interface ProviderOptions {
-  readonly issuer: string;
-  readonly clientId: string;
-  readonly appOrigin: string;
-  readonly credential: ClientCredential;
-  /** `ssps.cz`: Entra skips its account picker for the school's domain. */
-  readonly domainHint: string | null;
-  readonly production: boolean;
-  /** Tests only: an in-process identity provider. */
-  readonly fetch?: client.CustomFetch;
-  readonly timeoutSeconds?: number;
-}
-
-const ENTRA_ORIGIN = 'https://login.microsoftonline.com';
-
-class EndpointOutsideIssuer extends Error {}
-
-/**
- * The client assertion as Entra wants it: PS256, typ JWT, the certificate's
- * `x5t#S256` and no kid, the token endpoint as audience, a GUID jti.
- */
-function clientAuth(credential: ClientCredential): client.ClientAuth {
-  if (credential.kind === 'secret') return client.ClientSecretPost(credential.secret);
-  return (server, metadata, body, headers) =>
-    client.PrivateKeyJwt(credential.key, {
-      [client.modifyAssertion]: (header, payload) => {
-        header['typ'] = 'JWT';
-        header['x5t#S256'] = credential.x5tS256;
-        delete header['kid'];
-        payload['aud'] = server.token_endpoint;
-        payload['jti'] = randomUUID();
-      },
-    })(server, metadata, body, headers);
-}
 
 const fail = (stage: IdpDetail['stage'], error: unknown): IdpResult<never> => {
   if (error instanceof EndpointOutsideIssuer) {
@@ -64,37 +27,13 @@ const fail = (stage: IdpDetail['stage'], error: unknown): IdpResult<never> => {
  */
 export function createIdentityProvider(options: ProviderOptions): IdentityProvider {
   const redirectUri = new URL('/auth/callback', options.appOrigin).href;
-  const insecure = new URL(options.issuer).protocol === 'http:' && !options.production;
   let discovered: Promise<client.Configuration> | undefined;
 
   const configuration = () => {
-    discovered ??= client
-      .discovery(
-        new URL(options.issuer),
-        options.clientId,
-        { id_token_signed_response_alg: 'RS256', [client.clockTolerance]: 60 },
-        clientAuth(options.credential),
-        {
-          timeout: options.timeoutSeconds ?? 10,
-          ...(options.fetch && { [client.customFetch]: options.fetch }),
-          execute: [
-            client.enableNonRepudiationChecks,
-            ...(insecure ? [client.allowInsecureRequests] : []),
-          ],
-        },
-      )
-      .then((config) => {
-        const server = config.serverMetadata();
-        const endpoints = [server.authorization_endpoint, server.token_endpoint, server.jwks_uri];
-        if (options.production && endpoints.some((e) => !e || new URL(e).origin !== ENTRA_ORIGIN)) {
-          throw new EndpointOutsideIssuer();
-        }
-        return config;
-      })
-      .catch((error: unknown) => {
-        discovered = undefined;
-        throw error;
-      });
+    discovered ??= discover(options).catch((error: unknown) => {
+      discovered = undefined;
+      throw error;
+    });
     return discovered;
   };
 

@@ -1,2 +1,4 @@
 export { loadClientCredential } from './credential';
-export { createIdentityProvider, type ProviderOptions } from './provider';
+export type { ProviderOptions } from './discovery';
+export { formatProbe, probeEntra } from './probe';
+export { createIdentityProvider } from './provider';

@@ -13,7 +13,8 @@ export interface MappedFailure {
 }
 
 const OAUTH_ERROR = /^[a-z_]{1,40}$/;
-const AADSTS = /AADSTS\d{5,6}/;
+/** Entra error codes have five to seven digits, e.g. AADSTS50011, AADSTS7000215. */
+const AADSTS = /AADSTS\d{5,7}/;
 const UNAVAILABLE_CODES = new Set(['OAUTH_TIMEOUT', 'OAUTH_ABORT']);
 
 const oauthError = (value: unknown) =>

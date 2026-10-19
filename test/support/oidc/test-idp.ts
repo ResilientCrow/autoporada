@@ -78,6 +78,8 @@ export interface TestIdp {
   down(isDown?: boolean): void;
   /** Accepts client assertions signed for this certificate, as Entra would after the upload. */
   trust(certificatePem: string): void;
+  /** The application roles a client-credentials token carries. */
+  grantRoles(roles: readonly string[]): void;
   readonly seen: {
     readonly tokenRequests: URLSearchParams[];
     readonly assertions: {
@@ -101,6 +103,7 @@ export async function createTestIdp(): Promise<TestIdp> {
   const grants = new Map<string, Grant>();
   let pending: { claims?: Record<string, unknown>; sign?: Signing } = {};
   let tokenFailure: TokenFailure | undefined;
+  let appRoles: readonly string[] = ['User.ReadBasic.All'];
   let isDown = false;
   const seen = {
     tokenRequests: [] as URLSearchParams[],
@@ -204,6 +207,10 @@ export async function createTestIdp(): Promise<TestIdp> {
         401,
       );
     }
+    if (body.get('grant_type') === 'client_credentials') {
+      const payload = Buffer.from(JSON.stringify({ roles: appRoles })).toString('base64url');
+      return json({ token_type: 'Bearer', access_token: `e30.${payload}.`, expires_in: 3600 });
+    }
     const grant = grants.get(body.get('code') ?? '');
     const valid =
       body.get('grant_type') === 'authorization_code' &&
@@ -279,6 +286,9 @@ export async function createTestIdp(): Promise<TestIdp> {
     },
     failToken(failure) {
       tokenFailure = failure;
+    },
+    grantRoles(roles) {
+      appRoles = roles;
     },
     trust(certificatePem) {
       const der = new X509Certificate(certificatePem).raw;
