@@ -1,6 +1,6 @@
 import type { Pool } from 'pg';
 
-import type { Db, TxOptions } from '@/application/ports';
+import { DatabaseFailure, type Db, type TxOptions } from '@/application/ports';
 
 import { fromDriver, isRetryable, toPortError } from './pg-errors';
 import { buildTx } from './tx';
@@ -17,7 +17,11 @@ async function driver<T>(call: () => Promise<T>): Promise<T> {
 }
 
 function beginStatement(options: TxOptions): string {
-  const t = { ...DEFAULT_TIMEOUTS, ...options };
+  const t = {
+    statementTimeoutMs: options.statementTimeoutMs ?? DEFAULT_TIMEOUTS.statementTimeoutMs,
+    lockTimeoutMs: options.lockTimeoutMs ?? DEFAULT_TIMEOUTS.lockTimeoutMs,
+    idleTimeoutMs: options.idleTimeoutMs ?? DEFAULT_TIMEOUTS.idleTimeoutMs,
+  };
   for (const ms of [t.statementTimeoutMs, t.lockTimeoutMs, t.idleTimeoutMs]) {
     if (!Number.isSafeInteger(ms) || ms <= 0) throw new RangeError('timeouts are positive ms');
   }
@@ -38,22 +42,37 @@ export function createPgDb(pool: Pool): Db {
         const client = await driver(() => pool.connect());
         const life = { open: true };
         let healthy = true;
+        // The server can drop a checked-out connection (idle timeout, restart);
+        // without a listener its 'error' event would crash the process.
+        const lost = () => {
+          healthy = false;
+        };
+        client.on('error', lost);
         try {
           await driver(() => client.query(begin));
-          const value = await work(buildTx(client, ctx, life));
+          // Nothing the work started may run once it has settled: a query sent
+          // later would land after COMMIT or ROLLBACK, outside the transaction.
+          const value = await work(buildTx(client, ctx, life)).finally(() => {
+            life.open = false;
+          });
           // Deferred constraint triggers run here.
-          await driver(() => client.query('COMMIT'));
+          const done = await driver(() => client.query('COMMIT'));
+          // An aborted transaction (a failed query the work caught) answers
+          // COMMIT with ROLLBACK and no error.
+          if (done.command !== 'COMMIT') throw new DatabaseFailure('25P02');
           return value;
         } catch (error) {
-          healthy = await client.query('ROLLBACK').then(
+          life.open = false;
+          const rolledBack = await client.query('ROLLBACK').then(
             () => true,
             () => false,
           );
+          healthy = healthy && rolledBack;
           if (attempt < ATTEMPTS && isRetryable(error)) continue;
           throw toPortError(error);
         } finally {
-          life.open = false;
-          // A connection whose ROLLBACK failed is destroyed, not reused.
+          client.off('error', lost);
+          // A connection that failed or whose ROLLBACK failed is destroyed, not reused.
           client.release(!healthy);
         }
       }

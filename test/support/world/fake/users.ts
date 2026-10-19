@@ -76,7 +76,15 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       }
       const user = find(id);
       if (!user || user.version !== expectedVersion) throw new StaleVersion();
-      return save({ ...user, ...patch, version: user.version + 1, updatedAt: ctx.now });
+      const { role = user.role, isStudent = user.isStudent, status = user.status } = patch;
+      return save({
+        ...user,
+        role,
+        isStudent,
+        status,
+        version: user.version + 1,
+        updatedAt: ctx.now,
+      });
     },
     async countActiveHeadmasters() {
       guard(tx, false);

@@ -26,16 +26,18 @@ export interface WebContainer {
  * connection: the pool connects on the first query.
  */
 export function buildWeb(config: Config): WebContainer {
+  const log = createLogger({ service: 'web', level: config.logLevel });
   const database = connectDatabase({
     url: config.databaseUrl,
     applicationName: 'autoporada-web',
+    onConnectionError: (sqlstate) => log.warn({ sqlstate }, 'database connection lost'),
   });
   return {
     app: { db: database.app, clock: systemClock },
     // Sessions arrive in M4.4; until then nobody is signed in.
     resolvePrincipal: async () => null,
     limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
-    log: createLogger({ service: 'web', level: config.logLevel }),
+    log,
     appOrigin: config.appOrigin,
     requestIdFrom,
   };

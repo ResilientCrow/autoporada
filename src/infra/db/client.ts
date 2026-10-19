@@ -18,6 +18,8 @@ export interface DatabaseOptions {
    * cluster owner and use it to get exactly the app role's privileges.
    */
   readonly role?: string;
+  /** An idle pooled connection failed (database restart, failover); the pool replaces it. */
+  readonly onConnectionError?: (sqlstate: string) => void;
 }
 
 export interface DatabaseHandle {
@@ -41,6 +43,11 @@ export function connectDatabase(options: DatabaseOptions): DatabaseHandle {
     max: options.maxConnections ?? 10,
     // A startup parameter, so the role is set before the first query runs.
     ...(options.role && { options: `-c role=${options.role}` }),
+  });
+  // Without a listener, an idle connection the server drops would crash the process.
+  pool.on('error', (error) => {
+    const code: unknown = 'code' in error ? error.code : undefined;
+    options.onConnectionError?.(typeof code === 'string' ? code : '08000');
   });
   return {
     db: drizzle({ client: pool, schema, casing: 'snake_case' }),

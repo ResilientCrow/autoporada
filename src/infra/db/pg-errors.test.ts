@@ -41,7 +41,9 @@ describe('toPortError', () => {
 
   it('keeps nothing of the query, its parameters or the message', () => {
     const mapped = toPortError(wrapped(pgError('23505')));
-    const everything = JSON.stringify(mapped, Object.getOwnPropertyNames(mapped));
+    // The stack is left out: it holds file paths and repeats the message.
+    const keys = Object.getOwnPropertyNames(mapped).filter((k) => k !== 'stack');
+    const everything = JSON.stringify(mapped, keys);
     expect(everything).not.toMatch(/Jana|insert|users|oid/);
     expect(mapped).toMatchObject({ name: 'DatabaseFailure', sqlstate: '23505' });
   });

@@ -85,9 +85,17 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
     },
     async changeAccess(id, expectedVersion, patch) {
       require({ action: 'users.manage' });
+      const { role, isStudent, status } = patch;
       const [row] = await db
         .update(users)
-        .set({ ...patch, version: sql`${users.version} + 1`, updatedAt: ctx.now })
+        .set({
+          // Named one by one: a wider object passed as a patch cannot touch other columns.
+          ...(role !== undefined && { role }),
+          ...(isStudent !== undefined && { isStudent }),
+          ...(status !== undefined && { status }),
+          version: sql`${users.version} + 1`,
+          updatedAt: ctx.now,
+        })
         .where(and(eq(users.id, id), eq(users.version, expectedVersion), visible()))
         .returning(RECORD);
       if (!row) throw new StaleVersion();

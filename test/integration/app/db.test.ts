@@ -93,8 +93,9 @@ describe('Db.transaction', () => {
       tx.users.upsertFromClaims({ ...identity('Jana Tajná'), tid: 'Jana Tajná' }),
     ).catch((e: unknown) => e);
     expect(error).toEqual(new DatabaseFailure('22P02'));
-    const everything = JSON.stringify(error, Object.getOwnPropertyNames(error));
-    expect(everything).not.toMatch(/Jana|insert|users/i);
+    // The stack is left out: it holds file paths (/Users/… on macOS) and repeats the message.
+    const keys = Object.getOwnPropertyNames(error).filter((k) => k !== 'stack');
+    expect(JSON.stringify(error, keys)).not.toMatch(/Jana|insert|users/i);
   });
 
   it('refuses queries from a transaction that has ended', async () => {
@@ -138,6 +139,78 @@ describe('Db.transaction', () => {
       );
       expect(outcomes.filter((o) => o.status === 'fulfilled')).toHaveLength(4);
     }
+  });
+
+  it('refuses queries that start after the work has settled', async () => {
+    const user = await run((tx) => tx.users.upsertFromClaims(identity()));
+    const head = await run((tx) =>
+      tx.users.changeAccess(user.id, user.version, { role: 'headmaster' }),
+    );
+    const late = (tx: Tx, patch: Parameters<Tx['users']['changeAccess']>[2]) => {
+      const chain = (async () => {
+        const u = await tx.users.get(head.id);
+        return tx.users.changeAccess(u!.id, u!.version, patch);
+      })();
+      chain.catch(() => undefined);
+      return chain;
+    };
+    let failed: Promise<unknown> | undefined;
+    await expect(
+      run(async (tx) => {
+        failed = late(tx, { role: 'reviewer' });
+        throw new Error('refused');
+      }),
+    ).rejects.toThrow('refused');
+    await expect(failed).rejects.toBeInstanceOf(TxClosed);
+    let readOnly: Promise<unknown> | undefined;
+    await run(async (tx) => {
+      readOnly = late(tx, { status: 'blocked' });
+    }, 'read');
+    await expect(readOnly).rejects.toBeInstanceOf(TxClosed);
+    const [row] = await database.owner<{ role: string; status: string; version: number }>(
+      'SELECT role, status, version FROM users WHERE id = $1',
+      [head.id],
+    );
+    expect(row).toEqual({ role: 'headmaster', status: 'active', version: head.version });
+  });
+
+  it('does not report a commit that PostgreSQL turned into a rollback', async () => {
+    const swallowed = run(async (tx) => {
+      await tx.audit.record({ action: 'test.swallowed', target: null });
+      await tx.users.get('not-a-uuid').catch(() => null);
+      return 'committed?';
+    });
+    await expect(swallowed).rejects.toEqual(new DatabaseFailure('25P02'));
+    const audit = await database.owner(
+      `SELECT 1 FROM audit_events WHERE action = 'test.swallowed'`,
+    );
+    expect(audit).toEqual([]);
+  });
+
+  it('survives connections the server drops, idle or in a transaction', async () => {
+    await run((tx) => tx.users.list());
+    await database.owner(
+      `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+        WHERE datname = current_database() AND application_name = 'autoporada-test'`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await expect(run((tx) => tx.users.list())).resolves.toBeDefined();
+    const idle = database.app.transaction(
+      ctx(),
+      { mode: 'read', idleTimeoutMs: 100 },
+      async (tx) => {
+        await tx.users.list();
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return tx.users.list();
+      },
+    );
+    await expect(idle).rejects.toBeInstanceOf(DatabaseFailure);
+    await expect(run((tx) => tx.users.list())).resolves.toBeDefined();
+  });
+
+  it('uses the default for a timeout given as undefined', async () => {
+    const options = { mode: 'read', statementTimeoutMs: undefined } as const;
+    await expect(database.app.transaction(ctx(), options, async () => 'ran')).resolves.toBe('ran');
   });
 
   it('runs the work again after a deadlock', async () => {
