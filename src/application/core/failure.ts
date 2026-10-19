@@ -1,3 +1,5 @@
+import type { KnownConstraint } from '@/application/ports';
+import type { RuleCode } from '@/contracts';
 import type { TransitionResult } from '@/domain/review';
 
 import { fail, type Outcome } from './result';
@@ -16,3 +18,11 @@ export function fromTransition(
       return fail({ code: 'invalid-input', fields: { [noteField]: 'required' } });
   }
 }
+
+/**
+ * Constraints a concurrent change can trip at commit, as the rule the user
+ * reads. Use cases check the rule first; this covers the race.
+ */
+export const CONSTRAINT_RULES: Readonly<Record<KnownConstraint, RuleCode>> = {
+  users_active_headmaster: 'last-headmaster',
+};

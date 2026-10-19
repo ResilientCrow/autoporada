@@ -9,6 +9,10 @@ const config: NextConfig = {
   // Components. The root layout calls connection(), so no route is
   // prerendered either (ADR 0001).
   cacheComponents: false,
+  experimental: {
+    // Matches INPUT_LIMITS in src/application/core (ADR 0011).
+    serverActions: { bodySizeLimit: '512kb' },
+  },
 };
 
 export default config;
