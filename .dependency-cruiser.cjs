@@ -133,19 +133,20 @@ module.exports = {
       to: { path: '^src/server/', pathNot: '^src/server/(actions|routes|pages)/index\\.ts$' },
     },
     {
-      name: 'container-only-at-the-edges',
+      name: 'container-bound-only-at-the-edges',
       comment:
-        'The pipeline, auth and the rest of server/ take their dependencies as arguments; only Next entry points, pages, the route table and instrumentation reach the process container.',
+        'The pipeline, auth and the rest of server/ take their dependencies as arguments. The container, and every module bound to it (bind, pages, routes, actions), is reached only by those modules, app/ and instrumentation.',
       severity: 'error',
       from: {
         path: '^src/',
         pathNot: [
-          '^src/server/(entry|pages|routes)/',
+          '^src/app/',
+          '^src/server/(bind|pages|routes|actions)/',
           '^src/server/container(\\.test)?\\.ts$',
           '^src/instrumentation\\.ts$',
         ],
       },
-      to: { path: '^src/server/container\\.ts$' },
+      to: { path: '^src/server/(container\\.ts$|bind/|pages/|routes/|actions/)' },
     },
     {
       name: 'proxy-is-light',

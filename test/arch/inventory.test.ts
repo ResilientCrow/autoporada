@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isUseCase } from '@/application/core';
 import { USE_CASES } from '@/application/use-cases';
-import { wrappedInfo } from '@/server/entry';
+import { wrappedInfo } from '@/server/bind';
 
 import {
   ACTION_MODULES,

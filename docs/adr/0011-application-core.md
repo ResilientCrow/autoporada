@@ -53,9 +53,12 @@ Drizzle or Node core (ADR 0004).
 - **Fences** (dependency-cruiser and ESLint): only `infra/` imports
   Drizzle, `pg` or pg-boss; `infra/` sees the application only through its
   ports; `src/` never imports test helpers; `app/` reaches `server/` only
-  through its `actions`, `routes` and `pages` entry modules; application
-  code has no module state, no clock and no randomness; use cases make no
-  type assertions; server code lets no `any` through.
+  through its `actions`, `routes` and `pages` entry modules; only those
+  modules, `server/bind` (`defineAction`, `defineRoute`) and
+  instrumentation reach the process container, while the pipeline and
+  `server/auth` take their dependencies as arguments; application code has
+  no module state, no clock and no randomness; use cases make no type
+  assertions; server code lets no `any` through.
 
 ## Consequences
 

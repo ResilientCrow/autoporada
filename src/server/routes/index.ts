@@ -1,7 +1,7 @@
 /** Route handlers for src/app; each route file exports one of these per method. */
 import { authRouteSpecs } from '../auth';
 import { getContainer } from '../container';
-import { defineRoute } from '../entry';
+import { defineRoute } from '../bind';
 
 const auth = authRouteSpecs(() => getContainer().auth);
 

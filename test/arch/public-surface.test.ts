@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { USE_CASES } from '@/application/use-cases';
-import { wrappedInfo } from '@/server/entry';
+import { wrappedInfo } from '@/server/bind';
 
 import { exportsOf, ROUTE_FILES } from './entries';
 
