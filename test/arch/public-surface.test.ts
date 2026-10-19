@@ -12,8 +12,8 @@ import { exportsOf, ROUTE_FILES } from './entries';
 /** M4: the sign-in login and callback routes; M11: /healthz. */
 const PUBLIC_ROUTES: readonly string[] = [];
 
-/** M4: completing a sign-in; M7: jobs. */
-const SYSTEM_USE_CASES: readonly string[] = [];
+/** Sign-in steps run before anyone is signed in; M7 adds jobs. */
+const SYSTEM_USE_CASES: readonly string[] = ['auth.beginLogin', 'auth.takeSignIn'];
 
 describe('public surface', () => {
   it('lists every route open without a session', async () => {

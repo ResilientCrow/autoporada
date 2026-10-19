@@ -74,7 +74,9 @@ export function inputProblems(schema: z.ZodType): string[] {
  * protocol state to the sign-in code on the server. defineAction refuses
  * system use cases, so these values never reach a client.
  */
-export const PROTOCOL_OUTPUTS: Readonly<Record<string, readonly string[]>> = {};
+export const PROTOCOL_OUTPUTS: Readonly<Record<string, readonly string[]>> = {
+  'auth.takeSignIn': ['nonce', 'codeVerifier'],
+};
 
 /** Outputs return only what they name (z.object strips the rest), never a credential. */
 export function outputProblems(schema: z.ZodType, allowed: readonly string[] = []): string[] {

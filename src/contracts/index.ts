@@ -7,3 +7,22 @@ export type {
   ServerAction,
 } from './result';
 export { RULE_CODES, type RuleCode } from './rules';
+export {
+  beginSignInInput,
+  beginSignInOutput,
+  completeSignInInput,
+  completeSignInOutput,
+  isSignInError,
+  meInput,
+  meOutput,
+  recordRejectionInput,
+  recordRejectionOutput,
+  resolveSessionInput,
+  resolveSessionOutput,
+  SIGN_IN_ERRORS,
+  signOutInput,
+  signOutOutput,
+  takeSignInInput,
+  takeSignInOutput,
+  type SignInError,
+} from './auth';

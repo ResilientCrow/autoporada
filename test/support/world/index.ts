@@ -7,6 +7,8 @@ import { randomUUID } from 'node:crypto';
 
 import { beforeEach, inject } from 'vitest';
 
+import { runUseCase, type PipelineFailure, type Result, type UseCase } from '@/application/core';
+
 import {
   system,
   type AppDeps,
@@ -40,6 +42,12 @@ export interface World {
   /** What this world can check; PostgreSQL has no job queue until M7.1. */
   readonly supports: { readonly jobs: boolean };
   tx<T>(principal: Principal, work: (tx: Tx) => Promise<T>, mode?: TxMode): Promise<T>;
+  /** Runs a use case through the real pipeline, at the world's clock. */
+  run<In, Out>(
+    useCase: UseCase<In, Out>,
+    principal: Principal,
+    input: unknown,
+  ): Promise<Result<Out, PipelineFailure>>;
   readonly seed: { user(seed?: UserSeed): Promise<UserRecord> };
   readonly inspect: {
     audit(): Promise<readonly AuditRow[]>;
@@ -76,6 +84,8 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
     get fake() {
       return backend().fake;
     },
+    run: (useCase, principal, input) =>
+      runUseCase(useCase, { principal, requestId: 'test', input }, { db: backend().db, clock }),
     tx: (principal, work, mode = 'write') =>
       backend().db.transaction({ principal, now: clock.now(), requestId: 'test' }, { mode }, work),
     seed: {
