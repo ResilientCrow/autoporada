@@ -1,0 +1,34 @@
+/**
+ * What anyone can reach without signing in, and what runs as the system.
+ * Widening either list is an edit reviewers see, like the policy matrix.
+ */
+import { describe, expect, it } from 'vitest';
+
+import { USE_CASES } from '@/application/use-cases';
+import { wrappedInfo } from '@/server/pipeline';
+
+import { exportsOf, ROUTE_FILES } from './entries';
+
+/** M4: the sign-in login and callback routes; M11: /healthz. */
+const PUBLIC_ROUTES: readonly string[] = [];
+
+/** M4: completing a sign-in; M7: jobs. */
+const SYSTEM_USE_CASES: readonly string[] = [];
+
+describe('public surface', () => {
+  it('lists every route open without a session', async () => {
+    const open: string[] = [];
+    for (const file of ROUTE_FILES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'route' && info.access === 'public') open.push(info.name);
+      }
+    }
+    expect(open.sort()).toEqual([...PUBLIC_ROUTES].sort());
+  });
+
+  it('lists every use case that runs as the system', () => {
+    const system = USE_CASES.filter((u) => u.principal === 'system').map((u) => u.name);
+    expect(system.sort()).toEqual([...SYSTEM_USE_CASES].sort());
+  });
+});
