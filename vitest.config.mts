@@ -19,6 +19,7 @@ export default defineConfig({
             'test/support/**/*.test.ts',
             'test/contract/**/*.test.ts',
             'test/arch/**/*.test.ts',
+            'test/security/**/*.test.ts',
           ],
           environment: 'node',
           // Port contracts and use cases run against in-memory fakes (ADR 0011).
@@ -33,6 +34,7 @@ export default defineConfig({
             'test/integration/**/*.test.ts',
             'test/contract/**/*.test.ts',
             'src/application/use-cases/**/*.test.ts',
+            'test/security/**/*.test.ts',
           ],
           environment: 'node',
           // The same contract and use-case suites, against PostgreSQL (ADR 0011).

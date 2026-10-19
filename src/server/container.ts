@@ -4,10 +4,11 @@ import { USE_CASES } from '@/application/use-cases';
 import { getConfig, type Config } from '@/infra/config';
 import { connectDatabase } from '@/infra/db';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
+import { createIdentityProvider, loadClientCredential } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
 
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
-import { principalResolver } from './session';
+import { principalResolver, type AuthDeps } from './session';
 
 /** Everything the web process wires together, once. */
 export interface WebContainer {
@@ -24,6 +25,8 @@ export interface WebContainer {
   readonly log: Logger;
   readonly appOrigin: string;
   readonly requestIdFrom: (header: string | null) => string;
+  /** The sign-in routes' dependencies (Entra, its expectations, the first headmaster). */
+  readonly auth: AuthDeps;
 }
 
 /**
@@ -38,6 +41,23 @@ export function buildWeb(config: Config): WebContainer {
     onConnectionError: (sqlstate) => log.warn({ sqlstate }, 'database connection lost'),
   });
   const app: AppDeps = { db: database.app, clock: systemClock };
+  const { oidc } = config;
+  const auth: AuthDeps = {
+    // Loading the credential checks the key against the certificate: a bad pair stops the boot.
+    idp: createIdentityProvider({
+      issuer: oidc.issuer,
+      clientId: oidc.clientId,
+      appOrigin: config.appOrigin,
+      credential: loadClientCredential(oidc.credential),
+      domainHint: oidc.domainHint,
+      production: config.environment === 'production',
+    }),
+    clock: systemClock,
+    appOrigin: config.appOrigin,
+    log,
+    expect: { issuer: oidc.issuer, clientId: oidc.clientId, tenantId: oidc.tenantId },
+    bootstrapHeadmasterOid: config.bootstrapHeadmasterOid ?? null,
+  };
   return {
     app,
     useCases: new Set(USE_CASES),
@@ -46,6 +66,7 @@ export function buildWeb(config: Config): WebContainer {
     log,
     appOrigin: config.appOrigin,
     requestIdFrom,
+    auth,
   };
 }
 

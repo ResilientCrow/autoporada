@@ -1,0 +1,9 @@
+/** Route handlers for src/app; each route file exports one of these per method. */
+import { authRouteSpecs } from '../auth';
+import { getContainer } from '../container';
+import { defineRoute } from '../pipeline';
+
+const auth = authRouteSpecs(() => getContainer().auth);
+
+export const authLogin = defineRoute(auth.login);
+export const authStepUp = defineRoute(auth.stepUp);
