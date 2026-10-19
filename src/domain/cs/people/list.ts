@@ -34,11 +34,14 @@ export function renderPerson(p: Person, showAffiliation = true): string {
   return showAffiliation ? withAffiliation(formatName(p), p.affiliation) : formatName(p);
 }
 
-/** The person's class code, if their affiliation is one („1.A“, „L1B“); roles are not. */
+/** The person's class code („1.A“, „L1B“), if their affiliation is one; jobs are not. */
 function classOf(p: Person): string | undefined {
   const affiliation = p.affiliation?.trim();
   return affiliation && parseClass(affiliation) !== null ? affiliation : undefined;
 }
+
+/** Nothing in parentheses after the name. */
+const isBare = (p: Person) => !p.affiliation?.trim();
 
 /**
  * A class code everyone shares. Roles are never merged: „(obě učitelka
@@ -54,11 +57,33 @@ function completeGroupOrder(order: readonly Salutation[] | undefined): Salutatio
   return [...new Set([...(order ?? []), ...DEFAULT_GROUP_ORDER])];
 }
 
+const allWomen = (people: readonly Person[]) =>
+  people.every((p) => SALUTATION[p.salutation].sex === 'f');
+
 /** „oba“, „obě“, „všichni“, „všechny“ — by count and whether all are women. */
 function togetherWord(people: readonly Person[]): string {
-  const allWomen = people.every((p) => SALUTATION[p.salutation].sex === 'f');
-  if (people.length === 2) return allWomen ? 'obě' : 'oba';
-  return allWomen ? 'všechny' : 'všichni';
+  if (people.length === 2) return allWomen(people) ? 'obě' : 'oba';
+  return allWomen(people) ? 'všechny' : 'všichni';
+}
+
+/** A bare name since the last parenthesis, and whether a group label stands after it. */
+interface Bare {
+  readonly person: Person;
+  readonly acrossLabel: boolean;
+}
+
+/**
+ * Could the run's „(oba 1.A)“ be read as counting a bare name before it in
+ * too? „Petr Dvořák, Jan Novák, Ivo Žák (oba 3.B)“ can. „Obě“ and „všechny“
+ * skip men, so they reach the nearest bare woman. A group label marks where
+ * a pair starts, so across one only „všichni“ / „všechny“, which fit any
+ * number, reach back.
+ */
+function tailCouldClaim(bare: readonly Bare[], run: readonly Person[]): boolean {
+  const women = allWomen(run);
+  const nearest = bare.findLast((b) => !women || SALUTATION[b.person.salutation].sex === 'f');
+  if (!nearest) return false;
+  return !nearest.acrossLabel || run.length >= 3;
 }
 
 /** „(oba 1.A)“ — the class stays with its word, never broken across lines. */
@@ -66,12 +91,18 @@ const together = (people: readonly Person[], classCode: string) =>
   `(${togetherWord(people)}\u00A0${classCode})`;
 
 /**
- * Each person's text. Neighbours from the same class share one class at the
- * end of their run: „Tomáš Černý, John Doe (oba 1.A)“; anyone else keeps
- * their own „(2.B)“ or „(učitelka fyziky)“.
+ * Each person's text, and the bare names left at the end. Neighbours from the
+ * same class share one class at the end of their run: „Tomáš Černý, John Doe
+ * (oba 1.A)“; anyone else keeps their own „(2.B)“ or „(učitelka fyziky)“, and
+ * so does a run whose tail could claim a bare name before it.
  */
-function withClassRuns(people: readonly Person[], name: (p: Person) => string): string[] {
+function withClassRuns(
+  people: readonly Person[],
+  name: (p: Person) => string,
+  bareBefore: readonly Bare[],
+): { texts: string[]; bare: Bare[] } {
   const texts: string[] = [];
+  let bare = [...bareBefore];
   for (let start = 0; start < people.length;) {
     const first = people[start];
     if (!first) break;
@@ -79,16 +110,19 @@ function withClassRuns(people: readonly Person[], name: (p: Person) => string): 
     let end = start + 1;
     while (classCode && end < people.length && classOf(people[end] as Person) === classCode) end++;
     const run = people.slice(start, end);
-    if (classCode && run.length >= 2) {
+    if (classCode && run.length >= 2 && !tailCouldClaim(bare, run)) {
       run.forEach((p, i) =>
         texts.push(i === run.length - 1 ? `${name(p)} ${together(run, classCode)}` : name(p)),
       );
     } else {
-      texts.push(withAffiliation(name(first), first.affiliation));
+      for (const p of run) texts.push(withAffiliation(name(p), p.affiliation));
     }
+    // Any parenthesis ends the reach of a later tail. A run of two or more
+    // always has one, so only a lone person can be bare.
+    bare = isBare(first) ? [...bare, { person: first, acrossLabel: false }] : [];
     start = end;
   }
-  return texts;
+  return { texts, bare };
 }
 
 function joinItems(items: readonly string[], join: ListOptions['join']): string {
@@ -124,11 +158,18 @@ export function renderPeople(people: readonly Person[], options: ListOptions): s
     withRoles
       ? [p.role?.trim(), SALUTATION[p.salutation].label, formatName(p)].filter(Boolean).join(' ')
       : formatName(p);
-  const items = groups.flatMap((g) => {
-    const texts = shared ? g.people.map(name) : withClassRuns(g.people, name);
-    if (g.label && texts[0] !== undefined) texts[0] = `${g.label} ${texts[0]}`;
-    return texts;
-  });
+  const items: string[] = [];
+  let bare: Bare[] = [];
+  for (const g of groups) {
+    // This group's label stands between its runs and every bare name before it.
+    const before = g.label ? bare.map((b) => ({ ...b, acrossLabel: true })) : bare;
+    const group = shared
+      ? { texts: g.people.map(name), bare: [] }
+      : withClassRuns(g.people, name, before);
+    if (g.label && group.texts[0] !== undefined) group.texts[0] = `${g.label} ${group.texts[0]}`;
+    items.push(...group.texts);
+    bare = group.bare;
+  }
 
   const text = joinItems(items, options.join);
   return shared ? `${text} ${together(people, shared)}` : text;
