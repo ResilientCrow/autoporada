@@ -30,6 +30,18 @@ const change = (
     return after;
   });
 
+/** A session for `user`, as the sign-in callback stores it. */
+const signIn = (user: UserRecord, tokenSha256: string) =>
+  world.tx(cli, async (tx) => {
+    const session = await tx.sessions.create({
+      tokenSha256,
+      userId: user.id,
+      authTime: world.clock.now(),
+      ...newSessionTimes(world.clock.now()),
+    });
+    await tx.audit.record({ action: 'auth.login', target: { type: 'session', id: session.id } });
+  });
+
 describe('UserRepo (port contract)', () => {
   it('creates a user on first sign-in and later refreshes only the display fields', async () => {
     const reviewer = await world.seed.user({ role: 'reviewer', displayName: 'Jana Nováková' });
@@ -133,15 +145,7 @@ describe('UserRepo (port contract)', () => {
     const sha = (text: string) => createHash('sha256').update(text).digest('hex');
     const live = (token: string) =>
       world.tx(cli, async (tx) => (await tx.sessions.find(sha(token))) !== null, 'read');
-    await world.tx(cli, async (tx) => {
-      const session = await tx.sessions.create({
-        tokenSha256: sha('first'),
-        userId: user.id,
-        authTime: world.clock.now(),
-        ...newSessionTimes(world.clock.now()),
-      });
-      await tx.audit.record({ action: 'auth.login', target: { type: 'session', id: session.id } });
-    });
+    await signIn(user, sha('first'));
     await world.tx(cli, async (tx) => {
       await tx.users.upsertFromClaims({
         tid: user.tid,
@@ -167,15 +171,7 @@ describe('UserRepo (port contract)', () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const user = await world.seed.user({ role: 'submitter' });
     const tokenSha256 = createHash('sha256').update('mine').digest('hex');
-    await world.tx(cli, async (tx) => {
-      const session = await tx.sessions.create({
-        tokenSha256,
-        userId: user.id,
-        authTime: world.clock.now(),
-        ...newSessionTimes(world.clock.now()),
-      });
-      await tx.audit.record({ action: 'auth.login', target: { type: 'session', id: session.id } });
-    });
+    await signIn(user, tokenSha256);
     await change(world.as(head), user, patch);
     expect(await world.tx(cli, (tx) => tx.sessions.find(tokenSha256), 'read')).toBeNull();
   });

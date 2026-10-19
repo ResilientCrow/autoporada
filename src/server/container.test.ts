@@ -17,6 +17,23 @@ const ENV = {
   LOG_LEVEL: 'error',
 };
 
+/** A production configuration with a certificate and without the Server Actions key. */
+const PRODUCTION = () => {
+  const pair = testCertificate();
+  const tenant = '00000000-0000-4000-8000-000000000001';
+  return {
+    ...ENV,
+    APP_ENV: 'production',
+    APP_ORIGIN: 'https://autoporada.ssps.cz',
+    OIDC_ISSUER: `https://login.microsoftonline.com/${tenant}/v2.0`,
+    OIDC_TENANT_ID: tenant,
+    OIDC_CLIENT_SECRET: undefined,
+    OIDC_CLIENT_KEY: pair.keyPem,
+    OIDC_CLIENT_CERT: pair.certificatePem,
+    MAIL_TRANSPORT: 'graph',
+  };
+};
+
 describe('web container', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -71,21 +88,29 @@ describe('web container', () => {
   });
 
   it('refuses to serve in production without the Server Actions key', async () => {
-    const pair = testCertificate();
-    const tenant = '00000000-0000-4000-8000-000000000001';
-    const production = {
-      ...ENV,
-      APP_ENV: 'production',
-      APP_ORIGIN: 'https://autoporada.ssps.cz',
-      OIDC_ISSUER: `https://login.microsoftonline.com/${tenant}/v2.0`,
-      OIDC_TENANT_ID: tenant,
-      OIDC_CLIENT_SECRET: undefined,
-      OIDC_CLIENT_KEY: pair.keyPem,
-      OIDC_CLIENT_CERT: pair.certificatePem,
-      MAIL_TRANSPORT: 'graph',
-    };
-    for (const [name, value] of Object.entries(production)) vi.stubEnv(name, value);
+    for (const [name, value] of Object.entries(PRODUCTION())) vi.stubEnv(name, value);
     const { getContainer } = await import('./container');
     expect(() => getContainer()).toThrow(/NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required/);
+  });
+
+  it('logs an expired certificate at error at boot', async () => {
+    const production = {
+      ...PRODUCTION(),
+      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
+    };
+    for (const [name, value] of Object.entries(production)) vi.stubEnv(name, value);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(Date.now() + 800 * 86_400_000));
+    try {
+      const { bootWeb, getContainer } = await import('./container');
+      const error = vi.spyOn(getContainer().log, 'error').mockImplementation(() => {});
+      bootWeb();
+      expect(error).toHaveBeenCalledWith(
+        {},
+        'the certificate has expired: renew it (ENTRA-SETUP §6)',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -23,93 +23,33 @@ import type { CustomFetch } from 'openid-client';
 
 import { insideTransaction } from '@/infra/system';
 
-const TEST_TENANT = '00000000-0000-0000-0000-000000000001';
-export const TEST_CLIENT = '11111111-2222-4333-8444-555555555555';
-export const TEST_SECRET = 'test-client-secret';
-export const TEST_ISSUER = `https://login.microsoftonline.com/${TEST_TENANT}/v2.0`;
-const BASE = `https://login.microsoftonline.com/${TEST_TENANT}`;
-const AUTHORIZE = `${BASE}/oauth2/v2.0/authorize`;
-const TOKEN = `${BASE}/oauth2/v2.0/token`;
-const KEYS = `${BASE}/discovery/v2.0/keys`;
+import {
+  AUTHORIZE,
+  DELETE,
+  IDENTITY_CLAIMS,
+  json,
+  KEYS,
+  MEMBER,
+  s256,
+  TEST_CLIENT,
+  TEST_ISSUER,
+  TEST_SECRET,
+  TEST_TENANT,
+  TOKEN,
+  type Grant,
+  type Signing,
+  type TestIdp,
+  type TokenFailure,
+} from './test-idp-api';
 
-/** Removes a claim from the next ID token. */
-export const DELETE = Symbol('delete');
-
-interface Persona {
-  readonly oid: string;
-  readonly upn: string;
-  readonly name: string;
-  readonly email: string;
-  readonly acct: number;
-}
-
-export const MEMBER: Persona = {
-  oid: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
-  upn: 'jana.novakova@ssps.cz',
-  name: 'Jana Nováková',
-  email: 'jana.novakova@ssps.cz',
-  acct: 0,
-};
-
-type Signing = 'good' | 'other-key-same-kid' | 'none' | 'hs256-public-key' | 'unknown-kid';
-type TokenFailure =
-  | {
-      readonly status: number;
-      readonly body: object;
-      readonly headers?: Readonly<Record<string, string>>;
-    }
-  | 'network'
-  | 'timeout';
-
-interface Grant {
-  readonly state: string;
-  readonly nonce: string;
-  readonly challenge: string;
-  readonly redirectUri: string;
-  readonly persona: Persona;
-  used: boolean;
-}
-
-export interface TestIdp {
-  readonly issuer: string;
-  readonly fetch: CustomFetch;
-  /** Plays the browser at /authorize; returns the query string Entra would send to the callback. */
-  authorize(
-    authorizationUrl: string,
-    persona?: Partial<Persona>,
-    tamper?: { readonly state?: string; readonly error?: string; readonly description?: string },
-  ): string;
-  /** Changes the next ID token. */
-  next(token: { readonly claims?: Record<string, unknown>; readonly sign?: Signing }): void;
-  failToken(failure: TokenFailure): void;
-  /** Changes fields of the discovery document, e.g. an endpoint on another origin. */
-  metadata(fields: Readonly<Record<string, string>>): void;
-  down(isDown?: boolean): void;
-  /** Accepts client assertions signed for this certificate, as Entra would after the upload. */
-  trust(certificatePem: string): void;
-  /** The application roles a client-credentials token carries. */
-  grantRoles(roles: readonly string[]): void;
-  readonly seen: {
-    readonly tokenRequests: URLSearchParams[];
-    readonly assertions: {
-      readonly header: ProtectedHeaderParameters;
-      readonly payload: JWTPayload;
-    }[];
-    jwksFetches: number;
-    calledInsideTransaction: number;
-    /** Names, UPNs and e-mail addresses this IdP put into tokens: never for a log. */
-    readonly identities: Set<string>;
-  };
-}
-
-const IDENTITY_CLAIMS = ['name', 'upn', 'email', 'preferred_username'];
-
-const json = (body: object, status = 200, headers: Readonly<Record<string, string>> = {}) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', ...headers },
-  });
-const s256 = (verifier: string) => createHash('sha256').update(verifier).digest('base64url');
+export {
+  DELETE,
+  MEMBER,
+  TEST_CLIENT,
+  TEST_ISSUER,
+  TEST_SECRET,
+  type TestIdp,
+} from './test-idp-api';
 
 export async function createTestIdp(): Promise<TestIdp> {
   const good = await generateKeyPair('RS256', { extractable: true });
@@ -290,6 +230,8 @@ export async function createTestIdp(): Promise<TestIdp> {
     authorize(authorizationUrl, persona = {}, tamper = {}) {
       const params = new URL(authorizationUrl).searchParams;
       const state = params.get('state') ?? '';
+      // Who is at the browser, even when Entra answers with an error.
+      remember({ ...MEMBER, ...persona });
       if (tamper.error) {
         const answer = new URLSearchParams({ error: tamper.error, state: tamper.state ?? state });
         if (tamper.description) answer.set('error_description', tamper.description);
@@ -304,7 +246,6 @@ export async function createTestIdp(): Promise<TestIdp> {
         persona: { ...MEMBER, ...persona },
         used: false,
       });
-      remember({ ...MEMBER, ...persona });
       return `?${new URLSearchParams({ code, state: tamper.state ?? state, session_state: randomUUID() })}`;
     },
     next(t) {

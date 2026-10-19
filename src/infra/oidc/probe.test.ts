@@ -12,7 +12,10 @@ const credential = loadClientCredential({
   thumbprint: undefined,
 });
 
-async function probe(setup: (idp: Awaited<ReturnType<typeof createTestIdp>>) => void = () => {}) {
+async function probe(
+  setup: (idp: Awaited<ReturnType<typeof createTestIdp>>) => void = () => {},
+  now = new Date(),
+) {
   const idp = await createTestIdp();
   setup(idp);
   return probeEntra(
@@ -25,7 +28,7 @@ async function probe(setup: (idp: Awaited<ReturnType<typeof createTestIdp>>) => 
       production: true,
       fetch: idp.fetch,
     },
-    new Date(),
+    now,
   );
 }
 
@@ -44,6 +47,15 @@ describe('probeEntra', () => {
     expect(lines).toContain('Entra accepted the credential');
     expect(lines.join('\n')).toContain(credential.sha1);
     expect(lines.join('\n')).not.toMatch(/PRIVATE KEY|BEGIN CERTIFICATE/);
+  });
+
+  it('says ERROR for an expired certificate', async () => {
+    if (credential.kind !== 'certificate') throw new Error('expected a certificate');
+    const later = new Date(credential.notAfter.getTime() + 86_400_000);
+    const report = await probe((idp) => idp.trust(pair.certificatePem), later);
+    expect(formatProbe(report)).toContain(
+      'ERROR: the certificate has expired: renew it (ENTRA-SETUP §6)',
+    );
   });
 
   it('reports a certificate Entra does not know', async () => {

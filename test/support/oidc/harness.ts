@@ -19,7 +19,9 @@ import { setupWorld, type World } from '../world';
 import { createTestIdp, TEST_CLIENT, TEST_ISSUER, TEST_SECRET, type TestIdp } from './test-idp';
 
 export const APP_ORIGIN = 'https://autoporada.ssps.cz';
-const SIGN_IN_CLEARED = '__Host-ap_signin=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
+/** The Set-Cookie that ends a sign-in. */
+export const SIGN_IN_CLEARED =
+  '__Host-ap_signin=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
 
 /** A callback that ended on the sign-in page with `error`, its sign-in cookie cleared. */
 export function expectSignInFailed(response: Response, error: string, withCode = false): void {
@@ -64,8 +66,17 @@ export interface SignInHarness {
   transactions(): number;
 }
 
-/** Query parameters that carry a secret, in either direction. */
-const SECRET_PARAMS = ['code', 'state', 'nonce', 'code_challenge', 'session_state'];
+/** Query parameters that carry a secret, in either direction; Entra's descriptions name the user. */
+const SECRET_PARAMS = [
+  'code',
+  'state',
+  'nonce',
+  'code_challenge',
+  'session_state',
+  'error_description',
+];
+/** What the app sent to Entra's token endpoint: the PKCE verifier and the client's proof. */
+const TOKEN_SECRETS = ['code', 'code_verifier', 'client_assertion', 'client_secret'];
 
 function applySetCookie(cookies: Map<string, string>, header: string): void {
   const [pair = ''] = header.split(';');
@@ -185,6 +196,9 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
     try {
       const { idp, lines, secrets } = harness.current;
       expect(idp.seen.calledInsideTransaction).toBe(0);
+      for (const sent of idp.seen.tokenRequests) {
+        for (const key of TOKEN_SECRETS) secrets.add(sent.get(key) ?? '');
+      }
       const logged = JSON.stringify(lines);
       for (const secret of [...secrets, ...idp.seen.identities, 'eyJ', '#EXT#']) {
         if (secret) expect(logged, 'a log line leaks a secret').not.toContain(secret);

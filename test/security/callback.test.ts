@@ -4,7 +4,12 @@ import { LockTimeout, system } from '@/application/ports';
 import { SIGN_IN_TTL_MS } from '@/domain/identity';
 import { digest, newToken } from '@/server/auth';
 
-import { APP_ORIGIN, expectSignInFailed, setupSignInHarness } from '../support/oidc/harness';
+import {
+  APP_ORIGIN,
+  expectSignInFailed,
+  setupSignInHarness,
+  SIGN_IN_CLEARED as CLEARED,
+} from '../support/oidc/harness';
 import { DELETE, MEMBER } from '../support/oidc/test-idp';
 import { signedIn } from '../support/sessions';
 
@@ -12,7 +17,6 @@ const harness = setupSignInHarness({
   bootstrapHeadmasterOid: '99999999-0000-4000-8000-000000000099',
 });
 const SESSION = /^__Host-ap_session=[A-Za-z0-9_-]{43}; Path=\/; Secure; HttpOnly; SameSite=Lax$/;
-const CLEARED = '__Host-ap_signin=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
 
 type Browser = ReturnType<typeof harness.h.browser>;
 
