@@ -3,6 +3,7 @@ import type { Db, Tx, TxContext, TxMode, TxOptions } from '@/application/ports';
 import { fakeAudit, fakeJobs } from './effects';
 import { checkAuditCoverage } from './oracle';
 import { emptyState, type FakeState, type FakeTxState } from './state';
+import { fakeSignInRepo } from './sign-ins';
 import { fakeUserRepo } from './users';
 
 export interface FakeDb extends Db {
@@ -42,6 +43,7 @@ export function createFakeDb(): FakeDb {
     const view: Tx = {
       ctx,
       users: fakeUserRepo(tx, ctx),
+      signIns: fakeSignInRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),
       jobs: fakeJobs(tx),
     };

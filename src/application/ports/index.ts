@@ -30,4 +30,5 @@ export {
   type SystemReason,
   type UserPrincipal,
 } from './principal';
+export type { PendingSignIn, SignInRepo } from './sign-ins';
 export type { AccessPatch, UserRecord, UserRepo, VerifiedIdentity } from './users';
