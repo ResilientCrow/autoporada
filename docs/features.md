@@ -24,7 +24,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   - at least one participant list and one vyjádření, both mandatory;
   - a live document preview.
 - People picker that searches the M365 directory and remembers each person's
-  salutation, class and genitive form.
+  salutation, class and genitive form. Class codes are saved in the school's
+  form ("1. a" becomes "1.A").
 - Genitive suggestion with a confidence indicator. The submitter can correct it.
 - Future items (jednání / akce). They are placed into points 1 and 2 and the
   last PROVOZ point by date. After the event, the author is asked to write the

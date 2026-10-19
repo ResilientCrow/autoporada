@@ -387,7 +387,7 @@ The DOCX can be downloaded immediately.
 | Function | Rules |
 |---|---|
 | `suggestGenitive(person)` | Titles: pan → pana, paní → paní, slečna → slečny. Each name part is declined by ordered suffix rules: -ek → -ka, -ec → -ce, -el → -la (lexical exceptions), -a (masc.) → -y, -ová → -ové, -á → -é, -ý → -ého, -í → -ího, consonant → +a. Academic titles pass through. Result `{text, confidence high/medium/low}`: low keeps the nominative and asks the submitter to check. Foreign surnames ending in a vowel stay undeclined ("pana Johna Doe"). Corrections are saved per person. **300+ test cases** built from public Czech name-frequency lists, including every example from the requirements word for word. |
-| `renderPeople(list)` | Groups by title, with each label once per group: slečna / slečny, paní, pan / pánové; default order slečna → paní → pan. Class or role in parentheses. "(oba / obě / všichni X)" only when everyone shares it. |
+| `renderPeople(list)` | Groups by title, with each label once per group: slečna / slečny, paní, pan / pánové; default order slečna → paní → pan. Class or job in parentheses, as stored. Neighbouring classmates share one "(oba / obě / všichni / všechny X)"; a class shared by the whole list goes once at the end; jobs never merge (ADR 0009). |
 | `openingSentence(fields, type)` | Template: "V {weekday} {date} od {10.00} do {12.00} hodin v areálu {Smíchov} v {učebně S206} {proběhl} {Název}, {který} {organizovali} …". The verb agrees with the type's grammatical gender and the organisers' number. Multi-day: "Ve dnech 27.–29. října 2026 proběhla …". Neutral fallback when the gender is unknown. |
 | Dates | Own `CalDate` type plus Europe/Prague conversion (DST tested on 25 Oct and 28 Mar). Formats "pondělí 19. 10. 2026", "19. října", "27.–29. 10. 2026", "30. 10. – 2. 11. 2026". `windowHeading`, `schoolYear` (switches in September), `targetMonday`, `deadline`. |
 | `typographize(runs)` | Quotes, dashes, NBSP; idempotent across run boundaries. URLs, e-mails and class codes untouched. |
@@ -407,13 +407,13 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 | `/kontrola`, `/kontrola/[id]` | reviewer+ | Queue by section; split view of form, preview and history; return templates |
 | `/porada/[datum]/…` | headmaster | Weekly stepper: Uzávěrka → Kontrola → Přítomni/Hosté → Pokyny → Registr → Náhled → Vygenerovat (with preflight) |
 | `/archiv` | reviewer+ | Versions with DOCX and PDF downloads |
-| `/registr` | reviewer read, headmaster write | Lists, NOVÉ tags, bulk paste, "Nový školní rok" |
+| `/registr` | reviewer read, headmaster write | Lists, NOVÉ tags, bulk paste (class codes normalised), "Nový školní rok" |
 | `/nastaveni`, `/uzivatele` | headmaster | Deadline, texts, point types, reminders; users, roles, access requests |
 | `/profil`, `/ochrana-osobnich-udaju`, `/napoveda` | all | E-mail preferences, "Odhlásit všude", privacy, house-style guide |
 
 **People picker** (React Aria ComboBox)
 - Local "Naposledy vybraní" and "Z registru" results first, then M365 results after 3 characters.
-- Each person becomes a chip with inline title and class.
+- Each person becomes a chip with inline title and class. A class is saved normalised (`normalizeClass`: "1. a" → "1.A"); the document prints affiliations as stored, because "3M" or "1. LF" may be an organisation.
 - Reordering uses ↑↓ buttons.
 - "Vložit seznam" pastes a whole list at once.
 

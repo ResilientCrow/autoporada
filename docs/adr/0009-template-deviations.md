@@ -76,6 +76,24 @@ Tick each box after checking it in Word.
       part has a verb (organizuje / koordinuje / zajišťuje / vede, agreeing in
       number), an optional "za …" and people with an optional role. Multi-day
       items read "20. až 22. října 2026, …" without times.
+- [x] **People lists.** Confirmed at the checkpoint: neighbours in one
+      salutation group who share a class write it once, "pánové Tomáš
+      Černý, John Doe (oba 1.A)"; three or more take "(všichni 1.A)", and
+      women "(obě …)" / "(všechny …)". A class shared by the whole list goes
+      once at the end. Roles and jobs are never merged.
+
+      A run keeps every class when its tail could be read as claiming a
+      name with nothing in parentheses before it. A tail reaches back to
+      the previous parenthesis, and "(obě …)" / "(všechny …)" skip men on
+      the way. Within a group this always applies: "pánové Petr Dvořák, Jan
+      Novák (3.B), Ivo Žák (3.B)". Across a group label it applies only to
+      "(všichni …)" / "(všechny …)", because the label marks where a pair
+      starts: "slečna Eva Malá, pánové Tomáš Černý, John Doe (oba 1.A)".
+      With roles shown, the list is one group.
+
+      Affiliations are printed as stored. "3M" or "1. LF" may be a company
+      or a faculty, so the document never rewrites them. The forms
+      normalise class codes on input instead ("1. a" becomes "1.A").
 - [ ] **Times in prose.** Report paragraphs use "od 10.00 do 12.00 hodin", as
       in the template.
 - [ ] **Point 4.** The students follow the label on the same line: "Tomáš
