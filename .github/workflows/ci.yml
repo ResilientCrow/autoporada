@@ -136,6 +136,24 @@ jobs:
           autoporada-tools:ci migrate
       - run: scripts/check-web-image.sh autoporada-web:ci
 
+  deploy:
+    name: Deployment files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node scripts/check-compose.mjs
+      - name: Caddyfile is valid and formatted (the pinned Caddy)
+        run: |
+          image=$(grep -o 'caddy:[^ ]*@sha256:[0-9a-f]*' deploy/compose.yaml)
+          docker run --rm -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            -e APP_HOST=autoporada.example -e ACME_EMAIL=it@example.org \
+            "$image" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          docker run --rm -i "$image" caddy fmt - < deploy/Caddyfile | diff -u deploy/Caddyfile -
+      - run: shellcheck deploy/install.sh deploy/postgres/initdb/10-roles.sh scripts/*.sh
+
   security:
     name: Secrets and dependency audit
     runs-on: ubuntu-latest

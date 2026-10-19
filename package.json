@@ -32,6 +32,7 @@
     "cli": "tsx --tsconfig tsconfig.json src/cli/main.ts",
     "test:render": "vitest run --project render",
     "lint:chars": "node scripts/check-characters.mjs",
+    "lint:compose": "node scripts/check-compose.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "pnpm cli migrate"
   },

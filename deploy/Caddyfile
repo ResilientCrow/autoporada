@@ -1,0 +1,46 @@
+# The only way in (ADR 0008): TLS with Let's Encrypt, HSTS, a fresh request
+# id, and the app behind it. Stock Caddy 2.11; HSTS_MAX_AGE starts at a day
+# and goes to a year once the smoke test passes.
+{
+	email {$ACME_EMAIL}
+	admin off
+	servers {
+		# Only TCP 80 and 443 are open.
+		protocols h1 h2
+		timeouts {
+			read_header 10s
+			idle 2m
+		}
+	}
+}
+
+{$APP_HOST} {
+	request_body {
+		max_size 1MB
+	}
+	# Always Caddy's own: the app trusts this header for its logs.
+	request_header X-Request-Id {http.request.uuid}
+	request_header -X-Middleware-Subrequest
+	header {
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE:86400}"
+		-Server
+	}
+	@static path /_next/static/*
+	encode @static zstd gzip
+	# No trusted_proxies: X-Forwarded-For is the peer Caddy saw, which the
+	# rate limits key on; Host is forwarded for the Server Actions check.
+	reverse_proxy web:3000
+	log {
+		output stdout
+		format filter {
+			request>uri query {
+				delete code
+				delete state
+				delete session_state
+				delete error_description
+			}
+			# The sign-in redirect carries state and nonce.
+			resp_headers>Location delete
+		}
+	}
+}
