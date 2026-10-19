@@ -4,6 +4,8 @@ import { connectDatabase } from '@/infra/db';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
 import { systemClock } from '@/infra/system';
 
+import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
+
 /** Everything the web process wires together, once. */
 export interface WebContainer {
   readonly app: AppDeps;
@@ -12,6 +14,8 @@ export interface WebContainer {
     token: string | null,
     requestId: string,
   ) => Promise<UserPrincipal | null>;
+  /** One per process: the single web replica of ADR 0008. */
+  readonly limiter: RateLimiter;
   readonly log: Logger;
   readonly appOrigin: string;
   readonly requestIdFrom: (header: string | null) => string;
@@ -30,6 +34,7 @@ export function buildWeb(config: Config): WebContainer {
     app: { db: database.app, clock: systemClock },
     // Sessions arrive in M4.4; until then nobody is signed in.
     resolvePrincipal: async () => null,
+    limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
     log: createLogger({ service: 'web', level: config.logLevel }),
     appOrigin: config.appOrigin,
     requestIdFrom,

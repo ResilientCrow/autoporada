@@ -1,0 +1,162 @@
+import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+
+import { defineUseCase, ok } from '@/application/core';
+import { system, type UserPrincipal } from '@/application/ports';
+
+import { recordingLog } from '../../../test/support/log';
+import { setupWorld } from '../../../test/support/world';
+import { createRateLimiter, LIMITS } from '../rate-limit';
+import { runRoute, type RouteDeps, type RouteSpec } from './index';
+
+const world = setupWorld();
+const ORIGIN = 'https://autoporada.ssps.cz';
+const REQUEST_ID = 'abcdef12-3456';
+
+function deps(principal: UserPrincipal | null = null) {
+  const { lines, log } = recordingLog();
+  const routeDeps: RouteDeps = {
+    app: world.deps,
+    resolvePrincipal: async (token) => (token === 'good' ? principal : null),
+    limiter: createRateLimiter({
+      limits: { ...LIMITS, auth: { ...LIMITS.auth, max: 1 } },
+      now: () => 0,
+    }),
+    log,
+    appOrigin: ORIGIN,
+    requestIdFrom: (header) => header ?? 'generated',
+  };
+  return { routeDeps, lines };
+}
+
+const route = (over: Partial<RouteSpec> = {}): RouteSpec => ({
+  name: 'test.route',
+  access: 'session',
+  rateLimit: 'none',
+  handle: async () => new Response('hello', { status: 200 }),
+  ...over,
+});
+
+interface Init {
+  readonly method?: string;
+  readonly origin?: string;
+  readonly cookie?: string;
+  readonly ip?: string;
+}
+
+function request(path: string, init: Init = {}): Request {
+  const headers = new Headers({ 'x-request-id': REQUEST_ID });
+  if (init.origin) headers.set('origin', init.origin);
+  if (init.cookie) headers.set('cookie', init.cookie);
+  if (init.ip) headers.set('x-forwarded-for', init.ip);
+  return new Request(`${ORIGIN}${path}`, { method: init.method ?? 'GET', headers });
+}
+const segment = { params: Promise.resolve({}) };
+const SESSION = '__Host-ap_session=good';
+
+describe('runRoute', () => {
+  it('refuses unsafe methods from another origin before anything else', async () => {
+    const handle = vi.fn(async () => new Response('x'));
+    const response = await runRoute(
+      deps().routeDeps,
+      route({ access: 'public', handle }),
+      request('/x', { method: 'POST', origin: 'https://evil.example' }),
+      segment,
+    );
+    expect(response.status).toBe(403);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it('sends a GET without a session to sign in, and refuses other methods', async () => {
+    const { routeDeps } = deps();
+    const get = await runRoute(routeDeps, route(), request('/porada/2026-10-19?tab=body'), segment);
+    expect(get.status).toBe(303);
+    expect(get.headers.get('location')).toBe(
+      `${ORIGIN}/prihlaseni?returnTo=%2Fporada%2F2026-10-19%3Ftab%3Dbody`,
+    );
+    const post = request('/x', { method: 'POST', origin: ORIGIN });
+    expect((await runRoute(routeDeps, route(), post, segment)).status).toBe(401);
+  });
+
+  it('answers no-store with the request id, whatever the handler set', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    const response = await runRoute(
+      deps(world.as(user)).routeDeps,
+      route(),
+      request('/x', { cookie: SESSION }),
+      segment,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe('hello');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('x-request-id')).toBe(REQUEST_ID);
+  });
+
+  it('answers 500 with an empty body when the handler throws', async () => {
+    const { routeDeps, lines } = deps();
+    const failing = route({
+      access: 'public',
+      handle: () => Promise.reject(new Error('boom')),
+    });
+    const response = await runRoute(routeDeps, failing, request('/x'), segment);
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe('');
+    expect(response.headers.get('x-request-id')).toBe(REQUEST_ID);
+    expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
+      err: { message: 'boom' },
+    });
+  });
+
+  it('limits public routes by client address, before the session lookup', async () => {
+    const { routeDeps } = deps();
+    const resolve = vi.spyOn(routeDeps, 'resolvePrincipal');
+    const auth = route({ access: 'public', rateLimit: 'auth' });
+    const from = (ip: string) => runRoute(routeDeps, auth, request('/auth/login', { ip }), segment);
+    expect((await from('203.0.113.7')).status).toBe(200);
+    const limited = await from('203.0.113.7');
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBe('60');
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect((await from('198.51.100.1')).status).toBe(200);
+  });
+
+  it('runs use cases as the session user, as a named system principal, or not at all', async () => {
+    const user = await world.seed.user({ role: 'reviewer' });
+    const count = defineUseCase({
+      name: 'test.count',
+      mode: 'read',
+      input: z.strictObject({}),
+      output: z.object({ count: z.number() }),
+      access: { kind: 'gate', check: () => ({ action: 'review.queue' }) },
+      execute: async ({ tx }) => ok({ count: (await tx.users.list()).length }),
+    });
+    const seen: unknown[] = [];
+    const handle: RouteSpec['handle'] = async (_request, ctx) => {
+      seen.push(await ctx.run(count, {}));
+      return new Response(null, { status: 204 });
+    };
+    await runRoute(
+      deps(world.as(user)).routeDeps,
+      route({ handle }),
+      request('/x', { cookie: SESSION }),
+      segment,
+    );
+    await runRoute(deps().routeDeps, route({ access: 'public', handle }), request('/x'), segment);
+    expect(seen).toEqual([
+      { ok: true, data: { count: 1 } },
+      { ok: false, error: { code: 'unauthenticated' } },
+    ]);
+    // A system principal must be named explicitly; a gate use case still refuses it.
+    const asSystem: RouteSpec['handle'] = async (_request, ctx) => {
+      await ctx.run(count, {}, system('auth.callback'));
+      return new Response(null, { status: 204 });
+    };
+    const refused = await runRoute(
+      deps().routeDeps,
+      route({ access: 'public', handle: asSystem }),
+      request('/x'),
+      segment,
+    );
+    expect(refused.status).toBe(500);
+  });
+});
