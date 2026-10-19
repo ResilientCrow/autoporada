@@ -62,6 +62,7 @@ describe('web container', () => {
     const report = getContainer().bootReport(new Date());
     expect(report).toEqual({
       facts: { environment: 'development', credential: { kind: 'secret' } },
+      errors: [],
       warnings: [
         'BOOTSTRAP_HEADMASTER_OID is set: empty it once the headmaster has signed in (plan §4)',
       ],

@@ -36,6 +36,7 @@ describe('probeEntra', () => {
       issuer: TEST_ISSUER,
       accepted: true,
       roles: ['User.ReadBasic.All'],
+      errors: [],
       warnings: [],
     });
     if (credential.kind !== 'certificate') throw new Error('expected a certificate');

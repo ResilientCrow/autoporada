@@ -16,6 +16,7 @@ export interface ProbeReport {
   readonly failure?: { readonly failure: IdpFailure; readonly detail: IdpDetail };
   /** Application roles Entra granted, read from the Graph access token. */
   readonly roles: readonly string[];
+  readonly errors: readonly string[];
   readonly warnings: readonly string[];
 }
 
@@ -41,7 +42,7 @@ function rolesOf(accessToken: string): string[] {
 export async function probeEntra(options: ProviderOptions, now: Date): Promise<ProbeReport> {
   assertOutsideTransaction('Entra probe');
   const described = describeCredential(options.credential, now);
-  const facts = described.facts;
+  const { facts, errors } = described;
   const warnings = [...described.warnings];
   try {
     const config = await discover(options);
@@ -52,7 +53,7 @@ export async function probeEntra(options: ProviderOptions, now: Date): Promise<P
         'Mail.Send is granted in Entra and covers every mailbox: remove it (ENTRA-SETUP §1.4)',
       );
     }
-    return { issuer: options.issuer, credential: facts, accepted: true, roles, warnings };
+    return { issuer: options.issuer, credential: facts, accepted: true, roles, errors, warnings };
   } catch (error) {
     const mapped = mapFailure(error, 'token');
     if (!mapped) throw error;
@@ -62,6 +63,7 @@ export async function probeEntra(options: ProviderOptions, now: Date): Promise<P
       accepted: false,
       failure: mapped,
       roles: [],
+      errors,
       warnings,
     };
   }
@@ -81,6 +83,7 @@ export function formatProbe(report: ProbeReport): string[] {
     credential,
     answer,
     `roles: ${report.roles.length > 0 ? report.roles.join(', ') : '(none)'}`,
+    ...report.errors.map((e) => `ERROR: ${e}`),
     ...report.warnings.map((w) => `WARNING: ${w}`),
   ];
 }

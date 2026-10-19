@@ -32,20 +32,27 @@ export type CredentialFacts =
       readonly daysLeft: number;
     };
 
+/** What needs doing: an expired certificate is an error (every sign-in fails), a near one a warning. */
+export interface CredentialNotes {
+  readonly errors: readonly string[];
+  readonly warnings: readonly string[];
+}
+
 export function describeCredential(
   credential: ClientCredential,
   now: Date,
-): { readonly facts: CredentialFacts; readonly warnings: readonly string[] } {
-  if (credential.kind === 'secret') return { facts: { kind: 'secret' }, warnings: [] };
+): CredentialNotes & { readonly facts: CredentialFacts } {
+  if (credential.kind === 'secret') return { facts: { kind: 'secret' }, errors: [], warnings: [] };
   const daysLeft = Math.floor((credential.notAfter.getTime() - now.getTime()) / DAY);
   const { sha1, subject } = credential;
-  const warnings =
-    daysLeft < 0
-      ? ['the certificate has expired']
-      : daysLeft < WARN_DAYS
+  return {
+    facts: { kind: 'certificate', sha1, subject, daysLeft },
+    errors: daysLeft < 0 ? ['the certificate has expired: renew it (ENTRA-SETUP §6)'] : [],
+    warnings:
+      daysLeft >= 0 && daysLeft < WARN_DAYS
         ? [`the certificate expires in ${daysLeft} days: renew it (ENTRA-SETUP §6)`]
-        : [];
-  return { facts: { kind: 'certificate', sha1, subject, daysLeft }, warnings };
+        : [],
+  };
 }
 
 function parse<T>(read: () => T, problem: string): T {

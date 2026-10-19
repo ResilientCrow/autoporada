@@ -103,16 +103,18 @@ describe('describeCredential', () => {
   });
 
   it.each([
-    [45, []],
-    [44.5, ['the certificate expires in 44 days: renew it (ENTRA-SETUP §6)']],
-    [-1, ['the certificate has expired']],
-  ])('warns %s days before expiry: %j', (days, warnings) => {
-    expect(describeCredential(loaded, daysBefore(days)).warnings).toEqual(warnings);
+    [45, [], []],
+    [44.5, [], ['the certificate expires in 44 days: renew it (ENTRA-SETUP §6)']],
+    [0.5, [], ['the certificate expires in 0 days: renew it (ENTRA-SETUP §6)']],
+    [-1, ['the certificate has expired: renew it (ENTRA-SETUP §6)'], []],
+  ])('%s days before expiry: errors %j, warnings %j', (days, errors, warnings) => {
+    expect(describeCredential(loaded, daysBefore(days))).toMatchObject({ errors, warnings });
   });
 
   it('says only that a development secret is one', () => {
     expect(describeCredential({ kind: 'secret', secret: 'dev' }, new Date())).toEqual({
       facts: { kind: 'secret' },
+      errors: [],
       warnings: [],
     });
   });

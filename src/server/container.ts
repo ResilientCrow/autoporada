@@ -33,6 +33,7 @@ export interface WebContainer {
 
 interface BootReport {
   readonly facts: Record<string, unknown>;
+  readonly errors: readonly string[];
   readonly warnings: readonly string[];
 }
 
@@ -93,9 +94,10 @@ function buildWeb(config: Config): WebContainer {
     requestIdFrom,
     auth,
     bootReport: (now) => {
-      const { facts, warnings } = describeCredential(credential, now);
+      const { facts, errors, warnings } = describeCredential(credential, now);
       return {
         facts: { environment: config.environment, credential: facts },
+        errors,
         warnings: config.bootstrapHeadmasterOid ? [...warnings, BOOTSTRAP_STILL_SET] : warnings,
       };
     },
@@ -124,7 +126,8 @@ export function getContainer(): WebContainer {
  */
 export function bootWeb(): void {
   const { log, bootReport } = getContainer();
-  const { facts, warnings } = bootReport(systemClock.now());
+  const { facts, errors, warnings } = bootReport(systemClock.now());
   log.info(facts, 'web process configured');
+  for (const error of errors) log.error({}, error);
   for (const warning of warnings) log.warn({}, warning);
 }
