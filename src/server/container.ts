@@ -4,7 +4,7 @@ import { USE_CASES } from '@/application/use-cases';
 import { getConfig, type Config } from '@/infra/config';
 import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
-import { createIdentityProvider, loadClientCredential } from '@/infra/oidc';
+import { createIdentityProvider, describeCredential, loadClientCredential } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
 
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
@@ -27,6 +27,13 @@ export interface WebContainer {
   readonly requestIdFrom: (header: string | null) => string;
   /** The sign-in routes' dependencies (Entra, its expectations, the first headmaster). */
   readonly auth: AuthDeps;
+  /** What the boot log says about this process. */
+  readonly bootReport: (now: Date) => BootReport;
+}
+
+interface BootReport {
+  readonly facts: Record<string, unknown>;
+  readonly warnings: readonly string[];
 }
 
 /** What the process holds once: state, but no class or object anyone checks the identity of. */
@@ -58,13 +65,14 @@ function buildWeb(config: Config): WebContainer {
   const { pool, limiter } = shared(config, log);
   const app: AppDeps = { db: databaseOn(pool).app, clock: systemClock };
   const { oidc } = config;
+  // Loading the credential checks the key against the certificate: a bad pair stops the boot.
+  const credential = loadClientCredential(oidc.credential);
   const auth: AuthDeps = {
-    // Loading the credential checks the key against the certificate: a bad pair stops the boot.
     idp: createIdentityProvider({
       issuer: oidc.issuer,
       clientId: oidc.clientId,
       appOrigin: config.appOrigin,
-      credential: loadClientCredential(oidc.credential),
+      credential,
       domainHint: oidc.domainHint,
       production: config.environment === 'production',
     }),
@@ -83,8 +91,18 @@ function buildWeb(config: Config): WebContainer {
     appOrigin: config.appOrigin,
     requestIdFrom,
     auth,
+    bootReport: (now) => {
+      const { facts, warnings } = describeCredential(credential, now);
+      return {
+        facts: { environment: config.environment, credential: facts },
+        warnings: config.bootstrapHeadmasterOid ? [...warnings, BOOTSTRAP_STILL_SET] : warnings,
+      };
+    },
   };
 }
+
+const BOOTSTRAP_STILL_SET =
+  'BOOTSTRAP_HEADMASTER_OID is set: empty it once the headmaster has signed in (plan §4)';
 
 let container: WebContainer | undefined;
 
@@ -99,8 +117,13 @@ export function getContainer(): WebContainer {
   return (container ??= buildWeb(getConfig()));
 }
 
-/** Validates the configuration before the first request: a misconfigured server refuses to start. */
+/**
+ * Validates the configuration before the first request: a misconfigured
+ * server refuses to start. Then says what it runs with, and what needs doing.
+ */
 export function bootWeb(): void {
-  const container = getContainer();
-  container.log.info({ environment: getConfig().environment }, 'web process configured');
+  const { log, bootReport } = getContainer();
+  const { facts, warnings } = bootReport(systemClock.now());
+  log.info(facts, 'web process configured');
+  for (const warning of warnings) log.warn({}, warning);
 }

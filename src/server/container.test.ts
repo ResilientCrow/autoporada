@@ -18,7 +18,10 @@ const ENV = {
 describe('web container', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
-    delete (globalThis as Record<symbol, unknown>)[Symbol.for('autoporada.web.shared')];
+    vi.resetModules();
+    for (const key of ['autoporada.web.shared', 'autoporada.config']) {
+      delete (globalThis as Record<symbol, unknown>)[Symbol.for(key)];
+    }
   });
 
   it('shares the pool and the limiter, but wires each module instance its own use cases', async () => {
@@ -46,5 +49,21 @@ describe('web container', () => {
     const container = getContainer();
     expect(await container.resolvePrincipal('any-token', 'req')).toBeNull();
     expect(container.requestIdFrom('not valid!')).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('tells the boot log what it runs with, and to empty the bootstrap oid', async () => {
+    const oid = '0d000000-0000-4000-8000-000000000003';
+    for (const [name, value] of Object.entries({ ...ENV, BOOTSTRAP_HEADMASTER_OID: oid })) {
+      vi.stubEnv(name, value);
+    }
+    const { getContainer } = await import('./container');
+    const report = getContainer().bootReport(new Date());
+    expect(report).toEqual({
+      facts: { environment: 'development', credential: { kind: 'secret' } },
+      warnings: [
+        'BOOTSTRAP_HEADMASTER_OID is set: empty it once the headmaster has signed in (plan §4)',
+      ],
+    });
+    expect(JSON.stringify(report)).not.toContain(oid);
   });
 });

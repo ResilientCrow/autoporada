@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { testCertificate } from '../../../test/support/oidc/cert';
 import { ConfigError } from '../config';
-import { loadClientCredential } from './index';
+import { describeCredential, loadClientCredential } from './index';
 
 const pair = testCertificate();
 const certificate = (pem: string) => ({
@@ -82,6 +82,38 @@ describe('loadClientCredential', () => {
     expect(loadClientCredential({ kind: 'secret', secret: 'dev' })).toEqual({
       kind: 'secret',
       secret: 'dev',
+    });
+  });
+});
+
+describe('describeCredential', () => {
+  const loaded = loadClientCredential(certificate(pair.certificatePem));
+  if (loaded.kind !== 'certificate') throw new Error('expected a certificate');
+  const daysBefore = (days: number) => new Date(loaded.notAfter.getTime() - days * 86_400_000);
+
+  it('says what IT checks against the portal, never the key', () => {
+    const { facts, warnings } = describeCredential(loaded, daysBefore(400));
+    expect(facts).toEqual({
+      kind: 'certificate',
+      sha1: loaded.sha1,
+      subject: 'CN=autoporada.test',
+      daysLeft: 400,
+    });
+    expect(warnings).toEqual([]);
+  });
+
+  it.each([
+    [45, []],
+    [44.5, ['the certificate expires in 44 days: renew it (ENTRA-SETUP §6)']],
+    [-1, ['the certificate has expired']],
+  ])('warns %s days before expiry: %j', (days, warnings) => {
+    expect(describeCredential(loaded, daysBefore(days)).warnings).toEqual(warnings);
+  });
+
+  it('says only that a development secret is one', () => {
+    expect(describeCredential({ kind: 'secret', secret: 'dev' }, new Date())).toEqual({
+      facts: { kind: 'secret' },
+      warnings: [],
     });
   });
 });

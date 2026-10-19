@@ -18,6 +18,35 @@ export type ClientCredential =
     };
 
 const MIN_RSA_BITS = 2048;
+const DAY = 86_400_000;
+/** Warn the IT contact this long before the certificate expires (plan §4). */
+const WARN_DAYS = 45;
+
+/** What may be said about a credential, in a log or a terminal: never the key or the secret. */
+export type CredentialFacts =
+  | { readonly kind: 'secret' }
+  | {
+      readonly kind: 'certificate';
+      readonly sha1: string;
+      readonly subject: string;
+      readonly daysLeft: number;
+    };
+
+export function describeCredential(
+  credential: ClientCredential,
+  now: Date,
+): { readonly facts: CredentialFacts; readonly warnings: readonly string[] } {
+  if (credential.kind === 'secret') return { facts: { kind: 'secret' }, warnings: [] };
+  const daysLeft = Math.floor((credential.notAfter.getTime() - now.getTime()) / DAY);
+  const { sha1, subject } = credential;
+  const warnings =
+    daysLeft < 0
+      ? ['the certificate has expired']
+      : daysLeft < WARN_DAYS
+        ? [`the certificate expires in ${daysLeft} days: renew it (ENTRA-SETUP §6)`]
+        : [];
+  return { facts: { kind: 'certificate', sha1, subject, daysLeft }, warnings };
+}
 
 function parse<T>(read: () => T, problem: string): T {
   try {

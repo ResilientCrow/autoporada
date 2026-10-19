@@ -3,24 +3,15 @@ import * as client from 'openid-client';
 import type { IdpDetail, IdpFailure } from '@/application/ports';
 
 import { assertOutsideTransaction } from '../system';
+import { describeCredential, type CredentialFacts } from './credential';
 import { discover, type ProviderOptions } from './discovery';
 import { mapFailure } from './failure';
 
 const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
-const DAY = 86_400_000;
-/** The ops check warns the IT contact this long before the certificate expires (plan §4). */
-const WARN_DAYS = 45;
 
 export interface ProbeReport {
   readonly issuer: string;
-  readonly credential:
-    | { readonly kind: 'secret' }
-    | {
-        readonly kind: 'certificate';
-        readonly sha1: string;
-        readonly subject: string;
-        readonly daysLeft: number;
-      };
+  readonly credential: CredentialFacts;
   readonly accepted: boolean;
   readonly failure?: { readonly failure: IdpFailure; readonly detail: IdpDetail };
   /** Application roles Entra granted, read from the Graph access token. */
@@ -49,22 +40,9 @@ function rolesOf(accessToken: string): string[] {
  */
 export async function probeEntra(options: ProviderOptions, now: Date): Promise<ProbeReport> {
   assertOutsideTransaction('Entra probe');
-  const { credential } = options;
-  const warnings: string[] = [];
-  const facts: ProbeReport['credential'] =
-    credential.kind === 'secret'
-      ? { kind: 'secret' }
-      : {
-          kind: 'certificate',
-          sha1: credential.sha1,
-          subject: credential.subject,
-          daysLeft: Math.floor((credential.notAfter.getTime() - now.getTime()) / DAY),
-        };
-  if (facts.kind === 'certificate' && facts.daysLeft < 0)
-    warnings.push('the certificate has expired');
-  else if (facts.kind === 'certificate' && facts.daysLeft < WARN_DAYS) {
-    warnings.push(`the certificate expires in ${facts.daysLeft} days: renew it (ENTRA-SETUP §6)`);
-  }
+  const described = describeCredential(options.credential, now);
+  const facts = described.facts;
+  const warnings = [...described.warnings];
   try {
     const config = await discover(options);
     const tokens = await client.clientCredentialsGrant(config, { scope: GRAPH_SCOPE });
