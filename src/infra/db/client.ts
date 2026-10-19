@@ -8,6 +8,9 @@ import * as schema from './schema';
 
 export type Database = NodePgDatabase<typeof schema>;
 
+/** A connection pool. */
+export type DatabasePool = Pool;
+
 export interface DatabaseOptions {
   readonly url: string;
   /** Shown in pg_stat_activity: autoporada-web, autoporada-worker … */
@@ -33,7 +36,8 @@ export interface DatabaseHandle {
 
 const ROLE_NAME = /^[a-z_][a-z0-9_]*$/;
 
-export function connectDatabase(options: DatabaseOptions): DatabaseHandle {
+/** Opens a pool; nothing connects until the first query. */
+export function openPool(options: DatabaseOptions): DatabasePool {
   if (options.role !== undefined && !ROLE_NAME.test(options.role)) {
     throw new Error('connectDatabase: role must be a plain lower-case identifier');
   }
@@ -49,9 +53,17 @@ export function connectDatabase(options: DatabaseOptions): DatabaseHandle {
     const code: unknown = 'code' in error ? error.code : undefined;
     options.onConnectionError?.(typeof code === 'string' ? code : '08000');
   });
+  return pool;
+}
+
+/** The schema and the application's transactions over a pool. */
+export function databaseOn(pool: DatabasePool): DatabaseHandle {
   return {
     db: drizzle({ client: pool, schema, casing: 'snake_case' }),
     app: createPgDb(pool),
     close: () => pool.end(),
   };
 }
+
+export const connectDatabase = (options: DatabaseOptions): DatabaseHandle =>
+  databaseOn(openPool(options));

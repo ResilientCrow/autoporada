@@ -1,1 +1,8 @@
-export { connectDatabase, type Database, type DatabaseHandle } from './client';
+export {
+  connectDatabase,
+  databaseOn,
+  openPool,
+  type Database,
+  type DatabaseHandle,
+  type DatabasePool,
+} from './client';

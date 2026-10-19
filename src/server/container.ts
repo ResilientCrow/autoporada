@@ -2,7 +2,7 @@ import type { AnyUseCase } from '@/application/core';
 import type { AppDeps, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { getConfig, type Config } from '@/infra/config';
-import { connectDatabase } from '@/infra/db';
+import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
 import { createIdentityProvider, loadClientCredential } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
@@ -29,18 +29,34 @@ export interface WebContainer {
   readonly auth: AuthDeps;
 }
 
+/** What the process holds once: state, but no class or object anyone checks the identity of. */
+interface Shared {
+  readonly pool: DatabasePool;
+  readonly limiter: RateLimiter;
+}
+
+const SHARED = Symbol.for('autoporada.web.shared');
+
+function shared(config: Config, log: Logger): Shared {
+  const holder = globalThis as { [SHARED]?: Shared };
+  return (holder[SHARED] ??= {
+    pool: openPool({
+      url: config.databaseUrl,
+      applicationName: 'autoporada-web',
+      onConnectionError: (sqlstate) => log.warn({ sqlstate }, 'database connection lost'),
+    }),
+    limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
+  });
+}
+
 /**
  * Composition root of the web process. Building is lazy and opens no
  * connection: the pool connects on the first query.
  */
-export function buildWeb(config: Config): WebContainer {
+function buildWeb(config: Config): WebContainer {
   const log = createLogger({ service: 'web', level: config.logLevel });
-  const database = connectDatabase({
-    url: config.databaseUrl,
-    applicationName: 'autoporada-web',
-    onConnectionError: (sqlstate) => log.warn({ sqlstate }, 'database connection lost'),
-  });
-  const app: AppDeps = { db: database.app, clock: systemClock };
+  const { pool, limiter } = shared(config, log);
+  const app: AppDeps = { db: databaseOn(pool).app, clock: systemClock };
   const { oidc } = config;
   const auth: AuthDeps = {
     // Loading the credential checks the key against the certificate: a bad pair stops the boot.
@@ -62,7 +78,7 @@ export function buildWeb(config: Config): WebContainer {
     app,
     useCases: new Set(USE_CASES),
     resolvePrincipal: principalResolver(app),
-    limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
+    limiter,
     log,
     appOrigin: config.appOrigin,
     requestIdFrom,
@@ -70,17 +86,17 @@ export function buildWeb(config: Config): WebContainer {
   };
 }
 
-const KEY = Symbol.for('autoporada.web');
-type Holder = { [KEY]?: WebContainer };
+let container: WebContainer | undefined;
 
 /**
- * The process's container. Next loads instrumentation and the server
- * components as separate module instances, so a module-level singleton
- * would build two pools; globalThis is shared by both.
+ * This module instance's container. Next loads instrumentation and the app
+ * as separate module instances: a container built by one would hand the
+ * other its own copies of the use cases and the port errors, and the
+ * registry check and every `instanceof` would fail. So each instance wires
+ * its own, over the pool and the rate limiter the process shares.
  */
 export function getContainer(): WebContainer {
-  const holder = globalThis as Holder;
-  return (holder[KEY] ??= buildWeb(getConfig()));
+  return (container ??= buildWeb(getConfig()));
 }
 
 /** Validates the configuration before the first request: a misconfigured server refuses to start. */
