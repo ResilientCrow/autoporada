@@ -14,4 +14,4 @@ record that supersedes it.
 | [0006](0006-background-jobs.md) | pg-boss worker with transactional enqueue | Accepted |
 | [0007](0007-rich-text.md) | Restricted rich text as flat indented paragraphs | Accepted |
 | [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted |
-| [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Proposed |
+| [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Accepted |
