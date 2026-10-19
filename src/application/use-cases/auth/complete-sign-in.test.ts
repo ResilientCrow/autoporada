@@ -129,6 +129,13 @@ describe('auth.completeSignIn', () => {
       expect(await sessionOf('current')).not.toBeNull();
       const users = await world.tx(callback, (tx) => tx.users.list(), 'read');
       expect(users.map((u) => u.oid)).toEqual([OID]);
+      expect((await world.inspect.audit()).find((a) => a.action === 'auth.rejected')).toMatchObject(
+        {
+          targetType: 'user',
+          targetId: user.id,
+          data: { meta: { reason: 'other-account', purpose: 'step_up' } },
+        },
+      );
     });
   });
 

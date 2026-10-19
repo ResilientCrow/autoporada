@@ -20,7 +20,8 @@ export interface FakeDb extends Db {
 /**
  * Transactions over an in-memory state. Each one works on a copy that
  * replaces the state on commit; a mutex runs them one at a time, which
- * also stands in for row locks. Triggers are not emulated.
+ * also stands in for row locks. The repos emulate the triggers whose
+ * effects a use case relies on (users_end_sessions, in fake/users.ts).
  */
 export function createFakeDb(): FakeDb {
   let state = emptyState();

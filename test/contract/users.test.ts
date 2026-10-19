@@ -159,4 +159,24 @@ describe('UserRepo (port contract)', () => {
     await change(world.as(head), unchanged, { role: 'reviewer' });
     expect(await live('first')).toBe(false);
   });
+
+  it.each([
+    ['blocking them', { status: 'blocked' }],
+    ['marking them a student', { isStudent: true }],
+  ] as const)('ends a user’s sessions when %s', async (_name, patch) => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const user = await world.seed.user({ role: 'submitter' });
+    const tokenSha256 = createHash('sha256').update('mine').digest('hex');
+    await world.tx(cli, async (tx) => {
+      const session = await tx.sessions.create({
+        tokenSha256,
+        userId: user.id,
+        authTime: world.clock.now(),
+        ...newSessionTimes(world.clock.now()),
+      });
+      await tx.audit.record({ action: 'auth.login', target: { type: 'session', id: session.id } });
+    });
+    await change(world.as(head), user, patch);
+    expect(await world.tx(cli, (tx) => tx.sessions.find(tokenSha256), 'read')).toBeNull();
+  });
 });

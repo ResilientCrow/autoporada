@@ -31,15 +31,17 @@ describe('auth.resolveSession', () => {
   it('touches the session at most every five minutes, without an audit event', async () => {
     const user = await world.seed.user();
     await signedIn(world, user.id, 'token');
+    const signedInAt = world.clock.now();
     const before = (await world.inspect.audit()).length;
-    world.clock.advance(SESSION_TOUCH_MS);
+    const lastSeen = async () =>
+      (await world.tx(system('auth.session'), (tx) => tx.sessions.find(sha('token')), 'read'))
+        ?.session.lastSeenAt;
+    world.clock.advance(SESSION_TOUCH_MS - 1);
     await resolve();
-    const stored = await world.tx(
-      system('auth.session'),
-      (tx) => tx.sessions.find(sha('token')),
-      'read',
-    );
-    expect(stored?.session.lastSeenAt).toEqual(world.clock.now());
+    expect(await lastSeen()).toEqual(signedInAt);
+    world.clock.advance(1);
+    await resolve();
+    expect(await lastSeen()).toEqual(world.clock.now());
     expect((await world.inspect.audit()).length).toBe(before);
   });
 

@@ -82,6 +82,8 @@ export interface TestIdp {
   /** Changes the next ID token. */
   next(token: { readonly claims?: Record<string, unknown>; readonly sign?: Signing }): void;
   failToken(failure: TokenFailure): void;
+  /** Changes fields of the discovery document, e.g. an endpoint on another origin. */
+  metadata(fields: Readonly<Record<string, string>>): void;
   down(isDown?: boolean): void;
   /** Accepts client assertions signed for this certificate, as Entra would after the upload. */
   trust(certificatePem: string): void;
@@ -119,6 +121,7 @@ export async function createTestIdp(): Promise<TestIdp> {
   let tokenFailure: TokenFailure | undefined;
   let appRoles: readonly string[] = ['User.ReadBasic.All'];
   let isDown = false;
+  let metadata: Readonly<Record<string, string>> = {};
   const seen = {
     tokenRequests: [] as URLSearchParams[],
     assertions: [] as { header: ProtectedHeaderParameters; payload: JWTPayload }[],
@@ -269,6 +272,7 @@ export async function createTestIdp(): Promise<TestIdp> {
           subject_types_supported: ['pairwise'],
           id_token_signing_alg_values_supported: ['RS256'],
           token_endpoint_auth_methods_supported: ['client_secret_post', 'private_key_jwt'],
+          ...metadata,
         });
       case KEYS:
         seen.jwksFetches++;
@@ -309,6 +313,9 @@ export async function createTestIdp(): Promise<TestIdp> {
     },
     failToken(failure) {
       tokenFailure = failure;
+    },
+    metadata(fields) {
+      metadata = fields;
     },
     grantRoles(roles) {
       appRoles = roles;

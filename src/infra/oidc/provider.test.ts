@@ -173,6 +173,37 @@ describe('Entra over openid-client', () => {
     await expect(inTransactionScope(() => provider.authorizationUrl(request))).rejects.toThrow(
       /must not run inside a database transaction/,
     );
+    await expect(
+      inTransactionScope(() => provider.redeem(`?code=x&state=${request.state}`, request)),
+    ).rejects.toThrow(/must not run inside a database transaction/);
+  });
+
+  const offOrigin = { stage: 'discovery', code: 'ENDPOINT_ORIGIN' };
+
+  it.each(['token_endpoint', 'jwks_uri', 'authorization_endpoint'])(
+    'refuses Entra metadata whose %s is on another origin, in production',
+    async (field) => {
+      const { idp, provider } = await setup();
+      idp.metadata({ [field]: 'https://evil.example/endpoint' });
+      expect(await provider.authorizationUrl(request)).toEqual({
+        ok: false,
+        failure: 'unavailable',
+        detail: offOrigin,
+      });
+    },
+  );
+
+  it('outside production accepts other endpoints, but never an authorize URL off the issuer', async () => {
+    const relaxed = await setup({ production: false });
+    relaxed.idp.metadata({ token_endpoint: 'https://idp.example/token' });
+    expect((await relaxed.provider.authorizationUrl(request)).ok).toBe(true);
+    const moved = await setup({ production: false });
+    moved.idp.metadata({ authorization_endpoint: 'https://evil.example/authorize' });
+    expect(await moved.provider.authorizationUrl(request)).toEqual({
+      ok: false,
+      failure: 'unavailable',
+      detail: offOrigin,
+    });
   });
 
   it('signs in with the certificate the way Entra requires', async () => {
