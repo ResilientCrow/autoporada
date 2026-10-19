@@ -3,6 +3,7 @@ import type {
   EnqueueOptions,
   JobName,
   PendingSignIn,
+  SessionRecord,
   UserRecord,
 } from '@/application/ports';
 
@@ -11,6 +12,8 @@ export interface FakeState {
   readonly users: Map<string, UserRecord>;
   /** auth_transactions, by cookie hash (unique). */
   readonly signIns: Map<string, PendingSignIn>;
+  /** sessions, by id; the token digest is kept next to the record. */
+  readonly sessions: Map<string, SessionRecord & { readonly tokenSha256: string }>;
   readonly audit: AuditRow[];
   readonly jobs: JobRow[];
   /** Hands out UUID-shaped ids in order, as uuidv7() would. */
@@ -35,6 +38,7 @@ export interface JobRow {
 export const emptyState = (): FakeState => ({
   users: new Map(),
   signIns: new Map(),
+  sessions: new Map(),
   audit: [],
   jobs: [],
   nextId: 1,

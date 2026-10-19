@@ -2,6 +2,7 @@ import type { AuditPort } from './audit';
 import type { Clock } from './clock';
 import type { JobPort } from './jobs';
 import type { Principal } from './principal';
+import type { SessionRepo } from './sessions';
 import type { SignInRepo } from './sign-ins';
 import type { UserRepo } from './users';
 
@@ -27,6 +28,7 @@ export interface Tx {
   readonly ctx: TxContext;
   readonly users: UserRepo;
   readonly signIns: SignInRepo;
+  readonly sessions: SessionRepo;
   readonly audit: AuditPort;
   readonly jobs: JobPort;
 }

@@ -14,7 +14,7 @@ import { users } from '../schema';
 import type { TxDatabase } from './database';
 
 /** The columns a UserRecord is made of; new columns stay out until named here. */
-const RECORD = {
+export const USER_RECORD = {
   id: users.id,
   tid: users.tid,
   oid: users.oid,
@@ -39,7 +39,7 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
   };
   const byId = (id: string) =>
     db
-      .select(RECORD)
+      .select(USER_RECORD)
       .from(users)
       .where(and(eq(users.id, id), visible()));
 
@@ -54,7 +54,7 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
     },
     async list(filter = {}) {
       return db
-        .select(RECORD)
+        .select(USER_RECORD)
         .from(users)
         .where(
           and(
@@ -79,7 +79,7 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
         .values({ tid: identity.tid, oid: identity.oid, ...display, createdAt: ctx.now })
         // Display fields only: role, status and the student flag change through changeAccess.
         .onConflictDoUpdate({ target: [users.tid, users.oid], set: display })
-        .returning(RECORD);
+        .returning(USER_RECORD);
       if (!row) throw new Error('upsertFromClaims: the upsert returned no row');
       return row;
     },
@@ -97,7 +97,7 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
           updatedAt: ctx.now,
         })
         .where(and(eq(users.id, id), eq(users.version, expectedVersion), visible()))
-        .returning(RECORD);
+        .returning(USER_RECORD);
       if (!row) throw new StaleVersion();
       return row;
     },
