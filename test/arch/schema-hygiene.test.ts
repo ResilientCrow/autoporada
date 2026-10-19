@@ -37,6 +37,24 @@ describe('the hygiene checks themselves', () => {
     expect(inputProblems(z.object({}))).toEqual(['$: object accepts unknown keys']);
   });
 
+  it('report schemas that accept or return anything', () => {
+    for (const loose of [z.unknown(), z.any(), z.custom<string>()]) {
+      expect(inputProblems(z.strictObject({ body: loose }))).toEqual([
+        '$.properties.body: accepts anything',
+      ]);
+    }
+    expect(outputProblems(z.looseObject({ id: z.string() }))).toEqual([
+      '$: object passes unnamed keys through',
+      '$.additionalProperties: returns anything',
+    ]);
+    expect(outputProblems(z.record(z.string(), z.string()))).toEqual([
+      '$: object passes unnamed keys through',
+    ]);
+    expect(outputProblems(z.unknown())).toEqual(['$: returns anything']);
+    expect(outputProblems(z.object({ items: z.array(z.object({ id: z.string() })) }))).toEqual([]);
+    expect(inputProblems(z.strictObject({}))).toEqual([]);
+  });
+
   it('report outputs that name a credential', () => {
     const output = z.object({ session: z.object({ tokenHash: z.string() }), name: z.string() });
     expect(outputProblems(output)).toEqual([

@@ -15,6 +15,10 @@ function walk(node: unknown, path: string, visit: (node: Node, path: string) => 
   }
 }
 
+/** `{}`: z.unknown(), z.any() or z.custom(); not the `properties` map of an empty object. */
+const acceptsAnything = (node: Node, path: string) =>
+  !/\.(?:properties|\$defs)$/.test(path) && Object.keys(node).every((key) => key === '$schema');
+
 /**
  * An input schema accepts only what it names, and only so much of it:
  * every object strict, every string and array bounded (ADR 0011). Zod's
@@ -26,6 +30,7 @@ export function inputProblems(schema: z.ZodType): string[] {
     if (node['type'] === 'object' && node['additionalProperties'] !== false) {
       problems.push(`${path}: object accepts unknown keys`);
     }
+    if (acceptsAnything(node, path)) problems.push(`${path}: accepts anything`);
     const bounded =
       node['maxLength'] !== undefined ||
       node['enum'] !== undefined ||
@@ -39,10 +44,14 @@ export function inputProblems(schema: z.ZodType): string[] {
   return problems;
 }
 
-/** Output schemas never name a credential. */
+/** Outputs return only what they name (z.object strips the rest), never a credential. */
 export function outputProblems(schema: z.ZodType): string[] {
   const problems: string[] = [];
   walk(z.toJSONSchema(schema, { io: 'output', unrepresentable: 'any' }), '$', (node, path) => {
+    if (node['type'] === 'object' && node['additionalProperties'] !== false) {
+      problems.push(`${path}: object passes unnamed keys through`);
+    }
+    if (acceptsAnything(node, path)) problems.push(`${path}: returns anything`);
     const properties = node['properties'];
     if (!properties || typeof properties !== 'object') return;
     for (const name of Object.keys(properties)) {

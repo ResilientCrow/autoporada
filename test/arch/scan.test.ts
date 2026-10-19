@@ -76,10 +76,25 @@ export const requestAccessAction = defineAction(requestAccess, { rateLimit: 'acc
     ]);
   });
 
-  it('refuses metadata routes', () => {
-    expect(findings('src/app/robots.ts', 'export default function robots() {}')).toEqual([
-      'src/app/robots.ts: metadata routes are not wrapped; list it in the test first',
+  it('refuses JavaScript files and the Pages Router', () => {
+    expect(findings('src/app/x/route.js', 'export const GET = 1;')).toContain(
+      'src/app/x/route.js: src/ holds TypeScript only (pageExtensions)',
+    );
+    expect(findings('src/pages/api/x.ts', 'export default function x() {}')).toEqual([
+      'src/pages/api/x.ts: the Pages Router is not used; entry points live in src/app',
     ]);
+  });
+
+  it('refuses metadata routes', () => {
+    for (const file of [
+      'src/app/robots.ts',
+      'src/app/icon2.tsx',
+      'src/app/(x)/opengraph-image3.ts',
+    ]) {
+      expect(findings(file, 'export default function f() {}')).toEqual([
+        `${file}: metadata routes are not wrapped; list it in the test first`,
+      ]);
+    }
   });
 
   it('notices a directive-like line the parser did not see as a directive', () => {

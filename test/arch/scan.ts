@@ -15,7 +15,9 @@ export interface ScanResult {
 export const ACTION_MODULE = /^src\/server\/actions\/(?!index\.ts$)[^/]+\.ts$/;
 export const ROUTE_FILE = /^src\/app\/(?:.+\/)?route\.tsx?$/;
 const METADATA_FILE =
-  /^src\/app\/(?:.+\/)?(?:sitemap|robots|manifest|icon|apple-icon|opengraph-image|twitter-image)\.[a-z]+$/;
+  /^src\/app\/(?:.+\/)?(?:sitemap|robots|manifest|(?:apple-)?icon\d*|(?:opengraph|twitter)-image\d*)\.[a-z]+$/;
+/** next.config serves .ts and .tsx only; anything else in src/ would escape this scan. */
+const NOT_TYPESCRIPT = /\.[cm]?jsx?$/;
 const HTTP_METHODS = new Set(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 /** Every line that looks like a directive; the parser must have seen each one. */
 const DIRECTIVE_LINE = /^\s*(['"])use (?:server|cache)[^'"]*\1;?\s*$/gm;
@@ -127,6 +129,10 @@ export function scanSource(file: string, text: string): ScanResult {
   }
   if (METADATA_FILE.test(file))
     report('metadata routes are not wrapped; list it in the test first');
+
+  if (NOT_TYPESCRIPT.test(file)) report('src/ holds TypeScript only (pageExtensions)');
+  if (file.startsWith('src/pages/'))
+    report('the Pages Router is not used; entry points live in src/app');
 
   const lines = text.match(DIRECTIVE_LINE)?.length ?? 0;
   if (lines !== seen) report(`${lines} directive-like lines, but the parser found ${seen}`);

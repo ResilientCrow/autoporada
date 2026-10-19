@@ -5,7 +5,8 @@ import { join, relative } from 'node:path';
 import { ACTION_MODULE, ROUTE_FILE, scanSource, type ScanResult } from './scan';
 
 const ROOT = process.cwd();
-const SOURCE = /\.(?:ts|tsx|mts)$/;
+/** Every script, JavaScript too: the scanner reports anything that is not TypeScript. */
+const SOURCE = /\.[cm]?[jt]sx?$/;
 
 function walk(dir: string): string[] {
   return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((entry) => {

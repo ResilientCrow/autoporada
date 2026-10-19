@@ -48,7 +48,9 @@ describe('inventory of entry points', () => {
       for (const value of Object.values(await exportsOf(file))) {
         const info = wrappedInfo(value);
         if (info?.kind === 'action') expect(registered.has(info.useCase), file).toBe(true);
-        if (info?.kind === 'route' && file.startsWith('src/app/auth/')) {
+        // Route groups such as (public) are not part of the URL.
+        const url = file.replace(/\/\([^/]+\)(?=\/)/g, '');
+        if (info?.kind === 'route' && url.startsWith('src/app/auth/')) {
           expect(info.rateLimit, file).toBe('auth');
         }
       }
@@ -65,6 +67,17 @@ describe('inventory of entry points', () => {
     expect(new Set(USE_CASES)).toEqual(defined);
     const names = USE_CASES.map((u) => u.name);
     expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('defines use cases only where the registry check can see them', () => {
+    const elsewhere = SOURCE_FILES.filter(
+      (file) =>
+        !file.startsWith('src/application/use-cases/') &&
+        file !== 'src/application/core/define-use-case.ts' &&
+        !/\.test\.tsx?$/.test(file) &&
+        /define(?:System)?UseCase\s*[<(]/.test(read(file)),
+    );
+    expect(elsewhere).toEqual([]);
   });
 
   it('has a colocated test for every module that defines a use case', () => {

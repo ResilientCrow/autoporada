@@ -23,8 +23,18 @@ const NONDETERMINISM = [
     selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
     message: 'Application code must be deterministic (ADR 0011).',
   },
+  { selector: "CallExpression[callee.name='Date']", message: 'Use ctx.now.' },
   {
-    selector: "Program > VariableDeclaration[kind='let']",
+    selector: "MemberExpression[object.name='performance'][property.name='now']",
+    message: 'Use ctx.now.',
+  },
+  {
+    selector: "MemberExpression[object.name='crypto']",
+    message: 'Application code must be deterministic (ADR 0011).',
+  },
+  {
+    selector:
+      ":matches(Program, Program > ExportNamedDeclaration) > VariableDeclaration[kind='let']",
     message: 'No module state in application code (ADR 0011).',
   },
 ];
