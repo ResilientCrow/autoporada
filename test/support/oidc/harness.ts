@@ -1,9 +1,11 @@
 /**
  * The sign-in routes end to end, without a browser or a network: the real
  * pipeline (runRoute), the real use cases in the current world, the real
- * openid-client against the in-process TestIdp, and a cookie jar.
+ * openid-client against the in-process TestIdp, and a cookie jar. After
+ * every test (plan §11): no Entra call ran inside a transaction, and no log
+ * line holds a cookie, state, nonce, code, token or who signed in.
  */
-import { afterEach, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, expect, vi } from 'vitest';
 
 import { DatabaseFailure, type AppDeps } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
@@ -18,6 +20,16 @@ import { setupWorld, type World } from '../world';
 import { createTestIdp, TEST_CLIENT, TEST_ISSUER, TEST_SECRET, type TestIdp } from './test-idp';
 
 export const APP_ORIGIN = 'https://autoporada.ssps.cz';
+const SIGN_IN_CLEARED = '__Host-ap_signin=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
+
+/** A callback that ended on the sign-in page with `error`, its sign-in cookie cleared. */
+export function expectSignInFailed(response: Response, error: string, withCode = false): void {
+  expect(response.status).toBe(303);
+  expect(response.headers.get('location')).toBe(
+    `${APP_ORIGIN}/prihlaseni?chyba=${error}${withCode ? '&kod=req-test-0001' : ''}`,
+  );
+  expect(response.headers.getSetCookie()).toEqual([SIGN_IN_CLEARED]);
+}
 const TENANT = '00000000-0000-0000-0000-000000000001';
 
 interface Browser {
@@ -36,12 +48,19 @@ export interface SignInHarness {
   readonly auth: AuthDeps;
   readonly routes: ReturnType<typeof authRouteSpecs>;
   readonly lines: LogLine[];
+  /** Every cookie value and secret query parameter the browsers saw. */
+  readonly secrets: Set<string>;
   browser(): Browser;
   /** Moves the world's clock and the libraries' Date together. */
   advance(ms: number): void;
   /** The routes' n-th next transaction fails, by default as a lost connection would (both worlds). */
   failTransaction(n?: number, error?: Error): void;
+  /** Transactions the routes opened so far. */
+  transactions(): number;
 }
+
+/** Query parameters that carry a secret, in either direction. */
+const SECRET_PARAMS = ['code', 'state', 'nonce', 'code_challenge', 'session_state'];
 
 function applySetCookie(cookies: Map<string, string>, header: string): void {
   const [pair = ''] = header.split(';');
@@ -79,14 +98,23 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
     };
     let failIn = 0;
     let failure: Error = new DatabaseFailure('08000');
+    let opened = 0;
     const app: AppDeps = {
       ...world.deps,
       db: {
-        transaction: (ctx, options, work) =>
-          failIn > 0 && --failIn === 0
+        transaction: (ctx, options, work) => {
+          opened++;
+          return failIn > 0 && --failIn === 0
             ? Promise.reject(failure)
-            : world.deps.db.transaction(ctx, options, work),
+            : world.deps.db.transaction(ctx, options, work);
+        },
       },
+    };
+    const secrets = new Set<string>();
+    const remember = (url: URL) => {
+      for (const key of SECRET_PARAMS) {
+        for (const value of url.searchParams.getAll(key)) secrets.add(value);
+      }
     };
     const routeDeps: RouteDeps = {
       app,
@@ -111,6 +139,8 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
         failIn = n;
         failure = error;
       },
+      transactions: () => opened,
+      secrets,
       browser() {
         const cookies = new Map<string, string>();
         return {
@@ -124,6 +154,8 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
               headers.set('origin', init.origin ?? APP_ORIGIN);
             if (init.body !== undefined)
               headers.set('content-type', 'application/x-www-form-urlencoded');
+            for (const value of cookies.values()) secrets.add(value);
+            remember(new URL(path, APP_ORIGIN));
             const request = new Request(new URL(path, APP_ORIGIN), {
               method: init.method ?? 'GET',
               headers,
@@ -133,6 +165,9 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
               params: Promise.resolve({}),
             });
             for (const header of response.headers.getSetCookie()) applySetCookie(cookies, header);
+            for (const value of cookies.values()) secrets.add(value);
+            const location = response.headers.get('location');
+            if (location) remember(new URL(location, APP_ORIGIN));
             return response;
           },
         };
@@ -140,7 +175,16 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
     };
   });
   afterEach(() => {
-    vi.useRealTimers();
+    try {
+      const { idp, lines, secrets } = harness.current;
+      expect(idp.seen.calledInsideTransaction).toBe(0);
+      const logged = JSON.stringify(lines);
+      for (const secret of [...secrets, ...idp.seen.identities, 'eyJ', '#EXT#']) {
+        if (secret) expect(logged, 'a log line leaks a secret').not.toContain(secret);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   return {

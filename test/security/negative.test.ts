@@ -1,20 +1,19 @@
 /**
  * The OIDC negative suite (plan §11): what an attacker or a broken Entra
- * can send, through the real routes, in both worlds. After every case: no
- * Entra call ran inside a transaction, and the log holds no secret.
+ * can send, through the real routes, in both worlds. The harness checks
+ * after every case that no Entra call ran inside a transaction and that the
+ * log holds no secret.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { system } from '@/application/ports';
 
-import { APP_ORIGIN, setupSignInHarness } from '../support/oidc/harness';
-import { MEMBER, type TestIdp } from '../support/oidc/test-idp';
+import { APP_ORIGIN, expectSignInFailed, setupSignInHarness } from '../support/oidc/harness';
+import type { TestIdp } from '../support/oidc/test-idp';
 
 const harness = setupSignInHarness();
 const failed = (error: string, withCode = false) =>
   `${APP_ORIGIN}/prihlaseni?chyba=${error}${withCode ? '&kod=req-test-0001' : ''}`;
-/** Everything that must never reach a log line. */
-const secrets = new Set<string>();
 
 type Browser = ReturnType<typeof harness.h.browser>;
 
@@ -27,15 +26,9 @@ async function signIn(
   const { idp, routes } = harness.h;
   const start = await b.send(routes.login, '/auth/login?returnTo=%2Fporada');
   const location = start.headers.get('location') ?? '';
-  const params = new URL(location).searchParams;
-  for (const key of ['state', 'nonce']) secrets.add(params.get(key) ?? '');
-  secrets.add(b.cookies.get('__Host-ap_signin') ?? '');
   prepare(idp);
   const search = idp.authorize(location, {}, tamper);
-  secrets.add(new URLSearchParams(search).get('code') ?? '');
-  const response = await b.send(routes.callback, `${callbackBase}/auth/callback${search}`);
-  secrets.add(b.cookies.get('__Host-ap_session') ?? '');
-  return response;
+  return b.send(routes.callback, `${callbackBase}/auth/callback${search}`);
 }
 
 const nothingKept = async () => {
@@ -44,22 +37,12 @@ const nothingKept = async () => {
   expect(await world.inspect.audit()).toEqual([]);
 };
 
-afterEach(() => {
-  const { idp, lines } = harness.h;
-  expect(idp.seen.calledInsideTransaction).toBe(0);
-  const logged = JSON.stringify(lines);
-  for (const secret of [...secrets, MEMBER.upn, MEMBER.email, MEMBER.name, 'eyJ']) {
-    if (secret) expect(logged).not.toContain(secret);
-  }
-  secrets.clear();
-});
-
 describe('forged ID tokens', () => {
   it.each(['other-key-same-kid', 'none', 'hs256-public-key', 'unknown-kid'] as const)(
     'refuses a token signed with %s and keeps nothing',
     async (sign) => {
       const response = await signIn(harness.h.browser(), (idp) => idp.next({ sign }));
-      expect(response.headers.get('location')).toBe(failed('failed', true));
+      expectSignInFailed(response, 'failed', true);
       await nothingKept();
       expect(harness.h.idp.seen.jwksFetches).toBeLessThanOrEqual(2);
     },
@@ -81,7 +64,7 @@ describe('claims the library checks', () => {
     ['a token not valid for 2 minutes', () => ({ nbf: now() + 120 })],
   ])('refuses %s', async (_name, claims) => {
     const response = await signIn(harness.h.browser(), (idp) => idp.next({ claims: claims() }));
-    expect(response.headers.get('location')).toBe(failed('failed', true));
+    expectSignInFailed(response, 'failed', true);
     await nothingKept();
   });
 
@@ -95,19 +78,15 @@ describe('claims the library checks', () => {
 
 describe('what Entra answers', () => {
   it.each([
-    ['access_denied', undefined, failed('cancelled')],
-    [
-      'server_error',
-      'AADSTS90033: transient error for jana.novakova@ssps.cz',
-      failed('unavailable', true),
-    ],
-    ['invalid_request', 'AADSTS50011: redirect URI mismatch', failed('failed', true)],
-  ])('maps %s at the authorization step', async (error, description, location) => {
+    ['access_denied', undefined, 'cancelled', false],
+    ['server_error', 'AADSTS90033: transient error for jana.novakova@ssps.cz', 'unavailable', true],
+    ['invalid_request', 'AADSTS50011: redirect URI mismatch', 'failed', true],
+  ])('maps %s at the authorization step', async (error, description, shown, withCode) => {
     const response = await signIn(harness.h.browser(), undefined, {
       error,
       ...(description && { description }),
     });
-    expect(response.headers.get('location')).toBe(location);
+    expectSignInFailed(response, shown, withCode);
     await nothingKept();
   });
 
@@ -138,7 +117,7 @@ describe('what Entra answers', () => {
     ['a timeout', 'timeout', 'unavailable'],
   ] as const)('maps %s at the token endpoint', async (_name, answer, error) => {
     const response = await signIn(harness.h.browser(), (idp) => idp.failToken(answer));
-    expect(response.headers.get('location')).toBe(failed(error, true));
+    expectSignInFailed(response, error, true);
     // Mapped by the adapter, not caught as a bug by the pipeline.
     expect(harness.h.lines.filter((l) => l.level === 'error')).toEqual([]);
     await nothingKept();
@@ -162,7 +141,6 @@ describe('the deployment', () => {
     const search = idp.authorize(start.headers.get('location') ?? '');
     const twin = harness.h.browser();
     twin.cookies.set('__Host-ap_signin', cookie);
-    secrets.add(cookie);
     const answers = await Promise.all([
       b.send(routes.callback, `/auth/callback${search}`),
       twin.send(routes.callback, `/auth/callback${search}`),

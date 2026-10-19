@@ -4,7 +4,7 @@ import { system } from '@/application/ports';
 import { SIGN_IN_TTL_MS } from '@/domain/identity';
 import { digest, newToken } from '@/server/session';
 
-import { APP_ORIGIN, setupSignInHarness } from '../support/oidc/harness';
+import { APP_ORIGIN, expectSignInFailed, setupSignInHarness } from '../support/oidc/harness';
 import { DELETE, MEMBER } from '../support/oidc/test-idp';
 import { signedIn } from '../support/sessions';
 
@@ -13,8 +13,6 @@ const harness = setupSignInHarness({
 });
 const SESSION = /^__Host-ap_session=[A-Za-z0-9_-]{43}; Path=\/; Secure; HttpOnly; SameSite=Lax$/;
 const CLEARED = '__Host-ap_signin=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
-const failed = (error: string, withCode = false) =>
-  `${APP_ORIGIN}/prihlaseni?chyba=${error}${withCode ? '&kod=req-test-0001' : ''}`;
 
 type Browser = ReturnType<typeof harness.h.browser>;
 
@@ -81,8 +79,21 @@ describe('GET /auth/callback', () => {
     const thief = harness.h.browser();
     thief.cookies.set('__Host-ap_signin', signInCookie.cookie);
     const stolen = await thief.send(harness.h.routes.callback, `/auth/callback${search}`);
-    expect(stolen.headers.get('location')).toBe(failed('expired'));
+    expectSignInFailed(stolen, 'expired');
     expect(harness.h.idp.seen.tokenRequests).toHaveLength(1);
+  });
+
+  it('ends the session this browser had before, whoever owned it', async () => {
+    const { world } = harness.h;
+    const other = await world.seed.user({ oid: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff' });
+    const previous = newToken();
+    await signedIn(world, other.id, previous);
+    const b = harness.h.browser();
+    b.cookies.set('__Host-ap_session', previous);
+    const { response } = await signIn(b, { start: '/auth/login?returnTo=%2F&account=select' });
+    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/`);
+    expect(await sessionOf(previous)).toBeNull();
+    expect((await sessionOf(b.cookies.get('__Host-ap_session')))?.user.oid).toBe(MEMBER.oid);
   });
 
   it('refuses a callback after ten minutes', async () => {
@@ -91,8 +102,10 @@ describe('GET /auth/callback', () => {
     harness.h.advance(SIGN_IN_TTL_MS + 1);
     const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
     const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
-    expect(response.headers.get('location')).toBe(failed('expired'));
+    expectSignInFailed(response, 'expired');
     expect(b.cookies.has('__Host-ap_session')).toBe(false);
+    // Checked before the code is redeemed at Entra.
+    expect(harness.h.idp.seen.tokenRequests).toEqual([]);
   });
 
   it.each([
@@ -106,12 +119,38 @@ describe('GET /auth/callback', () => {
       const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
       harness.h.failTransaction(n);
       const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
-      expect(response.status).toBe(303);
-      expect(response.headers.get('location')).toBe(failed('failed', true));
-      expect(response.headers.getSetCookie()).toEqual([CLEARED]);
+      expectSignInFailed(response, 'failed', true);
       expect(b.cookies.has('__Host-ap_session')).toBe(false);
     },
   );
+
+  it.each([
+    ['a second state', (search: string) => `${search}&state=${'A'.repeat(43)}`],
+    ['a malformed state', (search: string) => search.replace(/state=[^&]+/, 'state=short')],
+    ['an oversized query', (search: string) => `${search}&pad=${'x'.repeat(4096)}`],
+  ])('finds nothing to finish with %s, before any transaction', async (_name, edit) => {
+    const b = harness.h.browser();
+    const start = await b.send(harness.h.routes.login, '/auth/login');
+    const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
+    const opened = harness.h.transactions();
+    const response = await b.send(harness.h.routes.callback, `/auth/callback${edit(search)}`);
+    expectSignInFailed(response, 'expired');
+    expect(harness.h.transactions()).toBe(opened);
+    expect(harness.h.idp.seen.tokenRequests).toEqual([]);
+  });
+
+  it('finds nothing to finish with a malformed sign-in cookie, before any transaction', async () => {
+    const b = harness.h.browser();
+    const start = await b.send(harness.h.routes.login, '/auth/login');
+    b.cookies.set('__Host-ap_signin', 'not-a-token');
+    const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
+    const opened = harness.h.transactions();
+    expectSignInFailed(
+      await b.send(harness.h.routes.callback, `/auth/callback${search}`),
+      'expired',
+    );
+    expect(harness.h.transactions()).toBe(opened);
+  });
 
   it('refuses a callback without the browser’s sign-in cookie', async () => {
     const b = harness.h.browser();
@@ -119,7 +158,7 @@ describe('GET /auth/callback', () => {
     b.cookies.delete('__Host-ap_signin');
     const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
     const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
-    expect(response.headers.get('location')).toBe(failed('expired'));
+    expectSignInFailed(response, 'expired');
     expect(harness.h.idp.seen.tokenRequests).toEqual([]);
   });
 
@@ -138,7 +177,7 @@ describe('GET /auth/callback', () => {
   ])('turns away %s, creates no account and audits why', async (_name, claims, meta) => {
     const b = harness.h.browser();
     const { response } = await signIn(b, { claims });
-    expect(response.headers.get('location')).toBe(failed('not-member'));
+    expectSignInFailed(response, 'not-member');
     expect(b.cookies.has('__Host-ap_session')).toBe(false);
     expect(await harness.h.world.tx(system('cli:test'), (tx) => tx.users.list(), 'read')).toEqual(
       [],
@@ -148,21 +187,29 @@ describe('GET /auth/callback', () => {
 
   it('fails closed when Entra omits an optional claim, with a code to report', async () => {
     const { response } = await signIn(harness.h.browser(), { claims: { acct: DELETE } });
-    expect(response.headers.get('location')).toBe(failed('failed', true));
+    expectSignInFailed(response, 'failed', true);
     expect(await audit()).toEqual([
       ['auth.rejected', { reason: 'missing-claim', claim: 'acct', signals: [], purpose: 'login' }],
+    ]);
+  });
+
+  it('refuses a malformed claim with a code to report, and audits it', async () => {
+    const { response } = await signIn(harness.h.browser(), { claims: { oid: 'not-a-guid' } });
+    expectSignInFailed(response, 'failed', true);
+    expect(await audit()).toEqual([
+      ['auth.rejected', { reason: 'invalid-claim', claim: 'oid', signals: [], purpose: 'login' }],
     ]);
   });
 
   it('turns away a blocked account', async () => {
     await harness.h.world.seed.user({ oid: MEMBER.oid, status: 'blocked' });
     const { response } = await signIn(harness.h.browser());
-    expect(response.headers.get('location')).toBe(failed('blocked'));
+    expectSignInFailed(response, 'blocked');
   });
 
   it('says so when the user cancelled at Entra, and audits nothing', async () => {
     const { response } = await signIn(harness.h.browser(), { tamper: { error: 'access_denied' } });
-    expect(response.headers.get('location')).toBe(failed('cancelled'));
+    expectSignInFailed(response, 'cancelled');
     expect(await audit()).toEqual([]);
   });
 
@@ -180,8 +227,10 @@ describe('GET /auth/callback', () => {
       await signedIn(world, user.id, token);
       const b = harness.h.browser();
       b.cookies.set('__Host-ap_session', token);
-      return { b, token };
+      return { b, token, user };
     }
+    const rejection = async () =>
+      (await harness.h.world.inspect.audit()).find((a) => a.action === 'auth.rejected');
 
     it('replaces the session with a fresh one after the password', async () => {
       const { b, token } = await signedInHeadmaster();
@@ -192,23 +241,33 @@ describe('GET /auth/callback', () => {
     });
 
     it('refuses another account and keeps the current session', async () => {
-      const { b, token } = await signedInHeadmaster();
+      const { b, token, user } = await signedInHeadmaster();
       const { response } = await signIn(b, {
         start: '/auth/step-up?returnTo=%2F',
         persona: { oid: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff' },
       });
-      expect(response.headers.get('location')).toBe(failed('step-up-mismatch'));
+      expectSignInFailed(response, 'step-up-mismatch');
       expect(await sessionOf(token)).not.toBeNull();
+      expect(await rejection()).toMatchObject({
+        targetType: 'user',
+        targetId: user.id,
+        data: { meta: { reason: 'other-account', purpose: 'step_up' } },
+      });
     });
 
     it('refuses a sign-in that did not ask for the password again', async () => {
-      const { b } = await signedInHeadmaster();
+      const { b, user } = await signedInHeadmaster();
       const before = Math.floor(harness.h.world.clock.now().getTime() / 1000) - 3600;
       const { response } = await signIn(b, {
         start: '/auth/step-up?returnTo=%2F',
         claims: { auth_time: before },
       });
-      expect(response.headers.get('location')).toBe(failed('step-up-stale'));
+      expectSignInFailed(response, 'step-up-stale');
+      expect(await rejection()).toMatchObject({
+        targetType: 'user',
+        targetId: user.id,
+        data: { meta: { reason: 'stale-auth', claim: 'auth_time', purpose: 'step_up' } },
+      });
     });
   });
 });

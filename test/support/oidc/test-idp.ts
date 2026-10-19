@@ -95,8 +95,12 @@ export interface TestIdp {
     }[];
     jwksFetches: number;
     calledInsideTransaction: number;
+    /** Names, UPNs and e-mail addresses this IdP put into tokens: never for a log. */
+    readonly identities: Set<string>;
   };
 }
+
+const IDENTITY_CLAIMS = ['name', 'upn', 'email', 'preferred_username'];
 
 const json = (body: object, status = 200, headers: Readonly<Record<string, string>> = {}) =>
   new Response(JSON.stringify(body), {
@@ -120,6 +124,13 @@ export async function createTestIdp(): Promise<TestIdp> {
     assertions: [] as { header: ProtectedHeaderParameters; payload: JWTPayload }[],
     jwksFetches: 0,
     calledInsideTransaction: 0,
+    identities: new Set<string>(),
+  };
+  const remember = (claims: Readonly<Record<string, unknown>>) => {
+    for (const key of IDENTITY_CLAIMS) {
+      const value = claims[key];
+      if (typeof value === 'string' && value) seen.identities.add(value);
+    }
   };
   let trusted: { pem: string; x5tS256: string } | undefined;
   const usedJtis = new Set<string>();
@@ -289,10 +300,12 @@ export async function createTestIdp(): Promise<TestIdp> {
         persona: { ...MEMBER, ...persona },
         used: false,
       });
+      remember({ ...MEMBER, ...persona });
       return `?${new URLSearchParams({ code, state: tamper.state ?? state, session_state: randomUUID() })}`;
     },
     next(t) {
       pending = { ...t };
+      if (t.claims) remember(t.claims);
     },
     failToken(failure) {
       tokenFailure = failure;
