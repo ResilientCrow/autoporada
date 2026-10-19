@@ -9,12 +9,3 @@ export function cookieValue(header: string | null, name: string): string | null 
   }
   return null;
 }
-
-/**
- * A path on this origin to return to after signing in. Anything that a
- * browser could read as another origin (`//x`, `/\x`) goes home instead.
- */
-export function returnPath(url: URL): string {
-  const path = `${url.pathname}${url.search}`;
-  return /^\/(?![/\\])/.test(path) ? path : '/';
-}

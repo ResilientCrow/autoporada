@@ -1,11 +1,12 @@
 import type { UseCase } from '@/application/core';
 import type { SystemPrincipal, UserPrincipal } from '@/application/ports';
 import type { ActionResult } from '@/contracts';
+import { safeReturnTo } from '@/domain/identity';
 
 import { clientIp, LIMITS, type LimitName } from '../rate-limit';
 import { errorSummary } from './log';
 import { logCall, toActionResult, type CallLine } from './outcome';
-import { cookieValue, returnPath, SESSION_COOKIE } from './request';
+import { cookieValue, SESSION_COOKIE } from './request';
 import { runRegistered, type ActionDeps } from './run-action';
 
 export interface RouteDeps extends ActionDeps {
@@ -95,7 +96,8 @@ export async function runRoute(
     if (spec.access === 'session' && !principal) {
       if (!SAFE_METHODS.has(request.method)) return refuse('unauthenticated', status(401));
       const login = new URL(LOGIN_PAGE, deps.appOrigin);
-      login.searchParams.set('returnTo', returnPath(new URL(request.url)));
+      const url = new URL(request.url);
+      login.searchParams.set('returnTo', safeReturnTo(`${url.pathname}${url.search}`));
       return refuse('unauthenticated', status(303, { Location: login.toString() }));
     }
     if (limit?.key === 'user' && principal) {
