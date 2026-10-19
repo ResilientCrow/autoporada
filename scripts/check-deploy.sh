@@ -37,16 +37,20 @@ openssl req -x509 -newkey rsa:3072 -sha256 -days 1 -nodes -subj '/CN=autoporada-
   -keyout "$work/deploy/secrets/entra_key" -out "$work/deploy/secrets/entra_cert" 2>/dev/null
 thumbprint=$(openssl x509 -in "$work/deploy/secrets/entra_cert" -noout -fingerprint -sha1 |
   sed 's/.*=//; s/://g')
-cat >"$work/deploy/.env" <<ENV
+tenant=00000000-0000-4000-8000-000000000001
+
+as_root './install.sh' || fail 'install.sh failed'
+# It made .env from the example; compose runs as an ordinary user here.
+[ -r "$work/deploy/.env" ] || fail '.env is not readable without root'
+cat >"$work/env" <<ENV
 APP_VERSION=check
 APP_HOST=localhost
 ACME_EMAIL=it@example.org
-TENANT_ID=00000000-0000-4000-8000-000000000001
+TENANT_ID=$tenant
 CLIENT_ID=autoporada-check
 CERT_THUMBPRINT=$thumbprint
 ENV
-
-as_root './install.sh' || fail 'install.sh failed'
+as_root 'cp /work/env .env' || fail 'could not fill in .env'
 as_root './install.sh' >/dev/null || fail 'install.sh is not idempotent'
 compose up -d --no-build >/dev/null 2>&1 || fail 'compose up failed'
 
@@ -96,4 +100,21 @@ printf '%s\n' "$access" | grep -q '/auth/callback' || fail 'caddy did not log th
 if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged code or state'; fi
 
 if compose logs --no-color web 2>&1 | grep -q '"level":"\(error\|fatal\)"'; then fail 'web logged an error'; fi
+
+# The probe of SMOKE-TEST step 3 starts and asks Entra (which does not know
+# this tenant): its configuration is complete without the web-only secrets.
+probe=$(compose run --rm --no-deps cli auth:probe 2>&1) || true
+for line in "issuer: https://login.microsoftonline.com/$tenant/v2.0" 'credential: certificate CN=autoporada-check'; do
+  printf '%s\n' "$probe" | grep -qF "$line" || fail "auth:probe did not report: $line ($probe)"
+done
+
+# While web is down, Caddy answers 502 and logs the error with the request:
+# filtered too.
+compose stop web >/dev/null 2>&1
+down=$(curl -sk -o /dev/null -w '%{http_code}' 'https://localhost/auth/callback?code=leaked-down&state=leaked-down')
+[ "$down" = 502 ] || fail "with web stopped, the callback got $down"
+sleep 1
+access=$(compose logs --no-color caddy 2>&1)
+printf '%s\n' "$access" | grep -q 'http.log.error' || fail 'caddy did not log the 502'
+if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged code or state of a failed request'; fi
 echo 'check-deploy: the production stack boots and answers as designed'

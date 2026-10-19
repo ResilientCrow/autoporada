@@ -58,6 +58,8 @@ if [ ! -e .env ]; then
   cp .env.example .env
   echo 'install.sh: created .env; fill it in'
 fi
+# No secret in it, and every compose command reads it.
+chmod 0644 .env
 if [ -n "$missing" ]; then
   echo "install.sh: missing Entra certificate files:$missing"
   echo '  Create them as in docs/ENTRA-SETUP.md §6, save them as secrets/entra_key'

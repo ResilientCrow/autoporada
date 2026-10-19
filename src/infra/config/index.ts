@@ -91,6 +91,17 @@ export function publishNextRuntimeEnv(config: Config, env: Record<string, string
 }
 
 /**
+ * The web process signs Server Action ids with this key, and without a
+ * fixed one every restart breaks the forms of open pages. Only web serves
+ * actions, so the CLI runs without it (deploy/compose.yaml).
+ */
+export function requireServerActionsKey(config: Config): void {
+  if (config.environment === 'production' && !config.serverActionsKey) {
+    throw new ConfigError(['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required in production']);
+  }
+}
+
+/**
  * Only DATABASE_URL, for the one-shot migrate service: it runs as the schema
  * owner and gets no other secrets.
  */

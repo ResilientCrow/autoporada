@@ -4,7 +4,8 @@
 #   docker compose build               the web and tools images, from ..
 #   docker compose up -d               migrate, then web, then Caddy
 #   docker compose run --rm cli auth:probe
-# Configuration is .env (see .env.example); secrets are files in ./secrets.
+# Configuration is .env (see .env.example; root owns it, so edit it with
+# sudo); secrets are files in ./secrets.
 name: autoporada
 
 x-hardened: &hardened

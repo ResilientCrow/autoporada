@@ -1,7 +1,7 @@
 import type { AnyUseCase } from '@/application/core';
 import type { AppDeps, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
-import { getConfig, type Config } from '@/infra/config';
+import { getConfig, requireServerActionsKey, type Config } from '@/infra/config';
 import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
 import { createIdentityProvider, describeCredential, loadClientCredential } from '@/infra/oidc';
@@ -61,6 +61,7 @@ function shared(config: Config, log: Logger): Shared {
  * connection: the pool connects on the first query.
  */
 function buildWeb(config: Config): WebContainer {
+  requireServerActionsKey(config);
   const log = createLogger({ service: 'web', level: config.logLevel });
   const { pool, limiter } = shared(config, log);
   const app: AppDeps = { db: databaseOn(pool).app, clock: systemClock };

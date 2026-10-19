@@ -4,7 +4,13 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ConfigError, loadConfig, loadDatabaseUrl, publishNextRuntimeEnv } from './index';
+import {
+  ConfigError,
+  loadConfig,
+  loadDatabaseUrl,
+  publishNextRuntimeEnv,
+  requireServerActionsKey,
+} from './index';
 
 const DEV_ENV = {
   APP_ORIGIN: 'http://localhost:3000',
@@ -133,8 +139,20 @@ describe('loadConfig', () => {
       'APP_ORIGIN: must use https in production',
       'OIDC_CLIENT_SECRET: is not allowed in production; use the certificate',
       'MAIL_TRANSPORT: must be graph in production',
+    ]);
+  });
+
+  it('leaves the Server Actions key to the web process, which needs it in production', () => {
+    const files = secretFiles({
+      '/run/secrets/entra_key': KEY_PEM,
+      '/run/secrets/entra_cert': CERT_PEM,
+    });
+    const cli = loadConfig({ ...PROD_ENV, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: undefined }, files);
+    expect(problemsOf(() => requireServerActionsKey(cli))).toEqual([
       'NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required in production',
     ]);
+    expect(() => requireServerActionsKey(loadConfig(PROD_ENV, files))).not.toThrow();
+    expect(() => requireServerActionsKey(loadConfig(DEV_ENV, noFiles))).not.toThrow();
   });
 
   it('never echoes secret values in error messages', () => {

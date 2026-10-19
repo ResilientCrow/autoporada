@@ -4,6 +4,22 @@
 {
 	email {$ACME_EMAIL}
 	admin off
+	# An error Caddy raises itself (a 502 while web restarts) logs the
+	# request too: it goes through the same filter as the access log below.
+	log default {
+		exclude http.log.error
+	}
+	log errors {
+		include http.log.error
+		format filter {
+			request>uri query {
+				delete code
+				delete state
+				delete session_state
+				delete error_description
+			}
+		}
+	}
 	servers {
 		# Only TCP 80 and 443 are open.
 		protocols h1 h2

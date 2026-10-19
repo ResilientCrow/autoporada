@@ -94,9 +94,6 @@ export const rawConfigSchema = shape.superRefine((c, ctx) => {
   }
   if (!hasCert) problem('OIDC_CLIENT_KEY', 'certificate credential is required in production');
   if (c.MAIL_TRANSPORT !== 'graph') problem('MAIL_TRANSPORT', 'must be graph in production');
-  if (!c.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY) {
-    problem('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY', 'is required in production');
-  }
 });
 
 export type LogLevel = (typeof LOG_LEVELS)[number];

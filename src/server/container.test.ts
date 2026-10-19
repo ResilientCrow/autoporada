@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { testCertificate } from '../../test/support/oidc/cert';
+
 const ENV = {
   APP_ORIGIN: 'http://localhost:3000',
   // Port 9 discards: nothing listens, so any connection attempt would fail.
@@ -65,5 +67,24 @@ describe('web container', () => {
       ],
     });
     expect(JSON.stringify(report)).not.toContain(oid);
+  });
+
+  it('refuses to serve in production without the Server Actions key', async () => {
+    const pair = testCertificate();
+    const tenant = '00000000-0000-4000-8000-000000000001';
+    const production = {
+      ...ENV,
+      APP_ENV: 'production',
+      APP_ORIGIN: 'https://autoporada.ssps.cz',
+      OIDC_ISSUER: `https://login.microsoftonline.com/${tenant}/v2.0`,
+      OIDC_TENANT_ID: tenant,
+      OIDC_CLIENT_SECRET: undefined,
+      OIDC_CLIENT_KEY: pair.keyPem,
+      OIDC_CLIENT_CERT: pair.certificatePem,
+      MAIL_TRANSPORT: 'graph',
+    };
+    for (const [name, value] of Object.entries(production)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    expect(() => getContainer()).toThrow(/NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required/);
   });
 });

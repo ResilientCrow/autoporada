@@ -7,9 +7,9 @@ coverage
 playwright-report
 test-results
 *.log
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 secrets
 deploy/secrets
 deploy/state
