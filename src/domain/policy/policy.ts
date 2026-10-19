@@ -49,13 +49,6 @@ export type Check =
 
 export type Action = Check['action'];
 
-/** Actions that need a fresh sign-in (≤ 10 min) on top of the session (ADR 0002). */
-const STEP_UP: ReadonlySet<Action> = new Set<Action>(['users.manage', 'registry.newSchoolYear']);
-
-export function requiresStepUp(action: Action): boolean {
-  return STEP_UP.has(action);
-}
-
 function reviewActor(actor: Actor, owned: Owned): ReviewActor {
   return { kind: 'user', role: actor.role, isAuthor: owned.authorId === actor.id };
 }
