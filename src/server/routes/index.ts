@@ -7,4 +7,5 @@ const auth = authRouteSpecs(() => getContainer().auth);
 
 export const authLogin = defineRoute(auth.login);
 export const authCallback = defineRoute(auth.callback);
+export const authLogout = defineRoute(auth.logout);
 export const authStepUp = defineRoute(auth.stepUp);

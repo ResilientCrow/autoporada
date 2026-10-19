@@ -25,7 +25,7 @@ interface Browser {
   send(
     spec: RouteSpec,
     path: string,
-    init?: { readonly method?: string; readonly body?: string },
+    init?: { readonly method?: string; readonly body?: string; readonly origin?: string },
   ): Promise<Response>;
 }
 
@@ -102,7 +102,8 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
             if (cookies.size > 0) {
               headers.set('cookie', [...cookies].map(([k, v]) => `${k}=${v}`).join('; '));
             }
-            if (init.method && init.method !== 'GET') headers.set('origin', APP_ORIGIN);
+            if (init.method && init.method !== 'GET')
+              headers.set('origin', init.origin ?? APP_ORIGIN);
             if (init.body !== undefined)
               headers.set('content-type', 'application/x-www-form-urlencoded');
             const request = new Request(new URL(path, APP_ORIGIN), {
