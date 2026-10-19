@@ -101,10 +101,10 @@ module.exports = {
     },
     {
       name: 'io-libraries-only-in-infra',
-      comment: 'Database and queue drivers stay behind the ports (ADR 0011).',
+      comment: 'Database, queue and OpenID drivers stay behind the ports (ADR 0011).',
       severity: 'error',
       from: { pathNot: ['^src/infra/', ...TESTS] },
-      to: { path: npm('drizzle-orm', 'pg', 'pg-boss') },
+      to: { path: npm('drizzle-orm', 'pg', 'pg-boss', 'openid-client', 'oauth4webapi', 'jose') },
     },
     {
       name: 'no-test-helpers-in-src',

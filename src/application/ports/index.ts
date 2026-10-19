@@ -21,6 +21,14 @@ export {
   TxClosed,
   type KnownConstraint,
 } from './errors';
+export type {
+  AuthorizationRequest,
+  IdentityProvider,
+  IdpDetail,
+  IdpFailure,
+  IdpResult,
+  VerifiedClaims,
+} from './identity-provider';
 export type { EnqueueOptions, JobCatalog, JobName, JobPort } from './jobs';
 export {
   scopeOf,
