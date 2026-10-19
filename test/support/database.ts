@@ -39,6 +39,20 @@ export interface TestDatabase {
   readonly name: string;
   /** Runs SQL as the owner, for setup and for assertions on the catalog. */
   owner<R extends object>(sql: string, params?: unknown[]): Promise<R[]>;
+  /** A connection of its own as autoporada_app, for tests of concurrent transactions. */
+  connect(): Promise<Client>;
+}
+
+/** The PostgreSQL error behind a rejected query; Drizzle wraps it as `cause`. */
+export async function pgErrorOf(
+  query: Promise<unknown>,
+): Promise<{ code?: string; constraint?: string }> {
+  try {
+    await query;
+  } catch (error) {
+    return ((error as { cause?: unknown }).cause ?? error) as { code?: string };
+  }
+  throw new Error('expected the query to fail');
 }
 
 /** A fresh database for this test file, dropped after its last test. */
@@ -67,5 +81,13 @@ export function setupTestDatabase(): TestDatabase {
       return handle.db;
     },
     owner: (sql, params) => asAdmin(async (c) => (await c.query(sql, params)).rows, name),
+    async connect() {
+      const client = new Client({
+        connectionString: databaseUrl(name),
+        options: `-c role=${APP_ROLE}`,
+      });
+      await client.connect();
+      return client;
+    },
   };
 }

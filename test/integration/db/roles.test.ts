@@ -25,6 +25,37 @@ describe('database roles (ADR 0010)', () => {
     ).rejects.toMatchObject(DENIED);
   });
 
+  it('grants every table exactly the default privileges, unless listed here', async () => {
+    const EXCEPTIONS: Record<string, string> = {};
+    const grants = await database.owner<{ table: string; grantee: string; privileges: string }>(
+      `SELECT c.relname AS table, g.grantee,
+              coalesce(string_agg(g.privilege_type, ',' ORDER BY g.privilege_type), '') AS privileges
+         FROM pg_class c
+         JOIN information_schema.role_table_grants g
+           ON g.table_schema = 'public' AND g.table_name = c.relname
+        WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
+          AND g.grantee IN ('autoporada_app', 'autoporada_backup')
+        GROUP BY 1, 2 ORDER BY 1, 2`,
+    );
+    const tables = (
+      await database.owner<{ name: string }>(
+        `SELECT relname AS name FROM pg_class
+          WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p') ORDER BY 1`,
+      )
+    ).map((t) => t.name);
+    expect(tables.length).toBeGreaterThan(0);
+    expect(grants).toEqual(
+      tables.flatMap((table) => [
+        {
+          table,
+          grantee: 'autoporada_app',
+          privileges: EXCEPTIONS[table] ?? 'DELETE,INSERT,SELECT,UPDATE',
+        },
+        { table, grantee: 'autoporada_backup', privileges: 'SELECT' },
+      ]),
+    );
+  });
+
   it('grants every new table to the app (DML) and the backup (read)', async () => {
     await database.owner('CREATE TABLE probe (id int PRIMARY KEY, note text)');
     try {
