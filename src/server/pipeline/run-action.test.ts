@@ -24,6 +24,7 @@ function deps(principal: UserPrincipal | null, max = 30) {
   const { lines, log } = recordingLog();
   const actionDeps: ActionDeps = {
     app: world.deps,
+    useCases: new Set([echo]),
     resolvePrincipal: async (token) => (token === 'good' ? principal : null),
     limiter: createRateLimiter({
       limits: { ...LIMITS, directory: { ...LIMITS.directory, max } },
@@ -112,6 +113,33 @@ describe('runAction', () => {
       err: { name: 'DatabaseFailure', sqlstate: '08000' },
     });
     expect(JSON.stringify(lines)).not.toContain('Jana');
+  });
+});
+
+describe('runAction and the registry', () => {
+  it('answers unavailable for a use case that is not registered', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    const { actionDeps, lines } = deps(world.as(user));
+    const unlisted = defineUseCase({
+      name: 'test.unlisted',
+      mode: 'read',
+      input: z.strictObject({}),
+      output: z.object({}),
+      access: { kind: 'gate', check: () => ({ action: 'directory.search' }) },
+      execute: async () => ok({}),
+    });
+    const result = await runAction(
+      actionDeps,
+      request('good'),
+      unlisted,
+      { rateLimit: 'none' },
+      {},
+    );
+    expect(result).toEqual({ ok: false, error: { code: 'unavailable', requestId: 'req-1' } });
+    expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
+      err: { message: 'test.unlisted: not in USE_CASES' },
+    });
+    expect(world.fake?.history).toEqual([expect.objectContaining({ outcome: 'commit' })]);
   });
 });
 

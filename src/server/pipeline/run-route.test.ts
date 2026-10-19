@@ -13,10 +13,23 @@ const world = setupWorld();
 const ORIGIN = 'https://autoporada.ssps.cz';
 const REQUEST_ID = 'abcdef12-3456';
 
+/** A use case that counts the users its principal can see. */
+const counter = (name: `${string}.${string}`) =>
+  defineUseCase({
+    name,
+    mode: 'read',
+    input: z.strictObject({}),
+    output: z.object({ count: z.number() }),
+    access: { kind: 'gate', check: () => ({ action: 'review.queue' }) },
+    execute: async ({ tx }) => ok({ count: (await tx.users.list()).length }),
+  });
+const count = counter('test.count');
+
 function deps(principal: UserPrincipal | null = null) {
   const { lines, log } = recordingLog();
   const routeDeps: RouteDeps = {
     app: world.deps,
+    useCases: new Set([count]),
     resolvePrincipal: async (token) => (token === 'good' ? principal : null),
     limiter: createRateLimiter({
       limits: { ...LIMITS, auth: { ...LIMITS.auth, max: 1 } },
@@ -122,14 +135,6 @@ describe('runRoute', () => {
 
   it('runs use cases as the session user, as a named system principal, or not at all', async () => {
     const user = await world.seed.user({ role: 'reviewer' });
-    const count = defineUseCase({
-      name: 'test.count',
-      mode: 'read',
-      input: z.strictObject({}),
-      output: z.object({ count: z.number() }),
-      access: { kind: 'gate', check: () => ({ action: 'review.queue' }) },
-      execute: async ({ tx }) => ok({ count: (await tx.users.list()).length }),
-    });
     const seen: unknown[] = [];
     const handle: RouteSpec['handle'] = async (_request, ctx) => {
       seen.push(await ctx.run(count, {}));
@@ -158,6 +163,26 @@ describe('runRoute', () => {
       segment,
     );
     expect(refused.status).toBe(500);
+  });
+
+  it('refuses to run a use case that is not registered, however it was obtained', async () => {
+    const user = await world.seed.user({ role: 'reviewer' });
+    const unlisted = counter('test.unlisted');
+    const handle: RouteSpec['handle'] = async (_request, ctx) => {
+      await ctx.run(unlisted, {});
+      return new Response(null, { status: 204 });
+    };
+    const { routeDeps, lines } = deps(world.as(user));
+    const response = await runRoute(
+      routeDeps,
+      route({ handle }),
+      request('/x', { cookie: SESSION }),
+      segment,
+    );
+    expect(response.status).toBe(500);
+    expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
+      err: { message: 'test.unlisted: not in USE_CASES' },
+    });
   });
 });
 

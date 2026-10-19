@@ -1,4 +1,4 @@
-import { runUseCase, type UseCase } from '@/application/core';
+import type { UseCase } from '@/application/core';
 import type { SystemPrincipal, UserPrincipal } from '@/application/ports';
 import type { ActionResult } from '@/contracts';
 
@@ -6,7 +6,7 @@ import { clientIp, LIMITS, type LimitName } from '../rate-limit';
 import { errorSummary } from './log';
 import { logCall, toActionResult, type CallLine } from './outcome';
 import { cookieValue, returnPath, SESSION_COOKIE } from './request';
-import type { ActionDeps } from './run-action';
+import { runRegistered, type ActionDeps } from './run-action';
 
 export interface RouteDeps extends ActionDeps {
   readonly appOrigin: string;
@@ -110,7 +110,7 @@ export async function runRoute(
         const runAs = as ?? principal;
         if (!runAs) return { ok: false, error: { code: 'unauthenticated' } };
         return toActionResult(
-          await runUseCase(useCase, { principal: runAs, requestId, input }, deps.app),
+          await runRegistered(deps, useCase, { principal: runAs, requestId, input }),
         );
       },
     };

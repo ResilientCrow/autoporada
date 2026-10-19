@@ -1,4 +1,4 @@
-import { runUseCase, type UseCase } from '@/application/core';
+import { runUseCase, type AnyUseCase, type Call, type UseCase } from '@/application/core';
 import type { AppDeps, UserPrincipal } from '@/application/ports';
 import type { ActionResult } from '@/contracts';
 
@@ -8,6 +8,8 @@ import { logCall, toActionResult, type CallLine } from './outcome';
 
 export interface ActionDeps {
   readonly app: AppDeps;
+  /** USE_CASES: nothing else runs, however it was built or imported (ADR 0011). */
+  readonly useCases: ReadonlySet<AnyUseCase>;
   readonly resolvePrincipal: (
     token: string | null,
     requestId: string,
@@ -29,6 +31,12 @@ type UserLimitName = {
 export interface ActionOptions {
   /** Required: no limit is a written-down decision too. */
   readonly rateLimit: UserLimitName | 'none';
+}
+
+/** Runs a registered use case; an unlisted one is a bug in the code, never a request. */
+export function runRegistered<In, Out>(deps: ActionDeps, useCase: UseCase<In, Out>, call: Call) {
+  if (!deps.useCases.has(useCase)) throw new Error(`${useCase.name}: not in USE_CASES`);
+  return runUseCase(useCase, call, deps.app);
 }
 
 /**
@@ -66,7 +74,7 @@ export async function runAction<In, Out>(
       }
     }
     const call = { principal, requestId: request.requestId, input };
-    return answer(toActionResult(await runUseCase(useCase, call, deps.app)));
+    return answer(toActionResult(await runRegistered(deps, useCase, call)));
   } catch (error) {
     deps.log.error({ ...line, err: errorSummary(error) }, 'action failed');
     return { ok: false, error: { code: 'unavailable', requestId: request.requestId } };

@@ -46,7 +46,9 @@ Drizzle or Node core (ADR 0004).
   an audited row without an audit event or a named exemption.
 - **Every entry point is wrapped.** A test scans the source and imports
   every `"use server"` module and route handler, and fails the build on
-  anything not built with `defineAction` or `defineRoute`.
+  anything not built with `defineAction` or `defineRoute`. At run time,
+  actions and routes run only use cases listed in `USE_CASES`, so a use
+  case built anywhere else cannot be reached.
 
 - **Fences** (dependency-cruiser and ESLint): only `infra/` imports
   Drizzle, `pg` or pg-boss; `infra/` sees the application only through its

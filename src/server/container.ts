@@ -1,4 +1,6 @@
+import type { AnyUseCase } from '@/application/core';
 import type { AppDeps, UserPrincipal } from '@/application/ports';
+import { USE_CASES } from '@/application/use-cases';
 import { getConfig, type Config } from '@/infra/config';
 import { connectDatabase } from '@/infra/db';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
@@ -9,6 +11,8 @@ import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
 /** Everything the web process wires together, once. */
 export interface WebContainer {
   readonly app: AppDeps;
+  /** The only use cases actions and routes may run. */
+  readonly useCases: ReadonlySet<AnyUseCase>;
   /** The signed-in user behind a session cookie, or null (fails closed). */
   readonly resolvePrincipal: (
     token: string | null,
@@ -34,6 +38,7 @@ export function buildWeb(config: Config): WebContainer {
   });
   return {
     app: { db: database.app, clock: systemClock },
+    useCases: new Set(USE_CASES),
     // Sessions arrive in M4.4; until then nobody is signed in.
     resolvePrincipal: async () => null,
     limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
