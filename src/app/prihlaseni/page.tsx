@@ -13,8 +13,7 @@ export default async function SignInPage({ searchParams }: Props) {
         <p role="status">
           {page.loggedOut === 'everywhere'
             ? cs.signIn.loggedOut.everywhere
-            : cs.signIn.loggedOut.here}{' '}
-          {cs.signIn.loggedOut.sharedComputer}
+            : cs.signIn.loggedOut.here}
         </p>
       )}
       {page.error && (
@@ -28,6 +27,7 @@ export default async function SignInPage({ searchParams }: Props) {
           )}
         </p>
       )}
+      {page.sharedComputerHint && <p>{cs.signIn.loggedOut.sharedComputer}</p>}
       <p>{cs.signIn.intro}</p>
       <p>
         <a href={page.loginHref}>{cs.signIn.button}</a>

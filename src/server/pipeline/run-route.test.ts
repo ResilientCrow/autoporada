@@ -139,6 +139,15 @@ describe('runRoute', () => {
     });
   });
 
+  it('treats a session cookie sent twice as none', async () => {
+    const { routeDeps } = deps({ kind: 'user' } as UserPrincipal);
+    const resolve = vi.spyOn(routeDeps, 'resolvePrincipal');
+    const twice = request('/x', { cookie: '__Host-ap_session=good; __Host-ap_session=good' });
+    const response = await runRoute(routeDeps, route(), twice, segment);
+    expect(resolve).toHaveBeenCalledWith(null, REQUEST_ID);
+    expect(response.status).toBe(303);
+  });
+
   it('limits public routes by client address, before the session lookup', async () => {
     const { routeDeps } = deps();
     const resolve = vi.spyOn(routeDeps, 'resolvePrincipal');

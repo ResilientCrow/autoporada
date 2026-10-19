@@ -15,6 +15,7 @@ describe('signInPage', () => {
       error: 'failed',
       code: 'abcdef12-3456',
       loggedOut: null,
+      sharedComputerHint: false,
       loginHref: '/auth/login?returnTo=%2Fporada',
       switchHref: '/auth/login?returnTo=%2Fporada&account=select',
     });
@@ -32,6 +33,7 @@ describe('signInPage', () => {
       error: null,
       code: null,
       loggedOut: null,
+      sharedComputerHint: false,
       loginHref: '/auth/login?returnTo=%2F',
       switchHref: '/auth/login?returnTo=%2F&account=select',
     });
@@ -41,9 +43,12 @@ describe('signInPage', () => {
 
 describe('signInPage after signing out', () => {
   it.each([{ odhlaseno: '1' }, { odhlaseno: 'vsude' }, { chyba: 'signout-failed' }])(
-    'offers the account picker on the main button too (%o)',
+    'offers the account picker on the main button, and the shared-PC hint (%o)',
     (params) => {
-      expect(signInPage(params).loginHref).toBe('/auth/login?returnTo=%2F&account=select');
+      expect(signInPage(params)).toMatchObject({
+        loginHref: '/auth/login?returnTo=%2F&account=select',
+        sharedComputerHint: true,
+      });
     },
   );
 });

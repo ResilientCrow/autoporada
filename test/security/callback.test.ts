@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { system } from '@/application/ports';
+import { LockTimeout, system } from '@/application/ports';
 import { SIGN_IN_TTL_MS } from '@/domain/identity';
 import { digest, newToken } from '@/server/auth';
 
@@ -75,6 +75,7 @@ describe('GET /auth/callback', () => {
     b.cookies.set('__Host-ap_signin', signInCookie.cookie);
     const again = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
     expect(again.headers.get('location')).toBe(`${APP_ORIGIN}/`);
+    expect(again.headers.getSetCookie()).toEqual([CLEARED]);
     // The same answer in another browser that copied the cookie.
     const thief = harness.h.browser();
     thief.cookies.set('__Host-ap_signin', signInCookie.cookie);
@@ -95,6 +96,45 @@ describe('GET /auth/callback', () => {
     expect(await sessionOf(previous)).toBeNull();
     expect((await sessionOf(b.cookies.get('__Host-ap_session')))?.user.oid).toBe(MEMBER.oid);
   });
+
+  it('ends no session when the browser sent two session cookies', async () => {
+    const { world } = harness.h;
+    const [mine, other] = [newToken(), newToken()];
+    const a = await world.seed.user({ oid: 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff' });
+    const c = await world.seed.user({ oid: 'cccccccc-dddd-4eee-8fff-000000000000' });
+    await signedIn(world, a.id, mine);
+    await signedIn(world, c.id, other);
+    const b = harness.h.browser();
+    b.cookies.set('__Host-ap_session', mine);
+    const start = await b.send(harness.h.routes.login, '/auth/login?account=select');
+    const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
+    await b.send(harness.h.routes.callback, `/auth/callback${search}`, {
+      extraCookie: `__Host-ap_session=${other}`,
+    });
+    expect([await sessionOf(mine), await sessionOf(other)]).toEqual([
+      expect.anything(),
+      expect.anything(),
+    ]);
+  });
+
+  it.each([
+    ['lost', undefined],
+    ['refused as busy', new LockTimeout()],
+  ])(
+    'still turns a guest away when the audit of the refusal is %s, and logs it',
+    async (_name, error) => {
+      const b = harness.h.browser();
+      const start = await b.send(harness.h.routes.login, '/auth/login');
+      harness.h.idp.next({ claims: { acct: 1 } });
+      const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
+      harness.h.failTransaction(2, error);
+      const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
+      expectSignInFailed(response, 'not-member');
+      expect(harness.h.lines.filter((l) => l.level === 'error').map((l) => l.message)).toEqual([
+        'could not audit a refused sign-in',
+      ]);
+    },
+  );
 
   it('refuses a callback after ten minutes', async () => {
     const b = harness.h.browser();

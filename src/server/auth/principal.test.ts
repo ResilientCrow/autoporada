@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { LockTimeout } from '@/application/ports';
+
 import { signedIn } from '../../../test/support/sessions';
 import { setupWorld } from '../../../test/support/world';
 import { principalResolver } from './principal';
@@ -28,6 +30,13 @@ describe('principalResolver', () => {
       expect(await principalResolver(world.deps)(token, 'req')).toBeNull();
     }
     expect(world.fake?.history.length ?? 0).toBe(before);
+  });
+
+  it('throws when the lookup is refused, so a sign-out never takes it for no session', async () => {
+    const busy = { ...world.deps, db: { transaction: () => Promise.reject(new LockTimeout()) } };
+    await expect(principalResolver(busy)(newToken(), 'req')).rejects.toThrow(
+      'auth.resolveSession: busy',
+    );
   });
 
   it('makes 256-bit tokens and stores only their SHA-256', () => {

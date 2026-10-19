@@ -97,7 +97,10 @@ export const meOutput = z.object({
   isStudent: z.boolean(),
 });
 
-/** Why a sign-in did not finish, as /prihlaseni?chyba=… names it; Czech copy in ui/copy. */
+/**
+ * Why a sign-in, or a sign-out, did not finish, as /prihlaseni?chyba=…
+ * names it; Czech copy in ui/copy.
+ */
 export const SIGN_IN_ERRORS = [
   'expired',
   'cancelled',

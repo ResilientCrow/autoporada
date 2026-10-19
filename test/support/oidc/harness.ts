@@ -37,7 +37,13 @@ interface Browser {
   send(
     spec: RouteSpec,
     path: string,
-    init?: { readonly method?: string; readonly body?: string; readonly origin?: string },
+    init?: {
+      readonly method?: string;
+      readonly body?: string;
+      readonly origin?: string;
+      /** Sent after the jar's cookies, e.g. a second copy of one. */
+      readonly extraCookie?: string;
+    },
   ): Promise<Response>;
 }
 
@@ -146,9 +152,11 @@ export function setupSignInHarness(options: { readonly bootstrapHeadmasterOid?: 
           cookies,
           async send(spec, path, init = {}) {
             const headers = new Headers({ 'x-forwarded-for': '203.0.113.7' });
-            if (cookies.size > 0) {
-              headers.set('cookie', [...cookies].map(([k, v]) => `${k}=${v}`).join('; '));
-            }
+            const sent = [
+              ...[...cookies].map(([k, v]) => `${k}=${v}`),
+              init.extraCookie ?? [],
+            ].flat();
+            if (sent.length > 0) headers.set('cookie', sent.join('; '));
             if (init.method && init.method !== 'GET')
               headers.set('origin', init.origin ?? APP_ORIGIN);
             if (init.body !== undefined)

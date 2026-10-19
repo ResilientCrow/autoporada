@@ -48,9 +48,11 @@ export async function homePage(viewer: UserPrincipal): Promise<HomeModel> {
 
 export interface SignInPageModel {
   readonly error: SignInError | null;
-  /** The request id to report, shown only with failed and unavailable. */
+  /** The request id to report (the redirects add it only where there is something to report). */
   readonly code: string | null;
   readonly loggedOut: 'here' | 'everywhere' | null;
+  /** After any sign-out, also a failed one: Entra's session outlives ours (risk 12). */
+  readonly sharedComputerHint: boolean;
   readonly loginHref: string;
   readonly switchHref: string;
 }
@@ -70,6 +72,7 @@ export function signInPage(params: SearchParams): SignInPageModel {
     error: isSignInError(error) ? error : null,
     code: code && REQUEST_ID.test(code) ? code : null,
     loggedOut: signedOut,
+    sharedComputerHint: signedOut !== null || error === 'signout-failed',
     // After signing out, Entra still knows the browser (a shared PC): even
     // the main button lets the next person choose the account (risk 12).
     loginHref:

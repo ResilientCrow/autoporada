@@ -3,6 +3,7 @@ import { completeSignIn, recordRejection, takeSignIn } from '@/application/use-c
 import type { SignInError } from '@/contracts';
 import { checkEntraClaims, safeReturnTo, type ClaimRejection } from '@/domain/identity';
 
+import { errorSummary } from '../log';
 import { cookieValue, sessionTokenFrom, type RouteContext } from '../pipeline';
 import type { AuthDeps } from './deps';
 import { digest, isToken, newToken } from './tokens';
@@ -82,14 +83,18 @@ export async function callback(
   if (!checked.ok) {
     const { reason, claim, signals } = checked;
     deps.log.warn({ reqId, reason, claim, signals }, 'sign-in refused');
+    // The refusal stands without its audit row; the log says it is missing.
     try {
-      await ctx.run(
+      const recorded = await ctx.run(
         recordRejection,
         { reason, claim, signals: [...signals], purpose: signIn.purpose, userId: signIn.userId },
         callbackPrincipal,
       );
-    } catch {
-      deps.log.error({ reqId }, 'could not audit a refused sign-in');
+      if (!recorded.ok) {
+        deps.log.error({ reqId, code: recorded.error.code }, 'could not audit a refused sign-in');
+      }
+    } catch (error) {
+      deps.log.error({ reqId, err: errorSummary(error) }, 'could not audit a refused sign-in');
     }
     return fail(REJECTIONS[reason]);
   }

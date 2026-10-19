@@ -75,6 +75,35 @@ describe('GET /auth/login', () => {
   });
 });
 
+describe('when the database fails', () => {
+  const failed = `${APP_ORIGIN}/prihlaseni?chyba=failed&kod=req-test-0001`;
+
+  it('login still redirects with a code, and sets no sign-in cookie', async () => {
+    const b = harness.h.browser();
+    harness.h.failTransaction(1);
+    const response = await b.send(harness.h.routes.login, '/auth/login');
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(failed);
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+
+  it.each([
+    ['looking up the session', 1],
+    ['storing the sign-in', 2],
+  ])('step-up still redirects with a code when it fails %s', async (_name, n) => {
+    const { world, routes, browser } = harness.h;
+    const user = await world.seed.user({ role: 'headmaster' });
+    const token = newToken();
+    await signedIn(world, user.id, token);
+    const b = browser();
+    b.cookies.set('__Host-ap_session', token);
+    harness.h.failTransaction(n);
+    const response = await b.send(routes.stepUp, '/auth/step-up?returnTo=%2F');
+    expect(response.headers.get('location')).toBe(failed);
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+});
+
 describe('GET /auth/step-up', () => {
   it('asks a signed-in user for the password again, bound to their account', async () => {
     const { world, routes, browser } = harness.h;
