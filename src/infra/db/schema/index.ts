@@ -3,3 +3,4 @@
  * migrations in drizzle/ from these definitions.
  */
 export * from './identity';
+export * from './audit';

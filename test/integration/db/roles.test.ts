@@ -26,7 +26,8 @@ describe('database roles (ADR 0010)', () => {
   });
 
   it('grants every table exactly the default privileges, unless listed here', async () => {
-    const EXCEPTIONS: Record<string, string> = {};
+    // The audit log is append-only: no UPDATE (migration 0004).
+    const EXCEPTIONS: Record<string, string> = { audit_events: 'DELETE,INSERT,SELECT' };
     const grants = await database.owner<{ table: string; grantee: string; privileges: string }>(
       `SELECT c.relname AS table, g.grantee,
               coalesce(string_agg(g.privilege_type, ',' ORDER BY g.privilege_type), '') AS privileges
