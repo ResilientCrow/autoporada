@@ -275,6 +275,23 @@ describe('statement quotes', () => {
   });
 });
 
+describe('affiliations', () => {
+  it('prints them as stored, even when they look like a class', () => {
+    const model = composeDocument(
+      snapshotFixture('template-replica', (raw) => {
+        const reports = raw['reports'] as Record<string, unknown>[];
+        reports[1] = {
+          ...reports[1],
+          statements: [{ speakerGenitive: 'pana Testa', affiliation: ' 3M ', quote: 'Super' }],
+        };
+      }),
+    );
+    expect(allBlocks(model).map((b) => text(b).replaceAll(NB, ' '))).toContain(
+      'vyjádření pana Testa (3M): „Super“',
+    );
+  });
+});
+
 describe('report eligibility', () => {
   it('leaves out reports of events that have not ended before the meeting', () => {
     const model = composeDocument(

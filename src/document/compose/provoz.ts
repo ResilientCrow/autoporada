@@ -6,7 +6,7 @@ import type { SnapshotBullet, SnapshotReport } from '@/snapshot';
 import type { Block } from '../model';
 import type { ComposeContext } from './context';
 import { futureBullet } from './future';
-import { finalRuns, finalText, point, quoted, richBlocks } from './text';
+import { finalRuns, finalText, point, quoted, richBlocks, statementLabel } from './text';
 
 const minutes = (t?: string) => (t ? parseWallTime(t).hour * 60 + parseWallTime(t).minute : -1);
 
@@ -42,9 +42,7 @@ function reportBlocks(report: SnapshotReport, ctx: ComposeContext): Block[] {
     ...report.bullets.map((b) => bulletLine(b, groupOrder)),
     ...report.statements.map((s) => ({
       kind: 'reportLine' as const,
-      label: finalText(
-        `vyjádření ${s.speakerGenitive}${s.affiliation ? ` (${s.affiliation})` : ''}:`,
-      ),
+      label: statementLabel(s.speakerGenitive, s.affiliation),
       runs: [{ text: ` ${quoted(s.quote)}` }],
     })),
   ]);

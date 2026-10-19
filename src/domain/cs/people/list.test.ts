@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderPeople, type Person } from '../index';
+import { renderPeople, withAffiliation, type Person } from '../index';
 
 const p = (
   salutation: Person['salutation'],
@@ -155,6 +155,33 @@ describe('participant lists', () => {
 
   it('renders nothing for nobody', () => {
     expect(renderPeople([], participants)).toBe('');
+  });
+});
+
+describe('affiliations as stored', () => {
+  it.each([
+    [[p('pani', 'Jana', 'Bílá', '3M', 'Ing.')], 'paní Ing. Jana Bílá (3M)'],
+    [[p('pani', 'Jana', 'Bílá', 'TU 1.A', 'Mgr.')], 'paní Mgr. Jana Bílá (TU 1.A)'],
+    [[p('pani', 'Jana', 'Bílá', ' učitelka fyziky ')], 'paní Jana Bílá (učitelka fyziky)'],
+    [
+      [p('pan', 'Adam', 'A', '1.A'), p('pan', 'Bořek', 'B', '1a')],
+      'pánové Adam A (1.A), Bořek B (1a)',
+    ],
+    [
+      [p('pan', 'Adam', 'A', ' 2.B '), p('pan', 'Bořek', 'B', '2.B')],
+      `pánové Adam A, Bořek B (oba${NB}2.B)`,
+    ],
+  ])('never rewrites what the form stored: %#', (people, text) => {
+    expect(renderPeople(people, { join: 'comma', order: 'input' })).toBe(text);
+  });
+
+  it.each([
+    [' Next Zone ', 'X (Next Zone)'],
+    ['3M', 'X (3M)'],
+    ['  ', 'X'],
+    [undefined, 'X'],
+  ])('withAffiliation(%j)', (affiliation, text) => {
+    expect(withAffiliation('X', affiliation)).toBe(text);
   });
 });
 

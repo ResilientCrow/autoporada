@@ -19,10 +19,19 @@ export interface ListOptions {
 
 const DEFAULT_GROUP_ORDER: readonly Salutation[] = ['slecna', 'pani', 'pan'];
 
+/**
+ * „Jan Novák (1.A)“: the text with a class or job in parentheses, as stored.
+ * Only the forms normalise class codes: „3M“ or „1. LF“ may be a company or a
+ * faculty, which no shape tells apart from a class.
+ */
+export function withAffiliation(text: string, affiliation: string | undefined): string {
+  const trimmed = affiliation?.trim();
+  return trimmed ? `${text} (${trimmed})` : text;
+}
+
 /** „Mgr. Jana Nováková (1.A)“ */
-export function renderPerson(p: Person, withAffiliation = true): string {
-  const affiliation = p.affiliation?.trim();
-  return withAffiliation && affiliation ? `${formatName(p)} (${affiliation})` : formatName(p);
+export function renderPerson(p: Person, showAffiliation = true): string {
+  return showAffiliation ? withAffiliation(formatName(p), p.affiliation) : formatName(p);
 }
 
 /** The person's class code, if their affiliation is one („1.A“, „L1B“); roles are not. */
@@ -75,8 +84,7 @@ function withClassRuns(people: readonly Person[], name: (p: Person) => string): 
         texts.push(i === run.length - 1 ? `${name(p)} ${together(run, classCode)}` : name(p)),
       );
     } else {
-      const affiliation = first.affiliation?.trim();
-      texts.push(affiliation ? `${name(first)} (${affiliation})` : name(first));
+      texts.push(withAffiliation(name(first), first.affiliation));
     }
     start = end;
   }

@@ -6,7 +6,7 @@ import type { Block } from '../model';
 import type { ComposeContext } from './context';
 import { futureBullet } from './future';
 import { inlineStudents } from './students';
-import { finalRuns, finalText, point, quoted, richBlocks, spacer } from './text';
+import { finalRuns, finalText, point, quoted, richBlocks, spacer, statementLabel } from './text';
 
 function futurePoint(
   heading: string,
@@ -71,9 +71,7 @@ function slotBlocks(item: SnapshotItem, ctx: ComposeContext): Block[] {
             item.title,
             item.quotes.map((q) => ({
               kind: 'partner',
-              label: finalText(
-                `vyjádření ${q.speakerGenitive}${q.affiliation ? ` (${q.affiliation})` : ''}:`,
-              ),
+              label: statementLabel(q.speakerGenitive, q.affiliation),
               quote: quoted(q.quote),
             })),
           );

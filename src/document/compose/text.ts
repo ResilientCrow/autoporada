@@ -1,4 +1,4 @@
-import { typographize, typographizeText } from '@/domain/cs';
+import { typographize, typographizeText, withAffiliation } from '@/domain/cs';
 import { paragraphRuns, type RichDoc } from '@/domain/richtext';
 
 import type { Block, Run } from '../model';
@@ -25,6 +25,11 @@ export function finalRuns(runs: readonly Run[], tokens?: Tokens): Run[] {
   return typographize(
     runs.map((r) => (tokens ? { ...r, text: replaceTokens(r.text, tokens) } : r)),
   );
+}
+
+/** „vyjádření pana Johna Doe (1.A):“ — the speaker is already in the 2nd case. */
+export function statementLabel(speakerGenitive: string, affiliation: string | undefined): string {
+  return finalText(`${withAffiliation(`vyjádření ${speakerGenitive}`, affiliation)}:`);
 }
 
 /**
