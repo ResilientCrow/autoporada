@@ -35,6 +35,25 @@ describe('proxy', () => {
     expect(response.headers.get('x-middleware-request-content-security-policy')).toBe(csp);
   });
 
+  it('drops a cookie sent twice before Next reads the header', () => {
+    const twice = proxy(
+      new NextRequest(`${ORIGIN}/`, {
+        headers: { cookie: '__Host-ap_session=A; theme=x; __Host-ap_session=B' },
+      }),
+    );
+    expect(twice.headers.get('x-middleware-request-cookie')).toBe('theme=x');
+    const only = proxy(
+      new NextRequest(`${ORIGIN}/`, {
+        headers: { cookie: '__Host-ap_session=A; __Host-ap_session=B' },
+      }),
+    );
+    expect(only.headers.get('x-middleware-override-headers')?.split(',')).not.toContain('cookie');
+    const once = proxy(
+      new NextRequest(`${ORIGIN}/`, { headers: { cookie: '__Host-ap_session=A' } }),
+    );
+    expect(once.headers.get('x-middleware-request-cookie')).toBe('__Host-ap_session=A');
+  });
+
   it('never redirects or answers: pages and routes check sign-in themselves', () => {
     const response = proxy(new NextRequest(`${ORIGIN}/porada`));
     expect(response.headers.get('x-middleware-next')).toBe('1');

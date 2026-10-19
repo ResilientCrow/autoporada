@@ -16,7 +16,9 @@ export function cookieValue(header: string | null, name: string): string | null 
 /**
  * This request's session token, by the rule above. Routes, actions and
  * pages all read it from the raw header: Next's cookies() keeps only the
- * last of two copies, so it cannot see a duplicate.
+ * last of two copies, so it cannot see a duplicate. The proxy has already
+ * dropped both (Next re-serializes the header when it forwards an action);
+ * this check stays for the code that runs without it, such as tests.
  */
 export const sessionTokenFrom = (cookieHeader: string | null): string | null =>
   cookieValue(cookieHeader, SESSION_COOKIE);
