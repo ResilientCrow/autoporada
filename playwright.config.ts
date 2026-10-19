@@ -13,7 +13,7 @@ const E2E_ENV = {
   OIDC_CLIENT_ID: 'autoporada-dev',
   OIDC_CLIENT_SECRET: 'dev-secret',
   MAIL_TRANSPORT: 'smtp',
-  MAIL_FROM: 'autoporada@ssps.cz',
+  MAIL_FROM: 'autoporada@example.org',
   SMTP_URL: 'smtp://localhost:1025',
   GOTENBERG_URL: 'http://localhost:3001',
 };

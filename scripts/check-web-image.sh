@@ -45,7 +45,7 @@ docker run -d --name "$name" \
   --env OIDC_CLIENT_CERT_FILE=/run/secrets/entra_cert \
   --env NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_FILE=/run/secrets/server_actions_key \
   --env MAIL_TRANSPORT=graph \
-  --env MAIL_FROM=autoporada@ssps.cz \
+  --env MAIL_FROM=autoporada@example.org \
   --env GOTENBERG_URL=http://gotenberg:3000 \
   "$image" >/dev/null
 
