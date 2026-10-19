@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { RULE_CODES } from '@/contracts';
+
 import { cs } from './cs';
 
 /** Flattens the nested catalogue into [path, text] pairs. */
@@ -26,5 +28,11 @@ describe('Czech copy catalogue', () => {
 
   it('uses an en dash, never a spaced hyphen', () => {
     expect(all.filter(([, text]) => text.includes(' - '))).toEqual([]);
+  });
+});
+
+describe('error copy', () => {
+  it('has a text for every rule code, and nothing else', () => {
+    expect(Object.keys(cs.rules).sort()).toEqual([...RULE_CODES].sort());
   });
 });
