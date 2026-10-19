@@ -13,7 +13,12 @@ import { exportsOf, ROUTE_FILES } from './entries';
 const PUBLIC_ROUTES: readonly string[] = [];
 
 /** Sign-in steps run before anyone is signed in; M7 adds jobs. */
-const SYSTEM_USE_CASES: readonly string[] = ['auth.beginLogin', 'auth.takeSignIn'];
+const SYSTEM_USE_CASES: readonly string[] = [
+  'auth.beginLogin',
+  'auth.completeSignIn',
+  'auth.recordRejection',
+  'auth.takeSignIn',
+];
 
 describe('public surface', () => {
   it('lists every route open without a session', async () => {
