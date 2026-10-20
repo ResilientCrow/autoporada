@@ -19,22 +19,26 @@ const PRINT_ONLY = /004d8c/i;
 const TOKEN = /--color-[\w-]+:\s*(#[0-9a-fA-F]{3,8})\b/g;
 /** CSS colour functions. */
 const COLOUR_FUNCTION = /(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\(/;
-/** `bg-[red]`, `!bg-[red]/50`, `bg-(--x)`, but not the variant `data-[x=y]:`. */
+/** `bg-[red]`, `!bg-[red]/50`, `-mt-[3px]`, `bg-(--x)`, but not the variant `data-[x=y]:`. */
 const ARBITRARY_VALUE =
-  /(?<![\w-])[a-z][a-z0-9-]*-(?:\[[^\]\s]+\]|\([^)\s]+\))(?:\/[\w.]+)?!?(?![\w:-])/;
+  /(?<![\w-])-?[a-z][a-z0-9-]*-(?:\[[^\]\s]+\]|\([^)\s]+\))(?:\/[\w.]+)?!?(?![\w:-])/;
 /** `[color:red]`, `hover:[--tw-x:1]`; not `[key: string]` (space) or `[a-z:]` (empty value). */
 const ARBITRARY_PROPERTY = /(?<![\w\]])\[-{0,2}[a-z][\w-]*:[^\s\]]+\]/;
+/** Colour utilities with a side or compound part: `border-t-`, `ring-offset-`, `drop-shadow-`. */
+const COLOUR_PREFIX =
+  'bg|text|border(?:-(?:x|y|t|r|b|l|s|e))?|ring-offset|ring|inset-ring|inset-shadow|text-shadow|drop-shadow|outline|fill|stroke|from|via|to|decoration|divide|placeholder|caret|accent|shadow';
 /** Utilities of the removed default palette: they silently generate nothing. */
 const DEAD_PALETTE = new RegExp(
-  '(?<![\\w-])(?:bg|text|border|ring|ring-offset|outline|fill|stroke|from|via|to|decoration|divide|placeholder|caret|accent|shadow)-' +
+  `(?<![\\w-])(?:${COLOUR_PREFIX})-` +
     '(?:white|black|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-(?:50|[1-9]00|950))?)(?![\\w-])',
 );
 /** The accent on anything but a background. */
-const ACCENT_ELSEWHERE =
-  /(?<![\w-])(?:text|border|outline|ring|decoration|fill|stroke|caret|divide|placeholder|from|via|to|shadow|accent)-accent(?![\w-])/;
+const ACCENT_ELSEWHERE = new RegExp(
+  `(?<![\\w-])(?:${COLOUR_PREFIX.replace('bg|', '')})-accent(?![\\w-])`,
+);
 const ACCENT_BACKGROUND = /(?<![\w-])bg-accent(?![\w-])/;
 /** The base layer owns the focus outline. */
-const FOCUS_REMOVAL = /(?<![\w-])outline-(?:none|hidden)(?![\w-])/;
+const FOCUS_REMOVAL = /(?<![\w-])outline-(?:none|hidden|0)(?![\w-])/;
 /** SVG paint other than currentColor, none, inherit. */
 const SVG_PAINT = /\b(?:fill|stroke)="(?!(?:currentColor|none|inherit)")[^"]*"/;
 
