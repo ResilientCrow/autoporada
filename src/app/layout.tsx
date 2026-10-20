@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 
 import { cs } from '@/ui/copy';
+import '@/ui/theme';
 
 export const metadata: Metadata = {
   title: cs.app.name,

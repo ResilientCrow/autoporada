@@ -71,7 +71,7 @@ These versions were checked on the web on 2026-10-18.
 | DOCX / PDF | **docx 9.12** (dolanmiu); **Gotenberg 8** child image with OpenSymbol and Liberation fonts (Times New Roman and Aptos Narrow if licensed) | Covers the format spec; LibreOffice stays isolated |
 | Rich text | TipTap 3, restricted schema, stored as JSON (never HTML) | |
 | UI | Tailwind 4 `@theme` with `--color-*: initial`, so only brand colours exist; **React Aria Components** | Accessibility, Czech date pickers |
-| Fonts | Mona Sans (body), Bitter (slab headings), Tinos (paper preview, metric-compatible with Times New Roman); Fontsource, self-hosted | OFL / Apache licences; works with CSP `font-src 'self'` |
+| Fonts | Mona Sans (body) and Bitter (slab headings), Fontsource CSS imported by `ui/theme` (ADR 0012); Tinos (paper preview, metric-compatible with Times New Roman) arrives with the first rendered preview. All self-hosted | OFL-1.1 (all three); works with CSP `font-src 'self'` |
 | Logs | pino JSON to stdout, with redaction | |
 | Edge | Stock Caddy 2.11 (automatic HTTPS, body size limit); rate limits live in the app | No custom Caddy build |
 | Tests | Vitest, fast-check, Playwright + axe, `mock-oauth2-server` (fake IdP), Mailpit | |

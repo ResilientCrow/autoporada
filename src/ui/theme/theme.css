@@ -1,0 +1,73 @@
+/* The only stylesheet of the app: colour manual tokens, fonts, surfaces (ADR 0012). */
+@import 'tailwindcss' source(none);
+@import '@fontsource-variable/mona-sans';
+@import '@fontsource-variable/bitter';
+@source '../../app';
+@source '..';
+@source not '../**/*.test.tsx';
+
+@theme {
+  --color-*: initial;
+  --color-ink: #22232a;
+  --color-navy-dark: #000e19;
+  --color-navy-mid: #00233f;
+  --color-digital: #0062b3;
+  --color-sublight: #cce8ff;
+  --color-light: #f7fbff;
+  --color-accent: #f5b800;
+  --font-*: initial;
+  --font-sans: 'Mona Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-slab: 'Bitter Variable', ui-serif, Georgia, serif;
+  --radius-*: initial;
+  --radius-brand: 0.25rem;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+}
+
+/* A surface = background + text + heading + the link and focus colours that pass on it. */
+@utility surface-page {
+  background-color: var(--color-light);
+  color: var(--color-ink);
+  --ap-heading: var(--color-navy-mid);
+  --ap-link: var(--color-digital);
+  --ap-focus: var(--color-digital);
+}
+
+@utility surface-dark {
+  background-color: var(--color-navy-dark);
+  color: var(--color-light);
+  --ap-heading: var(--color-light);
+  --ap-link: var(--color-light);
+  --ap-focus: var(--color-light);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply surface-page font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-slab);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--ap-heading);
+  }
+  a {
+    color: var(--ap-link);
+    text-decoration-line: underline;
+    text-underline-offset: 0.15em;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ap-focus);
+    outline-offset: 2px;
+  }
+  main[tabindex='-1']:focus {
+    outline: none;
+  }
+}

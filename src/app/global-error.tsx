@@ -1,6 +1,7 @@
 'use client';
 
 import { cs } from '@/ui/copy';
+import '@/ui/theme';
 
 /**
  * The last resort when rendering fails, in place of Next's built-in page,
