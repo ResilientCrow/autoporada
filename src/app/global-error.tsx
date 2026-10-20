@@ -1,6 +1,7 @@
 'use client';
 
 import { appError, pageTitle } from '@/ui/copy';
+import { buttonStyles, SlantLabel } from '@/ui/kit';
 import '@/ui/theme';
 
 /**
@@ -9,16 +10,19 @@ import '@/ui/theme';
  * retry() asks the server again (reset() would re-render the same error).
  * Next's static 500 page, used only when a page module itself fails to
  * load, is still its own and renders unstyled under the CSP.
+ *
+ * No shell (if it threw, it would throw again) and no React Aria: this page
+ * has no csp-nonce meta for React Aria's runtime <style> (ADR 0012).
  */
 export default function GlobalError({ retry }: { readonly retry: () => void }) {
   return (
     <html lang="cs">
       <body>
         <title>{pageTitle(appError.title)}</title>
-        <main>
-          <h1>{appError.title}</h1>
+        <main id="obsah" className="mx-auto flex max-w-3xl flex-col items-start gap-4 p-4">
+          <SlantLabel level={1}>{appError.title}</SlantLabel>
           <p>{appError.text}</p>
-          <button type="button" onClick={() => retry()}>
+          <button type="button" className={buttonStyles('primary')} onClick={() => retry()}>
             {appError.retry}
           </button>
         </main>

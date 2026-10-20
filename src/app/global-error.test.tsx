@@ -22,6 +22,12 @@ describe('GlobalError', () => {
     expect(html).not.toMatch(/style/i);
   });
 
+  it('uses no React Aria, whose runtime style would find no nonce here', () => {
+    const html = renderToStaticMarkup(<GlobalError retry={() => {}} />);
+    expect(html).not.toContain('data-rac');
+    expect(html).toMatch(/<button type="button" class="[^"]+">/);
+  });
+
   it('asks the server again when the user retries', () => {
     const retry = vi.fn();
     find(GlobalError({ retry }), 'button')?.props.onClick?.();
