@@ -17,7 +17,7 @@ const noop = () => undefined;
 
 function render(issues: Parameters<typeof Form>[0]['issues'] = null): string {
   return renderToStaticMarkup(
-    <Form id="f" spec={spec} issues={issues} onSubmit={noop}>
+    <Form id="f" spec={spec} issues={issues} attempt={0} onSubmit={noop}>
       <TextField name="title" />
       <TextField name="note" description={NOTE} multiline />
     </Form>,
@@ -65,7 +65,7 @@ describe('Form and TextField', () => {
   it('throws for a name the spec does not declare', () => {
     expect(() =>
       renderToStaticMarkup(
-        <Form id="f" spec={spec} issues={null} onSubmit={noop}>
+        <Form id="f" spec={spec} issues={null} attempt={0} onSubmit={noop}>
           <TextField name="typo" />
         </Form>,
       ),
@@ -75,5 +75,29 @@ describe('Form and TextField', () => {
   it('renders markup the CSP accepts', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
     expect(cspMarkupProblems(render({ title: 'required' }))).toEqual([]);
+  });
+
+  describe('error summary', () => {
+    const bad = render({ note: 'too-long', title: 'required', 'other.0': 'invalid' });
+
+    it('is absent without issues', () => {
+      expect(html).not.toContain('role="alert"');
+      expect(render({})).not.toContain('role="alert"');
+    });
+
+    it('leads the form: focusable container, nested alert, title, then links in spec order', () => {
+      expect(bad).toMatch(/<form [^>]*><div tabindex="-1"[^>]*><div role="alert"/);
+      expect(bad).toMatch(new RegExp(`<h2 [^>]*>.*${cs.form.summaryTitle}</h2>`));
+      const items = [...bad.matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1]);
+      expect(items).toEqual([
+        `<a href="#f-title">Název: ${OWN}</a>`,
+        `<a href="#f-note">Poznámka: ${cs.fieldIssues['too-long']}</a>`,
+        cs.fieldIssues.invalid,
+      ]);
+    });
+
+    it('renders markup the CSP accepts', () => {
+      expect(cspMarkupProblems(bad)).toEqual([]);
+    });
   });
 });

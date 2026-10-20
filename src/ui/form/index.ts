@@ -1,3 +1,3 @@
 export { Form } from './Form';
 export { TextField } from './TextField';
-export type { FormSpec } from './spec';
+export { textOf, type FormSpec } from './spec';

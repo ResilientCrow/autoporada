@@ -33,6 +33,12 @@ export const gallery = {
       nicknameHint: 'Zobrazí se ostatním žákům.',
       reason: 'Důvod žádosti',
     },
+    live: {
+      name: 'Jméno',
+      reason: 'Důvod žádosti',
+      reasonTooLong: 'Důvod může mít nejvýše 40\u00A0znaků.',
+      sent: 'Formulář je v\u00A0pořádku.',
+    },
     failed: {
       name: 'Jméno',
       reason: 'Důvod žádosti',

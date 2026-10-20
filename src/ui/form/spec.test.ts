@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldIssueCode } from '@/contracts';
 import { fieldIssues } from '@/ui/copy';
-import { fieldId, fieldMessage, type FieldSpec, type FormSpec } from './spec';
+import { fieldId, fieldMessage, summaryItems, textOf, type FieldSpec, type FormSpec } from './spec';
 
 const title: FieldSpec = {
   label: 'Název',
@@ -36,5 +36,31 @@ describe('fieldMessage', () => {
 
   it('covers all four codes', () => {
     expect(codes).toHaveLength(4);
+  });
+});
+
+describe('summaryItems', () => {
+  it('lists issues in spec order, linked, with unknown paths last and unlinked', () => {
+    const items = summaryItems('f', spec, { x: 'invalid', note: 'too-long', title: 'required' });
+    expect(items).toEqual([
+      { id: 'f-title', text: 'Název: Zadejte název.' },
+      { id: 'f-note', text: `Poznámka: ${fieldIssues['too-long']}` },
+      { id: null, text: fieldIssues.invalid },
+    ]);
+  });
+
+  it('is empty without issues', () => {
+    expect(summaryItems('f', spec, {})).toEqual([]);
+  });
+});
+
+describe('textOf', () => {
+  it('returns the text, or an empty string when absent or not text', () => {
+    const data = new FormData();
+    data.set('a', 'abc');
+    data.set('file', new Blob(['x']), 'x.txt');
+    expect(textOf(data, 'a')).toBe('abc');
+    expect(textOf(data, 'missing')).toBe('');
+    expect(textOf(data, 'file')).toBe('');
   });
 });

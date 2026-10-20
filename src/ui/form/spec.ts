@@ -1,4 +1,4 @@
-import type { FieldIssueCode } from '@/contracts';
+import type { FieldIssueCode, FieldIssues } from '@/contracts';
 import { fieldIssues } from '@/ui/copy';
 
 /**
@@ -23,4 +23,42 @@ export function fieldId(formId: string, name: string): string {
 /** The text for one issue: the field's own message, else the generic one. */
 export function fieldMessage(spec: FormSpec, name: string, code: FieldIssueCode): string {
   return spec[name]?.messages?.[code] ?? fieldIssues[code];
+}
+
+export interface SummaryEntry {
+  /** The control to link to; null for a path the spec does not declare. */
+  readonly id: string | null;
+  readonly text: string;
+}
+
+/**
+ * What the error summary lists: one entry per issue, in the spec's (page) order,
+ * as "Label: message" linked to its control. Paths the spec lacks come last,
+ * unlinked, with the generic message.
+ */
+export function summaryItems(
+  formId: string,
+  spec: FormSpec,
+  issues: FieldIssues,
+): readonly SummaryEntry[] {
+  const known = Object.keys(spec).flatMap((name) => {
+    const code = issues[name];
+    if (code === undefined) return [];
+    return [
+      {
+        id: fieldId(formId, name),
+        text: `${spec[name]!.label}: ${fieldMessage(spec, name, code)}`,
+      },
+    ];
+  });
+  const unknown = Object.keys(issues)
+    .filter((name) => !(name in spec))
+    .map((name) => ({ id: null, text: fieldIssues[issues[name]!] }));
+  return [...known, ...unknown];
+}
+
+/** A field's text from submitted data; '' when it is absent or not text (a file). */
+export function textOf(data: FormData, name: string): string {
+  const value = data.get(name);
+  return typeof value === 'string' ? value : '';
 }

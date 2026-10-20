@@ -60,3 +60,38 @@ test('the built stylesheet holds only the manual, and Czech letters come from th
   );
   expect(faces).toBeGreaterThan(0);
 });
+
+test('a failed submit puts the summary in focus, and its link leads to the field', async ({
+  page,
+  expectAccessible,
+}) => {
+  const { live } = cs.gallery.forms;
+  await page.goto('/vzornik');
+  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  const form = page.locator('form#demo-live');
+  const summary = form.locator('[tabindex="-1"]').filter({ has: page.getByRole('alert') });
+  const focused = () => page.evaluate(() => document.activeElement?.id ?? '');
+  const isSummaryFocused = () => summary.evaluate((el) => el === document.activeElement);
+
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await expect(summary).toBeFocused();
+  await expectAccessible();
+
+  await form.getByRole('link', { name: new RegExp(`^${live.name}:`) }).click();
+  const name = form.getByLabel(live.name);
+  await expect(name).toBeFocused();
+  await expect(form.getByText(live.name, { exact: true }).first()).toBeInViewport();
+  expect(await focused()).toBe('demo-live-name');
+
+  await name.fill('Eva');
+  await form.getByLabel(live.reason).fill('x'.repeat(41));
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await expect(summary).toBeFocused();
+  expect(await isSummaryFocused()).toBe(true);
+  await expect(summary).toContainText(live.reasonTooLong);
+
+  await form.getByLabel(live.reason).fill('Stačí to.');
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await expect(form.getByRole('status')).toHaveText(live.sent);
+  await expect(summary).toHaveCount(0);
+});
