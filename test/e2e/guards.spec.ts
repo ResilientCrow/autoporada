@@ -57,3 +57,18 @@ test.describe('expectAccessible', () => {
     await expect(expectAccessible()).rejects.toThrow(/color-contrast/);
   });
 });
+
+test.describe('expectFocusRings', () => {
+  test('rejects a stop whose outline is removed, deep in main', async ({
+    page,
+    expectFocusRings,
+  }) => {
+    await page.setContent(
+      '<!doctype html><html lang="cs"><head><title>t</title>' +
+        '<style>:focus-visible{outline:2px solid blue}.x:focus-visible{outline:none}</style></head><body>' +
+        '<header><a href="/">a</a></header>' +
+        '<main><input aria-label="x"><input class="x" aria-label="y"></main></body></html>',
+    );
+    await expect(expectFocusRings()).rejects.toThrow(/input/);
+  });
+});

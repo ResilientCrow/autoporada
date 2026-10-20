@@ -35,7 +35,7 @@ interface Fixtures {
   expectNoReflow: () => Promise<void>;
 }
 
-const MAX_TAB_STOPS = 40;
+const MAX_TAB_STOPS = 80;
 
 export const test = base.extend<Fixtures>({
   cspViolations: [
@@ -83,23 +83,48 @@ export const test = base.extend<Fixtures>({
 
   expectFocusRings: async ({ page }, provide) => {
     await provide(async () => {
+      // Start at the top, so the first Tab is the skip link and the header is walked too.
+      await page.evaluate(() => {
+        for (const stale of document.querySelectorAll('[data-focus-walked]')) {
+          stale.removeAttribute('data-focus-walked');
+        }
+        const body = document.body;
+        const had = body.hasAttribute('tabindex');
+        if (!had) body.tabIndex = -1;
+        body.focus();
+        if (!had) body.removeAttribute('tabindex');
+      });
       const missing: string[] = [];
-      const seen = new Set<string>();
-      for (let stop = 0; stop < MAX_TAB_STOPS; stop++) {
+      const regions = new Set<string>();
+      let stops = 0;
+      for (;;) {
+        expect(stops, 'the tab walk never returned to a tagged element').toBeLessThan(
+          MAX_TAB_STOPS,
+        );
         await page.keyboard.press('Tab');
-        const ring = await page.evaluate(() => {
+        const stop = await page.evaluate(() => {
           const el = document.activeElement;
           if (!el || el === document.body) return null;
+          if (el.hasAttribute('data-focus-walked')) return null;
+          el.setAttribute('data-focus-walked', '');
           const style = getComputedStyle(el);
+          const region = ['header', 'main', 'footer'].find((tag) => el.closest(tag)) ?? 'none';
           const name = `${el.tagName.toLowerCase()} "${(el.textContent ?? '').trim().slice(0, 30)}"`;
-          return { name, style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
+          return { name, region, style: style.outlineStyle, width: parseFloat(style.outlineWidth) };
         });
-        if (ring === null || seen.has(ring.name)) break;
-        seen.add(ring.name);
-        if (ring.style === 'none' || ring.width < 2) missing.push(ring.name);
+        if (stop === null) break;
+        stops++;
+        regions.add(stop.region);
+        if (stop.style === 'none' || stop.width < 2) missing.push(stop.name);
       }
-      expect(seen.size).toBeGreaterThan(0);
+      expect(stops).toBeGreaterThan(0);
       expect(missing).toEqual([]);
+      for (const tag of ['header', 'main', 'footer']) {
+        const present = await page
+          .locator(`${tag} :is(a[href], button, input, select, textarea, [tabindex]):visible`)
+          .count();
+        if (present > 0) expect(regions, `no tab stop inside <${tag}>`).toContain(tag);
+      }
     });
   },
 
