@@ -7,9 +7,13 @@ import { describe, expect, it } from 'vitest';
 const ROOT = process.cwd();
 const USE_CLIENT = /^\s*(?:\/\*[\s\S]*?\*\/\s*)*['"]use client['"]/;
 const IMPORTS_ARIA = /from\s+['"]react-aria-components(?:\/[^'"]*)?['"]/;
-const IMPORTS_CS = /import\s*\{[^}]*\bcs\b[^}]*\}\s*from\s*['"]@\/ui\/copy['"]/;
+/** The copy barrel (or its index) imported as a namespace, as a default, or with `cs` named. */
+const IMPORTS_CS =
+  /import\s+(?!type\b)(?:\*\s*as\s+\w+|\w+\s*(?:,\s*\{[^}]*\})?|\{[^}]*\bcs\b[^}]*\})\s*from\s*['"]@\/ui\/copy(?:\/index)?['"]/;
 const EXPORT_NAME =
   /^export\s+(?:default\b|(?:async\s+)?(?:function|const|class|let|var|type|interface|enum)\s+([A-Za-z_$][\w$]*))/gm;
+/** `export { a, B as C }`; the exported name is the one after `as`. */
+const EXPORT_LIST = /^export\s*(?:type\s*)?\{([^}]*)\}/gm;
 const ALLOWED_EXPORT = /^(?:[A-Z][A-Za-z0-9]*|use[A-Z]\w*)$/;
 
 function isClient(text: string): boolean {
@@ -22,9 +26,17 @@ function boundaryProblems(text: string): string[] {
   const client = isClient(text);
   if (IMPORTS_ARIA.test(text) && !client) problems.push("React Aria without 'use client'");
   if (client) {
-    const bad = [...text.matchAll(EXPORT_NAME)]
-      .map((m) => m[1])
-      .filter((name): name is string => name !== undefined && !ALLOWED_EXPORT.test(name));
+    const listed = [...text.matchAll(EXPORT_LIST)].flatMap((m) =>
+      (m[1] ?? '')
+        .split(',')
+        .map((part) => part.trim().replace(/^type\s+/, ''))
+        .filter((part) => part !== '')
+        .map((part) => part.split(/\s+as\s+/).pop()!),
+    );
+    const bad = [...[...text.matchAll(EXPORT_NAME)].map((m) => m[1]), ...listed].filter(
+      (name): name is string =>
+        name !== undefined && name !== 'default' && !ALLOWED_EXPORT.test(name),
+    );
     if (bad.length > 0) problems.push(`client file exports ${bad.join(', ')}`);
     if (IMPORTS_CS.test(text)) problems.push('client file imports cs; use an area object');
   }
@@ -56,6 +68,27 @@ describe('boundaryProblems', () => {
       [],
     ],
     ["import { cs } from '@/ui/copy';\nexport const x = cs;", []],
+    [
+      "'use client';\nimport { cs } from '@/ui/copy/index';",
+      ['client file imports cs; use an area object'],
+    ],
+    [
+      "'use client';\nimport * as copy from '@/ui/copy';",
+      ['client file imports cs; use an area object'],
+    ],
+    [
+      "'use client';\nimport copy from '@/ui/copy';",
+      ['client file imports cs; use an area object'],
+    ],
+    [
+      "'use client';\nimport { cs as texts } from '@/ui/copy';",
+      ['client file imports cs; use an area object'],
+    ],
+    ["'use client';\nimport type { PrivacyCopy } from '@/ui/copy';", []],
+    ["'use client';\nconst a = 1;\nexport { a, B };", ['client file exports a']],
+    ["'use client';\nconst x = 1;\nexport { x as Y };", []],
+    ["'use client';\nconst Y = 1;\nexport { Y as x };", ['client file exports x']],
+    ["'use client';\nconst X = 1;\nexport { X as default };", []],
   ])('%#', (text, expected) => {
     expect(boundaryProblems(text)).toEqual(expected);
   });

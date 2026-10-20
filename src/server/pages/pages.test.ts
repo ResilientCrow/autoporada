@@ -145,7 +145,9 @@ describe('signed-in pages', () => {
     await expect(requireSignedIn('/porada')).rejects.toThrow(
       'redirect:/prihlaseni?returnTo=%2Fporada',
     );
-    await expect(requireSignedIn('//evil.example')).rejects.toThrow('returnTo=%2F');
+    await expect(requireSignedIn('//evil.example')).rejects.toThrow(
+      /^redirect:\/prihlaseni\?returnTo=%2F$/,
+    );
     expect(runRegistered).not.toHaveBeenCalled();
   });
 

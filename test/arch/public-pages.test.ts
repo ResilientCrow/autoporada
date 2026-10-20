@@ -4,19 +4,27 @@ import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const APP = join(process.cwd(), 'src/app');
-const GUARDED = /\b(?:requireSignedIn|optionalSignedIn)\(/;
+/** optionalSignedIn renders for anyone, so only this call is a guard. */
+const GUARDED = /\brequireSignedIn\(/;
+const COMMENTS = /\/\*[\s\S]*?\*\/|\/\/.*$/gm;
 
 /**
  * Pages that need no sign-in check, each reviewed on purpose: the sign-in page
- * itself, the gallery (404 in production) and the 404 page. Adding a path here
+ * itself, the gallery (404 in production), the privacy notice (it adapts to a
+ * signed-in viewer but is for everyone) and the 404 page. Adding a path here
  * widens the anonymous surface, so the edit shows in review.
  */
-const OPEN = new Set(['prihlaseni/page.tsx', 'vzornik/page.tsx', 'not-found.tsx']);
+const OPEN = new Set([
+  'prihlaseni/page.tsx',
+  'vzornik/page.tsx',
+  'ochrana-osobnich-udaju/page.tsx',
+  'not-found.tsx',
+]);
 
 /** The pages that neither check the viewer nor are on the reviewed list. */
 function unguarded(files: Readonly<Record<string, string>>): string[] {
   return Object.entries(files)
-    .filter(([path, text]) => !OPEN.has(path) && !GUARDED.test(text))
+    .filter(([path, text]) => !OPEN.has(path) && !GUARDED.test(text.replace(COMMENTS, '')))
     .map(([path]) => path);
 }
 
@@ -38,10 +46,25 @@ describe('unguarded', () => {
   it('accepts a checked page and a reviewed one', () => {
     expect(
       unguarded({
-        'a/page.tsx': 'const v = await optionalSignedIn();',
+        'a/page.tsx': 'const v = await requireSignedIn("/a");',
         'vzornik/page.tsx': '',
       }),
     ).toEqual([]);
+  });
+
+  it('counts only requireSignedIn: optionalSignedIn renders for anyone', () => {
+    expect(unguarded({ 'b/page.tsx': 'const v = await optionalSignedIn();' })).toEqual([
+      'b/page.tsx',
+    ]);
+  });
+
+  it('ignores a call that is only in a comment', () => {
+    expect(
+      unguarded({
+        'c/page.tsx': '// requireSignedIn(\nexport default function P() {}',
+        'd/page.tsx': '/* await requireSignedIn("/d") */\nexport default function P() {}',
+      }),
+    ).toEqual(['c/page.tsx', 'd/page.tsx']);
   });
 });
 

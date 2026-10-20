@@ -29,8 +29,11 @@ describe('SignInPanel', () => {
   });
 
   it('tells about the data and the account rule before the button', () => {
-    const at = (text: string) => html.indexOf(text);
-    expect(at(cs.signIn.data)).toBeGreaterThan(-1);
+    const at = (text: string) => {
+      const index = html.indexOf(text);
+      expect(index, `"${text}" is on the page`).toBeGreaterThan(-1);
+      return index;
+    };
     expect(at(cs.signIn.data)).toBeLessThan(at(cs.signIn.privacyLink));
     expect(at(cs.signIn.privacyLink)).toBeLessThan(at(cs.signIn.button));
     expect(at(cs.signIn.accounts)).toBeLessThan(at(cs.signIn.button));
