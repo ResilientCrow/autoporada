@@ -24,4 +24,19 @@ export const gallery = {
     info: 'Změny se ukládají průběžně.',
     problem: 'Zprávu se nepodařilo odeslat.',
   },
+  forms: {
+    title: 'Formulář',
+    submit: 'Odeslat',
+    plain: {
+      name: 'Jméno',
+      nickname: 'Přezdívka',
+      nicknameHint: 'Zobrazí se ostatním žákům.',
+      reason: 'Důvod žádosti',
+    },
+    failed: {
+      name: 'Jméno',
+      reason: 'Důvod žádosti',
+      reasonTooLong: 'Důvod je delší, než je povoleno.',
+    },
+  },
 } as const;

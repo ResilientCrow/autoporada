@@ -14,18 +14,26 @@ describe('Gallery', () => {
     expect(html).toMatch(new RegExp(`<h1 [^>]*>.*${cs.gallery.title}.*</h1>`));
   });
 
-  it.each([cs.gallery.statuses.title, cs.gallery.buttons.title, cs.gallery.notices.title])(
-    'has the section %s',
-    (title) => {
-      expect(html).toMatch(new RegExp(`<h2 [^>]*>${title}</h2>`));
-    },
-  );
+  it.each([
+    cs.gallery.statuses.title,
+    cs.gallery.buttons.title,
+    cs.gallery.notices.title,
+    cs.gallery.forms.title,
+  ])('has the section %s', (title) => {
+    expect(html).toMatch(new RegExp(`<h2 [^>]*>${title}</h2>`));
+  });
 
   it('shows all five chips and both notices, none of them live', () => {
     for (const label of Object.values(cs.gallery.statuses).slice(1)) expect(html).toContain(label);
     expect(html).toContain(cs.gallery.notices.info);
     expect(html).toContain(cs.gallery.notices.problem);
     expect(html).not.toMatch(/role="(status|alert)"/);
+  });
+
+  it('shows the error form with its issues and the plain form without', () => {
+    expect(html).toContain(cs.gallery.forms.failed.reasonTooLong);
+    expect(html).toContain(cs.fieldIssues.required);
+    expect(html.match(/aria-invalid="true"/g)).toHaveLength(2);
   });
 
   it('renders markup the CSP accepts', () => {

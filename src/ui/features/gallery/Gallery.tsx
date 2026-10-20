@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { cs } from '@/ui/copy';
 import { SlantLabel } from '@/ui/kit';
 
+import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
 
 /** The pattern gallery: each UI part, once, for the look and accessibility checks (inside a Shell). */
@@ -17,6 +18,10 @@ export function Gallery() {
         </Link>
       </p>
       <KitSections />
+      <section aria-labelledby="formular">
+        <h2 id="formular">{cs.gallery.forms.title}</h2>
+        <FormDemos />
+      </section>
     </>
   );
 }
