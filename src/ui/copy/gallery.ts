@@ -11,6 +11,14 @@ export const gallery = {
     attention: 'Vráceno',
     stopped: 'Zamítnuto',
   },
+  buttons: {
+    title: 'Tlačítka',
+    primary: 'Hlavní akce',
+    secondary: 'Vedlejší akce',
+    disabled: 'Nedostupná akce',
+    pending: 'Odesílá se',
+    onDark: 'Na tmavém pozadí',
+  },
   notices: {
     title: 'Oznámení',
     info: 'Změny se ukládají průběžně.',

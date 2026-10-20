@@ -1,6 +1,6 @@
 'use client';
 
-import { cs } from '@/ui/copy';
+import { appError } from '@/ui/copy';
 import '@/ui/theme';
 
 /**
@@ -14,12 +14,12 @@ export default function GlobalError({ retry }: { readonly retry: () => void }) {
   return (
     <html lang="cs">
       <body>
-        <title>{cs.appError.title}</title>
+        <title>{appError.title}</title>
         <main>
-          <h1>{cs.appError.title}</h1>
-          <p>{cs.appError.text}</p>
+          <h1>{appError.title}</h1>
+          <p>{appError.text}</p>
           <button type="button" onClick={() => retry()}>
-            {cs.appError.retry}
+            {appError.retry}
           </button>
         </main>
       </body>

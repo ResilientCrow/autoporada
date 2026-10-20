@@ -5,7 +5,8 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
 
-import { ArrowLink, Card, Notice, SlantLabel, StatusChip } from './index';
+import { buttonStyles } from './button-styles';
+import { ArrowLink, Button, Card, Notice, SlantLabel, StatusChip } from './index';
 
 const TEXT = cs.gallery.title;
 const html = renderToStaticMarkup;
@@ -102,5 +103,53 @@ describe('Notice', () => {
         </Notice>,
       ),
     ).not.toContain('role=');
+  });
+});
+
+describe('buttonStyles', () => {
+  it.each([
+    ['primary', 'bg-digital text-light'],
+    ['secondary', 'bg-light text-digital'],
+    ['onDark', 'bg-transparent text-light'],
+  ] as const)('%s', (variant, look) => {
+    const styles = buttonStyles(variant);
+    expect(styles).toContain(look);
+    expect(styles).toContain('min-h-11');
+    expect(styles).toContain('no-underline');
+    expect(styles).not.toMatch(/opacity|outline/);
+  });
+
+  it('is primary by default', () => {
+    expect(buttonStyles()).toBe(buttonStyles('primary'));
+  });
+});
+
+describe('Button', () => {
+  it('is a native button with its type, name and value', () => {
+    const out = html(
+      <Button type="submit" name="scope" value="all">
+        {TEXT}
+      </Button>,
+    );
+    expect(out).toMatch(/^<button /);
+    expect(out).toContain('type="submit"');
+    expect(out).toContain('name="scope"');
+    expect(out).toContain('value="all"');
+    expect(out).toContain(buttonStyles('primary'));
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('is a plain button by default, in the variant asked for', () => {
+    const out = html(<Button variant="secondary">{TEXT}</Button>);
+    expect(out).toContain('type="button"');
+    expect(out).toContain(buttonStyles('secondary'));
+  });
+
+  it('is disabled when asked', () => {
+    expect(html(<Button isDisabled>{TEXT}</Button>)).toMatch(/<button [^>]*disabled=""/);
+  });
+
+  it('marks itself pending', () => {
+    expect(html(<Button isPending>{TEXT}</Button>)).toContain('data-pending="true"');
   });
 });

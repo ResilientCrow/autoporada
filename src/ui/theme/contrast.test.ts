@@ -75,6 +75,11 @@ describe('surfaces', () => {
 describe('planned pairs', () => {
   it.each([
     ['light', 'digital', 'primary button'],
+    ['light', 'navy-mid', 'primary button hovered'],
+    ['light', 'navy-dark', 'primary button pressed, on dark'],
+    ['digital', 'light', 'secondary button'],
+    ['digital', 'sublight', 'secondary button hovered'],
+    ['navy-mid', 'sublight', 'disabled button'],
     ['ink', 'sublight', 'card, waiting chip'],
     ['navy-mid', 'sublight', 'card heading'],
     ['ink', 'accent', 'attention chip'],
@@ -88,6 +93,8 @@ describe('planned pairs', () => {
     ['ink', 'light', 'input border'],
     ['ink', 'sublight', 'input border on a card'],
     ['digital', 'sublight', 'info notice border'],
+    ['digital', 'light', 'secondary button border'],
+    ['light', 'navy-dark', 'button border on dark'],
   ])('non-text %s on %s reaches 3 (%s)', (fg, bg) => {
     expect(ratio(fg, bg)).toBeGreaterThanOrEqual(3);
   });

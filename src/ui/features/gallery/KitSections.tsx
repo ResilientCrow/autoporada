@@ -1,5 +1,5 @@
 import { cs } from '@/ui/copy';
-import { Notice, StatusChip } from '@/ui/kit';
+import { Button, Notice, StatusChip } from '@/ui/kit';
 
 const TONES = ['neutral', 'waiting', 'done', 'attention', 'stopped'] as const;
 
@@ -16,6 +16,18 @@ export function KitSections() {
             </li>
           ))}
         </ul>
+      </section>
+      <section aria-labelledby="tlacitka">
+        <h2 id="tlacitka">{cs.gallery.buttons.title}</h2>
+        <div className="flex flex-wrap gap-2">
+          <Button>{cs.gallery.buttons.primary}</Button>
+          <Button variant="secondary">{cs.gallery.buttons.secondary}</Button>
+          <Button isDisabled>{cs.gallery.buttons.disabled}</Button>
+          <Button isPending>{cs.gallery.buttons.pending}</Button>
+        </div>
+        <div className="surface-dark mt-2 p-3">
+          <Button variant="onDark">{cs.gallery.buttons.onDark}</Button>
+        </div>
       </section>
       <section aria-labelledby="oznameni">
         <h2 id="oznameni">{cs.gallery.notices.title}</h2>

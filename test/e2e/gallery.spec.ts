@@ -1,3 +1,5 @@
+import { cs } from '@/ui/copy';
+
 import { expect, test } from './fixtures';
 
 /** The seven of the colour manual; Tailwind's preflight adds the transparent #0000. */
@@ -16,6 +18,23 @@ test('the gallery loads, hydrates and passes axe', async ({ page, expectAccessib
   await page.goto('/vzornik');
   await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
   await expectAccessible();
+});
+
+test('React Aria styles its pressables with the page nonce, and a press breaks no policy', async ({
+  page,
+}) => {
+  await page.goto('/vzornik');
+  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  const style = page.locator('head > style#react-aria-pressable-style');
+  await expect(style).toHaveCount(1);
+  const metaNonce = await page
+    .locator('meta[name="csp-nonce"]')
+    .evaluate((m) => (m as HTMLMetaElement).nonce);
+  expect(metaNonce).not.toBe('');
+  expect(await style.evaluate((s) => (s as HTMLStyleElement).nonce)).toBe(metaNonce);
+  const button = page.getByRole('button', { name: cs.gallery.buttons.primary });
+  expect(await button.evaluate((b) => getComputedStyle(b).touchAction)).toBe('manipulation');
+  await button.click();
 });
 
 test('the built stylesheet holds only the manual, and Czech letters come from the web font', async ({
