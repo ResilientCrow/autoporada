@@ -9,7 +9,7 @@ test('the home page sends an anonymous visitor to the sign-in page, in Czech', a
   await page.goto('/');
   await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Přihlášení');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.signIn.title);
   await expect(page.getByRole('link', { name: cs.signIn.button })).toHaveAttribute(
     'href',
     '/auth/login?returnTo=%2F',
@@ -22,9 +22,7 @@ test('the sign-in page names only known errors, with the code to report', async 
   expectAccessible,
 }) => {
   await page.goto('/prihlaseni?chyba=failed&kod=abcdef12-3456');
-  await expect(page.getByRole('main').getByRole('alert')).toContainText(
-    'Přihlášení se nepodařilo.',
-  );
+  await expect(page.getByRole('main').getByRole('alert')).toContainText(cs.signIn.errors.failed);
   await expect(page.getByRole('main').getByRole('alert')).toContainText('abcdef12-3456');
   await expectAccessible();
   await page.goto('/prihlaseni?chyba=%3Cscript%3E&kod=%3Cb%3E');

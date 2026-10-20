@@ -24,6 +24,7 @@ const SCREENS = [
 for (const [name, url, status, persona] of SCREENS) {
   test(`${name} is a well-formed, accessible, keyboard-friendly page`, async ({
     page,
+    hydrated,
     expectAccessible,
     attachScreenshot,
     expectSkipLink,
@@ -37,7 +38,7 @@ for (const [name, url, status, persona] of SCREENS) {
     await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page).toHaveTitle(TITLE_SUFFIX);
-    await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+    await hydrated();
     if (persona === HEADMASTER && url === '/') {
       await expect(page.getByText(cs.home.statusActive, { exact: true })).toBeVisible();
       await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
@@ -55,6 +56,7 @@ for (const [name, url, status, persona] of SCREENS) {
 
 test('the error page answers 500 and passes axe', async ({
   page,
+  hydrated,
   expectAccessible,
   attachScreenshot,
   expectFocusRings,
@@ -64,7 +66,7 @@ test('the error page answers 500 and passes axe', async ({
   expect(response?.status()).toBe(500);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.appError.title);
   await expect(page).toHaveTitle(TITLE_SUFFIX);
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await hydrated();
   await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
   await expectAccessible();
   await attachScreenshot('the error page');
@@ -77,6 +79,7 @@ test('the error page answers 500 and passes axe', async ({
 test('the sign-in page works without JavaScript and loads no React Aria', async ({
   browser,
   page,
+  hydrated,
 }) => {
   const plain = await browser.newContext({ javaScriptEnabled: false });
   const bare = await plain.newPage();
@@ -87,6 +90,6 @@ test('the sign-in page works without JavaScript and loads no React Aria', async 
   await plain.close();
 
   await page.goto('/prihlaseni');
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await hydrated();
   await expect(page.locator('#react-aria-pressable-style')).toHaveCount(0);
 });

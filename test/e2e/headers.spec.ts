@@ -12,19 +12,34 @@ const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
 };
 
-test('a page runs only its own nonced scripts', async ({ page, expectAccessible }) => {
-  const response = await page.goto('/prihlaseni?chyba=failed&kod=abcdef12-3456');
-  const nonce = nonceOf(response?.headers()['content-security-policy']);
-  expect(nonce).toBeTruthy();
-  // Hydrated: Next's inline bootstrap and its chunks both ran.
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
-  const scripts = await page
-    .locator('script')
-    .evaluateAll((all) => all.map((s) => (s as HTMLScriptElement).nonce));
-  expect(scripts.length).toBeGreaterThan(0);
-  expect(new Set(scripts)).toEqual(new Set([nonce]));
-  await expectAccessible();
-});
+const NONCED_PAGES = [
+  ['the sign-in page', '/prihlaseni?chyba=failed&kod=abcdef12-3456', null],
+  ['the privacy notice', '/ochrana-osobnich-udaju', null],
+  ['the gallery', '/vzornik', null],
+  ['the 404 page', '/tato-stranka-neexistuje', null],
+  ['the signed-in home page', '/', /^Učitelka/],
+] as const;
+
+for (const [name, url, persona] of NONCED_PAGES) {
+  test(`${name} runs only its own nonced scripts`, async ({
+    page,
+    hydrated,
+    expectAccessible,
+    signInAs,
+  }) => {
+    if (persona) await signInAs(persona);
+    const response = await page.goto(url);
+    const nonce = nonceOf(response?.headers()['content-security-policy']);
+    expect(nonce).toBeTruthy();
+    await hydrated();
+    const scripts = await page
+      .locator('script')
+      .evaluateAll((all) => all.map((s) => (s as HTMLScriptElement).nonce));
+    expect(scripts.length).toBeGreaterThan(0);
+    expect(new Set(scripts)).toEqual(new Set([nonce]));
+    await expectAccessible();
+  });
+}
 
 test('the nonce is also in a csp-nonce meta in the head, hidden from the DOM attribute', async ({
   page,
@@ -38,11 +53,11 @@ test('the nonce is also in a csp-nonce meta in the head, hidden from the DOM att
   expect(await metas.getAttribute('nonce')).toBe('');
 });
 
-test('an unknown page answers 404', async ({ page, expectAccessible }) => {
+test('an unknown page answers 404', async ({ page, hydrated, expectAccessible }) => {
   const response = await page.goto('/tato-stranka-neexistuje');
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.notFound.title);
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await hydrated();
   await expectAccessible();
 });
 

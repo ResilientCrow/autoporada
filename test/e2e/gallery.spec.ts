@@ -14,17 +14,18 @@ const ALLOWED_HEX = new Set([
   '#0000',
 ]);
 
-test('the gallery loads, hydrates and passes axe', async ({ page, expectAccessible }) => {
+test('the gallery loads, hydrates and passes axe', async ({ page, hydrated, expectAccessible }) => {
   await page.goto('/vzornik');
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await hydrated();
   await expectAccessible();
 });
 
 test('React Aria styles its pressables with the page nonce, and a press breaks no policy', async ({
   page,
+  hydrated,
 }) => {
   await page.goto('/vzornik');
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await hydrated();
   const style = page.locator('head > style#react-aria-pressable-style');
   await expect(style).toHaveCount(1);
   const metaNonce = await page
@@ -63,12 +64,13 @@ test('the built stylesheet holds only the manual, and Czech letters come from th
 
 test('a failed submit puts the summary in focus, and its link leads to the field', async ({
   page,
+  hydrated,
   expectAccessible,
   attachScreenshot,
 }) => {
   const { live } = cs.gallery.forms;
   await page.goto('/vzornik');
-  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await hydrated();
   const form = page.locator('form#demo-live');
   const summary = form.locator('[tabindex="-1"]').filter({ has: page.getByRole('alert') });
   const focused = () => page.evaluate(() => document.activeElement?.id ?? '');

@@ -24,6 +24,8 @@ const MUST_COMPLETE = new Set(['color-contrast', 'target-size', 'label-content-n
 interface Fixtures {
   /** The violations seen on the app's own origin; the test fails at teardown if any remain. */
   cspViolations: CspViolation[];
+  /** Waits until Next has hydrated the page: its inline bootstrap and its chunks both ran. */
+  hydrated: () => Promise<void>;
   expectAccessible: () => Promise<void>;
   /** Attaches a full-page PNG to the report: the pack for the headmaster's sign-off on the look. */
   attachScreenshot: (name: string) => Promise<void>;
@@ -68,6 +70,12 @@ export const test = base.extend<Fixtures>({
     },
     { auto: true },
   ],
+
+  hydrated: async ({ page }, provide) => {
+    await provide(async () => {
+      await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+    });
+  },
 
   expectAccessible: async ({ page }, provide, testInfo) => {
     await provide(async () => {
