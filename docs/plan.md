@@ -134,8 +134,11 @@ src/
 - No `style` props or `dangerouslySetInnerHTML`; no `next/image`, `next/script` or `next/font` (ADR 0012).
 - `process.env` is read only in `infra/config`.
 
-**Palette check** (`scripts/check-palette.mjs`, CI `lint:palette`): hex colours only in
-`ui/theme`, and #004D8C nowhere in `src/`.
+**Palette check** (`scripts/check-palette.ts`, rules in `scripts/palette-rules.ts`, CI
+`lint:palette`): hex colours only in `ui/theme` and only the manual's, and #004D8C nowhere in `src/`;
+outside tests also no colour functions, arbitrary values or properties, default-palette names,
+accent except as a `StatusChip` background, outline removal or SVG paint but `currentColor`, and no
+stylesheet but `ui/theme/theme.css` and `paper.module.css`.
 
 **Action pipeline.** Every `"use server"` export goes through `defineAction`, in this order:
 

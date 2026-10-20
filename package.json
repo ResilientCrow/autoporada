@@ -17,7 +17,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
     "lint:arch": "depcruise src --config .dependency-cruiser.cjs",
-    "lint:palette": "node scripts/check-palette.mjs",
+    "lint:palette": "tsx scripts/check-palette.ts",
     "lint:unused": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
