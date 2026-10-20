@@ -60,6 +60,17 @@ export interface SignInPageModel {
 type SearchParams = Readonly<Record<string, string | string[] | undefined>>;
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
+export interface GalleryModel {
+  /** Asked to fail, to see the error page (`?stav=vyjimka`). */
+  readonly fail: boolean;
+}
+
+/** The pattern gallery, or null where it must not exist (production). */
+export function galleryPage(params: SearchParams): GalleryModel | null {
+  if (getContainer().environment === 'production') return null;
+  return { fail: first(params['stav']) === 'vyjimka' };
+}
+
 /** The sign-in page from its query string; anything unexpected is ignored. */
 export function signInPage(params: SearchParams): SignInPageModel {
   const error = first(params['chyba']);

@@ -1,13 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { getViewer, signInPage } from './index';
+import { galleryPage, getViewer, signInPage } from './index';
 
 const request = vi.hoisted(() => ({ headers: new Headers() }));
 vi.mock('next/headers', () => ({ headers: async () => request.headers }));
 const resolvePrincipal = vi.hoisted(() => vi.fn(async () => null));
+const where = vi.hoisted(() => ({ environment: 'development' }));
 vi.mock('../container', () => ({
-  getContainer: () => ({ resolvePrincipal, requestIdFrom: () => 'req-1' }),
+  getContainer: () => ({
+    resolvePrincipal,
+    requestIdFrom: () => 'req-1',
+    environment: where.environment,
+  }),
 }));
+
+describe('galleryPage', () => {
+  it.each(['development', 'test'])('exists in %s, and fails only on request', (environment) => {
+    where.environment = environment;
+    expect(galleryPage({})).toEqual({ fail: false });
+    expect(galleryPage({ stav: 'x' })).toEqual({ fail: false });
+    expect(galleryPage({ stav: 'vyjimka' })).toEqual({ fail: true });
+  });
+
+  it('does not exist in production', () => {
+    where.environment = 'production';
+    expect(galleryPage({ stav: 'vyjimka' })).toBeNull();
+  });
+});
 
 describe('signInPage', () => {
   it('shows known errors with their code, and links that come back to a safe path', () => {

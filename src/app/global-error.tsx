@@ -14,6 +14,7 @@ export default function GlobalError({ retry }: { readonly retry: () => void }) {
   return (
     <html lang="cs">
       <body>
+        <title>{cs.appError.title}</title>
         <main>
           <h1>{cs.appError.title}</h1>
           <p>{cs.appError.text}</p>

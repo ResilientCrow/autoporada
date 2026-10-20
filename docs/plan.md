@@ -414,6 +414,7 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 | `/registr` | reviewer read, headmaster write | Lists, NOVÉ tags, bulk paste (class codes normalised), "Nový školní rok" |
 | `/nastaveni`, `/uzivatele` | headmaster | Deadline, texts, point types, reminders; users, roles, access requests |
 | `/profil`, `/ochrana-osobnich-udaju`, `/napoveda` | all | E-mail preferences, "Odhlásit všude", privacy, house-style guide |
+| `/vzornik` | development and test only (404 in production) | The UI parts no real screen shows, for the look and accessibility checks |
 
 **People picker** (React Aria ComboBox)
 - Local "Naposledy vybraní" and "Z registru" results first, then M365 results after 3 characters.

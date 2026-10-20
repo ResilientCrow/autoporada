@@ -24,6 +24,8 @@ export interface WebContainer {
   readonly limiter: RateLimiter;
   readonly log: Logger;
   readonly appOrigin: string;
+  /** Where this process runs; the pattern gallery is closed in production. */
+  readonly environment: Config['environment'];
   readonly requestIdFrom: (header: string | null) => string;
   /** The sign-in routes' dependencies (Entra, its expectations, the first headmaster). */
   readonly auth: AuthDeps;
@@ -91,6 +93,7 @@ function buildWeb(config: Config): WebContainer {
     limiter,
     log,
     appOrigin: config.appOrigin,
+    environment: config.environment,
     requestIdFrom,
     auth,
     bootReport: (now) => {

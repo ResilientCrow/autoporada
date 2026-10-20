@@ -67,6 +67,7 @@ describe('web container', () => {
     const { getContainer } = await import('./container');
     const container = getContainer();
     expect(await container.resolvePrincipal('any-token', 'req')).toBeNull();
+    expect(container.environment).toBe('development');
     expect(container.requestIdFrom('not valid!')).toMatch(/^[0-9a-f-]{36}$/);
   });
 
