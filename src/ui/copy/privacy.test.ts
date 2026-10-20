@@ -63,6 +63,7 @@ describe('sections', () => {
 
 describe('review notes', () => {
   it('are short tasks that begin with a verb, never commentary', () => {
-    for (const review of reviewsOf(privacy)) expect(review.note).toMatch(/^Ověřit[ ,][^]+\.$/);
+    for (const review of reviewsOf(privacy))
+      expect(review.note).toMatch(/^(?:Ověřit|Stanovit)[ ,][^]+\.$/);
   });
 });

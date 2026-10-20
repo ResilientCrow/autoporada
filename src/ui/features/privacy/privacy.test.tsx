@@ -38,7 +38,9 @@ describe('PrivacyNotice', () => {
     const targets = [...(nav?.[2] ?? '').matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
     expect(targets).toEqual(draft.sections.map((section) => section.id));
     for (const section of draft.sections) {
-      expect(html).toMatch(new RegExp(`<h2 id="${section.id}"[^>]*>${section.title}</h2>`));
+      expect(html).toMatch(
+        new RegExp(`<h2 id="${section.id}"[^>]*>${section.title.replace('?', '\\?')}</h2>`),
+      );
     }
   });
 
