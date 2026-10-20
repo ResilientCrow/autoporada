@@ -11,7 +11,7 @@ export const retentionSections = [
         kind: 'facts',
         review: {
           by: 'dpo',
-          note: 'Ověřit dobu uchování záloh, kopií e-mailů, účtů a\u00A0archivních seznamů.',
+          note: 'Ověřit dobu uchování záloh, kopií e-mailů, dat úloh na\u00A0pozadí, účtů a\u00A0archivních seznamů.',
         },
         rows: [
           {
@@ -147,7 +147,12 @@ export const retentionSections = [
     blocks: [
       {
         kind: 'p',
-        text: 'Žádný zákon vám neukládá, abyste Autoporadu používali. Bez přihlášení ji ale používat nelze.',
+        text: 'Žádný zákon vám neukládá, abyste Autoporadu používali.',
+        review: { by: 'dpo', note: 'Ověřit informaci o\u00A0povinnosti poskytnout údaje.' },
+      },
+      {
+        kind: 'p',
+        text: 'Bez přihlášení ji ale používat nelze.',
         review: { by: 'headmaster', note: 'Ověřit, zda lze podklady posílat i\u00A0jinou cestou.' },
       },
     ],

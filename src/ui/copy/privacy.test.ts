@@ -55,6 +55,13 @@ describe('sections', () => {
     expect(ids).not.toContain('obsah');
   });
 
+  it('have ids that never look like hex, which an id scanner could mistake for a token', () => {
+    const hexLike = (id: string) => /^[a-f]+$/.test(id) || /^[0-9a-f-]+$/.test(id);
+    expect(ids.filter(hexLike)).toEqual([]);
+    // The check bites: 'abc' and '0a-1' would be refused.
+    expect(['abc', '0a-1'].filter(hexLike)).toEqual(['abc', '0a-1']);
+  });
+
   it('each have a title and at least one block', () => {
     for (const section of privacy.sections) {
       expect(section.title.trim()).not.toBe('');
