@@ -65,6 +65,12 @@ describe('Czech copy catalogue', () => {
   });
 });
 
+describe('product names', () => {
+  it('never says 365: Microsoft advises against it for a work or school account', () => {
+    expect(entries(cs).filter(([, text]) => text.includes('365'))).toEqual([]);
+  });
+});
+
 describe('typography', () => {
   const all = entries(cs);
 

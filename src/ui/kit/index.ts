@@ -1,5 +1,6 @@
 export { ArrowLink } from './ArrowLink';
 export { Button } from './Button';
+export { buttonStyles } from './button-styles';
 export { Card } from './Card';
 export { Icon } from './Icon';
 export { Notice } from './Notice';

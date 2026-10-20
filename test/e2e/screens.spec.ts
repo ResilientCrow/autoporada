@@ -9,6 +9,9 @@ const SCREENS = [
   ['the 404 page', '/tato-stranka-neexistuje', 404, null],
   ['the gallery', '/vzornik', 200, null],
   ['the home page of a waiting teacher', '/', 200, /^Učitelka/],
+  ['the sign-in page', '/prihlaseni', 200, null],
+  ['the sign-in page with an error', '/prihlaseni?chyba=failed&kod=abcdef12-3456', 200, null],
+  ['the sign-in page after signing out', '/prihlaseni?odhlaseno=1', 200, null],
   ['the privacy notice for a visitor', '/ochrana-osobnich-udaju', 200, null],
   ['the privacy notice for a signed-in teacher', '/ochrana-osobnich-udaju', 200, /^Učitelka/],
 ] as const;
@@ -45,4 +48,21 @@ test('the error page answers 500 and passes axe', async ({ page, expectAccessibl
   await expect(page).toHaveTitle(TITLE_SUFFIX);
   await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
   await expectAccessible();
+});
+
+test('the sign-in page works without JavaScript and loads no React Aria', async ({
+  browser,
+  page,
+}) => {
+  const plain = await browser.newContext({ javaScriptEnabled: false });
+  const bare = await plain.newPage();
+  await bare.goto('/prihlaseni');
+  await expect(bare.getByRole('heading', { level: 1 })).toHaveText(cs.signIn.title);
+  await expect(bare.getByRole('link', { name: cs.signIn.button })).toBeVisible();
+  await expect(bare.getByRole('link', { name: cs.signIn.switchAccount })).toBeVisible();
+  await plain.close();
+
+  await page.goto('/prihlaseni');
+  await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+  await expect(page.locator('#react-aria-pressable-style')).toHaveCount(0);
 });

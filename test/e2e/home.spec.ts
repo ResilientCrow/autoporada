@@ -1,3 +1,5 @@
+import { cs } from '@/ui/copy';
+
 import { expect, test } from './fixtures';
 
 test('the home page sends an anonymous visitor to the sign-in page, in Czech', async ({
@@ -8,9 +10,10 @@ test('the home page sends an anonymous visitor to the sign-in page, in Czech', a
   await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Přihlášení');
-  await expect(
-    page.getByRole('link', { name: 'Přihlásit se účtem Microsoft 365' }),
-  ).toHaveAttribute('href', '/auth/login?returnTo=%2F');
+  await expect(page.getByRole('link', { name: cs.signIn.button })).toHaveAttribute(
+    'href',
+    '/auth/login?returnTo=%2F',
+  );
   await expectAccessible();
 });
 
