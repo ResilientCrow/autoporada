@@ -112,7 +112,7 @@ src/
   infra/         adapters: db (Drizzle schema, repos), oidc, graph, mail, gotenberg, pgboss, config, log
   server/        composition root, session, defineAction pipeline
   app/           Next routes with Czech slugs; thin, they call server/actions
-  ui/            theme/ copy/ kit/ form/ shell/ features/<feature>/ (ADR 0012); editor, paper preview later
+  ui/            theme/ copy/ kit/ form/ shell/ features/<feature>/ (status/ reserved) (ADR 0012); editor, paper preview later
   worker/  cli/  other composition roots
 ```
 
@@ -403,7 +403,7 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 
 | Route | Who | Purpose |
 |---|---|---|
-| `/prihlaseni`, `/pristup` | all / pending | "Přihlásit se účtem školy"; access request with reason and its state |
+| `/prihlaseni`, `/pristup` | all / pending | "Přihlásit se školním účtem"; access request with reason and its state |
 | `/` Přehled | submitter+ | Deadline card, "Vráceno" card, "Akce čekající na zprávu" card, quick actions |
 | `/body`, `/body/novy?typ=`, `/body/[id]` | author | Report editor beside a sticky A4 preview (≥1024 px; a Formulář \| Náhled toggle below that). Autosave and a timeline. |
 | `/akce`, `/akce/nova` | submitter+ | Future items by week, plus a strip showing where each item will appear |
@@ -541,11 +541,15 @@ Immediate notifications:
 2. step-up re-auth
 3. users and roles admin
 
+Note: React Aria's Checkbox, Radio, Select and Date* render `style` attributes that the CSP refuses, so M6 uses a native checkbox and a native `<select>` styled with tokens. M8's DatePicker needs a new ADR (`style-src-attr`); ADR 0012 records the constraint.
+
 **M7 Worker & mail**
 1. pg-boss worker, cron registry, transactional `JobPort`
 2. Graph mail transport + throttle
 3. SMTP (Mailpit) transport + Czech templates
 4. access notifications
+
+Note: the Graph mail adapter sends `saveToSentItems: false`, so no copies pile up in the shared mailbox.
 
 **M8 Submissions & review**
 1. issues schema + `ensureIssue`, deadline, skip
@@ -590,6 +594,8 @@ Immediate notifications:
 6. data-subject-request CLI
 7. Playwright end-to-end: five journeys
 8. RUNBOOK (install, update with a backup before migrations, restore, PG upgrade, minimum host 2 vCPU / 6 GB RAM / 40 GB)
+
+Note: before go-live the privacy notice is approved: `approved: true`, the effective date set, no review flags left (`docs/gdpr/privacy-review.md`).
 
 ## 11. Verification
 
