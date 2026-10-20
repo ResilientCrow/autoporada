@@ -39,8 +39,13 @@ export const retentionSections = [
             value: 'smažeme 1.\u00A0září, na\u00A0konci školního roku',
           },
           {
+            term: 'Čekající žádosti o\u00A0přístup',
+            value: 'do rozhodnutí vedení školy',
+          },
+          {
             term: 'Zablokované žádosti o\u00A0přístup',
-            value: 'po dobu zablokování',
+            value: 'bez časového omezení, aby blokace platila',
+            review: { by: 'dpo', note: 'Ověřit dobu uchování zablokovaných žádostí.' },
           },
           { term: 'Záznam změn', value: `${facts.auditYears}\u00A0roky` },
           {

@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { getTableColumns } from 'drizzle-orm';
 
 import { AUDIT_RETENTION_YEARS, isPurgeableAccessRequest } from '@/domain/retention';
+import { ACCESS_MACHINE } from '@/domain/review';
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SIGN_IN_TTL_MS } from '@/domain/identity/session';
 import { sessions, users } from '@/infra/db/schema';
 import { SIGN_IN_COOKIE, sessionCookie, signInCookie } from '@/server/auth/cookies';
@@ -53,18 +54,28 @@ function retentionRow(term: RegExp) {
 }
 
 describe('access requests in the retention table', () => {
-  it('purges only the decided ones and keeps blocked requests', () => {
+  it('purges only the decided ones; pending and blocked requests stay', () => {
     expect((['approved', 'rejected', 'cancelled'] as const).map(isPurgeableAccessRequest)).toEqual([
       true,
       true,
       true,
     ]);
+    expect(isPurgeableAccessRequest('pending')).toBe(false);
     expect(isPurgeableAccessRequest('blocked')).toBe(false);
   });
 
-  it('says so: three states are deleted, blocked ones stay while the block lasts', () => {
+  it('cannot lift a block, so a blocked request has no end date', () => {
+    const fromBlocked = Object.values(ACCESS_MACHINE).filter((t) => t.from.includes('blocked'));
+    expect(fromBlocked).toEqual([]);
+  });
+
+  it('says so: three states are deleted, pending ones wait, blocked ones stay', () => {
     expect(retentionRow(/^Schválené, zamítnuté a\u00A0zrušené žádosti/)).toBeDefined();
-    expect(retentionRow(/^Zablokované žádosti/)?.value).toBe('po dobu zablokování');
+    expect(retentionRow(/^Čekající žádosti/)?.value).toBe('do rozhodnutí vedení školy');
+    expect(retentionRow(/^Zablokované žádosti/)).toMatchObject({
+      value: 'bez časového omezení, aby blokace platila',
+      review: { by: 'dpo' },
+    });
     // No other row may claim the blocked ones are deleted with the rest.
     expect(retentionRow(/vyřízené žádosti/)).toBeUndefined();
   });
@@ -103,6 +114,14 @@ const REVIEWED_COLUMNS = {
 };
 
 describe('the personal-data columns are the ones the notice describes', () => {
+  it('claims notification settings only once a column holds them', () => {
+    const udaje = privacy.sections.find((section) => section.id === 'udaje');
+    const rows = udaje?.blocks.flatMap((block) => (block.kind === 'facts' ? block.rows : [])) ?? [];
+    const usersRow = JSON.stringify(rows.find((row) => /přihlásí/.test(row.term))?.value ?? '');
+    const hasColumn = Object.keys(getTableColumns(users)).some((c) => /notif/i.test(c));
+    expect(hasColumn || !/upozorn/.test(usersRow)).toBe(true);
+  });
+
   it('lists the columns of users and sessions', () => {
     expect(Object.keys(getTableColumns(users)).sort()).toEqual([...REVIEWED_COLUMNS.users].sort());
     expect(Object.keys(getTableColumns(sessions)).sort()).toEqual(
