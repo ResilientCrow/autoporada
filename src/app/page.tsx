@@ -1,24 +1,18 @@
-import { homePage, requireViewer } from '@/server/pages';
-import { cs } from '@/ui/copy';
+import type { Metadata } from 'next';
 
-/** The home page; the dashboard of M5 replaces it. */
+import { requireSignedIn } from '@/server/pages';
+import { cs, pageTitle } from '@/ui/copy';
+import { Overview } from '@/ui/features/overview';
+import { Shell } from '@/ui/shell';
+
+export const metadata: Metadata = { title: pageTitle(cs.home.title) };
+
+/** The home page: the state of the account; the dashboard (plan §8) replaces it in M8. */
 export default async function HomePage() {
-  const home = await homePage(await requireViewer('/'));
+  const viewer = await requireSignedIn('/');
   return (
-    <main>
-      <h1>{cs.app.name}</h1>
-      <p>
-        {cs.home.signedInAs} {home.displayName}
-      </p>
-      {home.pending && <p role="status">{cs.home.pending}</p>}
-      <form method="post" action="/auth/logout">
-        <button type="submit" name="scope" value="this">
-          {cs.home.signOut}
-        </button>{' '}
-        <button type="submit" name="scope" value="all">
-          {cs.home.signOutEverywhere}
-        </button>
-      </form>
-    </main>
+    <Shell viewer={viewer} current="/">
+      <Overview pending={viewer.pending} />
+    </Shell>
   );
 }

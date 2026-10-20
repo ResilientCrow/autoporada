@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import type { UserPrincipal } from '@/application/ports';
 import { me } from '@/application/use-cases';
 import { isSignInError, type SignInError } from '@/contracts';
+import type { Actor } from '@/domain/actor';
 import { safeReturnTo } from '@/domain/identity';
 
 import { getContainer } from '../container';
@@ -36,28 +37,36 @@ export async function getViewer(): Promise<UserPrincipal | null> {
   return getContainer().resolvePrincipal(token, await requestId());
 }
 
-/** The signed-in user, or a redirect to the sign-in page that comes back to `path`. */
-export async function requireViewer(path: string): Promise<UserPrincipal> {
-  const viewer = await getViewer();
-  if (!viewer) redirect(`/prihlaseni?returnTo=${encodeURIComponent(safeReturnTo(path))}`);
-  return viewer;
-}
-
-export interface HomeModel {
+export interface SignedInModel {
   readonly displayName: string;
+  readonly actor: Actor;
+  /** Still waiting for the headmaster to approve the account. */
   readonly pending: boolean;
 }
 
-/** The home page: who is signed in and whether they still wait for approval. */
-export async function homePage(viewer: UserPrincipal): Promise<HomeModel> {
-  const container = getContainer();
-  const result = await runRegistered(container, me, {
+/** Who a signed-in user is, for the shell and the home page. */
+async function signedIn(viewer: UserPrincipal): Promise<SignedInModel> {
+  const result = await runRegistered(getContainer(), me, {
     principal: viewer,
     requestId: await requestId(),
     input: {},
   });
   if (!result.ok) throw new Error(`profile.me: ${result.error.code}`);
-  return { displayName: result.value.displayName, pending: result.value.role === 'pending' };
+  const { displayName, role } = result.value;
+  return { displayName, actor: viewer.actor, pending: role === 'pending' };
+}
+
+/** The signed-in user, or a redirect to the sign-in page that comes back to `path`. */
+export async function requireSignedIn(path: string): Promise<SignedInModel> {
+  const viewer = await getViewer();
+  if (!viewer) redirect(`/prihlaseni?returnTo=${encodeURIComponent(safeReturnTo(path))}`);
+  return signedIn(viewer);
+}
+
+/** The signed-in user, or null for a visitor (no database call without a session). */
+export async function optionalSignedIn(): Promise<SignedInModel | null> {
+  const viewer = await getViewer();
+  return viewer ? signedIn(viewer) : null;
 }
 
 export interface SignInPageModel {

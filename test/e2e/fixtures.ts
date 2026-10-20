@@ -29,6 +29,8 @@ interface Fixtures {
   expectFocusRings: () => Promise<void>;
   /** The first Tab lands on the skip link, and Enter moves focus to the content. */
   expectSkipLink: () => Promise<void>;
+  /** Signs in through the mock IdP as the persona whose button name matches. */
+  signInAs: (persona: RegExp) => Promise<void>;
   /** At 320 px wide nothing scrolls sideways (desktop project only). */
   expectNoReflow: () => Promise<void>;
 }
@@ -118,6 +120,16 @@ export const test = base.extend<Fixtures>({
       const width = await page.evaluate(() => document.documentElement.scrollWidth);
       if (original) await page.setViewportSize(original);
       expect(width).toBeLessThanOrEqual(320);
+    });
+  },
+
+  signInAs: async ({ page }, provide) => {
+    await provide(async (persona) => {
+      await page.goto('/');
+      await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
+      await page.getByRole('link', { name: cs.signIn.button }).click();
+      await expect(page.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
+      await page.getByRole('button', { name: persona }).click();
     });
   },
 });

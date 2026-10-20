@@ -6,19 +6,21 @@ import { expect, test } from './fixtures';
 const TITLE_SUFFIX = / – Autoporada$/;
 
 const SCREENS = [
-  ['the 404 page', '/tato-stranka-neexistuje', 404],
-  ['the gallery', '/vzornik', 200],
+  ['the 404 page', '/tato-stranka-neexistuje', 404, null],
+  ['the gallery', '/vzornik', 200, null],
+  ['the home page of a waiting teacher', '/', 200, /^Učitelka/],
 ] as const;
 
-for (const [name, url, status] of SCREENS) {
+for (const [name, url, status, persona] of SCREENS) {
   test(`${name} is a well-formed, accessible, keyboard-friendly page`, async ({
     page,
-    request,
     expectAccessible,
     expectSkipLink,
     expectFocusRings,
     expectNoReflow,
+    signInAs,
   }) => {
+    if (persona) await signInAs(persona);
     const response = await page.goto(url);
     expect(response?.status()).toBe(status);
     await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
@@ -28,7 +30,7 @@ for (const [name, url, status] of SCREENS) {
     await expectAccessible();
     await expectNoReflow();
     // The live DOM may carry style attributes (Next's route announcer gets one through the CSSOM).
-    expect(await (await request.get(url)).text()).not.toContain('style="');
+    expect(await (await page.request.get(url)).text()).not.toContain('style="');
     await expectSkipLink();
     await expectFocusRings();
   });

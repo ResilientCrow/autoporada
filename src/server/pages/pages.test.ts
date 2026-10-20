@@ -1,10 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { cspNonce, galleryPage, getViewer, signInPage } from './index';
+import {
+  cspNonce,
+  galleryPage,
+  getViewer,
+  optionalSignedIn,
+  requireSignedIn,
+  signInPage,
+} from './index';
 
 const request = vi.hoisted(() => ({ headers: new Headers() }));
 vi.mock('next/headers', () => ({ headers: async () => request.headers }));
-const resolvePrincipal = vi.hoisted(() => vi.fn(async () => null));
+const redirect = vi.hoisted(() =>
+  vi.fn((to: string): never => {
+    throw new Error(`redirect:${to}`);
+  }),
+);
+vi.mock('next/navigation', () => ({ redirect }));
+const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
+const runRegistered = vi.hoisted(() => vi.fn());
+vi.mock('../pipeline', async () => ({
+  ...(await vi.importActual<object>('../pipeline')),
+  runRegistered,
+}));
 const where = vi.hoisted(() => ({ environment: 'development' }));
 vi.mock('../container', () => ({
   getContainer: () => ({
@@ -103,5 +121,52 @@ describe('cspNonce', () => {
   ])('ignores %s', async (value) => {
     request.headers = new Headers(value === undefined ? {} : { 'x-nonce': value });
     expect(await cspNonce()).toBeNull();
+  });
+});
+
+describe('signed-in pages', () => {
+  const principal = (role: string) => ({
+    kind: 'user',
+    actor: { id: 'u1', role, status: 'active', isStudent: false },
+  });
+  const signedIn = (role: string) => {
+    resolvePrincipal.mockResolvedValue(principal(role));
+    runRegistered.mockResolvedValue({ ok: true, value: { displayName: 'Jana', role } });
+  };
+
+  beforeEach(() => {
+    resolvePrincipal.mockReset();
+    resolvePrincipal.mockResolvedValue(null);
+    runRegistered.mockReset();
+    redirect.mockClear();
+  });
+
+  it('sends an anonymous visitor to sign in and back, to a safe path only', async () => {
+    await expect(requireSignedIn('/porada')).rejects.toThrow(
+      'redirect:/prihlaseni?returnTo=%2Fporada',
+    );
+    await expect(requireSignedIn('//evil.example')).rejects.toThrow('returnTo=%2F');
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['pending', true],
+    ['submitter', false],
+  ])('knows a %s user (pending %s)', async (role, pending) => {
+    signedIn(role);
+    const expected = { displayName: 'Jana', actor: principal(role).actor, pending };
+    expect(await requireSignedIn('/')).toEqual(expected);
+    expect(await optionalSignedIn()).toEqual(expected);
+  });
+
+  it('answers null to a visitor without asking the use case', async () => {
+    expect(await optionalSignedIn()).toBeNull();
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it('fails loudly when the profile cannot be read', async () => {
+    resolvePrincipal.mockResolvedValue(principal('pending'));
+    runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
+    await expect(optionalSignedIn()).rejects.toThrow('profile.me: unavailable');
   });
 });

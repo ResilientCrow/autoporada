@@ -17,8 +17,10 @@ export const appError = {
 } as const;
 
 export const home = {
-  signedInAs: 'Přihlášen(a):',
+  title: 'Přehled',
   pending: 'Váš účet čeká na schválení vedením školy.',
-  signOut: 'Odhlásit se',
+  account: 'Váš účet',
+  statusPending: 'Čeká na schválení',
+  statusActive: 'Aktivní',
   signOutEverywhere: 'Odhlásit všude',
 } as const;
