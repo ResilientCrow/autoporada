@@ -1,5 +1,5 @@
 import { app, appError, home, notFound } from './app';
-import { errors, fieldIssues, rules } from './forms';
+import { errors, fieldIssues, form, rules } from './forms';
 import { gallery } from './gallery';
 import { nav } from './nav';
 import { shell } from './shell';
@@ -21,6 +21,7 @@ export const cs = {
   errors,
   rules,
   fieldIssues,
+  form,
 } as const;
 
 /** A page's `<title>`: the page name, then the app's. */

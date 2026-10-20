@@ -24,3 +24,10 @@ export const fieldIssues = {
   'too-long': 'Text je příliš dlouhý.',
   invalid: 'Hodnota není platná.',
 } as const satisfies Record<FieldIssueCode, string>;
+
+/** Chrome of the form components: optional marker, error prefix, summary title. */
+export const form = {
+  optional: '(nepovinné)',
+  errorPrefix: 'Chyba:',
+  summaryTitle: 'Zkontrolujte prosím tyto údaje',
+} as const;
