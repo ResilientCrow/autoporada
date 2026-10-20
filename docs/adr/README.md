@@ -17,3 +17,4 @@ record that supersedes it.
 | [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Accepted |
 | [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted |
 | [0011](0011-application-core.md) | Application core: principal-bound transactions and one pipeline | Accepted |
+| [0012](0012-ui-foundation.md) | UI foundation: brand-only Tailwind, audited React Aria, no inline styles | Accepted |

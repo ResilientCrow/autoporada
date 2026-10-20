@@ -1,5 +1,5 @@
 /**
- * Layer rules from docs/adr/0004-module-boundaries.md.
+ * Layer rules from docs/adr/0004-module-boundaries.md (ui/ modules: 0012).
  * Changing a rule here is an architecture change: update the ADR as well.
  * @type {import('dependency-cruiser').IConfiguration}
  */
@@ -9,6 +9,8 @@ const npm = (...names) => `(^|/)node_modules/(${names.join('|')})/`;
 
 const TESTS = ['\\.test\\.tsx?$', '^test/'];
 const INDEX = '^src/[^/]+/[^/]+/index\\.tsx?$';
+/** The modules of ui/ (ADR 0012); status/ is reserved for domain status maps. */
+const UI_MODULES = 'theme|copy|kit|form|shell|status|features';
 
 module.exports = {
   forbidden: [
@@ -178,6 +180,56 @@ module.exports = {
           '^src/document/render-docx/',
         ],
       },
+    },
+    {
+      name: 'ui-known-modules',
+      comment:
+        'ui/ has a fixed set of modules (ADR 0012); a new one changes this rule and needs an ADR.',
+      severity: 'error',
+      from: {},
+      to: { path: `^src/ui/(?!(${UI_MODULES})/)` },
+    },
+    {
+      name: 'ui-leaves',
+      comment: 'theme, copy and kit import nothing else in ui/ (kit gets its text as props).',
+      severity: 'error',
+      from: { path: '^src/ui/(theme|copy|kit)/', pathNot: TESTS },
+      to: { path: '^src/ui/', pathNot: '^src/ui/$1/' },
+    },
+    {
+      name: 'ui-form-shell-status',
+      comment: 'form, shell and status build on kit and copy only.',
+      severity: 'error',
+      from: { path: '^src/ui/(form|shell|status)/', pathNot: TESTS },
+      to: { path: '^src/ui/', pathNot: ['^src/ui/$1/', '^src/ui/(kit|copy)/'] },
+    },
+    {
+      name: 'ui-features-no-shell-theme',
+      comment: 'Pages put features inside the shell; only the root layouts load the theme.',
+      severity: 'error',
+      from: { path: '^src/ui/features/', pathNot: TESTS },
+      to: { path: '^src/ui/(theme|shell)/' },
+    },
+    {
+      name: 'ui-features-isolated',
+      severity: 'error',
+      from: { path: '^src/ui/features/([^/]+)/', pathNot: TESTS },
+      to: { path: '^src/ui/features/', pathNot: '^src/ui/features/$1/' },
+    },
+    {
+      name: 'theme-only-from-root-layouts',
+      comment:
+        'The stylesheet is loaded once, by the root layout and the error page that replaces it.',
+      severity: 'error',
+      from: { pathNot: ['^src/app/(layout|global-error)\\.tsx$', '^src/ui/theme/', ...TESTS] },
+      to: { path: '^src/ui/theme/' },
+    },
+    {
+      name: 'react-aria-only-in-kit-and-form',
+      comment: 'React Aria is wrapped once, in the audited kit and form modules (ADR 0012).',
+      severity: 'error',
+      from: { pathNot: ['^src/ui/(kit|form)/', ...TESTS] },
+      to: { path: npm('react-aria-components', 'react-aria', 'react-stately') },
     },
     {
       name: 'server-not-into-delivery',

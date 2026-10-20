@@ -44,6 +44,48 @@ const NONDETERMINISM = [
   },
 ];
 
+/** Server HTML must carry no style attribute: the CSP refuses it and hydration never repairs it (ADR 0012). */
+const INLINE_STYLE_MESSAGE = 'Inline styles break the CSP (ADR 0012): use theme classes.';
+const NO_INLINE_STYLE = [
+  { selector: "JSXAttribute[name.name='style']", message: INLINE_STYLE_MESSAGE },
+  {
+    selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
+    message: 'Render text through components, never raw HTML (plan §4).',
+  },
+];
+
+/** Modules that put style attributes or unnonced code into server HTML (ADR 0012). */
+const UNSAFE_MARKUP_MESSAGE = 'It renders inline styles or scripts the CSP refuses (ADR 0012).';
+const RAC_MESSAGE =
+  'Use React Aria through ui/kit and ui/form, and only its audited subpaths (ADR 0012).';
+const RESTRICTED_IMPORT_PATHS = [
+  { name: 'process', message: ENV_MESSAGE },
+  { name: 'node:process', message: ENV_MESSAGE },
+  { name: 'next/image', message: UNSAFE_MARKUP_MESSAGE },
+  { name: 'next/legacy/image', message: UNSAFE_MARKUP_MESSAGE },
+  { name: 'next/script', message: UNSAFE_MARKUP_MESSAGE },
+  { name: 'react-aria-components', message: RAC_MESSAGE },
+];
+const RESTRICTED_IMPORT_PATTERNS = [
+  {
+    // A gitignore group cannot re-include a path under an excluded parent, so
+    // the package root is banned through RESTRICTED_IMPORT_PATHS instead.
+    group: [
+      'react-aria-components/*',
+      '!react-aria-components/Button',
+      '!react-aria-components/Form',
+      '!react-aria-components/TextField',
+      '!react-aria-components/I18nProvider',
+    ],
+    message: RAC_MESSAGE,
+  },
+  {
+    group: ['react-aria', 'react-aria/*', 'react-stately', 'react-stately/*'],
+    message: RAC_MESSAGE,
+  },
+  { group: ['next/font', 'next/font/*'], message: 'Fonts come from ui/theme (ADR 0012).' },
+];
+
 /** `globalThis.process.env` — the one form no-restricted-properties cannot see. */
 const GLOBAL_ENV = {
   selector: "MemberExpression[object.property.name='process'][property.name='env']",
@@ -112,12 +154,7 @@ export default defineConfig([
       ],
       'no-restricted-imports': [
         'error',
-        {
-          paths: [
-            { name: 'process', message: ENV_MESSAGE },
-            { name: 'node:process', message: ENV_MESSAGE },
-          ],
-        },
+        { paths: RESTRICTED_IMPORT_PATHS, patterns: RESTRICTED_IMPORT_PATTERNS },
       ],
       'no-restricted-syntax': ['error', GLOBAL_ENV, INLINE_USE_SERVER],
     },
@@ -161,7 +198,20 @@ export default defineConfig([
         },
       ],
       // Overrides the block above for these files, so it repeats GLOBAL_ENV.
-      'no-restricted-syntax': ['error', GLOBAL_ENV, INLINE_USE_SERVER, ...UI_COPY_SYNTAX],
+      'no-restricted-syntax': [
+        'error',
+        GLOBAL_ENV,
+        INLINE_USE_SERVER,
+        ...UI_COPY_SYNTAX,
+        ...NO_INLINE_STYLE,
+      ],
+    },
+  },
+  {
+    // The paper preview is server HTML too; it overrides the src block, so it repeats its selectors.
+    files: ['src/document/render-html/**/*.tsx'],
+    rules: {
+      'no-restricted-syntax': ['error', GLOBAL_ENV, INLINE_USE_SERVER, ...NO_INLINE_STYLE],
     },
   },
   {

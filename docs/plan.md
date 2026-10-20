@@ -112,7 +112,7 @@ src/
   infra/         adapters: db (Drizzle schema, repos), oidc, graph, mail, gotenberg, pgboss, config, log
   server/        composition root, session, defineAction pipeline
   app/           Next routes with Czech slugs; thin, they call server/actions
-  ui/            design system, editor, paper preview, features/<feature>/, copy/cs.ts
+  ui/            theme/ copy/ kit/ form/ shell/ features/<feature>/ (ADR 0012); editor, paper preview later
   worker/  cli/  other composition roots
 ```
 
@@ -124,13 +124,14 @@ src/
   - React may be used only in `render-html`.
 - `application` never imports Next, Drizzle or infra.
 - Only the composition roots import infra: `server/container.ts`, `worker/main.ts` and `cli/main.ts`.
-- `ui` never imports server, infra, application or the DOCX renderer.
+- `ui` never imports server, infra, application or the DOCX renderer. Inside `ui`, modules import one way (ADR 0012); React Aria is used only in `ui/kit` and `ui/form`.
 - Across modules, imports go only through `index.ts`. Circular imports are not allowed.
 
 **ESLint rules**
 
 - At most 300 lines per file.
-- UI strings live only in `ui/copy/cs.ts`, which is created with the first UI string.
+- UI strings live only in `ui/copy` (one `cs` object).
+- No `style` props or `dangerouslySetInnerHTML`; no `next/image`, `next/script` or `next/font` (ADR 0012).
 - `process.env` is read only in `infra/config`.
 
 **Palette check** (`scripts/check-palette.mjs`, CI `lint:palette`): hex colours only in
@@ -532,7 +533,7 @@ Immediate notifications:
 5. login page + privacy notice
 
 **M6 Access & users**
-1. access request page + headmaster decision (with student flag)
+1. access request page + headmaster decision (with student flag); the form submit path (action result → fields, error summary, problem notice) is designed with it
 2. step-up re-auth
 3. users and roles admin
 
