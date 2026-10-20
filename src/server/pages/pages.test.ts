@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { galleryPage, getViewer, signInPage } from './index';
+import { cspNonce, galleryPage, getViewer, signInPage } from './index';
 
 const request = vi.hoisted(() => ({ headers: new Headers() }));
 vi.mock('next/headers', () => ({ headers: async () => request.headers }));
@@ -85,5 +85,23 @@ describe('getViewer', () => {
     request.headers = new Headers({ cookie: '__Host-ap_session=one; __Host-ap_session=two' });
     await getViewer();
     expect(resolvePrincipal).toHaveBeenCalledWith(null, 'req-1');
+  });
+});
+
+describe('cspNonce', () => {
+  it('passes on the nonce the proxy set', async () => {
+    request.headers = new Headers({ 'x-nonce': 'AAAAAAAAAAAAAAAAAAAAAA==' });
+    expect(await cspNonce()).toBe('AAAAAAAAAAAAAAAAAAAAAA==');
+  });
+
+  it.each([
+    [undefined],
+    ['bad"><script>'],
+    ['AAAAAAAAAAAAAAAAAAAAA=='],
+    ['AAAAAAAAAAAAAAAAAAAAAA'],
+    ['AAAAAAAAAAAAAAAAAAAAAAA=='],
+  ])('ignores %s', async (value) => {
+    request.headers = new Headers(value === undefined ? {} : { 'x-nonce': value });
+    expect(await cspNonce()).toBeNull();
   });
 });

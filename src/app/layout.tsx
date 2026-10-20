@@ -2,8 +2,11 @@ import type { Metadata } from 'next';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 
+import { cspNonce } from '@/server/pages';
 import { cs } from '@/ui/copy';
 import '@/ui/theme';
+
+import { CspNonce } from './csp-nonce';
 
 export const metadata: Metadata = {
   title: cs.app.name,
@@ -19,7 +22,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   await connection();
   return (
     <html lang="cs">
-      <body>{children}</body>
+      <body>
+        {/* React Aria reads this nonce for the <style> it inserts at run time (ADR 0012). */}
+        <CspNonce nonce={await cspNonce()} />
+        {children}
+      </body>
     </html>
   );
 }

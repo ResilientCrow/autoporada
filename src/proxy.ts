@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { contentSecurityPolicy, newNonce, withoutRepeatedCookies } from '@/server/http';
+import {
+  contentSecurityPolicy,
+  newNonce,
+  NONCE_HEADER,
+  withoutRepeatedCookies,
+} from '@/server/http';
 
 /**
  * Sets a fresh nonce CSP on every page, and drops a cookie sent twice
@@ -12,7 +17,7 @@ export function proxy(request: NextRequest) {
   const csp = contentSecurityPolicy(nonce, { dev: process.env.NODE_ENV === 'development' });
   // Overwrites anything the client sent; Next reads the nonce from this request header.
   const headers = new Headers(request.headers);
-  headers.set('x-nonce', nonce);
+  headers.set(NONCE_HEADER, nonce);
   headers.set('content-security-policy', csp);
   const cookie = request.headers.get('cookie');
   if (cookie !== null) {

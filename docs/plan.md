@@ -197,7 +197,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 **CSRF and headers**
 - Server Actions use Next's Origin/Host check (Caddy forwards Host). Route handlers require `Origin === APP_ORIGIN` on non-GET requests.
 - Headers:
-  - nonce-based CSP;
+  - nonce-based CSP; inline attributes refused (`script-src-attr` and `style-src-attr 'none'`), and the nonce reaches React Aria through a `csp-nonce` meta (ADR 0012);
   - HSTS;
   - `Referrer-Policy: same-origin`;
   - COOP and CORP;

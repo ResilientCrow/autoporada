@@ -8,12 +8,26 @@ import { isSignInError, type SignInError } from '@/contracts';
 import { safeReturnTo } from '@/domain/identity';
 
 import { getContainer } from '../container';
+import { NONCE_HEADER } from '../http';
 import { runRegistered, sessionTokenFrom } from '../pipeline';
 
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
 
 async function requestId(): Promise<string> {
   return getContainer().requestIdFrom((await headers()).get('x-request-id'));
+}
+
+/** What newNonce makes: 128 bits in base64. */
+const NONCE_SHAPE = /^[A-Za-z0-9+/]{22}==$/;
+
+/**
+ * This response's CSP nonce, as the proxy set it, or null. The proxy matcher
+ * skips prefetch requests, so the header can come from the client: anything
+ * but the shape of a real nonce is ignored.
+ */
+export async function cspNonce(): Promise<string | null> {
+  const value = (await headers()).get(NONCE_HEADER);
+  return value !== null && NONCE_SHAPE.test(value) ? value : null;
 }
 
 /** The signed-in user of this request, or null. A cookie sent twice counts as none. */

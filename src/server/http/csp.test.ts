@@ -23,7 +23,9 @@ describe('contentSecurityPolicy', () => {
     expect(Object.fromEntries(directives(contentSecurityPolicy('N0nce', { dev: false })))).toEqual({
       'default-src': ["'self'"],
       'script-src': ["'self'", "'nonce-N0nce'", "'strict-dynamic'"],
+      'script-src-attr': ["'none'"],
       'style-src': ["'self'", "'nonce-N0nce'"],
+      'style-src-attr': ["'none'"],
       'img-src': ["'self'"],
       'font-src': ["'self'"],
       'connect-src': ["'self'"],

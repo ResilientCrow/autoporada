@@ -26,6 +26,18 @@ test('a page runs only its own nonced scripts', async ({ page, expectAccessible 
   await expectAccessible();
 });
 
+test('the nonce is also in a csp-nonce meta in the head, hidden from the DOM attribute', async ({
+  page,
+}) => {
+  const response = await page.goto('/prihlaseni');
+  const nonce = nonceOf(response?.headers()['content-security-policy']);
+  const metas = page.locator('meta[name="csp-nonce"]');
+  await expect(metas).toHaveCount(1);
+  await expect(page.locator('head > meta[name="csp-nonce"]')).toHaveCount(1);
+  expect(await metas.evaluate((m) => (m as HTMLMetaElement).nonce)).toBe(nonce);
+  expect(await metas.getAttribute('nonce')).toBe('');
+});
+
 test('an unknown page answers 404', async ({ page, expectAccessible }) => {
   const response = await page.goto('/tato-stranka-neexistuje');
   expect(response?.status()).toBe(404);
