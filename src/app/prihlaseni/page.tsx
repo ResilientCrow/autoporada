@@ -22,7 +22,7 @@ export default async function SignInPage({ searchParams }: Props) {
           {page.code && (
             <>
               {' '}
-              {cs.signIn.code} <code>{page.code}</code>
+              {cs.app.errorCode} <code>{page.code}</code>
             </>
           )}
         </p>
