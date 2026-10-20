@@ -1,2 +1,2 @@
 export { appError } from './app';
-export { cs } from './cs';
+export { cs, pageTitle } from './cs';

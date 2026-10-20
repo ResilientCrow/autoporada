@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { RULE_CODES } from '@/contracts';
 import { typographizeText } from '@/domain/cs';
 
-import { cs } from './cs';
+import { cs, pageTitle } from './cs';
 
 /** Flattens the nested catalogue into [path, text] pairs. */
 function entries(node: unknown, path = ''): [string, string][] {
@@ -81,5 +81,11 @@ describe('typography', () => {
 describe('error copy', () => {
   it('has a text for every rule code, and nothing else', () => {
     expect(Object.keys(cs.rules).sort()).toEqual([...RULE_CODES].sort());
+  });
+});
+
+describe('pageTitle', () => {
+  it('puts the app name after an en dash', () => {
+    expect(pageTitle(cs.notFound.title)).toBe(`${cs.notFound.title} – ${cs.app.name}`);
   });
 });

@@ -5,10 +5,10 @@ import { SlantLabel } from '@/ui/kit';
 
 import { KitSections } from './KitSections';
 
-/** The pattern gallery: each UI part, once, for the look and accessibility checks. */
+/** The pattern gallery: each UI part, once, for the look and accessibility checks (inside a Shell). */
 export function Gallery() {
   return (
-    <main id="obsah" tabIndex={-1}>
+    <>
       <SlantLabel level={1}>{cs.gallery.title}</SlantLabel>
       <p>{cs.gallery.intro}</p>
       <p>
@@ -17,6 +17,6 @@ export function Gallery() {
         </Link>
       </p>
       <KitSections />
-    </main>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { appError } from '@/ui/copy';
+import { appError, pageTitle } from '@/ui/copy';
 import '@/ui/theme';
 
 /**
@@ -14,7 +14,7 @@ export default function GlobalError({ retry }: { readonly retry: () => void }) {
   return (
     <html lang="cs">
       <body>
-        <title>{appError.title}</title>
+        <title>{pageTitle(appError.title)}</title>
         <main>
           <h1>{appError.title}</h1>
           <p>{appError.text}</p>
