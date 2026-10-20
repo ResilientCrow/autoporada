@@ -64,6 +64,7 @@ test('the built stylesheet holds only the manual, and Czech letters come from th
 test('a failed submit puts the summary in focus, and its link leads to the field', async ({
   page,
   expectAccessible,
+  attachScreenshot,
 }) => {
   const { live } = cs.gallery.forms;
   await page.goto('/vzornik');
@@ -76,6 +77,7 @@ test('a failed submit puts the summary in focus, and its link leads to the field
   await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
   await expect(summary).toBeFocused();
   await expectAccessible();
+  await attachScreenshot('the gallery live demo with errors');
 
   await form.getByRole('link', { name: new RegExp(`^${live.name}:`) }).click();
   const name = form.getByLabel(live.name);
@@ -94,4 +96,5 @@ test('a failed submit puts the summary in focus, and its link leads to the field
   await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
   await expect(form.getByRole('status')).toHaveText(live.sent);
   await expect(summary).toHaveCount(0);
+  await expectAccessible();
 });

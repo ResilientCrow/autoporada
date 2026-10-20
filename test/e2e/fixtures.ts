@@ -25,6 +25,8 @@ interface Fixtures {
   /** The violations seen on the app's own origin; the test fails at teardown if any remain. */
   cspViolations: CspViolation[];
   expectAccessible: () => Promise<void>;
+  /** Attaches a full-page PNG to the report: the pack for the headmaster's sign-off on the look. */
+  attachScreenshot: (name: string) => Promise<void>;
   /** Tab through the page: every stop shows an outline of 2 px or more. */
   expectFocusRings: () => Promise<void>;
   /** The first Tab lands on the skip link, and Enter moves focus to the content. */
@@ -78,6 +80,15 @@ export const test = base.extend<Fixtures>({
         entries.map((r) => `${r.id}: ${r.nodes.map((n) => n.target.join(' ')).join(', ')}`);
       expect(describe(result.violations)).toEqual([]);
       expect(describe(result.incomplete.filter((r) => MUST_COMPLETE.has(r.id)))).toEqual([]);
+    });
+  },
+
+  attachScreenshot: async ({ page }, provide, testInfo) => {
+    await provide(async (name) => {
+      await testInfo.attach(`${name} (${testInfo.project.name})`, {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png',
+      });
     });
   },
 

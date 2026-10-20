@@ -16,6 +16,8 @@ const E2E_ENV = {
   MAIL_FROM: 'autoporada@example.org',
   SMTP_URL: 'smtp://localhost:1025',
   GOTENBERG_URL: 'http://localhost:3001',
+  // The "reditel" persona of docker/dev/mock-oauth2.json: the one active user, the teacher stays pending.
+  BOOTSTRAP_HEADMASTER_OID: '0d000000-0000-4000-8000-000000000003',
 };
 
 export default defineConfig({

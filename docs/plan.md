@@ -631,7 +631,7 @@ Every e2e test fails on a CSP violation, and axe runs on every screen in both Pl
 - A dry-run week that includes the DST Sunday.
 - A restore drill.
 - Screen-reader passes (NVDA, VoiceOver).
-- Headmaster sign-off on the look and the Czech copy; DPO sign-off on the DPIA.
+- Headmaster sign-off on the look and the Czech copy; the full-page screenshots attached to the e2e report (both projects, every screen state) are the pack for the look. DPO sign-off on the DPIA.
 
 ## 12. Defaults assumed (change any time)
 
