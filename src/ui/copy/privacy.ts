@@ -1,3 +1,4 @@
+import { processingSections } from './privacy-processing';
 import type { PrivacyCopy } from './privacy-types';
 
 /**
@@ -78,5 +79,6 @@ export const privacy = {
         },
       ],
     },
+    ...processingSections,
   ],
 } as const satisfies PrivacyCopy;

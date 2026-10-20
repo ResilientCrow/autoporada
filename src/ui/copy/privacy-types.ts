@@ -23,7 +23,7 @@ export type Block =
       }[];
     };
 
-interface Section {
+export interface Section {
   readonly id: string;
   readonly title: string;
   readonly blocks: readonly Block[];
