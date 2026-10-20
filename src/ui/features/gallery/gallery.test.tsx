@@ -11,7 +11,7 @@ describe('Gallery', () => {
   const html = renderToStaticMarkup(<Gallery />);
 
   it('has its heading', () => {
-    expect(html).toContain(`<h1>${cs.gallery.title}</h1>`);
+    expect(html).toMatch(new RegExp(`<h1 [^>]*>.*${cs.gallery.title}.*</h1>`));
   });
 
   it('renders markup the CSP accepts', () => {
