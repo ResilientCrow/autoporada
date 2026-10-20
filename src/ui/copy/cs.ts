@@ -2,6 +2,7 @@ import { app, appError, home, notFound } from './app';
 import { errors, fieldIssues, form, rules } from './forms';
 import { gallery } from './gallery';
 import { nav } from './nav';
+import { privacy } from './privacy';
 import { shell } from './shell';
 import { signIn } from './sign-in';
 
@@ -18,6 +19,7 @@ export const cs = {
   shell,
   nav,
   gallery,
+  privacy,
   errors,
   rules,
   fieldIssues,

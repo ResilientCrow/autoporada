@@ -5,13 +5,16 @@ import { typographizeText } from '@/domain/cs';
 
 import { cs, pageTitle } from './cs';
 
+/** Values of these keys are identifiers and addresses, not prose. */
+const NOT_PROSE = new Set(['href', 'id']);
+
 /** Flattens the nested catalogue into [path, text] pairs. */
 function entries(node: unknown, path = ''): [string, string][] {
   if (typeof node === 'string') return [[path, node]];
   if (typeof node === 'object' && node !== null) {
-    return Object.entries(node).flatMap(([key, value]) =>
-      entries(value, path ? `${path}.${key}` : key),
-    );
+    return Object.entries(node)
+      .filter(([key]) => !NOT_PROSE.has(key))
+      .flatMap(([key, value]) => entries(value, path ? `${path}.${key}` : key));
   }
   return [];
 }

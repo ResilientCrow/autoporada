@@ -68,7 +68,12 @@ export function Shell({
         {children}
       </main>
       <footer className="surface-dark">
-        <p className="mx-auto max-w-3xl p-4">{cs.shell.school}</p>
+        <div className="mx-auto flex max-w-3xl flex-wrap gap-x-4 gap-y-1 p-4">
+          <p>{cs.shell.school}</p>
+          <Link href="/ochrana-osobnich-udaju" prefetch={false}>
+            {cs.shell.privacy}
+          </Link>
+        </div>
       </footer>
     </div>
   );

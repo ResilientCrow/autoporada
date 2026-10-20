@@ -9,6 +9,8 @@ const SCREENS = [
   ['the 404 page', '/tato-stranka-neexistuje', 404, null],
   ['the gallery', '/vzornik', 200, null],
   ['the home page of a waiting teacher', '/', 200, /^Učitelka/],
+  ['the privacy notice for a visitor', '/ochrana-osobnich-udaju', 200, null],
+  ['the privacy notice for a signed-in teacher', '/ochrana-osobnich-udaju', 200, /^Učitelka/],
 ] as const;
 
 for (const [name, url, status, persona] of SCREENS) {

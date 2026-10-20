@@ -33,8 +33,10 @@ test('the signed-out notice page passes axe', async ({ page, expectAccessible })
   await expectAccessible();
 });
 
-test('pages render per request and are never cached (ADR 0001)', async ({ request }) => {
-  const response = await request.get('/prihlaseni');
-  expect(response.headers()['cache-control']).toContain('no-store');
-  expect(response.headers()['x-nextjs-prerender']).toBeUndefined();
-});
+for (const path of ['/prihlaseni', '/ochrana-osobnich-udaju']) {
+  test(`${path} renders per request and is never cached (ADR 0001)`, async ({ request }) => {
+    const response = await request.get(path);
+    expect(response.headers()['cache-control']).toContain('no-store');
+    expect(response.headers()['x-nextjs-prerender']).toBeUndefined();
+  });
+}
