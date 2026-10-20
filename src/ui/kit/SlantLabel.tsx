@@ -10,7 +10,13 @@ const SIZE: Record<Level, string> = { 1: 'text-3xl', 2: 'text-2xl', 3: 'text-xl'
  * pseudo-element, which axe cannot measure) and the text is skewed back upright.
  * With a level it is the page's heading, otherwise inline decoration.
  */
-export function SlantLabel({ level, children }: { level?: Level; children: string }) {
+export function SlantLabel({
+  level,
+  children,
+}: {
+  readonly level?: Level;
+  readonly children: string;
+}) {
   const Tag = level ? (`h${level}` as const) : 'span';
   return (
     <Tag

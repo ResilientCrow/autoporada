@@ -87,6 +87,7 @@ describe('planned pairs', () => {
   it.each([
     ['ink', 'light', 'input border'],
     ['ink', 'sublight', 'input border on a card'],
+    ['digital', 'sublight', 'info notice border'],
   ])('non-text %s on %s reaches 3 (%s)', (fg, bg) => {
     expect(ratio(fg, bg)).toBeGreaterThanOrEqual(3);
   });

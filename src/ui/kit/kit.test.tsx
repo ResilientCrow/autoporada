@@ -5,7 +5,7 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
 
-import { ArrowLink, Card, SlantLabel } from './index';
+import { ArrowLink, Card, Notice, SlantLabel, StatusChip } from './index';
 
 const TEXT = cs.gallery.title;
 const html = renderToStaticMarkup;
@@ -53,5 +53,54 @@ describe('ArrowLink', () => {
     expect(out).toContain('href="/vzornik"');
     expect(out).toMatch(/<svg aria-hidden="true"/);
     expect(cspMarkupProblems(out)).toEqual([]);
+  });
+});
+
+describe('StatusChip', () => {
+  it.each(['neutral', 'waiting', 'done', 'attention', 'stopped'] as const)(
+    '%s has an icon hidden from assistive technology, its text, and no role',
+    (tone) => {
+      const out = html(<StatusChip tone={tone}>{TEXT}</StatusChip>);
+      expect(out).toMatch(/<svg aria-hidden="true"/);
+      expect(out).toContain(`${TEXT}</span>`);
+      expect(out).not.toContain('role=');
+      expect(cspMarkupProblems(out)).toEqual([]);
+    },
+  );
+
+  it('draws every tone with a different icon', () => {
+    const shapes = (['neutral', 'waiting', 'done', 'attention', 'stopped'] as const).map(
+      (tone) => /<path d="([^"]+)"/.exec(html(<StatusChip tone={tone}>{TEXT}</StatusChip>))?.[1],
+    );
+    expect(new Set(shapes).size).toBe(5);
+  });
+
+  it('uses the accent as a background only here', () => {
+    expect(html(<StatusChip tone="attention">{TEXT}</StatusChip>)).toContain('bg-accent');
+    expect(html(<StatusChip tone="done">{TEXT}</StatusChip>)).not.toContain('accent');
+  });
+});
+
+describe('Notice', () => {
+  it.each([
+    ['info', 'status'],
+    ['problem', 'alert'],
+  ] as const)('%s announces itself as %s', (tone, role) => {
+    const out = html(<Notice tone={tone}>{TEXT}</Notice>);
+    expect(out).toContain(`role="${role}"`);
+    expect(out).toMatch(/<svg aria-hidden="true"/);
+    expect(out).toContain(`<div>${TEXT}</div>`);
+    expect(out).not.toMatch(/sr-only|hidden(?!=)/);
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it.each(['info', 'problem'] as const)('%s has no role when not live', (tone) => {
+    expect(
+      html(
+        <Notice tone={tone} live={false}>
+          {TEXT}
+        </Notice>,
+      ),
+    ).not.toContain('role=');
   });
 });

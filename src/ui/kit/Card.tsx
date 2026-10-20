@@ -6,9 +6,9 @@ export function Card({
   level = 2,
   children,
 }: {
-  title?: string;
-  level?: 2 | 3;
-  children: ReactNode;
+  readonly title?: string;
+  readonly level?: 2 | 3;
+  readonly children: ReactNode;
 }) {
   const Heading = `h${level}` as const;
   return (

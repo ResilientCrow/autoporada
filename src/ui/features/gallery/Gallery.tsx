@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { cs } from '@/ui/copy';
 import { SlantLabel } from '@/ui/kit';
 
+import { KitSections } from './KitSections';
+
 /** The pattern gallery: each UI part, once, for the look and accessibility checks. */
 export function Gallery() {
   return (
@@ -14,6 +16,7 @@ export function Gallery() {
           {cs.gallery.errorPage}
         </Link>
       </p>
+      <KitSections />
     </main>
   );
 }
