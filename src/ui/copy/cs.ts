@@ -1,6 +1,7 @@
 import { app, appError, home, notFound } from './app';
 import { errors, fieldIssues, rules } from './forms';
 import { gallery } from './gallery';
+import { nav } from './nav';
 import { shell } from './shell';
 import { signIn } from './sign-in';
 
@@ -15,6 +16,7 @@ export const cs = {
   appError,
   home,
   shell,
+  nav,
   gallery,
   errors,
   rules,

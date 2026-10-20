@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import type { Actor } from '@/domain/actor';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
@@ -30,5 +31,55 @@ describe('Shell', () => {
 
   it('renders markup the CSP accepts', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+});
+
+const VIEWER = {
+  displayName: 'Jana Nováková',
+  actor: { id: 'u1', role: 'submitter', status: 'active', isStudent: false } satisfies Actor,
+};
+
+describe('Shell with a viewer', () => {
+  const signedIn = renderToStaticMarkup(
+    <Shell viewer={VIEWER} current="/">
+      {cs.gallery.intro}
+    </Shell>,
+  );
+
+  it('has a labelled navigation, marking the current page', () => {
+    expect(signedIn).toContain(`<nav aria-label="${cs.nav.label}">`);
+    expect(signedIn.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(signedIn).toMatch(new RegExp(`aria-current="page"[^>]*>${cs.nav.overview}</a>`));
+  });
+
+  it('marks no page as current elsewhere', () => {
+    const elsewhere = renderToStaticMarkup(
+      <Shell viewer={VIEWER} current="/jinde">
+        {cs.gallery.intro}
+      </Shell>,
+    );
+    expect(elsewhere).not.toContain('aria-current');
+  });
+
+  it('names the viewer and signs out this device only', () => {
+    expect(signedIn).toContain(VIEWER.displayName);
+    const form = /<form [^>]*>/.exec(signedIn)?.[0];
+    expect(form).toContain('method="post"');
+    expect(form).toContain('action="/auth/logout"');
+    const button = /<button [^>]*>/.exec(signedIn)?.[0];
+    expect(button).toContain('name="scope"');
+    expect(button).toContain('value="this"');
+    expect(signedIn).toContain(`${cs.shell.signOut}</button>`);
+  });
+
+  it('renders markup the CSP accepts', () => {
+    expect(cspMarkupProblems(signedIn)).toEqual([]);
+  });
+});
+
+describe('Shell without a viewer', () => {
+  it('has neither navigation nor sign-out', () => {
+    expect(html).not.toContain('<nav');
+    expect(html).not.toContain('<form');
   });
 });
