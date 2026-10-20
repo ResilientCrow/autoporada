@@ -1,0 +1,59 @@
+/** The guards of fixtures.ts must fail when they should, or they only look safe. */
+import type { Page } from '@playwright/test';
+
+import { expect, test } from './fixtures';
+
+/** Serves a page with an inline style under the app's real policy, on the app's origin. */
+async function openViolatingPage(page: Page): Promise<void> {
+  const real = await page.request.get('/prihlaseni');
+  const policy = real.headers()['content-security-policy'] ?? '';
+  expect(policy).not.toBe('');
+  await page.route('**/__guard', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      headers: { 'content-security-policy': policy },
+      body: '<!doctype html><html lang="cs"><body><p style="color:red">x</p></body></html>',
+    }),
+  );
+  await page.goto('/__guard');
+}
+
+test('the CSP guard sees an inline style served under the real policy', async ({
+  page,
+  cspViolations,
+}) => {
+  await openViolatingPage(page);
+  await expect.poll(() => cspViolations.map((v) => v.directive)).toContain('style-src-attr');
+  cspViolations.length = 0;
+});
+
+test('the CSP guard fails a test that leaves a violation behind', async ({
+  page,
+  cspViolations,
+}) => {
+  // The failure comes from the fixture's teardown, which is what this proves.
+  test.fail();
+  await openViolatingPage(page);
+  await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
+});
+
+test.describe('expectAccessible', () => {
+  test('rejects low-contrast text', async ({ page, expectAccessible }) => {
+    await page.setContent(
+      '<!doctype html><html lang="cs"><head><title>t</title></head><body><main><h1>h</h1>' +
+        '<p style="color:#bbb;background:#fff">Slabý kontrast</p></main></body></html>',
+    );
+    await expect(expectAccessible()).rejects.toThrow(/color-contrast/);
+  });
+
+  test('rejects text on a gradient, which axe cannot measure', async ({
+    page,
+    expectAccessible,
+  }) => {
+    await page.setContent(
+      '<!doctype html><html lang="cs"><head><title>t</title></head><body><main><h1>h</h1>' +
+        '<p style="color:#000;background:linear-gradient(#fff,#888)">Přechod</p></main></body></html>',
+    );
+    await expect(expectAccessible()).rejects.toThrow(/color-contrast/);
+  });
+});

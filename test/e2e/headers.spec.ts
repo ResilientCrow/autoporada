@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
-
 import { cs } from '@/ui/copy';
+
+import { expect, test } from './fixtures';
 
 const nonceOf = (policy: string | undefined) => /'nonce-([^']+)'/.exec(policy ?? '')?.[1];
 
@@ -12,17 +12,7 @@ const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
 };
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const seen: string[] = [];
-    Object.assign(window, { cspViolations: seen });
-    document.addEventListener('securitypolicyviolation', (e) => {
-      seen.push(`${e.violatedDirective} ${e.blockedURI}`);
-    });
-  });
-});
-
-test('a page runs only its own nonced scripts, with no CSP violation', async ({ page }) => {
+test('a page runs only its own nonced scripts', async ({ page, expectAccessible }) => {
   const response = await page.goto('/prihlaseni?chyba=failed&kod=abcdef12-3456');
   const nonce = nonceOf(response?.headers()['content-security-policy']);
   expect(nonce).toBeTruthy();
@@ -33,19 +23,15 @@ test('a page runs only its own nonced scripts, with no CSP violation', async ({ 
     .evaluateAll((all) => all.map((s) => (s as HTMLScriptElement).nonce));
   expect(scripts.length).toBeGreaterThan(0);
   expect(new Set(scripts)).toEqual(new Set([nonce]));
-  expect(
-    await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations),
-  ).toEqual([]);
+  await expectAccessible();
 });
 
-test('an unknown page answers 404, also without a CSP violation', async ({ page }) => {
+test('an unknown page answers 404', async ({ page, expectAccessible }) => {
   const response = await page.goto('/tato-stranka-neexistuje');
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.notFound.title);
   await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
-  expect(
-    await page.evaluate(() => (window as unknown as { cspViolations: string[] }).cspViolations),
-  ).toEqual([]);
+  await expectAccessible();
 });
 
 test('every response gets a fresh nonce', async ({ request }) => {

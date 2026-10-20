@@ -2,9 +2,11 @@
  * The sign-in journey against mock-oauth2-server (compose.dev.yaml), whose
  * login page offers the personas of docker/dev/mock-oauth2.json.
  */
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { cs } from '@/ui/copy';
+
+import { expect, test } from './fixtures';
 
 async function signInAs(page: Page, persona: RegExp) {
   await page.goto('/');
@@ -14,10 +16,15 @@ async function signInAs(page: Page, persona: RegExp) {
   await page.getByRole('button', { name: persona }).click();
 }
 
-test('a member signs in, waits for approval, and signs out', async ({ page, context }) => {
+test('a member signs in, waits for approval, and signs out', async ({
+  page,
+  context,
+  expectAccessible,
+}) => {
   await signInAs(page, /^Učitelka/);
   await expect(page).toHaveURL(/:\d+\/$/);
   await expect(page.getByRole('main').getByRole('status')).toHaveText(cs.home.pending);
+  await expectAccessible();
   const cookies = await context.cookies();
   expect(cookies.find((c) => c.name === '__Host-ap_session')).toMatchObject({
     path: '/',

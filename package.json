@@ -37,6 +37,7 @@
     "db:migrate": "pnpm cli migrate"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@fontsource-variable/bitter": "5.3.0",
     "@fontsource-variable/mona-sans": "5.3.0",
     "@playwright/test": "1.64.1",

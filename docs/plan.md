@@ -614,6 +614,9 @@ Immediate notifications:
 4. generate → download DOCX and PDF;
 5. reopen → v2.
 
+Every e2e test fails on a CSP violation, and axe runs on every screen in both Playwright projects
+(desktop and mobile).
+
 **Security tests**
 - OIDC negatives: bad signature, `alg=none`, wrong `iss`, `aud` or `tid`, expired token, replayed `state`, wrong `nonce`, guest.
 - Cookie flags, expiry and revocation.
