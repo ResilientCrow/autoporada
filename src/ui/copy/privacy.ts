@@ -15,11 +15,24 @@ export const privacy = {
     'Toto je návrh. Čeká na schválení pověřencem pro ochranu osobních údajů a\u00A0vedením školy. Části označené „K\u00A0ověření“ čekají na potvrzení.',
   summaryTitle: 'Stručně',
   summary: [
-    'Autoporada slouží k\u00A0přípravě podkladů pro poradu vedení školy. Zaměstnanci a\u00A0studenti v\u00A0ní píší zprávy o\u00A0akcích a\u00A0další body.',
-    'Ukládáme jméno, e-mail a\u00A0zařazení ve škole těch, kdo se přihlásí. Ukládáme také text bodů, včetně jmen a\u00A0vyjádření lidí, kterých se body týkají.',
-    'Údaje jsou na\u00A0serveru, který spravuje škola. Microsoft používáme k\u00A0přihlášení a\u00A0k\u00A0e-mailům.',
-    'Rozpracované a\u00A0zamítnuté body mažeme na\u00A0konci školního roku. Schválené body patří do\u00A0archivu porad.',
-    'Můžete se zeptat, jaké údaje o\u00A0vás máme, a\u00A0požádat o\u00A0opravu. Obraťte se na\u00A0školu nebo na\u00A0pověřence.',
+    {
+      text: 'Autoporada slouží k\u00A0přípravě podkladů pro poradu vedení školy. Zaměstnanci a\u00A0studenti v\u00A0ní píší zprávy o\u00A0akcích a\u00A0další body.',
+    },
+    {
+      text: 'Ukládáme jméno, e-mail a\u00A0zařazení ve škole těch, kdo se přihlásí. Ukládáme také text bodů, včetně jmen a\u00A0vyjádření lidí, kterých se body týkají.',
+    },
+    {
+      text: 'Údaje jsou na\u00A0serveru, který spravuje škola. Microsoft používáme k\u00A0přihlášení a\u00A0k\u00A0e-mailům.',
+      review: { by: 'headmaster', note: 'Ověřit umístění serveru.' },
+    },
+    {
+      text: 'Rozpracované a\u00A0zamítnuté body mažeme na\u00A0konci školního roku. Schválené body patří do\u00A0archivu porad.',
+      review: { by: 'dpo', note: 'Ověřit dobu uchování.' },
+    },
+    {
+      text: 'Můžete se zeptat, jaké údaje o\u00A0vás máme, a\u00A0požádat o\u00A0opravu. Obraťte se na\u00A0školu nebo na\u00A0pověřence.',
+      review: { by: 'dpo', note: 'Ověřit, jak se žádosti podávají.' },
+    },
   ],
   tocLabel: 'Obsah stránky',
   reviewLabel: 'K\u00A0ověření',

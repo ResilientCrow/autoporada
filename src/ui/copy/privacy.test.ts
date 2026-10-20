@@ -1,15 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { reviewsOf } from '../../../test/support/privacy';
+
 import { privacy } from './privacy';
 import type { PrivacyCopy } from './privacy-types';
-
-/** Every review flag in a notice: on blocks and on facts rows. */
-function reviewsOf(notice: PrivacyCopy) {
-  return notice.sections
-    .flatMap((section) => section.blocks)
-    .flatMap((block) => [block, ...(block.kind === 'facts' ? block.rows : [])])
-    .flatMap((part) => (part.review === undefined ? [] : [part.review]));
-}
 
 /** An approved notice has nothing left to confirm and says since when it holds. */
 function approvalProblems(notice: PrivacyCopy): string[] {
@@ -28,10 +22,22 @@ describe('approval', () => {
   it('fails an approved notice that still has reviews or no date (both directions)', () => {
     const approved: PrivacyCopy = { ...privacy, approved: true, effectiveFrom: '2027-09-01' };
     expect(approvalProblems(approved)).toEqual(['approved with open reviews']);
-    expect(approvalProblems({ ...approved, sections: [] })).toEqual([]);
-    expect(approvalProblems({ ...approved, effectiveFrom: null, sections: [] })).toEqual([
+    const clean = { ...approved, summary: [], sections: [] };
+    expect(approvalProblems(clean)).toEqual([]);
+    expect(approvalProblems({ ...clean, effectiveFrom: null })).toEqual([
       'approved without an effective date',
     ]);
+  });
+
+  it('counts a flag on a summary bullet, though no section has one', () => {
+    const flagged: PrivacyCopy = {
+      ...privacy,
+      approved: true,
+      effectiveFrom: '2027-09-01',
+      summary: [{ text: 'x', review: { by: 'dpo', note: 'Ověřit x.' } }],
+      sections: [],
+    };
+    expect(approvalProblems(flagged)).toEqual(['approved with open reviews']);
   });
 
   it('is still a draft, since reviews are open', () => {

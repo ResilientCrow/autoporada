@@ -1,7 +1,7 @@
 import type { PrivacyCopy } from '@/ui/copy';
 import { Card, Notice, SlantLabel } from '@/ui/kit';
 
-import { Blocks, Bullets } from './Blocks';
+import { Blocks, SummaryBullets } from './Blocks';
 
 /** The privacy notice page: a draft banner until approved, a summary, contents, then every section. */
 export function PrivacyNotice({ notice }: { readonly notice: PrivacyCopy }) {
@@ -18,7 +18,7 @@ export function PrivacyNotice({ notice }: { readonly notice: PrivacyCopy }) {
       {banner}
       {effective}
       <Card title={notice.summaryTitle}>
-        <Bullets items={notice.summary} />
+        <SummaryBullets items={notice.summary} labels={notice} />
       </Card>
       <nav aria-label={notice.tocLabel}>
         <ul className="list-disc pl-6">

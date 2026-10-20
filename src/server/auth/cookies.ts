@@ -1,8 +1,10 @@
+import { SIGN_IN_TTL_MS } from '@/domain/identity';
+
 import { SESSION_COOKIE } from '../pipeline';
 
 /** The sign-in in progress: 10 minutes, then Entra's answer can no longer be used. */
 export const SIGN_IN_COOKIE = '__Host-ap_signin';
-const SIGN_IN_SECONDS = 600;
+const SIGN_IN_SECONDS = SIGN_IN_TTL_MS / 1000;
 
 /**
  * __Host- cookies: this origin only, HTTPS, path /. Lax lets the redirect

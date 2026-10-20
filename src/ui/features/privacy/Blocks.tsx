@@ -1,5 +1,5 @@
 import { StatusChip } from '@/ui/kit';
-import type { Block, PrivacyCopy, Review, Rich } from '@/ui/copy';
+import type { Block, PrivacyCopy, Review, Rich, SummaryItem } from '@/ui/copy';
 
 type Labels = Pick<PrivacyCopy, 'reviewLabel' | 'reviewBy'>;
 
@@ -35,8 +35,28 @@ function ReviewNote({ review, labels }: { readonly review?: Review; readonly lab
   );
 }
 
+/** The summary: bullets that can carry a review flag like blocks. */
+export function SummaryBullets({
+  items,
+  labels,
+}: {
+  readonly items: readonly SummaryItem[];
+  readonly labels: Labels;
+}) {
+  return (
+    <ul className="list-disc pl-6">
+      {items.map((item) => (
+        <li key={plain(item.text)}>
+          <RichText value={item.text} />
+          <ReviewNote review={item.review} labels={labels} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** A bulleted list of running text. */
-export function Bullets({ items }: { readonly items: readonly Rich[] }) {
+function Bullets({ items }: { readonly items: readonly Rich[] }) {
   return (
     <ul className="list-disc pl-6">
       {items.map((item) => (

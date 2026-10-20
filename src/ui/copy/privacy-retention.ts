@@ -31,8 +31,16 @@ export const retentionSections = [
             },
           },
           {
-            term: 'Koncepty, vrácené, zamítnuté a\u00A0stažené body, vyřízené žádosti o\u00A0přístup',
+            term: 'Koncepty, vrácené, zamítnuté a\u00A0stažené body',
             value: 'smažeme 1.\u00A0září, na\u00A0konci školního roku',
+          },
+          {
+            term: 'Schválené, zamítnuté a\u00A0zrušené žádosti o\u00A0přístup',
+            value: 'smažeme 1.\u00A0září, na\u00A0konci školního roku',
+          },
+          {
+            term: 'Zablokované žádosti o\u00A0přístup',
+            value: 'po dobu zablokování',
           },
           { term: 'Záznam změn', value: `${facts.auditYears}\u00A0roky` },
           {

@@ -10,6 +10,12 @@ export interface Review {
   readonly note: string;
 }
 
+/** A bullet of the summary; it can be flagged like a block. */
+export interface SummaryItem {
+  readonly text: Rich;
+  readonly review?: Review;
+}
+
 export type Block =
   | { readonly kind: 'p'; readonly text: Rich; readonly review?: Review }
   | { readonly kind: 'list'; readonly items: readonly Rich[]; readonly review?: Review }
@@ -37,7 +43,7 @@ export interface PrivacyCopy {
   readonly title: string;
   readonly draft: string;
   readonly summaryTitle: string;
-  readonly summary: readonly Rich[];
+  readonly summary: readonly SummaryItem[];
   readonly tocLabel: string;
   readonly reviewLabel: string;
   readonly reviewBy: Readonly<Record<Review['by'], string>>;

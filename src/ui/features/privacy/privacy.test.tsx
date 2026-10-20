@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { cs, type PrivacyCopy } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
+import { reviewsOf } from '../../../../test/support/privacy';
 
 import { PrivacyNotice } from './index';
 
@@ -29,7 +30,7 @@ describe('PrivacyNotice', () => {
 
   it('shows the summary as a card with its bullets', () => {
     expect(html).toMatch(new RegExp(`<h2 [^>]*>${draft.summaryTitle}</h2>`));
-    for (const bullet of draft.summary) expect(html).toContain(bullet);
+    for (const bullet of draft.summary) expect(html).toContain(bullet.text);
   });
 
   it('links every table-of-contents entry to a section heading', () => {
@@ -53,10 +54,7 @@ describe('PrivacyNotice', () => {
   });
 
   it('marks every flagged block or row with the chip, the reviewer and the task', () => {
-    const reviews = draft.sections
-      .flatMap((section) => section.blocks)
-      .flatMap((block) => [block, ...(block.kind === 'facts' ? block.rows : [])])
-      .flatMap((part) => (part.review === undefined ? [] : [part.review]));
+    const reviews = reviewsOf(draft);
     expect(reviews.length).toBeGreaterThan(0);
     expect(html.match(new RegExp(`${draft.reviewLabel}<\\/span>`, 'g'))).toHaveLength(
       reviews.length,

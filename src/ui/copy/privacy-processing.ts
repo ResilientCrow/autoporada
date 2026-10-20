@@ -35,7 +35,7 @@ export const processingSections = [
           {
             term: 'Lidé, kteří se přihlásí',
             value:
-              'jméno, e-mail, pracovní zařazení a\u00A0oddělení, role v\u00A0Autoporadě, zda jde o\u00A0studenta, stav účtu a\u00A0nastavení upozornění',
+              'jméno, e-mail, identifikátor účtu Microsoft, pracovní zařazení a\u00A0oddělení, role v\u00A0Autoporadě, zda jde o\u00A0studenta, stav účtu a\u00A0nastavení upozornění',
           },
           {
             term: 'Žádosti o\u00A0přístup',
@@ -43,7 +43,8 @@ export const processingSections = [
           },
           {
             term: 'Přihlášení',
-            value: 'jen otisk přihlašovacího kódu a\u00A0čas přihlášení, ne kód samotný',
+            value:
+              'otisk přihlašovacího kódu (ne kód samotný), čas přihlášení, čas poslední činnosti a\u00A0časy, kdy přihlášení vyprší',
           },
           {
             term: 'Body k\u00A0poradě',
