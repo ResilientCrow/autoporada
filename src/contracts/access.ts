@@ -33,3 +33,10 @@ export const myAccessOutput = z.object({
     z.object({ kind: z.literal('blocked'), decidedAt: z.iso.datetime() }),
   ]),
 });
+
+/** „Zrušit žádost“: the version is the one the page showed. */
+export const cancelAccessInput = z.strictObject({
+  requestId: z.guid(),
+  version: z.number().int().positive(),
+});
+export const cancelAccessOutput = z.object({});

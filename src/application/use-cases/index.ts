@@ -1,6 +1,6 @@
 import type { AnyUseCase } from '@/application/core';
 
-import { myAccess, requestAccess } from './access';
+import { cancelAccess, myAccess, requestAccess } from './access';
 import {
   beginLogin,
   beginStepUp,
@@ -12,7 +12,7 @@ import {
 } from './auth';
 import { me } from './profile';
 
-export { myAccess, requestAccess } from './access';
+export { cancelAccess, myAccess, requestAccess } from './access';
 export {
   beginLogin,
   beginStepUp,
@@ -31,6 +31,7 @@ export { me } from './profile';
 export const USE_CASES: readonly AnyUseCase[] = [
   beginLogin,
   beginStepUp,
+  cancelAccess,
   completeSignIn,
   me,
   myAccess,
