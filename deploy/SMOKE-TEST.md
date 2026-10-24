@@ -101,9 +101,45 @@ docker compose exec postgres psql -U pgadmin -d autoporada
     - [ ] `docker compose logs web | grep -E 'eyJ|ap_session|ap_signin|#EXT#|@ssps.cz'`
           finds nothing.
 
+## Mail
+
+Every step here waits for the tenant: the shared mailbox and the Exchange role
+assignment (ENTRA-SETUP §3) must exist first. `mail:test` takes the id of an
+active reviewer or headmaster who is not a student.
+
+16. **The mailbox scope** (Exchange PowerShell).
+    - [ ] `Test-ServicePrincipalAuthorization -Identity <AppId> -Resource autoporada@ssps.cz`
+          shows `InScope True`, and `False` for another mailbox.
+    - [ ] `docker compose run --rm cli auth:probe` shows no `Mail.Send` warning.
+17. **A test mail.** `docker compose run --rm cli mail:test --user <id>`.
+    - [ ] It arrives from `autoporada@ssps.cz` with the Czech text intact.
+    - [ ] There is no copy in the Sent Items of `autoporada@ssps.cz`.
+    - [ ] `docker compose logs worker` shows `mail.sent` for it. This proves
+          the worker's own egress through the school firewall.
+    - [ ] Record what Graph really answers, for ADR 0016: the body of a 403,
+          the format of `Retry-After`, whether the 202 carries `request-id`,
+          and whether `X-Auto-Response-Suppress` and `X-Autoporada-Dedupe`
+          survive in the received headers.
+18. **RBAC propagation.** While the scope is new, the first mail may be refused.
+    - [ ] `psql`: `SELECT state, code, settled_at FROM mail_ledger ORDER BY claimed_at DESC LIMIT 5;`
+          shows `auth.*` rows and then `sent`, with no intervention. Record how
+          long it took.
+19. **A real decision.** Approve an access request.
+    - [ ] The requester gets the mail within a minute.
+    - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
+20. **Bounces.** Run `mail:test` for a reviewer whose `users.email` you set to
+    an address that does not exist at ssps.cz (set it back afterwards).
+    - [ ] The bounce lands in the `autoporada@ssps.cz` inbox.
+    - [ ] The person IT named for that inbox can open it.
+21. **Daylight saving.** After the first night the clocks change:
+    - [ ] `docker compose run --rm cli jobs:status` shows no dead job, and the
+          scheduled jobs ran once, not twice or not at all.
+22. **Shutdown.**
+    - [ ] `docker compose stop worker` returns within 50 s.
+
 ## At go-live
 
-16. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
+23. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
     - [ ] Record how many sign-ins per minute the school's NAT address sees;
           the `auth` limit allows 600 per address.
 
@@ -119,3 +155,8 @@ docker compose exec postgres psql -U pgadmin -d autoporada
 | `OAUTH_JWT_TIMESTAMP_CHECK_FAILED` | The server clock is off | Fix NTP |
 | Many `expired` | The browser dropped the `Secure` cookie | Caddy must terminate TLS; nothing in front may speak plain http |
 | `web` restarts with `Invalid configuration` | `.env` or a secret file is wrong | The message names the setting; `sudo ./install.sh` again |
+| `mail.systemic` | Graph refuses the send (403, 401) or Entra refuses the token | Normal for up to 2 hours after the role assignment; later, check the scope (ENTRA-SETUP §3) |
+| `auth.token.AADSTS…` in the ledger `code` | Entra refused the app's token | Look the code up as above; run `auth:probe` |
+| `mail.waiting` | The mail waits for the 20-a-minute window or a `Retry-After` | Normal; nothing to do |
+| `job.dead` | A job used up its retries | Fix the cause, then `docker compose run --rm cli jobs:redrive` (running `cli` with no command prints the usage) |
+| `worker.start_failed` with the hint `run migrate` | The job queue's tables are behind the code | `docker compose up -d` runs `migrate` first; check `docker compose logs migrate` |

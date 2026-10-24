@@ -111,6 +111,22 @@ Test-ServicePrincipalAuthorization -Identity <AppId> -Resource <any-other-user>@
 # expected: InScope = False
 ```
 
+The first mails can be refused (403) for up to 2 hours while the scope
+propagates. The worker retries on its own for about 2.8 hours, one Graph call
+a minute, and logs each refusal as `mail.systemic`; nobody has to act. Then
+send a test mail from the server:
+
+```sh
+docker compose run --rm cli mail:test --user <id>
+```
+
+`<id>` is the id of an active reviewer or headmaster, not a student. The
+Entra consent must not hold `Mail.Send`; `cli auth:probe` warns if it does.
+
+Bounces (non-delivery reports) land in the inbox of `autoporada@ssps.cz` and
+quote the full text of the mail. Name a person who reads that inbox, and set
+an Exchange retention policy on it.
+
 ## 4. DNS and network
 
 - **DNS:** an `A` (and optionally `AAAA`) record for `autoporada.ssps.cz`
@@ -120,6 +136,9 @@ Test-ServicePrincipalAuthorization -Identity <AppId> -Resource <any-other-user>@
 - **Outbound from the server (HTTPS):**
   - always: `login.microsoftonline.com`, `graph.microsoft.com`,
     `acme-v02.api.letsencrypt.org`;
+  - the worker (the mail sender) needs only `login.microsoftonline.com` and
+    `graph.microsoft.com`. Where the firewall can limit a service, please
+    allow only those two from the server for it;
   - during installs and updates, which build the images on the server:
     `github.com` (the source), `registry.npmjs.org` (packages), and the
     container registries `registry-1.docker.io`, `auth.docker.io`,

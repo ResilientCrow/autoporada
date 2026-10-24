@@ -33,6 +33,12 @@ DATABASE_URL=postgres://autoporada:autoporada@localhost:5432/autoporada pnpm db:
 pnpm dev
 ```
 
+The worker sends the e-mails and runs the scheduled jobs. In another terminal,
+with `pnpm dev:services` up and `pnpm db:migrate` done (it also installs
+pg-boss), run `pnpm dev:worker`. Mail goes to Mailpit at
+http://localhost:8025. `WORKER_POLL_SECONDS` in `.env` sets how often it looks
+for jobs; the default is 2.
+
 At http://localhost:3000 the sign-in goes to a development login page with
 fixed personas ([docker/dev/mock-oauth2.json](docker/dev/mock-oauth2.json)):
 a teacher, a student, a guest, an account from another tenant and more.
