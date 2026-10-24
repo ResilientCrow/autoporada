@@ -18,8 +18,10 @@ export const appError = {
 
 export const home = {
   title: 'Přehled',
-  pending: 'Váš účet čeká na schválení vedením školy.',
+  pending: 'Zatím nemáte přístup k\u00A0podkladům porady.',
+  access: 'Přístup',
+  request: 'Požádat o\u00A0přístup',
+  showRequest: 'Zobrazit žádost',
   account: 'Váš účet',
-  statusPending: 'Čeká na schválení',
   signOutEverywhere: 'Odhlásit všude',
 } as const;

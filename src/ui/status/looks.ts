@@ -1,5 +1,5 @@
 import type { Role, UserStatus } from '@/domain/actor';
-import type { AccessState } from '@/domain/review';
+import type { AccessState, RequestStanding } from '@/domain/review';
 import { status } from '@/ui/copy';
 import type { StatusTone } from '@/ui/kit';
 
@@ -30,3 +30,10 @@ export const ACCOUNT_LOOK: Readonly<Record<UserStatus, Look>> = {
 };
 
 export const STUDENT_LOOK: Look = { tone: 'neutral', label: status.student };
+
+/** Where a person stands on asking for access; `open` (free to ask) has no chip. */
+export const STANDING_LOOK: Readonly<Record<Exclude<RequestStanding['kind'], 'open'>, Look>> = {
+  pending: ACCESS_LOOK.pending,
+  cooldown: ACCESS_LOOK.rejected,
+  blocked: ACCESS_LOOK.blocked,
+};

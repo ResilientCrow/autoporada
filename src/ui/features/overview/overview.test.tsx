@@ -12,18 +12,45 @@ function actor(over: Partial<Actor>): Actor {
   return { id: 'u1', role: 'submitter', status: 'active', isStudent: false, ...over };
 }
 
-const render = (over: Partial<Actor>) => renderToStaticMarkup(<Overview actor={actor(over)} />);
+const render = (over: Partial<Actor>) =>
+  renderToStaticMarkup(<Overview actor={actor(over)} home={{ kind: 'member' }} />);
 
-describe('Overview', () => {
-  it('shows a waiting user the notice and a waiting chip, no member chips', () => {
-    const html = render({ role: 'pending' });
+const waiting = (standing: 'open' | 'pending' | 'cooldown' | 'blocked') =>
+  renderToStaticMarkup(
+    <Overview actor={actor({ role: 'pending' })} home={{ kind: 'pending', standing }} />,
+  );
+
+const link = (html: string) => /<a [^>]*href="\/pristup"[^>]*>(.*?)<\/a>/.exec(html);
+
+describe('Overview for a waiting user', () => {
+  it.each([
+    ['open', null, cs.home.request],
+    ['pending', cs.status.access.pending, cs.home.showRequest],
+    ['cooldown', cs.status.access.rejected, cs.home.showRequest],
+    ['blocked', cs.status.access.blocked, cs.home.showRequest],
+  ] as const)('with a %s standing shows the chip and the link', (standing, chip, text) => {
+    const html = waiting(standing);
     expect(html).toMatch(new RegExp(`<h1 [^>]*>.*${cs.home.title}.*</h1>`));
-    expect(html).toContain(cs.home.statusPending);
+    expect(html).toContain(cs.home.pending);
+    expect(link(html)?.[1]).toContain(text);
+    for (const label of Object.values(cs.status.access)) {
+      expect(html.includes(label)).toBe(label === chip);
+    }
     expect(html).not.toContain(cs.status.account.active);
     expect(html).not.toContain(cs.status.role.pending);
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
+  it('announces nothing: the notice is on the page at load', () => {
+    expect(waiting('open')).not.toContain('role=');
+  });
+
+  it('still signs out of every device', () => {
+    expect(waiting('open')).toContain(`${cs.home.signOutEverywhere}</button>`);
+  });
+});
+
+describe('Overview for a member', () => {
   it.each([
     ['submitter', cs.status.role.submitter],
     ['headmaster', cs.status.role.headmaster],
@@ -32,7 +59,8 @@ describe('Overview', () => {
     expect(html).toContain(label);
     expect(html).toContain(cs.status.account.active);
     expect(html).not.toContain(cs.status.student);
-    expect(html).not.toContain(cs.home.statusPending);
+    expect(html).not.toContain(cs.home.pending);
+    expect(link(html)).toBeNull();
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
@@ -46,10 +74,7 @@ describe('Overview', () => {
     expect(render({ status: 'blocked' })).toContain(cs.status.account.blocked);
   });
 
-  it('announces the waiting state once, and only while waiting', () => {
-    const waiting = render({ role: 'pending' });
-    expect(waiting.match(/role="status"/g)).toHaveLength(1);
-    expect(waiting).toContain(`>${cs.home.pending}</div>`);
+  it('has no live region', () => {
     expect(render({})).not.toContain('role=');
   });
 

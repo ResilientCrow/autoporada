@@ -14,7 +14,9 @@ test('a member signs in, waits for approval, and signs out', async ({
 }) => {
   await signInAs(/^Učitelka/);
   await expect(page).toHaveURL(/:\d+\/$/);
-  await expect(page.getByRole('main').getByRole('status')).toHaveText(cs.home.pending);
+  // Present at load, so not a live region (nothing is announced as a change).
+  await expect(page.getByRole('main').getByText(cs.home.pending)).toBeVisible();
+  await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
   await expectAccessible();
   const cookies = await context.cookies();
   expect(cookies.find((c) => c.name === '__Host-ap_session')).toMatchObject({

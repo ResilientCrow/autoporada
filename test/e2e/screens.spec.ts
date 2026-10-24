@@ -7,10 +7,19 @@ const TITLE_SUFFIX = / – Autoporada$/;
 
 const HEADMASTER = /^Ředitel/;
 
+/** What a waiting user's home page offers per standing: the link's text and the chip, if any. */
+const HOME_STANDINGS = [
+  ['open', /^Učitelka/, cs.home.request, null],
+  ['pending', /^Test – ceka/, cs.home.showRequest, cs.status.access.pending],
+  ['blocked', /^Test – blokovany/, cs.home.showRequest, cs.status.access.blocked],
+] as const;
+
 const SCREENS = [
   ['the 404 page', '/tato-stranka-neexistuje', 404, null],
   ['the gallery', '/vzornik', 200, null],
   ['the home page of a waiting teacher', '/', 200, /^Učitelka/],
+  ['the home page of a teacher with a request waiting', '/', 200, /^Test – ceka/],
+  ['the home page of a blocked applicant', '/', 200, /^Test – blokovany/],
   ['the access request page of a waiting teacher', '/pristup', 200, /^Učitelka/],
   ['the sign-in page', '/prihlaseni', 200, null],
   ['the sign-in page with an error', '/prihlaseni?chyba=failed&kod=abcdef12-3456', 200, null],
@@ -40,6 +49,18 @@ for (const [name, url, status, persona] of SCREENS) {
       await expect(page.getByText(cs.status.account.active, { exact: true })).toBeVisible();
       await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
       await expect(page.locator('a[aria-current="page"]')).toHaveCount(1);
+    }
+    const standing = HOME_STANDINGS.find(([, who]) => who === persona);
+    if (standing && url === '/') {
+      const [, , link, chip] = standing;
+      await expect(page.getByRole('main').getByRole('link', { name: link })).toHaveAttribute(
+        'href',
+        '/pristup',
+      );
+      const chips = page.getByRole('main').getByText(cs.status.access.pending, { exact: true });
+      await expect(chips).toHaveCount(chip === cs.status.access.pending ? 1 : 0);
+      if (chip) await expect(page.getByRole('main').getByText(chip, { exact: true })).toBeVisible();
+      await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
     }
     await checkScreen(name);
   });

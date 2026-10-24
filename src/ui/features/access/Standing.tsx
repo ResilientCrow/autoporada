@@ -1,6 +1,6 @@
 import { access } from '@/ui/copy';
 import { ArrowLink, Notice } from '@/ui/kit';
-import { ACCESS_LOOK, Chip } from '@/ui/status';
+import { Chip, STANDING_LOOK } from '@/ui/status';
 
 /** The page's model: the standing, with its dates written out. */
 export type AccessView =
@@ -60,7 +60,7 @@ export function Standing({ view }: { readonly view: AccessView }) {
       return (
         <>
           <p>
-            <Chip look={ACCESS_LOOK.pending} />
+            <Chip look={STANDING_LOOK.pending} />
           </p>
           <p>
             {access.pending.sent(view.sent)} {access.pending.afterApproval}
@@ -73,7 +73,7 @@ export function Standing({ view }: { readonly view: AccessView }) {
       return (
         <>
           <p>
-            <Chip look={ACCESS_LOOK.rejected} />
+            <Chip look={STANDING_LOOK.cooldown} />
           </p>
           <p>{access.cooldown.text(view.decided, view.from)}</p>
         </>
@@ -82,7 +82,7 @@ export function Standing({ view }: { readonly view: AccessView }) {
       return (
         <>
           <p>
-            <Chip look={ACCESS_LOOK.blocked} />
+            <Chip look={STANDING_LOOK.blocked} />
           </p>
           <p>{access.blocked.text}</p>
         </>

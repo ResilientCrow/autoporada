@@ -8,6 +8,7 @@ import { getContainer } from '../container';
 import { NONCE_HEADER } from '../http';
 
 export { accessPage } from './access';
+export { homePage } from './home';
 export { getViewer, optionalSignedIn, requireSignedIn } from './viewer';
 
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;

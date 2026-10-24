@@ -1,11 +1,8 @@
-import { myAccess } from '@/application/use-cases';
 import { formatLongDate } from '@/domain/cs';
 import { instantToWallClock } from '@/domain/time';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
-
-import { getViewer, requestId } from './viewer';
+import { myStanding } from './my-access';
+import { getViewer } from './viewer';
 
 /** What „Žádost o přístup“ shows, its dates already written out. */
 type AccessPageModel =
@@ -28,17 +25,8 @@ const day = (iso: string) => formatLongDate(instantToWallClock(new Date(iso)).da
 export async function accessPage(): Promise<AccessPageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
-  const result = await runRegistered(getContainer(), myAccess, {
-    principal: viewer,
-    requestId: await requestId(),
-    input: {},
-  });
-  if (!result.ok) {
-    const { code } = result.error;
-    if (code === 'forbidden' || code === 'not-found' || code === 'invalid-input') return null;
-    throw new Error(`access.mine: ${code}`);
-  }
-  const { standing } = result.value;
+  const standing = await myStanding(viewer);
+  if (standing === null) return null;
   switch (standing.kind) {
     case 'member':
     case 'open':

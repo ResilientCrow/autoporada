@@ -5,7 +5,7 @@ import { ROLES, USER_STATUSES } from '@/domain/actor';
 import { ACCESS_MACHINE, type AccessState } from '@/domain/review';
 import { cs } from '@/ui/copy';
 
-import { ACCESS_LOOK, ACCOUNT_LOOK, Chip, ROLE_LOOK, STUDENT_LOOK } from './index';
+import { ACCESS_LOOK, ACCOUNT_LOOK, Chip, ROLE_LOOK, STANDING_LOOK, STUDENT_LOOK } from './index';
 
 const ACCESS_STATES: readonly AccessState[] = [
   ...new Set(Object.values(ACCESS_MACHINE).flatMap((t) => [...t.from, t.to])),
@@ -47,6 +47,14 @@ describe('status looks', () => {
     ['student', STUDENT_LOOK, 'neutral'],
   ] as const)('%s has the tone %s', (_name, look, tone) => {
     expect(look.tone).toBe(tone);
+  });
+
+  it('shows a standing as the state of the request behind it', () => {
+    expect(STANDING_LOOK).toEqual({
+      pending: ACCESS_LOOK.pending,
+      cooldown: ACCESS_LOOK.rejected,
+      blocked: ACCESS_LOOK.blocked,
+    });
   });
 
   it('never uses the attention tone', () => {
