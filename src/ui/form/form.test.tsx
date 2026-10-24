@@ -346,7 +346,7 @@ describe('FormProblem', () => {
 
   describe('on a page with a query string', () => {
     const SEARCH = 'hledat=Eva+Nov%C3%A1k&skupina=ucitele';
-    const WHERE = encodeURIComponent(`/uzivatele/u 1?${SEARCH}`);
+    const PATH_ONLY = encodeURIComponent('/uzivatele/u 1');
     beforeEach(() => {
       nav.search = SEARCH;
     });
@@ -354,10 +354,16 @@ describe('FormProblem', () => {
       nav.search = '';
     });
 
-    it.each(['/auth/login', '/auth/step-up'])('%s returns to the same query', (path) => {
-      const code = path === '/auth/login' ? 'unauthenticated' : 'step-up-required';
-      expect(html({ code })).toContain(`<a href="${path}?returnTo=${WHERE}"`);
-    });
+    // The search names people: a sign-in URL would put it in Caddy's log and the sign-in row.
+    it.each(['/auth/login', '/auth/step-up'])(
+      '%s returns to the path, never the search',
+      (path) => {
+        const code = path === '/auth/login' ? 'unauthenticated' : 'step-up-required';
+        const out = html({ code });
+        expect(out).toContain(`<a href="${path}?returnTo=${PATH_ONLY}"`);
+        expect(out).not.toContain('hledat');
+      },
+    );
 
     it('reloads the same query', () => {
       expect(html({ code: 'conflict' })).toMatch(

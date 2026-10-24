@@ -20,11 +20,16 @@ function textOf(problem: Problem): string {
   return errors[problem.code];
 }
 
-/** A sign-in page opens in a new tab so the typed text stays; a plain link, since /auth/* is not a page. */
-function SignInLink({ path, label, location }: { path: string; label: string; location: string }) {
+/**
+ * A sign-in page opens in a new tab so the typed text stays; a plain link, since
+ * /auth/* is not a page. It returns to the path alone: a query can hold a search
+ * that names people, which the sign-in URL would put in the server log and the
+ * stored sign-in.
+ */
+function SignInLink({ path, label, pathname }: { path: string; label: string; pathname: string }) {
   return (
     <>
-      <a href={`${path}?returnTo=${encodeURIComponent(location)}`} target="_blank" rel="noopener">
+      <a href={`${path}?returnTo=${encodeURIComponent(pathname)}`} target="_blank" rel="noopener">
         {label}
       </a>{' '}
       {problemActions.returnHint}
@@ -32,12 +37,12 @@ function SignInLink({ path, label, location }: { path: string; label: string; lo
   );
 }
 
-function actionOf(problem: Problem, location: string): ReactNode {
+function actionOf(problem: Problem, pathname: string, location: string): ReactNode {
   if (problem.code === 'unauthenticated') {
-    return <SignInLink path="/auth/login" label={problemActions.signIn} location={location} />;
+    return <SignInLink path="/auth/login" label={problemActions.signIn} pathname={pathname} />;
   }
   if (problem.code === 'step-up-required') {
-    return <SignInLink path="/auth/step-up" label={problemActions.stepUp} location={location} />;
+    return <SignInLink path="/auth/step-up" label={problemActions.stepUp} pathname={pathname} />;
   }
   if (problem.code === 'conflict' || problem.code === 'not-found') {
     return (
@@ -64,7 +69,8 @@ export function FormProblem({
   // Both are available on the server here: every route is dynamic, so no Suspense boundary is needed.
   const pathname = usePathname();
   const search = useSearchParams().toString();
-  const action = actionOf(problem, search === '' ? pathname : `${pathname}?${search}`);
+  // The reload stays on this page, query and all; a sign-in returns to the path only.
+  const action = actionOf(problem, pathname, search === '' ? pathname : `${pathname}?${search}`);
   return (
     <div ref={focusRef} tabIndex={-1}>
       <Notice tone="problem">
