@@ -147,6 +147,16 @@ describe('runJob', () => {
     expect(h.sleeps[0]?.signal.aborted).toBe(true);
   });
 
+  it('holds nothing when the shutdown came during the handler call that asked for a wait', async () => {
+    const h = harness((self) => {
+      self.shutdown.abort();
+      return waitFor(HOLD_MS)(self);
+    }, sent);
+    expect(await h.run()).toMatchObject({ status: 'failed', output: { code: 'shutdown' } });
+    expect(h.sleeps).toEqual([]);
+    expect(h.calls).toHaveLength(1);
+  });
+
   it("ends a hold when pg-boss aborts the job's own signal too", async () => {
     const h = harness(waitFor(HOLD_MS), sent);
     h.duringSleep(() => h.claim.abort());

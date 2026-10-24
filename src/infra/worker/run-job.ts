@@ -115,13 +115,16 @@ export async function runJob<N extends JobName>(
     output: { code: outcome.code },
   });
 
+  const stopped = () =>
+    settle(report({ kind: 'retry', code: shutdown.aborted ? 'shutdown' : 'aborted' }));
+
   for (;;) {
-    if (stop.aborted) {
-      return settle(report({ kind: 'retry', code: shutdown.aborted ? 'shutdown' : 'aborted' }));
-    }
+    if (stop.aborted) return stopped();
     const call = Promise.resolve().then(() => handler(deps, input));
     const outcome = report(checked(await call.catch(thrownOutcome)));
     if (outcome.kind !== 'wait') return settle(outcome);
+    // A stop that came during the call: no hold (its signal will not fire again).
+    if (stop.aborted) return stopped();
     const now = clock.now().getTime();
     const hold = Math.min(Math.max(0, outcome.until.getTime() - now), HOLD_MS);
     if (now + hold > deadline) return settle(report({ kind: 'retry', code: 'deferred' }));
