@@ -167,9 +167,17 @@ schedule=$(sql "SELECT string_agg(name || ' ' || timezone, ',' ORDER BY name) FR
 [ "$schedule" = 'mail.prune Europe/Prague' ] || fail "unexpected schedule: $schedule"
 
 # The worker's own rights: the queue tables and the mail tables, no schema, no role, no business writes.
+# Nothing on pgboss.bam (the owner's migrate runs its rows as SQL), nor on a queue's table or the
+# schema version.
 worker_rights=$(sql "SELECT concat_ws(' ',
   has_table_privilege('autoporada_worker', 'pgboss.job_common', 'UPDATE'),
   has_table_privilege('autoporada_worker', 'pgboss.job_common', 'DELETE'),
+  has_table_privilege('autoporada_worker', 'pgboss.bam', 'INSERT'),
+  has_table_privilege('autoporada_worker', 'pgboss.bam', 'UPDATE'),
+  has_table_privilege('autoporada_worker', 'pgboss.bam', 'DELETE'),
+  has_column_privilege('autoporada_worker', 'pgboss.version', 'version', 'UPDATE'),
+  has_column_privilege('autoporada_worker', 'pgboss.queue', 'table_name', 'UPDATE'),
+  (SELECT count(*) FROM pg_default_acl WHERE defaclnamespace = 'pgboss'::regnamespace),
   has_schema_privilege('autoporada_worker', 'pgboss', 'CREATE'),
   (SELECT count(*) FROM pg_tables WHERE schemaname = 'pgboss' AND tableowner = 'autoporada_worker'),
   has_table_privilege('autoporada_worker', 'users', 'INSERT, UPDATE, DELETE'),
@@ -178,7 +186,7 @@ worker_rights=$(sql "SELECT concat_ws(' ',
   (SELECT rolsuper FROM pg_roles WHERE rolname = 'autoporada_worker'),
   (SELECT rolcreaterole FROM pg_roles WHERE rolname = 'autoporada_worker'))") ||
   fail 'could not read the worker privileges'
-[ "$worker_rights" = 't t f 0 f f f f f' ] || fail "unexpected worker privileges: $worker_rights"
+[ "$worker_rights" = 't t f f f f f 0 f 0 f f f f f' ] || fail "unexpected worker privileges: $worker_rights"
 
 # The probe of SMOKE-TEST step 3 starts and asks Entra (which does not know
 # this tenant): its configuration is complete without the web-only secrets.

@@ -1,7 +1,7 @@
 import { Client } from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createBoss } from '@/infra/jobs';
+import { applyJobGrants, createBoss } from '@/infra/jobs';
 import { createLogger } from '@/infra/log';
 import type { Logger } from '@/infra/log';
 
@@ -163,21 +163,144 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
     SLOW,
   );
 
-  it('changes rows in every pgboss table but creates nothing and owns nothing', async () => {
+  it('holds on each pgboss table only what a supervising, scheduling worker uses', async () => {
+    // Table-level privileges, and the columns it may update where it may not update the table.
+    // Every table counts, so a table a pg-boss upgrade adds shows up here (denied) until granted.
+    const rows = await database.owner<{ table: string; held: string; updates: string }>(
+      `SELECT DISTINCT regexp_replace(c.relname, '^queue_stats_\\d{8}$', 'queue_stats_<day>') AS table,
+              array_to_string(ARRAY(
+                SELECT p FROM unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) p
+                 WHERE has_table_privilege('autoporada_worker', c.oid, p)), ' ') AS held,
+              array_to_string(ARRAY(
+                SELECT a.attname FROM pg_attribute a
+                 WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                   AND NOT has_table_privilege('autoporada_worker', c.oid, 'UPDATE')
+                   AND has_column_privilege('autoporada_worker', c.oid, a.attnum, 'UPDATE')
+                 ORDER BY a.attname), ' ') AS updates
+         FROM pg_class c
+        WHERE c.relnamespace = 'pgboss'::regnamespace AND c.relkind IN ('r', 'p')
+        ORDER BY 1`,
+    );
+    const DML = 'SELECT INSERT UPDATE DELETE';
+    const none = { held: '', updates: '' };
+    expect(Object.fromEntries(rows.map(({ table, ...rest }) => [table, rest]))).toEqual({
+      bam: none,
+      instance: { held: 'SELECT DELETE', updates: 'stopped_on' },
+      job: { held: DML, updates: '' },
+      job_common: { held: DML, updates: '' },
+      job_dependency: { held: 'SELECT DELETE', updates: '' },
+      queue: {
+        held: 'SELECT INSERT',
+        updates: [
+          'active_count',
+          'blocked_count',
+          'deferred_count',
+          'failed_count',
+          'maintain_on',
+          'monitor_claim_on',
+          'monitor_on',
+          'queued_count',
+          'ready_count',
+          'ready_history',
+          'retained_count',
+          'retained_on',
+          'singletons_active',
+          'total_count',
+        ].join(' '),
+      },
+      queue_stats: none,
+      'queue_stats_<day>': none,
+      schedule: { held: DML, updates: '' },
+      subscription: none,
+      version: { held: 'SELECT', updates: 'cron_on flow_on monitor_backoff_on' },
+      warning: none,
+    });
+  });
+
+  // pg-boss runs pgboss.bam's `command` as SQL in the next owner-run migrate (security-1).
+  describe.each(['autoporada_worker', 'autoporada_jobs'])('%s on pgboss.bam', (role) => {
+    it.each([
+      [
+        'plant a command',
+        `INSERT INTO pgboss.bam (name, version, status, table_name, command)
+         VALUES ('planted', 1, 'pending', 'job_common', 'GRANT UPDATE ON public.users TO autoporada_jobs')`,
+      ],
+      ['rewrite a command', `UPDATE pgboss.bam SET command = 'SELECT 1', status = 'pending'`],
+      ['delete a row', `DELETE FROM pgboss.bam`],
+      ['read it', `SELECT count(*) FROM pgboss.bam`],
+    ])('cannot %s', async (_what, statement) => {
+      expect(await sqlstateAs(role, statement)).toBe(DENIED);
+    });
+  });
+
+  it.each([
+    ['set the schema version', `UPDATE pgboss.version SET version = version - 1`],
+    ['stamp the bam poll', `UPDATE pgboss.version SET bam_on = now()`],
+    ['point a queue at another table', `UPDATE pgboss.queue SET table_name = 'bam'`],
+    ['partition a queue', `UPDATE pgboss.queue SET partition = true`],
+    ['rename a queue', `UPDATE pgboss.queue SET name = name || 'x'`],
+    ['change a queue setting', `UPDATE pgboss.queue SET retry_limit = 0`],
+    ['write a warning', `INSERT INTO pgboss.warning (type, message) VALUES ('x', 'x')`],
+    ['subscribe', `INSERT INTO pgboss.subscription (event, name) VALUES ('x', 'mail.send')`],
+  ])('the worker cannot %s', async (_what, statement) => {
+    expect(await sqlstateAs('autoporada_worker', statement)).toBe(DENIED);
+  });
+
+  it('stamps the clock and the sweep columns of version', async () => {
+    expect(
+      await sqlstateAs(
+        'autoporada_worker',
+        `UPDATE pgboss.version SET cron_on = now(), flow_on = now(), monitor_backoff_on = NULL`,
+      ),
+    ).toBeUndefined();
+  });
+
+  it('gets nothing on a table the owner adds to pgboss later', async () => {
+    await database.owner(`CREATE TABLE pgboss.added_later (id int)`);
+    try {
+      expect(await sqlstateAs('autoporada_worker', `SELECT * FROM pgboss.added_later`)).toBe(
+        DENIED,
+      );
+    } finally {
+      await database.owner(`DROP TABLE pgboss.added_later`);
+    }
+    expect(
+      await database.owner(
+        `SELECT defaclrole::regrole::text FROM pg_default_acl WHERE defaclnamespace = 'pgboss'::regnamespace`,
+      ),
+    ).toEqual([]);
+  });
+
+  it('takes back the blanket grant of a volume migrated before this fix', async () => {
+    await database.owner(
+      `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA pgboss TO autoporada_jobs;
+       ALTER DEFAULT PRIVILEGES IN SCHEMA pgboss GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO autoporada_jobs`,
+    );
+    const owner = new Client({ connectionString: databaseUrl(database.name) });
+    await owner.connect();
+    try {
+      await applyJobGrants(owner);
+    } finally {
+      await owner.end();
+    }
+    expect(await sqlstateAs('autoporada_worker', `DELETE FROM pgboss.bam`)).toBe(DENIED);
+    expect(await sqlstateAs('autoporada_worker', `UPDATE pgboss.version SET version = 1`)).toBe(
+      DENIED,
+    );
+    expect(
+      await database.owner(
+        `SELECT 1 FROM pg_default_acl WHERE defaclnamespace = 'pgboss'::regnamespace`,
+      ),
+    ).toEqual([]);
+  });
+
+  it('creates nothing and owns nothing', async () => {
     const [facts] = await database.owner<Record<string, boolean | number>>(
-      `SELECT has_table_privilege('autoporada_worker', 'pgboss.job_common', 'INSERT,UPDATE,DELETE,SELECT') AS job,
-              has_table_privilege('autoporada_worker', 'pgboss.queue', 'UPDATE') AS queue,
-              has_table_privilege('autoporada_worker', 'pgboss.version', 'UPDATE') AS version,
-              has_table_privilege('autoporada_worker', 'pgboss.schedule', 'INSERT,DELETE') AS schedule,
-              has_schema_privilege('autoporada_worker', 'pgboss', 'CREATE') AS create_pgboss,
+      `SELECT has_schema_privilege('autoporada_worker', 'pgboss', 'CREATE') AS create_pgboss,
               has_schema_privilege('autoporada_worker', 'public', 'CREATE') AS create_public,
               (SELECT count(*)::int FROM pg_class WHERE relowner = 'autoporada_worker'::regrole) AS owns`,
     );
     expect(facts).toEqual({
-      job: true,
-      queue: true,
-      version: true,
-      schedule: true,
       create_pgboss: false,
       create_public: false,
       owns: 0,
