@@ -7,6 +7,7 @@ import { ControlDemos } from './ControlDemos';
 import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
 import { ProblemDemos } from './ProblemDemos';
+import { StatusDemos } from './StatusDemos';
 
 /** The pattern gallery: each UI part, once, for the look and accessibility checks (inside a Shell). */
 export function Gallery({ unavailable = false }: { readonly unavailable?: boolean }) {
@@ -20,6 +21,10 @@ export function Gallery({ unavailable = false }: { readonly unavailable?: boolea
         </Link>
       </p>
       <KitSections />
+      <section aria-labelledby="stavy-aplikace">
+        <h2 id="stavy-aplikace">{cs.gallery.statusMaps.title}</h2>
+        <StatusDemos />
+      </section>
       <section aria-labelledby="formular">
         <h2 id="formular">{cs.gallery.forms.title}</h2>
         <FormDemos unavailable={unavailable} />

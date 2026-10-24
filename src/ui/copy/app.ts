@@ -21,6 +21,5 @@ export const home = {
   pending: 'Váš účet čeká na schválení vedením školy.',
   account: 'Váš účet',
   statusPending: 'Čeká na schválení',
-  statusActive: 'Aktivní',
   signOutEverywhere: 'Odhlásit všude',
 } as const;

@@ -11,6 +11,12 @@ export const gallery = {
     attention: 'Vráceno',
     stopped: 'Zamítnuto',
   },
+  statusMaps: {
+    title: 'Stavy v\u00A0aplikaci',
+    access: 'Žádost o\u00A0přístup',
+    role: 'Role',
+    account: 'Účet',
+  },
   buttons: {
     title: 'Tlačítka',
     primary: 'Hlavní akce',

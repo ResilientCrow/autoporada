@@ -12,7 +12,7 @@ export default async function HomePage() {
   const viewer = await requireSignedIn('/');
   return (
     <Shell viewer={viewer} current="/">
-      <Overview pending={viewer.pending} />
+      <Overview actor={viewer.actor} />
     </Shell>
   );
 }

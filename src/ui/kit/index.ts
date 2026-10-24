@@ -5,4 +5,4 @@ export { Card } from './Card';
 export { Icon } from './Icon';
 export { Notice } from './Notice';
 export { SlantLabel } from './SlantLabel';
-export { StatusChip } from './StatusChip';
+export { StatusChip, type StatusTone } from './StatusChip';

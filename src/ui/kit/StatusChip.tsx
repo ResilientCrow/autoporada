@@ -1,10 +1,10 @@
 import { cx } from './cx';
 import { Icon, type IconName } from './Icon';
 
-type Tone = 'neutral' | 'waiting' | 'done' | 'attention' | 'stopped';
+export type StatusTone = 'neutral' | 'waiting' | 'done' | 'attention' | 'stopped';
 
 /** Each tone has its own icon, so status never relies on colour alone. */
-const LOOK: Record<Tone, { readonly icon: IconName; readonly classes: string }> = {
+const LOOK: Record<StatusTone, { readonly icon: IconName; readonly classes: string }> = {
   neutral: { icon: 'dot', classes: 'border-ink bg-light text-ink' },
   waiting: { icon: 'clock', classes: 'border-transparent bg-sublight text-ink' },
   done: { icon: 'check', classes: 'border-transparent bg-navy-mid text-light' },
@@ -17,7 +17,13 @@ const LOOK: Record<Tone, { readonly icon: IconName; readonly classes: string }> 
  * never by features. `attention` is only for „Vráceno“ and a deadline under
  * 24 hours. Not a live region: a change of status is announced elsewhere.
  */
-export function StatusChip({ tone, children }: { readonly tone: Tone; readonly children: string }) {
+export function StatusChip({
+  tone,
+  children,
+}: {
+  readonly tone: StatusTone;
+  readonly children: string;
+}) {
   const { icon, classes } = LOOK[tone];
   return (
     <span

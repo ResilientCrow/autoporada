@@ -18,6 +18,7 @@ describe('Gallery', () => {
 
   it.each([
     cs.gallery.statuses.title,
+    cs.gallery.statusMaps.title,
     cs.gallery.buttons.title,
     cs.gallery.notices.title,
     cs.gallery.forms.title,

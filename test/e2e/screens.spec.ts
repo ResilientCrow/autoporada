@@ -36,7 +36,7 @@ for (const [name, url, status, persona] of SCREENS) {
     await expect(page).toHaveTitle(TITLE_SUFFIX);
     await hydrated();
     if (persona === HEADMASTER && url === '/') {
-      await expect(page.getByText(cs.home.statusActive, { exact: true })).toBeVisible();
+      await expect(page.getByText(cs.status.account.active, { exact: true })).toBeVisible();
       await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
       await expect(page.locator('a[aria-current="page"]')).toHaveCount(1);
     }

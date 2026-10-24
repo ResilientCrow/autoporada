@@ -5,6 +5,7 @@ import { nav } from './nav';
 import { privacy } from './privacy';
 import { shell } from './shell';
 import { signIn } from './sign-in';
+import { status } from './status';
 
 /**
  * Czech UI copy. Every user-facing string lives in this directory, one file per
@@ -21,6 +22,7 @@ export const cs = {
   gallery,
   privacy,
   errors,
+  status,
   problemActions,
   rules,
   fieldIssues,
