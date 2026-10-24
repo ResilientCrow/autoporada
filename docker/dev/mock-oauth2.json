@@ -91,6 +91,118 @@
         },
         {
           "requestParam": "subject",
+          "match": "ceka",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000011",
+            "name": "Čeněk Čekající",
+            "preferred_username": "ceka@ssps.cz",
+            "upn": "ceka@ssps.cz",
+            "email": "ceka@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "lhuta",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000012",
+            "name": "Lenka Lhůtová",
+            "preferred_username": "lhuta@ssps.cz",
+            "upn": "lhuta@ssps.cz",
+            "email": "lhuta@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "po-lhute",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000013",
+            "name": "Pavel Polhůtní",
+            "preferred_username": "po-lhute@ssps.cz",
+            "upn": "po-lhute@ssps.cz",
+            "email": "po-lhute@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "zrusena",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000014",
+            "name": "Zdena Zrušená",
+            "preferred_username": "zrusena@ssps.cz",
+            "upn": "zrusena@ssps.cz",
+            "email": "zrusena@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "blokovany",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000015",
+            "name": "Bohumil Blokovaný",
+            "preferred_username": "blokovany@ssps.cz",
+            "upn": "blokovany@ssps.cz",
+            "email": "blokovany@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "zadatel",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000016",
+            "name": "Zdeněk Žadatel",
+            "preferred_username": "zadatel@ssps.cz",
+            "upn": "zadatel@ssps.cz",
+            "email": "zadatel@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "prazdny",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000017",
+            "name": "Prokop Prázdný",
+            "preferred_username": "prazdny@ssps.cz",
+            "upn": "prazdny@ssps.cz",
+            "email": "prazdny@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "relace",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000018",
+            "name": "Radka Relační",
+            "preferred_username": "relace@ssps.cz",
+            "upn": "relace@ssps.cz",
+            "email": "relace@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],

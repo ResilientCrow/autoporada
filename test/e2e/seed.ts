@@ -10,17 +10,55 @@ import { Client } from 'pg';
 
 type Role = 'pending' | 'submitter' | 'reviewer' | 'headmaster';
 
+type RequestState = 'pending' | 'rejected' | 'cancelled' | 'blocked';
+
 interface Persona {
   /** The `subject` of the mock IdP's mapping. */
   readonly subject: string;
   readonly role: Role;
+  /** An access request the user starts with; the offsets are days before the run (decided only for a decision). */
+  readonly request?: {
+    readonly state: RequestState;
+    readonly createdDaysAgo: number;
+    readonly decidedDaysAgo?: number;
+  };
 }
+
+const REASON = 'Chci posílat zprávy o akcích třídy.';
 
 const PERSONAS: readonly Persona[] = [
   // Read-only screens and the pending notice; never mutated.
   { subject: 'ucitel', role: 'pending' },
   // Headmaster from the start, so the bootstrap never runs in e2e (unit and integration tests cover it).
   { subject: 'reditel', role: 'headmaster' },
+  // /pristup states: each is read by screens only, never mutated.
+  { subject: 'ceka', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
+  // Rejected two days ago: inside the cooldown.
+  {
+    subject: 'lhuta',
+    role: 'pending',
+    request: { state: 'rejected', createdDaysAgo: 3, decidedDaysAgo: 2 },
+  },
+  // Rejected 40 days ago: past the cooldown, so the form is open again.
+  {
+    subject: 'po-lhute',
+    role: 'pending',
+    request: { state: 'rejected', createdDaysAgo: 41, decidedDaysAgo: 40 },
+  },
+  {
+    subject: 'zrusena',
+    role: 'pending',
+    request: { state: 'cancelled', createdDaysAgo: 2, decidedDaysAgo: 1 },
+  },
+  {
+    subject: 'blokovany',
+    role: 'pending',
+    request: { state: 'blocked', createdDaysAgo: 6, decidedDaysAgo: 5 },
+  },
+  // Journeys of access.spec.ts, one persona per test and no request to begin with.
+  { subject: 'zadatel', role: 'pending' },
+  { subject: 'prazdny', role: 'pending' },
+  { subject: 'relace', role: 'pending' },
 ];
 
 interface Mapping {
@@ -44,11 +82,31 @@ export async function seed(databaseUrl: string): Promise<void> {
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   try {
+    let headmaster = '';
     for (const persona of PERSONAS) {
       const { tid, oid, name, email } = identityOf(persona.subject);
-      await client.query(
-        'INSERT INTO users (tid, oid, display_name, email, role) VALUES ($1, $2, $3, $4, $5)',
+      const { rows } = await client.query<{ id: string }>(
+        'INSERT INTO users (tid, oid, display_name, email, role) VALUES ($1, $2, $3, $4, $5) RETURNING id',
         [tid, oid, name, email, persona.role],
+      );
+      const userId = rows[0]!.id;
+      if (persona.role === 'headmaster') headmaster = userId;
+      const { request } = persona;
+      if (!request) continue;
+      // Decisions are the headmaster's, who is listed before every persona with a decision.
+      const decided = request.decidedDaysAgo !== undefined;
+      await client.query(
+        `INSERT INTO access_requests (user_id, reason, state, decided_by, decided_at, created_at)
+         VALUES ($1, $2, $3, $4, CASE WHEN $5::int IS NULL THEN NULL ELSE now() - $5::int * interval '1 day' END,
+                 now() - $6::int * interval '1 day')`,
+        [
+          userId,
+          REASON,
+          request.state,
+          decided && request.state !== 'cancelled' ? headmaster : null,
+          request.decidedDaysAgo ?? null,
+          request.createdDaysAgo,
+        ],
       );
     }
   } finally {

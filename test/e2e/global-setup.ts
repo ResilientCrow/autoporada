@@ -6,9 +6,8 @@
  */
 import { databaseUrl, ensureTemplate, recreateFromTemplate } from '../support/template-db';
 
+import { E2E_DATABASE } from './db';
 import { seed } from './seed';
-
-const E2E_DATABASE = 'autoporada_e2e';
 
 export default async function setup(): Promise<void> {
   await ensureTemplate();

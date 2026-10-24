@@ -1,5 +1,5 @@
 /** One test per screen; each screen joins in the commit that restyles it. */
-import { cs } from '@/ui/copy';
+import { access, cs } from '@/ui/copy';
 
 import { expect, test } from './fixtures';
 
@@ -42,6 +42,48 @@ for (const [name, url, status, persona] of SCREENS) {
       await expect(page.locator('a[aria-current="page"]')).toHaveCount(1);
     }
     await checkScreen(name);
+  });
+}
+
+/** A copy template with `{}` where its dates go, as a pattern. */
+const withDates = (text: (a: string, b: string) => string) =>
+  new RegExp(
+    text('@1@', '@2@')
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/@\d@/g, '.+')
+      .replace(/\u00A0/g, '\\s'),
+  );
+
+/** The states of „Žádost o přístup“ a person can be in, each with its own seeded persona. */
+const ACCESS_STATES = [
+  ['pending', /^Test – ceka/, access.pending.title, access.pending.reason],
+  ['cooldown', /^Test – lhuta/, access.cooldown.title, withDates(access.cooldown.text)],
+  ['open after a rejection', /^Test – po-lhute/, access.open.title, access.open.previousRejected],
+  [
+    'open after a cancellation',
+    /^Test – zrusena/,
+    access.open.title,
+    access.open.previousCancelled,
+  ],
+  ['blocked', /^Test – blokovany/, access.blocked.title, access.blocked.text],
+] as const;
+
+for (const [state, persona, title, text] of ACCESS_STATES) {
+  test(`the access request page in the ${state} state is well-formed, accessible and keyboard-friendly`, async ({
+    page,
+    hydrated,
+    checkScreen,
+    signInAs,
+  }) => {
+    await signInAs(persona);
+    const response = await page.goto('/pristup');
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText(title);
+    await expect(page.getByRole('main').getByText(text).first()).toBeVisible();
+    await expect(page).toHaveTitle(TITLE_SUFFIX);
+    await hydrated();
+    await checkScreen(`the access request page, ${state}`);
   });
 }
 
