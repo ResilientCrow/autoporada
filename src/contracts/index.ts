@@ -1,10 +1,11 @@
-export type {
-  ActionError,
-  ActionResult,
-  ErrorCode,
-  FieldIssueCode,
-  FieldIssues,
-  ServerAction,
+export {
+  ERROR_CODES,
+  type ActionError,
+  type ActionResult,
+  type ErrorCode,
+  type FieldIssueCode,
+  type FieldIssues,
+  type ServerAction,
 } from './result';
 export { RULE_CODES, type RuleCode } from './rules';
 export {

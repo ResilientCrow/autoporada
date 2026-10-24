@@ -1,19 +1,31 @@
 import type { ErrorCode, FieldIssueCode, RuleCode } from '@/contracts';
 import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
-/** Why an action did not happen; `unavailable` is shown with the request id. */
+/** Why an action did not happen; `invalid-input` here is the case with no field to point at. */
 export const errors = {
-  'invalid-input': 'Zkontrolujte prosím označená pole.',
+  'invalid-input': 'Zadání obsahuje znaky, které nelze uložit. Zkontrolujte prosím text.',
   unauthenticated: 'Přihlášení vypršelo. Přihlaste se prosím znovu.',
   'step-up-required': 'Pro tuto změnu se prosím znovu přihlaste.',
   forbidden: 'K\u00A0této akci nemáte oprávnění.',
   'not-found': 'Položka neexistuje, nebo k\u00A0ní nemáte přístup.',
-  conflict: 'Položku mezitím změnil někdo jiný. Načtěte prosím stránku znovu.',
+  conflict: 'Stav se mezitím změnil. Načtěte prosím aktuální stav a\u00A0akci případně zopakujte.',
   busy: 'Položka se právě zpracovává. Zkuste to prosím za chvíli znovu.',
   rule: 'Akci nelze provést.',
-  'rate-limited': 'Příliš mnoho pokusů za krátkou dobu. Zkuste to prosím později.',
+  'rate-limited': 'Příliš mnoho pokusů za krátkou dobu.',
   unavailable: 'Něco se nepovedlo. Pokud potíže trvají, pošlete správci kód chyby.',
-} as const satisfies Record<ErrorCode, string>;
+  network:
+    'Nepodařilo se spojit se serverem. Zkontrolujte připojení; pokud to nepomůže, načtěte stránku znovu.',
+} as const satisfies Record<ErrorCode | 'network', string>;
+
+/** The actions and hints a problem notice adds to its text. */
+export const problemActions = {
+  retry: 'Znovu to můžete zkusit',
+  signIn: 'Přihlásit se (otevře se na nové kartě)',
+  stepUp: 'Potvrdit totožnost (otevře se na nové kartě)',
+  reload: 'Načíst aktuální stav',
+  returnHint:
+    'Po přihlášení se vraťte na tuto kartu a\u00A0odešlete formulář znovu. Napsaný text zůstane zachován.',
+} as const;
 
 export const rules = {
   'last-headmaster': 'Musí zůstat alespoň jeden aktivní účet ředitele.',

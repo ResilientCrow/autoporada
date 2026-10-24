@@ -22,6 +22,23 @@ export type ActionError =
 
 export type ErrorCode = ActionError['code'];
 
+/** One key per code; `Record<ErrorCode, …>` fails to compile when a code is missing or extra. */
+const CODE_SET = {
+  'invalid-input': true,
+  unauthenticated: true,
+  'step-up-required': true,
+  forbidden: true,
+  'not-found': true,
+  conflict: true,
+  busy: true,
+  rule: true,
+  'rate-limited': true,
+  unavailable: true,
+} as const satisfies Record<ErrorCode, true>;
+
+/** Every error code, for what must cover them all (copy, `settle`). */
+export const ERROR_CODES = Object.keys(CODE_SET) as readonly ErrorCode[];
+
 export type ActionResult<T> =
   { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: ActionError };
 

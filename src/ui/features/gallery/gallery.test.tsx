@@ -1,11 +1,13 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import { Gallery } from './index';
+
+vi.mock('next/navigation', () => ({ usePathname: () => '/vzornik' }));
 
 describe('Gallery', () => {
   const html = renderToStaticMarkup(<Gallery />);
@@ -20,6 +22,7 @@ describe('Gallery', () => {
     cs.gallery.notices.title,
     cs.gallery.forms.title,
     cs.gallery.forms.controls.title,
+    cs.gallery.problems.title,
   ])('has the section %s', (title) => {
     expect(html).toMatch(new RegExp(`<h2 [^>]*>${title}</h2>`));
   });
@@ -35,7 +38,8 @@ describe('Gallery', () => {
     expect(html).toContain(cs.gallery.forms.failed.reasonTooLong);
     expect(html).toContain(cs.fieldIssues.required);
     expect(html.match(/aria-invalid="true"/g)).toHaveLength(4);
-    expect(html.match(/role="alert"/g)).toHaveLength(2);
+    // Two summaries, plus one problem notice per code (eleven).
+    expect(html.match(/role="alert"/g)).toHaveLength(13);
     expect(html).toContain(cs.form.summaryTitle);
   });
 
@@ -47,6 +51,12 @@ describe('Gallery', () => {
     expect(html).toContain(cs.fieldIssues.invalid);
     expect(html).toMatch(/<select [^>]*aria-invalid="true"/);
     expect(html).toMatch(/<input [^>]*type="checkbox"[^>]*aria-invalid="true"/);
+  });
+
+  it('shows a problem notice for every code', () => {
+    for (const label of Object.values(cs.gallery.problems.code)) expect(html).toContain(label);
+    expect(html).toContain(`${cs.app.errorCode} abcdef12-3456`);
+    expect(html).toContain('returnTo=%2Fvzornik');
   });
 
   it('has the live form, quiet until submitted', () => {

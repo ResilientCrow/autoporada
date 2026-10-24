@@ -1,5 +1,5 @@
 import { app, appError, home, notFound } from './app';
-import { errors, fieldIssues, form, rules } from './forms';
+import { errors, fieldIssues, form, problemActions, rules } from './forms';
 import { gallery } from './gallery';
 import { nav } from './nav';
 import { privacy } from './privacy';
@@ -21,6 +21,7 @@ export const cs = {
   gallery,
   privacy,
   errors,
+  problemActions,
   rules,
   fieldIssues,
   form,

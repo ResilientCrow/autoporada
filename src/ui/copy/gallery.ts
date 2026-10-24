@@ -24,6 +24,22 @@ export const gallery = {
     info: 'Změny se ukládají průběžně.',
     problem: 'Zprávu se nepodařilo odeslat.',
   },
+  problems: {
+    title: 'Chyby při odeslání',
+    code: {
+      'invalid-input': 'Bez označeného pole',
+      unauthenticated: 'Vypršelo přihlášení',
+      'step-up-required': 'Je třeba potvrdit totožnost',
+      forbidden: 'Bez oprávnění',
+      'not-found': 'Položka nenalezena',
+      conflict: 'Střet změn',
+      busy: 'Položka je zaneprázdněná',
+      rule: 'Porušené pravidlo',
+      'rate-limited': 'Příliš mnoho pokusů',
+      unavailable: 'Služba nedostupná',
+      network: 'Spojení selhalo',
+    },
+  },
   forms: {
     title: 'Formulář',
     submit: 'Odeslat',

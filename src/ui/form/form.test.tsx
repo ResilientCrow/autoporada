@@ -1,11 +1,22 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
 
-import { CheckboxField, Form, SelectField, TextField, type FormSpec } from './index';
+import {
+  CheckboxField,
+  Form,
+  FormProblem,
+  SelectField,
+  TextField,
+  type FormSpec,
+  type Problem,
+} from './index';
+import { retryAfterText } from './settle';
+
+vi.mock('next/navigation', () => ({ usePathname: () => '/uzivatele/u 1' }));
 
 const NOTE = 'Pomůže nám to.';
 const OWN_LABEL = 'Vlastní';
@@ -236,5 +247,60 @@ describe('SelectField and CheckboxField', () => {
       expect(cspMarkupProblems(renderControls())).toEqual([]);
       expect(cspMarkupProblems(renderControls(null, true, true))).toEqual([]);
     });
+  });
+});
+
+describe('FormProblem', () => {
+  const PATH = encodeURIComponent('/uzivatele/u 1');
+  const problems: readonly [Problem, string][] = [
+    [{ code: 'invalid-input' }, cs.errors['invalid-input']],
+    [{ code: 'unauthenticated' }, cs.errors.unauthenticated],
+    [{ code: 'step-up-required' }, cs.errors['step-up-required']],
+    [{ code: 'forbidden' }, cs.errors.forbidden],
+    [{ code: 'not-found' }, cs.errors['not-found']],
+    [{ code: 'conflict' }, cs.errors.conflict],
+    [{ code: 'busy' }, cs.errors.busy],
+    [{ code: 'rule', rule: 'last-headmaster' }, cs.rules['last-headmaster']],
+    [
+      { code: 'rate-limited', retryAfterSeconds: 720 },
+      `${cs.errors['rate-limited']} ${cs.problemActions.retry} ${retryAfterText(720)}.`,
+    ],
+    [
+      { code: 'unavailable', requestId: 'abcdef12-3456' },
+      `${cs.errors.unavailable} ${cs.app.errorCode} abcdef12-3456`,
+    ],
+    [{ code: 'network' }, cs.errors.network],
+  ];
+  const html = (problem: Problem) => renderToStaticMarkup(<FormProblem problem={problem} />);
+
+  it.each(problems)('says what happened for %j', (problem, text) => {
+    const out = html(problem);
+    expect(out).toMatch(/^<div tabindex="-1"><div role="alert"/);
+    expect(out).toContain(text);
+    expect(out).not.toContain('style=');
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it.each([
+    ['unauthenticated', '/auth/login', cs.problemActions.signIn],
+    ['step-up-required', '/auth/step-up', cs.problemActions.stepUp],
+  ] as const)('%s: a sign-in link in a new tab, plus the return hint', (code, path, label) => {
+    const out = html({ code });
+    expect(out).toContain(
+      `<a href="${path}?returnTo=${PATH}" target="_blank" rel="noopener">${label}</a>`,
+    );
+    expect(out).toContain(cs.problemActions.returnHint);
+  });
+
+  it.each(['conflict', 'not-found'] as const)('%s: a link back to the page', (code) => {
+    const out = html({ code });
+    expect(out).toMatch(
+      new RegExp(`<a href="/uzivatele/u(?: |%20)1"[^>]*>${cs.problemActions.reload}</a>`),
+    );
+    expect(out).not.toContain(cs.problemActions.returnHint);
+  });
+
+  it.each(['forbidden', 'busy', 'network'] as const)('%s: no action', (code) => {
+    expect(html({ code })).not.toContain('<a ');
   });
 });
