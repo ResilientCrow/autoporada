@@ -89,6 +89,14 @@ module.exports = {
       },
     },
     {
+      name: 'use-cases-not-into-jobs',
+      comment:
+        'ADR 0015: use cases enqueue through application/notifications; the handlers and the cron registry stay out of the web bundle.',
+      severity: 'error',
+      from: { path: '^src/application/use-cases/' },
+      to: { path: '^src/application/jobs/' },
+    },
+    {
       name: 'infra-is-a-leaf',
       severity: 'error',
       from: { path: '^src/infra/' },

@@ -26,6 +26,7 @@ export {
   REPORT_MACHINE,
   type AccessEvent,
   type AccessState,
+  type DecisionEvent,
   type FutureEvent,
   type FutureState,
   type IssueEvent,

@@ -134,6 +134,8 @@ export const ACCESS_STATES = ['pending', 'approved', 'rejected', 'blocked', 'can
 export const ACCESS_EVENTS = ['approve', 'reject', 'block', 'cancel'] as const;
 export type AccessState = (typeof ACCESS_STATES)[number];
 export type AccessEvent = (typeof ACCESS_EVENTS)[number];
+/** The headmaster's events; the requester's cancel decides nothing. */
+export type DecisionEvent = Exclude<AccessEvent, 'cancel'>;
 
 const requester = (a: ReviewActor) => a.kind === 'user' && a.isAuthor;
 

@@ -3,12 +3,12 @@ import type { z } from 'zod';
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { decideAccessInput, decideAccessOutput } from '@/contracts';
 import { can } from '@/domain/policy';
-import { ACCESS_MACHINE, transition } from '@/domain/review';
+import { ACCESS_MACHINE, transition, type DecisionEvent } from '@/domain/review';
 
 import { userAccessEvent } from '../users/events';
 import { lockedActor } from '../users/locked-actor';
 import { accessRequestEvent } from './events';
-import { machineActor, type DecisionEvent } from './machine';
+import { machineActor } from './machine';
 
 type Decision = z.output<typeof decideAccessInput>['decision'];
 
