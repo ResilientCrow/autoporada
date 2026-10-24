@@ -386,20 +386,29 @@ describe('a serialization failure rerun (F9)', () => {
       const held = new Promise<void>((resolve) => {
         secondHoldsB = resolve;
       });
+      let firstHoldsA: () => void = () => undefined;
+      const enqueuedFirst = new Promise<void>((resolve) => {
+        firstHoldsA = resolve;
+      });
       const enqueue = (tx: Tx) => tx.jobs.enqueue('mail.send', payload, { dedupeKey: key });
 
       // The first enqueues, takes user A, then waits for user B, which the second holds. The second
-      // takes B, then enqueues the same key: it waits for the first's uncommitted job row.
-      // Each waits for the other, PostgreSQL ends one of them, and its work runs again.
+      // takes B only once the first has enqueued and holds A, then enqueues the same key: it waits
+      // for the first's uncommitted job row. Each waits for the other, PostgreSQL ends one of
+      // them, and its work runs again.
       const first = database.app.transaction(ctx, { mode: 'write' }, async (tx) => {
         runs.first += 1;
         await enqueue(tx);
         await tx.users.lock(a!.id);
-        if (runs.first === 1) await held;
+        if (runs.first === 1) {
+          firstHoldsA();
+          await held;
+        }
         await tx.users.lock(b!.id);
       });
       const second = database.app.transaction(ctx, { mode: 'write' }, async (tx) => {
         runs.second += 1;
+        if (runs.second === 1) await enqueuedFirst;
         await tx.users.lock(b!.id);
         if (runs.second === 1) secondHoldsB();
         await enqueue(tx);
