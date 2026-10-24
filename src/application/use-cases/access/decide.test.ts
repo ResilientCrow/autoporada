@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { mailJob, type DECISION_MAIL } from '@/application/notifications';
 import { system, type AccessRequestRecord, type UserRecord } from '@/application/ports';
 
 import { signedIn } from '../../../../test/support/sessions';
 import { sha } from '../../../../test/support/sign-in';
 import { setupWorld } from '../../../../test/support/world';
-import { decideAccess, requestAccess } from './index';
+import { cancelAccess, decideAccess, requestAccess } from './index';
 
 const world = setupWorld();
 const DAY = 86_400_000;
@@ -37,7 +38,17 @@ const decide = (
     ...extra,
   });
 
-/** The requester's row, their requests and the audit log, as the system sees them. */
+/** The mail.send job a decision of `template` leaves behind: ids only, one key per request. */
+const mailFor = (
+  template: (typeof DECISION_MAIL)[keyof typeof DECISION_MAIL],
+  user: Pick<UserRecord, 'id'>,
+  request: Pick<AccessRequestRecord, 'id'>,
+) => {
+  const { data, dedupeKey } = mailJob(template, { recipientId: user.id, requestId: request.id });
+  return { name: 'mail.send', data, options: { dedupeKey } };
+};
+
+/** The requester's row, their requests, the audit log and the queue, as the system sees them. */
 const snapshot = (userId: string) =>
   world.tx(
     system('test.seed'),
@@ -45,6 +56,7 @@ const snapshot = (userId: string) =>
       user: await tx.users.get(userId),
       requests: await tx.accessRequests.forUser(userId),
       audit: await world.inspect.audit(),
+      jobs: await world.inspect.jobs(),
     }),
     'read',
   );
@@ -123,7 +135,7 @@ describe('access.decide', () => {
       ]);
       expect(JSON.stringify(audit)).not.toContain(request.reason);
       expect(await live('requester')).toBe(false);
-      expect(await world.inspect.jobs()).toEqual([]);
+      expect(after.jobs).toEqual([mailFor('access.approved', user, request)]);
     },
   );
 
@@ -165,7 +177,7 @@ describe('access.decide', () => {
       },
     ]);
     expect(await live('requester')).toBe(true);
-    expect(await world.inspect.jobs()).toEqual([]);
+    expect(after.jobs).toEqual([mailFor('access.rejected', user, request)]);
     expect(await world.run(requestAccess, world.as(user), { reason: 'Znovu.' })).toEqual({
       ok: false,
       error: { code: 'rule', rule: 'request-cooldown' },
@@ -192,7 +204,7 @@ describe('access.decide', () => {
         { state: { from: 'pending', to: 'blocked' }, decidedBy: { from: null, to: head.id } },
       ],
     ]);
-    expect(await world.inspect.jobs()).toEqual([]);
+    expect(after.jobs).toEqual([mailFor('access.blocked', user, request)]);
     expect(await world.run(requestAccess, world.as(user), { reason: 'Znovu.' })).toEqual({
       ok: false,
       error: { code: 'rule', rule: 'request-blocked' },
@@ -213,9 +225,32 @@ describe('access.decide', () => {
       ok: true,
       value: { state: 'blocked' },
     });
-    expect((await snapshot(user.id)).audit.map((a) => [a.action, a.data['diff']])).toEqual([
+    const after = await snapshot(user.id);
+    expect(after.audit.map((a) => [a.action, a.data['diff']])).toEqual([
       ['access.block', { state: { from: 'rejected', to: 'blocked' } }],
     ]);
+    expect(after.jobs).toEqual([mailFor('access.blocked', user, rejected)]);
+  });
+
+  it('mails a reject and then the block that follows it, under two keys', async () => {
+    const { head, user, request } = await setup();
+    expect((await decide(head, request, 'reject')).ok).toBe(true);
+    expect(
+      (await decide(head, { id: request.id, version: 2 }, 'block', { confirmed: true })).ok,
+    ).toBe(true);
+    const { jobs } = await snapshot(user.id);
+    expect(jobs).toEqual([
+      mailFor('access.rejected', user, request),
+      mailFor('access.blocked', user, request),
+    ]);
+    expect(new Set(jobs.map((job) => job.options.dedupeKey)).size).toBe(2);
+  });
+
+  it('mails nothing when the requester cancels', async () => {
+    const { user, request } = await setup();
+    const input = { requestId: request.id, version: request.version };
+    expect((await world.run(cancelAccess, world.as(user), input)).ok).toBe(true);
+    expect((await snapshot(user.id)).jobs).toEqual([]);
   });
 
   it('refuses a second decision, from the old form and from the new one', async () => {

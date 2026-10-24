@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { mailJob } from '@/application/notifications';
 import { system, type UserRecord } from '@/application/ports';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 
@@ -31,7 +32,7 @@ const change = (
   authTime?: Date,
 ) => world.run(changeUserAccess, world.as(by, authTime ? { authTime } : {}), form(target, patch));
 
-/** The target's row, their requests and the audit log, as the system sees them. */
+/** The target's row, their requests, the audit log and the queue, as the system sees them. */
 const snapshot = (userId: string) =>
   world.tx(
     system('test.seed'),
@@ -39,6 +40,7 @@ const snapshot = (userId: string) =>
       user: await tx.users.get(userId),
       requests: await tx.accessRequests.forUser(userId),
       audit: await world.inspect.audit(),
+      jobs: await world.inspect.jobs(),
     }),
     'read',
   );
@@ -169,6 +171,12 @@ describe('users.changeAccess', () => {
     const isStudent = audience === 'student';
     const after = await snapshot(user.id);
     expect(after.user).toMatchObject({ role: 'submitter', isStudent });
+    const { data, dedupeKey } = mailJob('access.granted', {
+      userId: user.id,
+      versionAfter: user.version + 1,
+    });
+    expect(dedupeKey).toBe(`access.granted:${user.id}:${user.version + 1}`);
+    expect(after.jobs).toEqual([{ name: 'mail.send', data, options: { dedupeKey } }]);
     expect(after.audit.slice(logged).map((a) => a.data['diff'])).toEqual([
       {
         role: { from: 'pending', to: 'submitter' },
@@ -176,6 +184,23 @@ describe('users.changeAccess', () => {
       },
     ]);
   });
+
+  it.each([
+    ['a promotion', { role: 'submitter' }, { role: 'reviewer' }],
+    ['a demotion', { role: 'reviewer' }, { role: 'submitter', ...CONFIRMED }],
+    ['a block', { role: 'submitter' }, { status: 'blocked', ...CONFIRMED }],
+    ['a change of audience', { role: 'submitter' }, { audience: 'student' }],
+    ['an unblock', { role: 'submitter', status: 'blocked' }, { status: 'active' }],
+    ['a block of a pending user', { role: 'pending' }, { status: 'blocked', ...CONFIRMED }],
+  ] as const)(
+    'mails nobody about %s: only a grant out of pending is told',
+    async (_case, seed, patch) => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user(seed);
+      expect(await change(head, user, patch)).toEqual(changed);
+      expect(await world.inspect.jobs()).toEqual([]);
+    },
+  );
 
   it('keeps a student a submitter: rule student-role, unless they become staff', async () => {
     const head = await world.seed.user({ role: 'headmaster' });

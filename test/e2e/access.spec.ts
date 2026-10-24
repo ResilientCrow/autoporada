@@ -6,12 +6,22 @@
  */
 import type { Page } from '@playwright/test';
 
+import { formatLongDate, typographizeText } from '@/domain/cs';
+import { cooldownEnd } from '@/domain/review';
+import { instantToWallClock } from '@/domain/time';
+import { renderMail } from '@/notify';
 import { access, cs, users } from '@/ui/copy';
 
 import { endSession } from './db';
+import { E2E_ENV } from './env';
 import { expect, signInElsewhere, test, withDates } from './fixtures';
+import { mailpit } from './mailpit';
 
 const REASON = 'Jsem třídní učitelka 2.A.';
+const ORIGIN = E2E_ENV.APP_ORIGIN;
+/** The personas' addresses (docker/dev/mock-oauth2.json): each decision mails its requester once. */
+const APPROVED_ADDRESS = 'schvalit@ssps.cz';
+const REJECTED_ADDRESS = 'zamitnout@ssps.cz';
 
 test.beforeEach(({}, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'journeys change data, so they run once');
@@ -142,6 +152,7 @@ test("approving as a student announces it, ends the applicant's session, and sho
 }) => {
   const applicant = await signInElsewhere(newContext, /^Test – schvalit/);
   await expect(applicant).toHaveURL(/:\d+\/$/);
+  await mailpit.forget(APPROVED_ADDRESS);
   await signInAs(/^Ředitel/);
   await page.goto('/uzivatele');
   await hydrated();
@@ -163,6 +174,15 @@ test("approving as a student announces it, ends the applicant's session, and sho
   await expect(main.getByText(cs.status.student, { exact: true })).toBeVisible();
   const list = await applicant.goto('/uzivatele');
   expect(list?.status()).toBe(404);
+
+  // One mail, from the worker: the approval, with the way back in.
+  const mail = await mailpit.waitFor({ to: APPROVED_ADDRESS });
+  expect(mail.subject).toBe(renderMail('access.approved', {}, ORIGIN).subject);
+  expect(mail.text).toContain(`${ORIGIN}/prihlaseni`);
+  const raw = await mailpit.raw(mail.id);
+  expect(raw).toMatch(/^X-Auto-Response-Suppress: All\r?$/m);
+  expect(raw).toMatch(/^X-Autoporada-Dedupe: access\.approved:[0-9a-f-]{36}\r?$/m);
+  await mailpit.quiet({ to: APPROVED_ADDRESS });
 });
 
 test('rejecting announces it, and the applicant then sees the cooldown', async ({
@@ -172,6 +192,7 @@ test('rejecting announces it, and the applicant then sees the cooldown', async (
   settled,
   signInAs,
 }) => {
+  await mailpit.forget(REJECTED_ADDRESS);
   await signInAs(/^Ředitel/);
   await page.goto('/uzivatele');
   await hydrated();
@@ -188,4 +209,14 @@ test('rejecting announces it, and the applicant then sees the cooldown', async (
   const main = applicant.getByRole('main');
   await expect(main.getByRole('heading', { level: 2 })).toHaveText(access.cooldown.title);
   await expect(main.getByText(withDates(access.cooldown.text))).toBeVisible();
+
+  // One mail: the rejection, naming the day a new request can be made.
+  const retryFrom = instantToWallClock(cooldownEnd(new Date())).date;
+  const mail = await mailpit.waitFor({ to: REJECTED_ADDRESS });
+  expect(mail.subject).toBe(renderMail('access.rejected', { retryFrom }, ORIGIN).subject);
+  expect(mail.text).toContain(typographizeText(formatLongDate(retryFrom)));
+  const raw = await mailpit.raw(mail.id);
+  expect(raw).toMatch(/^X-Auto-Response-Suppress: All\r?$/m);
+  expect(raw).toMatch(/^X-Autoporada-Dedupe: access\.rejected:[0-9a-f-]{36}\r?$/m);
+  await mailpit.quiet({ to: REJECTED_ADDRESS });
 });

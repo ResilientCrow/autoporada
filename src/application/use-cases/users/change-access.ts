@@ -1,4 +1,5 @@
 import { defineUseCase, fail, ok, type UseCaseFailure } from '@/application/core';
+import { mailJob } from '@/application/notifications';
 import type { AccessPatch, UserRecord } from '@/application/ports';
 import { changeUserAccessInput, changeUserAccessOutput } from '@/contracts';
 import { can, lowersAccess, refuseAccessChange, type AccessValue } from '@/domain/policy';
@@ -31,7 +32,8 @@ function patchOf(user: UserRecord, next: AccessValue): AccessPatch {
  * takes first, so a request filed meanwhile is seen here; the headmaster's
  * own row comes next, so `can()` is asked again of it (lockedActor). A
  * headmaster who still is one never leaves the school without one; the
- * database's check at commit (rule last-headmaster) stays the backstop.
+ * database's check at commit (rule last-headmaster) stays the backstop. A
+ * grant out of `pending` queues the user's mail; no other change does.
  */
 export const changeUserAccess = defineUseCase({
   name: 'users.changeAccess',
@@ -67,6 +69,10 @@ export const changeUserAccess = defineUseCase({
     }
     const after = await tx.users.changeAccess(user.id, user.version, patch);
     await tx.audit.record(userAccessEvent(user, after, { via: 'users.changeAccess' }));
+    if (user.role === 'pending' && after.role !== 'pending') {
+      const mail = mailJob('access.granted', { userId: user.id, versionAfter: after.version });
+      await tx.jobs.enqueue('mail.send', mail.data, { dedupeKey: mail.dedupeKey });
+    }
     return ok({ changed: true });
   },
 });

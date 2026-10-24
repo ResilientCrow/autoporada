@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { mailJob } from '@/application/notifications';
 import { system, type JobInput, type LedgerRow, type WorkerDeps } from '@/application/ports';
+import { changeUserAccess, decideAccess } from '@/application/use-cases';
 import { cooldownEnd } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
 import { renderMail } from '@/notify';
@@ -57,6 +58,56 @@ async function decided(state: 'approved' | 'rejected' | 'blocked', over: UserSee
 }
 
 describe('the mail.send handler', () => {
+  describe('an approval overtaken after its mail was queued (S5)', () => {
+    /** The approval runs as a use case on the app handle; the worker then gets the job it queued. */
+    async function approved() {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ email: EMAIL, role: 'pending' });
+      const request = await world.seed.accessRequest({ userId: user.id, state: 'pending' });
+      expect(
+        await world.run(decideAccess, world.as(head), {
+          requestId: request.id,
+          version: request.version,
+          decision: 'approve-staff',
+        }),
+      ).toEqual({ ok: true, value: { state: 'approved' } });
+      const job = mailJob('access.approved', { recipientId: user.id, requestId: request.id });
+      expect(await world.inspect.jobs()).toEqual([
+        { name: 'mail.send', data: job.data, options: { dedupeKey: job.dedupeKey } },
+      ]);
+      return { head, job, member: { id: user.id, version: user.version + 1 } };
+    }
+
+    it('skips as stale when the account is blocked meanwhile, and sends nothing', async () => {
+      const { head, job, member } = await approved();
+      expect(
+        await world.run(changeUserAccess, world.as(head), {
+          userId: member.id,
+          version: member.version,
+          role: 'submitter',
+          audience: 'staff',
+          status: 'blocked',
+          confirmed: true,
+        }),
+      ).toEqual({ ok: true, value: { changed: true } });
+      const { mail, run } = handler();
+      expect(await run(job)).toEqual({ kind: 'done', code: 'skipped.stale' });
+      expect(mail.calls).toHaveLength(0);
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'skipped', attempts: 0 });
+    });
+
+    it('skips as stale when the user is lowered to pending meanwhile', async () => {
+      // The form never offers pending (changeAccess refuses it), so the row is lowered directly.
+      const { job, member } = await approved();
+      await world.tx(system('test.seed'), (tx) =>
+        tx.users.changeAccess(member.id, member.version, { role: 'pending' }),
+      );
+      const { mail, run } = handler();
+      expect(await run(job)).toEqual({ kind: 'done', code: 'skipped.stale' });
+      expect(mail.calls).toHaveLength(0);
+    });
+  });
+
   it('sends the approval outside any transaction and records it as sent', async () => {
     const { job } = await decided('approved');
     const { mail, run } = handler();
