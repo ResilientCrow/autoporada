@@ -1,8 +1,8 @@
 # Production stack for the school server (ADR 0008). The repository is
 # cloned to /opt/autoporada; run everything from this directory:
 #   sudo ./install.sh                  secrets and state, once and after changes
-#   docker compose build               the web and tools images, from ..
-#   docker compose up -d               migrate, then web, then Caddy
+#   docker compose build               the web, worker and tools images, from ..
+#   docker compose up -d               migrate, then web and worker, then Caddy
 #   docker compose run --rm cli auth:probe
 # Configuration is .env (see .env.example; root owns it, so edit it with
 # sudo); secrets are files in ./secrets.
@@ -92,6 +92,39 @@ services:
       start_period: 20s
     depends_on: { migrate: { condition: service_completed_successfully } }
 
+  # The job queue and the mail (ADR 0015, 0016): no port, never on edge. One replica only: the
+  # gate in the database is a safety net, not a licence to scale.
+  worker:
+    <<: *hardened
+    image: autoporada-worker:${APP_VERSION:?set APP_VERSION in .env}
+    build: { context: .., dockerfile: docker/app/Dockerfile, target: worker }
+    user: '65532:65532'
+    init: true
+    # Its stop timeout is 35 s (src/infra/worker/limits.ts); check-compose wants at least 45 s.
+    stop_grace_period: 50s
+    environment:
+      <<: *app-env
+      DATABASE_URL_FILE: /run/secrets/worker_database_url
+    secrets: [worker_database_url, entra_key, entra_cert]
+    tmpfs: ['/tmp:size=8m']
+    # data: the database. egress: Entra and Graph.
+    networks: [data, egress]
+    # The alive file is touched while the database answers (src/infra/worker/health.ts); a Graph
+    # outage never makes the worker unhealthy, since a restart cannot fix it.
+    healthcheck:
+      test:
+        - CMD
+        - /nodejs/bin/node
+        - -e
+        - "process.exit(Date.now() - require('fs').statSync('/tmp/worker.alive').mtimeMs < 60000 ? 0 : 1)"
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      postgres: { condition: service_healthy }
+
   migrate:
     <<: [*tools, *hardened]
     command: ['migrate']
@@ -124,7 +157,7 @@ services:
       POSTGRES_USER: pgadmin
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD_FILE: /run/secrets/pg_superuser_password
-    secrets: [pg_superuser_password, pg_owner_password, pg_web_password]
+    secrets: [pg_superuser_password, pg_owner_password, pg_web_password, pg_worker_password]
     volumes:
       - pgdata:/var/lib/postgresql
       - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
@@ -139,8 +172,10 @@ services:
 
 networks:
   edge: {}
-  # No way out: only web, migrate and cli reach the database.
+  # No way out: only web, worker, migrate and cli reach the database.
   data: { internal: true }
+  # egress: any host; the school firewall restricts it (docs/ENTRA-SETUP.md §4). Caddy is not on it.
+  egress: {}
 
 volumes:
   pgdata: {}
@@ -150,8 +185,10 @@ secrets:
   pg_superuser_password: { file: ./secrets/pg_superuser_password }
   pg_owner_password: { file: ./secrets/pg_owner_password }
   pg_web_password: { file: ./secrets/pg_web_password }
+  pg_worker_password: { file: ./secrets/pg_worker_password }
   owner_database_url: { file: ./secrets/owner_database_url }
   web_database_url: { file: ./secrets/web_database_url }
+  worker_database_url: { file: ./secrets/worker_database_url }
   server_actions_key: { file: ./secrets/server_actions_key }
   # The Entra certificate pair of docs/ENTRA-SETUP.md §6.
   entra_key: { file: ./secrets/entra_key }

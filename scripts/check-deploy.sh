@@ -1,10 +1,11 @@
 #!/bin/sh
 # Boots deploy/compose.yaml on this machine the way the school server runs
 # it, with throwaway secrets and an unreal tenant: install.sh, the roles of
-# initdb, migrate as the owner, web as autoporada_web, Caddy in front (its
-# own CA for localhost). Checks what a browser gets and what each role may
+# initdb, migrate as the owner, web as autoporada_web, the worker as
+# autoporada_worker, Caddy in front (its own CA for localhost). Checks what a browser gets and what each role may
 # do, then removes everything. Needs Docker, openssl and ports 80 and 443.
 #   docker build -f docker/app/Dockerfile --target web -t autoporada-web:check .
+#   docker build -f docker/app/Dockerfile --target worker -t autoporada-worker:check .
 #   docker build -f docker/app/Dockerfile --target tools -t autoporada-tools:check .
 #   scripts/check-deploy.sh
 set -eu
@@ -135,6 +136,50 @@ if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged the sear
 compose logs --no-color web 2>&1 | grep -q 'jobs.producer_ready' || fail 'the web job producer never became ready'
 if compose logs --no-color web 2>&1 | grep -q '"level":"\(error\|fatal\)"'; then fail 'web logged an error'; fi
 
+# The worker (ADR 0015) on distroless: healthy, never restarted, and no Graph call at boot, so the
+# unreal tenant does not crash-loop it.
+worker=$(compose ps -q worker)
+[ -n "$worker" ] || fail 'the worker container is missing'
+i=0
+until [ "$(docker inspect -f '{{.State.Health.Status}}' "$worker")" = healthy ]; do
+  i=$((i + 1))
+  [ "$i" -lt 45 ] || fail "the worker is not healthy after 90 s (state: $(docker inspect -f '{{.State.Health.Status}}' "$worker"))"
+  sleep 2
+done
+[ "$(docker inspect -f '{{.RestartCount}}' "$worker")" = 0 ] || fail 'the worker restarted while booting'
+
+worker_logs=$(compose logs --no-color worker 2>&1)
+printf '%s\n' "$worker_logs" | grep -q '"msg":"worker.ready"' || fail 'the worker never logged worker.ready'
+if printf '%s\n' "$worker_logs" | grep -q '"level":"\(error\|fatal\)"'; then fail 'the worker logged an error'; fi
+if printf '%s\n' "$worker_logs" | grep -q '@'; then fail 'the worker logged an @ (an address?)'; fi
+
+# The schema is the one this image's pg-boss expects (it logs its number), the queues exist, and the
+# cron entry is registered in Prague time.
+expected=$(printf '%s\n' "$worker_logs" | grep -o '"pgbossSchema":[0-9]*' | head -1 | cut -d: -f2)
+[ -n "$expected" ] || fail 'worker.ready did not say which pg-boss schema it expects'
+installed=$(sql 'SELECT version FROM pgboss.version') || fail 'could not read pgboss.version'
+[ "$installed" = "$expected" ] || fail "pgboss.version is $installed, the worker expects $expected"
+queues=$(sql "SELECT string_agg(name, ',' ORDER BY name) FROM pgboss.queue WHERE name <> '__pgboss__send-it'") ||
+  fail 'could not read the queues'
+[ "$queues" = 'dead,mail.prune,mail.send' ] || fail "unexpected queues: $queues"
+schedule=$(sql "SELECT string_agg(name || ' ' || timezone, ',' ORDER BY name) FROM pgboss.schedule") ||
+  fail 'could not read the schedule'
+[ "$schedule" = 'mail.prune Europe/Prague' ] || fail "unexpected schedule: $schedule"
+
+# The worker's own rights: the queue tables and the mail tables, no schema, no role, no business writes.
+worker_rights=$(sql "SELECT concat_ws(' ',
+  has_table_privilege('autoporada_worker', 'pgboss.job_common', 'UPDATE'),
+  has_table_privilege('autoporada_worker', 'pgboss.job_common', 'DELETE'),
+  has_schema_privilege('autoporada_worker', 'pgboss', 'CREATE'),
+  (SELECT count(*) FROM pg_tables WHERE schemaname = 'pgboss' AND tableowner = 'autoporada_worker'),
+  has_table_privilege('autoporada_worker', 'users', 'INSERT, UPDATE, DELETE'),
+  has_table_privilege('autoporada_worker', 'sessions', 'INSERT, UPDATE, DELETE'),
+  has_table_privilege('autoporada_worker', 'audit_events', 'INSERT, UPDATE, DELETE'),
+  (SELECT rolsuper FROM pg_roles WHERE rolname = 'autoporada_worker'),
+  (SELECT rolcreaterole FROM pg_roles WHERE rolname = 'autoporada_worker'))") ||
+  fail 'could not read the worker privileges'
+[ "$worker_rights" = 't t f 0 f f f f f' ] || fail "unexpected worker privileges: $worker_rights"
+
 # The probe of SMOKE-TEST step 3 starts and asks Entra (which does not know
 # this tenant): its configuration is complete without the web-only secrets.
 probe=$(compose run --rm --no-deps cli auth:probe 2>&1) || true
@@ -151,4 +196,13 @@ sleep 1
 access=$(compose logs --no-color caddy 2>&1)
 printf '%s\n' "$access" | grep -q 'http.log.error' || fail 'caddy did not log the 502'
 if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged code or state of a failed request'; fi
+# The worker was never restarted, and a stop finishes inside its grace period with exit code 0 (a
+# SIGKILL after the 50 s would show as 137).
+[ "$(docker inspect -f '{{.RestartCount}}' "$worker")" = 0 ] || fail 'the worker restarted during the checks'
+started=$(date +%s)
+compose stop worker >/dev/null 2>&1
+elapsed=$(($(date +%s) - started))
+[ "$(docker inspect -f '{{.State.ExitCode}}' "$worker")" = 0 ] ||
+  fail "the worker stopped with exit code $(docker inspect -f '{{.State.ExitCode}}' "$worker")"
+[ "$elapsed" -le 50 ] || fail "the worker took ${elapsed} s to stop"
 echo 'check-deploy: the production stack boots and answers as designed'

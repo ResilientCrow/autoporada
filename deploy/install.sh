@@ -17,7 +17,7 @@ command -v openssl >/dev/null || {
   exit 1
 }
 
-APP_UID=65532 # web, migrate, cli and Caddy
+APP_UID=65532 # web, worker, migrate, cli and Caddy
 PG_UID=999    # postgres
 
 mkdir -p secrets state/caddy/data state/caddy/config
@@ -35,12 +35,14 @@ generate() { # <file> <command…>: only when missing, never overwritten
 generate pg_superuser_password openssl rand -hex 24
 generate pg_owner_password openssl rand -hex 24
 generate pg_web_password openssl rand -hex 24
+generate pg_worker_password openssl rand -hex 24
 generate server_actions_key openssl rand -base64 32
 
 # Derived, so rewritten every time to stay in step with the passwords.
 url() { printf 'postgres://%s:%s@postgres:5432/autoporada\n' "$1" "$(cat "secrets/$2")"; }
 url autoporada_owner pg_owner_password >secrets/owner_database_url
 url autoporada_web pg_web_password >secrets/web_database_url
+url autoporada_worker pg_worker_password >secrets/worker_database_url
 
 missing=''
 for file in entra_key entra_cert; do
@@ -48,7 +50,7 @@ for file in entra_key entra_cert; do
 done
 
 chown "$PG_UID:$PG_UID" secrets/pg_*
-for file in owner_database_url web_database_url server_actions_key entra_key entra_cert; do
+for file in owner_database_url web_database_url worker_database_url server_actions_key entra_key entra_cert; do
   [ ! -e "secrets/$file" ] || chown "$APP_UID:$APP_UID" "secrets/$file"
 done
 chmod 0400 secrets/*
@@ -68,3 +70,5 @@ if [ -n "$missing" ]; then
 fi
 echo 'install.sh: ready. The database passwords take effect on the first start'
 echo '  of an empty volume only; changing one later needs ALTER ROLE as well.'
+echo '  A volume made before the worker existed needs its login role once (psql as pgadmin):'
+echo '  CREATE ROLE autoporada_worker LOGIN PASSWORD <secrets/pg_worker_password> IN ROLE autoporada_jobs;'
