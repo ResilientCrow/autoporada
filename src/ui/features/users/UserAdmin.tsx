@@ -2,7 +2,8 @@
 
 import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
-import type { Role } from '@/domain/actor';
+import type { DecisionEventName } from '@/contracts';
+import type { Role, UserStatus } from '@/domain/actor';
 import { users } from '@/ui/copy';
 import { LiveStatus, NoScriptNotice, StepUpNotice, useFocusFirstOnRise } from '@/ui/form';
 import { Notice, SlantLabel } from '@/ui/kit';
@@ -33,9 +34,9 @@ const ACCOUNT_SAID = {
 export interface UserView {
   readonly user: UserFactsView & RoleFormUser & { readonly displayName: string };
   readonly isSelf: boolean;
-  readonly choices: { readonly roles: readonly Role[]; readonly statuses: readonly string[] };
+  readonly choices: { readonly roles: readonly Role[]; readonly statuses: readonly UserStatus[] };
   readonly request: RequestView | null;
-  readonly requestEvents: readonly string[];
+  readonly requestEvents: readonly DecisionEventName[];
 }
 
 /** A section of the page with its own focusable heading; the host decides where focus goes. */

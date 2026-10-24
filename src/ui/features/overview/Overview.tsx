@@ -1,3 +1,6 @@
+import type { z } from 'zod';
+
+import type { myAccessOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
 import { cs } from '@/ui/copy';
 import { ArrowLink, Button, Card, Notice, SlantLabel } from '@/ui/kit';
@@ -6,7 +9,10 @@ import { ACCOUNT_LOOK, Chip, ROLE_LOOK, STANDING_LOOK, STUDENT_LOOK } from '@/ui
 /** What the page knows besides the actor: a waiting user's standing on asking for access. */
 type HomeView =
   | { readonly kind: 'member' }
-  | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
+  | {
+      readonly kind: 'pending';
+      readonly standing: Exclude<z.output<typeof myAccessOutput>['standing']['kind'], 'member'>;
+    };
 
 /** The chips of an approved member: role, student, account status. */
 function MemberChips({ actor }: { readonly actor: Actor }) {

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 
-import { USER_GROUP_SLUGS, type UserGroup } from '@/contracts';
-import type { Role, UserStatus } from '@/domain/actor';
+import type { z } from 'zod';
+
+import { USER_GROUP_SLUGS, type listUsersOutput, type UserGroup } from '@/contracts';
 import { users } from '@/ui/copy';
 import { SearchForm } from '@/ui/form';
 import { SlantLabel } from '@/ui/kit';
@@ -14,14 +15,7 @@ import { Queue, type QueueItemView } from './Queue';
 /** The list's model: the people found, their count, and the search it answers. */
 export interface UsersView {
   readonly queue: readonly QueueItemView[];
-  readonly users: readonly {
-    readonly id: string;
-    readonly displayName: string;
-    readonly email: string | null;
-    readonly role: Role;
-    readonly status: UserStatus;
-    readonly isStudent: boolean;
-  }[];
+  readonly users: readonly z.output<typeof listUsersOutput>['users'][number][];
   readonly total: number;
   readonly q: string;
   readonly group: UserGroup;

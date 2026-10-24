@@ -1,8 +1,9 @@
+import type { DecisionEventName } from '@/contracts';
 import { users } from '@/ui/copy';
 import { ACCESS_LOOK, Chip } from '@/ui/status';
 
 import { BlockRequestForm } from './BlockRequestForm';
-import { DecisionForm, type DecideAction } from './DecisionForm';
+import { DecisionForm, type DecideAction, type Decided } from './DecisionForm';
 
 type AccessState = keyof typeof ACCESS_LOOK;
 
@@ -27,9 +28,9 @@ export function RequestSection({
   onDecided,
 }: {
   readonly request: RequestView;
-  readonly events: readonly string[];
+  readonly events: readonly DecisionEventName[];
   readonly decideAccess: DecideAction;
-  readonly onDecided: (state: 'approved' | 'rejected' | 'blocked') => void;
+  readonly onDecided: (state: Decided) => void;
 }) {
   const { detail, queue } = users;
   return (

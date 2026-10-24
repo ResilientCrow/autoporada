@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 
+import type { DecisionEventName } from '@/contracts';
 import { users } from '@/ui/copy';
 import { ArrowLink } from '@/ui/kit';
 import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
@@ -21,7 +22,7 @@ export interface QueueItemView {
   readonly department: string | null;
   readonly reason: string;
   readonly submitted: string;
-  readonly events: readonly string[];
+  readonly events: readonly DecisionEventName[];
 }
 
 /**

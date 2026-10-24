@@ -1,6 +1,8 @@
 'use client';
 
-import type { ServerAction } from '@/contracts';
+import type { z } from 'zod';
+
+import type { requestAccessInput, requestAccessOutput, ServerAction } from '@/contracts';
 import { access } from '@/ui/copy';
 import { Form, SubmitButton, TextField, useActionForm, type FormSpec } from '@/ui/form';
 
@@ -14,12 +16,17 @@ const SPEC: FormSpec = {
   },
 };
 
+export type RequestAction = ServerAction<
+  z.input<typeof requestAccessInput>,
+  z.output<typeof requestAccessOutput>
+>;
+
 /** The request form of the open state. No HTML `maxLength`: the server decides what is too long. */
 export function RequestForm({
   action,
   onSent,
 }: {
-  readonly action: ServerAction<{ readonly reason: string }, { readonly requestId: string }>;
+  readonly action: RequestAction;
   readonly onSent: () => void;
 }) {
   const state = useActionForm({ action, toInput: requestInput, onSuccess: onSent });

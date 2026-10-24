@@ -44,6 +44,7 @@ export const cancelAccessOutput = z.object({});
 /** What a decision can leave a request as, and the events that decide (not the requester's cancel). */
 const DECIDED_STATES = z.enum(ACCESS_STATES).exclude(['pending', 'cancelled']);
 export const DECISION_EVENTS = z.enum(ACCESS_EVENTS).exclude(['cancel']);
+export type DecisionEventName = z.output<typeof DECISION_EVENTS>;
 
 /** The headmaster's answer: approval names the audience, with no default; a block is confirmed. */
 const ACCESS_DECISIONS = ['approve-staff', 'approve-student', 'reject', 'block'] as const;

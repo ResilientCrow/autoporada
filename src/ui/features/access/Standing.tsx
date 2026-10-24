@@ -1,20 +1,26 @@
+import type { z } from 'zod';
+
+import type { myAccessOutput } from '@/contracts';
 import { access } from '@/ui/copy';
 import { ArrowLink, Notice } from '@/ui/kit';
 import { Chip, STANDING_LOOK } from '@/ui/status';
 
-/** The page's model: the standing, with its dates written out. */
+type Standing = z.output<typeof myAccessOutput>['standing'];
+type Of<K extends Standing['kind']> = Extract<Standing, { readonly kind: K }>;
+
+/**
+ * The page's model: the contract's standing, with its dates written out. The
+ * contract's fields carry over; the date fields become the text, or are left out.
+ */
 export type AccessView =
-  | { readonly kind: 'member' }
-  | { readonly kind: 'open'; readonly previous: 'rejected' | 'cancelled' | null }
-  | {
-      readonly kind: 'pending';
-      readonly requestId: string;
-      readonly version: number;
-      readonly sent: string;
-      readonly reason: string;
-    }
-  | { readonly kind: 'cooldown'; readonly decided: string; readonly from: string }
-  | { readonly kind: 'blocked' };
+  | Of<'member'>
+  | Of<'open'>
+  | Omit<Of<'blocked'>, 'decidedAt'>
+  | (Omit<Of<'pending'>, 'createdAt'> & { readonly sent: string })
+  | (Omit<Of<'cooldown'>, 'decidedAt' | 'until'> & {
+      readonly decided: string;
+      readonly from: string;
+    });
 
 /** The heading of the state: it stays one element and only its text changes. */
 export function headingOf(view: AccessView): string {

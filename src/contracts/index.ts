@@ -19,6 +19,7 @@ export {
   pendingAccessOutput,
   requestAccessInput,
   requestAccessOutput,
+  type DecisionEventName,
 } from './access';
 export {
   beginSignInInput,

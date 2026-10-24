@@ -1,8 +1,15 @@
 'use client';
 
-import type { ServerAction } from '@/contracts';
+import type { z } from 'zod';
+
+import type { cancelAccessInput, cancelAccessOutput, ServerAction } from '@/contracts';
 import { access } from '@/ui/copy';
 import { Form, SubmitButton, useActionForm } from '@/ui/form';
+
+export type CancelAction = ServerAction<
+  z.input<typeof cancelAccessInput>,
+  z.output<typeof cancelAccessOutput>
+>;
 
 /** „Zrušit žádost“: sends the request and version the page showed, taken from the props. */
 export function CancelForm({
@@ -11,10 +18,7 @@ export function CancelForm({
   version,
   onCancelled,
 }: {
-  readonly action: ServerAction<
-    { readonly requestId: string; readonly version: number },
-    Record<string, never>
-  >;
+  readonly action: CancelAction;
   readonly requestId: string;
   readonly version: number;
   readonly onCancelled: () => void;

@@ -2,7 +2,12 @@
 
 import type { z } from 'zod';
 
-import type { decideAccessInput, decideAccessOutput, ServerAction } from '@/contracts';
+import type {
+  decideAccessInput,
+  decideAccessOutput,
+  DecisionEventName,
+  ServerAction,
+} from '@/contracts';
 import { users } from '@/ui/copy';
 import { choiceOf, Form, SubmitButton, useActionForm } from '@/ui/form';
 
@@ -10,7 +15,7 @@ export type DecideAction = ServerAction<
   z.input<typeof decideAccessInput>,
   z.output<typeof decideAccessOutput>
 >;
-type Decided = z.output<typeof decideAccessOutput>['state'];
+export type Decided = z.output<typeof decideAccessOutput>['state'];
 
 /** The decisions this form offers; blocking lives on the user's own page. */
 const DECISIONS = [
@@ -31,7 +36,7 @@ export function DecisionForm({
   readonly action: DecideAction;
   readonly requestId: string;
   readonly version: number;
-  readonly events: readonly string[];
+  readonly events: readonly DecisionEventName[];
   /** The id of the text naming the person, which names the group of buttons. */
   readonly labelledBy?: string;
   readonly onDecided: (state: Decided) => void;

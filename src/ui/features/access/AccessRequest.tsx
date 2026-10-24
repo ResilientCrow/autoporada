@@ -2,13 +2,12 @@
 
 import { useRef, useState } from 'react';
 
-import type { ServerAction } from '@/contracts';
 import { access } from '@/ui/copy';
 import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
 import { SlantLabel } from '@/ui/kit';
 
-import { CancelForm } from './CancelForm';
-import { RequestForm } from './RequestForm';
+import { CancelForm, type CancelAction } from './CancelForm';
+import { RequestForm, type RequestAction } from './RequestForm';
 import { headingOf, hasForm, Standing, type AccessView } from './Standing';
 
 /**
@@ -23,11 +22,8 @@ export function AccessRequest({
   cancelAccess,
 }: {
   readonly view: AccessView;
-  readonly requestAccess: ServerAction<{ readonly reason: string }, { readonly requestId: string }>;
-  readonly cancelAccess: ServerAction<
-    { readonly requestId: string; readonly version: number },
-    Record<string, never>
-  >;
+  readonly requestAccess: RequestAction;
+  readonly cancelAccess: CancelAction;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const [said, setSaid] = useState({ message: '', count: 0 });
