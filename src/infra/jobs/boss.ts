@@ -78,6 +78,11 @@ function identifier(source: unknown, key: string, pattern: RegExp): string | nul
   return typeof value === 'string' && pattern.test(value) ? value : null;
 }
 
+/** The `code` of a driver error (a SQLSTATE, ECONNREFUSED ...), if it looks like one; never its message. */
+export function errorCode(error: unknown): string | null {
+  return identifier(error, 'code', CODE);
+}
+
 type BossEvent = 'error' | 'warning';
 
 /**
@@ -89,7 +94,7 @@ function scrub(event: BossEvent, raw: unknown) {
     event === 'warning' && typeof raw === 'object' && raw !== null ? Reflect.get(raw, 'data') : raw;
   return {
     name: identifier(source, event === 'warning' ? 'type' : 'name', NAME) ?? event,
-    code: identifier(raw, 'code', CODE),
+    code: errorCode(raw),
     queue: identifier(raw, 'queue', QUEUE),
   };
 }
