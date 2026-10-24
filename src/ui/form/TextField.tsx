@@ -12,11 +12,9 @@ import {
 import { form } from '@/ui/copy';
 import { Icon } from '@/ui/kit';
 
+import { CONTROL } from './control-styles';
 import { useFormContext } from './context';
 import { fieldId, fieldMessage } from './spec';
-
-const CONTROL =
-  'min-h-11 w-full rounded-brand border-2 border-ink bg-light px-3 py-2 text-ink aria-invalid:border-4';
 
 /**
  * A labelled text field, single line or `multiline`. Its label, required marker,

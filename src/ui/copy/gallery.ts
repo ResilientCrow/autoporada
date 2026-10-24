@@ -39,6 +39,14 @@ export const gallery = {
       reasonTooLong: 'Důvod může mít nejvýše 40\u00A0znaků.',
       sent: 'Formulář je v\u00A0pořádku.',
     },
+    controls: {
+      title: 'Výběr a\u00A0zaškrtnutí',
+      role: 'Role',
+      roleHint: 'Určuje, co v\u00A0aplikaci uvidíte.',
+      agree: 'Souhlasím s\u00A0podmínkami',
+      agreeHint: 'Bez souhlasu nelze pokračovat.',
+      options: { student: 'Student', teacher: 'Učitel' },
+    },
     failed: {
       name: 'Jméno',
       reason: 'Důvod žádosti',

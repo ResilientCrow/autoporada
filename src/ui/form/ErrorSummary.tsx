@@ -17,7 +17,9 @@ function SummaryItem({ id, text }: SummaryEntry) {
     if (control === null) return;
     event.preventDefault();
     const label =
-      control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+      control instanceof HTMLInputElement ||
+      control instanceof HTMLTextAreaElement ||
+      control instanceof HTMLSelectElement
         ? control.labels?.[0]
         : undefined;
     (label ?? control).scrollIntoView({ block: 'center' });

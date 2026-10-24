@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { cs } from '@/ui/copy';
 import { SlantLabel } from '@/ui/kit';
 
+import { ControlDemos } from './ControlDemos';
 import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
 
@@ -21,6 +22,10 @@ export function Gallery() {
       <section aria-labelledby="formular">
         <h2 id="formular">{cs.gallery.forms.title}</h2>
         <FormDemos />
+      </section>
+      <section aria-labelledby="ovladaci-prvky">
+        <h2 id="ovladaci-prvky">{cs.gallery.forms.controls.title}</h2>
+        <ControlDemos />
       </section>
     </>
   );

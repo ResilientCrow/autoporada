@@ -5,9 +5,10 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
 
-import { Form, TextField, type FormSpec } from './index';
+import { CheckboxField, Form, SelectField, TextField, type FormSpec } from './index';
 
 const NOTE = 'Pomůže nám to.';
+const OWN_LABEL = 'Vlastní';
 const OWN = 'Zadejte název vlastními slovy.';
 const spec: FormSpec = {
   title: { label: 'Název', required: true, messages: { required: OWN } },
@@ -98,6 +99,142 @@ describe('Form and TextField', () => {
 
     it('renders markup the CSP accepts', () => {
       expect(cspMarkupProblems(bad)).toEqual([]);
+    });
+  });
+});
+
+describe('SelectField and CheckboxField', () => {
+  const HINT = 'Určuje, co uvidíte.';
+  const OPTIONS = [
+    { value: 'a', label: 'Alfa' },
+    { value: 'b', label: 'Beta' },
+  ];
+  const controlSpec: FormSpec = {
+    kind: { label: 'Druh', required: true, messages: { invalid: OWN } },
+    agree: { label: 'Souhlas' },
+  };
+
+  function renderControls(
+    issues: Parameters<typeof Form>[0]['issues'] = null,
+    described = false,
+    checked = false,
+  ): string {
+    return renderToStaticMarkup(
+      <Form id="c" spec={controlSpec} issues={issues} attempt={0} onSubmit={noop}>
+        <SelectField
+          name="kind"
+          options={OPTIONS}
+          defaultValue="b"
+          description={described ? HINT : undefined}
+        />
+        <CheckboxField
+          name="agree"
+          description={described ? HINT : undefined}
+          defaultChecked={checked}
+        />
+      </Form>,
+    );
+  }
+
+  describe('clean', () => {
+    const html = renderControls();
+
+    it('puts the ids on the native elements and points the labels at them', () => {
+      expect(html).toMatch(/<select [^>]*id="c-kind"/);
+      expect(html).toMatch(/<input [^>]*id="c-agree"[^>]*type="checkbox"/);
+      expect(html).toMatch(/<label [^>]*for="c-kind"/);
+      expect(html).toMatch(/<label [^>]*for="c-agree"/);
+    });
+
+    it('uses aria-required, not required, and no invalid or describedby', () => {
+      expect(html).toMatch(/<select [^>]*aria-required="true"/);
+      expect(html).not.toMatch(/<(select|input) [^>]*\srequired/);
+      expect(html).not.toContain('aria-invalid=');
+      expect(html).not.toContain('aria-describedby');
+      expect(html).not.toContain(cs.form.errorPrefix);
+    });
+
+    it('marks the optional checkbox only, with the label from the spec', () => {
+      expect(html).toContain(`Souhlas ${cs.form.optional}`);
+      expect(html).not.toContain(`Druh ${cs.form.optional}`);
+    });
+
+    it('selects the default value and has no placeholder option', () => {
+      expect(html).toContain('<option value="b" selected="">Beta</option>');
+      expect(html.match(/<option /g)).toHaveLength(2);
+    });
+
+    it('is unchecked by default and checked on request', () => {
+      expect(html).not.toContain('checked=""');
+      expect(renderControls(null, false, true)).toMatch(/<input [^>]*checked=""/);
+    });
+
+    it('takes an explicit checkbox label and falls back to the first option', () => {
+      const out = renderToStaticMarkup(
+        <Form id="c" spec={controlSpec} issues={null} attempt={0} onSubmit={noop}>
+          <SelectField name="kind" options={OPTIONS} />
+          <CheckboxField name="kind" label={OWN_LABEL} />
+        </Form>,
+      );
+      expect(out).toContain('<option value="a" selected="">Alfa</option>');
+      expect(out).toContain(OWN_LABEL);
+    });
+
+    it('throws for a name the spec does not declare', () => {
+      for (const field of [
+        <SelectField key="s" name="typo" options={OPTIONS} />,
+        <CheckboxField key="c" name="typo" />,
+      ]) {
+        expect(() =>
+          renderToStaticMarkup(
+            <Form id="c" spec={controlSpec} issues={null} attempt={0} onSubmit={noop}>
+              {field}
+            </Form>,
+          ),
+        ).toThrow(/typo/);
+      }
+    });
+  });
+
+  describe('described', () => {
+    const html = renderControls(null, true);
+
+    it('lists the description id in aria-describedby', () => {
+      expect(html).toMatch(/<select [^>]*aria-describedby="c-kind-description"/);
+      expect(html).toMatch(/<input [^>]*aria-describedby="c-agree-description"/);
+      expect(html).toMatch(/<span id="c-kind-description">/);
+    });
+  });
+
+  describe('invalid', () => {
+    const html = renderControls({ kind: 'invalid', agree: 'required' }, true);
+
+    it('sets aria-invalid, shows the message with a hidden prefix, and lists both ids', () => {
+      expect(html.match(/aria-invalid="true"/g)).toHaveLength(2);
+      expect(html).toContain(OWN);
+      expect(html).toContain(cs.fieldIssues.required);
+      expect(html).toMatch(/<select [^>]*aria-describedby="c-kind-description c-kind-error"/);
+      expect(html).toMatch(/<input [^>]*aria-describedby="c-agree-description c-agree-error"/);
+      expect(html).toMatch(/<div id="c-kind-error"[^>]*>.*<span class="sr-only">Chyba: <\/span>/);
+    });
+
+    it('orders label, description, error, then the select', () => {
+      const at = (needle: string) => html.indexOf(needle);
+      expect(at('for="c-kind"')).toBeLessThan(at('id="c-kind-description"'));
+      expect(at('id="c-kind-description"')).toBeLessThan(at('id="c-kind-error"'));
+      expect(at('id="c-kind-error"')).toBeLessThan(at('<select'));
+    });
+
+    it('links the summary entries to the controls', () => {
+      expect(html).toContain(`<a href="#c-kind">Druh: ${OWN}</a>`);
+      expect(html).toContain('<a href="#c-agree">');
+      expect(html).toMatch(/<select [^>]*id="c-kind"/);
+    });
+
+    it('renders markup the CSP accepts in every state', () => {
+      expect(cspMarkupProblems(html)).toEqual([]);
+      expect(cspMarkupProblems(renderControls())).toEqual([]);
+      expect(cspMarkupProblems(renderControls(null, true, true))).toEqual([]);
     });
   });
 });
