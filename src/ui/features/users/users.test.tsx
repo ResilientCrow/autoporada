@@ -281,6 +281,17 @@ describe('UserAdmin', () => {
     expect(html.match(/<noscript>/g)).toHaveLength(1);
   });
 
+  it('says a cancelled request was cancelled, not decided', () => {
+    const html = renderDetail(
+      detail({
+        request: { ...detail().request!, state: 'cancelled', decided: '3. října 2026' },
+        requestEvents: [],
+      }),
+    );
+    expect(html).toContain(users.detail.cancelled('3. října 2026'));
+    expect(html).not.toContain(users.detail.decided('3. října 2026'));
+  });
+
   it('shows the confirmed block below the decisions of a pending request', () => {
     const html = renderDetail(detail());
     const block = html.slice(html.indexOf('<h3'));

@@ -44,7 +44,13 @@ export function RequestSection({
       <p className="flex flex-wrap items-center gap-2">
         <Chip look={ACCESS_LOOK[request.state]} />
         <span>{queue.submitted(request.submitted)}</span>
-        {request.decided !== null && <span>{detail.decided(request.decided)}</span>}
+        {request.decided !== null && (
+          <span>
+            {request.state === 'cancelled'
+              ? detail.cancelled(request.decided)
+              : detail.decided(request.decided)}
+          </span>
+        )}
       </p>
       <p className="font-bold">{queue.reason}</p>
       <p className="break-words whitespace-pre-line">{request.reason}</p>

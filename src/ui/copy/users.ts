@@ -23,6 +23,7 @@ export const users = {
     since: (date: string) => `V\u00A0Autoporadě od ${date}`,
     request: 'Žádost o\u00A0přístup',
     decided: (date: string) => `Rozhodnuto ${date}`,
+    cancelled: (date: string) => `Zrušeno ${date}`,
     details: 'Podrobnosti',
     access: {
       title: 'Role a\u00A0typ uživatele',
