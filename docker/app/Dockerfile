@@ -12,7 +12,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build && pnpm build:cli
+RUN pnpm build && pnpm build:node
 
 # Next's standalone server on distroless: no shell, no package manager.
 # The files belong to root, so the app (uid 65532) cannot change itself.

@@ -9,4 +9,4 @@ export { createHealth, HEALTH_FRESH_MS, HEALTH_INTERVAL_MS, startHealth } from '
 export { logLineFor } from './log-names';
 export { runJob, type FetchedJob, type Sleep } from './run-job';
 export { syncSchedules } from './schedules';
-export { startWorker } from './worker';
+export { startWorker, type RunningWorker } from './worker';

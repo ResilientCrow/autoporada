@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cli": "node scripts/build-cli.mjs",
+    "build:node": "node scripts/build-node.mjs",
     "start": "node scripts/start-standalone.mjs",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
@@ -30,6 +30,7 @@
     "dev:services:down": "docker compose -f compose.dev.yaml down",
     "facts:extract": "node scripts/extract-template-facts.ts",
     "cli": "tsx --tsconfig tsconfig.json src/cli/main.ts",
+    "dev:worker": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json src/worker/main.ts",
     "test:render": "vitest run --project render",
     "lint:chars": "node scripts/check-characters.mjs",
     "lint:compose": "node scripts/check-compose.mjs",

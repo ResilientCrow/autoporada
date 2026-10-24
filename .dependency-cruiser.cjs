@@ -168,6 +168,14 @@ module.exports = {
       },
     },
     {
+      name: 'worker-isolated',
+      comment:
+        'ADR 0015: the worker is its own bundle, with no Next.js in it; it never imports the web (server, app) or the ui.',
+      severity: 'error',
+      from: { path: '^src/worker/' },
+      to: { path: '^src/(server|app|ui)/' },
+    },
+    {
       name: 'app-uses-server-entries',
       comment: 'Routes reach the server only through its actions, routes and pages entry modules.',
       severity: 'error',
