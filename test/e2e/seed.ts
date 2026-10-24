@@ -59,6 +59,9 @@ const PERSONAS: readonly Persona[] = [
   { subject: 'schvalit', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
   { subject: 'zamitnout', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
   { subject: 'spor', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
+  // The step-up actor (a second headmaster, so reditel stays the one who decides) and the user it changes.
+  { subject: 'zastupce', role: 'headmaster' },
+  { subject: 'kolega', role: 'submitter' },
   // Journeys of access.spec.ts, one persona per test and no request to begin with.
   { subject: 'zadatel', role: 'pending' },
   { subject: 'prazdny', role: 'pending' },

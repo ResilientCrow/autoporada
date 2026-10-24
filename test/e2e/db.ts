@@ -31,3 +31,21 @@ export async function endSession(token: string): Promise<number> {
     await client.end();
   }
 }
+
+/**
+ * Makes the sign-in of this cookie's session `minutes` older, so step-up sees it stale.
+ * It touches neither role nor status. Returns how many rows changed; a test expects 1.
+ */
+export async function ageSession(token: string, minutes: number): Promise<number> {
+  const client = new Client({ connectionString: databaseUrl(E2E_DATABASE) });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "UPDATE sessions SET auth_time = auth_time - $2::int * interval '1 minute' WHERE token_hash = $1",
+      [digestOf(token), minutes],
+    );
+    return result.rowCount ?? 0;
+  } finally {
+    await client.end();
+  }
+}

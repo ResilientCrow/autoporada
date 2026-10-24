@@ -1,7 +1,8 @@
 /** One test per screen; each screen joins in the commit that restyles it. */
-import { access, cs, users } from '@/ui/copy';
+import { access, cs, stepUpNotice, users } from '@/ui/copy';
 
-import { expect, test, withDates } from './fixtures';
+import { ageSession } from './db';
+import { expect, openUserDetail, sessionToken, test, withDates } from './fixtures';
 
 const TITLE_SUFFIX = / – Autoporada$/;
 
@@ -120,6 +121,32 @@ for (const [state, persona, title, text] of ACCESS_STATES) {
     await expect(page).toHaveTitle(TITLE_SUFFIX);
     await hydrated();
     await checkScreen(`the access request page, ${state}`);
+  });
+}
+
+/** The detail of a person, seen by the deputy headmaster: with a fresh sign-in, a stale one, and on their own page. */
+const DETAILS = [
+  ['a colleague with a fresh sign-in', 'Karel Kolegů', false, users.detail.access.title],
+  ['a colleague with a stale sign-in', 'Karel Kolegů', true, stepUpNotice.title],
+  ["the deputy's own account", 'Zdena Zástupná', false, users.detail.own],
+] as const;
+
+for (const [name, person, stale, text] of DETAILS) {
+  test(`the user page of ${name} is well-formed, accessible and keyboard-friendly`, async ({
+    page,
+    context,
+    hydrated,
+    checkScreen,
+    signInAs,
+  }) => {
+    await signInAs(/^Test – zastupce/);
+    if (stale) expect(await ageSession(await sessionToken(context), 20)).toBe(1);
+    await openUserDetail(page, person);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(person);
+    await expect(page.getByRole('main').getByText(text, { exact: true })).toBeVisible();
+    await expect(page).toHaveTitle(TITLE_SUFFIX);
+    await hydrated();
+    await checkScreen(`the user page of ${name}`);
   });
 }
 

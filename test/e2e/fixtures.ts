@@ -280,4 +280,18 @@ export const withDates = (text: (a: string, b: string) => string) =>
       .replace(/\u00A0/g, '\\s'),
   );
 
+/** The value of this context's session cookie: what the sessions table stores a digest of. */
+export async function sessionToken(context: BrowserContext): Promise<string> {
+  const cookie = (await context.cookies()).find((c) => c.name === '__Host-ap_session');
+  if (!cookie) throw new Error('no session cookie: sign in first');
+  return cookie.value;
+}
+
+/** Opens one person's page from the list, found by name as a headmaster would. */
+export async function openUserDetail(page: Page, name: string): Promise<void> {
+  await page.goto(`/uzivatele?hledat=${encodeURIComponent(name)}`);
+  await page.getByRole('main').getByRole('link', { name, exact: true }).click();
+  await expect(page).toHaveURL(/\/uzivatele\/[0-9a-f-]{36}$/);
+}
+
 export { expect };

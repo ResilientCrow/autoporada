@@ -21,6 +21,10 @@
         text-align: left;
         font: inherit;
       }
+      label {
+        display: block;
+        margin: 1rem 0;
+      }
       small {
         display: block;
         color: #555;
@@ -36,6 +40,10 @@
       <p>Toto není Microsoft. Vyberte, za koho se přihlásíte.</p>
       <form method="post">
         <input type="hidden" name="claims" value="{}" />
+        <label>
+          <input type="checkbox" name="stale" />
+          Přihlášení před hodinou<small>auth_time = před hodinou; ověření to odmítne</small>
+        </label>
         <button type="submit" name="username" value="ucitel">
           Učitelka<small>Jana Nováková, člen školy</small>
         </button>
@@ -89,14 +97,22 @@
           <button type="submit" name="username" value="spor">
             Test – spor<small>přístupové scénáře e2e</small>
           </button>
+          <button type="submit" name="username" value="zastupce">
+            Test – zastupce<small>přístupové scénáře e2e</small>
+          </button>
+          <button type="submit" name="username" value="kolega">
+            Test – kolega<small>přístupové scénáře e2e</small>
+          </button>
         </fieldset>
       </form>
     </main>
     <script>
       // Entra sends auth_time on every sign-in; step-up needs it to be recent.
+      // The box makes it an hour old, for the sign-in that step-up must refuse.
       document.querySelector('form').addEventListener('submit', (event) => {
         event.target.elements.claims.value = JSON.stringify({
-          auth_time: Math.floor(Date.now() / 1000),
+          auth_time:
+            Math.floor(Date.now() / 1000) - (event.target.elements.stale.checked ? 3600 : 0),
         });
       });
     </script>
