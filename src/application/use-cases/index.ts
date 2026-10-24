@@ -11,7 +11,7 @@ import {
   takeSignIn,
 } from './auth';
 import { me } from './profile';
-import { getUser, listUsers } from './users';
+import { changeUserAccess, getUser, listUsers } from './users';
 
 export { cancelAccess, decideAccess, myAccess, pendingAccess, requestAccess } from './access';
 export {
@@ -24,7 +24,7 @@ export {
   takeSignIn,
 } from './auth';
 export { me } from './profile';
-export { getUser, listUsers } from './users';
+export { changeUserAccess, getUser, listUsers } from './users';
 
 /**
  * Every use case of the app. The inventory test proves this list is
@@ -34,6 +34,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   beginLogin,
   beginStepUp,
   cancelAccess,
+  changeUserAccess,
   completeSignIn,
   decideAccess,
   getUser,

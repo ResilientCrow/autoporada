@@ -39,6 +39,8 @@ export {
   type SignInError,
 } from './auth';
 export {
+  changeUserAccessInput,
+  changeUserAccessOutput,
   getUserInput,
   getUserOutput,
   listUsersInput,
