@@ -1,10 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
+import type { PgBoss } from 'pg-boss';
 import { describe, expect, it } from 'vitest';
 
 import { JOB_HANDLERS } from '@/application/jobs';
 import { mailJob } from '@/application/notifications';
-import { system, type Tx, type WorkerDeps } from '@/application/ports';
+import {
+  system,
+  type JobHandlers,
+  type MailPort,
+  type Tx,
+  type WorkerDeps,
+} from '@/application/ports';
 import { jobId } from '@/infra/jobs';
 import { createGraphMail } from '@/infra/mail';
 import { createAppTokenSource } from '@/infra/oidc';
@@ -25,8 +32,15 @@ const ORIGIN = 'https://autoporada.test';
 const MAILBOX = 'autoporada@ssps.cz';
 const EMAIL = 'jana.novakova@ssps.cz';
 
+/** Faults of the worker, each once: it dies after Graph's 202, or pg-boss loses the completion. */
+interface Faults {
+  readonly dieAfterAccept?: boolean;
+  readonly loseCompletion?: boolean;
+}
+
 /** The real Graph transport against the fake Graph and TestIdp, under a real worker as autoporada_worker. */
-async function deliver() {
+async function deliver(faults: Faults = {}) {
+  let { dieAfterAccept = false, loseCompletion = false } = faults;
   const idp = await createTestIdp();
   const wall = new FixedClock(new Date());
   const graph = createFakeGraph({ idp, mailbox: MAILBOX, clock: wall });
@@ -39,13 +53,32 @@ async function deliver() {
     scope: 'https://graph.microsoft.com/.default',
     clock: wall,
   });
-  const mail = createGraphMail({
+  const graphMail = createGraphMail({
     ...{ baseUrl: GRAPH_BASE, mailbox: MAILBOX, tokens, fetch: graph.fetch, clock: wall },
   });
+  // Phase row 3: the mail left, and the settle never runs.
+  const mail: MailPort = {
+    async send(outgoing) {
+      const result = await graphMail.send(outgoing);
+      if (!dieAfterAccept) return result;
+      dieAfterAccept = false;
+      throw new Error('the worker died after the 202');
+    },
+  };
+  // Phase row 5: the settle committed, and pg-boss never heard of it.
+  const handlers: JobHandlers = {
+    ...JOB_HANDLERS,
+    async 'mail.send'(deps, job) {
+      const outcome = await JOB_HANDLERS['mail.send'](deps, job);
+      if (!loseCompletion) return outcome;
+      loseCompletion = false;
+      throw new Error('the completion was lost');
+    },
+  };
   const deps: WorkerDeps = { db: database.worker, clock: jobs.clock, appOrigin: ORIGIN, mail };
   const boss = jobs.boss();
   await startWorker({
-    ...{ boss, handlers: JOB_HANDLERS, schedules: [], deps, log: jobs.log },
+    ...{ boss, handlers, schedules: [], deps, log: jobs.log },
     ...{ pollSeconds: 0.5, sleep: jobs.instant },
   });
   return { graph, boss };
@@ -164,6 +197,75 @@ describe('mail delivery end to end (Graph transport, pg-boss, autoporada_worker)
       expect(dead).toHaveLength(1);
       expect(await ledger(job.dedupeKey)).toEqual({ state: 'failed', code: 'rejected.400' });
       expect(graph.sent).toHaveLength(0);
+    },
+    SLOW,
+  );
+
+  /** Enqueues `job` as the web does and returns its id. */
+  const enqueue = async (boss: PgBoss, job: Awaited<ReturnType<typeof approved>>) => {
+    const id = jobId('mail.send', job.dedupeKey);
+    await boss.send('mail.send', job.data, { id, singletonKey: job.dedupeKey });
+    return id;
+  };
+  const resends = () => jobs.lines.filter((l) => l['msg'] === 'mail.resend_unknown_outcome');
+
+  it(
+    'resends a mail whose attempt died after the 202: the one duplicate the ledger cannot close',
+    async () => {
+      await jobs.timing({ retryLimit: 3 });
+      const { graph, boss } = await deliver({ dieAfterAccept: true });
+      const job = await approved(EMAIL);
+      const id = await enqueue(boss, job);
+      await settled(id, 'completed');
+      expect(await row(id)).toMatchObject({ retry_count: 1, output: { code: 'resent' } });
+      expect(graph.sent).toHaveLength(2);
+      expect(graph.sent[1]).toEqual(graph.sent[0]);
+      expect(resends()).toHaveLength(1);
+      expect(await ledger(job.dedupeKey)).toEqual({ state: 'sent', code: 'resent' });
+    },
+    SLOW,
+  );
+
+  it(
+    'sends nothing again when only the completion was lost: what the ledger buys',
+    async () => {
+      await jobs.timing({ retryLimit: 3 });
+      const { graph, boss } = await deliver({ loseCompletion: true });
+      const job = await approved(EMAIL);
+      const id = await enqueue(boss, job);
+      await settled(id, 'completed');
+      expect(await row(id)).toMatchObject({ retry_count: 1, output: { code: 'already.sent' } });
+      expect(graph.sent).toHaveLength(1);
+      expect(await ledger(job.dedupeKey)).toEqual({ state: 'sent', code: 'sent' });
+    },
+    SLOW,
+  );
+
+  it(
+    'gives up after two ambiguous answers, and sends once more when an operator redrives it',
+    async () => {
+      await jobs.timing({ retryLimit: 5 });
+      const { graph, boss } = await deliver();
+      graph.acceptThenDrop();
+      graph.acceptThenDrop();
+      const job = await approved(EMAIL);
+      const id = await enqueue(boss, job);
+      await settled(id, 'failed');
+      expect(await row(id)).toMatchObject({ retry_count: 2, output: { code: 'ambiguous' } });
+      expect(graph.seen.calls).toBe(2);
+      expect(await ledger(job.dedupeKey)).toEqual({ state: 'failed', code: 'ambiguous' });
+
+      expect(await boss.redrive('dead')).toBe(1);
+      const [redriven] = await database.owner<{ id: string }>(
+        `SELECT id FROM pgboss.job WHERE name = 'mail.send' AND id <> $1`,
+        [id],
+      );
+      await settled(String(redriven?.id), 'completed');
+      expect(await row(String(redriven?.id))).toMatchObject({ output: { code: 'resent' } });
+      expect(graph.seen.calls).toBe(3);
+      expect(graph.sent).toHaveLength(3);
+      expect(resends()).toHaveLength(1);
+      expect(await ledger(job.dedupeKey)).toEqual({ state: 'sent', code: 'resent' });
     },
     SLOW,
   );

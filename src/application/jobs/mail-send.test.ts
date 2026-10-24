@@ -176,4 +176,56 @@ describe('the mail.send handler', () => {
     expect(await JOB_HANDLERS['mail.send'](deps, input)).toEqual({ kind: 'dead', code: 'no-key' });
     expect(mail.calls).toHaveLength(0);
   });
+
+  describe('ambiguous outcomes', () => {
+    const UNKNOWN = { kind: 'unknown', code: 'unknown.timeout' } as const;
+
+    it('resends after an unknown outcome, flagged as a resend', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script(UNKNOWN);
+      expect(await run(job)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
+      expect(await run(job)).toEqual({ kind: 'done', code: 'resent' });
+      expect(mail.calls).toHaveLength(2);
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        ...{ state: 'sent', code: 'resent', unknownSends: 1, attempts: 2 },
+      });
+    });
+
+    it('resends a mail whose attempt died before it settled', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script(new Error('the worker died after the provider took the mail'));
+      await expect(run(job)).rejects.toThrow(/worker died/);
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sending', unknownSends: 0 });
+      expect(await run(job)).toEqual({ kind: 'done', code: 'resent' });
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 1 });
+      expect(mail.calls.map((c) => c.mail)).toEqual([mail.calls[0]?.mail, mail.calls[0]?.mail]);
+    });
+
+    it('gives up after the second unknown outcome, without a third call', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script(UNKNOWN, UNKNOWN);
+      await run(job);
+      expect(await run(job)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
+      expect(await run(job)).toEqual({ kind: 'dead', code: 'ambiguous' });
+      expect(await run(job)).toEqual({ kind: 'dead', code: 'already.failed' });
+      expect(mail.calls).toHaveLength(2);
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        ...{ state: 'failed', code: 'ambiguous', unknownSends: 2 },
+      });
+    });
+
+    it('sends once more, flagged, when an operator redrives the ambiguous key', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script(UNKNOWN, UNKNOWN);
+      for (let attempt = 0; attempt < 3; attempt += 1) await run(job);
+      expect(await run(job, true)).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job, true)).toEqual({ kind: 'done', code: 'already.sent' });
+      expect(mail.calls).toHaveLength(3);
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 0 });
+    });
+  });
 });
