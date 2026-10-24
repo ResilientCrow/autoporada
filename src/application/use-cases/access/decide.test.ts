@@ -257,6 +257,31 @@ describe('access.decide', () => {
     }
   });
 
+  it.each([
+    ['demoted', { role: 'reviewer' }],
+    ['blocked', { status: 'blocked' }],
+  ] as const)(
+    'forbids a session from before the headmaster was %s, by the locked row',
+    async (_case, patch) => {
+      const { head, user, request } = await setup();
+      // A second headmaster stays, so the change to `head` commits.
+      await world.seed.user({ role: 'headmaster' });
+      await world.tx(system('test.seed'), (tx) =>
+        tx.users.changeAccess(head.id, head.version, patch),
+      );
+      // `head` is the record the session was resolved from: still an active headmaster.
+      for (const [decision, extra] of [
+        ['approve-staff', {}],
+        ['reject', {}],
+        ['block', { confirmed: true }],
+      ] as const) {
+        await refuses(user.id, () => decide(head, request, decision, extra), {
+          code: 'forbidden',
+        });
+      }
+    },
+  );
+
   it('forbids the requester to decide their own request, which they can see', async () => {
     const { user, request } = await setup();
     await refuses(user.id, () => decide(user, request, 'approve-staff'), { code: 'forbidden' });

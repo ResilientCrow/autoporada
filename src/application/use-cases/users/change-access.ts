@@ -1,9 +1,10 @@
 import { defineUseCase, fail, ok, type UseCaseFailure } from '@/application/core';
 import type { AccessPatch, UserRecord } from '@/application/ports';
 import { changeUserAccessInput, changeUserAccessOutput } from '@/contracts';
-import { lowersAccess, refuseAccessChange, type AccessValue } from '@/domain/policy';
+import { can, lowersAccess, refuseAccessChange, type AccessValue } from '@/domain/policy';
 
 import { userAccessEvent } from './events';
+import { lockedActor } from './locked-actor';
 
 const REFUSALS: Readonly<
   Record<NonNullable<ReturnType<typeof refuseAccessChange>>, UseCaseFailure>
@@ -26,9 +27,11 @@ function patchOf(user: UserRecord, next: AccessValue): AccessPatch {
  * A headmaster sets a user's role, audience and account status, under
  * step-up (the pipeline asks for it once `can()` passed). The form sends the
  * full desired state; nothing to change writes nothing. Lowering access
- * needs `confirmed`. The user's row lock is the only lock, and it is the one
- * access.request takes first, so a request filed meanwhile is seen here.
- * Leaving no active headmaster fails at commit as rule last-headmaster.
+ * needs `confirmed`. The user's row is locked first, the one access.request
+ * takes first, so a request filed meanwhile is seen here; the headmaster's
+ * own row comes next, so `can()` is asked again of it (lockedActor). A
+ * headmaster who still is one never leaves the school without one; the
+ * database's check at commit (rule last-headmaster) stays the backstop.
  */
 export const changeUserAccess = defineUseCase({
   name: 'users.changeAccess',
@@ -42,6 +45,8 @@ export const changeUserAccess = defineUseCase({
     check: () => ({ action: 'users.manage' }),
   },
   async execute({ tx, actor }, input, user) {
+    const current = await lockedActor(tx, actor);
+    if (!current || !can(current, { action: 'users.manage' })) return fail({ code: 'forbidden' });
     const [newest] = await tx.accessRequests.forUser(user.id);
     const next: AccessValue = {
       role: input.role,
@@ -49,7 +54,7 @@ export const changeUserAccess = defineUseCase({
       status: input.status,
     };
     const refusal = refuseAccessChange(
-      actor,
+      current,
       { ...user, hasPendingRequest: newest?.state === 'pending' },
       next,
     );

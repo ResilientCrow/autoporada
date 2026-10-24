@@ -3,6 +3,7 @@ import { requestAccessInput, requestAccessOutput, type RuleCode } from '@/contra
 import { can } from '@/domain/policy';
 import { requestStanding, type RequestStanding } from '@/domain/review';
 
+import { lockedActor } from '../users/locked-actor';
 import { accessRequestEvent } from './events';
 
 const REFUSALS: Readonly<Record<Exclude<RequestStanding['kind'], 'open'>, RuleCode>> = {
@@ -13,9 +14,8 @@ const REFUSALS: Readonly<Record<Exclude<RequestStanding['kind'], 'open'>, RuleCo
 
 /**
  * „Požádat o přístup“: a pending user asks the headmaster for access. The
- * user's row lock serialises this against a decision and a manual grant;
- * the gate saw the session's view of the user, so `can()` is asked again of
- * the locked row. The standing is checked before the insert, so the
+ * user's row lock serialises this against a decision and a manual grant,
+ * and `can()` is asked again of the locked row (lockedActor). The standing is checked before the insert, so the
  * one-pending index only ever catches a race.
  */
 export const requestAccess = defineUseCase({
@@ -25,14 +25,8 @@ export const requestAccess = defineUseCase({
   output: requestAccessOutput,
   access: { kind: 'gate', check: () => ({ action: 'access.request' }) },
   async execute({ tx, actor, now }, input) {
-    const locked = await tx.users.lock(actor.id);
-    if (!locked) return fail({ code: 'not-found' });
-    const current = {
-      ...actor,
-      role: locked.role,
-      status: locked.status,
-      isStudent: locked.isStudent,
-    };
+    const current = await lockedActor(tx, actor);
+    if (!current) return fail({ code: 'not-found' });
     if (!can(current, { action: 'access.request' })) return fail({ code: 'forbidden' });
     const standing = requestStanding(await tx.accessRequests.forUser(actor.id), now);
     if (standing.kind !== 'open') return fail({ code: 'rule', rule: REFUSALS[standing.kind] });

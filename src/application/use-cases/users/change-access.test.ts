@@ -253,16 +253,36 @@ describe('users.changeAccess', () => {
     });
   });
 
-  it('refuses to leave the school without an active headmaster: rule last-headmaster', async () => {
+  it.each([
+    ['demoted', { role: 'reviewer' }],
+    ['blocked', { status: 'blocked' }],
+  ] as const)(
+    'forbids a session from before the headmaster was %s, by the locked row',
+    async (_case, patch) => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      // A second headmaster stays, so the change to `head` commits.
+      await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter' });
+      await world.tx(system('test.seed'), (tx) =>
+        tx.users.changeAccess(head.id, head.version, patch),
+      );
+      // `head` is the record the session was resolved from: still an active headmaster.
+      await refuses(user.id, () => change(head, user, { role: 'reviewer' }), {
+        code: 'forbidden',
+      });
+    },
+  );
+
+  it('keeps the last headmaster from a demoted one’s old session: forbidden, not the rule', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const other = await world.seed.user({ role: 'headmaster' });
     // The other headmaster demoted `head` a moment ago; head's session still says headmaster.
+    // The database's last-headmaster check stays the backstop (test/integration/app/pipeline.test.ts).
     await world.tx(system('test.seed'), (tx) =>
       tx.users.changeAccess(head.id, head.version, { role: 'reviewer' }),
     );
     await refuses(other.id, () => change(head, other, { role: 'reviewer', ...CONFIRMED }), {
-      code: 'rule',
-      rule: 'last-headmaster',
+      code: 'forbidden',
     });
   });
 

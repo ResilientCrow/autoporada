@@ -2,9 +2,11 @@ import type { z } from 'zod';
 
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { decideAccessInput, decideAccessOutput } from '@/contracts';
+import { can } from '@/domain/policy';
 import { ACCESS_MACHINE, transition } from '@/domain/review';
 
 import { userAccessEvent } from '../users/events';
+import { lockedActor } from '../users/locked-actor';
 import { accessRequestEvent } from './events';
 import { machineActor, type DecisionEvent } from './machine';
 
@@ -26,8 +28,10 @@ const STATES: Readonly<Record<DecisionEvent, z.output<typeof decideAccessOutput>
  * The headmaster decides a request (plan §4: no step-up). Approval names
  * the audience, makes the requester a submitter in the same transaction and
  * so ends their sessions (users_end_sessions). Only the user's newest
- * request can be decided. Lock order: the request (load), then the user;
- * access.request takes the user first and never waits on the request.
+ * request can be decided. Lock order: the request (load), then the user,
+ * then the headmaster's own row, so `can()` is asked again of it
+ * (lockedActor); access.request takes the user first and never waits on
+ * the request.
  */
 export const decideAccess = defineUseCase({
   name: 'access.decide',
@@ -46,11 +50,13 @@ export const decideAccess = defineUseCase({
     }
     const user = await tx.users.lock(request.userId);
     if (!user) return fail({ code: 'not-found' });
+    const current = await lockedActor(tx, actor);
+    if (!current || !can(current, { action: 'access.decide' })) return fail({ code: 'forbidden' });
     const [newest] = await tx.accessRequests.forUser(request.userId);
     if (newest?.id !== request.id) return fail({ code: 'conflict' });
 
     const event = EVENTS[input.decision];
-    const step = transition(ACCESS_MACHINE, request.state, event, machineActor(actor, request));
+    const step = transition(ACCESS_MACHINE, request.state, event, machineActor(current, request));
     if (!step.ok) return fromTransition(step);
     if (event === 'approve' && user.role !== 'pending') return fail({ code: 'conflict' });
 

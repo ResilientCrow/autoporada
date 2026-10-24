@@ -24,7 +24,7 @@ import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
 import { createFakeDb, type FakeDb } from './fake/db';
 import { newId, type AuditRow, type JobRow } from './fake/state';
-import { auditRows, insertAccessRequest, resetTables } from './pg/backend';
+import { auditRows, insertAccessRequest, lockWaits, resetTables } from './pg/backend';
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -78,6 +78,13 @@ export interface World {
   as(user: UserRecord, options?: { readonly authTime?: Date }): UserPrincipal;
   /** The fake database, for fake-only checks (history, injected failures). */
   readonly fake: FakeDb | undefined;
+  /** PostgreSQL-only checks, for tests of concurrent transactions. */
+  readonly pg: PgInspector | undefined;
+}
+
+interface PgInspector {
+  /** How many of this database's transactions wait on a lock now. */
+  lockWaits(): Promise<number>;
 }
 
 /** What differs between the worlds; the rest of the World is built on top. */
@@ -85,6 +92,7 @@ interface Backend {
   readonly db: AppDeps['db'];
   readonly supportsJobs: boolean;
   readonly fake?: FakeDb;
+  readonly pg?: PgInspector;
   audit(): Promise<readonly AuditRow[]>;
   jobs(): Promise<readonly JobRow[]>;
   insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
@@ -121,6 +129,9 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
     },
     get fake() {
       return backend().fake;
+    },
+    get pg() {
+      return backend().pg;
     },
     run: (useCase, principal, input) =>
       runUseCase(useCase, { principal, requestId: 'test', input }, { db: backend().db, clock }),
@@ -188,6 +199,7 @@ function fakeBackend(db: FakeDb): Backend {
 function pgBackend(database: TestDatabase): Backend {
   return {
     db: database.app,
+    pg: { lockWaits: () => lockWaits(database) },
     // pg-boss arrives in M7.1; until then jobs are checked in the fake world only.
     supportsJobs: false,
     audit: () => auditRows(database),

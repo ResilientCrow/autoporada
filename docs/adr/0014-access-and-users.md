@@ -46,12 +46,19 @@ record adds the rules around them.
      step-up), and a tripwire test keeps `users.view`, `users.manage` and
      `access.decide` equal for every role, status and student flag, so that
      re-check never refuses an approval the policy allows.
+   - The pipeline decides on the user as the session read them, before the
+     transaction. `access.request`, `access.decide` and `users.changeAccess`
+     therefore lock the actor's own row and ask `can()` again of it
+     (`lockedActor`), so access lost a moment ago is not used once more.
+     Decide and changeAccess lock it after their other rows.
 5. **A headmaster never changes their own role, status or student flag.**
    - Policy refuses it, and so does the repository for a user principal.
    - A sole headmaster first promotes a deputy.
-   - Only two headmasters demoting each other at the same moment can leave no
-     active headmaster. The deferred database trigger catches that and maps
-     to the rule `last-headmaster`.
+   - Two headmasters demoting each other at the same moment lock each
+     other's rows in opposite order. PostgreSQL ends the deadlock, and the
+     transaction that runs again finds its actor demoted (`forbidden`). The
+     deferred database trigger stays the backstop and maps to the rule
+     `last-headmaster`.
 6. **Manual grant.**
    - While a request is pending, only its decision changes the user's role or
      type; the account status may still change.

@@ -59,3 +59,12 @@ export async function insertAccessRequest(
   if (!inserted) throw new Error('insertAccessRequest: no row returned');
   return { ...row, id: inserted.id, version: inserted.version };
 }
+
+/** This database's transactions that wait on a lock, so a race test knows the other side is blocked. */
+export async function lockWaits(database: TestDatabase): Promise<number> {
+  const [row] = await database.owner<{ n: number }>(
+    `SELECT count(*)::int AS n FROM pg_stat_activity
+      WHERE datname = current_database() AND wait_event_type = 'Lock'`,
+  );
+  return row?.n ?? 0;
+}
