@@ -1,8 +1,6 @@
 import { JOB_TX_TIMEOUT_MS, type JobName } from '@/application/ports';
 import { QUEUES } from '@/infra/jobs';
-
-/** Token and Graph call together, under one combined signal. */
-const SEND_BUDGET_MS = 20_000;
+import { SEND_BUDGET_MS } from '@/infra/mail';
 
 /** One claim, one send, one settle: the longest a single handler call works. */
 export const CALL_MS = JOB_TX_TIMEOUT_MS + SEND_BUDGET_MS + JOB_TX_TIMEOUT_MS;

@@ -128,6 +128,20 @@ module.exports = {
       to: { path: '^src/infra/' },
     },
     {
+      name: 'web-never-sends-mail',
+      comment:
+        'ADR 0003, 0015, 0016: the web only enqueues mail jobs; sending, the worker and the job handlers stay out of its graph, even transitively.',
+      severity: 'error',
+      from: {
+        path: ['^src/(server/container\\.ts|instrumentation\\.ts)$', '^src/(app|server)/'],
+        pathNot: TESTS,
+      },
+      to: {
+        path: ['^src/(infra/(mail|worker)|application/jobs)/', npm('nodemailer')],
+        reachable: true,
+      },
+    },
+    {
       name: 'app-uses-server-entries',
       comment: 'Routes reach the server only through its actions, routes and pages entry modules.',
       severity: 'error',
