@@ -46,7 +46,8 @@ export function Standing({ view }: { readonly view: AccessView }) {
       return (
         <>
           {view.previous !== null && (
-            <Notice tone="info">
+            // Part of the page as it loads: the host's status region announces changes.
+            <Notice tone="info" live={false}>
               {view.previous === 'cancelled'
                 ? access.open.previousCancelled
                 : access.open.previousRejected}

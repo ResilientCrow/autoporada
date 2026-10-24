@@ -35,6 +35,14 @@ describe('AccessRequest', () => {
     }
   });
 
+  it('has one live region, the host’s: notices that load with the page are not announced', () => {
+    for (const previous of ['cancelled', 'rejected'] as const) {
+      const html = render({ kind: 'open', previous });
+      expect(html.match(/role="status"/g)).toHaveLength(1);
+      expect(html).toContain('<div role="status"></div>');
+    }
+  });
+
   it('tells a member where to go', () => {
     const html = render({ kind: 'member' });
     expect(h2(html)?.[1]).toBe(access.member.title);
