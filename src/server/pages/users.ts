@@ -1,28 +1,31 @@
 import { listUsers, pendingAccess } from '@/application/use-cases';
 import { USER_GROUP_SLUGS, USER_QUERY_MAX, type UserGroup } from '@/contracts';
-import { formatLongDate } from '@/domain/cs';
-import { instantToWallClock } from '@/domain/time';
 import type { z } from 'zod';
 import type { listUsersOutput, pendingAccessOutput } from '@/contracts';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
+import { day } from './dates';
 import { first, type SearchParams } from './params';
 import { getViewer, requestId } from './viewer';
 
 /** A request waiting for the headmaster, its date written out. */
 type QueueItem = Pick<
   z.output<typeof pendingAccessOutput>['items'][number],
-  'requestId' | 'version' | 'displayName' | 'jobTitle' | 'department' | 'reason' | 'events'
+  | 'requestId'
+  | 'userId'
+  | 'version'
+  | 'displayName'
+  | 'jobTitle'
+  | 'department'
+  | 'reason'
+  | 'events'
 > & { readonly submitted: string };
 
 type Outcome<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: { readonly code: string } };
-
-/** The Prague calendar day of an instant, as „12. října 2026“. */
-const day = (iso: string) => formatLongDate(instantToWallClock(new Date(iso)).date);
 
 export interface UsersPageModel {
   readonly queue: readonly QueueItem[];
@@ -74,6 +77,7 @@ export async function usersPage(params: SearchParams): Promise<UsersPageModel | 
   if (list === null || pending === null) return null;
   const queue = pending.items.map((item) => ({
     requestId: item.requestId,
+    userId: item.userId,
     version: item.version,
     displayName: item.displayName,
     jobTitle: item.jobTitle,

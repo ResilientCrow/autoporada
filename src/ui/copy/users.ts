@@ -15,6 +15,16 @@ export const users = {
       rejected: 'Žádost byla zamítnuta.',
     },
   },
+  detail: {
+    title: 'Uživatel',
+    email: 'E-mail',
+    role: 'Role',
+    account: 'Účet',
+    since: (date: string) => `V\u00A0Autoporadě od ${date}`,
+    request: 'Žádost o\u00A0přístup',
+    decided: (date: string) => `Rozhodnuto ${date}`,
+    details: 'Podrobnosti',
+  },
   people: {
     title: 'Lidé',
     searchLabel: 'Hledat podle jména nebo e-mailu',

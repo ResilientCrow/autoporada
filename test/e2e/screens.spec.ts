@@ -1,5 +1,5 @@
 /** One test per screen; each screen joins in the commit that restyles it. */
-import { access, cs } from '@/ui/copy';
+import { access, cs, users } from '@/ui/copy';
 
 import { expect, test, withDates } from './fixtures';
 
@@ -66,6 +66,29 @@ for (const [name, url, status, persona] of SCREENS) {
     await checkScreen(name);
   });
 }
+
+/** The detail page of a person with a request waiting, reached by the list's link rather than an id. */
+test('the detail page of a user with a request waiting is a well-formed, accessible, keyboard-friendly page', async ({
+  page,
+  hydrated,
+  checkScreen,
+  signInAs,
+}) => {
+  await signInAs(HEADMASTER);
+  await page.goto('/uzivatele?hledat=ceka');
+  await page
+    .getByRole('main')
+    .getByRole('link', { name: 'Čeněk Čekající', exact: true })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/uzivatele\/[0-9a-f-]{36}$/);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+  await expect(page).toHaveTitle(TITLE_SUFFIX);
+  await hydrated();
+  await expect(page.getByRole('button', { name: users.queue.approveStaff })).toBeVisible();
+  await checkScreen('the detail page of a user with a request waiting');
+});
 
 /** The states of „Žádost o přístup“ a person can be in, each with its own seeded persona. */
 const ACCESS_STATES = [

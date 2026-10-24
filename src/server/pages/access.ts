@@ -1,6 +1,4 @@
-import { formatLongDate } from '@/domain/cs';
-import { instantToWallClock } from '@/domain/time';
-
+import { day } from './dates';
 import { myStanding } from './my-access';
 import { getViewer } from './viewer';
 
@@ -17,9 +15,6 @@ type AccessPageModel =
     }
   | { readonly kind: 'cooldown'; readonly decided: string; readonly from: string }
   | { readonly kind: 'blocked' };
-
-/** The Prague calendar day of an instant, as „12. října 2026“. */
-const day = (iso: string) => formatLongDate(instantToWallClock(new Date(iso)).date);
 
 /** The access page's model, or null for a visitor or a refusal (the page answers 404). */
 export async function accessPage(): Promise<AccessPageModel | null> {

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { USER_GROUP_SLUGS, type UserGroup } from '@/contracts';
 import type { Role, UserStatus } from '@/domain/actor';
 import { users } from '@/ui/copy';
@@ -57,7 +59,11 @@ export function UsersList({
             <ul className="space-y-2">
               {view.users.map((user) => (
                 <li key={user.id} className="space-y-1 border-b-2 border-ink pb-2">
-                  <p className="font-bold">{user.displayName}</p>
+                  <p>
+                    <Link href={`/uzivatele/${user.id}`} prefetch={false} className="font-bold">
+                      {user.displayName}
+                    </Link>
+                  </p>
                   {user.email !== null && <p className="break-all">{user.email}</p>}
                   <p className="flex flex-wrap gap-2">
                     <Chip look={ROLE_LOOK[user.role]} />

@@ -108,6 +108,7 @@ describe('usersPage', () => {
     expect((await usersPage({}))?.queue).toEqual([
       {
         requestId: 'r1',
+        userId: 'u9',
         version: 2,
         displayName: 'Jana Nová',
         jobTitle: 'Učitelka',

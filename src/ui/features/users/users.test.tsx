@@ -5,8 +5,9 @@ import { cs, users } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
-import { UsersList } from './index';
+import { UserAdmin, UsersList } from './index';
 import type { QueueItemView } from './Queue';
+import type { UserView } from './UserAdmin';
 import type { UsersView } from './UsersList';
 
 const person = (id: string, over: Partial<UsersView['users'][number]> = {}) => ({
@@ -42,7 +43,8 @@ describe('UsersList', () => {
 
   it('links every group, keeps the search and marks the current one', () => {
     const html = render(view({ group: 'headmaster', q: 'nov' }));
-    const links = [...html.matchAll(/<a ([^>]*)>(.*?)<\/a>/g)];
+    const nav = /<nav [^>]*>[\s\S]*?<\/nav>/.exec(html)?.[0] ?? '';
+    const links = [...nav.matchAll(/<a ([^>]*)>(.*?)<\/a>/g)];
     expect(links.map((l) => l[2])).toEqual(Object.values(users.people.groups));
     for (const [, attrs] of links) expect(attrs).toContain('hledat=nov');
     const current = links.filter((l) => l[1]?.includes('aria-current="page"'));
@@ -100,6 +102,7 @@ describe('UsersList', () => {
 
 const waiting = (id: string, over: Partial<QueueItemView> = {}): QueueItemView => ({
   requestId: id,
+  userId: `u-${id}`,
   version: 1,
   displayName: `Žadatel ${id}`,
   jobTitle: 'Učitelka',
@@ -171,5 +174,109 @@ describe('the queue of requests', () => {
   it('has clean markup', () => {
     expect(html).not.toContain('style=');
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+});
+
+describe('the links to the detail', () => {
+  it('turns each name into a link, not prefetched', () => {
+    const html = render(view());
+    expect(html).toContain('href="/uzivatele/a"');
+    expect(html).toContain('href="/uzivatele/b"');
+  });
+
+  it('offers „Podrobnosti“ on every queue item', () => {
+    const html = render(view({ queue: [waiting('r1')] }));
+    expect(html).toContain('href="/uzivatele/u-r1"');
+    expect(html).toContain(users.detail.details);
+  });
+});
+
+const detail = (over: Partial<UserView> = {}): UserView => ({
+  user: {
+    displayName: 'Jana Nová',
+    email: 'jana@skola.example',
+    role: 'pending',
+    status: 'active',
+    isStudent: false,
+    since: '1. října 2026',
+  },
+  request: {
+    requestId: 'r1',
+    version: 2,
+    state: 'pending',
+    reason: 'Chci posílat zprávy.\nDěkuji.',
+    submitted: '2. října 2026',
+    decided: null,
+  },
+  requestEvents: ['approve', 'reject', 'block'],
+  ...over,
+});
+
+const renderDetail = (v: UserView) =>
+  renderToStaticMarkup(<UserAdmin view={v} decideAccess={decide} />);
+
+describe('UserAdmin', () => {
+  it('shows the name as the one h1 and the facts as a description list', () => {
+    const html = renderDetail(detail());
+    expect(html.match(/<h1 /g)).toHaveLength(1);
+    expect(html).toMatch(/<h1 [^>]*>.*Jana Nová.*<\/h1>/);
+    expect(html).toContain(`<dt class="font-bold">${users.detail.email}</dt>`);
+    expect(html).toContain('jana@skola.example');
+    expect(html).toContain(cs.status.role.pending);
+    expect(html).toContain(cs.status.account.active);
+    expect(html).not.toContain(`</svg>${cs.status.student}</span>`);
+    expect(html).toContain(users.detail.since('1. října 2026'));
+  });
+
+  it('marks a student and a blocked account', () => {
+    const html = renderDetail(
+      detail({ user: { ...detail().user, isStudent: true, status: 'blocked' }, request: null }),
+    );
+    expect(html).toContain(`</svg>${cs.status.student}</span>`);
+    expect(html).toContain(cs.status.account.blocked);
+  });
+
+  it('leaves the request section out when there is no request', () => {
+    const html = renderDetail(detail({ request: null, requestEvents: [] }));
+    expect(html).not.toContain(users.detail.request);
+    expect(html).not.toContain('<form');
+    expect(html).not.toContain('<noscript>');
+    expect(html).toContain('<div role="status"></div>');
+  });
+
+  it('shows a waiting request with its reason and the decisions, off until hydrated', () => {
+    const html = renderDetail(detail());
+    expect(html).toMatch(/<h2 [^>]*tabindex="-1"[^>]*>/);
+    expect(html).toContain(`${users.detail.request}</h2>`);
+    expect(html).toContain(cs.status.access.pending);
+    expect(html).toContain(users.queue.submitted('2. října 2026'));
+    expect(html).toContain('Chci posílat zprávy.');
+    expect(html).toContain(`>${users.queue.approveStaff}</button>`);
+    expect(html).toContain(`>${users.queue.approveStudent}</button>`);
+    expect(html).toContain(`>${users.queue.reject}</button>`);
+    expect(html).not.toContain('value="block"');
+    for (const button of html.match(/<button [^>]*>/g) ?? []) expect(button).toContain('disabled');
+    expect(html.match(/<noscript>/g)).toHaveLength(1);
+  });
+
+  it('shows a rejected request without decision buttons', () => {
+    const html = renderDetail(
+      detail({
+        request: { ...detail().request!, state: 'rejected', decided: '3. října 2026' },
+        requestEvents: ['block'],
+      }),
+    );
+    expect(html).toContain(cs.status.access.rejected);
+    expect(html).toContain(users.detail.decided('3. října 2026'));
+    expect(html).not.toContain('<button');
+    expect(html).not.toContain('<noscript>');
+  });
+
+  it('has clean markup in every variant', () => {
+    for (const v of [detail(), detail({ request: null, requestEvents: [] })]) {
+      const html = renderDetail(v);
+      expect(html).not.toContain('style=');
+      expect(cspMarkupProblems(html)).toEqual([]);
+    }
   });
 });

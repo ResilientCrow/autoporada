@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { users } from '@/ui/copy';
+import { ArrowLink } from '@/ui/kit';
 import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
 
 import { DecisionForm, type DecideAction } from './DecisionForm';
@@ -10,6 +11,7 @@ import { DecisionForm, type DecideAction } from './DecisionForm';
 /** One request waiting for the headmaster, its date written out. */
 export interface QueueItemView {
   readonly requestId: string;
+  readonly userId: string;
   readonly version: number;
   readonly displayName: string;
   readonly jobTitle: string | null;
@@ -53,6 +55,9 @@ export function Queue({
               <p>{queue.submitted(item.submitted)}</p>
               <p className="font-bold">{queue.reason}</p>
               <p className="break-words whitespace-pre-line">{item.reason}</p>
+              <p>
+                <ArrowLink href={`/uzivatele/${item.userId}`}>{users.detail.details}</ArrowLink>
+              </p>
               <DecisionForm
                 action={decideAccess}
                 requestId={item.requestId}
