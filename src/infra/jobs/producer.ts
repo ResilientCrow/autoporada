@@ -3,6 +3,7 @@ import { DatabaseError, type PoolClient } from 'pg';
 import { DatabaseFailure, TxClosed, type JobName, type JobPort } from '@/application/ports';
 
 import type { Logger } from '../log';
+import { sleepOn } from '../system';
 
 import { createBoss, errorCode } from './boss';
 import { jobId } from './ids';
@@ -20,18 +21,6 @@ interface ProducerOptions {
 }
 
 const RETRY = { initialMs: 1_000, maxMs: 30_000 };
-
-function sleepOn(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    const done = () => {
-      clearTimeout(timer);
-      signal.removeEventListener('abort', done);
-      resolve();
-    };
-    const timer = setTimeout(done, ms);
-    signal.addEventListener('abort', done);
-  });
-}
 
 /**
  * pg-boss throws plain errors where the transaction layer expects port errors (F5). A PostgreSQL

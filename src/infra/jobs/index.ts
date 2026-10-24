@@ -1,4 +1,4 @@
-export { bossOptions, createBoss } from './boss';
+export { bossOptions, createBoss, errorCode } from './boss';
 export { applyJobGrants } from './grants';
 export { installJobs, waitForBam } from './install';
 export { jobId } from './ids';
