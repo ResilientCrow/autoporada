@@ -1,5 +1,6 @@
 import {
   DatabaseFailure,
+  isOutcomeCode,
   ScopeViolation,
   type LedgerRow,
   type LedgerState,
@@ -26,6 +27,10 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
     if (principal.kind !== 'system' || !DELIVERY_PRINCIPAL.test(principal.reason)) {
       throw new ScopeViolation();
     }
+  };
+  /** mail_ledger_code: the CHECK is isOutcomeCode's pattern and length. */
+  const codeAllowed = (code: string) => {
+    if (!isOutcomeCode(code)) throw new DatabaseFailure('23514');
   };
   /** mail_ledger_recipient_id_users_id_fk */
   const recipientExists = (recipientId: string) => {
@@ -70,6 +75,7 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
       enter(true);
       const before = mailLedger.get(dedupeKey);
       if (!before) throw new Error('settle: the key has no ledger row');
+      codeAllowed(settlement.code);
       mailLedger.set(dedupeKey, {
         ...before,
         state: settlement.state,
@@ -82,6 +88,7 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
     async skip({ code, ...row }) {
       enter(true);
       recipientExists(row.recipientId);
+      codeAllowed(code);
       const before: Pick<LedgerRow, 'unknownSends' | 'attempts' | 'claimedAt'> = mailLedger.get(
         row.dedupeKey,
       ) ?? { unknownSends: 0, attempts: 0, claimedAt: null };

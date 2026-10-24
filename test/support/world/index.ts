@@ -41,7 +41,7 @@ declare module 'vitest' {
 }
 
 type UserSeed = Partial<
-  Pick<UserRecord, 'role' | 'isStudent' | 'status' | 'displayName' | 'tid' | 'oid'>
+  Pick<UserRecord, 'role' | 'isStudent' | 'status' | 'displayName' | 'tid' | 'oid' | 'email'>
 >;
 
 /** A row of someone's request history; `createdAt` defaults to the world's clock. */
@@ -160,7 +160,7 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             tid: seed.tid ?? TEST_TID,
             oid: seed.oid ?? randomUUID(),
             displayName: seed.displayName ?? 'Jana Nováková',
-            email: null,
+            email: seed.email ?? null,
             jobTitle: null,
             department: null,
           });

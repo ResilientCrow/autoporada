@@ -139,6 +139,19 @@ describe('MailLedgerPort (port contract)', () => {
     ).rejects.toEqual(new DatabaseFailure('23503'));
   });
 
+  it('refuses a code outside the closed set, as the CHECK does', async () => {
+    const user = await world.seed.user();
+    await expect(
+      ledger((l) => l.skip({ ...claimRow(user.id, 'bad.skip'), code: 'no-address' })),
+    ).rejects.toEqual(new DatabaseFailure('23514'));
+    await ledger((l) => l.claim(claimRow(user.id, 'bad.settle')));
+    await expect(
+      ledger((l) => l.settle('bad.settle', { state: 'sent', code: `sent.${'x'.repeat(40)}` })),
+    ).rejects.toEqual(new DatabaseFailure('23514'));
+    expect(await ledger((l) => l.get('bad.skip'))).toBeNull();
+    expect(await ledger((l) => l.get('bad.settle'))).toMatchObject({ state: 'sending' });
+  });
+
   it('closes the gate to the latest instant it was given, and keeps that one code', async () => {
     await ledger((l) => l.closeGate(later(30 * SECOND), 'throttled.429'));
     expect(await ledger((l) => l.gate())).toEqual({

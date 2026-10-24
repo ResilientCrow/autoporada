@@ -2,7 +2,7 @@
 const DEFAULT_MS = 30_000;
 const MIN_MS = 1_000;
 /** The longest honoured wait; the worker's hold (HOLD_MS) is as long. */
-const MAX_MS = 900_000;
+export const RETRY_AFTER_MAX_MS = 900_000;
 
 const DELAY_SECONDS = /^\d+$/;
 /** RFC 9110 IMF-fixdate, e.g. `Sat, 24 Oct 2026 08:00:07 GMT`. */
@@ -19,5 +19,5 @@ export function retryAfterMs(header: string | null, now: Date): number {
   else if (HTTP_DATE.test(value) && !Number.isNaN(Date.parse(value))) {
     ms = Date.parse(value) - now.getTime();
   } else return DEFAULT_MS;
-  return Math.min(MAX_MS, Math.max(MIN_MS, ms));
+  return Math.min(RETRY_AFTER_MAX_MS, Math.max(MIN_MS, ms));
 }
