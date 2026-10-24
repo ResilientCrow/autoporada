@@ -1,11 +1,11 @@
 import type { PgBoss } from 'pg-boss';
 import { describe, expect, it } from 'vitest';
 
-import { jobId, withJobsAdmin } from '@/infra/jobs';
+import { jobId, PGBOSS_SCHEMA_VERSION, withJobsAdmin } from '@/infra/jobs';
 
 import { setupTestDatabase } from '../../support/database';
 import { setupJobs } from '../../support/jobs';
-import { databaseUrl } from '../../support/template-db';
+import { adminUrl, databaseUrl } from '../../support/template-db';
 
 const database = setupTestDatabase();
 const jobs = setupJobs(database);
@@ -136,4 +136,49 @@ describe('the jobs admin (as the owner, the way the CLI connects)', () => {
     },
     SLOW,
   );
+
+  describe('a start that fails', () => {
+    /** The CLI's connections to `name` that are still open. */
+    const cliSessions = async (name: string) =>
+      (
+        await database.owner<{ n: number }>(
+          `SELECT count(*)::int AS n FROM pg_stat_activity
+            WHERE application_name = 'autoporada-cli' AND datname = $1`,
+          [name],
+        )
+      )[0]?.n;
+
+    it(
+      'leaves no connection behind when pg-boss is not installed',
+      async () => {
+        const empty = `${database.name}_empty`;
+        await database.owner(`CREATE DATABASE ${empty}`);
+        try {
+          const url = new URL(adminUrl());
+          url.pathname = `/${empty}`;
+          await expect(withJobsAdmin(url.toString(), () => Promise.resolve())).rejects.toThrow(
+            /not installed/,
+          );
+          expect(await cliSessions(empty)).toBe(0);
+        } finally {
+          await database.owner(`DROP DATABASE ${empty} WITH (FORCE)`);
+        }
+      },
+      SLOW,
+    );
+
+    it(
+      'leaves no connection behind when the schema needs migrations',
+      async () => {
+        await database.owner(`UPDATE pgboss.version SET version = ${PGBOSS_SCHEMA_VERSION - 1}`);
+        try {
+          await expect(admin(() => Promise.resolve())).rejects.toThrow(/requires migrations/);
+          expect(await cliSessions(database.name)).toBe(0);
+        } finally {
+          await database.owner(`UPDATE pgboss.version SET version = ${PGBOSS_SCHEMA_VERSION}`);
+        }
+      },
+      SLOW,
+    );
+  });
 });

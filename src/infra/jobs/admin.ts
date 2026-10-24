@@ -47,8 +47,9 @@ export async function withJobsAdmin<T>(
 ): Promise<T> {
   const log = createLogger({ service: 'cli', level: 'warn' });
   const boss = createBoss('producer', { url, applicationName: 'autoporada-cli', log });
-  await boss.start();
   try {
+    // inside the try: a start that fails has opened the pool already, and only stop() closes it
+    await boss.start();
     return await run({
       async counts() {
         const { rows } = await boss.getDb().executeSql(
