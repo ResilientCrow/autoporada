@@ -11,9 +11,15 @@ in v1 unless the [plan of record](plan.md) changes first.
   The app stores no passwords.
 - Allow-list with access requests. Users who are not approved see
   „Požádat o přístup“, and the headmaster decides each request.
+- After a rejection the person can ask again 30 days later. A blocked request
+  is final, but the headmaster can still grant access by hand.
 - Roles: submitter, reviewer, headmaster. A student flag limits students to
   the submitter role.
-- Re-authentication (step-up) for role changes and „Nový školní rok“.
+- The headmaster finds people in the users list by name or e-mail. A
+  headmaster cannot change their own role, type or account status; a sole
+  headmaster first promotes a deputy.
+- Re-authentication (step-up) for changes to users' roles, types and account
+  status, and for „Nový školní rok“.
 - „Odhlásit všude“, which revokes all of a user's sessions.
 
 ### Submitting

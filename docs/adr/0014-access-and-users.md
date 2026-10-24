@@ -30,20 +30,22 @@ record adds the rules around them.
    - A mistaken block is repaired by a manual grant (item 6).
 3. **Approval is a button press.**
    - „Schválit jako zaměstnance“ and „Schválit jako studenta“ have no
-     default. Approval sets `role = submitter` and `isStudent` through
-     `changeAccess` in the same transaction as the request transition.
+     default. Approval sets `role = submitter` and `isStudent` through the
+     repository's `changeAccess` in the same transaction as the request
+     transition, and audits both.
    - The `users_end_sessions` trigger then signs the requester out, and the
      pending text says so.
-   - Deciding a request that is not the user's newest, or whose user is no
-     longer `pending`, is a `conflict`.
+   - Deciding a request that is not the user's newest, or approving one
+     whose user is no longer `pending`, is a `conflict`.
 4. **Reads and writes of users.**
    - `users.view` sits beside `users.manage` and is granted to the same
      people: headmasters who are not students. Reads use it, with no
      step-up. Writes use `users.manage`, which needs step-up.
-   - Approval uses `access.decide`, with no step-up, and re-checks
-     `users.manage` inside `changeAccess`.
-   - A tripwire test keeps `users.view`, `users.manage` and `access.decide`
-     equal for every role, status and student flag.
+   - Approval uses `access.decide`, with no step-up. The repository's
+     `changeAccess` still re-checks `users.manage` (the policy, not the
+     step-up), and a tripwire test keeps `users.view`, `users.manage` and
+     `access.decide` equal for every role, status and student flag, so that
+     re-check never refuses an approval the policy allows.
 5. **A headmaster never changes their own role, status or student flag.**
    - Policy refuses it, and so does the repository for a user principal.
    - A sole headmaster first promotes a deputy.

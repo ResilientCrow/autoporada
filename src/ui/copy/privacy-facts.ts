@@ -10,6 +10,7 @@ export const PRIVACY_FACTS = {
   sessionMaxHours: 12,
   signInMinutes: 10,
   auditYears: 3,
+  accessCooldownDays: 30,
   logMegabytes: 10,
   logFiles: 5,
 } as const;

@@ -109,6 +109,15 @@ Each entry gives the section, the flagged text, the reviewer and the note shown 
 22. **Effective date**, „Toto oznámení se může změnit. Aktuální znění najdete vždy na této stránce. …“ Reviewer: DPO. Note: „Stanovit datum účinnosti.“
     Set `effectiveFrom` when approving. The DPO also decides whether the notice should be linked from ssps.cz.
 
+### Access requests and users (M6)
+
+23. **Wait after a rejection**, in the first retention row (rejected requests): „Novou žádost lze podat nejdříve 30 dní po zamítnutí.“ Reviewer: DPO. Note: „Ověřit lhůtu pro novou žádost po zamítnutí.“
+    The 30 days come from `ACCESS_COOLDOWN_DAYS` in code; a test compares the page with it. The wait ends at 00:00 Prague time on the 30th day after the decision and is computed from the stored request, so the 1 September purge of rejected requests can end it early. The DPO confirms the length is proportionate.
+24. **Reasons**, no flag on the page. The reason of a request is free text, up to 1 000 characters, written by the user. Only the headmaster sees it (queue and user detail), and it is never written to the audit log. A user may type personal data of others or special-category data into it; the form asks only for the purpose. It is deleted with the request on 1 September, unless the request is blocked.
+25. **E-mail, job title and department**, no flag on the page. They come from Entra at sign-in and appear in the headmaster's users list, the queue and the user detail. Only users with `users.view` (headmasters who are not students) see them. The „Jaké údaje“ table already names these fields.
+26. **Audit of decisions**, no flag on the page. Approving, rejecting, cancelling and blocking a request, and every change of role, type or account status (including manual grants), are audited with the actor and the user concerned, and kept for 3 years like the rest of the log. The audit rows hold no request text.
+27. **Manual grant over a blocked request**, no flag on the page. A block stops further requests and leaves the account alone, and it has no end date (item 16). The headmaster can still grant access by hand under step-up, which repairs a mistaken block. The DPO should know that a blocked person can regain access only this way.
+
 ## Kept off the page, for the record
 
 - The DPIA and the record of processing are separate documents (plan §4, §11); this list does not replace them.

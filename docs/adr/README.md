@@ -18,5 +18,5 @@ record that supersedes it.
 | [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted |
 | [0011](0011-application-core.md) | Application core: principal-bound transactions and one pipeline | Accepted |
 | [0012](0012-ui-foundation.md) | UI foundation: brand-only Tailwind, audited React Aria, no inline styles | Accepted |
-| [0013](0013-forms-submit-through-actions.md) | Forms submit through actions: one hook, typed problems, refresh after success | Proposed |
-| [0014](0014-access-and-users.md) | Access requests and user administration | Proposed |
+| [0013](0013-forms-submit-through-actions.md) | Forms submit through actions: one hook, typed problems, refresh after success | Accepted |
+| [0014](0014-access-and-users.md) | Access requests and user administration | Accepted |

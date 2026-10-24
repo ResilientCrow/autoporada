@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { getTableColumns } from 'drizzle-orm';
 
 import { AUDIT_RETENTION_YEARS, isPurgeableAccessRequest } from '@/domain/retention';
-import { ACCESS_MACHINE } from '@/domain/review';
+import { ACCESS_COOLDOWN_DAYS, ACCESS_MACHINE } from '@/domain/review';
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SIGN_IN_TTL_MS } from '@/domain/identity/session';
 import { sessions, users } from '@/infra/db/schema';
 import { SIGN_IN_COOKIE, sessionCookie, signInCookie } from '@/server/auth/cookies';
@@ -67,6 +67,14 @@ describe('access requests in the retention table', () => {
   it('cannot lift a block, so a blocked request has no end date', () => {
     const fromBlocked = Object.values(ACCESS_MACHINE).filter((t) => t.from.includes('blocked'));
     expect(fromBlocked).toEqual([]);
+  });
+
+  it('states the wait before a new request, as long as the code enforces it', () => {
+    expect(facts.accessCooldownDays).toBe(ACCESS_COOLDOWN_DAYS);
+    const row = retentionRow(/^Schválené, zamítnuté a\u00A0zrušené žádosti/);
+    expect(row?.value).toContain(
+      `Novou žádost lze podat nejdříve ${ACCESS_COOLDOWN_DAYS}\u00A0dní po zamítnutí.`,
+    );
   });
 
   it('says so: three states are deleted, pending ones wait, blocked ones stay', () => {

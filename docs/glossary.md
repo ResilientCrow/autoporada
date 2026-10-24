@@ -29,5 +29,10 @@ same word.
 | ředitel | `headmaster` role | Full administrator. The only role that generates the document. |
 | kontrolor | `reviewer` role | Approves, edits, returns or rejects submitted points. |
 | přispěvatel | `submitter` role | An allow-listed user who may file points. |
+| žádost o přístup | `accessRequest` | A signed-in user's request for the submitter role, with a free-text reason that only the headmaster sees. |
+| student | `isStudent` | Flag on a user. A student may only be `pending` or `submitter`. |
+| bez přístupu | `pending` role | The role of a new account: it sees nothing until a request is approved or access is granted by hand. |
+| zablokovaný účet | `status` `blocked` | An account that cannot sign in. Not the same as blocking further access requests. |
+| ověření totožnosti | step-up | A fresh Entra sign-in (no older than 10 minutes) required before changing users or starting „Nový školní rok“. |
 | 2. pád | `genitive` | The genitive case used in „vyjádření pana Johna Doe“. |
 | oslovení | `salutation` | pan / paní / slečna. |

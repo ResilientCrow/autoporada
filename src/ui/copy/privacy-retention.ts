@@ -36,7 +36,8 @@ export const retentionSections = [
           },
           {
             term: 'Schválené, zamítnuté a\u00A0zrušené žádosti o\u00A0přístup',
-            value: 'smažeme 1.\u00A0září, na\u00A0konci školního roku',
+            value: `smažeme 1.\u00A0září, na\u00A0konci školního roku. Novou žádost lze podat nejdříve ${facts.accessCooldownDays}\u00A0dní po zamítnutí.`,
+            review: { by: 'dpo', note: 'Ověřit lhůtu pro novou žádost po zamítnutí.' },
           },
           {
             term: 'Čekající žádosti o\u00A0přístup',

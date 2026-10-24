@@ -180,7 +180,8 @@ An inventory test fails the build if any action or route handler is not wrapped.
 
 **Step-up re-auth**
 - `prompt=login`, with `auth_time` no older than 10 min.
-- Required only for role and user changes (`users.manage`) and for "Nový školní rok". Approving an access request does not need it: it only grants the submitter role, and every submission is still reviewed. Elsewhere, destructive actions get confirmation dialogs (typed confirmation where it matters).
+- Required only for writes of user management (`users.manage`) and for "Nový školní rok". Reading the users list and detail uses `users.view` and needs no step-up. Approving an access request does not need it: it only grants the submitter role, and every submission is still reviewed.
+- Elsewhere, destructive actions need confirmation. Access and user changes use a confirmation checkbox that the server checks (`confirmed: true`); typed confirmation stays for irreversible bulk actions such as M9's "Nový školní rok".
 - Day-to-day MFA comes from the school's Conditional Access.
 
 **Authorization**
@@ -211,7 +212,8 @@ An inventory test fails the build if any action or route handler is not wrapped.
 | `/auth/*` | per IP, loose (the school is behind one NAT address) |
 | directory search | 30/min per user |
 | submissions | 30/h per user |
-| access requests | 3/day, with a 30-day cooldown after rejection |
+| headmaster `admin` writes (deciding requests, changing access) | 600/h per user, an abuse guard a person never reaches |
+| access requests | 3/day; the 30-day cooldown after rejection is computed from the database, so it survives restarts |
 
 **Audit log**
 - An append-only `audit_event` table; a trigger blocks UPDATE and DELETE for the app role.
@@ -403,8 +405,9 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 
 | Route | Who | Purpose |
 |---|---|---|
-| `/prihlaseni`, `/pristup` | all / pending | "Přihlásit se školním účtem"; access request with reason and its state |
-| `/` Přehled | submitter+ | Deadline card, "Vráceno" card, "Akce čekající na zprávu" card, quick actions |
+| `/prihlaseni` | all | "Přihlásit se školním účtem" |
+| `/pristup` | signed-in | Access request with a reason, and its state: open, pending (with cancel), cooldown after a rejection, blocked, or already a member |
+| `/` Přehled | submitter+ | Deadline card, "Vráceno" card, "Akce čekající na zprávu" card, quick actions. Until M8 it shows the account's state; a pending user sees a card with their request standing and a link to `/pristup` |
 | `/body`, `/body/novy?typ=`, `/body/[id]` | author | Report editor beside a sticky A4 preview (≥1024 px; a Formulář \| Náhled toggle below that). Autosave and a timeline. |
 | `/akce`, `/akce/nova` | submitter+ | Future items by week, plus a strip showing where each item will appear |
 | `/navrhy/novy` | submitter+ | Proposals for POKYNY (x) and HOSPODAŘENÍ |
@@ -412,7 +415,9 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 | `/porada/[datum]/…` | headmaster | Weekly stepper: Uzávěrka → Kontrola → Přítomni/Hosté → Pokyny → Registr → Náhled → Vygenerovat (with preflight) |
 | `/archiv` | reviewer+ | Versions with DOCX and PDF downloads |
 | `/registr` | reviewer read, headmaster write | Lists, NOVÉ tags, bulk paste (class codes normalised), "Nový školní rok" |
-| `/nastaveni`, `/uzivatele` | headmaster | Deadline, texts, point types, reminders; users, roles, access requests |
+| `/nastaveni` | headmaster | Deadline, texts, point types, reminders |
+| `/uzivatele` | headmaster | Queue of pending access requests (approve as staff or as student, reject); people grouped by role with search by name or e-mail, at most 100 rows |
+| `/uzivatele/[id]` | headmaster | One user: facts, the decision on their request, block further requests, role and type (step-up), block or unblock the account |
 | `/profil`, `/ochrana-osobnich-udaju`, `/napoveda` | all | E-mail preferences, "Odhlásit všude", privacy, house-style guide |
 | `/vzornik` | development and test only (404 in production) | The UI parts no real screen shows, for the look and accessibility checks |
 
@@ -540,6 +545,8 @@ Immediate notifications:
 1. access request page + headmaster decision (with student flag); the form submit path (action result → fields, error summary, problem notice) is designed with it
 2. step-up re-auth
 3. users and roles admin
+
+Built (ADR 0013, 0014): `/pristup`, `/uzivatele` and `/uzivatele/[id]` over the form path `useActionForm`; reads under `users.view`, role, type and account changes under step-up with a server-checked confirmation; the 30-day cooldown after a rejection, a final block of further requests that a manual grant can override, and no change to one's own account. The privacy notice states the cooldown.
 
 Note: React Aria's Checkbox, Radio, Select and Date* render `style` attributes that the CSP refuses, so M6 uses a native checkbox and a native `<select>` styled with tokens. M8's DatePicker needs a new ADR (`style-src-attr`); ADR 0012 records the constraint.
 
