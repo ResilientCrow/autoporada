@@ -28,7 +28,8 @@ export interface AccessRequestRepo {
   /**
    * Version-checked (StaleVersion). `cancelled` needs `access.request` and
    * the row's own user, and leaves `decided_by` empty; the other states need
-   * `access.decide` and record who decided. `decided_at` is the transaction's
+   * `access.decide` and record who decided, so they are always a user's: a
+   * system principal gets ScopeViolation. `decided_at` is the transaction's
    * instant and the version rises by one.
    */
   transition(

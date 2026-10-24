@@ -84,6 +84,8 @@ export function fakeAccessRequestRepo(tx: FakeTxState, ctx: TxContext): AccessRe
       guard(tx, true);
       const cancel = to === 'cancelled';
       require({ action: cancel ? 'access.request' : 'access.decide' });
+      // As pg: a decision names its headmaster (access_requests_decided_by); the system makes none.
+      if (!cancel && principal.kind !== 'user') throw new ScopeViolation();
       const request = find(id);
       const foreign = cancel && principal.kind === 'user' && request?.userId !== principal.actor.id;
       if (!request || foreign || request.version !== expectedVersion) throw new StaleVersion();

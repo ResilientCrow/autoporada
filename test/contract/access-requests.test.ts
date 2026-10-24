@@ -28,7 +28,7 @@ const request = (user: UserRecord, reason = 'Jsem nový učitel.') =>
 const move = (
   by: Principal,
   row: AccessRequestRecord,
-  to: 'approved' | 'cancelled' | 'rejected',
+  to: 'approved' | 'blocked' | 'cancelled' | 'rejected',
   version = row.version,
 ) =>
   world.tx(by, async (tx) => {
@@ -179,6 +179,18 @@ describe('AccessRequestRepo (port contract)', () => {
       await expect(move(world.as(by), created, 'approved')).rejects.toBeInstanceOf(ScopeViolation);
     }
   });
+
+  it.each(['approved', 'rejected', 'blocked'] as const)(
+    'refuses a system principal a decision (%s): decisions are a headmaster’s',
+    async (to) => {
+      const user = await world.seed.user({ role: 'pending' });
+      const head = await world.seed.user({ role: 'headmaster' });
+      const created = await request(user);
+      await expect(move(system('cli:test'), created, to)).rejects.toBeInstanceOf(ScopeViolation);
+      const row = await world.tx(world.as(head), (tx) => tx.accessRequests.get(created.id), 'read');
+      expect(row).toEqual(created);
+    },
+  );
 
   it('lets a person have one pending request at a time', async () => {
     const user = await world.seed.user({ role: 'pending' });

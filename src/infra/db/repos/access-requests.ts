@@ -81,6 +81,8 @@ export function createAccessRequestRepo(db: TxDatabase, ctx: TxContext): AccessR
     async transition(id, expectedVersion, to) {
       const cancel = to === 'cancelled';
       require({ action: cancel ? 'access.request' : 'access.decide' });
+      // A decision names its headmaster (access_requests_decided_by); the system makes none.
+      if (!cancel && principal.kind !== 'user') throw new ScopeViolation();
       // A cancel is the requester's own; a headmaster's scope would otherwise reach any row.
       const own =
         cancel && principal.kind === 'user'
