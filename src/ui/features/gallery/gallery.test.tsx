@@ -7,7 +7,10 @@ import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import { Gallery } from './index';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/vzornik' }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/vzornik',
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 describe('Gallery', () => {
   const html = renderToStaticMarkup(<Gallery />);

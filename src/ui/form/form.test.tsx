@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { cs } from '@/ui/copy';
 
@@ -22,7 +22,11 @@ import {
 } from './index';
 import { retryAfterText } from './settle';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/uzivatele/u 1' }));
+const nav = vi.hoisted(() => ({ search: '' }));
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/uzivatele/u 1',
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
 
 const NOTE = 'Pomůže nám to.';
 const OWN_LABEL = 'Vlastní';
@@ -338,6 +342,28 @@ describe('FormProblem', () => {
       new RegExp(`<a href="/uzivatele/u(?: |%20)1"[^>]*>${cs.problemActions.reload}</a>`),
     );
     expect(out).not.toContain(cs.problemActions.returnHint);
+  });
+
+  describe('on a page with a query string', () => {
+    const SEARCH = 'hledat=Eva+Nov%C3%A1k&skupina=ucitele';
+    const WHERE = encodeURIComponent(`/uzivatele/u 1?${SEARCH}`);
+    beforeEach(() => {
+      nav.search = SEARCH;
+    });
+    afterEach(() => {
+      nav.search = '';
+    });
+
+    it.each(['/auth/login', '/auth/step-up'])('%s returns to the same query', (path) => {
+      const code = path === '/auth/login' ? 'unauthenticated' : 'step-up-required';
+      expect(html({ code })).toContain(`<a href="${path}?returnTo=${WHERE}"`);
+    });
+
+    it('reloads the same query', () => {
+      expect(html({ code: 'conflict' })).toMatch(
+        /<a href="\/uzivatele\/u(?: |%20)1\?hledat=Eva\+Nov%C3%A1k&amp;skupina=ucitele"/,
+      );
+    });
   });
 
   it.each(['forbidden', 'busy', 'network'] as const)('%s: no action', (code) => {

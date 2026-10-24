@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { ReactNode, Ref } from 'react';
 
 import { app, errors, problemActions, rules } from '@/ui/copy';
@@ -21,10 +21,10 @@ function textOf(problem: Problem): string {
 }
 
 /** A sign-in page opens in a new tab so the typed text stays; a plain link, since /auth/* is not a page. */
-function SignInLink({ path, label, pathname }: { path: string; label: string; pathname: string }) {
+function SignInLink({ path, label, location }: { path: string; label: string; location: string }) {
   return (
     <>
-      <a href={`${path}?returnTo=${encodeURIComponent(pathname)}`} target="_blank" rel="noopener">
+      <a href={`${path}?returnTo=${encodeURIComponent(location)}`} target="_blank" rel="noopener">
         {label}
       </a>{' '}
       {problemActions.returnHint}
@@ -32,16 +32,16 @@ function SignInLink({ path, label, pathname }: { path: string; label: string; pa
   );
 }
 
-function actionOf(problem: Problem, pathname: string): ReactNode {
+function actionOf(problem: Problem, location: string): ReactNode {
   if (problem.code === 'unauthenticated') {
-    return <SignInLink path="/auth/login" label={problemActions.signIn} pathname={pathname} />;
+    return <SignInLink path="/auth/login" label={problemActions.signIn} location={location} />;
   }
   if (problem.code === 'step-up-required') {
-    return <SignInLink path="/auth/step-up" label={problemActions.stepUp} pathname={pathname} />;
+    return <SignInLink path="/auth/step-up" label={problemActions.stepUp} location={location} />;
   }
   if (problem.code === 'conflict' || problem.code === 'not-found') {
     return (
-      <Link href={pathname} prefetch={false}>
+      <Link href={location} prefetch={false}>
         {problemActions.reload}
       </Link>
     );
@@ -61,8 +61,10 @@ export function FormProblem({
   readonly problem: Problem;
   readonly focusRef?: Ref<HTMLDivElement>;
 }) {
+  // Both are available on the server here: every route is dynamic, so no Suspense boundary is needed.
   const pathname = usePathname();
-  const action = actionOf(problem, pathname);
+  const search = useSearchParams().toString();
+  const action = actionOf(problem, search === '' ? pathname : `${pathname}?${search}`);
   return (
     <div ref={focusRef} tabIndex={-1}>
       <Notice tone="problem">
