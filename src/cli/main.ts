@@ -3,9 +3,17 @@
  * the only CLI code allowed to wire infrastructure together.
  */
 import { getConfig, getDatabaseUrl } from '@/infra/config';
+import { withJobsAdmin } from '@/infra/jobs';
 import { runMigrations } from '@/infra/migrate';
 import { formatProbe, loadClientCredential, probeEntra } from '@/infra/oidc';
 
+import {
+  JOBS_REDRIVE_USAGE,
+  JOBS_STATUS_USAGE,
+  jobsRedrive,
+  jobsStatus,
+  type JobsAdmin,
+} from './jobs';
 import { renderSnapshot, RENDER_SNAPSHOT_USAGE } from './render-snapshot';
 
 /** Applies pending migrations as the schema owner (the one-shot migrate service). */
@@ -31,8 +39,16 @@ async function authProbe(): Promise<string[]> {
   return formatProbe(report);
 }
 
+/** A jobs command: pg-boss as the schema owner (DATABASE_URL), open only while it runs. */
+const onJobs =
+  (command: (admin: JobsAdmin, args: readonly string[]) => Promise<string[]>) =>
+  (args: readonly string[]) =>
+    withJobsAdmin(getDatabaseUrl(), (admin) => command(admin, args));
+
 const COMMANDS: Readonly<Record<string, (args: readonly string[]) => Promise<string[]>>> = {
   'auth:probe': authProbe,
+  'jobs:redrive': onJobs(jobsRedrive),
+  'jobs:status': onJobs(jobsStatus),
   migrate,
   'render-snapshot': renderSnapshot,
 };
@@ -42,6 +58,8 @@ const USAGE = [
   '',
   'Commands:',
   '  auth:probe',
+  `  ${JOBS_REDRIVE_USAGE}`,
+  `  ${JOBS_STATUS_USAGE}`,
   '  migrate',
   `  ${RENDER_SNAPSHOT_USAGE}`,
 ].join('\n');

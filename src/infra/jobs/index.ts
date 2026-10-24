@@ -1,4 +1,5 @@
 export { bossOptions, createBoss, errorCode } from './boss';
+export { withJobsAdmin } from './admin';
 export { applyJobGrants } from './grants';
 export { installJobs, waitForBam } from './install';
 export { jobId } from './ids';

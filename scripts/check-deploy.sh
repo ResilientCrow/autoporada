@@ -196,6 +196,10 @@ sleep 1
 access=$(compose logs --no-color caddy 2>&1)
 printf '%s\n' "$access" | grep -q 'http.log.error' || fail 'caddy did not log the 502'
 if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged code or state of a failed request'; fi
+# jobs:status runs as the owner through the tools image and finds no dead job (ADR 0015).
+status=$(compose run --rm --no-deps cli jobs:status 2>&1) || fail "jobs:status failed: $status"
+printf '%s\n' "$status" | grep -qx 'dead: 0' || fail "jobs:status did not print dead: 0 ($status)"
+
 # The worker was never restarted, and a stop finishes inside its grace period with exit code 0 (a
 # SIGKILL after the 50 s would show as 137).
 [ "$(docker inspect -f '{{.RestartCount}}' "$worker")" = 0 ] || fail 'the worker restarted during the checks'
