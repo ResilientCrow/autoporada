@@ -11,6 +11,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   The app stores no passwords.
 - Allow-list with access requests. Users who are not approved see
   „Požádat o přístup“, and the headmaster decides each request.
+- The requester gets an e-mail when the request is approved, rejected or
+  blocked, and a user gets one when access is granted by hand.
 - After a rejection the person can ask again 30 days later. A blocked request
   is final, but the headmaster can still grant access by hand.
 - Roles: submitter, reviewer, headmaster. A student flag limits students to
@@ -74,6 +76,9 @@ in v1 unless the [plan of record](plan.md) changes first.
 - Health endpoint, a daily ops check, and alert e-mails to the IT contact.
 - A break-glass CLI: generate, revoke sessions, set role, render a snapshot,
   and handle data-subject requests.
+- CLI commands for the queue: `jobs:status` lists jobs and the dead-letter
+  queue, `jobs:redrive` replays dead jobs, and `mail:test` sends a test e-mail
+  to a reviewer or headmaster.
 - Privacy notice page.
 
 ## Deferred (later)

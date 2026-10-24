@@ -66,7 +66,7 @@ These versions were checked on the web on 2026-10-18.
 | Language | TypeScript strict (`noUncheckedIndexedAccess`), pnpm pinned | |
 | Auth | **openid-client 6.x** + own sessions stored hashed in the DB | Small and certified. Auth.js is frozen, and Better Auth has a long advisory history in the OAuth paths we would use |
 | DB | PostgreSQL 18 + **Drizzle** 0.45 (drizzle-kit SQL migrations) | Typed SQL; migrations can be reviewed |
-| Jobs | **pg-boss 12** in a separate `worker` container (same image), with Europe/Prague cron | No Redis; jobs are enqueued inside the business transaction |
+| Jobs | **pg-boss 12** in a separate `worker` container (its own distroless target, ADR 0015), with Europe/Prague cron | No Redis; jobs are enqueued inside the business transaction |
 | Validation | Zod 4, with contracts shared by client and server | |
 | DOCX / PDF | **docx 9.12** (dolanmiu); **Gotenberg 8** child image with OpenSymbol and Liberation fonts (Times New Roman and Aptos Narrow if licensed) | Covers the format spec; LibreOffice stays isolated |
 | Rich text | TipTap 3, restricted schema, stored as JSON (never HTML) | |
@@ -225,7 +225,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 - `.env` is validated by Zod in `instrumentation.ts` at boot; a bad value stops the server.
 - `APP_ENV` (development / test / production) switches on production hardening. It is separate from `NODE_ENV`, which `next start` always sets to production, and is required whenever `NODE_ENV=production`.
 - A Server Actions key given as a Docker secret is copied into `process.env` at boot, because Next.js reads it only from there.
-- Three DB roles: `migrator`, `app` and `backup`.
+- Four DB roles: `migrator`, `app`, `jobs` and `backup` (ADR 0010, 0015). The login roles are `autoporada_web` (in `app`) and `autoporada_worker` (in `jobs` only). The web can only insert jobs and read their ids; only the worker reads the mail ledger.
 - An alert fires 45 days before the certificate expires.
 
 **Graph least privilege**
@@ -236,6 +236,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 **Containers**
 - Non-root, `read_only`, `cap_drop: ALL`, `no-new-privileges`, pinned digests.
 - Internal networks: Gotenberg and Postgres are never exposed.
+- The worker is built from its own distroless target and sits on `data` and `egress`, never on `edge`. `egress` allows any host; the school firewall narrows it to `login.microsoftonline.com` and `graph.microsoft.com`. There is exactly one worker replica.
 - A `cli` maintenance container gives IT a shell for debugging.
 
 **Logs.** pino redacts cookies, tokens, `code` and request bodies. PG errors are logged as code only, actors as UUIDs, and the error page shows a `reqId`.
@@ -448,20 +449,22 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 
 | Job | When | Does |
 |---|---|---|
-| `mail.send` | enqueued in the transaction | Graph sendMail, throttled to ≤20/min, dedupe key, `Retry-After` honoured, retries plus a dead-letter queue (at-least-once with deduplication) |
+| `mail.send` | enqueued in the transaction | Graph sendMail as plain text with `saveToSentItems: false`; a ledger and a gate in the database, at most 20 sends per 60 s, `Retry-After` honoured by holds of up to 900 s that burn no retry; at most 2 unknown outcomes per key; 15 retries over about 2.8 h, then the dead-letter queue (ADR 0016) |
+| `mail.prune` | daily 05:10 (M7) | Deletes mail-ledger rows older than 91 days |
 | `reminders.deadline` | every 15 min | Deadline −2 days at 13:00 to active submitters (opt-out); deadline day at 12:00 to authors with drafts or returned points. Spread out over time. |
-| `reviewer.digest` | every 15 min | New submissions |
+| `reviewer.digest` | every 15 min | New submissions. M8 also tells headmasters about new access requests (a pending requester cannot list them, so M7 does not) |
 | `headmaster.summary` | deadline + 5 min | Counts: approved, pending, returned |
 | `future.report-prompt` | daily 08:00 | Day after the event; one nudge after 7 days, at most 2 |
-| `pdf.render` | at generation | Gotenberg |
-| `retention.daily` | 03:15 | Expired sessions and auth transactions, old jobs |
+| `pdf.render` | at generation (M10) | Gotenberg |
+| `retention.daily` | 03:15 | Expired sessions and auth transactions (jobs: pg-boss retention and `mail.prune`, M7) |
 | `retention.school-year` | 1 Sep | Purge drafts, rejected and withdrawn points, decided requests, unreferenced people; audit log older than 3 years |
 | `ops.check` | daily 07:00 | Backup age (local and off-site), dead-letter queue, certificate expiry, disk. Mails the IT contact and shows a banner to the headmaster. |
 | backup sidecar | nightly 02:30 | `pg_dump` → restore-verify into a throwaway database → `age`-encrypt (public key only) → off-site copy (SFTP/rsync, SMB NAS or S3-compatible). The private key stays offline; a manual restore drill every quarter. |
 
 Immediate notifications:
 - point approved, returned or rejected → the author;
-- access request decided → the requester.
+- access request approved, rejected or blocked → the requester;
+- access granted by hand to a pending user → that user.
 
 ## 10. Implementation plan (commit by commit)
 
@@ -555,6 +558,14 @@ Note: React Aria's Checkbox, Radio, Select and Date* render `style` attributes t
 2. Graph mail transport + throttle
 3. SMTP (Mailpit) transport + Czech templates
 4. access notifications
+
+Built (ADR 0015, 0016): the worker with its own login role, image and `egress` network; pg-boss installed by `migrate`; a mail ledger and gate in the database; the Graph and Mailpit transports; five Czech templates; the decisions of §9. The CLI gains `jobs:status`, `jobs:redrive` and `mail:test`.
+
+Deviations from the list above:
+- `pdf.render` is not in the job catalogue until M10.
+- The cron registry ships one entry, `mail.prune` (05:10). `retention.daily` stays M11's.
+- Headmasters are not mailed about new requests: M8's `reviewer.digest` does that.
+- The real-tenant checks wait for school IT (SMOKE-TEST).
 
 Note: the Graph mail adapter sends `saveToSentItems: false`, so no copies pile up in the shared mailbox.
 
