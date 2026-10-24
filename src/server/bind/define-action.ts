@@ -1,3 +1,4 @@
+import { refresh } from 'next/cache';
 import { headers } from 'next/headers';
 
 import type { UseCase } from '@/application/core';
@@ -11,6 +12,10 @@ import { runAction, sessionTokenFrom, type ActionOptions } from '../pipeline';
  * The only way to make a server action (ADR 0011). Export the result from
  * a "use server" module in src/server/actions; never freeze or alias it,
  * since React registers the function itself.
+ *
+ * After a write that succeeded, the page re-renders in the same response
+ * (`refresh`, ADR 0013): the client never refreshes or redirects itself. A
+ * failure does not refresh, or it would reset the form showing the problem.
  */
 export function defineAction<In, Out>(
   useCase: UseCase<In, Out>,
@@ -26,7 +31,9 @@ export function defineAction<In, Out>(
       sessionToken: sessionTokenFrom(head.get('cookie')),
       requestId: container.requestIdFrom(head.get('x-request-id')),
     };
-    return runAction(container, request, useCase, options, input);
+    const result = await runAction(container, request, useCase, options, input);
+    if (useCase.mode === 'write' && result.ok) refresh();
+    return result;
   };
   markWrapped(action, { kind: 'action', useCase, rateLimit: options.rateLimit });
   return action;

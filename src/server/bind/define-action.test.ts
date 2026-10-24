@@ -1,16 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { defineSystemUseCase, ok } from '@/application/core';
+import { defineSystemUseCase, defineUseCase, ok } from '@/application/core';
 import { me } from '@/application/use-cases';
 
 import { recordingLog } from '../../../test/support/log';
+import type * as pipeline from '../pipeline';
 import { wrappedInfo } from './brand';
 import { defineAction } from './define-action';
 
 const request = vi.hoisted(() => ({ headers: new Headers() }));
 vi.mock('next/headers', () => ({ headers: async () => request.headers }));
 const resolvePrincipal = vi.hoisted(() => vi.fn(async () => null));
+const refresh = vi.hoisted(() => vi.fn());
+vi.mock('next/cache', () => ({ refresh }));
+const runAction = vi.hoisted(() => vi.fn());
+vi.mock('../pipeline', async (original) => ({
+  ...(await original<typeof pipeline>()),
+  runAction,
+}));
 vi.mock('../container', () => ({
   getContainer: () => ({
     resolvePrincipal,
@@ -19,9 +27,23 @@ vi.mock('../container', () => ({
   }),
 }));
 
+const write = defineUseCase({
+  name: 'test.write',
+  mode: 'write',
+  input: z.strictObject({}),
+  output: z.object({}),
+  access: { kind: 'gate', check: () => ({ action: 'profile.manage' }) },
+  execute: async () => ok({}),
+});
+
 describe('defineAction', () => {
   const action = defineAction(me, { rateLimit: 'none' });
-  beforeEach(() => resolvePrincipal.mockClear());
+  beforeEach(async () => {
+    resolvePrincipal.mockClear();
+    refresh.mockClear();
+    const real = await vi.importActual<typeof pipeline>('../pipeline');
+    runAction.mockReset().mockImplementation(real.runAction);
+  });
 
   it('runs as the user of the one session cookie', async () => {
     request.headers = new Headers({ cookie: '__Host-ap_session=tok' });
@@ -50,5 +72,33 @@ describe('defineAction', () => {
       execute: async () => ok({}),
     });
     expect(() => defineAction(job, { rateLimit: 'none' })).toThrow(/signed-in user/);
+  });
+
+  describe('re-renders the page after a write that succeeded, and only then', () => {
+    const answer = defineAction(write, { rateLimit: 'none' });
+
+    it('refreshes after a successful write', async () => {
+      runAction.mockResolvedValue({ ok: true, data: {} });
+      expect(await answer({})).toEqual({ ok: true, data: {} });
+      expect(refresh).toHaveBeenCalledOnce();
+    });
+
+    it('does not refresh after a failed write, so the form keeps its problem', async () => {
+      runAction.mockResolvedValue({ ok: false, error: { code: 'conflict' } });
+      await answer({});
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh after a read', async () => {
+      runAction.mockResolvedValue({ ok: true, data: {} });
+      await action({});
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh when the call throws', async () => {
+      runAction.mockRejectedValue(new Error('boom'));
+      await expect(answer({})).rejects.toThrow('boom');
+      expect(refresh).not.toHaveBeenCalled();
+    });
   });
 });
