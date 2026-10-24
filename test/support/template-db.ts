@@ -4,6 +4,7 @@
  */
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 
 import { Client } from 'pg';
@@ -22,6 +23,9 @@ export function databaseUrl(name: string): string {
   return url.toString();
 }
 
+/** What `migrate` installs besides drizzle/: pg-boss's schema, and the code that sets up its queues. */
+const JOB_INSTALL_FILES = ['src/infra/jobs/install.ts', 'src/infra/jobs/queues.ts'];
+
 function migrationsHash(): string {
   const hash = createHash('sha256');
   const walk = (dir: string): string[] =>
@@ -31,6 +35,11 @@ function migrationsHash(): string {
   for (const file of walk(MIGRATIONS_DIR).sort()) {
     hash.update(relative(MIGRATIONS_DIR, file)).update('\0').update(readFileSync(file));
   }
+  const pgBoss = JSON.parse(
+    readFileSync(createRequire(import.meta.url).resolve('pg-boss/package.json'), 'utf8'),
+  ) as { version: string; pgboss: { schema: number } };
+  hash.update(`pg-boss ${pgBoss.version} schema ${pgBoss.pgboss.schema}`);
+  for (const file of JOB_INSTALL_FILES) hash.update(file).update('\0').update(readFileSync(file));
   return `migrations:${hash.digest('hex')}`;
 }
 

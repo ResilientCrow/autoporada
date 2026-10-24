@@ -11,7 +11,7 @@ export const retentionSections = [
         kind: 'facts',
         review: {
           by: 'dpo',
-          note: 'Ověřit dobu uchování záloh, kopií e-mailů, dat úloh na\u00A0pozadí, účtů a\u00A0archivních seznamů.',
+          note: 'Ověřit dobu uchování záloh, účtů a\u00A0archivních seznamů a\u00A0ověřit, že jinde nezůstává kopie e-mailu.',
         },
         rows: [
           {
@@ -49,6 +49,11 @@ export const retentionSections = [
             review: { by: 'dpo', note: 'Ověřit dobu uchování zablokovaných žádostí.' },
           },
           { term: 'Záznam změn', value: `${facts.auditYears}\u00A0roky` },
+          {
+            term: 'Úlohy na\u00A0pozadí (jen identifikátory)',
+            value: `dokončené ${facts.jobsKeptDays}\u00A0dny, nespuštěné ${facts.unrunJobsKeptDays}\u00A0dní, neúspěšné ${facts.deadJobsKeptDays}\u00A0dní`,
+            review: { by: 'dpo', note: 'Ověřit dobu uchování úloh na\u00A0pozadí.' },
+          },
           {
             term: 'Technické záznamy',
             value: `v\u00A0záznamech serveru; jejich rozsah omezuje velikost (${facts.logMegabytes}\u00A0MB, nejvýše ${facts.logFiles}\u00A0souborů na\u00A0službu), ne čas`,

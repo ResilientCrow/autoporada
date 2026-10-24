@@ -11,6 +11,10 @@ export const PRIVACY_FACTS = {
   signInMinutes: 10,
   auditYears: 3,
   accessCooldownDays: 30,
+  // Job queue retention; test/arch/privacy-facts.test.ts ties these to src/infra/jobs/queues.ts.
+  jobsKeptDays: 2,
+  unrunJobsKeptDays: 14,
+  deadJobsKeptDays: 90,
   logMegabytes: 10,
   logFiles: 5,
 } as const;

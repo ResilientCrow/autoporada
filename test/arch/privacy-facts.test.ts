@@ -9,6 +9,7 @@ import { AUDIT_RETENTION_YEARS, isPurgeableAccessRequest } from '@/domain/retent
 import { ACCESS_COOLDOWN_DAYS, ACCESS_MACHINE } from '@/domain/review';
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SIGN_IN_TTL_MS } from '@/domain/identity/session';
 import { sessions, users } from '@/infra/db/schema';
+import { QUEUES } from '@/infra/jobs';
 import { SIGN_IN_COOKIE, sessionCookie, signInCookie } from '@/server/auth/cookies';
 import { SESSION_COOKIE } from '@/server/pipeline/request';
 import { privacy } from '@/ui/copy/privacy';
@@ -86,6 +87,26 @@ describe('access requests in the retention table', () => {
     });
     // No other row may claim the blocked ones are deleted with the rest.
     expect(retentionRow(/vyřízené žádosti/)).toBeUndefined();
+  });
+});
+
+describe('job retention in the notice', () => {
+  const days = (seconds: number | undefined) => (seconds ?? 0) / 86_400;
+  const queue = (name: string) => QUEUES.find((spec) => spec.name === name)?.options;
+
+  it('gives the days the queues enforce', () => {
+    expect(facts.jobsKeptDays).toBe(days(queue('mail.send')?.deleteAfterSeconds));
+    expect(facts.unrunJobsKeptDays).toBe(days(queue('mail.send')?.retentionSeconds));
+    expect(facts.deadJobsKeptDays).toBe(days(queue('dead')?.deleteAfterSeconds));
+    expect(facts.deadJobsKeptDays).toBe(days(queue('dead')?.retentionSeconds));
+  });
+
+  it('has a row for them, flagged for the DPO', () => {
+    const row = retentionRow(/^Úlohy na\u00A0pozadí/);
+    expect(row?.value).toBe(
+      `dokončené ${facts.jobsKeptDays}\u00A0dny, nespuštěné ${facts.unrunJobsKeptDays}\u00A0dní, neúspěšné ${facts.deadJobsKeptDays}\u00A0dní`,
+    );
+    expect(row).toMatchObject({ review: { by: 'dpo' } });
   });
 });
 

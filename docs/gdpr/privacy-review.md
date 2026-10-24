@@ -74,12 +74,14 @@ Each entry gives the section, the flagged text, the reviewer and the note shown 
 
 ### `doba`, „Jak dlouho údaje uchováváme“
 
-14. **Whole table**, reviewer DPO, note: „Ověřit dobu uchování záloh, kopií e-mailů, dat úloh na pozadí, účtů a archivních seznamů.“ These are the retention gaps; none has a rule in the code yet:
+14. **Whole table**, reviewer DPO, note: „Ověřit dobu uchování záloh, účtů a archivních seznamů a ověřit, že jinde nezůstává kopie e-mailu.“ These are the retention gaps still open; none has a rule in the code yet:
     - **Backups**: retention is not specified anywhere.
     - **Mailbox copies**: Graph `sendMail` saves to Sent Items by default (`saveToSentItems` defaults to true), so copies would pile up in the `autoporada@ssps.cz` mailbox. The mail adapter (M7) will send `saveToSentItems: false`; the DPO should still confirm no other copy is kept.
-    - **Job payloads**: how long pg-boss keeps finished jobs, which hold mail payloads, is not specified.
+    - **Job payloads**: resolved in code. A payload holds ids only, and pg-boss deletes finished jobs after 2 days, unrun ones after 14 days and failed ones (the `dead` queue) after 90 days (`src/infra/jobs/queues.ts`; `test/arch/privacy-facts.test.ts` ties the notice to these numbers). See item 14a.
     - **Users**: no deletion rule exists for the `users` table.
     - **Archived registry entries**: no deletion rule exists for archived student lists.
+14a. **Background jobs row**, „Úlohy na pozadí (jen identifikátory)“: „dokončené 2 dny, nespuštěné 14 dní, neúspěšné 90 dní“. Reviewer: DPO. Note: „Ověřit dobu uchování úloh na pozadí.“
+    The numbers are the queue settings of `mail.send` and `dead`. A job carries a template name and two ids, never an address; the address is read from the database when the mail is sent.
 15. **Archive row**, „Porady, schválené a zveřejněné body, vytvořené dokumenty“: „trvale, jako archiv porad“. Reviewer: DPO. Note: „Ověřit trvalé uchování podle spisového a skartačního plánu.“
     „Trvale“ against the school's spisový a skartační plán and zákon 499/2004 Sb. is **unverified**. The generated documents are insert-only by design.
 16. **Blocked requests row**, „bez časového omezení, aby blokace platila“. Reviewer: DPO. Note: „Ověřit dobu uchování zablokovaných žádostí.“

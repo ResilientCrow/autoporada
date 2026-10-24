@@ -28,6 +28,7 @@ describe('runMigrations', () => {
   beforeAll(() => admin(`CREATE DATABASE ${name}`));
   afterAll(() => admin(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`));
 
+  // Each run also installs pg-boss and waits for its background index builds.
   it('applies every migration once, even with two migrators at the same time', async () => {
     await Promise.all([runMigrations(databaseUrl(name)), runMigrations(databaseUrl(name))]);
     await runMigrations(databaseUrl(name));
@@ -36,6 +37,15 @@ describe('runMigrations', () => {
       name,
     );
     expect(applied).toEqual([{ n: journal.entries.length }]);
+  }, 60_000);
+
+  it('installs the pg-boss schema and its queues', async () => {
+    const queues = (await admin(`SELECT name FROM pgboss.queue`, name)) as { name: string }[];
+    expect(queues.map((queue) => queue.name).sort()).toEqual([
+      '__pgboss__send-it',
+      'dead',
+      'mail.send',
+    ]);
   });
 
   it('takes temporary tables away from the app (migration 0005)', async () => {
