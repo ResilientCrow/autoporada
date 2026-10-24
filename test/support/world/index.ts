@@ -24,7 +24,7 @@ import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
 import { createFakeDb, type FakeDb } from './fake/db';
 import { newId, type AuditRow, type JobRow } from './fake/state';
-import { auditRows, insertAccessRequest, lockWaits, resetTables } from './pg/backend';
+import { auditRows, insertAccessRequest, jobRows, lockWaits, resetTables } from './pg/backend';
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -56,8 +56,6 @@ export interface World {
   readonly kind: 'fake' | 'pg';
   readonly clock: FixedClock;
   readonly deps: AppDeps;
-  /** What this world can check; PostgreSQL has no job queue until M7.1. */
-  readonly supports: { readonly jobs: boolean };
   tx<T>(principal: Principal, work: (tx: Tx) => Promise<T>, mode?: TxMode): Promise<T>;
   /** Runs a use case through the real pipeline, at the world's clock. */
   run<In, Out>(
@@ -90,7 +88,6 @@ interface PgInspector {
 /** What differs between the worlds; the rest of the World is built on top. */
 interface Backend {
   readonly db: AppDeps['db'];
-  readonly supportsJobs: boolean;
   readonly fake?: FakeDb;
   readonly pg?: PgInspector;
   audit(): Promise<readonly AuditRow[]>;
@@ -123,9 +120,6 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
     clock,
     get deps() {
       return { db: backend().db, clock };
-    },
-    get supports() {
-      return { jobs: backend().supportsJobs };
     },
     get fake() {
       return backend().fake;
@@ -178,7 +172,6 @@ function fakeBackend(db: FakeDb): Backend {
   return {
     db,
     fake: db,
-    supportsJobs: true,
     audit: async () => db.state().audit,
     jobs: async () => db.state().jobs,
     async insertAccessRequest(row) {
@@ -200,10 +193,8 @@ function pgBackend(database: TestDatabase): Backend {
   return {
     db: database.app,
     pg: { lockWaits: () => lockWaits(database) },
-    // pg-boss arrives in M7.1; until then jobs are checked in the fake world only.
-    supportsJobs: false,
     audit: () => auditRows(database),
-    jobs: async () => [],
+    jobs: () => jobRows(database),
     insertAccessRequest: (row) => insertAccessRequest(database, row),
   };
 }

@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { DatabaseError, type Client } from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DatabaseFailure, TxClosed, type JobName } from '@/application/ports';
+import { DatabaseFailure, system, TxClosed, type JobName, type Tx } from '@/application/ports';
 import { createProducer } from '@/infra/jobs';
 import { createLogger } from '@/infra/log';
 
@@ -365,6 +365,50 @@ describe('start', () => {
       const seen = lines.length;
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(lines.length).toBe(seen);
+    },
+    SLOW,
+  );
+});
+
+describe('a serialization failure rerun (F9)', () => {
+  it(
+    'enqueues once when a deadlock makes one transaction run its work again',
+    async () => {
+      const [a, b] = await database.owner<{ id: string }>(
+        `INSERT INTO users (tid, oid, display_name)
+       SELECT gen_random_uuid(), gen_random_uuid(), 'Uživatel ' || n FROM generate_series(1, 2) n
+       RETURNING id`,
+      );
+      const key = 'deadlock-1';
+      const ctx = { principal: system('cli:test'), now: new Date(), requestId: 'deadlock' };
+      const runs = { first: 0, second: 0 };
+      let secondHoldsB: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        secondHoldsB = resolve;
+      });
+      const enqueue = (tx: Tx) => tx.jobs.enqueue('mail.send', payload, { dedupeKey: key });
+
+      // The first enqueues, takes user A, then waits for user B, which the second holds. The second
+      // takes B, then enqueues the same key: it waits for the first's uncommitted job row.
+      // Each waits for the other, PostgreSQL ends one of them, and its work runs again.
+      const first = database.app.transaction(ctx, { mode: 'write' }, async (tx) => {
+        runs.first += 1;
+        await enqueue(tx);
+        await tx.users.lock(a!.id);
+        if (runs.first === 1) await held;
+        await tx.users.lock(b!.id);
+      });
+      const second = database.app.transaction(ctx, { mode: 'write' }, async (tx) => {
+        runs.second += 1;
+        await tx.users.lock(b!.id);
+        if (runs.second === 1) secondHoldsB();
+        await enqueue(tx);
+        await tx.users.lock(a!.id);
+      });
+      await Promise.all([first, second]);
+
+      expect(runs.first + runs.second).toBe(3);
+      expect(await jobsFor(key)).toBe(1);
     },
     SLOW,
   );

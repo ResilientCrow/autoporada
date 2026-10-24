@@ -3,6 +3,7 @@ import type { AppDeps, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { getConfig, requireServerActionsKey, type Config } from '@/infra/config';
 import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
+import { createProducer } from '@/infra/jobs';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
 import { createIdentityProvider, describeCredential, loadClientCredential } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
@@ -42,6 +43,8 @@ interface BootReport {
 /** What the process holds once: state, but no class or object anyone checks the identity of. */
 interface Shared {
   readonly pool: DatabasePool;
+  /** Sends jobs inside the use cases' transactions; connects only once `startProducer()` runs. */
+  readonly producer: ReturnType<typeof createProducer>;
   readonly limiter: RateLimiter;
 }
 
@@ -55,19 +58,28 @@ function shared(config: Config, log: Logger): Shared {
       applicationName: 'autoporada-web',
       onConnectionError: (sqlstate) => log.warn({ sqlstate }, 'database connection lost'),
     }),
+    producer: createProducer({
+      url: config.databaseUrl,
+      applicationName: 'autoporada-web',
+      log,
+    }),
     limiter: createRateLimiter({ limits: LIMITS, now: () => performance.now() }),
   });
 }
 
 /**
  * Composition root of the web process. Building is lazy and opens no
- * connection: the pool connects on the first query.
+ * connection: the pool connects on the first query, and the job producer
+ * only when `startProducer()` is called.
  */
 function buildWeb(config: Config): WebContainer {
   requireServerActionsKey(config);
   const log = createLogger({ service: 'web', level: config.logLevel });
-  const { pool, limiter } = shared(config, log);
-  const app: AppDeps = { db: databaseOn(pool).app, clock: systemClock };
+  const { pool, producer, limiter } = shared(config, log);
+  const app: AppDeps = {
+    db: databaseOn(pool, { jobsOn: producer.jobsOn }).app,
+    clock: systemClock,
+  };
   const { oidc } = config;
   // Loading the credential checks the key against the certificate: a bad pair stops the boot.
   const credential = loadClientCredential(oidc.credential);
@@ -133,4 +145,22 @@ export function bootWeb(): void {
   log.info(facts, 'web process configured');
   for (const error of errors) log.error({}, error);
   for (const warning of warnings) log.warn({}, warning);
+}
+
+/**
+ * Starts the job producer, outside any transaction (it is called from instrumentation, never from
+ * a use case). Does not wait: a web that boots before the database retries on its own and logs
+ * each failure, and until it is up an enqueue fails at once, so the use case rolls back and the
+ * user sees "unavailable". A second call changes nothing.
+ */
+export function startProducer(): void {
+  getContainer();
+  const holder = globalThis as { [SHARED]?: Shared };
+  void holder[SHARED]?.producer.start();
+}
+
+/** Ends the retrying start and stops the producer; tests call it so nothing outlives them. */
+export async function stopProducer(): Promise<void> {
+  const holder = globalThis as { [SHARED]?: Shared };
+  await holder[SHARED]?.producer.stop();
 }

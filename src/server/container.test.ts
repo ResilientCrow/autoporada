@@ -35,7 +35,10 @@ const PRODUCTION = () => {
 };
 
 describe('web container', () => {
-  afterEach(() => {
+  afterEach(async () => {
+    // No start loop may outlive a test: the producer retries for as long as the database is away.
+    const { stopProducer } = await import('./container');
+    await stopProducer();
     vi.unstubAllEnvs();
     vi.resetModules();
     for (const key of ['autoporada.web.shared', 'autoporada.config']) {
@@ -69,6 +72,33 @@ describe('web container', () => {
     expect(await container.resolvePrincipal('any-token', 'req')).toBeNull();
     expect(container.environment).toBe('development');
     expect(container.requestIdFrom('not valid!')).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('opens no connection for jobs until startProducer() is called', async () => {
+    for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    const warn = vi.spyOn(getContainer().log, 'warn');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const holder = globalThis as Record<symbol, { producer: { started: boolean } } | undefined>;
+    expect(holder[Symbol.for('autoporada.web.shared')]?.producer.started).toBe(false);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('starts the producer without waiting for the database, and keeps retrying until stopped', async () => {
+    for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
+    const { getContainer, startProducer, stopProducer } = await import('./container');
+    const warn = vi.spyOn(getContainer().log, 'warn');
+    expect(startProducer()).toBeUndefined();
+    startProducer();
+    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
+    expect(warn.mock.calls[0]).toEqual([
+      expect.objectContaining({ attempt: 1, code: 'ECONNREFUSED' }),
+      'jobs.producer_unavailable',
+    ]);
+    await stopProducer();
+    const seen = warn.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(warn.mock.calls.length).toBe(seen);
   });
 
   it('tells the boot log what it runs with, and to empty the bootstrap oid', async () => {

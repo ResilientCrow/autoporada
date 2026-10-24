@@ -5,6 +5,7 @@ import type { Db } from '@/application/ports';
 
 import { createPgDb } from './pg-db';
 import * as schema from './schema';
+import type { JobsOn } from './tx';
 
 export type Database = NodePgDatabase<typeof schema>;
 
@@ -23,6 +24,11 @@ export interface DatabaseOptions {
   readonly role?: string;
   /** An idle pooled connection failed (database restart, failover); the pool replaces it. */
   readonly onConnectionError?: (sqlstate: string) => void;
+}
+
+export interface DatabaseWiring {
+  /** Binds the job queue to a transaction's connection (the producer's `jobsOn`). */
+  readonly jobsOn: JobsOn;
 }
 
 export interface DatabaseHandle {
@@ -57,13 +63,13 @@ export function openPool(options: DatabaseOptions): DatabasePool {
 }
 
 /** The schema and the application's transactions over a pool. */
-export function databaseOn(pool: DatabasePool): DatabaseHandle {
+export function databaseOn(pool: DatabasePool, { jobsOn }: DatabaseWiring): DatabaseHandle {
   return {
     db: drizzle({ client: pool, schema, casing: 'snake_case' }),
-    app: createPgDb(pool),
+    app: createPgDb(pool, jobsOn),
     close: () => pool.end(),
   };
 }
 
-export const connectDatabase = (options: DatabaseOptions): DatabaseHandle =>
-  databaseOn(openPool(options));
+export const connectDatabase = (options: DatabaseOptions & DatabaseWiring): DatabaseHandle =>
+  databaseOn(openPool(options), options);

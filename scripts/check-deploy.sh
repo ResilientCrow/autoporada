@@ -120,6 +120,8 @@ access=$(compose logs --no-color caddy 2>&1)
 printf '%s\n' "$access" | grep -q '/uzivatele' || fail 'caddy did not log the users list'
 if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged the search text'; fi
 
+# pg-boss runs inside the standalone server: the job producer connected as autoporada_web.
+compose logs --no-color web 2>&1 | grep -q 'jobs.producer_ready' || fail 'the web job producer never became ready'
 if compose logs --no-color web 2>&1 | grep -q '"level":"\(error\|fatal\)"'; then fail 'web logged an error'; fi
 
 # The probe of SMOKE-TEST step 3 starts and asks Entra (which does not know

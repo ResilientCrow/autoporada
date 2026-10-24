@@ -33,7 +33,12 @@ export function fakeJobs(tx: FakeTxState): JobPort {
   return {
     async enqueue(name, data, options) {
       guard(tx, true);
-      tx.draft.jobs.push({ name, data, options });
+      // As pg-boss's deterministic id does: a job with this queue and key exists (committed
+      // or in this transaction, the draft holds both), so this one is a no-op.
+      const exists = tx.draft.jobs.some(
+        (job) => job.name === name && job.options.dedupeKey === options.dedupeKey,
+      );
+      if (!exists) tx.draft.jobs.push({ name, data, options });
     },
   };
 }

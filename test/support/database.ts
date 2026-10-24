@@ -10,6 +10,8 @@ import { afterAll, beforeAll } from 'vitest';
 
 import type { Db } from '@/application/ports';
 import { connectDatabase, type Database, type DatabaseHandle } from '@/infra/db';
+import { createProducer } from '@/infra/jobs';
+import { createLogger } from '@/infra/log';
 
 import { adminUrl, databaseUrl, recreateFromTemplate } from './template-db';
 
@@ -53,6 +55,7 @@ export async function pgErrorOf(
 export function setupTestDatabase(): TestDatabase {
   const name = `autoporada_test_${process.env['VITEST_POOL_ID'] ?? '0'}_${randomBytes(4).toString('hex')}`;
   let handle: DatabaseHandle | undefined;
+  let producer: ReturnType<typeof createProducer> | undefined;
   const opened = () => {
     if (!handle) throw new Error('setupTestDatabase: the database exists only inside tests');
     return handle;
@@ -60,7 +63,16 @@ export function setupTestDatabase(): TestDatabase {
 
   beforeAll(async () => {
     await recreateFromTemplate(name);
+    // The jobs a test enqueues go through the producer the web uses, with the app role's grants.
+    producer = createProducer({
+      url: databaseUrl(name),
+      applicationName: 'autoporada-test-producer',
+      role: APP_ROLE,
+      log: createLogger({ service: 'test', level: 'error' }),
+    });
+    await producer.start();
     handle = connectDatabase({
+      jobsOn: producer.jobsOn,
       url: databaseUrl(name),
       applicationName: 'autoporada-test',
       role: APP_ROLE,
@@ -68,6 +80,7 @@ export function setupTestDatabase(): TestDatabase {
     });
   });
   afterAll(async () => {
+    await producer?.stop();
     await handle?.close();
     await asAdmin((c) => c.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`));
   });

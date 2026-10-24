@@ -1,7 +1,7 @@
 import type { AccessRequestRecord } from '@/application/ports';
 
 import type { TestDatabase } from '../../database';
-import type { AuditRow } from '../fake/state';
+import type { AuditRow, JobRow } from '../fake/state';
 
 /**
  * Empties every table before a test, as the owner. The audit log refuses
@@ -13,6 +13,8 @@ export async function resetTables(database: TestDatabase): Promise<void> {
     `SELECT string_agg(quote_ident(relname), ', ') AS tables
        FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relkind = 'r'`,
   );
+  // The queue's rows go too; its queues stay, as the migrated template made them.
+  await database.owner('TRUNCATE pgboss.job');
   if (!row?.tables) return;
   await database.owner(
     `BEGIN;
@@ -67,4 +69,27 @@ export async function lockWaits(database: TestDatabase): Promise<number> {
       WHERE datname = current_database() AND wait_event_type = 'Lock'`,
   );
   return row?.n ?? 0;
+}
+
+/** The queued jobs in the shape the fake world keeps them; the dead-letter queue and pg-boss's own are not jobs. */
+export async function jobRows(database: TestDatabase): Promise<readonly JobRow[]> {
+  const rows = await database.owner<{
+    name: JobRow['name'];
+    data: JobRow['data'];
+    singleton_key: string;
+    start_after: Date;
+    created_on: Date;
+  }>(
+    `SELECT name, data, singleton_key, start_after, created_on FROM pgboss.job
+      WHERE name NOT LIKE '\\_\\_pgboss%' AND name <> 'dead' ORDER BY created_on, id`,
+  );
+  return rows.map((r) => ({
+    name: r.name,
+    data: r.data,
+    options: {
+      dedupeKey: r.singleton_key,
+      // pg-boss fills start_after with the creation time when none was given
+      ...(r.start_after.getTime() > r.created_on.getTime() && { startAfter: r.start_after }),
+    },
+  }));
 }
