@@ -99,9 +99,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Start Postgres and the mock IdP
+      - name: Start Postgres, the mock IdP and Mailpit
         run: |
-          docker compose -f compose.dev.yaml up -d --wait postgres mock-idp
+          docker compose -f compose.dev.yaml up -d --wait postgres mock-idp mailpit
           for i in $(seq 1 30); do curl -fs http://localhost:8080/ssps/.well-known/openid-configuration >/dev/null && break; sleep 2; done
       - run: pnpm db:migrate
         env:
