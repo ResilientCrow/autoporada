@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, type RefObject } from 'react';
 
+import { firstPresent, shouldMoveFocus } from './focus-target';
+
 /**
  * Focuses the first of `candidates` that is on the page when `count` rises after
  * mount. A page that refreshes after the write can drop the sent target a render
@@ -17,10 +19,11 @@ export function useFocusFirstOnRise(
   useEffect(() => {
     const rose = count > seen.current;
     seen.current = count;
-    const dropped = document.activeElement === null || document.activeElement === document.body;
-    const lost = focused.current !== null && !focused.current.isConnected && dropped;
-    if (!rose && !lost) return;
-    focused.current = candidates.find((c) => c.current !== null)?.current ?? null;
+    const focusedGone = focused.current !== null && !focused.current.isConnected;
+    const focusDropped =
+      document.activeElement === null || document.activeElement === document.body;
+    if (!shouldMoveFocus({ rose, focusedGone, focusDropped })) return;
+    focused.current = firstPresent(candidates);
     focused.current?.focus();
   });
 }
