@@ -17,7 +17,10 @@ export const myAccessInput = z.strictObject({});
 export const myAccessOutput = z.object({
   standing: z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('member') }),
-    z.object({ kind: z.literal('open'), previous: z.enum(['rejected', 'cancelled']).nullable() }),
+    z.object({
+      kind: z.literal('open'),
+      previous: z.enum(ACCESS_STATES).extract(['rejected', 'cancelled']).nullable(),
+    }),
     z.object({
       kind: z.literal('pending'),
       requestId: z.guid(),
