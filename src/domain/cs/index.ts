@@ -27,6 +27,7 @@ export {
   type ClassOrder,
   type SortableStudent,
 } from './sort/class-code';
+export { foldForSearch } from './sort/fold';
 export {
   renderPeople,
   renderPerson,

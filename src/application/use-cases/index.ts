@@ -11,6 +11,7 @@ import {
   takeSignIn,
 } from './auth';
 import { me } from './profile';
+import { listUsers } from './users';
 
 export { cancelAccess, decideAccess, myAccess, pendingAccess, requestAccess } from './access';
 export {
@@ -23,6 +24,7 @@ export {
   takeSignIn,
 } from './auth';
 export { me } from './profile';
+export { listUsers } from './users';
 
 /**
  * Every use case of the app. The inventory test proves this list is
@@ -34,6 +36,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   cancelAccess,
   completeSignIn,
   decideAccess,
+  listUsers,
   me,
   myAccess,
   pendingAccess,

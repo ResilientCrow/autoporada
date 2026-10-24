@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ROLES } from '@/domain/actor';
+import { ROLES, USER_STATUSES } from '@/domain/actor';
 import { CLAIM_NAMES, CLAIM_REJECTIONS } from '@/domain/identity';
 
 /** Digests travel as 64 lower-case hex characters; raw tokens never reach a use case. */
@@ -81,7 +81,7 @@ export const resolveSessionOutput = z.discriminatedUnion('found', [
     actor: z.object({
       id: z.guid(),
       role: z.enum(ROLES),
-      status: z.enum(['active', 'blocked', 'deactivated']),
+      status: z.enum(USER_STATUSES),
       isStudent: z.boolean(),
     }),
   }),

@@ -26,3 +26,5 @@ export function atLeast(role: Role, minimum: Role): boolean {
 }
 
 export const ROLES: readonly Role[] = ['pending', 'submitter', 'reviewer', 'headmaster'];
+
+export const USER_STATUSES: readonly UserStatus[] = ['active', 'blocked', 'deactivated'];
