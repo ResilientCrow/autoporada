@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { UserRecord } from '@/application/ports';
+import { system, type UserRecord } from '@/application/ports';
 import { ACCESS_REASON_MAX, cooldownEnd } from '@/domain/review';
 
 import { setupWorld } from '../../../../test/support/world';
@@ -88,6 +88,23 @@ describe('access.request', () => {
     const gone = { ...user, id: '00000000-0000-7000-8000-00000000ffff' };
     expect(await ask(gone)).toEqual({ ok: false, error: { code: 'not-found' } });
   });
+
+  it.each([
+    ['granted access', { role: 'submitter' }],
+    ['blocked', { status: 'blocked' }],
+  ] as const)(
+    'forbids a session from before the account was %s, by the locked row',
+    async (_case, patch) => {
+      const user = await world.seed.user({ role: 'pending' });
+      await world.tx(system('test.seed'), (tx) =>
+        tx.users.changeAccess(user.id, user.version, patch),
+      );
+      // `user` is the record the session was resolved from: still pending and active.
+      expect(await ask(user)).toEqual({ ok: false, error: { code: 'forbidden' } });
+      expect(await history(user)).toEqual([]);
+      expect(await world.inspect.audit()).toEqual([]);
+    },
+  );
 
   describe('by the requester’s standing', () => {
     const refusedWith = async (user: UserRecord, rule: string) => {
