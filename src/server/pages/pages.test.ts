@@ -9,8 +9,16 @@ import {
   signInPage,
 } from './index';
 
-const request = vi.hoisted(() => ({ headers: new Headers() }));
-vi.mock('next/headers', () => ({ headers: async () => request.headers }));
+const request = vi.hoisted(() => ({ headers: new Headers(), cookies: new Map<string, string>() }));
+vi.mock('next/headers', () => ({
+  headers: async () => request.headers,
+  cookies: async () => ({
+    get: (name: string) => {
+      const value = request.cookies.get(name);
+      return value === undefined ? undefined : { name, value };
+    },
+  }),
+}));
 const redirect = vi.hoisted(() =>
   vi.fn((to: string): never => {
     throw new Error(`redirect:${to}`);
@@ -33,16 +41,30 @@ vi.mock('../container', () => ({
 }));
 
 describe('galleryPage', () => {
-  it.each(['development', 'test'])('exists in %s, and fails only on request', (environment) => {
-    where.environment = environment;
-    expect(galleryPage({})).toEqual({ fail: false });
-    expect(galleryPage({ stav: 'x' })).toEqual({ fail: false });
-    expect(galleryPage({ stav: 'vyjimka' })).toEqual({ fail: true });
+  beforeEach(() => request.cookies.clear());
+
+  it.each(['development', 'test'])(
+    'exists in %s, and fails only on request',
+    async (environment) => {
+      where.environment = environment;
+      expect(await galleryPage({})).toEqual({ fail: false });
+      expect(await galleryPage({ stav: 'x' })).toEqual({ fail: false });
+      expect(await galleryPage({ stav: 'vyjimka' })).toEqual({ fail: true });
+    },
+  );
+
+  it('also fails while the cookie asks for it, so a retry can succeed once it is cleared', async () => {
+    where.environment = 'test';
+    request.cookies.set('vzornik_vyjimka', '1');
+    expect(await galleryPage({})).toEqual({ fail: true });
+    request.cookies.set('vzornik_vyjimka', '0');
+    expect(await galleryPage({})).toEqual({ fail: false });
   });
 
-  it('does not exist in production', () => {
+  it('does not exist in production', async () => {
     where.environment = 'production';
-    expect(galleryPage({ stav: 'vyjimka' })).toBeNull();
+    request.cookies.set('vzornik_vyjimka', '1');
+    expect(await galleryPage({ stav: 'vyjimka' })).toBeNull();
   });
 });
 

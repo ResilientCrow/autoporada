@@ -1,5 +1,5 @@
 /** What pages under src/app read, through the same container and pipeline as actions. */
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import type { UserPrincipal } from '@/application/ports';
@@ -83,15 +83,19 @@ export interface SignInPageModel {
 type SearchParams = Readonly<Record<string, string | string[] | undefined>>;
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
+const GALLERY_FAIL_COOKIE = 'vzornik_vyjimka';
+
 export interface GalleryModel {
-  /** Asked to fail, to see the error page (`?stav=vyjimka`). */
+  /** Asked to fail, to see the error page (`?stav=vyjimka`, or the cookie `vzornik_vyjimka=1`). */
   readonly fail: boolean;
 }
 
 /** The pattern gallery, or null where it must not exist (production). */
-export function galleryPage(params: SearchParams): GalleryModel | null {
+export async function galleryPage(params: SearchParams): Promise<GalleryModel | null> {
   if (getContainer().environment === 'production') return null;
-  return { fail: first(params['stav']) === 'vyjimka' };
+  // The cookie lets a test stop the failure before „Zkusit znovu“ (a query string would stay).
+  const cookie = (await cookies()).get(GALLERY_FAIL_COOKIE)?.value === '1';
+  return { fail: first(params['stav']) === 'vyjimka' || cookie };
 }
 
 /** The sign-in page from its query string; anything unexpected is ignored. */

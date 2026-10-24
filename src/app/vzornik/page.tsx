@@ -12,10 +12,10 @@ type Props = { readonly searchParams: Promise<Record<string, string | string[] |
 
 /** Development and test only: in production the gallery is a 404. */
 export default async function GalleryPage({ searchParams }: Props) {
-  const gallery = galleryPage(await searchParams);
+  const gallery = await galleryPage(await searchParams);
   if (!gallery) notFound();
   // A real render failure, to see global-error (the 500 page) in a browser and in e2e.
-  if (gallery.fail) throw new Error('vzornik: failure requested with ?stav=vyjimka');
+  if (gallery.fail) throw new Error('vzornik: failure requested with ?stav=vyjimka or the cookie');
   return (
     <Shell>
       <Gallery />
