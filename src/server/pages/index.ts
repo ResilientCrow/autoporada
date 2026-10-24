@@ -1,22 +1,15 @@
 /** What pages under src/app read, through the same container and pipeline as actions. */
 import { cookies, headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 
-import type { UserPrincipal } from '@/application/ports';
-import { me } from '@/application/use-cases';
 import { isSignInError, type SignInError } from '@/contracts';
-import type { Actor } from '@/domain/actor';
 import { safeReturnTo } from '@/domain/identity';
 
 import { getContainer } from '../container';
 import { NONCE_HEADER } from '../http';
-import { runRegistered, sessionTokenFrom } from '../pipeline';
+
+export { getViewer, optionalSignedIn, requireSignedIn } from './viewer';
 
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
-
-async function requestId(): Promise<string> {
-  return getContainer().requestIdFrom((await headers()).get('x-request-id'));
-}
 
 /** What newNonce makes: 128 bits in base64. */
 const NONCE_SHAPE = /^[A-Za-z0-9+/]{22}==$/;
@@ -29,44 +22,6 @@ const NONCE_SHAPE = /^[A-Za-z0-9+/]{22}==$/;
 export async function cspNonce(): Promise<string | null> {
   const value = (await headers()).get(NONCE_HEADER);
   return value !== null && NONCE_SHAPE.test(value) ? value : null;
-}
-
-/** The signed-in user of this request, or null. A cookie sent twice counts as none. */
-export async function getViewer(): Promise<UserPrincipal | null> {
-  const token = sessionTokenFrom((await headers()).get('cookie'));
-  return getContainer().resolvePrincipal(token, await requestId());
-}
-
-export interface SignedInModel {
-  readonly displayName: string;
-  readonly actor: Actor;
-  /** Still waiting for the headmaster to approve the account. */
-  readonly pending: boolean;
-}
-
-/** Who a signed-in user is, for the shell and the home page. */
-async function signedIn(viewer: UserPrincipal): Promise<SignedInModel> {
-  const result = await runRegistered(getContainer(), me, {
-    principal: viewer,
-    requestId: await requestId(),
-    input: {},
-  });
-  if (!result.ok) throw new Error(`profile.me: ${result.error.code}`);
-  const { displayName, role } = result.value;
-  return { displayName, actor: viewer.actor, pending: role === 'pending' };
-}
-
-/** The signed-in user, or a redirect to the sign-in page that comes back to `path`. */
-export async function requireSignedIn(path: string): Promise<SignedInModel> {
-  const viewer = await getViewer();
-  if (!viewer) redirect(`/prihlaseni?returnTo=${encodeURIComponent(safeReturnTo(path))}`);
-  return signedIn(viewer);
-}
-
-/** The signed-in user, or null for a visitor (no database call without a session). */
-export async function optionalSignedIn(): Promise<SignedInModel | null> {
-  const viewer = await getViewer();
-  return viewer ? signedIn(viewer) : null;
 }
 
 export interface SignInPageModel {
