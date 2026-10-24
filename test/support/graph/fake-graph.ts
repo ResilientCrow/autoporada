@@ -10,12 +10,13 @@ import type { CustomFetchOptions } from 'openid-client';
 import { z } from 'zod';
 
 import type { Clock } from '@/application/ports';
-import { systemClock } from '@/infra/system';
+import { insideTransaction, systemClock } from '@/infra/system';
 
 import type { TestIdp } from '../oidc/test-idp';
 import { GRAPH_AUDIENCE, TEST_TENANT } from '../oidc/test-idp-api';
 import {
   GRAPH_ORIGIN,
+  type Answer,
   type FakeGraph,
   type GraphFetch,
   type GraphRequest,
@@ -33,6 +34,10 @@ const ERROR_CODES: Readonly<Record<number, string>> = {
   404: 'ResourceNotFound',
   405: 'MethodNotAllowed',
   415: 'UnsupportedMediaType',
+  429: 'TooManyRequests',
+  500: 'InternalServerError',
+  503: 'ServiceUnavailable',
+  504: 'GatewayTimeout',
 };
 
 /** One plain ASCII address, as the transport hands Graph. */
@@ -53,17 +58,19 @@ const SendMail = z.strictObject({
   saveToSentItems: z.literal(false),
 });
 
-/** Graph's answer: an empty 202, or its error body; always with a request-id. */
-const answer = (status: number) =>
+const answer = (status: number, headers: Record<string, string> = {}, body?: object) =>
   new Response(
     status === 202
       ? null
-      : JSON.stringify({ error: { code: ERROR_CODES[status] ?? 'Error', message: 'fake' } }),
+      : JSON.stringify(
+          body ?? { error: { code: ERROR_CODES[status] ?? 'Error', message: 'fake' } },
+        ),
     {
       status,
       headers: {
         'request-id': randomUUID(),
         ...(status !== 202 && { 'content-type': 'application/json' }),
+        ...headers,
       },
     },
   );
@@ -75,6 +82,12 @@ const claimsOf = (token: string): Record<string, unknown> => {
   return typeof payload === 'object' && payload !== null ? { ...payload } : {};
 };
 
+const never = (signal: AbortSignal | null | undefined) =>
+  new Promise<Response>((_, reject) => {
+    if (signal?.aborted) reject(signal.reason);
+    signal?.addEventListener('abort', () => reject(signal.reason));
+  });
+
 export function createFakeGraph(options: {
   readonly idp: TestIdp;
   readonly mailbox: string;
@@ -83,10 +96,12 @@ export function createFakeGraph(options: {
   const { idp, mailbox } = options;
   const clock = options.clock ?? systemClock;
   const sent: SentMail[] = [];
+  const steps: (Answer | 'drop' | 'hang')[] = [];
   const outside = new Set<string>();
   let pending = 0;
   const seen: FakeGraph['seen'] = {
     calls: 0,
+    callsInsideTransaction: 0,
     unscopedGrant: false,
     rejected: [],
   };
@@ -127,6 +142,7 @@ export function createFakeGraph(options: {
 
   async function sendMail(url: URL, init: GraphRequest): Promise<Response> {
     seen.calls++;
+    if (insideTransaction()) seen.callsInsideTransaction++;
     const route = SEND_MAIL.exec(url.pathname);
     if (!route?.[1]) return refuse(404, 'route');
     if (init.method !== 'POST') return refuse(405, 'method');
@@ -162,8 +178,17 @@ export function createFakeGraph(options: {
       ),
     };
 
-    sent.push(mail);
-    return answer(202);
+    const step = steps.shift() ?? 202;
+    if (step === 'hang') return never(init.signal);
+    if (step === 'drop') {
+      sent.push(mail);
+      const reset = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+      throw new TypeError('fetch failed', { cause: reset });
+    }
+    const scripted = typeof step === 'number' ? { status: step } : step;
+    if (scripted.status === 202) sent.push(mail);
+    const { retryAfter } = scripted;
+    return answer(scripted.status, retryAfter ? { 'retry-after': retryAfter } : {}, scripted.body);
   }
 
   const fetch: GraphFetch = async (url, init) => {
@@ -177,6 +202,9 @@ export function createFakeGraph(options: {
   return {
     fetch,
     sent,
+    script: (...answers) => void steps.push(...answers),
+    acceptThenDrop: () => void steps.push('drop'),
+    hang: () => void steps.push('hang'),
     outOfScope: (address) => void outside.add(address.toLowerCase()),
     rbacPendingFor(calls) {
       pending = calls;

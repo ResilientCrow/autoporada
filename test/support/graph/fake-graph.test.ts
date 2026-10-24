@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createAppTokenSource } from '@/infra/oidc';
+import { inTransactionScope } from '@/infra/system';
 
 import { createTestIdp, TEST_CLIENT, TEST_ISSUER, TEST_SECRET } from '../oidc/test-idp';
 import { FixedClock } from '../world/clock';
@@ -195,8 +196,65 @@ describe('the fake Graph', () => {
     expect(graph.seen.unscopedGrant).toBe(true);
   });
 
-  it('reaches no other host', async () => {
-    const { graph } = await setup();
+  it('answers as scripted, once each, then normally', async () => {
+    const { graph, send } = await setup();
+    const date = 'Sat, 24 Oct 2026 08:00:07 GMT';
+    const odd403 = { error: { code: 'ErrorSendAsDenied', message: 'x' } };
+    graph.script(
+      { status: 429, retryAfter: '7' },
+      { status: 429, retryAfter: date },
+      503,
+      401,
+      { status: 403, body: odd403 },
+      400,
+      500,
+      504,
+      202,
+    );
+    const answers = [];
+    for (let i = 0; i < 10; i++) answers.push(await send());
+    expect(answers.map((r) => r.status)).toEqual([
+      429, 429, 503, 401, 403, 400, 500, 504, 202, 202,
+    ]);
+    expect(answers.map((r) => r.headers.get('retry-after')).slice(0, 3)).toEqual(['7', date, null]);
+    expect(await answers[0]!.json()).toMatchObject({ error: { code: 'TooManyRequests' } });
+    expect(await answers[4]!.json()).toEqual(odd403);
+    expect(answers.every((r) => r.headers.get('request-id'))).toBe(true);
+    expect(graph.sent).toHaveLength(2);
+    expect(graph.seen.rejected).toEqual([]);
+  });
+
+  it('accepts, then drops the connection', async () => {
+    const { graph, send } = await setup();
+    graph.acceptThenDrop();
+    const error: unknown = await send().catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(TypeError);
+    expect(error).toMatchObject({ message: 'fetch failed', cause: { code: 'ECONNRESET' } });
+    expect(graph.sent).toHaveLength(1);
+  });
+
+  it('hangs until the caller aborts', async () => {
+    const { graph, tokens } = await setup();
+    const authorization = `Bearer ${await tokens.token(new AbortController().signal)}`;
+    graph.hang();
+    const stop = new AbortController();
+    const call = graph.fetch(`${GRAPH_BASE}/users/${MAILBOX}/sendMail`, {
+      method: 'POST',
+      headers: { authorization, 'content-type': 'application/json' },
+      body: JSON.stringify(MAIL),
+      signal: stop.signal,
+    });
+    stop.abort();
+    await expect(call).rejects.toMatchObject({ name: 'AbortError' });
+    expect(graph.sent).toEqual([]);
+  });
+
+  it('counts calls made inside a transaction, and reaches no other host', async () => {
+    const { graph, send } = await setup();
+    await send();
+    const call = { method: 'POST', headers: { authorization: 'Bearer x' } };
+    await inTransactionScope(() => graph.fetch(`${GRAPH_BASE}/users/${MAILBOX}/sendMail`, call));
+    expect(graph.seen).toMatchObject({ calls: 2, callsInsideTransaction: 1 });
     await expect(graph.fetch('https://example.org/', {})).rejects.toThrow(TypeError);
   });
 });
