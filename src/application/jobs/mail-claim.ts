@@ -1,4 +1,4 @@
-import type { JobOutcome, LedgerRow, Settlement } from '@/application/ports';
+import type { GateRow, JobOutcome, LedgerRow, Settlement } from '@/application/ports';
 
 /** Sends with an unknown outcome a key may have before it is given up (ADR 0016). */
 const UNKNOWN_SENDS_CAP = 2;
@@ -57,4 +57,29 @@ export function claimDecision({ row, redriven }: ClaimInput): ClaimDecision {
       };
     }
   }
+}
+
+/** Sends per sliding minute: below Exchange's 30 per mailbox (ADR 0016). */
+const WINDOW_SENDS = 20;
+export const WINDOW_MS = 60_000;
+
+interface PaceInput {
+  readonly gate: GateRow;
+  /** Sends claimed in (now − WINDOW_MS, now]: `callsSince(now − WINDOW_MS)`. */
+  readonly calls: { readonly count: number; readonly oldest: Date | null };
+  readonly now: Date;
+}
+
+/**
+ * Whether a send may start now, read under the gate lock: a closed gate (a
+ * Retry-After or an auth pause) holds everyone until it opens; a full window
+ * holds until its oldest send leaves it. Null when the send may go.
+ */
+export function paceDecision({ gate, calls, now }: PaceInput): JobOutcome | null {
+  if (gate.notBefore && gate.notBefore > now) {
+    return { kind: 'wait', until: gate.notBefore, code: 'wait.gate' };
+  }
+  if (calls.count < WINDOW_SENDS) return null;
+  const oldest = (calls.oldest ?? now).getTime();
+  return { kind: 'wait', until: new Date(oldest + WINDOW_MS), code: 'wait.window' };
 }

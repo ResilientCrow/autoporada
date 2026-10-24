@@ -141,12 +141,6 @@ describe('the mail.send handler', () => {
       'deferred',
     ],
     [
-      { kind: 'throttled', retryAfterMs: 7_000, code: 'throttled.429' },
-      { kind: 'retry', code: 'throttled.429' },
-      'deferred',
-    ],
-    [{ kind: 'auth', code: 'auth.403' }, { kind: 'retry', code: 'auth.403' }, 'deferred'],
-    [
       { kind: 'unknown', code: 'unknown.timeout' },
       { kind: 'retry', code: 'unknown.timeout' },
       'unknown',
@@ -226,6 +220,85 @@ describe('the mail.send handler', () => {
       expect(await run(job, true)).toEqual({ kind: 'done', code: 'already.sent' });
       expect(mail.calls).toHaveLength(3);
       expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 0 });
+    });
+  });
+
+  describe('pacing (one gate and a 20-per-minute window, kept in the ledger)', () => {
+    const SECOND = 1_000;
+    const gate = () =>
+      world.workerDb.transaction(
+        { principal: system('job:test'), now: world.clock.now(), requestId: 'inspect' },
+        { mode: 'read' },
+        (tx) => tx.mailLedger.gate(),
+      );
+    /** `count` mails sent a second apart, the first at the clock's now; the clock ends there. */
+    async function sendMany(count: number) {
+      const { mail, run } = handler();
+      for (let i = 0; i < count; i += 1) {
+        await run((await decided('approved')).job);
+        world.clock.advance(SECOND);
+      }
+      return mail;
+    }
+
+    it('waits at a closed gate without a call or a claim', async () => {
+      const until = new Date(world.clock.now().getTime() + 30 * SECOND);
+      await world.workerDb.transaction(
+        { principal: system('job:test'), now: world.clock.now(), requestId: 'seed' },
+        { mode: 'write' },
+        (tx) => tx.mailLedger.closeGate(until, 'throttled.429'),
+      );
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      expect(await run(job)).toEqual({ kind: 'wait', until, code: 'wait.gate' });
+      expect(mail.calls).toHaveLength(0);
+      expect(await ledger(job.dedupeKey)).toBeNull();
+      world.clock.set(until);
+      expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+    });
+
+    it('holds the 21st mail of a minute until the oldest send leaves the window', async () => {
+      const first = world.clock.now();
+      const mail = await sendMany(20);
+      const { job } = await decided('approved');
+      const { run } = handler();
+      const until = new Date(first.getTime() + 60 * SECOND);
+      expect(await run(job)).toEqual({ kind: 'wait', until, code: 'wait.window' });
+      world.clock.set(until);
+      expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+      expect(mail.calls).toHaveLength(20);
+    });
+
+    it('frees the slot of a mail that was deferred: nothing was sent', async () => {
+      const { mail, run } = handler();
+      mail.script({ kind: 'not-sent', code: 'net.ENOTFOUND' });
+      await run((await decided('approved')).job);
+      await sendMany(19);
+      expect(await run((await decided('approved')).job)).toEqual({ kind: 'done', code: 'sent' });
+    });
+
+    it('closes the gate for a Retry-After and waits for it, burning no retry', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script({ kind: 'throttled', retryAfterMs: 7 * SECOND, code: 'throttled.429' });
+      const until = new Date(world.clock.now().getTime() + 7 * SECOND);
+      expect(await run(job)).toEqual({ kind: 'wait', until, code: 'throttled.429' });
+      expect(await gate()).toEqual({ notBefore: until, code: 'throttled.429' });
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        state: 'deferred',
+        code: 'throttled.429',
+      });
+    });
+
+    it('pauses everyone for a minute on an auth refusal, and retries', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script({ kind: 'auth', code: 'auth.403' });
+      const until = new Date(world.clock.now().getTime() + 60 * SECOND);
+      expect(await run(job)).toEqual({ kind: 'retry', code: 'auth.403' });
+      expect(await gate()).toEqual({ notBefore: until, code: 'auth.403' });
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'deferred', code: 'auth.403' });
+      expect(await run(job)).toEqual({ kind: 'wait', until, code: 'wait.gate' });
     });
   });
 });

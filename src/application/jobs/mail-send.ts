@@ -17,9 +17,11 @@ import { cooldownEnd } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
 import { renderMail, type TemplateName } from '@/notify';
 
-import { claimDecision } from './mail-claim';
+import { claimDecision, paceDecision, WINDOW_MS } from './mail-claim';
 
 const PRINCIPAL = system('job:mail.send');
+/** How long an auth refusal pauses every send: one Graph call a minute while RBAC propagates. */
+const AUTH_PAUSE_MS = 60_000;
 /** An address Graph takes: zod's check, printable ASCII only. */
 const ADDRESS = z.email().regex(/^[\x21-\x7e]+$/);
 
@@ -45,6 +47,7 @@ const done = (code: string): JobOutcome => ({ kind: 'done', code });
  * bears out, is recorded as skipped. Only then is the key claimed.
  */
 async function claim(tx: Tx, dedupeKey: string, data: Data, redriven: boolean) {
+  const { now } = tx.ctx;
   await tx.mailLedger.lockGate();
   const decision = claimDecision({ row: await tx.mailLedger.get(dedupeKey), redriven });
   if (decision.kind === 'stop') return decision.outcome;
@@ -62,6 +65,10 @@ async function claim(tx: Tx, dedupeKey: string, data: Data, redriven: boolean) {
     await tx.mailLedger.settle(dedupeKey, decision.settlement);
     return decision.outcome;
   }
+  const gate = await tx.mailLedger.gate();
+  const calls = await tx.mailLedger.callsSince(new Date(now.getTime() - WINDOW_MS));
+  const wait = paceDecision({ gate, calls, now });
+  if (wait) return wait;
   const { unknownSends, resend } = decision;
   await tx.mailLedger.claim({ dedupeKey, ...data, unknownSends });
   return { kind: 'send', to, about, resend, unknownSends } satisfies Claimed;
@@ -79,7 +86,9 @@ function render(template: TemplateName, about: Claimed['about'], origin: string)
 function outcomeOf(
   result: MailResult,
   claimed: Claimed,
-): { settlement: Settlement; outcome: JobOutcome } {
+  now: Date,
+): { settlement: Settlement; outcome: JobOutcome; closeGate?: Date } {
+  const later = (ms: number) => new Date(now.getTime() + ms);
   switch (result.kind) {
     case 'sent': {
       const code = claimed.resend ? 'resent' : 'sent';
@@ -98,9 +107,23 @@ function outcomeOf(
         settlement: { state: 'unknown', code: result.code, unknownSends: claimed.unknownSends + 1 },
         outcome: { kind: 'retry', code: result.code },
       };
-    case 'throttled':
-    case 'not-sent':
+    case 'throttled': {
+      // The runner holds for it; a hold past the execution deadline costs a retry there.
+      const until = later(result.retryAfterMs);
+      return {
+        settlement: { state: 'deferred', code: result.code },
+        outcome: { kind: 'wait', until, code: result.code },
+        closeGate: until,
+      };
+    }
     case 'auth':
+      // One retry per Graph call: the job's retries are the budget for RBAC to propagate.
+      return {
+        settlement: { state: 'deferred', code: result.code },
+        outcome: { kind: 'retry', code: result.code },
+        closeGate: later(AUTH_PAUSE_MS),
+      };
+    case 'not-sent':
       return {
         settlement: { state: 'deferred', code: result.code },
         outcome: { kind: 'retry', code: result.code },
@@ -126,7 +149,10 @@ export const mailSend: JobHandler<'mail.send'> = async ({ db, clock, mail, appOr
   if (claimed.kind !== 'send') return claimed;
   const { subject, text } = render(job.data.template, claimed.about, appOrigin);
   const result = await mail.send({ to: claimed.to, subject, text, dedupeKey: key });
-  const { settlement, outcome } = outcomeOf(result, claimed);
-  await write((tx) => tx.mailLedger.settle(key, settlement));
-  return outcome;
+  return write(async (tx) => {
+    const { settlement, outcome, closeGate } = outcomeOf(result, claimed, tx.ctx.now);
+    await tx.mailLedger.settle(key, settlement);
+    if (closeGate) await tx.mailLedger.closeGate(closeGate, settlement.code);
+    return outcome;
+  });
 };

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { LedgerRow, LedgerState } from '@/application/ports';
 
-import { claimDecision } from './mail-claim';
+import { claimDecision, paceDecision } from './mail-claim';
 
 const row = (state: LedgerState, unknownSends = 0): LedgerRow => ({
   dedupeKey: 'access.approved:5d2e8a4b-1c3f-4e6a-8b9d-7f0a1c2e3b4d',
@@ -103,6 +103,41 @@ describe('claimDecision', () => {
     expect(claimDecision({ row: row('failed', 2), redriven: false })).toEqual({
       kind: 'stop',
       outcome: { kind: 'dead', code: 'already.failed' },
+    });
+  });
+});
+
+describe('paceDecision', () => {
+  const NOW = new Date('2026-10-24T08:00:00Z');
+  const at = (ms: number) => new Date(NOW.getTime() + ms);
+  const open = { notBefore: null, code: null };
+  const calls = (count: number, oldest: Date | null = count > 0 ? at(-50_000) : null) => ({
+    count,
+    oldest,
+  });
+
+  it('lets a send through with the gate open and room in the window', () => {
+    expect(paceDecision({ gate: open, calls: calls(19), now: NOW })).toBeNull();
+    expect(
+      paceDecision({ gate: { notBefore: NOW, code: 'auth.403' }, calls: calls(0), now: NOW }),
+    ).toBeNull();
+  });
+
+  it('waits for a closed gate until it opens', () => {
+    const gate = { notBefore: at(1), code: 'throttled.429' };
+    expect(paceDecision({ gate, calls: calls(0), now: NOW })).toEqual({
+      kind: 'wait',
+      until: at(1),
+      code: 'wait.gate',
+    });
+    expect(paceDecision({ gate, calls: calls(20), now: NOW })).toMatchObject({ code: 'wait.gate' });
+  });
+
+  it('waits with 20 sends in the last minute until the oldest leaves it', () => {
+    expect(paceDecision({ gate: open, calls: calls(20), now: NOW })).toEqual({
+      kind: 'wait',
+      until: at(10_000),
+      code: 'wait.window',
     });
   });
 });
