@@ -43,6 +43,14 @@ export {
   type ScheduledJob,
 } from './jobs';
 export type { MailPort, MailResult, OutgoingMail } from './mail';
+export type {
+  ClaimRow,
+  LedgerRow,
+  LedgerState,
+  MailLedgerPort,
+  Settlement,
+  SkipRow,
+} from './mail-ledger';
 export type { JobHandler, JobHandlers, WorkerDeps } from './worker';
 export {
   scopeOf,

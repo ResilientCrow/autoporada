@@ -2,6 +2,7 @@ import type { AccessRequestRepo } from './access-requests';
 import type { AuditPort } from './audit';
 import type { Clock } from './clock';
 import type { JobPort } from './jobs';
+import type { MailLedgerPort } from './mail-ledger';
 import type { Principal } from './principal';
 import type { SessionRepo } from './sessions';
 import type { SignInRepo } from './sign-ins';
@@ -33,6 +34,8 @@ export interface Tx {
   readonly sessions: SessionRepo;
   readonly audit: AuditPort;
   readonly jobs: JobPort;
+  /** The worker's delivery state; refuses every principal but jobs and the CLI. */
+  readonly mailLedger: MailLedgerPort;
 }
 
 export interface Db {

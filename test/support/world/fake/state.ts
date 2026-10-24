@@ -1,12 +1,14 @@
-import type {
-  AccessRequestRecord,
-  AuditTarget,
-  EnqueueOptions,
-  JobCatalog,
-  JobName,
-  PendingSignIn,
-  SessionRecord,
-  UserRecord,
+import {
+  DatabaseFailure,
+  type AccessRequestRecord,
+  type AuditTarget,
+  type EnqueueOptions,
+  type JobCatalog,
+  type JobName,
+  type LedgerRow,
+  type PendingSignIn,
+  type SessionRecord,
+  type UserRecord,
 } from '@/application/ports';
 
 /** What the fake database holds, mirroring the tables the ports write. */
@@ -19,6 +21,8 @@ export interface FakeState {
   readonly sessions: Map<string, SessionRecord & { readonly tokenSha256: string }>;
   readonly audit: AuditRow[];
   readonly jobs: JobRow[];
+  /** mail_ledger, by dedupe key. */
+  readonly mailLedger: Map<string, LedgerRow>;
   /** Hands out UUID-shaped ids in order, as uuidv7() would. */
   nextId: number;
 }
@@ -45,8 +49,24 @@ export const emptyState = (): FakeState => ({
   sessions: new Map(),
   audit: [],
   jobs: [],
+  mailLedger: new Map(),
   nextId: 1,
 });
+
+/**
+ * Deletes a user as `DELETE FROM users` would: requests, sessions, sign-ins
+ * and ledger rows cascade; a request they decided refuses it (decided_by).
+ */
+export function eraseFakeUser(state: FakeState, id: string): void {
+  const requests = [...state.accessRequests.values()];
+  if (requests.some((r) => r.decidedBy === id)) throw new DatabaseFailure('23503');
+  for (const r of requests) if (r.userId === id) state.accessRequests.delete(r.id);
+  for (const [key, s] of state.sessions) if (s.userId === id) state.sessions.delete(key);
+  for (const [key, s] of state.signIns) if (s.userId === id) state.signIns.delete(key);
+  for (const [key, row] of state.mailLedger)
+    if (row.recipientId === id) state.mailLedger.delete(key);
+  state.users.delete(id);
+}
 
 export function newId(state: FakeState): string {
   return `00000000-0000-7000-8000-${String(state.nextId++).padStart(12, '0')}`;

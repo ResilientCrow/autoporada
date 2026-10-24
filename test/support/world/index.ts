@@ -13,6 +13,7 @@ import {
   system,
   type AccessRequestRecord,
   type AppDeps,
+  type Db,
   type Principal,
   type Tx,
   type TxMode,
@@ -23,8 +24,15 @@ import {
 import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
 import { createFakeDb, type FakeDb } from './fake/db';
-import { newId, type AuditRow, type JobRow } from './fake/state';
-import { auditRows, insertAccessRequest, jobRows, lockWaits, resetTables } from './pg/backend';
+import { eraseFakeUser, newId, type AuditRow, type JobRow } from './fake/state';
+import {
+  auditRows,
+  deleteUser,
+  insertAccessRequest,
+  jobRows,
+  lockWaits,
+  resetTables,
+} from './pg/backend';
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -56,6 +64,11 @@ export interface World {
   readonly kind: 'fake' | 'pg';
   readonly clock: FixedClock;
   readonly deps: AppDeps;
+  /**
+   * The worker's transactions: autoporada_worker in the pg world, the only
+   * role that may touch the mail ledger. Seed through `seed` and `tx` as usual.
+   */
+  readonly workerDb: Db;
   tx<T>(principal: Principal, work: (tx: Tx) => Promise<T>, mode?: TxMode): Promise<T>;
   /** Runs a use case through the real pipeline, at the world's clock. */
   run<In, Out>(
@@ -71,6 +84,10 @@ export interface World {
   readonly inspect: {
     audit(): Promise<readonly AuditRow[]>;
     jobs(): Promise<readonly JobRow[]>;
+  };
+  readonly erase: {
+    /** Deletes a user straight from the table (no port deletes users yet); their rows cascade. */
+    user(id: string): Promise<void>;
   };
   /** The user as a signed-in principal. */
   as(user: UserRecord, options?: { readonly authTime?: Date }): UserPrincipal;
@@ -88,11 +105,13 @@ interface PgInspector {
 /** What differs between the worlds; the rest of the World is built on top. */
 interface Backend {
   readonly db: AppDeps['db'];
+  readonly workerDb: Db;
   readonly fake?: FakeDb;
   readonly pg?: PgInspector;
   audit(): Promise<readonly AuditRow[]>;
   jobs(): Promise<readonly JobRow[]>;
   insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
+  deleteUser(id: string): Promise<void>;
 }
 
 function accessRequestRow(seed: AccessRequestSeed, now: Date): AccessRequestRow {
@@ -120,6 +139,9 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
     clock,
     get deps() {
       return { db: backend().db, clock };
+    },
+    get workerDb() {
+      return backend().workerDb;
     },
     get fake() {
       return backend().fake;
@@ -158,6 +180,7 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
       audit: () => backend().audit(),
       jobs: () => backend().jobs(),
     },
+    erase: { user: (id) => backend().deleteUser(id) },
     as: (user, options = {}) => ({
       kind: 'user',
       actor: { id: user.id, role: user.role, status: user.status, isStudent: user.isStudent },
@@ -171,6 +194,7 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
 function fakeBackend(db: FakeDb): Backend {
   return {
     db,
+    workerDb: db,
     fake: db,
     audit: async () => db.state().audit,
     jobs: async () => db.state().jobs,
@@ -186,16 +210,21 @@ function fakeBackend(db: FakeDb): Backend {
       accessRequests.set(request.id, request);
       return request;
     },
+    async deleteUser(id) {
+      eraseFakeUser(db.state(), id);
+    },
   };
 }
 
 function pgBackend(database: TestDatabase): Backend {
   return {
     db: database.app,
+    workerDb: database.worker,
     pg: { lockWaits: () => lockWaits(database) },
     audit: () => auditRows(database),
     jobs: () => jobRows(database),
     insertAccessRequest: (row) => insertAccessRequest(database, row),
+    deleteUser: (id) => deleteUser(database, id),
   };
 }
 

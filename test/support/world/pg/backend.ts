@@ -62,6 +62,11 @@ export async function insertAccessRequest(
   return { ...row, id: inserted.id, version: inserted.version };
 }
 
+/** Deletes a user as the owner, past the repositories; the foreign keys cascade. */
+export async function deleteUser(database: TestDatabase, id: string): Promise<void> {
+  await database.owner('DELETE FROM users WHERE id = $1', [id]);
+}
+
 /** This database's transactions that wait on a lock, so a race test knows the other side is blocked. */
 export async function lockWaits(database: TestDatabase): Promise<number> {
   const [row] = await database.owner<{ n: number }>(

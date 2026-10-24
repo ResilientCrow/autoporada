@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 
+import type { LedgerRow } from '@/application/ports';
+
 import { at } from './columns';
 import { users } from './identity';
 
@@ -16,14 +18,14 @@ export const mailLedger = pgTable(
   {
     /** The job's dedupe key, e.g. `access.approved:<requestId>`. */
     dedupeKey: text().primaryKey(),
-    template: text().notNull(),
+    template: text().$type<LedgerRow['template']>().notNull(),
     /** A deleted person's records go with them. */
     recipientId: uuid()
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     /** The request or user the mail is about; no foreign key, it may be purged first. */
     subjectId: uuid().notNull(),
-    state: text().notNull(),
+    state: text().$type<LedgerRow['state']>().notNull(),
     /** Sends whose outcome is unknown; at two the key goes to the dead letters. */
     unknownSends: integer().notNull().default(0),
     attempts: integer().notNull().default(0),

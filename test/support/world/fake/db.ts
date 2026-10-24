@@ -3,6 +3,7 @@ import { inTransactionScope } from '@/infra/system';
 
 import { fakeAccessRequestRepo } from './access-requests';
 import { fakeAudit, fakeJobs } from './effects';
+import { fakeMailLedger } from './mail-ledger';
 import { checkAuditCoverage } from './oracle';
 import { emptyState, type FakeState, type FakeTxState } from './state';
 import { fakeSessionRepo } from './sessions';
@@ -53,6 +54,7 @@ export function createFakeDb(): FakeDb {
       sessions: fakeSessionRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),
       jobs: fakeJobs(tx),
+      mailLedger: fakeMailLedger(tx, ctx),
     };
     try {
       const value = await inTransactionScope(() => work(view));
