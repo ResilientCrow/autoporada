@@ -30,7 +30,20 @@ export type {
   IdpResult,
   VerifiedClaims,
 } from './identity-provider';
-export type { EnqueueOptions, JobCatalog, JobName, JobPort } from './jobs';
+export {
+  isOutcomeCode,
+  JOB_NAMES,
+  type EnqueueOptions,
+  type JobCatalog,
+  type JobInput,
+  type JobName,
+  type JobOutcome,
+  type JobPort,
+  type OutcomeCode,
+  type ScheduledJob,
+} from './jobs';
+export type { MailPort, MailResult, OutgoingMail } from './mail';
+export type { JobHandler, JobHandlers, WorkerDeps } from './worker';
 export {
   scopeOf,
   system,

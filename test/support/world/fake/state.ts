@@ -2,6 +2,7 @@ import type {
   AccessRequestRecord,
   AuditTarget,
   EnqueueOptions,
+  JobCatalog,
   JobName,
   PendingSignIn,
   SessionRecord,
@@ -33,7 +34,7 @@ export interface AuditRow {
 
 export interface JobRow {
   readonly name: JobName;
-  readonly data: unknown;
+  readonly data: JobCatalog[JobName];
   readonly options: EnqueueOptions;
 }
 

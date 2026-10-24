@@ -22,7 +22,11 @@ describe('Db (port contract)', () => {
     const failing = world.tx(cli, async (tx) => {
       await tx.audit.record({ action: 'test.rollback', target: { type: 'user', id: user.id } });
       if (world.supports.jobs) {
-        await tx.jobs.enqueue('pdf.render', { documentId: user.id });
+        await tx.jobs.enqueue(
+          'mail.send',
+          { template: 'access.approved', recipientId: user.id, subjectId: user.id },
+          { dedupeKey: `access.approved:${user.id}` },
+        );
       }
       throw new Error('work failed');
     });

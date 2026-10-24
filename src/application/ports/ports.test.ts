@@ -1,19 +1,94 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import { readScope } from '@/domain/policy';
+import type { TemplateName } from '@/notify';
 
-import { AUDIT_EXEMPTIONS, scopeOf, system, type JobPort, type UserPrincipal } from './index';
+import {
+  AUDIT_EXEMPTIONS,
+  isOutcomeCode,
+  JOB_NAMES,
+  scopeOf,
+  system,
+  type JobCatalog,
+  type JobHandlers,
+  type JobName,
+  type JobOutcome,
+  type JobPort,
+  type MailPort,
+  type MailResult,
+  type UserPrincipal,
+  type WorkerDeps,
+} from './index';
 
 describe('ports', () => {
   it('keep the list of unaudited writes closed', () => {
     expect(AUDIT_EXEMPTIONS).toEqual(['author-autosave', 'retention', 'session-touch']);
   });
 
-  it('type job payloads by job name', () => {
-    expectTypeOf<Parameters<JobPort['enqueue']>[0]>().toEqualTypeOf<'mail.send' | 'pdf.render'>();
+  it('lists the job names the worker knows', () => {
+    expect(JOB_NAMES).toEqual(['mail.send']);
+    expectTypeOf<JobName>().toEqualTypeOf<'mail.send'>();
+  });
+
+  it('type job payloads by job name, and require a dedupe key', () => {
+    expectTypeOf<Parameters<JobPort['enqueue']>[0]>().toEqualTypeOf<'mail.send'>();
+    expectTypeOf<JobCatalog['mail.send']['template']>().toEqualTypeOf<TemplateName>();
     const jobs: JobPort = { enqueue: () => Promise.resolve() };
-    // @ts-expect-error: pdf.render takes a document id, not a recipient
-    void jobs.enqueue('pdf.render', { recipientId: 'x' });
+    const mail = { template: 'access.approved', recipientId: 'u1', subjectId: 'r1' } as const;
+    void jobs.enqueue('mail.send', mail, { dedupeKey: 'access.approved:r1' });
+    // @ts-expect-error: every job must be safely repeatable, so the key is required
+    void jobs.enqueue('mail.send', mail);
+    // @ts-expect-error: an empty options object has no key either
+    void jobs.enqueue('mail.send', mail, {});
+    // @ts-expect-error: the template is one of the notify templates
+    void jobs.enqueue('mail.send', { ...mail, template: 'nope' }, { dedupeKey: 'k' });
+    // @ts-expect-error: pdf.render is not in the catalogue until M10
+    void jobs.enqueue('pdf.render', { documentId: 'd1' }, { dedupeKey: 'k' });
+  });
+
+  it('give a handler a typed job and an outcome with a code', () => {
+    expectTypeOf<JobOutcome['kind']>().toEqualTypeOf<'done' | 'wait' | 'retry' | 'dead'>();
+    expectTypeOf<keyof JobHandlers>().toEqualTypeOf<JobName>();
+    const handlers: Pick<JobHandlers, 'mail.send'> = {
+      'mail.send': (deps: WorkerDeps, job) => {
+        expectTypeOf(job.data).toEqualTypeOf<JobCatalog['mail.send']>();
+        return Promise.resolve({ kind: 'done', code: deps.appOrigin });
+      },
+    };
+    expect(Object.keys(handlers)).toEqual(['mail.send']);
+  });
+
+  it('classify what a mail transport answers', () => {
+    expectTypeOf<MailResult['kind']>().toEqualTypeOf<
+      'sent' | 'throttled' | 'not-sent' | 'unknown' | 'auth' | 'rejected'
+    >();
+    expectTypeOf<MailPort['send']>().returns.resolves.toEqualTypeOf<MailResult>();
+  });
+
+  it.each([
+    'sent',
+    'skipped.stale',
+    'already.sent',
+    'wait.gate',
+    'deferred',
+    'auth.403',
+    'net.ECONNRESET',
+  ])('accepts the outcome code %s', (code) => {
+    expect(isOutcomeCode(code)).toBe(true);
+  });
+
+  it.each([
+    '',
+    'Sent',
+    'sent.',
+    '.sent',
+    'sent..x',
+    'jana@example.cz',
+    'user 12 not found',
+    'sent\nretry',
+    'a'.repeat(41),
+  ])('refuses the outcome code %j (no free text reaches the queue)', (code) => {
+    expect(isOutcomeCode(code)).toBe(false);
   });
 
   it('let the system see everything and users their policy scope', () => {

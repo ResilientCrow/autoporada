@@ -31,7 +31,7 @@ export function fakeAudit(tx: FakeTxState, ctx: TxContext): AuditPort {
 
 export function fakeJobs(tx: FakeTxState): JobPort {
   return {
-    async enqueue(name, data, options = {}) {
+    async enqueue(name, data, options) {
       guard(tx, true);
       tx.draft.jobs.push({ name, data, options });
     },
