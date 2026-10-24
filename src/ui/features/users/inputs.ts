@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { changeUserAccessInput, decideAccessInput } from '@/contracts';
-import type { UserStatus } from '@/domain/actor';
+import type { Role, UserStatus } from '@/domain/actor';
 import { choiceOf, flagOf } from '@/ui/form';
 
 /**
@@ -39,6 +39,30 @@ export function roleInput(
     role: choiceOf(data, 'role', ROLE_VALUES),
     audience: choiceOf(data, 'audience', AUDIENCE_VALUES),
     status: user.status,
+    ...(flagOf(data, 'confirmed') && { confirmed: true as const }),
+  };
+}
+
+/**
+ * What the account buttons send: the full state with the user's current role and
+ * audience and the new status. `confirmed` is there only when the box is ticked.
+ */
+export function accountInput(
+  user: {
+    readonly id: string;
+    readonly version: number;
+    readonly role: Role;
+    readonly isStudent: boolean;
+  },
+  status: UserStatus,
+  data: FormData,
+): z.input<typeof changeUserAccessInput> {
+  return {
+    userId: user.id,
+    version: user.version,
+    role: user.role,
+    audience: user.isStudent ? 'student' : 'staff',
+    status,
     ...(flagOf(data, 'confirmed') && { confirmed: true as const }),
   };
 }

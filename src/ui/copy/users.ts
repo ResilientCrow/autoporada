@@ -38,6 +38,20 @@ export const users = {
         unchanged: 'Nic se nezměnilo.',
       },
     },
+    accountStatus: {
+      title: 'Stav účtu',
+      blockText: 'Uživatel se nebude moci přihlásit, dokud účet neodblokujete.',
+      confirm: 'Rozumím, že se uživatel nebude moci přihlásit.',
+      unconfirmed: 'Potvrďte prosím změnu.',
+      block: 'Zablokovat účet',
+      unblock: 'Odblokovat účet',
+      restore: 'Obnovit účet',
+      said: {
+        blocked: 'Účet je zablokovaný.',
+        unblocked: 'Účet je odblokovaný.',
+        restored: 'Účet je obnovený.',
+      },
+    },
     own: 'Vlastní roli ani stav účtu zde měnit nelze. Změnu může provést jiný uživatel s\u00A0rolí Ředitel.',
     block: {
       title: 'Zablokovat další žádosti',

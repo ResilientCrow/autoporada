@@ -212,7 +212,7 @@ const detail = (over: Partial<UserView> = {}): UserView => ({
   },
   requestEvents: ['approve', 'reject', 'block'],
   isSelf: false,
-  choices: { roles: [], statuses: ['active', 'blocked'] },
+  choices: { roles: [], statuses: [] },
   ...over,
 });
 
@@ -323,7 +323,7 @@ describe('UserAdmin', () => {
 });
 
 describe('the role section', () => {
-  const { access } = users.detail;
+  const { access, accountStatus: account } = users.detail;
   const noRequest = { request: null, requestEvents: [] };
   const colleague = (over: Partial<UserView> = {}) =>
     detail({
@@ -346,7 +346,7 @@ describe('the role section', () => {
     expect(audience).toMatch(/<option value="staff" selected/);
     expect(audience).toContain(access.audience.student);
     expect(html).toContain(`>${access.save}</button>`);
-    expect(html).not.toContain('name="confirmed"');
+    expect(html.slice(0, html.indexOf(account.title))).not.toContain('name="confirmed"');
     expect(html).not.toContain('/auth/step-up');
     expect(html.match(/<noscript>/g)).toHaveLength(1);
   });
@@ -403,6 +403,78 @@ describe('the role section', () => {
 
   it('has clean markup', () => {
     for (const html of [renderDetail(colleague()), renderDetail(colleague(), false)]) {
+      expect(html).not.toContain('style=');
+      expect(cspMarkupProblems(html)).toEqual([]);
+    }
+  });
+});
+
+describe('the account section', () => {
+  const { accountStatus: account } = users.detail;
+  const person = (status: 'active' | 'blocked' | 'deactivated', over: Partial<UserView> = {}) =>
+    detail({
+      request: null,
+      requestEvents: [],
+      user: { ...detail().user, role: 'reviewer', status },
+      choices: {
+        roles: ['submitter', 'reviewer', 'headmaster'],
+        statuses:
+          status === 'deactivated' ? ['active', 'blocked', 'deactivated'] : ['active', 'blocked'],
+      },
+      ...over,
+    });
+  const section = (html: string) => html.slice(html.indexOf(`${account.title}</h2>`));
+
+  it('blocks an active account behind a ticked confirmation', () => {
+    const html = renderDetail(person('active'));
+    expect(html).toMatch(/<h2 [^>]*tabindex="-1"[^>]*>Stav účtu/);
+    const form = section(html);
+    expect(form).toContain(account.blockText);
+    expect(form).toMatch(/<input [^>]*type="checkbox"[^>]*name="confirmed"/);
+    expect(form).toContain(account.confirm);
+    expect(form).toContain(`>${account.block}</button>`);
+    expect(form).toContain('border-t-2 border-ink pt-4');
+    expect(form).not.toContain(account.unblock);
+  });
+
+  it('unblocks a blocked account without a confirmation', () => {
+    const form = section(renderDetail(person('blocked')));
+    expect(form).toContain(`>${account.unblock}</button>`);
+    expect(form).not.toContain('name="confirmed"');
+    expect(form).not.toContain(account.block);
+  });
+
+  it('restores a deactivated account, and never offers to deactivate', () => {
+    const html = renderDetail(person('deactivated'));
+    const form = section(html);
+    expect(form).toContain(`>${account.restore}</button>`);
+    expect(form).not.toContain('name="confirmed"');
+    expect(html).not.toContain(cs.status.account.deactivated + '</button>');
+  });
+
+  it('is there for a user with a pending request, whose role waits for the decision', () => {
+    const html = renderDetail(detail({ choices: { roles: [], statuses: ['active', 'blocked'] } }));
+    expect(html).toContain(users.detail.access.pendingRequest);
+    expect(html).toContain(`>${account.block}</button>`);
+  });
+
+  it('is left out on the own account and when nothing can change', () => {
+    expect(renderDetail(person('active', { isSelf: true }))).not.toContain(account.title);
+    expect(renderDetail(person('active', { choices: { roles: [], statuses: [] } }))).not.toContain(
+      account.title,
+    );
+  });
+
+  it('gives way to one step-up notice, for both sections, when the sign-in is stale', () => {
+    const html = renderDetail(person('active'), false);
+    expect(html).not.toContain(account.title);
+    expect(html).not.toContain('name="confirmed"');
+    expect(html.match(/\/auth\/step-up/g)).toHaveLength(1);
+  });
+
+  it('has clean markup', () => {
+    for (const status of ['active', 'blocked', 'deactivated'] as const) {
+      const html = renderDetail(person(status));
       expect(html).not.toContain('style=');
       expect(cspMarkupProblems(html)).toEqual([]);
     }

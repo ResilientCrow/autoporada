@@ -8,6 +8,7 @@ import { LiveStatus, NoScriptNotice, StepUpNotice, useFocusOnRise } from '@/ui/f
 import { Notice, SlantLabel } from '@/ui/kit';
 
 import type { DecideAction } from './DecisionForm';
+import { AccountForm } from './AccountForm';
 import { RequestSection, type RequestView } from './RequestSection';
 import { RoleForm, type ChangeAccessAction, type RoleFormUser } from './RoleForm';
 import { UserFacts, type UserFactsView } from './UserFacts';
@@ -20,6 +21,13 @@ const SAID = {
   unchanged: users.detail.access.said.unchanged,
 } as const;
 
+/** What was done to an account, by the status it had. */
+const ACCOUNT_SAID = {
+  active: users.detail.accountStatus.said.blocked,
+  blocked: users.detail.accountStatus.said.unblocked,
+  deactivated: users.detail.accountStatus.said.restored,
+} as const;
+
 /** The page's model, with its dates written out. */
 export interface UserView {
   readonly user: UserFactsView & RoleFormUser & { readonly displayName: string };
@@ -29,7 +37,7 @@ export interface UserView {
   readonly requestEvents: readonly string[];
 }
 
-type Section = 'request' | 'role';
+type Section = 'request' | 'role' | 'account';
 
 /**
  * The host of one user's page. Every section has a focusable h2: after a
@@ -51,6 +59,7 @@ export function UserAdmin({
   const { detail } = users;
   const requestHeading = useRef<HTMLHeadingElement>(null);
   const roleHeading = useRef<HTMLHeadingElement>(null);
+  const accountHeading = useRef<HTMLHeadingElement>(null);
   const [said, setSaid] = useState<{ message: string; count: number; section: Section }>({
     message: '',
     count: 0,
@@ -60,13 +69,15 @@ export function UserAdmin({
     setSaid((s) => ({ message, count: s.count + 1, section }));
   useFocusOnRise(requestHeading, said.section === 'request' ? said.count : 0);
   useFocusOnRise(roleHeading, said.section === 'role' ? said.count : 0);
+  useFocusOnRise(accountHeading, said.section === 'account' ? said.count : 0);
 
   const { choices, request, user } = view;
   const pending = request?.state === 'pending';
   const offered = choices.roles.length > 0 || choices.statuses.length > 0;
   const hasForm =
     (request !== null && view.requestEvents.length > 0) ||
-    (!view.isSelf && !pending && freshAuth && choices.roles.length > 0);
+    (!view.isSelf && !pending && freshAuth && choices.roles.length > 0) ||
+    (!view.isSelf && freshAuth && choices.statuses.length > 0);
   return (
     <>
       <SlantLabel level={1}>{user.displayName}</SlantLabel>
@@ -100,6 +111,17 @@ export function UserAdmin({
             roles={choices.roles}
             headingRef={roleHeading}
             onSaved={(changed) => say(changed ? SAID.changed : SAID.unchanged, 'role')}
+          />
+        )}
+        {!view.isSelf && freshAuth && choices.statuses.length > 0 && (
+          <AccountForm
+            key={user.version}
+            action={changeUserAccess}
+            user={user}
+            headingRef={accountHeading}
+            onSaved={(changed) =>
+              say(changed ? ACCOUNT_SAID[user.status] : SAID.unchanged, 'account')
+            }
           />
         )}
         {!view.isSelf && !freshAuth && offered && (

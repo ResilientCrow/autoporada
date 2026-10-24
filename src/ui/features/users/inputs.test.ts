@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { blockInput, roleInput } from './inputs';
+import { accountInput, blockInput, roleInput } from './inputs';
 
 describe('blockInput', () => {
   it('leaves confirmed out when the box is not ticked', () => {
@@ -52,5 +52,34 @@ describe('roleInput', () => {
   it('throws on a value the controls never offer', () => {
     expect(() => roleInput(user, form({ role: 'root', audience: 'staff' }))).toThrow('role');
     expect(() => roleInput(user, form({ role: 'reviewer' }))).toThrow('audience');
+  });
+});
+
+describe('accountInput', () => {
+  const user = { id: 'u1', version: 4, role: 'reviewer' as const, isStudent: false };
+
+  it('sends the current role and audience with the new status, and no confirmed when unticked', () => {
+    const input = accountInput(user, 'active', new FormData());
+    expect(input).toEqual({
+      userId: 'u1',
+      version: 4,
+      role: 'reviewer',
+      audience: 'staff',
+      status: 'active',
+    });
+    expect(input).not.toHaveProperty('confirmed');
+  });
+
+  it('sends confirmed: true when ticked, and the student audience for a student', () => {
+    const data = new FormData();
+    data.set('confirmed', 'on');
+    expect(accountInput({ ...user, role: 'submitter', isStudent: true }, 'blocked', data)).toEqual({
+      userId: 'u1',
+      version: 4,
+      role: 'submitter',
+      audience: 'student',
+      status: 'blocked',
+      confirmed: true,
+    });
   });
 });
