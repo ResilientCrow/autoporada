@@ -37,6 +37,8 @@ export interface UserRepo {
   get(id: string): Promise<UserRecord | null>;
   /** FOR UPDATE; write transactions only. */
   lock(id: string): Promise<UserRecord | null>;
+  /** The users among `ids` that the principal may see, ordered by id; none for no ids. */
+  getMany(ids: readonly string[]): Promise<readonly UserRecord[]>;
   list(filter?: {
     readonly role?: Role;
     readonly status?: UserStatus;
@@ -46,7 +48,14 @@ export interface UserRepo {
    * Never changes role, status or the student flag. System principals only.
    */
   upsertFromClaims(identity: VerifiedIdentity): Promise<UserRecord>;
-  /** Changes role, status or the student flag. Needs `users.manage`; throws StaleVersion. */
+  /**
+   * Changes role, status or the student flag; throws StaleVersion.
+   * A user principal needs `users.manage` and never changes their own row
+   * (ScopeViolation). Approving an access request counts as user management:
+   * the step-up lives on the use case's declared check, and a policy test
+   * keeps `access.decide` equal to `users.manage`. System principals
+   * (`test.seed`, `cli:*`) are not affected.
+   */
   changeAccess(id: string, expectedVersion: number, patch: AccessPatch): Promise<UserRecord>;
   countActiveHeadmasters(): Promise<number>;
 }

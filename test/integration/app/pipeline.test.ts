@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { defineUseCase, ok, runUseCase } from '@/application/core';
+import { ScopeViolation, system, type UserRecord } from '@/application/ports';
 
 import { setupWorld } from '../../support/world';
 
@@ -27,36 +28,42 @@ const demote = defineUseCase({
 });
 
 describe('the pipeline on PostgreSQL', () => {
-  it('reports the last-headmaster trigger at COMMIT as a rule, and keeps nothing', async () => {
-    const head = await world.seed.user({ role: 'headmaster' });
-    const result = await runUseCase(
+  const demoteOther = (by: UserRecord, target: UserRecord) =>
+    runUseCase(
       demote,
       {
-        principal: world.as(head),
+        principal: world.as(by),
         requestId: 'req',
-        input: { id: head.id, version: head.version },
+        input: { id: target.id, version: target.version },
       },
       world.deps,
     );
+
+  it('reports the last-headmaster trigger at COMMIT as a rule, and keeps nothing', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const other = await world.seed.user({ role: 'headmaster' });
+    // The system demotes `head`; the request still carries the old, stale actor.
+    await world.tx(system('test.seed'), (tx) =>
+      tx.users.changeAccess(head.id, head.version, { role: 'reviewer' }),
+    );
+    const result = await demoteOther(head, other);
     expect(result).toEqual({ ok: false, error: { code: 'rule', rule: 'last-headmaster' } });
     expect(await world.inspect.audit()).toEqual([]);
   });
 
   it('demotes a headmaster while another one remains', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
-    await world.seed.user({ role: 'headmaster' });
-    const result = await runUseCase(
-      demote,
-      {
-        principal: world.as(head),
-        requestId: 'req',
-        input: { id: head.id, version: head.version },
-      },
-      world.deps,
-    );
+    const other = await world.seed.user({ role: 'headmaster' });
+    const result = await demoteOther(head, other);
     expect(result).toEqual({ ok: true, value: { role: 'reviewer' } });
     expect((await world.inspect.audit()).map((a) => [a.action, a.requestId])).toEqual([
       ['user.role.change', 'req'],
     ]);
+  });
+
+  it('refuses a headmaster changing their own row', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    await world.seed.user({ role: 'headmaster' });
+    await expect(demoteOther(head, head)).rejects.toBeInstanceOf(ScopeViolation);
   });
 });

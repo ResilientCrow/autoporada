@@ -122,6 +122,34 @@ describe('UserRepo (port contract)', () => {
     );
   });
 
+  it('never lets a headmaster change their own access', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    await world.seed.user({ role: 'headmaster' });
+    await expect(change(world.as(head), head, { role: 'reviewer' })).rejects.toBeInstanceOf(
+      ScopeViolation,
+    );
+    await expect(change(world.as(head), head, { status: 'blocked' })).rejects.toBeInstanceOf(
+      ScopeViolation,
+    );
+  });
+
+  it('reads several users at once, within the principal’s scope', async () => {
+    const me = await world.seed.user({ role: 'submitter' });
+    const other = await world.seed.user({ role: 'reviewer' });
+    const head = await world.seed.user({ role: 'headmaster' });
+    const ids = [other.id, head.id, me.id];
+    const read = (who: UserRecord, wanted: readonly string[]) =>
+      world.tx(
+        world.as(who),
+        async (tx) => (await tx.users.getMany(wanted)).map((u) => u.id),
+        'read',
+      );
+    expect(await read(head, ids)).toEqual([me.id, other.id, head.id].sort());
+    expect(await read(me, ids)).toEqual([me.id]);
+    expect(await read(head, [])).toEqual([]);
+    expect(await read(head, [me.id, me.id])).toEqual([me.id]);
+  });
+
   it('lists by role and status, and counts the active headmasters', async () => {
     await world.seed.user({ role: 'headmaster' });
     await world.seed.user({ role: 'headmaster' });

@@ -36,6 +36,13 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       guard(tx, true);
       return find(id);
     },
+    async getMany(ids) {
+      guard(tx, false);
+      return [...new Set(ids)]
+        .map(find)
+        .filter((u): u is UserRecord => u !== null)
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
+    },
     async list(filter = {}) {
       guard(tx, false);
       return [...users.values()]
@@ -75,6 +82,7 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       if (principal.kind === 'user' && !can(principal.actor, { action: 'users.manage' })) {
         throw new ScopeViolation();
       }
+      if (principal.kind === 'user' && principal.actor.id === id) throw new ScopeViolation();
       const user = find(id);
       if (!user || user.version !== expectedVersion) throw new StaleVersion();
       const { role = user.role, isStudent = user.isStudent, status = user.status } = patch;

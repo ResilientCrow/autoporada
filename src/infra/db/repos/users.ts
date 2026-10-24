@@ -1,4 +1,4 @@
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 
 import {
   scopeOf,
@@ -52,6 +52,14 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
       const [row] = await byId(id).for('update');
       return row ?? null;
     },
+    async getMany(ids) {
+      if (ids.length === 0) return [];
+      return db
+        .select(USER_RECORD)
+        .from(users)
+        .where(and(inArray(users.id, [...ids]), visible()))
+        .orderBy(users.id);
+    },
     async list(filter = {}) {
       return db
         .select(USER_RECORD)
@@ -85,6 +93,7 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
     },
     async changeAccess(id, expectedVersion, patch) {
       require({ action: 'users.manage' });
+      if (principal.kind === 'user' && principal.actor.id === id) throw new ScopeViolation();
       const { role, isStudent, status } = patch;
       const [row] = await db
         .update(users)
