@@ -18,7 +18,10 @@ export interface RequestView {
   readonly decided: string | null;
 }
 
-/** „Žádost o přístup“: the reason, the state, and the decisions still open. */
+/**
+ * „Žádost o přístup“: the reason, the state, and the decisions still open. Both
+ * forms are keyed by the request's version, each under its own name (as in UserAdmin).
+ */
 export function RequestSection({
   request,
   events,
@@ -46,7 +49,7 @@ export function RequestSection({
       <p className="font-bold">{queue.reason}</p>
       <p className="break-words whitespace-pre-line">{request.reason}</p>
       <DecisionForm
-        key={request.version}
+        key={`decision-${request.version}`}
         action={decideAccess}
         requestId={request.requestId}
         version={request.version}
@@ -55,7 +58,7 @@ export function RequestSection({
       />
       {events.includes('block') && (
         <BlockRequestForm
-          key={request.version}
+          key={`block-${request.version}`}
           action={decideAccess}
           requestId={request.requestId}
           version={request.version}

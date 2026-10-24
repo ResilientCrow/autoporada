@@ -44,6 +44,8 @@ type Section = 'request' | 'role' | 'account';
  * successful write focus goes to the heading of the section that was sent (the
  * write refreshes the page, so the sections stay and only their content changes).
  * The request decision is never behind step-up; the role and account sections are.
+ * The two forms are siblings keyed by the same version, so each key names its
+ * form: equal keys make React keep a stale copy of one beside the remounted one.
  */
 export function UserAdmin({
   view,
@@ -105,7 +107,7 @@ export function UserAdmin({
         )}
         {!view.isSelf && !pending && freshAuth && choices.roles.length > 0 && (
           <RoleForm
-            key={user.version}
+            key={`role-${user.version}`}
             action={changeUserAccess}
             user={user}
             roles={choices.roles}
@@ -115,7 +117,7 @@ export function UserAdmin({
         )}
         {!view.isSelf && freshAuth && choices.statuses.length > 0 && (
           <AccountForm
-            key={user.version}
+            key={`account-${user.version}`}
             action={changeUserAccess}
             user={user}
             headingRef={accountHeading}

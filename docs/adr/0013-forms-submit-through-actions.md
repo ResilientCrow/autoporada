@@ -30,6 +30,8 @@ Constraints:
      the host through `onSuccess`.
    - Forms are keyed by the version of what they edit, so a refreshed payload
      resets them.
+     Sibling forms that edit the same thing also carry their own name in the
+     key (`role-${version}`), since equal sibling keys leave a stale copy in place.
 2. **Every result is settled into one of three cases.** `settle` turns an
    action result, or a rejected promise (`network`), into `ok`, `issues` or
    `problem`. It switches over every error code with no default, and the
