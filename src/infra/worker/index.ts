@@ -6,3 +6,4 @@ export {
   STOP_TIMEOUT_MS,
 } from './limits';
 export { logLineFor } from './log-names';
+export { runJob, type FetchedJob, type Sleep } from './run-job';
