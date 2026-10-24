@@ -8,7 +8,8 @@ export type { Logger } from 'pino';
 
 /**
  * Keys that must never reach the logs: credentials, tokens, cookies, secrets
- * from Config, and request bodies (which carry minors' personal data).
+ * from Config, request bodies (which carry minors' personal data) and mail
+ * addresses.
  * Header names appear in both casings because plain-object fetch headers keep
  * the caller's spelling.
  */
@@ -43,6 +44,13 @@ const SENSITIVE_KEYS = [
   'body',
   // Drizzle's query errors list the bound values; infra strips them, this is the backstop.
   'params',
+  // Mail addresses (ADR 0016): a transport or Graph error must not print who was mailed.
+  // So log a state transition as fromState/toState, never from/to.
+  'to',
+  'toRecipients',
+  'email',
+  'address',
+  'from',
 ];
 
 /**

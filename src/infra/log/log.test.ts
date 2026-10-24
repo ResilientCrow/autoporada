@@ -59,6 +59,33 @@ describe('createLogger', () => {
     }
   });
 
+  it('redacts mail addresses at the top level, in nested objects and in arrays of objects', () => {
+    const { lines, destination } = capture();
+    createLogger({ service: 'worker', level: 'info', destination }).warn(
+      {
+        to: 'top-to@ssps.cz',
+        email: 'top-email@ssps.cz',
+        mail: {
+          from: 'nested-from@ssps.cz',
+          to: 'nested-to@ssps.cz',
+          dedupeKey: 'access.approved:1',
+        },
+        graph: {
+          message: {
+            toRecipients: [{ emailAddress: { address: 'graph-to@ssps.cz' } }],
+            from: { emailAddress: { address: 'graph-from@ssps.cz' } },
+          },
+        },
+        recipients: [{ email: 'array-email@ssps.cz' }, { address: 'array-address@ssps.cz' }],
+        user: { profile: { email: 'deep-email@ssps.cz' } },
+      },
+      'mail.systemic',
+    );
+    const line = JSON.stringify(lines[0]);
+    expect(line).not.toContain('@ssps.cz');
+    expect(lines[0]).toMatchObject({ mail: { dedupeKey: 'access.approved:1' } });
+  });
+
   it('never prints the secrets of a logged Config object', () => {
     const { lines, destination } = capture();
     createLogger({ service: 'web', level: 'info', destination }).info({
