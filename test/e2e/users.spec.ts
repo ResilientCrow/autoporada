@@ -92,6 +92,9 @@ test.describe('administration by the deputy headmaster', () => {
   const problemOf = (form: Locator) =>
     form.locator('[tabindex="-1"]').filter({ has: form.page().getByRole('alert') });
 
+  const heading = (page: Page, name: string) =>
+    main(page).getByRole('heading', { level: 2, name, exact: true });
+
   /** The regression of duplicate keys: a form or a section shown twice after a refresh. */
   async function expectOneOfEach(page: Page): Promise<void> {
     const ids = await page.locator('main form[id]').evaluateAll((forms) => forms.map((f) => f.id));
@@ -117,6 +120,7 @@ test.describe('administration by the deputy headmaster', () => {
     await settled();
     await expect(main(page).getByRole('status')).toHaveText(users.detail.access.said.changed);
     await expect(facts(page, cs.status.role.reviewer)).toBeVisible();
+    await expect(heading(page, users.detail.access.title)).toBeFocused();
     await expect(roleForm(page)).toHaveCount(1);
     await expect(accountForm(page)).toHaveCount(1);
     await expectOneOfEach(page);
@@ -183,6 +187,7 @@ test.describe('administration by the deputy headmaster', () => {
     await settled();
     await expect(main(page).getByRole('status')).toHaveText(users.detail.block.said);
     await expect(main(page).getByText(cs.status.access.blocked, { exact: true })).toBeVisible();
+    await expect(heading(page, users.detail.request)).toBeFocused();
     await expect(page.locator('form[id^="blokace-"]')).toHaveCount(0);
     await expectOneOfEach(page);
 
@@ -211,6 +216,7 @@ test.describe('administration by the deputy headmaster', () => {
       users.detail.accountStatus.said.blocked,
     );
     await expect(facts(page, cs.status.account.blocked)).toBeVisible();
+    await expect(heading(page, users.detail.accountStatus.title)).toBeFocused();
     await expect(accountForm(page)).toHaveCount(1);
     await expectOneOfEach(page);
 
@@ -223,6 +229,7 @@ test.describe('administration by the deputy headmaster', () => {
       .click();
     await settled();
     await expect(facts(page, cs.status.account.active)).toBeVisible();
+    await expect(heading(page, users.detail.accountStatus.title)).toBeFocused();
     await expectOneOfEach(page);
   });
 
@@ -242,6 +249,7 @@ test.describe('administration by the deputy headmaster', () => {
     await settled();
     await expect(main(page).getByRole('status')).toHaveText(users.queue.said.rejected);
     await expect(main(page).getByText(cs.status.access.rejected, { exact: true })).toBeVisible();
+    await expect(heading(page, users.detail.request)).toBeFocused();
     await expect(page.locator('form[id^="rozhodnuti-"]')).toHaveCount(0);
     await expect(roleForm(page)).toHaveCount(1);
     await expect(accountForm(page)).toHaveCount(1);

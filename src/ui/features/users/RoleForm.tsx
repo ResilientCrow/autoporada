@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type RefObject } from 'react';
+import { useState } from 'react';
 import type { z } from 'zod';
 
 import type { changeUserAccessInput, changeUserAccessOutput, ServerAction } from '@/contracts';
@@ -54,13 +54,11 @@ export function RoleForm({
   action,
   user,
   roles,
-  headingRef,
   onSaved,
 }: {
   readonly action: ChangeAccessAction;
   readonly user: RoleFormUser;
   readonly roles: readonly Role[];
-  readonly headingRef: RefObject<HTMLHeadingElement | null>;
   readonly onSaved: (changed: boolean) => void;
 }) {
   const [chosen, setChosen] = useState<string>(user.role);
@@ -78,25 +76,20 @@ export function RoleForm({
     onSuccess: (value) => onSaved(value.changed),
   });
   return (
-    <section className="space-y-3">
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl">
-        {copy.title}
-      </h2>
-      <Form id="role" spec={SPEC} state={state}>
-        <SelectField
-          name="role"
-          options={roles.map((role) => ({ value: role, label: ROLE_LOOK[role].label }))}
-          defaultValue={user.role}
-          onChange={setChosen}
-        />
-        <SelectField
-          name="audience"
-          options={AUDIENCES}
-          defaultValue={user.isStudent ? 'student' : 'staff'}
-        />
-        {lowers && <CheckboxField name="confirmed" />}
-        <SubmitButton>{copy.save}</SubmitButton>
-      </Form>
-    </section>
+    <Form id="role" spec={SPEC} state={state}>
+      <SelectField
+        name="role"
+        options={roles.map((role) => ({ value: role, label: ROLE_LOOK[role].label }))}
+        defaultValue={user.role}
+        onChange={setChosen}
+      />
+      <SelectField
+        name="audience"
+        options={AUDIENCES}
+        defaultValue={user.isStudent ? 'student' : 'staff'}
+      />
+      {lowers && <CheckboxField name="confirmed" />}
+      <SubmitButton>{copy.save}</SubmitButton>
+    </Form>
   );
 }

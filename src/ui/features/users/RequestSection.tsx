@@ -1,5 +1,3 @@
-import type { RefObject } from 'react';
-
 import { users } from '@/ui/copy';
 import { ACCESS_LOOK, Chip } from '@/ui/status';
 
@@ -26,21 +24,16 @@ export function RequestSection({
   request,
   events,
   decideAccess,
-  headingRef,
   onDecided,
 }: {
   readonly request: RequestView;
   readonly events: readonly string[];
   readonly decideAccess: DecideAction;
-  readonly headingRef: RefObject<HTMLHeadingElement | null>;
   readonly onDecided: (state: 'approved' | 'rejected' | 'blocked') => void;
 }) {
   const { detail, queue } = users;
   return (
-    <section className="space-y-3">
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl">
-        {detail.request}
-      </h2>
+    <div className="space-y-3">
       <p className="flex flex-wrap items-center gap-2">
         <Chip look={ACCESS_LOOK[request.state]} />
         <span>{queue.submitted(request.submitted)}</span>
@@ -71,6 +64,6 @@ export function RequestSection({
           onBlocked={() => onDecided('blocked')}
         />
       )}
-    </section>
+    </div>
   );
 }

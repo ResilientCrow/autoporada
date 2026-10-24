@@ -249,6 +249,11 @@ describe('UserAdmin', () => {
     expect(html).toContain(users.detail.since('1. října 2026'));
   });
 
+  it('lets focus be sent to the title, the last place it can fall back to', () => {
+    expect(renderDetail(detail())).toMatch(/<h1 [^>]*tabindex="-1"/);
+    expect(render(view())).not.toMatch(/<h1 [^>]*tabindex/);
+  });
+
   it('marks a student and a blocked account', () => {
     const html = renderDetail(
       detail({ user: { ...detail().user, isStudent: true, status: 'blocked' }, request: null }),

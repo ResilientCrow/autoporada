@@ -1,7 +1,5 @@
 'use client';
 
-import type { RefObject } from 'react';
-
 import type { UserStatus } from '@/domain/actor';
 import { users } from '@/ui/copy';
 import { CheckboxField, Form, SubmitButton, useActionForm, type FormSpec } from '@/ui/form';
@@ -30,12 +28,10 @@ const NEXT: Readonly<Record<UserStatus, { status: UserStatus; label: string }>> 
 export function AccountForm({
   action,
   user,
-  headingRef,
   onSaved,
 }: {
   readonly action: ChangeAccessAction;
   readonly user: RoleFormUser;
-  readonly headingRef: RefObject<HTMLHeadingElement | null>;
   readonly onSaved: (changed: boolean) => void;
 }) {
   const next = NEXT[user.status];
@@ -45,21 +41,16 @@ export function AccountForm({
     onSuccess: (value) => onSaved(value.changed),
   });
   return (
-    <section className="space-y-3">
-      <h2 ref={headingRef} tabIndex={-1} className="text-xl">
-        {copy.title}
-      </h2>
-      <Form id="ucet" spec={user.status === 'active' ? SPEC : {}} state={state}>
-        {user.status === 'active' && (
-          <div className="space-y-3 border-t-2 border-ink pt-4">
-            <p>{copy.blockText}</p>
-            <CheckboxField name="confirmed" />
-          </div>
-        )}
-        <SubmitButton variant={user.status === 'active' ? 'secondary' : 'primary'}>
-          {next.label}
-        </SubmitButton>
-      </Form>
-    </section>
+    <Form id="ucet" spec={user.status === 'active' ? SPEC : {}} state={state}>
+      {user.status === 'active' && (
+        <div className="space-y-3 border-t-2 border-ink pt-4">
+          <p>{copy.blockText}</p>
+          <CheckboxField name="confirmed" />
+        </div>
+      )}
+      <SubmitButton variant={user.status === 'active' ? 'secondary' : 'primary'}>
+        {next.label}
+      </SubmitButton>
+    </Form>
   );
 }

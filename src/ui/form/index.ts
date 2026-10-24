@@ -11,5 +11,5 @@ export type { Problem } from './settle';
 export { StepUpNotice } from './StepUpNotice';
 export { SubmitButton } from './SubmitButton';
 export { useActionForm } from './use-action-form';
-export { useFocusOnRise } from './use-focus-on-rise';
+export { useFocusFirstOnRise, useFocusOnRise } from './use-focus-on-rise';
 export { choiceOf, flagOf, textOf, type FormSpec } from './spec';
