@@ -1,4 +1,5 @@
 import type { ErrorCode, FieldIssueCode, RuleCode } from '@/contracts';
+import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
 /** Why an action did not happen; `invalid-input` here is the case with no field to point at. */
@@ -48,4 +49,11 @@ export const form = {
   errorPrefix: 'Chyba:',
   summaryTitle: 'Zkontrolujte prosím tyto údaje',
   noscript: 'Odeslání formuláře vyžaduje zapnutý JavaScript.',
+} as const;
+
+/** The notice before a form that needs a fresh sign-in (a step-up action). */
+export const stepUpNotice = {
+  title: 'Potvrďte svou totožnost',
+  text: `Před změnou role nebo stavu účtu se prosím znovu přihlaste. Ověření platí ${STEP_UP_MAX_AGE_MS / 60_000}\u00A0minut.`,
+  action: 'Potvrdit totožnost',
 } as const;

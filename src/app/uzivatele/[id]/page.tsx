@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { decideAccess } from '@/server/actions';
+import { changeUserAccess, decideAccess } from '@/server/actions';
 import { requireSignedIn, userPage } from '@/server/pages';
 import { pageTitle, users } from '@/ui/copy';
 import { UserAdmin } from '@/ui/features/users';
@@ -21,7 +21,12 @@ export default async function UserPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/uzivatele">
-      <UserAdmin view={model} decideAccess={decideAccess} />
+      <UserAdmin
+        view={model}
+        freshAuth={viewer.freshAuth}
+        decideAccess={decideAccess}
+        changeUserAccess={changeUserAccess}
+      />
     </Shell>
   );
 }

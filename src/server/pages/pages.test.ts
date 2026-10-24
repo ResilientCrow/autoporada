@@ -31,12 +31,16 @@ vi.mock('../pipeline', async () => ({
   ...(await vi.importActual<object>('../pipeline')),
   runRegistered,
 }));
-const where = vi.hoisted(() => ({ environment: 'development' }));
+const where = vi.hoisted(() => ({
+  environment: 'development',
+  now: new Date('2026-10-24T12:00:00Z'),
+}));
 vi.mock('../container', () => ({
   getContainer: () => ({
     resolvePrincipal,
     requestIdFrom: () => 'req-1',
     environment: where.environment,
+    app: { clock: { now: () => where.now } },
   }),
 }));
 
@@ -154,6 +158,7 @@ describe('signed-in pages', () => {
   const principal = (role: string) => ({
     kind: 'user',
     actor: { id: 'u1', role, status: 'active', isStudent: false },
+    authTime: new Date('2026-10-24T11:55:00Z'),
   });
   const signedIn = (role: string) => {
     resolvePrincipal.mockResolvedValue(principal(role));
@@ -182,9 +187,26 @@ describe('signed-in pages', () => {
     ['submitter', false],
   ])('knows a %s user (pending %s)', async (role, pending) => {
     signedIn(role);
-    const expected = { displayName: 'Jana', actor: principal(role).actor, pending };
+    const expected = {
+      displayName: 'Jana',
+      actor: principal(role).actor,
+      pending,
+      freshAuth: true,
+    };
     expect(await requireSignedIn('/')).toEqual(expected);
     expect(await optionalSignedIn()).toEqual(expected);
+  });
+
+  it.each([
+    ['just inside the window', '11:50:00', true],
+    ['just outside it', '11:49:59', false],
+  ])('knows a sign-in %s (the 10 minutes of step-up)', async (_name, at, fresh) => {
+    signedIn('headmaster');
+    resolvePrincipal.mockResolvedValue({
+      ...principal('headmaster'),
+      authTime: new Date(`2026-10-24T${at}Z`),
+    });
+    expect((await requireSignedIn('/')).freshAuth).toBe(fresh);
   });
 
   it('answers null to a visitor without asking the use case', async () => {

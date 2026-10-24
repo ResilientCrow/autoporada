@@ -24,6 +24,21 @@ export const users = {
     request: 'Žádost o\u00A0přístup',
     decided: (date: string) => `Rozhodnuto ${date}`,
     details: 'Podrobnosti',
+    access: {
+      title: 'Role a\u00A0typ uživatele',
+      roleLabel: 'Role',
+      audienceLabel: 'Typ uživatele',
+      audience: { staff: 'Zaměstnanec', student: 'Student' },
+      confirm: 'Rozumím, že uživatel přijde o\u00A0část oprávnění.',
+      unconfirmed: 'Potvrďte prosím změnu.',
+      save: 'Uložit změny',
+      pendingRequest: 'Roli určíte rozhodnutím o\u00A0žádosti výše.',
+      said: {
+        changed: 'Změny jsou uloženy. Uživatel se musí znovu přihlásit.',
+        unchanged: 'Nic se nezměnilo.',
+      },
+    },
+    own: 'Vlastní roli ani stav účtu zde měnit nelze. Změnu může provést jiný uživatel s\u00A0rolí Ředitel.',
     block: {
       title: 'Zablokovat další žádosti',
       text: 'Uživatel už nebude moci požádat o\u00A0přístup. Blokaci žádosti nelze zrušit; přístup lze ale udělit ručně v\u00A0části Role a\u00A0typ uživatele.',

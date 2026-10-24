@@ -13,6 +13,7 @@ import {
   NoScriptNotice,
   SearchForm,
   SelectField,
+  StepUpNotice,
   SubmitButton,
   TextField,
   type FormSpec,
@@ -414,6 +415,27 @@ describe('SearchForm', () => {
 
   it('keeps the group in a hidden field', () => {
     expect(html).toMatch(/<input [^>]*type="hidden"[^>]*name="skupina"[^>]*value="reditele"/);
+  });
+
+  it('has clean markup', () => {
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+});
+
+describe('StepUpNotice', () => {
+  const html = renderToStaticMarkup(<StepUpNotice returnTo="/uzivatele/u 1" />);
+
+  it('explains why and for how long', () => {
+    expect(html).toContain(cs.stepUpNotice.title);
+    expect(html).toContain(cs.stepUpNotice.text);
+  });
+
+  it('is a plain link in the same tab, to the step-up with the way back', () => {
+    const link = /<a [^>]*>/.exec(html)?.[0] ?? '';
+    expect(link).toContain('href="/auth/step-up?returnTo=%2Fuzivatele%2Fu%201"');
+    expect(link).not.toContain('target=');
+    expect(link).not.toContain('prefetch');
+    expect(html).toContain(`>${cs.stepUpNotice.action}</a>`);
   });
 
   it('has clean markup', () => {

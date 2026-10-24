@@ -193,6 +193,8 @@ describe('the links to the detail', () => {
 
 const detail = (over: Partial<UserView> = {}): UserView => ({
   user: {
+    id: 'u9',
+    version: 3,
     displayName: 'Jana Nová',
     email: 'jana@skola.example',
     role: 'pending',
@@ -209,11 +211,16 @@ const detail = (over: Partial<UserView> = {}): UserView => ({
     decided: null,
   },
   requestEvents: ['approve', 'reject', 'block'],
+  isSelf: false,
+  choices: { roles: [], statuses: ['active', 'blocked'] },
   ...over,
 });
 
-const renderDetail = (v: UserView) =>
-  renderToStaticMarkup(<UserAdmin view={v} decideAccess={decide} />);
+const change = vi.fn(async () => ({ ok: true as const, data: { changed: true } }));
+const renderDetail = (v: UserView, freshAuth = true) =>
+  renderToStaticMarkup(
+    <UserAdmin view={v} freshAuth={freshAuth} decideAccess={decide} changeUserAccess={change} />,
+  );
 
 describe('UserAdmin', () => {
   it('shows the name as the one h1 and the facts as a description list', () => {
@@ -309,6 +316,93 @@ describe('UserAdmin', () => {
       detail({ requestEvents: ['block'] }),
     ]) {
       const html = renderDetail(v);
+      expect(html).not.toContain('style=');
+      expect(cspMarkupProblems(html)).toEqual([]);
+    }
+  });
+});
+
+describe('the role section', () => {
+  const { access } = users.detail;
+  const noRequest = { request: null, requestEvents: [] };
+  const colleague = (over: Partial<UserView> = {}) =>
+    detail({
+      ...noRequest,
+      user: { ...detail().user, role: 'reviewer' },
+      choices: { roles: ['submitter', 'reviewer', 'headmaster'], statuses: ['active', 'blocked'] },
+      ...over,
+    });
+
+  it('offers the roles and the audience with the current values, after a fresh sign-in', () => {
+    const html = renderDetail(colleague());
+    expect(html).toContain(`${access.title}</h2>`);
+    expect(html).toMatch(/<h2 [^>]*tabindex="-1"[^>]*>Role a/);
+    const role = /<select [^>]*name="role"[^>]*>[\s\S]*?<\/select>/.exec(html)?.[0] ?? '';
+    expect(role.match(/<option /g)).toHaveLength(3);
+    expect(role).toMatch(/<option value="reviewer" selected/);
+    expect(role).toContain(cs.status.role.headmaster);
+    expect(role).not.toContain('value="pending"');
+    const audience = /<select [^>]*name="audience"[^>]*>[\s\S]*?<\/select>/.exec(html)?.[0] ?? '';
+    expect(audience).toMatch(/<option value="staff" selected/);
+    expect(audience).toContain(access.audience.student);
+    expect(html).toContain(`>${access.save}</button>`);
+    expect(html).not.toContain('name="confirmed"');
+    expect(html).not.toContain('/auth/step-up');
+    expect(html.match(/<noscript>/g)).toHaveLength(1);
+  });
+
+  it('selects the student audience for a student', () => {
+    const html = renderDetail(
+      colleague({ user: { ...detail().user, role: 'submitter', isStudent: true } }),
+    );
+    expect(html).toMatch(/<option value="student" selected/);
+  });
+
+  it('offers a user without access the role “without access” as the current one', () => {
+    const html = renderDetail(
+      detail({
+        ...noRequest,
+        choices: { roles: ['pending', 'submitter', 'reviewer', 'headmaster'], statuses: [] },
+      }),
+    );
+    expect(html).toMatch(/<option value="pending" selected/);
+  });
+
+  it('asks to sign in again instead, when the sign-in is stale, with no role form', () => {
+    const html = renderDetail(colleague(), false);
+    expect(html).toContain(cs.stepUpNotice.title);
+    expect(html).toContain(`href="/auth/step-up?returnTo=%2Fuzivatele%2Fu9"`);
+    expect(html).not.toContain('<select');
+    expect(html).not.toContain(access.title);
+    expect(html).not.toContain('<noscript>');
+  });
+
+  it('shows the own account a notice and neither the form nor the step-up', () => {
+    const html = renderDetail(
+      detail({ ...noRequest, isSelf: true, choices: { roles: [], statuses: [] } }),
+      false,
+    );
+    expect(html).toContain(users.detail.own);
+    expect(html).not.toContain('<select');
+    expect(html).not.toContain('/auth/step-up');
+  });
+
+  it('points to the decision while a request is pending, with no role form', () => {
+    const html = renderDetail(detail());
+    expect(html).toContain(access.pendingRequest);
+    expect(html).not.toContain('<select');
+  });
+
+  it('asks nothing of a user whose access cannot be changed', () => {
+    const html = renderDetail(
+      detail({ ...noRequest, choices: { roles: [], statuses: [] } }),
+      false,
+    );
+    expect(html).not.toContain('/auth/step-up');
+  });
+
+  it('has clean markup', () => {
+    for (const html of [renderDetail(colleague()), renderDetail(colleague(), false)]) {
       expect(html).not.toContain('style=');
       expect(cspMarkupProblems(html)).toEqual([]);
     }

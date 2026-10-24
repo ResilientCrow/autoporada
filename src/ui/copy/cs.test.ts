@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RULE_CODES } from '@/contracts';
 import { typographizeText } from '@/domain/cs';
+import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
 import { cs, pageTitle } from './cs';
@@ -102,6 +103,12 @@ describe('error copy', () => {
 
   it('names the cooldown in days', () => {
     expect(cs.rules['request-cooldown']).toContain(`${ACCESS_COOLDOWN_DAYS}${NBSP}dní`);
+  });
+});
+
+describe('step-up copy', () => {
+  it('names the minutes the sign-in counts for', () => {
+    expect(cs.stepUpNotice.text).toContain(`${STEP_UP_MAX_AGE_MS / 60_000}${NBSP}minut`);
   });
 });
 

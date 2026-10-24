@@ -7,6 +7,7 @@ import type { UserPrincipal } from '@/application/ports';
 import { me } from '@/application/use-cases';
 import type { Actor } from '@/domain/actor';
 import { safeReturnTo } from '@/domain/identity';
+import { isFreshAuth } from '@/domain/policy';
 
 import { getContainer } from '../container';
 import { runRegistered, sessionTokenFrom } from '../pipeline';
@@ -30,6 +31,8 @@ interface SignedInModel {
   readonly actor: Actor;
   /** Still waiting for the headmaster to approve the account. */
   readonly pending: boolean;
+  /** Signed in at Entra recently enough for a step-up action (ADR 0002). */
+  readonly freshAuth: boolean;
 }
 
 /** The viewer with their profile, or null for a visitor (no database call without a session). */
@@ -43,7 +46,12 @@ const currentSignedIn = cache(async (): Promise<SignedInModel | null> => {
   });
   if (!result.ok) throw new Error(`profile.me: ${result.error.code}`);
   const { displayName, role } = result.value;
-  return { displayName, actor: viewer.actor, pending: role === 'pending' };
+  return {
+    displayName,
+    actor: viewer.actor,
+    pending: role === 'pending',
+    freshAuth: isFreshAuth(viewer.authTime, getContainer().app.clock.now()),
+  };
 });
 
 /** The signed-in user, or a redirect to the sign-in page that comes back to `path`. */

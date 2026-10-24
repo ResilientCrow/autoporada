@@ -1,6 +1,6 @@
 import { access } from './access';
 import { app, appError, home, notFound } from './app';
-import { errors, fieldIssues, form, problemActions, rules } from './forms';
+import { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
 import { gallery } from './gallery';
 import { nav } from './nav';
 import { privacy } from './privacy';
@@ -31,6 +31,7 @@ export const cs = {
   rules,
   fieldIssues,
   form,
+  stepUpNotice,
 } as const;
 
 /** A page's `<title>`: the page name, then the app's. */
