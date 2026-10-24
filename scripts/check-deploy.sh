@@ -200,6 +200,37 @@ if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged code or 
 status=$(compose run --rm --no-deps cli jobs:status 2>&1) || fail "jobs:status failed: $status"
 printf '%s\n' "$status" | grep -qx 'dead: 0' || fail "jobs:status did not print dead: 0 ($status)"
 
+# A job through the production stack (ADR 0016): the operator's test mail reaches the worker, which
+# cannot deliver it to an unreal tenant. The ledger says "deferred" with an auth or network code,
+# the job waits for a retry, the worker warns and neither fails nor restarts.
+reviewer=$(sql "WITH added AS (
+  INSERT INTO users (tid, oid, display_name, email, role, status)
+  VALUES ('$tenant', gen_random_uuid(), 'Check Reviewer', 'check@example.org', 'reviewer', 'active')
+  RETURNING id) SELECT id FROM added") || fail 'could not insert the reviewer for mail:test'
+sent=$(compose run --rm --no-deps cli mail:test --user "$reviewer" 2>&1) || fail "mail:test failed: $sent"
+key=$(printf '%s\n' "$sent" | sed -n 's/^Test mail queued: //p')
+[ -n "$key" ] || fail "mail:test did not print the key ($sent)"
+i=0
+until [ "$(sql "SELECT state FROM mail_ledger WHERE dedupe_key = '$key'")" = deferred ]; do
+  i=$((i + 1))
+  [ "$i" -lt 30 ] || fail "the ledger row of $key never became deferred ($(sql "SELECT concat_ws(' ', state, code) FROM mail_ledger WHERE dedupe_key = '$key'"))"
+  sleep 2
+done
+code=$(sql "SELECT code FROM mail_ledger WHERE dedupe_key = '$key'")
+printf '%s\n' "$code" | grep -Eq '^(auth|net)\.' || fail "the deferred mail has an unexpected code: $code"
+job=$(sql "SELECT state FROM pgboss.job WHERE name = 'mail.send' AND singleton_key = '$key'")
+case "$job" in
+  retry | active) ;;
+  *) fail "the test mail job is $job, not retry or active" ;;
+esac
+audited=$(sql "SELECT count(*) FROM audit_events WHERE action = 'cli.mail-test' AND data -> 'meta' ->> 'dedupeKey' = '$key'")
+[ "$audited" = 1 ] || fail "mail:test left $audited audit rows, not 1"
+worker_logs=$(compose logs --no-color worker 2>&1)
+printf '%s\n' "$worker_logs" | grep -Eq '"level":"warn".*"msg":"mail\.(systemic|deferred)"' ||
+  fail 'the worker did not warn mail.systemic or mail.deferred'
+if printf '%s\n' "$worker_logs" | grep -q '"level":"\(error\|fatal\)"'; then fail 'the worker logged an error for the test mail'; fi
+[ "$(docker inspect -f '{{.State.Running}}' "$worker")" = true ] || fail 'the worker stopped after the test mail'
+
 # The worker was never restarted, and a stop finishes inside its grace period with exit code 0 (a
 # SIGKILL after the 50 s would show as 137).
 [ "$(docker inspect -f '{{.RestartCount}}' "$worker")" = 0 ] || fail 'the worker restarted during the checks'
