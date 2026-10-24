@@ -55,6 +55,10 @@ const PERSONAS: readonly Persona[] = [
     role: 'pending',
     request: { state: 'blocked', createdDaysAgo: 6, decidedDaysAgo: 5 },
   },
+  // Decided by journeys (approve, reject, two tabs): each persona is decided by one test only.
+  { subject: 'schvalit', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
+  { subject: 'zamitnout', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
+  { subject: 'spor', role: 'pending', request: { state: 'pending', createdDaysAgo: 1 } },
   // Journeys of access.spec.ts, one persona per test and no request to begin with.
   { subject: 'zadatel', role: 'pending' },
   { subject: 'prazdny', role: 'pending' },

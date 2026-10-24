@@ -4,12 +4,12 @@
  * user, 3 per 24 hours and invalid ones too, in its memory for the whole run:
  * a test makes at most 2 (prazdny) and a CI retry repeats only that test.
  */
-import type { Page } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
 
-import { access, cs } from '@/ui/copy';
+import { access, cs, users } from '@/ui/copy';
 
 import { endSession } from './db';
-import { expect, test } from './fixtures';
+import { expect, test, withDates } from './fixtures';
 
 const REASON = 'Jsem třídní učitelka 2.A.';
 
@@ -122,4 +122,78 @@ test('an expired session keeps the typed reason, and signing in on another tab l
   await submit(page).click();
   await settled();
   await expect(heading(page)).toHaveText(access.pending.title);
+});
+
+/** A second signed-in person in a context of their own, guarded like the test's. */
+async function signInElsewhere(newContext: () => Promise<BrowserContext>, persona: RegExp) {
+  const context = await newContext();
+  const page = await context.newPage();
+  await page.goto('/');
+  await page.getByRole('link', { name: cs.signIn.button }).click();
+  await page.getByRole('button', { name: persona }).click();
+  await expect(page).toHaveURL(/:\d+\/$/);
+  return { context, page };
+}
+
+/** The queue item of a person, found by name; the people list below repeats names. */
+const queueItem = (page: Page, name: string) =>
+  page
+    .locator('section')
+    .filter({ has: page.getByRole('heading', { name: users.queue.title }) })
+    .getByRole('listitem')
+    .filter({ hasText: name });
+
+test("approving as a student announces it, ends the applicant's session, and shows their new standing", async ({
+  page,
+  newContext,
+  hydrated,
+  settled,
+  signInAs,
+}) => {
+  const applicant = await signInElsewhere(newContext, /^Test – schvalit/);
+  await signInAs(/^Ředitel/);
+  await page.goto('/uzivatele');
+  await hydrated();
+  const item = queueItem(page, 'Soňa Schvalovaná');
+  await item.getByRole('button', { name: users.queue.approveStudent }).click();
+  await settled();
+  await expect(page.getByRole('main').getByRole('status')).toHaveText(users.queue.said.approved);
+  await expect(page.getByRole('heading', { name: users.queue.title })).toBeFocused();
+  await expect(item).toHaveCount(0);
+
+  // The approval ended every session of the applicant, so the next request asks to sign in.
+  await applicant.page.goto('/');
+  await expect(applicant.page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
+  await applicant.page.getByRole('link', { name: cs.signIn.button }).click();
+  await applicant.page.getByRole('button', { name: /^Test – schvalit/ }).click();
+  await expect(applicant.page).toHaveURL(/:\d+\/$/);
+  const main = applicant.page.getByRole('main');
+  await expect(main.getByText(cs.status.role.submitter, { exact: true })).toBeVisible();
+  await expect(main.getByText(cs.status.student, { exact: true })).toBeVisible();
+  const list = await applicant.page.goto('/uzivatele');
+  expect(list?.status()).toBe(404);
+});
+
+test('rejecting announces it, and the applicant then sees the cooldown', async ({
+  page,
+  newContext,
+  hydrated,
+  settled,
+  signInAs,
+}) => {
+  await signInAs(/^Ředitel/);
+  await page.goto('/uzivatele');
+  await hydrated();
+  const item = queueItem(page, 'Zdeněk Zamítaný');
+  await item.getByRole('button', { name: users.queue.reject }).click();
+  await settled();
+  await expect(page.getByRole('main').getByRole('status')).toHaveText(users.queue.said.rejected);
+  await expect(page.getByRole('heading', { name: users.queue.title })).toBeFocused();
+  await expect(item).toHaveCount(0);
+
+  const applicant = await signInElsewhere(newContext, /^Test – zamitnout/);
+  await applicant.page.goto('/pristup');
+  const main = applicant.page.getByRole('main');
+  await expect(main.getByRole('heading', { level: 2 })).toHaveText(access.cooldown.title);
+  await expect(main.getByText(withDates(access.cooldown.text))).toBeVisible();
 });

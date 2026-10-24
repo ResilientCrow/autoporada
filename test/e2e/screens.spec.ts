@@ -1,7 +1,7 @@
 /** One test per screen; each screen joins in the commit that restyles it. */
 import { access, cs } from '@/ui/copy';
 
-import { expect, test } from './fixtures';
+import { expect, test, withDates } from './fixtures';
 
 const TITLE_SUFFIX = / – Autoporada$/;
 
@@ -66,15 +66,6 @@ for (const [name, url, status, persona] of SCREENS) {
     await checkScreen(name);
   });
 }
-
-/** A copy template with `{}` where its dates go, as a pattern. */
-const withDates = (text: (a: string, b: string) => string) =>
-  new RegExp(
-    text('@1@', '@2@')
-      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/@\d@/g, '.+')
-      .replace(/\u00A0/g, '\\s'),
-  );
 
 /** The states of „Žádost o přístup“ a person can be in, each with its own seeded persona. */
 const ACCESS_STATES = [

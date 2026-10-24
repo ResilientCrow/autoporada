@@ -4,7 +4,13 @@
  * expectAccessible() runs axe over the page as it is.
  */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test as base } from '@playwright/test';
+import {
+  expect,
+  test as base,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type Page,
+} from '@playwright/test';
 
 import { cs } from '@/ui/copy';
 
@@ -25,7 +31,9 @@ interface Fixtures {
   /** The violations seen on the app's own origin; the test fails at teardown if any remain. */
   cspViolations: CspViolation[];
   /** Waits until Next has hydrated the page: its inline bootstrap and its chunks both ran. */
-  hydrated: () => Promise<void>;
+  hydrated: (other?: Page) => Promise<void>;
+  /** Another context with this project's options and the same CSP guard; closed at teardown. */
+  newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
   /** Waits until no submit is in flight: React Aria marks the pending button with data-pending (in a form; the kit demos show a static one). */
   settled: () => Promise<void>;
   expectAccessible: () => Promise<void>;
@@ -43,48 +51,98 @@ interface Fixtures {
   checkScreen: (name: string) => Promise<void>;
 }
 
+/** Reports the violations of every page of the context, popups and new tabs included, into `violations`. */
+async function installCspGuard(
+  context: BrowserContext,
+  appOrigin: string,
+  violations: CspViolation[],
+): Promise<void> {
+  await context.exposeBinding('reportCspViolation', (_source, violation: CspViolation) => {
+    // The mock IdP is another origin with a policy of its own.
+    if (violation.origin === appOrigin) violations.push(violation);
+  });
+  await context.addInitScript(() => {
+    document.addEventListener('securitypolicyviolation', (e) => {
+      // effectiveDirective is the directive that applied; the console quotes its fallback.
+      void (
+        window as unknown as { reportCspViolation: (v: CspViolation) => Promise<void> }
+      ).reportCspViolation({
+        directive: e.effectiveDirective,
+        blocked: e.blockedURI,
+        source: `${e.sourceFile}:${e.lineNumber}`,
+        origin: location.origin,
+      });
+    });
+  });
+}
+
+/** Lets events still in flight reach the binding; a closed page has none. */
+async function flushCspGuard(context: BrowserContext): Promise<void> {
+  for (const open of context.pages()) {
+    // A page without JavaScript never answers, so give up after a moment.
+    const flushed = open.evaluate(() => new Promise((done) => setTimeout(done)));
+    const gaveUp = new Promise((done) => setTimeout(done, 1000));
+    await Promise.race([flushed, gaveUp]).catch(() => undefined);
+    flushed.catch(() => undefined);
+  }
+}
+
 const MAX_TAB_STOPS = 80;
 
 export const test = base.extend<Fixtures>({
   cspViolations: [
     async ({ context, baseURL }, provide) => {
       const violations: CspViolation[] = [];
-      const appOrigin = new URL(baseURL ?? '').origin;
-      // On the context, so popups and new tabs report too.
-      await context.exposeBinding('reportCspViolation', (_source, violation: CspViolation) => {
-        // The mock IdP is another origin with a policy of its own.
-        if (violation.origin === appOrigin) violations.push(violation);
-      });
-      await context.addInitScript(() => {
-        document.addEventListener('securitypolicyviolation', (e) => {
-          // effectiveDirective is the directive that applied; the console quotes its fallback.
-          void (
-            window as unknown as { reportCspViolation: (v: CspViolation) => Promise<void> }
-          ).reportCspViolation({
-            directive: e.effectiveDirective,
-            blocked: e.blockedURI,
-            source: `${e.sourceFile}:${e.lineNumber}`,
-            origin: location.origin,
-          });
-        });
-      });
+      await installCspGuard(context, new URL(baseURL ?? '').origin, violations);
       await provide(violations);
-      // Let events still in flight reach the binding; a closed page has none.
-      for (const open of context.pages()) {
-        // A page without JavaScript never answers, so give up after a moment.
-        const flushed = open.evaluate(() => new Promise((done) => setTimeout(done)));
-        const gaveUp = new Promise((done) => setTimeout(done, 1000));
-        await Promise.race([flushed, gaveUp]).catch(() => undefined);
-        flushed.catch(() => undefined);
-      }
+      await flushCspGuard(context);
       expect(violations).toEqual([]);
     },
     { auto: true },
   ],
 
+  newContext: async (
+    {
+      browser,
+      baseURL,
+      locale,
+      timezoneId,
+      viewport,
+      userAgent,
+      isMobile,
+      hasTouch,
+      deviceScaleFactor,
+      cspViolations,
+    },
+    provide,
+  ) => {
+    const opened: BrowserContext[] = [];
+    await provide(async (options = {}) => {
+      const context = await browser.newContext({
+        baseURL,
+        locale,
+        timezoneId,
+        viewport,
+        userAgent,
+        isMobile,
+        hasTouch,
+        deviceScaleFactor,
+        ...options,
+      });
+      opened.push(context);
+      await installCspGuard(context, new URL(baseURL ?? '').origin, cspViolations);
+      return context;
+    });
+    // Before the violations are asserted (this fixture is torn down first).
+    for (const context of opened) {
+      await flushCspGuard(context);
+      await context.close();
+    }
+  },
+
   hydrated: async ({ page }, provide) => {
-    await provide(async () => {
-      await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+    await provide(async (other = page) => {
+      await expect.poll(() => other.evaluate(() => 'next' in window)).toBe(true);
     });
   },
 
@@ -212,5 +270,14 @@ export const test = base.extend<Fixtures>({
     });
   },
 });
+
+/** A copy template with `@1@` and `@2@` where its dates go, as a pattern. */
+export const withDates = (text: (a: string, b: string) => string) =>
+  new RegExp(
+    text('@1@', '@2@')
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/@\d@/g, '.+')
+      .replace(/\u00A0/g, '\\s'),
+  );
 
 export { expect };

@@ -203,6 +203,48 @@
         },
         {
           "requestParam": "subject",
+          "match": "schvalit",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000019",
+            "name": "Soňa Schvalovaná",
+            "preferred_username": "schvalit@ssps.cz",
+            "upn": "schvalit@ssps.cz",
+            "email": "schvalit@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "zamitnout",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000001a",
+            "name": "Zdeněk Zamítaný",
+            "preferred_username": "zamitnout@ssps.cz",
+            "upn": "zamitnout@ssps.cz",
+            "email": "zamitnout@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "spor",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000001b",
+            "name": "Sáva Sporný",
+            "preferred_username": "spor@ssps.cz",
+            "upn": "spor@ssps.cz",
+            "email": "spor@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],

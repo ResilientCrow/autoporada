@@ -1,14 +1,17 @@
 /** The guards of fixtures.ts must fail when they should, or they only look safe. */
-import type { Page } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 
 /** Serves /__guard with an inline style under the app's real policy, on the app's origin. */
-async function serveViolatingPage(page: Page): Promise<void> {
+async function serveViolatingPage(
+  page: Page,
+  target: BrowserContext = page.context(),
+): Promise<void> {
   const real = await page.request.get('/prihlaseni');
   const policy = real.headers()['content-security-policy'] ?? '';
   expect(policy).not.toBe('');
-  await page.context().route('**/__guard', (route) =>
+  await target.route('**/__guard', (route) =>
     route.fulfill({
       contentType: 'text/html',
       headers: { 'content-security-policy': policy },
@@ -62,6 +65,18 @@ test('the CSP guard fails a test that leaves a violation behind in a popup', asy
 }) => {
   test.fail();
   await openViolatingPopup(page);
+  await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
+});
+
+test('the CSP guard fails a test that leaves a violation behind in a second context', async ({
+  page,
+  newContext,
+  cspViolations,
+}) => {
+  test.fail();
+  const other = await newContext();
+  await serveViolatingPage(page, other);
+  await (await other.newPage()).goto('/__guard');
   await expect.poll(() => cspViolations.length).toBeGreaterThan(0);
 });
 

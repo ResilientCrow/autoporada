@@ -4,22 +4,17 @@ import { access, cs } from '@/ui/copy';
 import { expect, test } from './fixtures';
 
 test('without JavaScript the request form is disabled, explained and sends nothing', async ({
-  browser,
+  newContext,
   page,
   context,
   signInAs,
-}, testInfo) => {
+}) => {
   // Signing in needs scripts (the mock IdP adds auth_time), so the session is carried over.
   await signInAs(/^Učitelka/);
   await expect(page).toHaveURL(/:\d+\/$/);
   const storageState = await context.storageState();
 
-  const plain = await browser.newContext({
-    javaScriptEnabled: false,
-    storageState,
-    baseURL: testInfo.project.use.baseURL,
-    locale: 'cs-CZ',
-  });
+  const plain = await newContext({ javaScriptEnabled: false, storageState });
   const bare = await plain.newPage();
   const sent: string[] = [];
   bare.on('request', (request) => {
@@ -38,5 +33,4 @@ test('without JavaScript the request form is disabled, explained and sends nothi
   await button.click({ force: true, timeout: 2000 }).catch(() => undefined);
   await bare.waitForTimeout(300);
   expect(sent).toEqual([]);
-  await plain.close();
 });
