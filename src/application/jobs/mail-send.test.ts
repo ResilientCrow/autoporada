@@ -22,12 +22,12 @@ const EMAIL = 'jana.novakova@ssps.cz';
 function handler() {
   const mail = createFakeMail();
   const deps: WorkerDeps = { db: world.workerDb, clock: world.clock, appOrigin: ORIGIN, mail };
-  const run = (job: ReturnType<typeof mailJob>, redriven = false) => {
+  const run = (job: ReturnType<typeof mailJob>, redriven = false, attempt = 1) => {
     const { data, dedupeKey } = job;
     const input: JobInput<'mail.send'> = {
       id: randomUUID(),
       data,
-      attempt: 1,
+      attempt,
       dedupeKey,
       redriven,
     };
@@ -272,6 +272,47 @@ describe('the mail.send handler', () => {
       expect(mail.calls).toHaveLength(3);
       expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 0 });
     });
+  });
+
+  describe('a redrive of a job dead-lettered while its outcome was unknown', () => {
+    const UNKNOWN = { kind: 'unknown', code: 'unknown.timeout' } as const;
+    /** Two unknown outcomes, then the job ran out of retries: the row stays unknown at the cap. */
+    async function leftUnknown() {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script(UNKNOWN, UNKNOWN);
+      await run(job);
+      await run(job, false, 2);
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'unknown', unknownSends: 2 });
+      return { job, mail, run };
+    }
+
+    it('sends at once, flagged, instead of failing the key as ambiguous', async () => {
+      const { job, mail, run } = await leftUnknown();
+      expect(await run(job, true, 1)).toEqual({ kind: 'done', code: 'resent' });
+      expect(mail.calls).toHaveLength(3);
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 0 });
+    });
+
+    it('keeps the cap for the revived job’s own retries: two more calls at most', async () => {
+      const { job, mail, run } = await leftUnknown();
+      mail.script(UNKNOWN, UNKNOWN);
+      expect(await run(job, true, 1)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
+      expect(await run(job, true, 2)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
+      expect(await run(job, true, 3)).toEqual({ kind: 'dead', code: 'ambiguous' });
+      expect(mail.calls).toHaveLength(4);
+    });
+  });
+
+  it('logs a resend after unknown, then deferred: the 202 may be a second copy', async () => {
+    const { job } = await decided('approved');
+    const { mail, run } = handler();
+    mail.script({ kind: 'unknown', code: 'unknown.timeout' }, { kind: 'auth', code: 'auth.403' });
+    await run(job);
+    await run(job, false, 2);
+    expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'deferred', unknownSends: 1 });
+    world.clock.advance(24 * 3_600_000);
+    expect(await run(job, false, 3)).toEqual({ kind: 'done', code: 'resent' });
   });
 
   describe('pacing (one gate and a 20-per-minute window, kept in the ledger)', () => {

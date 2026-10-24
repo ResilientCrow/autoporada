@@ -26,6 +26,8 @@ const AUTH_PAUSE_MS = 60_000;
 const ADDRESS = z.email().regex(/^[\x21-\x7e]+$/);
 
 type Data = JobInput<'mail.send'>['data'];
+/** What the ledger's rules read of the job itself. */
+type Revival = Pick<JobInput<'mail.send'>, 'redriven' | 'attempt'>;
 
 /** A key claimed in the ledger: the call may go out. */
 interface Claimed {
@@ -46,10 +48,11 @@ const done = (code: string): JobOutcome => ({ kind: 'done', code });
  * keep about them); no usable address, or a mail the account no longer
  * bears out, is recorded as skipped. Only then is the key claimed.
  */
-async function claim(tx: Tx, dedupeKey: string, data: Data, redriven: boolean) {
+async function claim(tx: Tx, dedupeKey: string, data: Data, job: Revival) {
   const { now } = tx.ctx;
   await tx.mailLedger.lockGate();
-  const decision = claimDecision({ row: await tx.mailLedger.get(dedupeKey), redriven });
+  const row = await tx.mailLedger.get(dedupeKey);
+  const decision = claimDecision({ row, redriven: job.redriven, attempt: job.attempt });
   if (decision.kind === 'stop') return decision.outcome;
   const recipient = await tx.users.get(data.recipientId);
   if (!recipient) return done('skipped.recipient-gone');
@@ -145,7 +148,7 @@ export const mailSend: JobHandler<'mail.send'> = async ({ db, clock, mail, appOr
       { mode: 'write', transactionTimeoutMs: JOB_TX_TIMEOUT_MS },
       work,
     );
-  const claimed = await write((tx) => claim(tx, key, job.data, job.redriven));
+  const claimed = await write((tx) => claim(tx, key, job.data, job));
   if (claimed.kind !== 'send') return claimed;
   const { subject, text } = render(job.data.template, claimed.about, appOrigin);
   const result = await mail.send({ to: claimed.to, subject, text, dedupeKey: key });

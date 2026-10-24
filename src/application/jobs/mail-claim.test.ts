@@ -26,7 +26,7 @@ const ambiguous = (unknownSends: number) => ({
 
 describe('claimDecision', () => {
   it('claims and sends a key it has never seen', () => {
-    expect(claimDecision({ row: null, redriven: false })).toEqual({
+    expect(claimDecision({ row: null, redriven: false, attempt: 1 })).toEqual({
       kind: 'send',
       unknownSends: 0,
       resend: false,
@@ -37,7 +37,7 @@ describe('claimDecision', () => {
     'sends nothing for a key already %s, redriven or not',
     (state) => {
       for (const redriven of [false, true]) {
-        expect(claimDecision({ row: row(state), redriven })).toEqual({
+        expect(claimDecision({ row: row(state), redriven, attempt: 1 })).toEqual({
           kind: 'stop',
           outcome: { kind: 'done', code: `already.${state}` },
         });
@@ -46,7 +46,7 @@ describe('claimDecision', () => {
   );
 
   it('counts a row left sending (an attempt died unsettled) as one unknown and resends', () => {
-    expect(claimDecision({ row: row('sending', 0), redriven: false })).toEqual({
+    expect(claimDecision({ row: row('sending', 0), redriven: false, attempt: 1 })).toEqual({
       kind: 'send',
       unknownSends: 1,
       resend: true,
@@ -54,7 +54,7 @@ describe('claimDecision', () => {
   });
 
   it('resends after one unknown outcome, which its settle already counted', () => {
-    expect(claimDecision({ row: row('unknown', 1), redriven: false })).toEqual({
+    expect(claimDecision({ row: row('unknown', 1), redriven: false, attempt: 1 })).toEqual({
       kind: 'send',
       unknownSends: 1,
       resend: true,
@@ -62,29 +62,64 @@ describe('claimDecision', () => {
   });
 
   it('gives up at two unknown outcomes: the row becomes failed, the job dead', () => {
-    expect(claimDecision({ row: row('unknown', 2), redriven: false })).toEqual(ambiguous(2));
-    expect(claimDecision({ row: row('unknown', 3), redriven: true })).toEqual(ambiguous(3));
+    expect(claimDecision({ row: row('unknown', 2), redriven: false, attempt: 1 })).toEqual(
+      ambiguous(2),
+    );
+    expect(claimDecision({ row: row('unknown', 2), redriven: false, attempt: 9 })).toEqual(
+      ambiguous(2),
+    );
+  });
+
+  // A job can be dead-lettered with its row still unknown or sending: its last allowed attempt
+  // ended that way. The redrive is the operator's decision to try again, as for a failed row.
+  it.each([
+    ['unknown at the cap', row('unknown', 2)],
+    ['left sending at the cap', row('sending', 1)],
+    ['unknown below the cap', row('unknown', 1)],
+  ])('redrives a row %s with a fresh count, flagged: a copy may be out', (_what, redriven) => {
+    expect(claimDecision({ row: redriven, redriven: true, attempt: 1 })).toEqual({
+      kind: 'send',
+      unknownSends: 0,
+      resend: true,
+    });
+  });
+
+  it('keeps the cap for the retries of a redriven job: only its first claim starts afresh', () => {
+    expect(claimDecision({ row: row('unknown', 1), redriven: true, attempt: 2 })).toEqual({
+      kind: 'send',
+      unknownSends: 1,
+      resend: true,
+    });
+    expect(claimDecision({ row: row('unknown', 2), redriven: true, attempt: 3 })).toEqual(
+      ambiguous(2),
+    );
+    expect(claimDecision({ row: row('sending', 1), redriven: true, attempt: 2 })).toEqual(
+      ambiguous(2),
+    );
   });
 
   it('counts the unsettled attempt towards the cap', () => {
-    expect(claimDecision({ row: row('sending', 1), redriven: false })).toEqual(ambiguous(2));
+    expect(claimDecision({ row: row('sending', 1), redriven: false, attempt: 1 })).toEqual(
+      ambiguous(2),
+    );
   });
 
-  it('claims a deferred row normally, keeping its unknown count', () => {
-    expect(claimDecision({ row: row('deferred', 0), redriven: false })).toEqual({
+  it('claims a deferred row keeping its unknown count, as a resend when an earlier call may be out', () => {
+    expect(claimDecision({ row: row('deferred', 0), redriven: false, attempt: 1 })).toEqual({
       kind: 'send',
       unknownSends: 0,
       resend: false,
     });
-    expect(claimDecision({ row: row('deferred', 1), redriven: false })).toEqual({
+    // unknown, then a 429 (deferred keeps the count): the next 202 may be a second copy
+    expect(claimDecision({ row: row('deferred', 1), redriven: false, attempt: 3 })).toEqual({
       kind: 'send',
       unknownSends: 1,
-      resend: false,
+      resend: true,
     });
   });
 
   it('redrives a failed ambiguous row with the unknowns reset, flagged: a copy may be out', () => {
-    expect(claimDecision({ row: row('failed', 2), redriven: true })).toEqual({
+    expect(claimDecision({ row: row('failed', 2), redriven: true, attempt: 1 })).toEqual({
       kind: 'send',
       unknownSends: 0,
       resend: true,
@@ -92,15 +127,22 @@ describe('claimDecision', () => {
   });
 
   it('redrives a rejected row (no unknown outcomes) as a first send', () => {
-    expect(claimDecision({ row: row('failed', 0), redriven: true })).toEqual({
+    expect(claimDecision({ row: row('failed', 0), redriven: true, attempt: 1 })).toEqual({
       kind: 'send',
       unknownSends: 0,
       resend: false,
     });
   });
 
+  it('stops a retry of a redriven job that meets a failed row: the redrive was its first claim', () => {
+    expect(claimDecision({ row: row('failed', 2), redriven: true, attempt: 2 })).toEqual({
+      kind: 'stop',
+      outcome: { kind: 'dead', code: 'already.failed' },
+    });
+  });
+
   it('stops a plain retry that meets a failed row (its dead-lettering did not complete)', () => {
-    expect(claimDecision({ row: row('failed', 2), redriven: false })).toEqual({
+    expect(claimDecision({ row: row('failed', 2), redriven: false, attempt: 1 })).toEqual({
       kind: 'stop',
       outcome: { kind: 'dead', code: 'already.failed' },
     });
