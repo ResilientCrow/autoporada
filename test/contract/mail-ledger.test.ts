@@ -42,6 +42,11 @@ const claimRow = (recipientId: string, key = 'access.approved:1', unknownSends =
 const later = (ms: number) => new Date(world.clock.now().getTime() + ms);
 
 describe('MailLedgerPort (port contract)', () => {
+  it('starts every test with no rows and an open gate', async () => {
+    expect(await ledger((l) => l.get('access.approved:1'))).toBeNull();
+    expect(await ledger((l) => l.gate())).toEqual({ notBefore: null, code: null });
+  });
+
   it('claims a key as sending at the transaction instant, counting each attempt', async () => {
     const user = await world.seed.user();
     const first = world.clock.now();
@@ -134,11 +139,88 @@ describe('MailLedgerPort (port contract)', () => {
     ).rejects.toEqual(new DatabaseFailure('23503'));
   });
 
+  it('closes the gate to the latest instant it was given, and keeps that one code', async () => {
+    await ledger((l) => l.closeGate(later(30 * SECOND), 'throttled.429'));
+    expect(await ledger((l) => l.gate())).toEqual({
+      notBefore: later(30 * SECOND),
+      code: 'throttled.429',
+    });
+    await ledger((l) => l.closeGate(later(10 * SECOND), 'auth.403'));
+    expect(await ledger((l) => l.gate())).toEqual({
+      notBefore: later(30 * SECOND),
+      code: 'throttled.429',
+    });
+    await ledger((l) => l.closeGate(later(60 * SECOND), 'auth.403'));
+    expect(await ledger((l) => l.gate())).toEqual({
+      notBefore: later(60 * SECOND),
+      code: 'auth.403',
+    });
+  });
+
+  it('counts the sends claimed after an instant: deferred and skipped rows sent nothing', async () => {
+    const user = await world.seed.user();
+    const start = world.clock.now();
+    const claim = (key: string) => ledger((l) => l.claim(claimRow(user.id, key)));
+    await claim('sending');
+    await claim('unknown');
+    await ledger((l) =>
+      l.settle('unknown', { state: 'unknown', code: 'unknown.reset', unknownSends: 1 }),
+    );
+    await claim('deferred');
+    await ledger((l) => l.settle('deferred', { state: 'deferred', code: 'throttled.429' }));
+    world.clock.advance(10 * SECOND);
+    await claim('sent');
+    await ledger((l) => l.settle('sent', { state: 'sent', code: 'sent' }));
+    await claim('failed');
+    await ledger((l) => l.settle('failed', { state: 'failed', code: 'rejected.400' }));
+    await ledger((l) => l.skip({ ...claimRow(user.id, 'skipped'), code: 'skipped.stale' }));
+
+    const since = (instant: Date) => ledger((l) => l.callsSince(instant));
+    expect(await since(new Date(start.getTime() - 1))).toEqual({ count: 4, oldest: start });
+    // the window is open at its start: a claim exactly at the instant is outside it
+    expect(await since(start)).toEqual({ count: 2, oldest: world.clock.now() });
+    expect(await since(world.clock.now())).toEqual({ count: 0, oldest: null });
+  });
+
+  it('serialises gate users: a second lock waits for the first transaction to end', async () => {
+    const order: string[] = [];
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let locked = () => {};
+    const first = ledger(async (l) => {
+      await l.lockGate();
+      order.push('first locked');
+      locked();
+      await held;
+      order.push('first done');
+    });
+    await new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const second = ledger(async (l) => {
+      await l.lockGate();
+      order.push('second locked');
+    });
+    if (world.pg) {
+      const pg = world.pg;
+      await expect.poll(() => pg.lockWaits(), { timeout: 5_000 }).toBe(1);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(order).toEqual(['first locked']);
+    release();
+    await Promise.all([first, second]);
+    expect(order).toEqual(['first locked', 'first done', 'second locked']);
+  });
+
   it('serves only jobs and the CLI', async () => {
     const user = await world.seed.user({ role: 'headmaster' });
     await ledger((l) => l.get('x'), system('cli:jobs'));
     for (const principal of [world.as(user), system('auth.session'), system('test.seed')]) {
       await expect(ledger((l) => l.get('x'), principal)).rejects.toBeInstanceOf(ScopeViolation);
+      await expect(ledger((l) => l.gate(), principal)).rejects.toBeInstanceOf(ScopeViolation);
       await expect(ledger((l) => l.claim(claimRow(user.id)), principal)).rejects.toBeInstanceOf(
         ScopeViolation,
       );

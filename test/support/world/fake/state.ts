@@ -3,6 +3,7 @@ import {
   type AccessRequestRecord,
   type AuditTarget,
   type EnqueueOptions,
+  type GateRow,
   type JobCatalog,
   type JobName,
   type LedgerRow,
@@ -23,6 +24,8 @@ export interface FakeState {
   readonly jobs: JobRow[];
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
+  /** mail_gate's one row, as migration 0009 inserts it. */
+  mailGate: GateRow;
   /** Hands out UUID-shaped ids in order, as uuidv7() would. */
   nextId: number;
 }
@@ -50,6 +53,7 @@ export const emptyState = (): FakeState => ({
   audit: [],
   jobs: [],
   mailLedger: new Map(),
+  mailGate: { notBefore: null, code: null },
   nextId: 1,
 });
 

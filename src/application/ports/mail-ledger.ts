@@ -22,6 +22,12 @@ export interface LedgerRow {
   readonly graphRequestId: string | null;
 }
 
+/** The pause on all sending: closed while `notBefore` is in the future. */
+export interface GateRow {
+  readonly notBefore: Date | null;
+  readonly code: OutcomeCode | null;
+}
+
 export type ClaimRow = Pick<
   LedgerRow,
   'dedupeKey' | 'template' | 'recipientId' | 'subjectId' | 'unknownSends'
@@ -41,15 +47,20 @@ export interface Settlement {
 }
 
 /**
- * The mail ledger on the transaction's connection. Primitives only: the
- * rules live in application/jobs. Every time is the transaction's
- * `ctx.now`, never the database clock, so tests drive it with a
+ * The mail ledger and gate on the transaction's connection. Primitives only:
+ * the rules live in application/jobs. Every time is the transaction's
+ * `ctx.now`, never the database clock, so tests drive the window with a
  * FixedClock. Only `system('job:…')` and `system('cli:…')` may use it
  * (ScopeViolation otherwise); rows need an existing recipient, and deleting
  * the recipient deletes their rows.
  */
 export interface MailLedgerPort {
+  /** Serialises everyone who reads or moves the gate and the window, until the transaction ends. */
+  lockGate(): Promise<void>;
   get(dedupeKey: string): Promise<LedgerRow | null>;
+  gate(): Promise<GateRow>;
+  /** Sends claimed strictly after `instant`: rows `sending`, `unknown`, `sent` or `failed`. */
+  callsSince(instant: Date): Promise<{ readonly count: number; readonly oldest: Date | null }>;
   /**
    * Inserts or overwrites the row as `sending`: `claimed_at` now, one more
    * attempt, the given unknown count; code, settlement and request id cleared.
@@ -59,6 +70,8 @@ export interface MailLedgerPort {
   settle(dedupeKey: string, settlement: Settlement): Promise<void>;
   /** Inserts or overwrites the row as `skipped`, settled now; it never counts as a send. */
   skip(row: SkipRow): Promise<void>;
+  /** Pauses sending until `until`, unless it is already paused longer. */
+  closeGate(until: Date, code: OutcomeCode): Promise<void>;
   /** Deletes rows settled, or claimed and never settled, before `cutoff`; returns how many. */
   purgeBefore(cutoff: Date): Promise<number>;
 }

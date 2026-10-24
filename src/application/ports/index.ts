@@ -45,6 +45,7 @@ export {
 export type { MailPort, MailResult, OutgoingMail } from './mail';
 export type {
   ClaimRow,
+  GateRow,
   LedgerRow,
   LedgerState,
   MailLedgerPort,

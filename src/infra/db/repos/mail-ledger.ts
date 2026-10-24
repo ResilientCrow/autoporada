@@ -1,9 +1,20 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, count, eq, gt, inArray, min, sql } from 'drizzle-orm';
 
-import { ScopeViolation, type MailLedgerPort, type TxContext } from '@/application/ports';
+import {
+  ScopeViolation,
+  type LedgerState,
+  type MailLedgerPort,
+  type TxContext,
+} from '@/application/ports';
 
-import { mailLedger } from '../schema';
+import { mailGate, mailLedger } from '../schema';
 import type { TxDatabase } from './database';
+
+/** The pg_advisory_xact_lock key of the gate and the window ('MAIL'). */
+const MAIL_GATE_LOCK = 0x4d41_494c;
+
+/** States whose claim sent something; a deferred or skipped row frees its slot. */
+const SENDS: readonly LedgerState[] = ['sending', 'unknown', 'sent', 'failed'];
 
 /** Only jobs and the operator's CLI read or write delivery state (ADR 0016). */
 const DELIVERY_PRINCIPAL = /^(job|cli):/;
@@ -17,10 +28,31 @@ export function createMailLedgerRepo(db: TxDatabase, ctx: TxContext): MailLedger
   };
 
   return {
+    async lockGate() {
+      allowed();
+      await db.execute(sql`SELECT pg_advisory_xact_lock(${MAIL_GATE_LOCK})`);
+    },
     async get(dedupeKey) {
       allowed();
       const [row] = await db.select().from(mailLedger).where(eq(mailLedger.dedupeKey, dedupeKey));
       return row ?? null;
+    },
+    async gate() {
+      allowed();
+      const [row] = await db
+        .select({ notBefore: mailGate.notBefore, code: mailGate.code })
+        .from(mailGate);
+      // Migration 0009 inserts the row and nothing deletes it.
+      if (!row) throw new Error('gate: mail_gate has no row');
+      return row;
+    },
+    async callsSince(instant) {
+      allowed();
+      const [row] = await db
+        .select({ count: count(), oldest: min(mailLedger.claimedAt) })
+        .from(mailLedger)
+        .where(and(gt(mailLedger.claimedAt, instant), inArray(mailLedger.state, SENDS)));
+      return { count: row?.count ?? 0, oldest: row?.oldest ?? null };
     },
     async claim(row) {
       allowed();
@@ -73,6 +105,15 @@ export function createMailLedgerRepo(db: TxDatabase, ctx: TxContext): MailLedger
         .insert(mailLedger)
         .values({ dedupeKey: row.dedupeKey, ...skipped })
         .onConflictDoUpdate({ target: mailLedger.dedupeKey, set: skipped });
+    },
+    async closeGate(until, code) {
+      allowed();
+      // Both expressions read the row as it was: the later instant wins, with its code.
+      await db.update(mailGate).set({
+        code: sql`CASE WHEN ${mailGate.notBefore} IS NULL OR ${mailGate.notBefore} < ${until}::timestamptz
+                       THEN ${code} ELSE ${mailGate.code} END`,
+        notBefore: sql`greatest(${mailGate.notBefore}, ${until}::timestamptz)`,
+      });
     },
     async purgeBefore(cutoff) {
       allowed();

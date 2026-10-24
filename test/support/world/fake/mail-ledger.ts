@@ -2,6 +2,7 @@ import {
   DatabaseFailure,
   ScopeViolation,
   type LedgerRow,
+  type LedgerState,
   type MailLedgerPort,
   type TxContext,
 } from '@/application/ports';
@@ -9,11 +10,13 @@ import {
 import { guard } from './guards';
 import type { FakeTxState } from './state';
 
+const SENDS: readonly LedgerState[] = ['sending', 'unknown', 'sent', 'failed'];
 const DELIVERY_PRINCIPAL = /^(job|cli):/;
 
 /**
  * The mail ledger over the fake state, with the same scope, foreign key and
- * timing rules; never audited.
+ * timing rules; never audited. The fake runs one transaction at a time, so
+ * the gate lock has nothing left to serialise.
  */
 export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort {
   const { principal, now } = ctx;
@@ -30,9 +33,24 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
   };
 
   return {
+    async lockGate() {
+      enter(false);
+    },
     async get(dedupeKey) {
       enter(false);
       return mailLedger.get(dedupeKey) ?? null;
+    },
+    async gate() {
+      enter(false);
+      return { ...tx.draft.mailGate };
+    },
+    async callsSince(instant) {
+      enter(false);
+      const claims = [...mailLedger.values()]
+        .filter((row) => SENDS.includes(row.state))
+        .flatMap((row) => (row.claimedAt && row.claimedAt > instant ? [row.claimedAt] : []));
+      const oldest = claims.reduce<Date | null>((a, b) => (a && a <= b ? a : b), null);
+      return { count: claims.length, oldest };
     },
     async claim(row) {
       enter(true);
@@ -77,6 +95,11 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
         settledAt: now,
         graphRequestId: null,
       });
+    },
+    async closeGate(until, code) {
+      enter(true);
+      const { notBefore } = tx.draft.mailGate;
+      if (notBefore === null || notBefore < until) tx.draft.mailGate = { notBefore: until, code };
     },
     async purgeBefore(cutoff) {
       enter(true);
