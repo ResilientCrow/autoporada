@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 import { ROLES, USER_STATUSES } from '@/domain/actor';
+import { AUDIENCES } from '@/domain/policy';
+import { ACCESS_STATES } from '@/domain/review';
+
+import { DECISION_EVENTS } from './access';
 
 /** The groups of the users list: a role (among active accounts), everyone, or the inactive. */
 export const USER_GROUPS = [
@@ -73,16 +77,15 @@ export const getUserOutput = z.object({
     .object({
       requestId: z.guid(),
       version: z.number().int(),
-      state: z.enum(['pending', 'approved', 'rejected', 'blocked', 'cancelled']),
+      state: z.enum(ACCESS_STATES),
       reason: z.string(),
       createdAt: z.iso.datetime(),
       decidedAt: z.iso.datetime().nullable(),
     })
     .nullable(),
-  requestEvents: z.array(z.enum(['approve', 'reject', 'block'])),
+  requestEvents: z.array(DECISION_EVENTS),
 });
 
-const AUDIENCES = ['staff', 'student'] as const;
 /** The full access the form asks for; only what differs from the user's row is changed. */
 export const changeUserAccessInput = z.strictObject({
   userId: z.guid(),

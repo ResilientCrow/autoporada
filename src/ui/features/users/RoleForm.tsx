@@ -5,7 +5,7 @@ import type { z } from 'zod';
 
 import type { changeUserAccessInput, changeUserAccessOutput, ServerAction } from '@/contracts';
 import type { Role, UserStatus } from '@/domain/actor';
-import { lowersAccess } from '@/domain/policy';
+import { AUDIENCES, lowersAccess } from '@/domain/policy';
 import { users } from '@/ui/copy';
 import {
   CheckboxField,
@@ -41,10 +41,7 @@ const SPEC: FormSpec = {
   confirmed: { label: copy.confirm, required: true, messages: { required: copy.unconfirmed } },
 };
 
-const AUDIENCES = [
-  { value: 'staff', label: copy.audience.staff },
-  { value: 'student', label: copy.audience.student },
-];
+const AUDIENCE_OPTIONS = AUDIENCES.map((value) => ({ value, label: copy.audience[value] }));
 
 /**
  * „Role a typ uživatele“: sends the whole desired state. The confirmation
@@ -85,7 +82,7 @@ export function RoleForm({
       />
       <SelectField
         name="audience"
-        options={AUDIENCES}
+        options={AUDIENCE_OPTIONS}
         defaultValue={user.isStudent ? 'student' : 'staff'}
       />
       {lowers && <CheckboxField name="confirmed" />}

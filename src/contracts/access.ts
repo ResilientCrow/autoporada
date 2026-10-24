@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ACCESS_REASON_MAX } from '@/domain/review';
+import { ACCESS_EVENTS, ACCESS_REASON_MAX, ACCESS_STATES } from '@/domain/review';
 
 /** Why the person needs access, in their own words; only the headmaster reads it. */
 export const requestAccessInput = z.strictObject({
@@ -41,6 +41,10 @@ export const cancelAccessInput = z.strictObject({
 });
 export const cancelAccessOutput = z.object({});
 
+/** What a decision can leave a request as, and the events that decide (not the requester's cancel). */
+const DECIDED_STATES = z.enum(ACCESS_STATES).exclude(['pending', 'cancelled']);
+export const DECISION_EVENTS = z.enum(ACCESS_EVENTS).exclude(['cancel']);
+
 /** The headmaster's answer: approval names the audience, with no default; a block is confirmed. */
 const ACCESS_DECISIONS = ['approve-staff', 'approve-student', 'reject', 'block'] as const;
 export const decideAccessInput = z.strictObject({
@@ -49,7 +53,7 @@ export const decideAccessInput = z.strictObject({
   decision: z.enum(ACCESS_DECISIONS),
   confirmed: z.literal(true).optional(),
 });
-export const decideAccessOutput = z.object({ state: z.enum(['approved', 'rejected', 'blocked']) });
+export const decideAccessOutput = z.object({ state: DECIDED_STATES });
 
 export const pendingAccessInput = z.strictObject({});
 /** The headmaster's queue, oldest first; `events` are the decisions open to them. */
@@ -65,7 +69,7 @@ export const pendingAccessOutput = z.object({
       department: z.string().nullable(),
       reason: z.string(),
       requestedAt: z.iso.datetime(),
-      events: z.array(z.enum(['approve', 'reject', 'block'])),
+      events: z.array(DECISION_EVENTS),
     }),
   ),
 });

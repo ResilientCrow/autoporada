@@ -9,6 +9,8 @@ import {
   canEditPoint,
   FUTURE_MACHINE,
   futureEditNeedsReview,
+  ACCESS_EVENTS,
+  ACCESS_STATES,
   ISSUE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,
@@ -225,6 +227,12 @@ describe('issues', () => {
 });
 
 describe('access requests', () => {
+  it("lists exactly the machine's events and states", () => {
+    expect([...ACCESS_EVENTS].sort()).toEqual(Object.keys(ACCESS_MACHINE).sort());
+    const used = Object.values(ACCESS_MACHINE).flatMap((t) => [...t.from, t.to]);
+    expect([...ACCESS_STATES].sort()).toEqual([...new Set(used)].sort());
+  });
+
   const requester = user('pending', true);
   it('is decided by the headmaster and cancelled only by the requester', () => {
     expect(availableEvents(ACCESS_MACHINE, 'pending', headmaster)).toEqual([

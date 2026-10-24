@@ -1,6 +1,7 @@
 import { atLeast, type Actor, type Role, type UserStatus } from '@/domain/actor';
 
-export type Audience = 'staff' | 'student';
+export const AUDIENCES = ['staff', 'student'] as const;
+export type Audience = (typeof AUDIENCES)[number];
 
 /** The user whose access is about to change, as the page or the use case read it. */
 export interface AccessTarget {

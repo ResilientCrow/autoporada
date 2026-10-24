@@ -1,7 +1,8 @@
 import type { z } from 'zod';
 
 import type { changeUserAccessInput, decideAccessInput } from '@/contracts';
-import type { Role, UserStatus } from '@/domain/actor';
+import { ROLES, type Role, type UserStatus } from '@/domain/actor';
+import { AUDIENCES } from '@/domain/policy';
 import { choiceOf, flagOf } from '@/ui/form';
 
 /**
@@ -21,9 +22,6 @@ export function blockInput(
   };
 }
 
-const ROLE_VALUES = ['pending', 'submitter', 'reviewer', 'headmaster'] as const;
-const AUDIENCE_VALUES = ['staff', 'student'] as const;
-
 /**
  * What „Uložit změny“ sends: the full desired state. The status is the user's
  * current one (the account section changes it), and `confirmed` is there only
@@ -36,8 +34,8 @@ export function roleInput(
   return {
     userId: user.id,
     version: user.version,
-    role: choiceOf(data, 'role', ROLE_VALUES),
-    audience: choiceOf(data, 'audience', AUDIENCE_VALUES),
+    role: choiceOf(data, 'role', ROLES),
+    audience: choiceOf(data, 'audience', AUDIENCES),
     status: user.status,
     ...(flagOf(data, 'confirmed') && { confirmed: true as const }),
   };

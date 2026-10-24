@@ -14,7 +14,9 @@ export {
   type TransitionResult,
 } from './machine';
 export {
+  ACCESS_EVENTS,
   ACCESS_MACHINE,
+  ACCESS_STATES,
   canEditFuture,
   canEditPoint,
   FUTURE_MACHINE,

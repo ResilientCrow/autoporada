@@ -16,7 +16,11 @@ const EVENTS: Readonly<Record<Decision, DecisionEvent>> = {
   reject: 'reject',
   block: 'block',
 };
-const STATES = { approve: 'approved', reject: 'rejected', block: 'blocked' } as const;
+const STATES: Readonly<Record<DecisionEvent, z.output<typeof decideAccessOutput>['state']>> = {
+  approve: 'approved',
+  reject: 'rejected',
+  block: 'blocked',
+};
 
 /**
  * The headmaster decides a request (plan §4: no step-up). Approval names

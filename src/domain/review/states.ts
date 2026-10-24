@@ -130,8 +130,10 @@ export const ISSUE_MACHINE: Machine<IssueStatus, IssueEvent, ReviewActor> = {
 
 // ── Access requests ────────────────────────────────────────────────────────
 
-export type AccessState = 'pending' | 'approved' | 'rejected' | 'blocked' | 'cancelled';
-export type AccessEvent = 'approve' | 'reject' | 'block' | 'cancel';
+export const ACCESS_STATES = ['pending', 'approved', 'rejected', 'blocked', 'cancelled'] as const;
+export const ACCESS_EVENTS = ['approve', 'reject', 'block', 'cancel'] as const;
+export type AccessState = (typeof ACCESS_STATES)[number];
+export type AccessEvent = (typeof ACCESS_EVENTS)[number];
 
 const requester = (a: ReviewActor) => a.kind === 'user' && a.isAuthor;
 
