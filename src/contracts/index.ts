@@ -14,6 +14,8 @@ export {
   decideAccessOutput,
   myAccessInput,
   myAccessOutput,
+  pendingAccessInput,
+  pendingAccessOutput,
   requestAccessInput,
   requestAccessOutput,
 } from './access';

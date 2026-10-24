@@ -50,3 +50,22 @@ export const decideAccessInput = z.strictObject({
   confirmed: z.literal(true).optional(),
 });
 export const decideAccessOutput = z.object({ state: z.enum(['approved', 'rejected', 'blocked']) });
+
+export const pendingAccessInput = z.strictObject({});
+/** The headmaster's queue, oldest first; `events` are the decisions open to them. */
+export const pendingAccessOutput = z.object({
+  items: z.array(
+    z.object({
+      requestId: z.guid(),
+      version: z.number().int(),
+      userId: z.guid(),
+      displayName: z.string(),
+      email: z.string().nullable(),
+      jobTitle: z.string().nullable(),
+      department: z.string().nullable(),
+      reason: z.string(),
+      requestedAt: z.iso.datetime(),
+      events: z.array(z.enum(['approve', 'reject', 'block'])),
+    }),
+  ),
+});
