@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 import { users } from '@/ui/copy';
 import { ACCESS_LOOK, Chip } from '@/ui/status';
 
+import { BlockRequestForm } from './BlockRequestForm';
 import { DecisionForm, type DecideAction } from './DecisionForm';
 
 type AccessState = keyof typeof ACCESS_LOOK;
@@ -52,6 +53,15 @@ export function RequestSection({
         events={events}
         onDecided={onDecided}
       />
+      {events.includes('block') && (
+        <BlockRequestForm
+          key={request.version}
+          action={decideAccess}
+          requestId={request.requestId}
+          version={request.version}
+          onBlocked={() => onDecided('blocked')}
+        />
+      )}
     </section>
   );
 }

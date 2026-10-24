@@ -24,6 +24,14 @@ export const users = {
     request: 'Žádost o\u00A0přístup',
     decided: (date: string) => `Rozhodnuto ${date}`,
     details: 'Podrobnosti',
+    block: {
+      title: 'Zablokovat další žádosti',
+      text: 'Uživatel už nebude moci požádat o\u00A0přístup. Blokaci žádosti nelze zrušit; přístup lze ale udělit ručně v\u00A0části Role a\u00A0typ uživatele.',
+      confirm: 'Rozumím, že další žádosti nebudou přijímány.',
+      unconfirmed: 'Potvrďte prosím změnu.',
+      submit: 'Zablokovat další žádosti',
+      said: 'Další žádosti jsou zablokovány.',
+    },
   },
   people: {
     title: 'Lidé',

@@ -259,7 +259,7 @@ describe('UserAdmin', () => {
     expect(html.match(/<noscript>/g)).toHaveLength(1);
   });
 
-  it('shows a rejected request without decision buttons', () => {
+  it('shows a rejected request with the block section only', () => {
     const html = renderDetail(
       detail({
         request: { ...detail().request!, state: 'rejected', decided: '3. října 2026' },
@@ -268,12 +268,46 @@ describe('UserAdmin', () => {
     );
     expect(html).toContain(cs.status.access.rejected);
     expect(html).toContain(users.detail.decided('3. října 2026'));
-    expect(html).not.toContain('<button');
-    expect(html).not.toContain('<noscript>');
+    expect(html).not.toContain('name="decision"');
+    expect(html).not.toContain(users.queue.studentHint);
+    expect(html).toContain(users.detail.block.title);
+    expect(html.match(/<noscript>/g)).toHaveLength(1);
   });
 
+  it('shows the confirmed block below the decisions of a pending request', () => {
+    const html = renderDetail(detail());
+    const block = html.slice(html.indexOf('<h3'));
+    expect(html.indexOf(users.queue.reject)).toBeLessThan(html.indexOf('<h3'));
+    expect(html).toContain('border-t-2 border-ink pt-4');
+    expect(html).toContain(`${users.detail.block.title}</h3>`);
+    expect(block).toContain(users.detail.block.text);
+    expect(block).toMatch(/<input [^>]*type="checkbox"[^>]*name="confirmed"/);
+    expect(block).toContain(users.detail.block.confirm);
+    expect(block).toContain(`>${users.detail.block.submit}</button>`);
+    expect(block.match(/<button /g)).toHaveLength(1);
+  });
+
+  it.each(['approved', 'blocked', 'cancelled'] as const)(
+    'offers no block for a %s request',
+    (state) => {
+      const html = renderDetail(
+        detail({
+          request: { ...detail().request!, state, decided: '3. října 2026' },
+          requestEvents: [],
+        }),
+      );
+      expect(html).not.toContain('<h3');
+      expect(html).not.toContain('<form');
+      expect(html).not.toContain('<noscript>');
+    },
+  );
+
   it('has clean markup in every variant', () => {
-    for (const v of [detail(), detail({ request: null, requestEvents: [] })]) {
+    for (const v of [
+      detail(),
+      detail({ request: null, requestEvents: [] }),
+      detail({ requestEvents: ['block'] }),
+    ]) {
       const html = renderDetail(v);
       expect(html).not.toContain('style=');
       expect(cspMarkupProblems(html)).toEqual([]);

@@ -7,6 +7,7 @@ import {
   summaryItems,
   textOf,
   choiceOf,
+  flagOf,
   type FieldSpec,
   type FormSpec,
 } from './spec';
@@ -89,5 +90,14 @@ describe('choiceOf', () => {
     expect(() => choiceOf(data, 'pick', values)).toThrow('pick');
     data.set('pick', new Blob(['a']), 'a.txt');
     expect(() => choiceOf(data, 'pick', values)).toThrow('pick');
+  });
+});
+
+describe('flagOf', () => {
+  it('is true for a ticked box and false for a missing one', () => {
+    const data = new FormData();
+    data.set('confirmed', 'on');
+    expect(flagOf(data, 'confirmed')).toBe(true);
+    expect(flagOf(data, 'other')).toBe(false);
   });
 });

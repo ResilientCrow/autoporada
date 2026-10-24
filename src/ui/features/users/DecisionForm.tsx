@@ -38,6 +38,7 @@ export function DecisionForm({
     toInput: (data) => ({ requestId, version, decision: choiceOf(data, 'decision', DECISIONS) }),
     onSuccess: (value) => onDecided(value.state),
   });
+  if (!events.includes('approve') && !events.includes('reject')) return null;
   return (
     <Form id={`rozhodnuti-${requestId}`} spec={{}} state={state}>
       <div className="flex flex-wrap gap-2">

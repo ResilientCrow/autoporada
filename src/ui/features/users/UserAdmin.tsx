@@ -10,6 +10,12 @@ import type { DecideAction } from './DecisionForm';
 import { RequestSection, type RequestView } from './RequestSection';
 import { UserFacts, type UserFactsView } from './UserFacts';
 
+const SAID = {
+  approved: users.queue.said.approved,
+  rejected: users.queue.said.rejected,
+  blocked: users.detail.block.said,
+} as const;
+
 /** The page's model, with its dates written out. */
 export interface UserView {
   readonly user: UserFactsView & { readonly displayName: string };
@@ -29,12 +35,11 @@ export function UserAdmin({
   readonly view: UserView;
   readonly decideAccess: DecideAction;
 }) {
-  const { queue } = users;
   const requestHeading = useRef<HTMLHeadingElement>(null);
   const [said, setSaid] = useState({ message: '', count: 0 });
   const say = (message: string) => setSaid((s) => ({ message, count: s.count + 1 }));
   useFocusOnRise(requestHeading, said.count);
-  const decidable = view.request !== null && view.requestEvents.some((e) => e !== 'block');
+  const hasForm = view.request !== null && view.requestEvents.length > 0;
   return (
     <>
       <SlantLabel level={1}>{view.user.displayName}</SlantLabel>
@@ -46,13 +51,11 @@ export function UserAdmin({
             events={view.requestEvents}
             decideAccess={decideAccess}
             headingRef={requestHeading}
-            onDecided={(state) =>
-              say(state === 'approved' ? queue.said.approved : queue.said.rejected)
-            }
+            onDecided={(state) => say(SAID[state])}
           />
         )}
         <LiveStatus message={said.message} count={said.count} />
-        {decidable && <NoScriptNotice />}
+        {hasForm && <NoScriptNotice />}
       </div>
     </>
   );

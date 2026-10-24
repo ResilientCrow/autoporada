@@ -11,4 +11,4 @@ export type { Problem } from './settle';
 export { SubmitButton } from './SubmitButton';
 export { useActionForm } from './use-action-form';
 export { useFocusOnRise } from './use-focus-on-rise';
-export { choiceOf, textOf, type FormSpec } from './spec';
+export { choiceOf, flagOf, textOf, type FormSpec } from './spec';

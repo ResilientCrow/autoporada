@@ -68,6 +68,11 @@ export function choiceOf<T extends string>(data: FormData, name: string, values:
   return found;
 }
 
+/** Whether a checkbox was ticked: it submits a value only then. */
+export function flagOf(data: FormData, name: string): boolean {
+  return data.has(name);
+}
+
 /** A field's text from submitted data; '' when it is absent or not text (a file). */
 export function textOf(data: FormData, name: string): string {
   const value = data.get(name);
