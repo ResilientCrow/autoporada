@@ -11,7 +11,13 @@ import { getViewer, requestId } from './viewer';
 type AccessPageModel =
   | { readonly kind: 'member' }
   | { readonly kind: 'open'; readonly previous: 'rejected' | 'cancelled' | null }
-  | { readonly kind: 'pending'; readonly sent: string; readonly reason: string }
+  | {
+      readonly kind: 'pending';
+      readonly requestId: string;
+      readonly version: number;
+      readonly sent: string;
+      readonly reason: string;
+    }
   | { readonly kind: 'cooldown'; readonly decided: string; readonly from: string }
   | { readonly kind: 'blocked' };
 
@@ -38,7 +44,13 @@ export async function accessPage(): Promise<AccessPageModel | null> {
     case 'open':
       return standing;
     case 'pending':
-      return { kind: 'pending', sent: day(standing.createdAt), reason: standing.reason };
+      return {
+        kind: 'pending',
+        requestId: standing.requestId,
+        version: standing.version,
+        sent: day(standing.createdAt),
+        reason: standing.reason,
+      };
     case 'cooldown':
       return { kind: 'cooldown', decided: day(standing.decidedAt), from: day(standing.until) };
     case 'blocked':

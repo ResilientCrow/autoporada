@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { access, cs } from '@/ui/copy';
 
@@ -8,7 +8,11 @@ import { cspMarkupProblems } from '../../../../test/support/markup';
 import { AccessRequest } from './index';
 import type { AccessView } from './Standing';
 
-const render = (view: AccessView) => renderToStaticMarkup(<AccessRequest view={view} />);
+const request = vi.fn(async () => ({ ok: true as const, data: { requestId: 'r1' } }));
+const cancel = vi.fn(async () => ({ ok: true as const, data: {} }));
+
+const render = (view: AccessView) =>
+  renderToStaticMarkup(<AccessRequest view={view} requestAccess={request} cancelAccess={cancel} />);
 
 const h2 = (html: string) => /<h2 [^>]*>(.*?)<\/h2>/.exec(html);
 
@@ -17,7 +21,7 @@ describe('AccessRequest', () => {
     const views: AccessView[] = [
       { kind: 'member' },
       { kind: 'open', previous: null },
-      { kind: 'pending', sent: '1. října 2026', reason: 'Důvod' },
+      { kind: 'pending', requestId: 'r1', version: 2, sent: '1. října 2026', reason: 'Důvod' },
       { kind: 'cooldown', decided: '1. října 2026', from: '31. října 2026' },
       { kind: 'blocked' },
     ];
@@ -37,6 +41,7 @@ describe('AccessRequest', () => {
     expect(html).toContain(access.member.overview);
     expect(html).toContain('href="/"');
     expect(html).not.toContain('<noscript>');
+    expect(html).not.toContain('<form');
   });
 
   it('explains how to ask, with no history', () => {
@@ -49,6 +54,21 @@ describe('AccessRequest', () => {
     expect(html).toContain(cs.form.noscript);
   });
 
+  it('offers the request form: label, description, a textarea without maxlength, a send button off until hydrated', () => {
+    const html = render({ kind: 'open', previous: null });
+    expect(html).toContain('id="zadost"');
+    expect(html).toContain(access.open.reason.label);
+    expect(html).toContain(access.open.reason.description);
+    const area = /<textarea [^>]*>/.exec(html)?.[0] ?? '';
+    expect(area).toContain('name="reason"');
+    expect(area).not.toContain('maxlength');
+    const button = /<button [^>]*>/.exec(html)?.[0] ?? '';
+    expect(button).toContain('disabled');
+    expect(html).toContain(`${access.open.send}</button>`);
+    expect(html).toContain(access.open.note);
+    expect(html).not.toContain(access.pending.cancel);
+  });
+
   it.each([
     ['cancelled', access.open.previousCancelled],
     ['rejected', access.open.previousRejected],
@@ -59,7 +79,13 @@ describe('AccessRequest', () => {
   });
 
   it('shows a pending request with its date and reason, kept as written', () => {
-    const html = render({ kind: 'pending', sent: '1. října 2026', reason: 'Řádek 1\nŘádek <2>' });
+    const html = render({
+      kind: 'pending',
+      requestId: 'r1',
+      version: 2,
+      sent: '1. října 2026',
+      reason: 'Řádek 1\nŘádek <2>',
+    });
     expect(h2(html)?.[1]).toBe(access.pending.title);
     expect(html).toContain('Žádost byla odeslána 1. října 2026.');
     expect(html).toContain(access.pending.afterApproval);
@@ -70,6 +96,10 @@ describe('AccessRequest', () => {
     );
     expect(html).toContain('Řádek 1\nŘádek &lt;2&gt;');
     expect(html).toContain('<noscript>');
+    expect(html).toContain('id="zrusit"');
+    expect(html).toContain(`${access.pending.cancel}</button>`);
+    expect(html).toContain(access.pending.cancelHint);
+    expect(html).not.toContain('<textarea');
   });
 
   it('shows the decision and the date a new request is possible from', () => {

@@ -47,6 +47,8 @@ describe('accessPage', () => {
     });
     expect(await accessPage()).toEqual({
       kind: 'pending',
+      requestId: 'r1',
+      version: 1,
       sent: '1. října 2026',
       reason: 'Chci posílat zprávy',
     });

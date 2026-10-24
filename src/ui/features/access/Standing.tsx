@@ -6,7 +6,13 @@ import { ACCESS_LOOK, Chip } from '@/ui/status';
 export type AccessView =
   | { readonly kind: 'member' }
   | { readonly kind: 'open'; readonly previous: 'rejected' | 'cancelled' | null }
-  | { readonly kind: 'pending'; readonly sent: string; readonly reason: string }
+  | {
+      readonly kind: 'pending';
+      readonly requestId: string;
+      readonly version: number;
+      readonly sent: string;
+      readonly reason: string;
+    }
   | { readonly kind: 'cooldown'; readonly decided: string; readonly from: string }
   | { readonly kind: 'blocked' };
 

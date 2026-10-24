@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { cancelAccess, requestAccess } from '@/server/actions';
 import { accessPage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
 import { AccessRequest } from '@/ui/features/access';
@@ -15,7 +16,7 @@ export default async function AccessPage() {
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/pristup">
-      <AccessRequest view={model} />
+      <AccessRequest view={model} requestAccess={requestAccess} cancelAccess={cancelAccess} />
     </Shell>
   );
 }

@@ -2,20 +2,36 @@
 
 import { useRef, useState } from 'react';
 
+import type { ServerAction } from '@/contracts';
 import { access } from '@/ui/copy';
 import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
 import { SlantLabel } from '@/ui/kit';
 
+import { CancelForm } from './CancelForm';
+import { RequestForm } from './RequestForm';
 import { headingOf, hasForm, Standing, type AccessView } from './Standing';
 
 /**
  * The host of „Žádost o přístup“. The h2 is one persistent element, the focus
  * target after a success; the status region and the no-JavaScript notice sit
- * outside the part that changes with the state.
+ * outside the part that changes with the state. A successful action refreshes
+ * the page, so the new state arrives with the same response and the host stays.
  */
-export function AccessRequest({ view }: { readonly view: AccessView }) {
+export function AccessRequest({
+  view,
+  requestAccess,
+  cancelAccess,
+}: {
+  readonly view: AccessView;
+  readonly requestAccess: ServerAction<{ readonly reason: string }, { readonly requestId: string }>;
+  readonly cancelAccess: ServerAction<
+    { readonly requestId: string; readonly version: number },
+    Record<string, never>
+  >;
+}) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const [said] = useState({ message: '', count: 0 });
+  const [said, setSaid] = useState({ message: '', count: 0 });
+  const say = (message: string) => setSaid((s) => ({ message, count: s.count + 1 }));
   useFocusOnRise(heading, said.count);
   return (
     <>
@@ -25,6 +41,17 @@ export function AccessRequest({ view }: { readonly view: AccessView }) {
       </h2>
       <div className="space-y-3">
         <Standing view={view} />
+        {view.kind === 'open' && (
+          <RequestForm action={requestAccess} onSent={() => say(access.said.sent)} />
+        )}
+        {view.kind === 'pending' && (
+          <CancelForm
+            action={cancelAccess}
+            requestId={view.requestId}
+            version={view.version}
+            onCancelled={() => say(access.said.cancelled)}
+          />
+        )}
       </div>
       <LiveStatus message={said.message} count={said.count} />
       {hasForm(view) && <NoScriptNotice />}
