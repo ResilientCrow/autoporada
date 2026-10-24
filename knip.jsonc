@@ -11,6 +11,7 @@
     "src/contracts/index.ts",
     "src/snapshot/index.ts",
     "src/document/index.ts",
+    "src/notify/index.ts",
   ],
   // System tools, not npm packages: poppler-utils for the PDF render check,
   // openssl for the test certificate (made as docs/ENTRA-SETUP.md §6 says).
