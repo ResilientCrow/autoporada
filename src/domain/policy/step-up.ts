@@ -3,7 +3,12 @@ import { CLOCK_SKEW_MS } from '@/domain/time';
 import type { Action } from './policy';
 
 /** Actions that need a fresh sign-in on top of the session (ADR 0002). */
-const STEP_UP: ReadonlySet<Action> = new Set<Action>(['users.manage', 'registry.newSchoolYear']);
+export const STEP_UP_ACTIONS = [
+  'users.manage',
+  'registry.newSchoolYear',
+] as const satisfies readonly Action[];
+
+const STEP_UP: ReadonlySet<Action> = new Set<Action>(STEP_UP_ACTIONS);
 
 export function requiresStepUp(action: Action): boolean {
   return STEP_UP.has(action);

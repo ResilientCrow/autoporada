@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { isFreshAuth, STEP_UP_MAX_AGE_MS } from './index';
+import { isFreshAuth, requiresStepUp, STEP_UP_ACTIONS, STEP_UP_MAX_AGE_MS } from './index';
+import type { Action } from './index';
 
 describe('isFreshAuth', () => {
   const now = new Date('2026-10-19T10:00:00Z');
@@ -14,5 +15,22 @@ describe('isFreshAuth', () => {
     ['further in the future', -60_001, false],
   ])('%s', (_name, age, fresh) => {
     expect(isFreshAuth(ago(age), now)).toBe(fresh);
+  });
+});
+
+describe('requiresStepUp', () => {
+  it('is exactly STEP_UP_ACTIONS', () => {
+    expect(STEP_UP_ACTIONS.every(requiresStepUp)).toBe(true);
+    expect(STEP_UP_ACTIONS).toEqual(['users.manage', 'registry.newSchoolYear']);
+  });
+
+  it('does not ask for it when only viewing users or deciding a request', () => {
+    for (const action of [
+      'users.view',
+      'access.decide',
+      'issue.edit',
+    ] as const satisfies readonly Action[]) {
+      expect(requiresStepUp(action)).toBe(false);
+    }
   });
 });

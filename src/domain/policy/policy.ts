@@ -44,6 +44,7 @@ export type Check =
   | { readonly action: 'registry.newSchoolYear' }
   | { readonly action: 'pointTypes.manage' }
   | { readonly action: 'settings.manage' }
+  | { readonly action: 'users.view' }
   | { readonly action: 'users.manage' }
   | { readonly action: 'access.decide' };
 
@@ -122,6 +123,7 @@ export function can(subject: Actor, check: Check): boolean {
     case 'registry.newSchoolYear':
     case 'pointTypes.manage':
     case 'settings.manage':
+    case 'users.view':
     case 'users.manage':
     case 'access.decide':
       return actor.role === 'headmaster' && !actor.isStudent;

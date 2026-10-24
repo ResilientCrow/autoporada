@@ -40,6 +40,7 @@ const MATRIX: Readonly<Record<Simple, readonly Role[]>> = {
   'registry.newSchoolYear': ['headmaster'],
   'pointTypes.manage': ['headmaster'],
   'settings.manage': ['headmaster'],
+  'users.view': ['headmaster'],
   'users.manage': ['headmaster'],
   'access.decide': ['headmaster'],
 };
@@ -63,6 +64,7 @@ describe('permission matrix', () => {
     const student = actor('reviewer', { isStudent: true });
     expect(can(student, { action: 'registry.view' })).toBe(false);
     expect(can(student, { action: 'archive.view' })).toBe(false);
+    expect(can(actor('headmaster', { isStudent: true }), { action: 'users.view' })).toBe(false);
     expect(can(actor('headmaster', { isStudent: true }), { action: 'users.manage' })).toBe(false);
   });
 
@@ -90,6 +92,19 @@ describe('permission matrix', () => {
   it('asks for a fresh sign-in only for user management and the new school year', () => {
     const stepUp = (Object.keys(MATRIX) as Simple[]).filter(requiresStepUp);
     expect(stepUp.sort()).toEqual(['registry.newSchoolYear', 'users.manage']);
+  });
+
+  it('keeps users.view, users.manage and access.decide equal for every actor', () => {
+    for (const role of ROLES) {
+      for (const status of ['active', 'blocked', 'deactivated'] as const) {
+        for (const isStudent of [false, true]) {
+          const a = actor(role, { status, isStudent });
+          const view = can(a, { action: 'users.view' });
+          expect(can(a, { action: 'users.manage' })).toBe(view);
+          expect(can(a, { action: 'access.decide' })).toBe(view);
+        }
+      }
+    }
   });
 });
 

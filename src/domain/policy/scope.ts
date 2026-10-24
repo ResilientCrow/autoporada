@@ -34,7 +34,7 @@ export function readScope(actor: Actor, resource: ScopedResource): Scope {
   const own = { kind: 'own', userId: actor.id } as const;
   switch (resource) {
     case 'user':
-      if (can(actor, { action: 'users.manage' })) return { kind: 'all' };
+      if (can(actor, { action: 'users.view' })) return { kind: 'all' };
       return can(actor, { action: 'profile.manage' }) ? own : { kind: 'none' };
     case 'accessRequest':
       if (can(actor, { action: 'access.decide' })) return { kind: 'all' };

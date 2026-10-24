@@ -80,6 +80,20 @@ describe('readScope for users and access requests', () => {
   });
 });
 
+describe('readScope for users follows users.view', () => {
+  it('for every actor', () => {
+    fc.assert(
+      fc.property(anyActor, fc.constantFrom(...IDS), (a, ownerId) => {
+        const sees = admits(readScope(a, 'user'), { ownerId });
+        const expected =
+          can(a, { action: 'users.view' }) ||
+          (ownerId === a.id && can(a, { action: 'profile.manage' }));
+        expect(sees).toBe(expected);
+      }),
+    );
+  });
+});
+
 describe('admits', () => {
   it('shows submitters their own future items and every approved akce', () => {
     const scope: Scope = { kind: 'own-or-approved-akce', userId: 'me' };

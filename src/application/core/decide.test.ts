@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { UserPrincipal } from '@/application/ports';
-import type { Role } from '@/domain/actor';
-import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
+import { ROLES, type Role } from '@/domain/actor';
+import { STEP_UP_ACTIONS, STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 
 import { decide } from './decide';
 import { fromTransition } from './failure';
@@ -30,6 +30,30 @@ describe('decide', () => {
     const stale = principal('headmaster', STEP_UP_MAX_AGE_MS + 1);
     expect(decide({ action: 'users.manage' }, stale, now)).toBe('step-up-required');
     expect(decide({ action: 'issue.edit' }, stale, now)).toBeNull();
+  });
+});
+
+describe.each(STEP_UP_ACTIONS)('decide %s', (action) => {
+  const stale = STEP_UP_MAX_AGE_MS + 1;
+
+  it('asks a stale headmaster to sign in again and lets a fresh one through', () => {
+    expect(decide({ action }, principal('headmaster', stale), now)).toBe('step-up-required');
+    expect(decide({ action }, principal('headmaster', 0), now)).toBeNull();
+  });
+
+  it.each(ROLES.filter((role) => role !== 'headmaster'))(
+    'refuses a stale %s as forbidden',
+    (role) => {
+      expect(decide({ action }, principal(role, stale), now)).toBe('forbidden');
+    },
+  );
+
+  it('refuses a student marked headmaster as forbidden', () => {
+    const student = {
+      ...principal('headmaster', stale),
+      actor: { ...principal('headmaster').actor, isStudent: true },
+    };
+    expect(decide({ action }, student, now)).toBe('forbidden');
   });
 });
 
