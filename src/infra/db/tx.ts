@@ -4,6 +4,7 @@ import type { PoolClient } from 'pg';
 import type { Tx, TxContext } from '@/application/ports';
 
 import { guardClient, guardPort, type TxLife } from './guard';
+import { createAccessRequestRepo } from './repos/access-requests';
 import { createAuditWriter } from './repos/audit';
 import { unwiredJobs } from './repos/jobs-unwired';
 import { createSessionRepo } from './repos/sessions';
@@ -17,6 +18,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife): Tx {
   return {
     ctx,
     users: guard(createUserRepo(db, ctx)),
+    accessRequests: guard(createAccessRequestRepo(db, ctx)),
     signIns: guard(createSignInRepo(db, ctx)),
     sessions: guard(createSessionRepo(db, ctx)),
     audit: guard(createAuditWriter(db, ctx)),

@@ -45,4 +45,16 @@ describe('runMigrations', () => {
     );
     expect(rows).toEqual([{ temp: false }]);
   });
+
+  it('indexes access requests by user, newest first (migration 0007)', async () => {
+    const rows = await admin(
+      `SELECT indexdef FROM pg_indexes WHERE indexname = 'access_requests_user_idx'`,
+      name,
+    );
+    expect(rows).toEqual([
+      {
+        indexdef: expect.stringContaining('(user_id, created_at DESC'),
+      },
+    ]);
+  });
 });

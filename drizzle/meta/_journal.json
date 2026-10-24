@@ -50,6 +50,13 @@
       "when": 1792429865260,
       "tag": "0006_end_sessions_on_access_change",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792840211132,
+      "tag": "0007_access_request_user_index",
+      "breakpoints": true
     }
   ]
 }

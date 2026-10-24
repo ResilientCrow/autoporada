@@ -73,6 +73,7 @@ export const accessRequests = pgTable(
     createdAt: createdAt(),
   },
   (t) => [
+    index('access_requests_user_idx').on(t.userId, t.createdAt.desc()),
     uniqueIndex('access_requests_one_pending')
       .on(t.userId)
       .where(sql`${t.state} = 'pending'`),

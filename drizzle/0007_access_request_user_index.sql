@@ -1,0 +1,1 @@
+CREATE INDEX "access_requests_user_idx" ON "access_requests" USING btree ("user_id","created_at" DESC NULLS LAST);

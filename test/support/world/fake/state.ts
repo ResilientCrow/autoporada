@@ -1,4 +1,5 @@
 import type {
+  AccessRequestRecord,
   AuditTarget,
   EnqueueOptions,
   JobName,
@@ -10,6 +11,7 @@ import type {
 /** What the fake database holds, mirroring the tables the ports write. */
 export interface FakeState {
   readonly users: Map<string, UserRecord>;
+  readonly accessRequests: Map<string, AccessRequestRecord>;
   /** auth_transactions, by cookie hash (unique). */
   readonly signIns: Map<string, PendingSignIn>;
   /** sessions, by id; the token digest is kept next to the record. */
@@ -37,6 +39,7 @@ export interface JobRow {
 
 export const emptyState = (): FakeState => ({
   users: new Map(),
+  accessRequests: new Map(),
   signIns: new Map(),
   sessions: new Map(),
   audit: [],

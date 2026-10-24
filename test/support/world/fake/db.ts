@@ -1,6 +1,7 @@
 import type { Db, Tx, TxContext, TxMode, TxOptions } from '@/application/ports';
 import { inTransactionScope } from '@/infra/system';
 
+import { fakeAccessRequestRepo } from './access-requests';
 import { fakeAudit, fakeJobs } from './effects';
 import { checkAuditCoverage } from './oracle';
 import { emptyState, type FakeState, type FakeTxState } from './state';
@@ -46,6 +47,7 @@ export function createFakeDb(): FakeDb {
     const view: Tx = {
       ctx,
       users: fakeUserRepo(tx, ctx),
+      accessRequests: fakeAccessRequestRepo(tx, ctx),
       signIns: fakeSignInRepo(tx, ctx),
       sessions: fakeSessionRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),

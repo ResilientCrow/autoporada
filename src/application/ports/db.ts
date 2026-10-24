@@ -1,3 +1,4 @@
+import type { AccessRequestRepo } from './access-requests';
 import type { AuditPort } from './audit';
 import type { Clock } from './clock';
 import type { JobPort } from './jobs';
@@ -27,6 +28,7 @@ export interface TxOptions {
 export interface Tx {
   readonly ctx: TxContext;
   readonly users: UserRepo;
+  readonly accessRequests: AccessRequestRepo;
   readonly signIns: SignInRepo;
   readonly sessions: SessionRepo;
   readonly audit: AuditPort;

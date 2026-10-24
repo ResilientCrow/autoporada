@@ -1,3 +1,4 @@
+export type { AccessRequestRecord, AccessRequestRepo } from './access-requests';
 export {
   AUDIT_EXEMPTIONS,
   type AuditDiff,
