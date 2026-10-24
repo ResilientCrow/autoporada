@@ -3,23 +3,16 @@
 import { startTransition, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import type { FieldIssues, ServerAction } from '@/contracts';
-import { form } from '@/ui/copy';
-
 import type { FormState } from './context';
+import { enterErrorTitle, leaveErrorTitle } from './error-title';
 import { settle, type Problem, type Settled } from './settle';
 
-const TITLE_PREFIX = `${form.errorPrefix} `;
-
-/** While the form has field issues the tab title starts with „Chyba:“; leaving or fixing restores it. */
+/** While this form has field issues the tab title starts with „Chyba:“ (once, however many forms fail). */
 function useErrorTitle(active: boolean): void {
   useEffect(() => {
     if (!active) return;
-    document.title = `${TITLE_PREFIX}${document.title}`;
-    return () => {
-      if (document.title.startsWith(TITLE_PREFIX)) {
-        document.title = document.title.slice(TITLE_PREFIX.length);
-      }
-    };
+    enterErrorTitle(document);
+    return () => leaveErrorTitle(document);
   }, [active]);
 }
 
