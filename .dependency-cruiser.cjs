@@ -106,7 +106,25 @@ module.exports = {
       comment: 'Database, queue and OpenID drivers stay behind the ports (ADR 0011).',
       severity: 'error',
       from: { pathNot: ['^src/infra/', ...TESTS] },
-      to: { path: npm('drizzle-orm', 'pg', 'pg-boss', 'openid-client', 'oauth4webapi', 'jose') },
+      to: {
+        path: npm(
+          'drizzle-orm',
+          'pg',
+          'pg-boss',
+          'openid-client',
+          'oauth4webapi',
+          'jose',
+          'nodemailer',
+        ),
+      },
+    },
+    {
+      name: 'nodemailer-only-in-smtp',
+      comment:
+        'ADR 0016: nodemailer is a devDependency for Mailpit; only the SMTP transport loads it.',
+      severity: 'error',
+      from: { pathNot: ['^src/infra/mail/smtp\\.ts$', ...TESTS] },
+      to: { path: npm('nodemailer') },
     },
     {
       name: 'no-test-helpers-in-src',

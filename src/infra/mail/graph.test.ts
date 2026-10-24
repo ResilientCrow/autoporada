@@ -205,7 +205,7 @@ describe('createMailPort', () => {
     expect(graph.sent[0]?.mailbox).toBe(MAILBOX);
   });
 
-  it('refuses SMTP in production, and SMTP is not built yet', async () => {
+  it('refuses SMTP in production, and builds it elsewhere without connecting', async () => {
     const { graph, tokens, clock } = await setup();
     const smtp = { transport: 'smtp', from: MAILBOX, smtpUrl: 'smtp://127.0.0.1:1025' } as const;
     const parts = { tokens, fetch: graph.fetch, clock };
@@ -213,8 +213,9 @@ describe('createMailPort', () => {
     expect(() => createMailPort(config, parts)).toThrow(
       'MAIL_TRANSPORT must be graph in production',
     );
-    expect(() => createMailPort({ ...config, environment: 'development' }, parts)).toThrow(
-      'MAIL_TRANSPORT=smtp: the SMTP transport is not built yet',
-    );
+    // The send itself is proved against Mailpit (test/integration/mail/smtp.test.ts).
+    const port = createMailPort({ ...config, environment: 'development' }, parts);
+    expect(port.send).toBeTypeOf('function');
+    expect(graph.seen.calls).toBe(0);
   });
 });

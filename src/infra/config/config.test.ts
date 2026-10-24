@@ -120,6 +120,13 @@ describe('loadConfig', () => {
     expect(problems).toEqual(['SMTP_URL: is required when MAIL_TRANSPORT=smtp']);
   });
 
+  it('takes plain smtp:// only: Mailpit speaks no TLS', () => {
+    const problems = problemsOf(() =>
+      loadConfig({ ...DEV_ENV, SMTP_URL: 'smtps://localhost:1025' }, noFiles),
+    );
+    expect(problems).toEqual(['SMTP_URL: must be an smtp:// URL']);
+  });
+
   it('enforces production hardening', () => {
     const env = {
       ...PROD_ENV,

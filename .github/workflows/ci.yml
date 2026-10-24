@@ -51,6 +51,10 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U autoporada"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      # The SMTP transport's test (test/integration/mail); the same image as compose.dev.yaml.
+      mailpit:
+        image: axllent/mailpit:v1.31.6
+        ports: ['1025:1025', '8025:8025']
     env:
       DATABASE_URL: postgres://autoporada:autoporada@localhost:5432/autoporada
     steps:

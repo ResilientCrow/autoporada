@@ -51,7 +51,7 @@ const shape = z.object({
   MAIL_FROM: z.email(),
   SMTP_URL: z
     .string()
-    .regex(/^smtps?:\/\//, 'must be an smtp:// or smtps:// URL')
+    .regex(/^smtp:\/\//, 'must be an smtp:// URL')
     .optional(),
   GOTENBERG_URL: httpUrl,
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: serverActionsKey.optional(),

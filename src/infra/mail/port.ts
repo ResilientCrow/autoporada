@@ -3,6 +3,7 @@ import type { Config } from '@/infra/config';
 import type { AppTokenSource } from '@/infra/oidc';
 
 import { createGraphMail, type HttpFetch } from './graph';
+import { createSmtpMail } from './smtp';
 
 /** The transport the configuration names: Graph in production, SMTP (Mailpit) in development. */
 export function createMailPort(
@@ -13,7 +14,7 @@ export function createMailPort(
     throw new Error('MAIL_TRANSPORT must be graph in production');
   }
   if (config.mail.transport === 'smtp') {
-    throw new Error('MAIL_TRANSPORT=smtp: the SMTP transport is not built yet');
+    return createSmtpMail({ url: config.mail.smtpUrl, from: config.mail.from, clock: parts.clock });
   }
   return createGraphMail({ ...parts, baseUrl: config.graphBaseUrl, mailbox: config.mail.from });
 }
