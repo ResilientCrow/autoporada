@@ -294,4 +294,19 @@ export async function openUserDetail(page: Page, name: string): Promise<void> {
   await expect(page).toHaveURL(/\/uzivatele\/[0-9a-f-]{36}$/);
 }
 
+/**
+ * Signs `persona` in on a second context from the `newContext` fixture (so the
+ * CSP guard covers it) and returns its page; the caller checks where it landed.
+ */
+export async function signInElsewhere(
+  newContext: Fixtures['newContext'],
+  persona: RegExp,
+): Promise<Page> {
+  const other = await (await newContext()).newPage();
+  await other.goto('/');
+  await other.getByRole('link', { name: cs.signIn.button }).click();
+  await other.getByRole('button', { name: persona }).click();
+  return other;
+}
+
 export { expect };

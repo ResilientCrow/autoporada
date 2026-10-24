@@ -273,6 +273,76 @@
         },
         {
           "requestParam": "subject",
+          "match": "zablokovat",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000001e",
+            "name": "Bohdan Blokace",
+            "preferred_username": "zablokovat@ssps.cz",
+            "upn": "zablokovat@ssps.cz",
+            "email": "zablokovat@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "ucet",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000001f",
+            "name": "Uršula Účetní",
+            "preferred_username": "ucet@ssps.cz",
+            "upn": "ucet@ssps.cz",
+            "email": "ucet@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "povysit",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000020",
+            "name": "Pavla Povýšená",
+            "preferred_username": "povysit@ssps.cz",
+            "upn": "povysit@ssps.cz",
+            "email": "povysit@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "typ",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000021",
+            "name": "Tomáš Typový",
+            "preferred_username": "typ@ssps.cz",
+            "upn": "typ@ssps.cz",
+            "email": "typ@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "rozhodnout",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000022",
+            "name": "Radek Rozhodovaný",
+            "preferred_username": "rozhodnout@ssps.cz",
+            "upn": "rozhodnout@ssps.cz",
+            "email": "rozhodnout@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],

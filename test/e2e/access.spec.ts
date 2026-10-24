@@ -4,12 +4,12 @@
  * user, 3 per 24 hours and invalid ones too, in its memory for the whole run:
  * a test makes at most 2 (prazdny) and a CI retry repeats only that test.
  */
-import type { BrowserContext, Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { access, cs, users } from '@/ui/copy';
 
 import { endSession } from './db';
-import { expect, test, withDates } from './fixtures';
+import { expect, signInElsewhere, test, withDates } from './fixtures';
 
 const REASON = 'Jsem třídní učitelka 2.A.';
 
@@ -125,16 +125,6 @@ test('an expired session keeps the typed reason, and signing in on another tab l
 });
 
 /** A second signed-in person in a context of their own, guarded like the test's. */
-async function signInElsewhere(newContext: () => Promise<BrowserContext>, persona: RegExp) {
-  const context = await newContext();
-  const page = await context.newPage();
-  await page.goto('/');
-  await page.getByRole('link', { name: cs.signIn.button }).click();
-  await page.getByRole('button', { name: persona }).click();
-  await expect(page).toHaveURL(/:\d+\/$/);
-  return { context, page };
-}
-
 /** The queue item of a person, found by name; the people list below repeats names. */
 const queueItem = (page: Page, name: string) =>
   page
@@ -151,6 +141,7 @@ test("approving as a student announces it, ends the applicant's session, and sho
   signInAs,
 }) => {
   const applicant = await signInElsewhere(newContext, /^Test – schvalit/);
+  await expect(applicant).toHaveURL(/:\d+\/$/);
   await signInAs(/^Ředitel/);
   await page.goto('/uzivatele');
   await hydrated();
@@ -162,15 +153,15 @@ test("approving as a student announces it, ends the applicant's session, and sho
   await expect(item).toHaveCount(0);
 
   // The approval ended every session of the applicant, so the next request asks to sign in.
-  await applicant.page.goto('/');
-  await expect(applicant.page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
-  await applicant.page.getByRole('link', { name: cs.signIn.button }).click();
-  await applicant.page.getByRole('button', { name: /^Test – schvalit/ }).click();
-  await expect(applicant.page).toHaveURL(/:\d+\/$/);
-  const main = applicant.page.getByRole('main');
+  await applicant.goto('/');
+  await expect(applicant).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
+  await applicant.getByRole('link', { name: cs.signIn.button }).click();
+  await applicant.getByRole('button', { name: /^Test – schvalit/ }).click();
+  await expect(applicant).toHaveURL(/:\d+\/$/);
+  const main = applicant.getByRole('main');
   await expect(main.getByText(cs.status.role.submitter, { exact: true })).toBeVisible();
   await expect(main.getByText(cs.status.student, { exact: true })).toBeVisible();
-  const list = await applicant.page.goto('/uzivatele');
+  const list = await applicant.goto('/uzivatele');
   expect(list?.status()).toBe(404);
 });
 
@@ -192,8 +183,9 @@ test('rejecting announces it, and the applicant then sees the cooldown', async (
   await expect(item).toHaveCount(0);
 
   const applicant = await signInElsewhere(newContext, /^Test – zamitnout/);
-  await applicant.page.goto('/pristup');
-  const main = applicant.page.getByRole('main');
+  await expect(applicant).toHaveURL(/:\d+\/$/);
+  await applicant.goto('/pristup');
+  const main = applicant.getByRole('main');
   await expect(main.getByRole('heading', { level: 2 })).toHaveText(access.cooldown.title);
   await expect(main.getByText(withDates(access.cooldown.text))).toBeVisible();
 });
