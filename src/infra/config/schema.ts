@@ -21,6 +21,14 @@ const serverActionsKey = z
   .string()
   .regex(/^[A-Za-z0-9+/]{43}=$/, 'must be 32 random bytes in standard base64 (44 chars)');
 
+/** How often the worker asks the queue for work: seconds, 0.5 to 30. */
+const POLL_SECONDS = 'must be a number of seconds from 0.5 to 30';
+const pollSeconds = z
+  .string()
+  .regex(/^\d+(\.\d+)?$/, POLL_SECONDS)
+  .transform(Number)
+  .refine((seconds) => seconds >= 0.5 && seconds <= 30, POLL_SECONDS);
+
 /** postgres://user:password@host:port/database */
 export const databaseUrl = z.string().regex(/^postgres(ql)?:\/\//, 'must be a postgres:// URL');
 
@@ -57,6 +65,7 @@ const shape = z.object({
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: serverActionsKey.optional(),
   BOOTSTRAP_HEADMASTER_OID: z.guid().optional(),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  WORKER_POLL_SECONDS: pollSeconds.default(2),
 });
 
 /** The variables the app reads; everything else in the environment is ignored. */

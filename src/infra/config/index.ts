@@ -35,6 +35,7 @@ export interface Config {
   readonly serverActionsKey: string | undefined;
   readonly bootstrapHeadmasterOid: string | undefined;
   readonly logLevel: LogLevel;
+  readonly worker: { readonly pollSeconds: number };
 }
 
 /** Validates the environment. Error messages name keys, never values. */
@@ -76,6 +77,7 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
     serverActionsKey: c.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
     bootstrapHeadmasterOid: c.BOOTSTRAP_HEADMASTER_OID?.toLowerCase(),
     logLevel: c.LOG_LEVEL,
+    worker: { pollSeconds: c.WORKER_POLL_SECONDS },
   };
 }
 

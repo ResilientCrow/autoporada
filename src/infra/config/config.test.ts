@@ -127,6 +127,30 @@ describe('loadConfig', () => {
     expect(problems).toEqual(['SMTP_URL: must be an smtp:// URL']);
   });
 
+  it('polls for jobs every 2 s unless WORKER_POLL_SECONDS says otherwise', () => {
+    expect(loadConfig(DEV_ENV, noFiles).worker).toEqual({ pollSeconds: 2 });
+    // An empty value is unset, as for every variable.
+    expect(loadConfig({ ...DEV_ENV, WORKER_POLL_SECONDS: '' }, noFiles).worker.pollSeconds).toBe(2);
+    for (const [value, seconds] of [
+      ['0.5', 0.5],
+      ['5', 5],
+      ['30', 30],
+    ] as const) {
+      const config = loadConfig({ ...DEV_ENV, WORKER_POLL_SECONDS: value }, noFiles);
+      expect(config.worker.pollSeconds).toBe(seconds);
+    }
+  });
+
+  it.each(['0.4', '0', '-1', '31', '30.5', 'abc', '2s', '1e1'])(
+    'refuses WORKER_POLL_SECONDS=%j',
+    (value) => {
+      const problems = problemsOf(() =>
+        loadConfig({ ...DEV_ENV, WORKER_POLL_SECONDS: value }, noFiles),
+      );
+      expect(problems).toEqual(['WORKER_POLL_SECONDS: must be a number of seconds from 0.5 to 30']);
+    },
+  );
+
   it('enforces production hardening', () => {
     const env = {
       ...PROD_ENV,
