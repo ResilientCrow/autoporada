@@ -7,7 +7,7 @@ export type {
   ServerAction,
 } from './result';
 export { RULE_CODES, type RuleCode } from './rules';
-export { requestAccessInput, requestAccessOutput } from './access';
+export { myAccessInput, myAccessOutput, requestAccessInput, requestAccessOutput } from './access';
 export {
   beginSignInInput,
   beginSignInOutput,
