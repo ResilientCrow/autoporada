@@ -10,6 +10,8 @@ export { RULE_CODES, type RuleCode } from './rules';
 export {
   cancelAccessInput,
   cancelAccessOutput,
+  decideAccessInput,
+  decideAccessOutput,
   myAccessInput,
   myAccessOutput,
   requestAccessInput,

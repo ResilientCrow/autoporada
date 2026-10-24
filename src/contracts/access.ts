@@ -40,3 +40,13 @@ export const cancelAccessInput = z.strictObject({
   version: z.number().int().positive(),
 });
 export const cancelAccessOutput = z.object({});
+
+/** The headmaster's answer: approval names the audience, with no default; a block is confirmed. */
+const ACCESS_DECISIONS = ['approve-staff', 'approve-student', 'reject', 'block'] as const;
+export const decideAccessInput = z.strictObject({
+  requestId: z.guid(),
+  version: z.number().int().positive(),
+  decision: z.enum(ACCESS_DECISIONS),
+  confirmed: z.literal(true).optional(),
+});
+export const decideAccessOutput = z.object({ state: z.enum(['approved', 'rejected', 'blocked']) });

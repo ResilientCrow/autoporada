@@ -1,22 +1,7 @@
-import { diffRecords, type AuditShape } from '@/application/core';
+import { diffRecords } from '@/application/core';
 import type { AuditEvent, AuditTarget, Json, UserRecord } from '@/application/ports';
 
-/** What the audit log shows of a user's access: role, status and the student flag. */
-const USER_ACCESS: AuditShape<UserRecord> = {
-  id: 'omit',
-  tid: 'omit',
-  oid: 'omit',
-  displayName: 'omit',
-  email: 'omit',
-  jobTitle: 'omit',
-  department: 'omit',
-  role: 'value',
-  isStudent: 'value',
-  status: 'value',
-  version: 'omit',
-  createdAt: 'omit',
-  updatedAt: 'omit',
-};
+import { USER_ACCESS } from '../users/events';
 
 const user = (id: string): AuditTarget => ({ type: 'user', id });
 const session = (id: string): AuditTarget => ({ type: 'session', id });
