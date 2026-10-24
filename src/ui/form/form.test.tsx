@@ -12,6 +12,7 @@ import {
   SelectField,
   TextField,
   type FormSpec,
+  type FormState,
   type Problem,
 } from './index';
 import { retryAfterText } from './settle';
@@ -27,9 +28,13 @@ const spec: FormSpec = {
 };
 const noop = () => undefined;
 
-function render(issues: Parameters<typeof Form>[0]['issues'] = null): string {
+function idle(issues: FormState['issues'], problem: Problem | null = null): FormState {
+  return { issues, problem, attempt: 0, submitting: null, onSubmit: noop };
+}
+
+function render(issues: FormState['issues'] = null): string {
   return renderToStaticMarkup(
-    <Form id="f" spec={spec} issues={issues} attempt={0} onSubmit={noop}>
+    <Form id="f" spec={spec} state={idle(issues)}>
       <TextField name="title" />
       <TextField name="note" description={NOTE} multiline />
     </Form>,
@@ -77,7 +82,7 @@ describe('Form and TextField', () => {
   it('throws for a name the spec does not declare', () => {
     expect(() =>
       renderToStaticMarkup(
-        <Form id="f" spec={spec} issues={null} attempt={0} onSubmit={noop}>
+        <Form id="f" spec={spec} state={idle(null)}>
           <TextField name="typo" />
         </Form>,
       ),
@@ -87,6 +92,36 @@ describe('Form and TextField', () => {
   it('renders markup the CSP accepts', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
     expect(cspMarkupProblems(render({ title: 'required' }))).toEqual([]);
+  });
+
+  describe('leading message', () => {
+    const lead = (issues: FormState['issues'], problem: Problem | null) =>
+      renderToStaticMarkup(
+        <Form id="f" spec={spec} state={idle(issues, problem)}>
+          <TextField name="title" />
+        </Form>,
+      );
+
+    it('shows a problem alone when there are no issues', () => {
+      const out = lead(null, { code: 'network' });
+      expect(out).toContain(cs.errors.network);
+      expect(out).not.toContain(cs.form.summaryTitle);
+      expect(out).toMatch(/<form [^>]*><div tabindex="-1"><div role="alert"/);
+    });
+
+    it('lets issues win over a problem', () => {
+      const out = lead({ title: 'required' }, { code: 'network' });
+      expect(out).toContain(cs.form.summaryTitle);
+      expect(out).not.toContain(cs.errors.network);
+    });
+
+    it('shows a problem when the issues are empty', () => {
+      expect(lead({}, { code: 'busy' })).toContain(cs.errors.busy);
+    });
+
+    it('shows neither when idle', () => {
+      expect(lead(null, null)).not.toContain('role="alert"');
+    });
   });
 
   describe('error summary', () => {
@@ -126,12 +161,12 @@ describe('SelectField and CheckboxField', () => {
   };
 
   function renderControls(
-    issues: Parameters<typeof Form>[0]['issues'] = null,
+    issues: FormState['issues'] = null,
     described = false,
     checked = false,
   ): string {
     return renderToStaticMarkup(
-      <Form id="c" spec={controlSpec} issues={issues} attempt={0} onSubmit={noop}>
+      <Form id="c" spec={controlSpec} state={idle(issues)}>
         <SelectField
           name="kind"
           options={OPTIONS}
@@ -182,7 +217,7 @@ describe('SelectField and CheckboxField', () => {
 
     it('takes an explicit checkbox label and falls back to the first option', () => {
       const out = renderToStaticMarkup(
-        <Form id="c" spec={controlSpec} issues={null} attempt={0} onSubmit={noop}>
+        <Form id="c" spec={controlSpec} state={idle(null)}>
           <SelectField name="kind" options={OPTIONS} />
           <CheckboxField name="kind" label={OWN_LABEL} />
         </Form>,
@@ -198,7 +233,7 @@ describe('SelectField and CheckboxField', () => {
       ]) {
         expect(() =>
           renderToStaticMarkup(
-            <Form id="c" spec={controlSpec} issues={null} attempt={0} onSubmit={noop}>
+            <Form id="c" spec={controlSpec} state={idle(null)}>
               {field}
             </Form>,
           ),

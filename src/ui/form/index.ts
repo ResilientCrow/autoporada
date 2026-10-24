@@ -1,3 +1,4 @@
+export type { FormState } from './context';
 export { Form } from './Form';
 export { CheckboxField } from './CheckboxField';
 export { FormProblem } from './FormProblem';

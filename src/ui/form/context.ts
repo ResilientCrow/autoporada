@@ -1,13 +1,26 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type FormEvent } from 'react';
 
 import type { FieldIssues } from '@/contracts';
 
+import type { Problem } from './settle';
 import type { FormSpec } from './spec';
+
+/** What a form shows and does: field issues, or a problem, the failed-submit count, and the submit handler. */
+export interface FormState {
+  readonly issues: FieldIssues | null;
+  readonly problem: Problem | null;
+  /** Rises on every failed submit. */
+  readonly attempt: number;
+  /** The pressed submit button's value ('' if unnamed); null when idle. */
+  readonly submitting: string | null;
+  readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}
 
 export interface FormContextValue {
   readonly formId: string;
   readonly spec: FormSpec;
   readonly issues: FieldIssues | null;
+  readonly submitting: string | null;
 }
 
 const FormContext = createContext<FormContextValue | null>(null);

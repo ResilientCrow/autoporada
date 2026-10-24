@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
 import { gallery } from '@/ui/copy';
-import { Form, TextField, textOf, type FormSpec } from '@/ui/form';
+import { Form, TextField, textOf, type FormSpec, type FormState } from '@/ui/form';
 import { Button, Notice } from '@/ui/kit';
 
 const { forms } = gallery;
@@ -42,6 +42,14 @@ function stay(event: FormEvent<HTMLFormElement>) {
   event.preventDefault();
 }
 
+const IDLE: FormState = {
+  issues: null,
+  problem: null,
+  attempt: 0,
+  submitting: null,
+  onSubmit: stay,
+};
+
 function check(data: FormData): FieldIssues | null {
   const reason = textOf(data, 'reason').trim();
   const issues: Record<string, FieldIssueCode> = {
@@ -68,7 +76,7 @@ function LiveDemo() {
 
   const done = sent ? <Notice tone="info">{forms.live.sent}</Notice> : null;
   return (
-    <Form id="demo-live" spec={LIVE} issues={issues} attempt={attempt} onSubmit={submit}>
+    <Form id="demo-live" spec={LIVE} state={{ ...IDLE, issues, attempt, onSubmit: submit }}>
       <TextField name="name" />
       <TextField name="reason" multiline />
       <div>
@@ -83,7 +91,7 @@ function LiveDemo() {
 export function FormDemos() {
   return (
     <div className="flex flex-col gap-6">
-      <Form id="demo-plain" spec={PLAIN} issues={null} attempt={0} onSubmit={stay}>
+      <Form id="demo-plain" spec={PLAIN} state={IDLE}>
         <TextField name="name" autoComplete="name" />
         <TextField name="nickname" description={forms.plain.nicknameHint} />
         <TextField name="reason" multiline />
@@ -91,7 +99,7 @@ export function FormDemos() {
           <Button type="submit">{forms.submit}</Button>
         </div>
       </Form>
-      <Form id="demo-failed" spec={FAILED} issues={ISSUES} attempt={0} onSubmit={stay}>
+      <Form id="demo-failed" spec={FAILED} state={{ ...IDLE, issues: ISSUES }}>
         <TextField name="name" />
         <TextField name="reason" multiline maxLength={200} />
         <div>

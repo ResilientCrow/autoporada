@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 import { app, errors, problemActions, rules } from '@/ui/copy';
 import { Notice } from '@/ui/kit';
@@ -54,11 +54,17 @@ function actionOf(problem: Problem, pathname: string): ReactNode {
  * element can take focus (see `Form`); the nested notice is what is announced,
  * as in `ErrorSummary`.
  */
-export function FormProblem({ problem }: { readonly problem: Problem }) {
+export function FormProblem({
+  problem,
+  focusRef,
+}: {
+  readonly problem: Problem;
+  readonly focusRef?: Ref<HTMLDivElement>;
+}) {
   const pathname = usePathname();
   const action = actionOf(problem, pathname);
   return (
-    <div tabIndex={-1}>
+    <div ref={focusRef} tabIndex={-1}>
       <Notice tone="problem">
         <p>{textOf(problem)}</p>
         {action === null ? null : <p>{action}</p>}
