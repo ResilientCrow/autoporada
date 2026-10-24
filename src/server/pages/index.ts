@@ -88,6 +88,8 @@ const GALLERY_FAIL_COOKIE = 'vzornik_vyjimka';
 export interface GalleryModel {
   /** Asked to fail, to see the error page (`?stav=vyjimka`, or the cookie `vzornik_vyjimka=1`). */
   readonly fail: boolean;
+  /** Make the live form's stub answer `unavailable` (`?stav=nedostupne`). */
+  readonly unavailable: boolean;
 }
 
 /** The pattern gallery, or null where it must not exist (production). */
@@ -95,7 +97,8 @@ export async function galleryPage(params: SearchParams): Promise<GalleryModel | 
   if (getContainer().environment === 'production') return null;
   // The cookie lets a test stop the failure before „Zkusit znovu“ (a query string would stay).
   const cookie = (await cookies()).get(GALLERY_FAIL_COOKIE)?.value === '1';
-  return { fail: first(params['stav']) === 'vyjimka' || cookie };
+  const state = first(params['stav']);
+  return { fail: state === 'vyjimka' || cookie, unavailable: state === 'nedostupne' };
 }
 
 /** The sign-in page from its query string; anything unexpected is ignored. */

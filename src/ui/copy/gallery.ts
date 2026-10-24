@@ -54,6 +54,7 @@ export const gallery = {
       reason: 'Důvod žádosti',
       reasonTooLong: 'Důvod může mít nejvýše 40\u00A0znaků.',
       sent: 'Formulář je v\u00A0pořádku.',
+      networkTrigger: 'spojení',
     },
     controls: {
       title: 'Výběr a\u00A0zaškrtnutí',

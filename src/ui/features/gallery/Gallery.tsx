@@ -9,7 +9,7 @@ import { KitSections } from './KitSections';
 import { ProblemDemos } from './ProblemDemos';
 
 /** The pattern gallery: each UI part, once, for the look and accessibility checks (inside a Shell). */
-export function Gallery() {
+export function Gallery({ unavailable = false }: { readonly unavailable?: boolean }) {
   return (
     <>
       <SlantLabel level={1}>{cs.gallery.title}</SlantLabel>
@@ -22,7 +22,7 @@ export function Gallery() {
       <KitSections />
       <section aria-labelledby="formular">
         <h2 id="formular">{cs.gallery.forms.title}</h2>
-        <FormDemos />
+        <FormDemos unavailable={unavailable} />
       </section>
       <section aria-labelledby="ovladaci-prvky">
         <h2 id="ovladaci-prvky">{cs.gallery.forms.controls.title}</h2>

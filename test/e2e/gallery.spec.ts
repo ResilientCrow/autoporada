@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { cs } from '@/ui/copy';
 
 import { expect, test } from './fixtures';
@@ -62,22 +64,33 @@ test('the built stylesheet holds only the manual, and Czech letters come from th
   expect(faces).toBeGreaterThan(0);
 });
 
-test('a failed submit puts the summary in focus, and its link leads to the field', async ({
+const { live } = cs.gallery.forms;
+const summaryOf = (page: Page) =>
+  page.locator('form#demo-live [tabindex="-1"]').filter({ has: page.getByRole('alert') });
+
+test('a failed submit puts the summary in focus and prefixes the title, and its link leads to the field', async ({
   page,
   hydrated,
+  settled,
   expectAccessible,
   attachScreenshot,
 }) => {
-  const { live } = cs.gallery.forms;
   await page.goto('/vzornik');
   await hydrated();
+  const title = await page.title();
   const form = page.locator('form#demo-live');
-  const summary = form.locator('[tabindex="-1"]').filter({ has: page.getByRole('alert') });
+  const summary = summaryOf(page);
   const focused = () => page.evaluate(() => document.activeElement?.id ?? '');
-  const isSummaryFocused = () => summary.evaluate((el) => el === document.activeElement);
+  const submit = form.getByRole('button', { name: cs.gallery.forms.submit });
 
-  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  // Nothing is focused or prefixed on load.
+  await expect(summary).toHaveCount(0);
+  expect(title.startsWith(cs.form.errorPrefix)).toBe(false);
+
+  await submit.click();
+  await settled();
   await expect(summary).toBeFocused();
+  await expect(page).toHaveTitle(`${cs.form.errorPrefix} ${title}`);
   await expectAccessible();
   await attachScreenshot('the gallery live demo with errors');
 
@@ -89,14 +102,96 @@ test('a failed submit puts the summary in focus, and its link leads to the field
 
   await name.fill('Eva');
   await form.getByLabel(live.reason).fill('x'.repeat(41));
-  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await submit.click();
+  await settled();
   await expect(summary).toBeFocused();
-  expect(await isSummaryFocused()).toBe(true);
   await expect(summary).toContainText(live.reasonTooLong);
 
   await form.getByLabel(live.reason).fill('Stačí to.');
-  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
-  await expect(form.getByRole('status')).toHaveText(live.sent);
+  await submit.click();
+  await settled();
+  await expect(page.getByRole('status')).toHaveText(live.sent);
   await expect(summary).toHaveCount(0);
+  await expect(page).toHaveTitle(title);
   await expectAccessible();
+});
+
+test('success fills the same status node, and a second success is a fresh notice', async ({
+  page,
+  hydrated,
+  settled,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const form = page.locator('form#demo-live');
+  const status = page.getByRole('status');
+  await expect(status).toBeEmpty();
+  const node = await status.elementHandle();
+  await form.getByLabel(live.name).fill('Eva');
+  await form.getByLabel(live.reason).fill('Stačí to.');
+
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await settled();
+  await expect(status).toHaveText(live.sent);
+  expect(await status.elementHandle().then((h) => h?.evaluate((el, n) => el === n, node))).toBe(
+    true,
+  );
+  const first = await status.locator('> div').elementHandle();
+
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await settled();
+  const second = await status.locator('> div').elementHandle();
+  expect(await first?.evaluate((el, n) => el === n, second)).toBe(false);
+});
+
+test('a network failure shows its problem, focused', async ({ page, hydrated, settled }) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const form = page.locator('form#demo-live');
+  await form.getByLabel(live.name).fill(live.networkTrigger);
+  await form.getByLabel(live.reason).fill('Stačí to.');
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await settled();
+  const problem = summaryOf(page);
+  await expect(problem).toBeFocused();
+  await expect(problem).toContainText(cs.errors.network);
+  await expect(page).toHaveTitle(/^(?!Chyba:)/);
+});
+
+test('an unavailable answer shows the problem with the request id', async ({
+  page,
+  hydrated,
+  settled,
+  expectAccessible,
+}) => {
+  await page.goto('/vzornik?stav=nedostupne');
+  await hydrated();
+  const form = page.locator('form#demo-live');
+  await form.getByLabel(live.name).fill('Eva');
+  await form.getByLabel(live.reason).fill('Stačí to.');
+  await form.getByRole('button', { name: cs.gallery.forms.submit }).click();
+  await settled();
+  const problem = summaryOf(page);
+  await expect(problem).toBeFocused();
+  await expect(problem).toContainText(`${cs.app.errorCode} abcdef12-3456`);
+  await expectAccessible();
+});
+
+test.describe('without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('a form cannot send: its submit is disabled and Enter sends nothing', async ({ page }) => {
+    const posts: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() !== 'GET') posts.push(request.url());
+    });
+    await page.goto('/vzornik');
+    const form = page.locator('form#demo-plain');
+    await expect(form.getByRole('button', { name: cs.gallery.forms.submit })).toBeDisabled();
+    const url = page.url();
+    await form.locator('input[name="name"]').press('Enter');
+    await page.waitForTimeout(300);
+    expect(posts).toEqual([]);
+    expect(page.url()).toBe(url);
+  });
 });

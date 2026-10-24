@@ -18,7 +18,7 @@ export default async function GalleryPage({ searchParams }: Props) {
   if (gallery.fail) throw new Error('vzornik: failure requested with ?stav=vyjimka or the cookie');
   return (
     <Shell>
-      <Gallery />
+      <Gallery unavailable={gallery.unavailable} />
     </Shell>
   );
 }

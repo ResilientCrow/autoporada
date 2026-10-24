@@ -47,4 +47,5 @@ export const form = {
   optional: '(nepovinné)',
   errorPrefix: 'Chyba:',
   summaryTitle: 'Zkontrolujte prosím tyto údaje',
+  noscript: 'Odeslání formuláře vyžaduje zapnutý JavaScript.',
 } as const;

@@ -2,10 +2,19 @@
 
 import { useState, type FormEvent } from 'react';
 
-import type { FieldIssueCode, FieldIssues } from '@/contracts';
+import type { ActionResult, FieldIssueCode, FieldIssues, ServerAction } from '@/contracts';
 import { gallery } from '@/ui/copy';
-import { Form, TextField, textOf, type FormSpec, type FormState } from '@/ui/form';
-import { Button, Notice } from '@/ui/kit';
+import {
+  Form,
+  LiveStatus,
+  NoScriptNotice,
+  SubmitButton,
+  TextField,
+  textOf,
+  useActionForm,
+  type FormSpec,
+  type FormState,
+} from '@/ui/form';
 
 const { forms } = gallery;
 
@@ -50,45 +59,63 @@ const IDLE: FormState = {
   onSubmit: stay,
 };
 
-function check(data: FormData): FieldIssues | null {
-  const reason = textOf(data, 'reason').trim();
+interface LiveInput {
+  readonly name: string;
+  readonly reason: string;
+}
+
+function check(input: LiveInput): FieldIssues | null {
+  const reason = input.reason.trim();
   const issues: Record<string, FieldIssueCode> = {
-    ...(textOf(data, 'name').trim() === '' ? { name: 'required' } : {}),
+    ...(input.name.trim() === '' ? { name: 'required' } : {}),
     ...(reason === '' ? { reason: 'required' } : {}),
     ...(reason.length > REASON_LIMIT ? { reason: 'too-long' } : {}),
   };
   return Object.keys(issues).length === 0 ? null : issues;
 }
 
-/** Validates locally and tells the form how many attempts failed, as a real action will. */
-function LiveDemo() {
-  const [issues, setIssues] = useState<FieldIssues | null>(null);
-  const [attempt, setAttempt] = useState(0);
-  const [sent, setSent] = useState(false);
+/** What a server would answer: issues for bad input, `unavailable` when asked, a rejection for the trigger word. */
+function liveAction(unavailable: boolean): ServerAction<LiveInput, null> {
+  return async (input): Promise<ActionResult<null>> => {
+    const fields = check(input);
+    if (fields !== null) return { ok: false, error: { code: 'invalid-input', fields } };
+    if (input.name.trim() === forms.live.networkTrigger) throw new Error('network');
+    if (unavailable) {
+      return { ok: false, error: { code: 'unavailable', requestId: 'abcdef12-3456' } };
+    }
+    return { ok: true, data: null };
+  };
+}
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const found = check(new FormData(event.currentTarget));
-    setIssues(found);
-    setSent(found === null);
-    if (found !== null) setAttempt((n) => n + 1);
-  }
+function toLiveInput(data: FormData): LiveInput {
+  return { name: textOf(data, 'name'), reason: textOf(data, 'reason') };
+}
 
-  const done = sent ? <Notice tone="info">{forms.live.sent}</Notice> : null;
+/** The live form: it runs the stub action as a real form runs a server action; success goes to a live region. */
+function LiveDemo({ unavailable }: { readonly unavailable: boolean }) {
+  const [said, setSaid] = useState({ message: '', count: 0 });
+  const state = useActionForm({
+    action: liveAction(unavailable),
+    toInput: toLiveInput,
+    onSuccess: () => setSaid((s) => ({ message: forms.live.sent, count: s.count + 1 })),
+  });
   return (
-    <Form id="demo-live" spec={LIVE} state={{ ...IDLE, issues, attempt, onSubmit: submit }}>
-      <TextField name="name" />
-      <TextField name="reason" multiline />
-      <div>
-        <Button type="submit">{forms.submit}</Button>
-      </div>
-      {done}
-    </Form>
+    <div className="flex flex-col gap-4">
+      <NoScriptNotice />
+      <Form id="demo-live" spec={LIVE} state={state}>
+        <TextField name="name" />
+        <TextField name="reason" multiline />
+        <div>
+          <SubmitButton>{forms.submit}</SubmitButton>
+        </div>
+      </Form>
+      <LiveStatus message={said.message} count={said.count} />
+    </div>
   );
 }
 
 /** Two static forms (clean, and the error anatomy; submitting does nothing) and a live one. */
-export function FormDemos() {
+export function FormDemos({ unavailable }: { readonly unavailable: boolean }) {
   return (
     <div className="flex flex-col gap-6">
       <Form id="demo-plain" spec={PLAIN} state={IDLE}>
@@ -96,17 +123,17 @@ export function FormDemos() {
         <TextField name="nickname" description={forms.plain.nicknameHint} />
         <TextField name="reason" multiline />
         <div>
-          <Button type="submit">{forms.submit}</Button>
+          <SubmitButton>{forms.submit}</SubmitButton>
         </div>
       </Form>
       <Form id="demo-failed" spec={FAILED} state={{ ...IDLE, issues: ISSUES }}>
         <TextField name="name" />
         <TextField name="reason" multiline maxLength={200} />
         <div>
-          <Button type="submit">{forms.submit}</Button>
+          <SubmitButton>{forms.submit}</SubmitButton>
         </div>
       </Form>
-      <LiveDemo />
+      <LiveDemo unavailable={unavailable} />
     </div>
   );
 }

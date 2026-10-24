@@ -9,7 +9,10 @@ import {
   CheckboxField,
   Form,
   FormProblem,
+  LiveStatus,
+  NoScriptNotice,
   SelectField,
+  SubmitButton,
   TextField,
   type FormSpec,
   type FormState,
@@ -337,5 +340,46 @@ describe('FormProblem', () => {
 
   it.each(['forbidden', 'busy', 'network'] as const)('%s: no action', (code) => {
     expect(html({ code })).not.toContain('<a ');
+  });
+});
+
+describe('SubmitButton, LiveStatus and NoScriptNotice', () => {
+  const buttons = renderToStaticMarkup(
+    <Form id="f" spec={spec} state={idle(null)}>
+      <SubmitButton>{cs.gallery.forms.submit}</SubmitButton>
+      <SubmitButton name="decision" value="no" variant="secondary">
+        {cs.gallery.buttons.secondary}
+      </SubmitButton>
+    </Form>,
+  );
+
+  it('renders every submit button disabled in the server HTML', () => {
+    const tags = buttons.match(/<button [^>]*>/g) ?? [];
+    expect(tags).toHaveLength(2);
+    for (const tag of tags) {
+      expect(tag).toContain('type="submit"');
+      expect(tag).toContain('disabled=""');
+      expect(tag).not.toContain(' data-pending=');
+    }
+    expect(buttons).toMatch(
+      /<button [^>]*name="decision"[^>]*value="no"|value="no"[^>]*name="decision"/,
+    );
+  });
+
+  it('renders the live region empty, and with a notice that is not itself live', () => {
+    expect(renderToStaticMarkup(<LiveStatus message="" count={0} />)).toBe(
+      '<div role="status"></div>',
+    );
+    const full = renderToStaticMarkup(<LiveStatus message="Hotovo." count={2} />);
+    expect(full).toMatch(/^<div role="status"><div [^>]*>.*Hotovo\./);
+    expect(full.match(/role=/g)).toHaveLength(1);
+  });
+
+  it('renders the no-script notice', () => {
+    const out = renderToStaticMarkup(<NoScriptNotice />);
+    expect(out).toMatch(/^<noscript>.*<\/noscript>$/);
+    expect(out).toContain(cs.form.noscript);
+    expect(cspMarkupProblems(out)).toEqual([]);
+    expect(cspMarkupProblems(buttons)).toEqual([]);
   });
 });

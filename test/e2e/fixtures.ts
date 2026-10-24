@@ -26,6 +26,8 @@ interface Fixtures {
   cspViolations: CspViolation[];
   /** Waits until Next has hydrated the page: its inline bootstrap and its chunks both ran. */
   hydrated: () => Promise<void>;
+  /** Waits until no submit is in flight: React Aria marks the pending button with data-pending (in a form; the kit demos show a static one). */
+  settled: () => Promise<void>;
   expectAccessible: () => Promise<void>;
   /** Attaches a full-page PNG to the report: the pack for the headmaster's sign-off on the look. */
   attachScreenshot: (name: string) => Promise<void>;
@@ -69,7 +71,11 @@ export const test = base.extend<Fixtures>({
       await provide(violations);
       // Let events still in flight reach the binding; a closed page has none.
       for (const open of context.pages()) {
-        await open.evaluate(() => new Promise((done) => setTimeout(done))).catch(() => undefined);
+        // A page without JavaScript never answers, so give up after a moment.
+        const flushed = open.evaluate(() => new Promise((done) => setTimeout(done)));
+        const gaveUp = new Promise((done) => setTimeout(done, 1000));
+        await Promise.race([flushed, gaveUp]).catch(() => undefined);
+        flushed.catch(() => undefined);
       }
       expect(violations).toEqual([]);
     },
@@ -79,6 +85,12 @@ export const test = base.extend<Fixtures>({
   hydrated: async ({ page }, provide) => {
     await provide(async () => {
       await expect.poll(() => page.evaluate(() => 'next' in window)).toBe(true);
+    });
+  },
+
+  settled: async ({ page }, provide) => {
+    await provide(async () => {
+      await expect(page.locator('form [data-pending]')).toHaveCount(0);
     });
   },
 

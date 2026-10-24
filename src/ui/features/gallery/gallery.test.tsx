@@ -31,7 +31,7 @@ describe('Gallery', () => {
     for (const label of Object.values(cs.gallery.statuses).slice(1)) expect(html).toContain(label);
     expect(html).toContain(cs.gallery.notices.info);
     expect(html).toContain(cs.gallery.notices.problem);
-    expect(html).not.toContain('role="status"');
+    expect(html.match(/role="status"/g)).toHaveLength(1); // the empty live region of the demo
   });
 
   it('shows the error form with its issues and the plain form without', () => {

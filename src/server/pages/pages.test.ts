@@ -47,18 +47,22 @@ describe('galleryPage', () => {
     'exists in %s, and fails only on request',
     async (environment) => {
       where.environment = environment;
-      expect(await galleryPage({})).toEqual({ fail: false });
-      expect(await galleryPage({ stav: 'x' })).toEqual({ fail: false });
-      expect(await galleryPage({ stav: 'vyjimka' })).toEqual({ fail: true });
+      expect(await galleryPage({})).toEqual({ fail: false, unavailable: false });
+      expect(await galleryPage({ stav: 'x' })).toEqual({ fail: false, unavailable: false });
+      expect(await galleryPage({ stav: 'vyjimka' })).toEqual({ fail: true, unavailable: false });
+      expect(await galleryPage({ stav: 'nedostupne' })).toEqual({
+        fail: false,
+        unavailable: true,
+      });
     },
   );
 
   it('also fails while the cookie asks for it, so a retry can succeed once it is cleared', async () => {
     where.environment = 'test';
     request.cookies.set('vzornik_vyjimka', '1');
-    expect(await galleryPage({})).toEqual({ fail: true });
+    expect(await galleryPage({})).toEqual({ fail: true, unavailable: false });
     request.cookies.set('vzornik_vyjimka', '0');
-    expect(await galleryPage({})).toEqual({ fail: false });
+    expect(await galleryPage({})).toEqual({ fail: false, unavailable: false });
   });
 
   it('does not exist in production', async () => {
