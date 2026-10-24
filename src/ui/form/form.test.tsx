@@ -11,6 +11,7 @@ import {
   FormProblem,
   LiveStatus,
   NoScriptNotice,
+  SearchForm,
   SelectField,
   SubmitButton,
   TextField,
@@ -381,5 +382,41 @@ describe('SubmitButton, LiveStatus and NoScriptNotice', () => {
     expect(out).toContain(cs.form.noscript);
     expect(cspMarkupProblems(out)).toEqual([]);
     expect(cspMarkupProblems(buttons)).toEqual([]);
+  });
+});
+
+const SEARCH = { path: '/uzivatele', label: 'Hledat', submit: 'Jdi' };
+
+describe('SearchForm', () => {
+  const html = renderToStaticMarkup(
+    <SearchForm
+      path={SEARCH.path}
+      label={SEARCH.label}
+      submit={SEARCH.submit}
+      query="nov"
+      keep={{ name: 'skupina', value: 'reditele' }}
+    />,
+  );
+
+  it('is a native GET search that works without JavaScript', () => {
+    expect(html).toMatch(/<form [^>]*method="get"/);
+    expect(html).toMatch(/<form [^>]*role="search"/);
+    expect(html).toMatch(/<form [^>]*action="\/uzivatele"/);
+    expect(html).toMatch(/<button [^>]*type="submit"/);
+    expect(html).toContain(`>${SEARCH.submit}</button>`);
+  });
+
+  it('labels the search field and fills it with the text searched', () => {
+    expect(html).toMatch(new RegExp(`<label [^>]*for="hledat"[^>]*>${SEARCH.label}</label>`));
+    expect(html).toMatch(/<input [^>]*id="hledat"/);
+    expect(html).toMatch(/<input [^>]*type="search"[^>]*name="hledat"[^>]*value="nov"/);
+  });
+
+  it('keeps the group in a hidden field', () => {
+    expect(html).toMatch(/<input [^>]*type="hidden"[^>]*name="skupina"[^>]*value="reditele"/);
+  });
+
+  it('has clean markup', () => {
+    expect(cspMarkupProblems(html)).toEqual([]);
   });
 });

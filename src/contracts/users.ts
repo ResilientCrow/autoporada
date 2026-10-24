@@ -13,8 +13,21 @@ export const USER_GROUPS = [
 ] as const;
 export type UserGroup = (typeof USER_GROUPS)[number];
 
+/** How each group is written in the address of the users page (`?skupina=`). */
+export const USER_GROUP_SLUGS: Readonly<Record<UserGroup, string>> = {
+  all: 'vsichni',
+  pending: 'cekajici',
+  submitter: 'prispevatele',
+  reviewer: 'kontrolori',
+  headmaster: 'reditele',
+  inactive: 'neaktivni',
+};
+
+/** The longest search text the users list takes. */
+export const USER_QUERY_MAX = 100;
+
 export const listUsersInput = z.strictObject({
-  q: z.string().trim().max(100).optional(),
+  q: z.string().trim().max(USER_QUERY_MAX).optional(),
   group: z.enum(USER_GROUPS).default('all'),
 });
 /** `total` counts every match; `users` is capped. */

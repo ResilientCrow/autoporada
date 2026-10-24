@@ -4,6 +4,7 @@ export { CheckboxField } from './CheckboxField';
 export { FormProblem } from './FormProblem';
 export { LiveStatus } from './LiveStatus';
 export { NoScriptNotice } from './NoScriptNotice';
+export { SearchForm } from './SearchForm';
 export { SelectField } from './SelectField';
 export { TextField } from './TextField';
 export type { Problem } from './settle';

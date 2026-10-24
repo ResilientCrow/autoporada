@@ -7,8 +7,11 @@ import { safeReturnTo } from '@/domain/identity';
 import { getContainer } from '../container';
 import { NONCE_HEADER } from '../http';
 
+import { first, type SearchParams } from './params';
+
 export { accessPage } from './access';
 export { homePage } from './home';
+export { usersPage } from './users';
 export { getViewer, optionalSignedIn, requireSignedIn } from './viewer';
 
 const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
@@ -36,9 +39,6 @@ export interface SignInPageModel {
   readonly loginHref: string;
   readonly switchHref: string;
 }
-
-type SearchParams = Readonly<Record<string, string | string[] | undefined>>;
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
 const GALLERY_FAIL_COOKIE = 'vzornik_vyjimka';
 

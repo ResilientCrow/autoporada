@@ -13,6 +13,7 @@ export interface NavItem {
 export const NAV: readonly NavItem[] = [
   { href: '/', label: cs.nav.overview, check: null },
   { href: '/pristup', label: cs.nav.access, check: { action: 'access.request' } },
+  { href: '/uzivatele', label: cs.nav.users, check: { action: 'users.view' } },
 ];
 
 /** The entries this actor may use. */

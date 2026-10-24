@@ -21,6 +21,7 @@ const SCREENS = [
   ['the home page of a teacher with a request waiting', '/', 200, /^Test – ceka/],
   ['the home page of a blocked applicant', '/', 200, /^Test – blokovany/],
   ['the access request page of a waiting teacher', '/pristup', 200, /^Učitelka/],
+  ['the users list of an active headmaster', '/uzivatele', 200, HEADMASTER],
   ['the sign-in page', '/prihlaseni', 200, null],
   ['the sign-in page with an error', '/prihlaseni?chyba=failed&kod=abcdef12-3456', 200, null],
   ['the sign-in page after signing out', '/prihlaseni?odhlaseno=1', 200, null],
