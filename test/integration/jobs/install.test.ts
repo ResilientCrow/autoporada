@@ -103,6 +103,63 @@ describe('installJobs', () => {
     SLOW,
   );
 
+  // The worker may insert queue rows and update some of their columns; pg-boss writes a queue's
+  // table_name into the SQL the owner runs, and runs pgboss.bam's commands as the owner. So
+  // migrate refuses rows it did not make before it starts pg-boss (security-1, A1b).
+  const PLANTED_TABLE = `x_i1 ON pgboss.job (id); GRANT UPDATE ON users TO autoporada_jobs; --`;
+  it.each([
+    [
+      'a partitioned queue',
+      `UPDATE pgboss.queue SET partition = true WHERE name = 'mail.prune'`,
+      `UPDATE pgboss.queue SET partition = false WHERE name = 'mail.prune'`,
+      /queue "mail\.prune" is partitioned/,
+    ],
+    [
+      'a queue it does not know',
+      `INSERT INTO pgboss.queue (name, policy, retry_limit, retry_delay, retry_backoff, expire_seconds,
+         retention_seconds, deletion_seconds, partition, table_name)
+       VALUES ('planted', 'standard', 0, 0, false, 60, 60, 60, false, 'job_common')`,
+      `DELETE FROM pgboss.queue WHERE name = 'planted'`,
+      /queue "planted" is not one of ours/,
+    ],
+    [
+      'a queue pointed at another table',
+      `UPDATE pgboss.queue SET table_name = '${PLANTED_TABLE.replaceAll("'", "''")}' WHERE name = 'mail.prune'`,
+      `UPDATE pgboss.queue SET table_name = 'job_common' WHERE name = 'mail.prune'`,
+      /queue "mail\.prune" has a table pg-boss did not make/,
+    ],
+    [
+      'a background command not completed',
+      `INSERT INTO pgboss.bam (name, version, status, table_name, command)
+       VALUES ('planted', 1, 'pending', 'job_common', 'GRANT UPDATE ON users TO autoporada_jobs')`,
+      `DELETE FROM pgboss.bam WHERE name = 'planted'`,
+      /1 background command "pending"/,
+    ],
+  ])(
+    'refuses to migrate over %s, naming only the queue or the status',
+    async (_what, plant, remove, reason) => {
+      await sql(plant);
+      try {
+        const refused = await installJobs(url, { log }).then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+        expect(refused).toBeInstanceOf(Error);
+        const { message } = refused as Error;
+        expect(message).toMatch(reason);
+        expect(message).not.toMatch(/GRANT|x_i1/);
+        // refused before pg-boss started: nothing ran, nothing is left connected
+        expect(
+          await sql(`SELECT 1 FROM pg_stat_activity WHERE datname = '${name}'`, 'postgres'),
+        ).toEqual([]);
+      } finally {
+        await sql(remove);
+      }
+      await expect(installJobs(url, { log })).resolves.toBeUndefined();
+    },
+    SLOW,
+  );
+
   it(
     'makes a producer that does not migrate refuse a schema it is not written for',
     async () => {
