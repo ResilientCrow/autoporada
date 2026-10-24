@@ -37,20 +37,23 @@ interface Fixtures {
   signInAs: (persona: RegExp) => Promise<void>;
   /** At 320 px wide nothing scrolls sideways (desktop project only). */
   expectNoReflow: () => Promise<void>;
+  /** Everything a loaded screen must pass, in order: axe, screenshot, reflow, no style=, skip link, focus rings. */
+  checkScreen: (name: string) => Promise<void>;
 }
 
 const MAX_TAB_STOPS = 80;
 
 export const test = base.extend<Fixtures>({
   cspViolations: [
-    async ({ page, baseURL }, provide) => {
+    async ({ context, baseURL }, provide) => {
       const violations: CspViolation[] = [];
       const appOrigin = new URL(baseURL ?? '').origin;
-      await page.exposeFunction('reportCspViolation', (violation: CspViolation) => {
+      // On the context, so popups and new tabs report too.
+      await context.exposeBinding('reportCspViolation', (_source, violation: CspViolation) => {
         // The mock IdP is another origin with a policy of its own.
         if (violation.origin === appOrigin) violations.push(violation);
       });
-      await page.addInitScript(() => {
+      await context.addInitScript(() => {
         document.addEventListener('securitypolicyviolation', (e) => {
           // effectiveDirective is the directive that applied; the console quotes its fallback.
           void (
@@ -65,7 +68,9 @@ export const test = base.extend<Fixtures>({
       });
       await provide(violations);
       // Let events still in flight reach the binding; a closed page has none.
-      await page.evaluate(() => new Promise((done) => setTimeout(done))).catch(() => undefined);
+      for (const open of context.pages()) {
+        await open.evaluate(() => new Promise((done) => setTimeout(done))).catch(() => undefined);
+      }
       expect(violations).toEqual([]);
     },
     { auto: true },
@@ -164,6 +169,22 @@ export const test = base.extend<Fixtures>({
       const width = await page.evaluate(() => document.documentElement.scrollWidth);
       if (original) await page.setViewportSize(original);
       expect(width).toBeLessThanOrEqual(320);
+    });
+  },
+
+  checkScreen: async (
+    { page, expectAccessible, attachScreenshot, expectNoReflow, expectSkipLink, expectFocusRings },
+    provide,
+  ) => {
+    await provide(async (name) => {
+      await expectAccessible();
+      await attachScreenshot(name);
+      await expectNoReflow();
+      // The live DOM may carry style attributes (Next's route announcer gets one through the CSSOM).
+      const { pathname, search } = new URL(page.url());
+      expect(await (await page.request.get(pathname + search)).text()).not.toContain('style="');
+      await expectSkipLink();
+      await expectFocusRings();
     });
   },
 

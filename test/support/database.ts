@@ -1,6 +1,6 @@
 /**
  * Integration tests get a database of their own per test file, cloned from
- * the migrated template (test/integration/global-setup.ts). The app's
+ * the migrated template (test/support/template-db.ts). The app's
  * connection runs as autoporada_app, so every test also checks the grants.
  */
 import { randomBytes } from 'node:crypto';
@@ -11,18 +11,9 @@ import { afterAll, beforeAll } from 'vitest';
 import type { Db } from '@/application/ports';
 import { connectDatabase, type Database, type DatabaseHandle } from '@/infra/db';
 
-export const TEMPLATE = 'autoporada_test_template';
+import { adminUrl, databaseUrl, recreateFromTemplate } from './template-db';
+
 const APP_ROLE = 'autoporada_app';
-
-/** The cluster owner's connection, as in .env.example and CI. */
-export const adminUrl = () =>
-  process.env['DATABASE_URL'] ?? 'postgres://autoporada:autoporada@localhost:5432/autoporada';
-
-export function databaseUrl(name: string): string {
-  const url = new URL(adminUrl());
-  url.pathname = `/${name}`;
-  return url.toString();
-}
 
 async function asAdmin<T>(run: (client: Client) => Promise<T>, database?: string): Promise<T> {
   const client = new Client({ connectionString: database ? databaseUrl(database) : adminUrl() });
@@ -68,9 +59,7 @@ export function setupTestDatabase(): TestDatabase {
   };
 
   beforeAll(async () => {
-    await asAdmin((c) => c.query(`CREATE DATABASE ${name} TEMPLATE ${TEMPLATE}`));
-    // A clone gets the default database privileges back; repeat what migration 0005 revoked.
-    await asAdmin((c) => c.query(`REVOKE TEMPORARY ON DATABASE ${name} FROM PUBLIC`));
+    await recreateFromTemplate(name);
     handle = connectDatabase({
       url: databaseUrl(name),
       applicationName: 'autoporada-test',

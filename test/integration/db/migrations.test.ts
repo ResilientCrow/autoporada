@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { MIGRATIONS_DIR, runMigrations } from '@/infra/migrate';
 
-import { adminUrl, databaseUrl } from '../../support/database';
+import { adminUrl, databaseUrl } from '../../support/template-db';
 
 const name = `autoporada_test_migrate_${randomBytes(4).toString('hex')}`;
 const journal = JSON.parse(readFileSync(join(MIGRATIONS_DIR, 'meta/_journal.json'), 'utf8')) as {

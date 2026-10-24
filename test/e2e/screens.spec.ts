@@ -25,11 +25,7 @@ for (const [name, url, status, persona] of SCREENS) {
   test(`${name} is a well-formed, accessible, keyboard-friendly page`, async ({
     page,
     hydrated,
-    expectAccessible,
-    attachScreenshot,
-    expectSkipLink,
-    expectFocusRings,
-    expectNoReflow,
+    checkScreen,
     signInAs,
   }) => {
     if (persona) await signInAs(persona);
@@ -44,13 +40,7 @@ for (const [name, url, status, persona] of SCREENS) {
       await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
       await expect(page.locator('a[aria-current="page"]')).toHaveCount(1);
     }
-    await expectAccessible();
-    await attachScreenshot(name);
-    await expectNoReflow();
-    // The live DOM may carry style attributes (Next's route announcer gets one through the CSSOM).
-    expect(await (await page.request.get(url)).text()).not.toContain('style="');
-    await expectSkipLink();
-    await expectFocusRings();
+    await checkScreen(name);
   });
 }
 
