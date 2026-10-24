@@ -10,9 +10,13 @@ export interface ProviderAnswer {
   readonly retryAfter: string | null;
 }
 
-/** The connection never carried the request: refused, no address, TLS refused before the write. */
+/**
+ * The connection never carried the request: refused, no address, no TCP connection in time
+ * (undici's connect timeout), TLS refused before the write.
+ */
 const NOT_WRITTEN = new Set([
   'ECONNREFUSED',
+  'UND_ERR_CONNECT_TIMEOUT',
   'ENOTFOUND',
   'EAI_AGAIN',
   'EHOSTUNREACH',
@@ -48,15 +52,29 @@ export function classifyAnswer(answer: ProviderAnswer, now: Date): MailResult {
   return { kind: 'unknown', code: `unknown.${status}` };
 }
 
+interface SocketCause {
+  readonly code: string | undefined;
+  readonly syscall: string | undefined;
+}
+
 /** The socket error behind undici's `fetch failed`, also inside an AggregateError (one per address). */
-function causeCode(error: TypeError): string | undefined {
+function socketCause(error: TypeError): SocketCause {
+  const field = (value: unknown, key: string) => {
+    const found: unknown = value instanceof Error ? Reflect.get(value, key) : undefined;
+    return typeof found === 'string' ? found : undefined;
+  };
   const cause: unknown = error.cause;
-  const codeOf = (value: unknown) =>
-    value instanceof Error && 'code' in value && typeof value.code === 'string'
-      ? value.code
-      : undefined;
-  if (cause instanceof AggregateError) return cause.errors.map(codeOf).find(Boolean);
-  return codeOf(cause);
+  const first =
+    cause instanceof AggregateError ? cause.errors.find((each) => field(each, 'code')) : cause;
+  return { code: field(first, 'code'), syscall: field(first, 'syscall') };
+}
+
+/** Whether the request cannot have been written: a refusal, a TLS failure, a timeout while connecting. */
+function notWritten({ code, syscall }: SocketCause): boolean {
+  if (!code) return false;
+  return (
+    NOT_WRITTEN.has(code) || TLS_CODE.test(code) || (code === 'ETIMEDOUT' && syscall === 'connect')
+  );
 }
 
 function tokenFailure(error: AppTokenError): MailResult {
@@ -69,7 +87,7 @@ function tokenFailure(error: AppTokenError): MailResult {
 
 /**
  * A call that got no HTTP answer, or a token it could not get. Nothing left
- * the machine (refused, DNS, TLS, the IdP unreachable) is `not-sent`;
+ * the machine (refused, DNS, a connect timeout, TLS, the IdP unreachable) is `not-sent`;
  * anything after the write is `unknown`; never throws.
  */
 export function classifyFailure(error: unknown): MailResult {
@@ -81,9 +99,7 @@ export function classifyFailure(error: unknown): MailResult {
     return { kind: 'unknown', code: 'unknown.timeout' };
   }
   if (!(error instanceof TypeError)) return { kind: 'unknown', code: 'unknown.error' };
-  const code = causeCode(error);
-  if (code && (NOT_WRITTEN.has(code) || TLS_CODE.test(code))) {
-    return { kind: 'not-sent', code: named('net', code, 'tls') };
-  }
-  return { kind: 'unknown', code: named('unknown', code, 'network') };
+  const cause = socketCause(error);
+  if (notWritten(cause)) return { kind: 'not-sent', code: named('net', cause.code, 'tls') };
+  return { kind: 'unknown', code: named('unknown', cause.code, 'network') };
 }

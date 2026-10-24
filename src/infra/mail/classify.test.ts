@@ -89,6 +89,36 @@ describe('classifying a call that got no answer', () => {
       { kind: 'not-sent', code: 'net.DEPTH_ZERO_SELF_SIGNED_CERT' },
     ],
     [
+      'undici’s connect timeout (no TCP connection yet)',
+      fetchFailed('UND_ERR_CONNECT_TIMEOUT'),
+      { kind: 'not-sent', code: 'net.UND_ERR_CONNECT_TIMEOUT' },
+    ],
+    [
+      'the kernel’s connect timeout',
+      fetchFailed('ETIMEDOUT', { syscall: 'connect' }),
+      { kind: 'not-sent', code: 'net.ETIMEDOUT' },
+    ],
+    [
+      'a connect timeout on every address',
+      new TypeError('fetch failed', {
+        cause: new AggregateError([
+          Object.assign(new Error('x'), { code: 'ETIMEDOUT', syscall: 'connect' }),
+          Object.assign(new Error('y'), { code: 'ETIMEDOUT', syscall: 'connect' }),
+        ]),
+      }),
+      { kind: 'not-sent', code: 'net.ETIMEDOUT' },
+    ],
+    [
+      'a timeout once connected',
+      fetchFailed('ETIMEDOUT', { syscall: 'read' }),
+      { kind: 'unknown', code: 'unknown.ETIMEDOUT' },
+    ],
+    [
+      'a timeout that names no call',
+      fetchFailed('ETIMEDOUT'),
+      { kind: 'unknown', code: 'unknown.ETIMEDOUT' },
+    ],
+    [
       'a reset after the write',
       fetchFailed('ECONNRESET'),
       { kind: 'unknown', code: 'unknown.ECONNRESET' },
