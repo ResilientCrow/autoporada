@@ -152,6 +152,20 @@ describe('the queue of requests', () => {
     expect(items[0]).toContain('value="reject"');
   });
 
+  it('names each item by its heading and ties the decisions and the link to it', () => {
+    for (const [i, id] of ['r1', 'r2'].entries()) {
+      const item = items[i] ?? '';
+      expect(item).toContain(`<h3 id="zadatel-${id}" class="font-bold">Žadatel ${id}</h3>`);
+      expect(item).toMatch(
+        new RegExp(
+          `role="group"[^>]*aria-labelledby="zadatel-${id}"|aria-labelledby="zadatel-${id}"[^>]*role="group"`,
+        ),
+      );
+      expect(item).toMatch(new RegExp(`<a [^>]*aria-describedby="zadatel-${id}"`));
+    }
+    expect(html.match(/<h3 /g)).toHaveLength(2);
+  });
+
   it('offers only the decisions the item allows', () => {
     expect(items[1]).toContain(`>${queue.reject}</button>`);
     expect(items[1]).not.toContain(queue.approveStaff);

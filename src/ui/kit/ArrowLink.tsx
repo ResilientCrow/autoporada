@@ -11,12 +11,15 @@ import { Icon } from './Icon';
 export function ArrowLink({
   href,
   children,
+  describedBy,
 }: {
   readonly href: `/${string}`;
   readonly children: string;
+  /** The id of the text that says what the link is about, when the label alone does not. */
+  readonly describedBy?: string;
 }) {
   return (
-    <Link href={href} prefetch={false} className="font-bold">
+    <Link href={href} prefetch={false} aria-describedby={describedBy} className="font-bold">
       {children} <Icon name="arrow" />
     </Link>
   );

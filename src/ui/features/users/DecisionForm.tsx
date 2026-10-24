@@ -25,12 +25,15 @@ export function DecisionForm({
   requestId,
   version,
   events,
+  labelledBy,
   onDecided,
 }: {
   readonly action: DecideAction;
   readonly requestId: string;
   readonly version: number;
   readonly events: readonly string[];
+  /** The id of the text naming the person, which names the group of buttons. */
+  readonly labelledBy?: string;
   readonly onDecided: (state: Decided) => void;
 }) {
   const state = useActionForm({
@@ -41,7 +44,11 @@ export function DecisionForm({
   if (!events.includes('approve') && !events.includes('reject')) return null;
   return (
     <Form id={`rozhodnuti-${requestId}`} spec={{}} state={state}>
-      <div className="flex flex-wrap gap-2">
+      <div
+        role={labelledBy === undefined ? undefined : 'group'}
+        aria-labelledby={labelledBy}
+        className="flex flex-wrap gap-2"
+      >
         {events.includes('approve') && (
           <>
             <SubmitButton name="decision" value="approve-staff">

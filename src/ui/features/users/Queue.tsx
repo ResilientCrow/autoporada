@@ -8,6 +8,9 @@ import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
 
 import { DecisionForm, type DecideAction } from './DecisionForm';
 
+/** The id of the requester's heading, which names their link and decisions. */
+const nameId = (requestId: string) => `zadatel-${requestId}`;
+
 /** One request waiting for the headmaster, its date written out. */
 export interface QueueItemView {
   readonly requestId: string;
@@ -49,18 +52,23 @@ export function Queue({
         <ul className="space-y-4">
           {items.map((item) => (
             <li key={item.requestId} className="space-y-2 border-b-2 border-ink pb-4">
-              <p className="font-bold">{item.displayName}</p>
+              <h3 id={nameId(item.requestId)} className="font-bold">
+                {item.displayName}
+              </h3>
               {item.jobTitle !== null && <p>{item.jobTitle}</p>}
               {item.department !== null && <p>{item.department}</p>}
               <p>{queue.submitted(item.submitted)}</p>
               <p className="font-bold">{queue.reason}</p>
               <p className="break-words whitespace-pre-line">{item.reason}</p>
               <p>
-                <ArrowLink href={`/uzivatele/${item.userId}`}>{users.detail.details}</ArrowLink>
+                <ArrowLink href={`/uzivatele/${item.userId}`} describedBy={nameId(item.requestId)}>
+                  {users.detail.details}
+                </ArrowLink>
               </p>
               <DecisionForm
                 action={decideAccess}
                 requestId={item.requestId}
+                labelledBy={nameId(item.requestId)}
                 version={item.version}
                 events={item.events}
                 onDecided={(state) =>
