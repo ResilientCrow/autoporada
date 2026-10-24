@@ -1,3 +1,5 @@
+import type { AccessRequestRecord } from '@/application/ports';
+
 import type { TestDatabase } from '../../database';
 import type { AuditRow } from '../fake/state';
 
@@ -42,4 +44,18 @@ export async function auditRows(database: TestDatabase): Promise<readonly AuditR
     data: r.data,
     requestId: r.request_id,
   }));
+}
+
+/** Inserts a request as the owner, past the app role's grants and the repository's rules. */
+export async function insertAccessRequest(
+  database: TestDatabase,
+  row: Omit<AccessRequestRecord, 'id' | 'version'>,
+): Promise<AccessRequestRecord> {
+  const [inserted] = await database.owner<{ id: string; version: number }>(
+    `INSERT INTO access_requests (user_id, reason, state, decided_by, decided_at, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, version`,
+    [row.userId, row.reason, row.state, row.decidedBy, row.decidedAt, row.createdAt],
+  );
+  if (!inserted) throw new Error('insertAccessRequest: no row returned');
+  return { ...row, id: inserted.id, version: inserted.version };
 }

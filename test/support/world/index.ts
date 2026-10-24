@@ -11,6 +11,7 @@ import { runUseCase, type PipelineFailure, type Result, type UseCase } from '@/a
 
 import {
   system,
+  type AccessRequestRecord,
   type AppDeps,
   type Principal,
   type Tx,
@@ -22,8 +23,8 @@ import {
 import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
 import { createFakeDb, type FakeDb } from './fake/db';
-import type { AuditRow, JobRow } from './fake/state';
-import { auditRows, resetTables } from './pg/backend';
+import { newId, type AuditRow, type JobRow } from './fake/state';
+import { auditRows, insertAccessRequest, resetTables } from './pg/backend';
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -34,6 +35,22 @@ declare module 'vitest' {
 type UserSeed = Partial<
   Pick<UserRecord, 'role' | 'isStudent' | 'status' | 'displayName' | 'tid' | 'oid'>
 >;
+
+/** A row of someone's request history; `createdAt` defaults to the world's clock. */
+interface AccessRequestSeed {
+  readonly userId: string;
+  readonly state: AccessRequestRecord['state'];
+  readonly createdAt?: Date;
+  /** Defaults to `createdAt` once decided; always empty while pending. */
+  readonly decidedAt?: Date;
+  /** Required for approved, rejected and blocked, as the table's CHECK requires. */
+  readonly decidedBy?: string;
+}
+
+/** A request row as the seed writes it, before the database gives it an id and a version. */
+type AccessRequestRow = Omit<AccessRequestRecord, 'id' | 'version'>;
+
+const SEED_REASON = 'Učím informatiku od září.';
 
 export interface World {
   readonly kind: 'fake' | 'pg';
@@ -48,7 +65,11 @@ export interface World {
     principal: Principal,
     input: unknown,
   ): Promise<Result<Out, PipelineFailure>>;
-  readonly seed: { user(seed?: UserSeed): Promise<UserRecord> };
+  readonly seed: {
+    user(seed?: UserSeed): Promise<UserRecord>;
+    /** Written straight into the table, past the repository's rules and the audit log. */
+    accessRequest(seed: AccessRequestSeed): Promise<AccessRequestRecord>;
+  };
   readonly inspect: {
     audit(): Promise<readonly AuditRow[]>;
     jobs(): Promise<readonly JobRow[]>;
@@ -66,6 +87,23 @@ interface Backend {
   readonly fake?: FakeDb;
   audit(): Promise<readonly AuditRow[]>;
   jobs(): Promise<readonly JobRow[]>;
+  insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
+}
+
+function accessRequestRow(seed: AccessRequestSeed, now: Date): AccessRequestRow {
+  const decided = seed.state !== 'pending';
+  if (decided && seed.state !== 'cancelled' && seed.decidedBy === undefined) {
+    throw new Error(`seed.accessRequest: a ${seed.state} request needs decidedBy`);
+  }
+  const createdAt = seed.createdAt ?? now;
+  return {
+    userId: seed.userId,
+    reason: SEED_REASON,
+    state: seed.state,
+    decidedBy: decided ? (seed.decidedBy ?? null) : null,
+    decidedAt: decided ? (seed.decidedAt ?? createdAt) : null,
+    createdAt,
+  };
 }
 
 export const TEST_TID = '00000000-0000-0000-0000-000000000001';
@@ -109,6 +147,7 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             ? tx.users.changeAccess(user.id, user.version, patch)
             : user;
         }),
+      accessRequest: (seed) => backend().insertAccessRequest(accessRequestRow(seed, clock.now())),
     },
     inspect: {
       audit: () => backend().audit(),
@@ -131,6 +170,18 @@ function fakeBackend(db: FakeDb): Backend {
     supportsJobs: true,
     audit: async () => db.state().audit,
     jobs: async () => db.state().jobs,
+    async insertAccessRequest(row) {
+      const { accessRequests } = db.state();
+      const pending = [...accessRequests.values()].some(
+        (r) => r.userId === row.userId && r.state === 'pending',
+      );
+      if (row.state === 'pending' && pending) {
+        throw new Error('seed.accessRequest: one pending request per user');
+      }
+      const request = { ...row, id: newId(db.state()), version: 1 };
+      accessRequests.set(request.id, request);
+      return request;
+    },
   };
 }
 
@@ -141,6 +192,7 @@ function pgBackend(database: TestDatabase): Backend {
     supportsJobs: false,
     audit: () => auditRows(database),
     jobs: async () => [],
+    insertAccessRequest: (row) => insertAccessRequest(database, row),
   };
 }
 
