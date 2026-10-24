@@ -2,15 +2,19 @@
 # id, and the app behind it. Stock Caddy 2.11; HSTS_MAX_AGE starts at a day
 # and goes to a year once the smoke test passes.
 
-# What Entra puts in the callback URL, removed from every log line that
-# carries the request: the access log and Caddy's own error log.
+# What Entra puts in the callback URL and what the users list is searched
+# for (names, e-mails), removed from every log line that carries the
+# request: the access log and Caddy's own error log. The Referer would
+# repeat the search, so it goes too.
 (redact_query) {
 	request>uri query {
 		delete code
 		delete state
 		delete session_state
 		delete error_description
+		delete hledat
 	}
+	request>headers>Referer delete
 }
 
 {

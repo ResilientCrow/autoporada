@@ -99,6 +99,14 @@ access=$(compose logs --no-color caddy 2>&1)
 printf '%s\n' "$access" | grep -q '/auth/callback' || fail 'caddy did not log the callback'
 if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged code or state'; fi
 
+# Nor the users-list search (names, e-mails), in the URL or in a Referer.
+curl -sk -o /dev/null -H 'Referer: https://localhost/uzivatele?hledat=leaked-referer' \
+  'https://localhost/uzivatele?hledat=leaked-search&skupina=vsichni'
+sleep 1
+access=$(compose logs --no-color caddy 2>&1)
+printf '%s\n' "$access" | grep -q '/uzivatele' || fail 'caddy did not log the users list'
+if printf '%s\n' "$access" | grep -q 'leaked-'; then fail 'caddy logged the search text'; fi
+
 if compose logs --no-color web 2>&1 | grep -q '"level":"\(error\|fatal\)"'; then fail 'web logged an error'; fi
 
 # The probe of SMOKE-TEST step 3 starts and asks Entra (which does not know
