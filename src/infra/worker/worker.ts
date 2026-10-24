@@ -32,6 +32,11 @@ export interface WorkerOptions {
   readonly startWithinMs?: number;
   /** Fields of the `worker.ready` line besides the queues: version, schema, transport. */
   readonly facts?: Readonly<Record<string, unknown>>;
+  /**
+   * The process's stop (SIGTERM), which may come while the worker starts: it then registers no
+   * more queues and stops pg-boss as `stop()` does before it resolves, so no call is left running.
+   */
+  readonly signal?: AbortSignal;
 }
 
 export interface RunningWorker {
@@ -39,13 +44,13 @@ export interface RunningWorker {
   stop(): Promise<void>;
 }
 
-/** pg-boss's start, retried from 1 s doubling until `withinMs` has passed. */
+/** pg-boss's start, retried from 1 s doubling until `withinMs` has passed or `signal` aborts. */
 async function startBoss(
   { boss, log, deps, sleep = sleepOn, startWithinMs = 60_000 }: WorkerOptions,
   signal: AbortSignal,
 ): Promise<void> {
   const giveUpAt = deps.clock.now().getTime() + startWithinMs;
-  for (let attempt = 1, delayMs = 1_000; ; attempt += 1, delayMs *= 2) {
+  for (let attempt = 1, delayMs = 1_000; !signal.aborted; attempt += 1, delayMs *= 2) {
     try {
       await boss.start();
       return;
@@ -108,23 +113,39 @@ function workOn<N extends JobName>(boss: PgBoss, name: N, options: WorkerOptions
   );
 }
 
-/** Starts pg-boss, syncs the schedules, and works every queue of the catalogue through `runJob`. */
+/**
+ * Starts pg-boss, syncs the schedules, and works every queue of the catalogue through `runJob`.
+ * When `options.signal` aborts first, it stops between steps and resolves once stopped.
+ */
 export async function startWorker(options: WorkerOptions): Promise<RunningWorker> {
   const { boss, deps, log, sleep = sleepOn } = options;
   const shutdown = new AbortController();
-  await startBoss(options, shutdown.signal);
-  await checkQueues(boss, log);
-  await syncSchedules(boss, options.schedules, log);
-  const run: RunContext = { deps, sleep, shutdown: shutdown.signal, log };
-  for (const name of JOB_NAMES) await workOn(boss, name, options, run);
+  const stopped = options.signal
+    ? AbortSignal.any([shutdown.signal, options.signal])
+    : shutdown.signal;
+  let stopping: Promise<void> | undefined;
+  const running: RunningWorker = {
+    stop() {
+      shutdown.abort();
+      stopping ??= boss.stop({ graceful: true, timeout: STOP_TIMEOUT_MS });
+      return stopping;
+    },
+  };
+  await startBoss(options, stopped);
+  if (!stopped.aborted) await checkQueues(boss, log);
+  if (!stopped.aborted) await syncSchedules(boss, options.schedules, log);
+  const run: RunContext = { deps, sleep, shutdown: stopped, log };
+  for (const name of JOB_NAMES) {
+    if (stopped.aborted) break;
+    await workOn(boss, name, options, run);
+  }
+  if (stopped.aborted) {
+    await running.stop();
+    return running;
+  }
   log.info(
     { ...options.facts, queues: JOB_NAMES, pollSeconds: options.pollSeconds },
     'worker.ready',
   );
-  return {
-    async stop() {
-      shutdown.abort();
-      await boss.stop({ graceful: true, timeout: STOP_TIMEOUT_MS });
-    },
-  };
+  return running;
 }

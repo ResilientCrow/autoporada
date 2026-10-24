@@ -228,6 +228,129 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
     SLOW,
   );
 
+  describe('a stop signal that comes while it starts (SIGTERM during boot)', () => {
+    const handlers = (send: JobHandler<'mail.send'>) => ({
+      'mail.send': send,
+      'mail.prune': () => Promise.resolve(purged),
+    });
+    const deps = () =>
+      ({
+        db: database.worker,
+        clock: jobs.clock,
+        appOrigin: 'https://x.test',
+      }) as unknown as WorkerDeps;
+
+    it(
+      'registers no more queues and stops pg-boss once the call in flight has finished',
+      async () => {
+        await jobs.timing();
+        const producer = jobs.boss();
+        await producer.start();
+        const id = await send(producer, 'access.approved:boot');
+
+        const stopping = new AbortController();
+        const boss = jobs.boss();
+        let started!: () => void;
+        const handlerStarted = new Promise<void>((resolve) => (started = resolve));
+        const registered: string[] = [];
+        const work = boss.work.bind(boss) as (...args: unknown[]) => Promise<string>;
+        // mail.send is registered first and fetches the queued job; the signal comes while
+        // startWorker is still awaiting that registration, before mail.prune
+        Reflect.set(boss, 'work', async (name: string, ...rest: unknown[]) => {
+          if (stopping.signal.aborted) throw new Error(`${name} registered after the stop`);
+          registered.push(name);
+          const workerId = await work(name, ...rest);
+          if (name === 'mail.send') {
+            await handlerStarted;
+            stopping.abort();
+          }
+          return workerId;
+        });
+        let finished = false;
+        const worker = await startWorker({
+          boss,
+          handlers: handlers(async () => {
+            started();
+            await new Promise((resolve) => setTimeout(resolve, 1_000));
+            finished = true;
+            return { kind: 'done', code: 'sent' };
+          }),
+          schedules: [PRUNE],
+          deps: deps(),
+          log: jobs.log,
+          pollSeconds: 0.5,
+          sleep: jobs.instant,
+          signal: stopping.signal,
+        });
+        // resolved only after the call that was running finished and pg-boss settled it
+        expect(finished).toBe(true);
+        expect(registered).toEqual(['mail.send']);
+        expect(await row(id)).toMatchObject({ state: 'completed', output: { code: 'sent' } });
+        expect(jobs.lines.map((l) => l['msg'])).not.toContain('worker.ready');
+        await expect(worker.stop()).resolves.toBeUndefined();
+      },
+      SLOW,
+    );
+
+    it(
+      'works nothing when the signal came before the start',
+      async () => {
+        await jobs.timing();
+        const producer = jobs.boss();
+        await producer.start();
+        const id = await send(producer, 'access.approved:before-boot');
+        const calls: unknown[] = [];
+        const worker = await startWorker({
+          boss: jobs.boss(),
+          handlers: handlers((_deps, job) => {
+            calls.push(job);
+            return Promise.resolve({ kind: 'done', code: 'sent' });
+          }),
+          schedules: [PRUNE],
+          deps: deps(),
+          log: jobs.log,
+          pollSeconds: 0.5,
+          sleep: jobs.instant,
+          signal: AbortSignal.abort(),
+        });
+        await new Promise((resolve) => setTimeout(resolve, 1_500));
+        expect(calls).toEqual([]);
+        expect(await row(id)).toMatchObject({ state: 'created' });
+        await worker.stop();
+      },
+      SLOW,
+    );
+
+    it(
+      'gives up retrying a failing start without an error',
+      async () => {
+        const stopping = new AbortController();
+        const boss = createBoss('worker', {
+          url: 'postgres://nobody@127.0.0.1:9/nothing',
+          applicationName: 'autoporada-test-unreachable',
+          log: jobs.log,
+        });
+        const worker = await startWorker({
+          boss,
+          handlers: handlers(() => Promise.resolve({ kind: 'done', code: 'sent' })),
+          schedules: [PRUNE],
+          deps: { clock: jobs.clock } as unknown as WorkerDeps,
+          log: jobs.log,
+          pollSeconds: 0.5,
+          // the signal comes during the first pause between attempts
+          sleep: async () => {
+            stopping.abort();
+          },
+          startWithinMs: 60_000,
+          signal: stopping.signal,
+        });
+        expect(jobs.lines.filter((l) => l['msg'] === 'worker.start_failed')).toHaveLength(1);
+        await worker.stop();
+      },
+      SLOW,
+    );
+  });
+
   it(
     'registers the schedules while it starts, before it reports ready',
     async () => {

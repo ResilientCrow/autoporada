@@ -67,12 +67,18 @@ async function main(): Promise<void> {
     appOrigin: config.appOrigin,
   };
 
-  const running: { worker?: RunningWorker; health?: ReturnType<typeof startHealth> } = {};
+  // A signal may come while the worker starts: startWorker then stops between steps, and the
+  // stop waits for that, so a handler call already running finishes before the pool closes.
+  const stopping = new AbortController();
+  const running: { worker?: Promise<RunningWorker>; health?: ReturnType<typeof startHealth> } = {};
   let signalled = false;
   const shutDown = async (): Promise<void> => {
     log.info({}, 'worker.stopping');
+    stopping.abort();
     running.health?.stop();
-    await running.worker?.stop();
+    // a start that failed has nothing to stop; main() reports it
+    const worker = await running.worker?.catch(() => undefined);
+    await worker?.stop();
     await producer.stop();
     await pool.end();
     log.info({}, 'worker.stopped');
@@ -94,7 +100,7 @@ async function main(): Promise<void> {
   process.on('SIGTERM', onSignal);
   process.on('SIGINT', onSignal);
 
-  running.worker = await startWorker({
+  running.worker = startWorker({
     boss,
     handlers: JOB_HANDLERS,
     schedules: SCHEDULES,
@@ -106,7 +112,10 @@ async function main(): Promise<void> {
       pgbossSchema: PGBOSS_SCHEMA_VERSION,
       transport: config.mail.transport,
     },
+    signal: stopping.signal,
   });
+  await running.worker;
+  if (stopping.signal.aborted) return;
   running.health = startHealth({ ping: () => pool.query('SELECT 1'), clock: systemClock, log });
 }
 
