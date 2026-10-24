@@ -6,6 +6,7 @@ import type { myAccessOutput } from '@/contracts';
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
+import { orNotFound } from './not-found';
 import { requestId } from './viewer';
 
 export type MyStanding = z.output<typeof myAccessOutput>['standing'];
@@ -17,8 +18,5 @@ export async function myStanding(viewer: UserPrincipal): Promise<MyStanding | nu
     requestId: await requestId(),
     input: {},
   });
-  if (result.ok) return result.value.standing;
-  const { code } = result.error;
-  if (code === 'forbidden' || code === 'not-found' || code === 'invalid-input') return null;
-  throw new Error(`access.mine: ${code}`);
+  return orNotFound('access.mine', result)?.standing ?? null;
 }

@@ -6,6 +6,7 @@ import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
 import { day } from './dates';
+import { orNotFound } from './not-found';
 import { getViewer, requestId } from './viewer';
 
 type Loaded = z.output<typeof getUserOutput>;
@@ -28,17 +29,16 @@ export interface UserPageModel {
 export async function userPage(id: string): Promise<UserPageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
-  const result = await runRegistered(getContainer(), getUser, {
-    principal: viewer,
-    requestId: await requestId(),
-    input: { userId: id },
-  });
-  if (!result.ok) {
-    const { code } = result.error;
-    if (code === 'forbidden' || code === 'not-found' || code === 'invalid-input') return null;
-    throw new Error(`users.get: ${code}`);
-  }
-  const { user, request, ...rest } = result.value;
+  const loaded = orNotFound(
+    'users.get',
+    await runRegistered(getContainer(), getUser, {
+      principal: viewer,
+      requestId: await requestId(),
+      input: { userId: id },
+    }),
+  );
+  if (loaded === null) return null;
+  const { user, request, ...rest } = loaded;
   const { createdAt, ...facts } = user;
   return {
     ...rest,
