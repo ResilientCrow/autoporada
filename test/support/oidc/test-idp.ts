@@ -26,6 +26,7 @@ import { insideTransaction } from '@/infra/system';
 import {
   AUTHORIZE,
   DELETE,
+  GRAPH_AUDIENCE,
   IDENTITY_CLAIMS,
   json,
   KEYS,
@@ -60,10 +61,12 @@ export async function createTestIdp(): Promise<TestIdp> {
   let pending: { claims?: Record<string, unknown>; sign?: Signing } = {};
   let tokenFailure: TokenFailure | undefined;
   let appRoles: readonly string[] = ['User.ReadBasic.All'];
+  let appClaims: Readonly<Record<string, unknown>> = {};
   let isDown = false;
   let metadata: Readonly<Record<string, string>> = {};
   const seen = {
     tokenRequests: [] as URLSearchParams[],
+    appTokens: new Set<string>(),
     assertions: [] as { header: ProtectedHeaderParameters; payload: JWTPayload }[],
     jwksFetches: 0,
     calledInsideTransaction: 0,
@@ -77,7 +80,6 @@ export async function createTestIdp(): Promise<TestIdp> {
   };
   let trusted: { pem: string; x5tS256: string } | undefined;
   const usedJtis = new Set<string>();
-  const GRAPH_AUDIENCE = 'https://graph.microsoft.com';
   const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   /** Entra's checks of a certificate client assertion (its certificate credentials page). */
@@ -181,9 +183,12 @@ export async function createTestIdp(): Promise<TestIdp> {
         tid: TEST_TENANT,
         roles: appRoles,
         exp: Math.floor(Date.now() / 1000) + 3600,
+        ...appClaims,
       };
       const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
-      return json({ token_type: 'Bearer', access_token: `e30.${payload}.`, expires_in: 3600 });
+      const accessToken = `e30.${payload}.`;
+      seen.appTokens.add(accessToken);
+      return json({ token_type: 'Bearer', access_token: accessToken, expires_in: 3600 });
     }
     const grant = grants.get(body.get('code') ?? '');
     const valid =
@@ -270,6 +275,9 @@ export async function createTestIdp(): Promise<TestIdp> {
     },
     grantRoles(roles) {
       appRoles = roles;
+    },
+    appTokenClaims(claims) {
+      appClaims = claims;
     },
     trust(certificatePem) {
       const der = new X509Certificate(certificatePem).raw;

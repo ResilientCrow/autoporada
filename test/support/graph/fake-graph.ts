@@ -1,0 +1,186 @@
+/**
+ * An in-process Microsoft Graph for the mail transport, next to the TestIdp:
+ * one router serves both, so production code runs unchanged against the real
+ * URLs. It checks what Graph checks of a sendMail call (the token, the RBAC
+ * scope, the body), and refuses everything the Graph transport never sends.
+ */
+import { randomUUID } from 'node:crypto';
+
+import type { CustomFetchOptions } from 'openid-client';
+import { z } from 'zod';
+
+import type { Clock } from '@/application/ports';
+import { systemClock } from '@/infra/system';
+
+import type { TestIdp } from '../oidc/test-idp';
+import { GRAPH_AUDIENCE, TEST_TENANT } from '../oidc/test-idp-api';
+import {
+  GRAPH_ORIGIN,
+  type FakeGraph,
+  type GraphFetch,
+  type GraphRequest,
+  type SentMail,
+} from './fake-graph-api';
+
+export { GRAPH_BASE } from './fake-graph-api';
+
+const ENTRA_ORIGIN = 'https://login.microsoftonline.com';
+const SEND_MAIL = /^\/v1\.0\/users\/([^/]+)\/sendMail$/;
+const ERROR_CODES: Readonly<Record<number, string>> = {
+  400: 'ErrorInvalidRequest',
+  401: 'InvalidAuthenticationToken',
+  403: 'ErrorAccessDenied',
+  404: 'ResourceNotFound',
+  405: 'MethodNotAllowed',
+  415: 'UnsupportedMediaType',
+};
+
+/** One plain ASCII address, as the transport hands Graph. */
+const recipient = z.strictObject({
+  emailAddress: z.strictObject({ address: z.string().regex(/^[!-?A-~]+@[A-Za-z0-9.-]+$/) }),
+});
+/** Exactly the body of design §4: text only, one recipient, x- headers, no Sent Items copy. */
+const SendMail = z.strictObject({
+  message: z.strictObject({
+    subject: z.string().min(1),
+    body: z.strictObject({ contentType: z.literal('Text'), content: z.string() }),
+    toRecipients: z.tuple([recipient]),
+    internetMessageHeaders: z
+      .array(z.strictObject({ name: z.string().regex(/^x-/i), value: z.string() }))
+      .optional(),
+    from: recipient.optional(),
+  }),
+  saveToSentItems: z.literal(false),
+});
+
+/** Graph's answer: an empty 202, or its error body; always with a request-id. */
+const answer = (status: number) =>
+  new Response(
+    status === 202
+      ? null
+      : JSON.stringify({ error: { code: ERROR_CODES[status] ?? 'Error', message: 'fake' } }),
+    {
+      status,
+      headers: {
+        'request-id': randomUUID(),
+        ...(status !== 202 && { 'content-type': 'application/json' }),
+      },
+    },
+  );
+
+const claimsOf = (token: string): Record<string, unknown> => {
+  const payload: unknown = JSON.parse(
+    Buffer.from(token.split('.')[1] ?? '', 'base64url').toString(),
+  );
+  return typeof payload === 'object' && payload !== null ? { ...payload } : {};
+};
+
+export function createFakeGraph(options: {
+  readonly idp: TestIdp;
+  readonly mailbox: string;
+  readonly clock?: Clock;
+}): FakeGraph {
+  const { idp, mailbox } = options;
+  const clock = options.clock ?? systemClock;
+  const sent: SentMail[] = [];
+  const outside = new Set<string>();
+  let pending = 0;
+  const seen: FakeGraph['seen'] = {
+    calls: 0,
+    unscopedGrant: false,
+    rejected: [],
+  };
+  const refuse = (status: number, reason: string) => {
+    seen.rejected.push(reason);
+    return answer(status);
+  };
+
+  /** Graph's token checks: issued by the IdP for Graph, this tenant, unexpired. */
+  function tokenProblem(authorization: string | null): string | Record<string, unknown> {
+    const token = /^Bearer (\S+)$/.exec(authorization ?? '')?.[1];
+    if (!token) return 'token.missing';
+    if (!idp.seen.appTokens.has(token)) return 'token.foreign';
+    const claims = claimsOf(token);
+    if (claims['aud'] !== GRAPH_AUDIENCE) return 'token.audience';
+    if (claims['tid'] !== TEST_TENANT) return 'token.tenant';
+    const exp = claims['exp'];
+    if (typeof exp !== 'number' || exp * 1000 <= clock.now().getTime()) return 'token.expired';
+    return claims;
+  }
+
+  /** Exchange's RBAC scope, in union with Entra's grants (an Entra Mail.Send covers every mailbox). */
+  function rbacProblem(claims: Record<string, unknown>, target: string): string | undefined {
+    const roles = claims['roles'];
+    if (Array.isArray(roles) && roles.includes('Mail.Send')) {
+      seen.unscopedGrant = true;
+      return undefined;
+    }
+    if (target.toLowerCase() !== mailbox.toLowerCase() || outside.has(target.toLowerCase())) {
+      return 'rbac.scope';
+    }
+    if (pending > 0) {
+      pending--;
+      return 'rbac.pending';
+    }
+    return undefined;
+  }
+
+  async function sendMail(url: URL, init: GraphRequest): Promise<Response> {
+    seen.calls++;
+    const route = SEND_MAIL.exec(url.pathname);
+    if (!route?.[1]) return refuse(404, 'route');
+    if (init.method !== 'POST') return refuse(405, 'method');
+    const target = decodeURIComponent(route[1]);
+    const headers = new Headers(init.headers);
+    const claims = tokenProblem(headers.get('authorization'));
+    if (typeof claims === 'string') return refuse(401, claims);
+    const rbac = rbacProblem(claims, target);
+    if (rbac) return refuse(403, rbac);
+    if (!/^application\/json(;|$)/i.test(headers.get('content-type') ?? '')) {
+      return refuse(415, 'content-type');
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(typeof init.body === 'string' ? init.body : '');
+    } catch {
+      return refuse(400, 'body.json');
+    }
+    const parsed = SendMail.safeParse(json);
+    if (!parsed.success) return refuse(400, `body.${parsed.error.issues[0]?.path.join('.') ?? ''}`);
+    const { message } = parsed.data;
+    const from = message.from?.emailAddress.address;
+    if (from !== undefined && from.toLowerCase() !== target.toLowerCase()) {
+      return refuse(400, 'body.from');
+    }
+    const mail: SentMail = {
+      mailbox: target,
+      subject: message.subject,
+      text: message.body.content,
+      to: message.toRecipients[0].emailAddress.address,
+      headers: Object.fromEntries(
+        (message.internetMessageHeaders ?? []).map((h) => [h.name, h.value]),
+      ),
+    };
+
+    sent.push(mail);
+    return answer(202);
+  }
+
+  const fetch: GraphFetch = async (url, init) => {
+    const parsed = new URL(url);
+    // openid-client's own requests: the init it built is a CustomFetchOptions.
+    if (parsed.origin === ENTRA_ORIGIN) return idp.fetch(url, init as CustomFetchOptions);
+    if (parsed.origin === GRAPH_ORIGIN) return sendMail(parsed, init);
+    throw new TypeError('fetch failed');
+  };
+
+  return {
+    fetch,
+    sent,
+    outOfScope: (address) => void outside.add(address.toLowerCase()),
+    rbacPendingFor(calls) {
+      pending = calls;
+    },
+    seen,
+  };
+}

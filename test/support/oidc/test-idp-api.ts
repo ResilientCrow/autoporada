@@ -12,6 +12,8 @@ const BASE = `https://login.microsoftonline.com/${TEST_TENANT}`;
 export const AUTHORIZE = `${BASE}/oauth2/v2.0/authorize`;
 export const TOKEN = `${BASE}/oauth2/v2.0/token`;
 export const KEYS = `${BASE}/discovery/v2.0/keys`;
+/** The audience of an app-only token for Graph. */
+export const GRAPH_AUDIENCE = 'https://graph.microsoft.com';
 
 /** Removes a claim from the next ID token. */
 export const DELETE = Symbol('delete');
@@ -70,8 +72,12 @@ export interface TestIdp {
   trust(certificatePem: string): void;
   /** The application roles a client-credentials token carries. */
   grantRoles(roles: readonly string[]): void;
+  /** Overrides claims of the next client-credentials tokens, e.g. another audience. */
+  appTokenClaims(claims: Readonly<Record<string, unknown>>): void;
   readonly seen: {
     readonly tokenRequests: URLSearchParams[];
+    /** Every client-credentials access token issued: they are unsigned, so this is the proof of origin. */
+    readonly appTokens: Set<string>;
     readonly assertions: {
       readonly header: ProtectedHeaderParameters;
       readonly payload: JWTPayload;
