@@ -105,6 +105,17 @@ jobs=$(sql "SELECT concat_ws(' ',
   fail 'could not read the pgboss privileges'
 [ "$jobs" = 't t f f f f f f' ] || fail "unexpected pgboss privileges: $jobs"
 
+# The mail ledger and gate (ADR 0016): only the worker group writes delivery
+# state; web can neither read nor write them. The gate has its one row.
+mail=$(sql "SELECT concat_ws(' ',
+  has_table_privilege('autoporada_web', 'mail_ledger', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'),
+  has_table_privilege('autoporada_web', 'mail_gate', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE'),
+  (SELECT bool_and(has_table_privilege('autoporada_jobs', t, p))
+     FROM unnest(ARRAY['mail_ledger', 'mail_gate']) t, unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) p),
+  (SELECT count(*) FROM mail_gate))") ||
+  fail 'could not read the mail table privileges'
+[ "$mail" = 'f f t 1' ] || fail "unexpected mail table privileges: $mail"
+
 # Caddy logs the request, but not what Entra puts in the callback URL.
 curl -sk -o /dev/null 'https://localhost/auth/callback?code=leaked-code&state=leaked-state'
 sleep 1

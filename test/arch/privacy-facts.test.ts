@@ -5,7 +5,11 @@ import { describe, expect, it } from 'vitest';
 
 import { getTableColumns } from 'drizzle-orm';
 
-import { AUDIT_RETENTION_YEARS, isPurgeableAccessRequest } from '@/domain/retention';
+import {
+  AUDIT_RETENTION_YEARS,
+  MAIL_LEDGER_RETENTION_DAYS,
+  isPurgeableAccessRequest,
+} from '@/domain/retention';
 import { ACCESS_COOLDOWN_DAYS, ACCESS_MACHINE } from '@/domain/review';
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SIGN_IN_TTL_MS } from '@/domain/identity/session';
 import { sessions, users } from '@/infra/db/schema';
@@ -106,6 +110,21 @@ describe('job retention in the notice', () => {
     expect(row?.value).toBe(
       `dokončené ${facts.jobsKeptDays}\u00A0dny, nespuštěné ${facts.unrunJobsKeptDays}\u00A0dní, neúspěšné ${facts.deadJobsKeptDays}\u00A0dní`,
     );
+    expect(row).toMatchObject({ review: { by: 'dpo' } });
+  });
+});
+
+describe('the mail ledger in the notice', () => {
+  it('keeps it as long as the code does, a day past every dead job', () => {
+    expect(facts.mailLogKeptDays).toBe(MAIL_LEDGER_RETENTION_DAYS);
+    expect(MAIL_LEDGER_RETENTION_DAYS).toBe(91);
+    // A redrive of a dead copy must still find the row that says the mail was sent.
+    expect(facts.mailLogKeptDays).toBeGreaterThan(facts.deadJobsKeptDays);
+  });
+
+  it('has a row for it, flagged for the DPO', () => {
+    const row = retentionRow(/^Záznam o\u00A0odeslaných e-mailech$/);
+    expect(row?.value).toBe(`${facts.mailLogKeptDays}\u00A0dní`);
     expect(row).toMatchObject({ review: { by: 'dpo' } });
   });
 });

@@ -24,6 +24,13 @@ const PURGED_ACCESS: ReadonlySet<AccessState> = new Set(['approved', 'rejected',
 
 export const AUDIT_RETENTION_YEARS = 3;
 
+/**
+ * Days a mail ledger row is kept after it settled (ADR 0016): one more than a
+ * dead job's 90, so a redrive at any point in a dead copy's life still finds
+ * the row that says the mail was sent.
+ */
+export const MAIL_LEDGER_RETENTION_DAYS = 91;
+
 export function isPurgeablePoint(state: PointState): boolean {
   return PURGED_POINTS.has(state);
 }

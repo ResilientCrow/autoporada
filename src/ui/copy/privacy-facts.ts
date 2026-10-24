@@ -15,6 +15,8 @@ export const PRIVACY_FACTS = {
   jobsKeptDays: 2,
   unrunJobsKeptDays: 14,
   deadJobsKeptDays: 90,
+  // Mail ledger retention; test/arch/privacy-facts.test.ts ties it to src/domain/retention.
+  mailLogKeptDays: 91,
   logMegabytes: 10,
   logFiles: 5,
 } as const;

@@ -188,7 +188,7 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
     );
   });
 
-  it('reads users and access_requests and nothing else in public', async () => {
+  it('reads users and access_requests, keeps the mail tables, and touches nothing else in public', async () => {
     const rows = await database.owner<{ table: string; read: boolean; write: boolean }>(
       `SELECT c.relname AS table,
               has_table_privilege('autoporada_worker', c.oid, 'SELECT') AS read,
@@ -200,13 +200,129 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
     // every table counts, so a table added without a decision here shows up as readable
     expect(rows.length).toBeGreaterThanOrEqual(5);
     const readable = rows.filter((row) => row.read).map((row) => row.table);
-    expect(readable).toEqual(['access_requests', 'users']);
-    expect(rows.filter((row) => row.write)).toEqual([]);
+    expect(readable).toEqual(['access_requests', 'mail_gate', 'mail_ledger', 'users']);
+    const writable = rows.filter((row) => row.write).map((row) => row.table);
+    expect(writable).toEqual(['mail_gate', 'mail_ledger']);
     expect(await sqlstateAs('autoporada_worker', `SELECT count(*) FROM users`)).toBeUndefined();
     expect(await sqlstateAs('autoporada_worker', `SELECT count(*) FROM sessions`)).toBe(DENIED);
     expect(await sqlstateAs('autoporada_worker', `INSERT INTO audit_events DEFAULT VALUES`)).toBe(
       DENIED,
     );
+  });
+});
+
+describe('the mail ledger and gate (ADR 0016: only the worker writes delivery state)', () => {
+  const MAIL_TABLES = ['mail_ledger', 'mail_gate'];
+  const PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'];
+
+  /** The privileges `role` holds on `table`, in the order of PRIVILEGES. */
+  async function privilegesOf(role: string, table: string): Promise<string[]> {
+    const [row] = await database.owner<{ held: string[] }>(
+      `SELECT array_agg(p ORDER BY o) FILTER (WHERE has_table_privilege($1, $2::regclass, p)) AS held
+         FROM unnest($3::text[]) WITH ORDINALITY AS t(p, o)`,
+      [role, table, PRIVILEGES],
+    );
+    return row?.held ?? [];
+  }
+
+  /** A user to point ledger rows at, inserted as the owner. */
+  async function seedUser(): Promise<string> {
+    const [user] = await database.owner<{ id: string }>(
+      `INSERT INTO users (tid, oid, display_name)
+       VALUES (gen_random_uuid(), gen_random_uuid(), 'Jana Nováková') RETURNING id`,
+    );
+    return user!.id;
+  }
+
+  const ledgerRow = (recipientId: string, key: string, state = 'sent', code = 'sent') =>
+    `INSERT INTO mail_ledger (dedupe_key, template, recipient_id, subject_id, state, code)
+     VALUES ('${key}', 'access.approved', '${recipientId}', gen_random_uuid(), '${state}', '${code}')`;
+
+  it.each(MAIL_TABLES)(
+    'gives %s to the worker group (DML) and the backup (read) only',
+    async (table) => {
+      expect(await privilegesOf('autoporada_app', table)).toEqual([]);
+      expect(await privilegesOf('autoporada_jobs', table)).toEqual([
+        'SELECT',
+        'INSERT',
+        'UPDATE',
+        'DELETE',
+      ]);
+      expect(await privilegesOf('autoporada_worker', table)).toEqual([
+        'SELECT',
+        'INSERT',
+        'UPDATE',
+        'DELETE',
+      ]);
+      expect(await privilegesOf('autoporada_backup', table)).toEqual(['SELECT']);
+    },
+  );
+
+  it.each([
+    ['read the ledger', `SELECT count(*) FROM mail_ledger`],
+    ['write the ledger', `INSERT INTO mail_ledger (dedupe_key) VALUES ('x')`],
+    ['change the ledger', `UPDATE mail_ledger SET state = 'sent'`],
+    ['delete from the ledger', `DELETE FROM mail_ledger`],
+    ['read the gate', `SELECT not_before FROM mail_gate`],
+    ['open the gate', `UPDATE mail_gate SET not_before = NULL`],
+    ['delete the gate', `DELETE FROM mail_gate`],
+  ])('the web cannot %s', async (_what, statement) => {
+    expect(await sqlstateAs('autoporada_app', statement)).toBe(DENIED);
+  });
+
+  it('lets the worker claim, settle and purge a row, and close the gate', async () => {
+    const recipient = await seedUser();
+    const worker = await connectAs('autoporada_worker');
+    try {
+      await worker.query('BEGIN');
+      await worker.query(ledgerRow(recipient, 'access.approved:w', 'sending', 'claimed'));
+      await worker.query(
+        `UPDATE mail_ledger SET state = 'sent', code = 'sent', settled_at = now()
+          WHERE dedupe_key = 'access.approved:w'`,
+      );
+      await worker.query(`UPDATE mail_gate SET not_before = now(), code = 'throttled.429'`);
+      const { rows } = await worker.query(`SELECT state FROM mail_ledger`);
+      expect(rows).toEqual([{ state: 'sent' }]);
+      expect((await worker.query(`DELETE FROM mail_ledger`)).rowCount).toBe(1);
+      await worker.query('ROLLBACK');
+    } finally {
+      await worker.end();
+    }
+  });
+
+  it('holds exactly one gate row', async () => {
+    expect(await database.owner(`SELECT id, not_before, code FROM mail_gate`)).toEqual([
+      { id: true, not_before: null, code: null },
+    ]);
+    expect(await sqlstateAs('autoporada_worker', `INSERT INTO mail_gate DEFAULT VALUES`)).toBe(
+      '23505',
+    );
+    expect(await sqlstateAs('autoporada_worker', `INSERT INTO mail_gate (id) VALUES (false)`)).toBe(
+      '23514',
+    );
+  });
+
+  it.each([
+    ['an unknown state', 'access.approved:s', 'lost', 'sent'],
+    ['a code with free text', 'access.approved:c', 'sent', 'Mailbox full: jana@ssps.cz'],
+    ['a key over 120 characters', `access.approved:${'k'.repeat(110)}`, 'sent', 'sent'],
+  ])('refuses %s', async (_what, key, state, code) => {
+    const recipient = await seedUser();
+    expect(await sqlstateAs('autoporada_worker', ledgerRow(recipient, key, state, code))).toBe(
+      '23514',
+    );
+  });
+
+  it('goes with the person: the web deletes a user and the cascade removes the rows', async () => {
+    const recipient = await seedUser();
+    await database.owner(ledgerRow(recipient, 'access.approved:cascade'));
+    const web = await connectAs('autoporada_app');
+    try {
+      await web.query(`DELETE FROM users WHERE id = $1`, [recipient]);
+    } finally {
+      await web.end();
+    }
+    expect(await database.owner(`SELECT dedupe_key FROM mail_ledger`)).toEqual([]);
   });
 });
 

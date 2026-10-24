@@ -75,13 +75,17 @@ Each entry gives the section, the flagged text, the reviewer and the note shown 
 ### `doba`, „Jak dlouho údaje uchováváme“
 
 14. **Whole table**, reviewer DPO, note: „Ověřit dobu uchování záloh, účtů a archivních seznamů a ověřit, že jinde nezůstává kopie e-mailu.“ These are the retention gaps still open; none has a rule in the code yet:
-    - **Backups**: retention is not specified anywhere.
-    - **Mailbox copies**: Graph `sendMail` saves to Sent Items by default (`saveToSentItems` defaults to true), so copies would pile up in the `autoporada@ssps.cz` mailbox. The mail adapter (M7) will send `saveToSentItems: false`; the DPO should still confirm no other copy is kept.
+    - **Backups**: retention is not specified anywhere. Backups include the mail ledger (item 14b; ids only), so a ledger row lives on in the backups for their retention.
+    - **Mailbox copies**: Graph `sendMail` saves to Sent Items by default (`saveToSentItems` defaults to true), so copies would pile up in the `autoporada@ssps.cz` mailbox. The mail adapter (M7) will send `saveToSentItems: false`; the DPO should still confirm no other copy is kept. A copy of each mail stays in the recipient's own mailbox, as with any e-mail. Bounces (NDRs), which quote the full text, collect in the `autoporada@ssps.cz` inbox with no retention rule; docs/ENTRA-SETUP.md will recommend an Exchange retention policy on that inbox and naming who reads it.
     - **Job payloads**: resolved in code. A payload holds ids only, and pg-boss deletes finished jobs after 2 days, unrun ones after 14 days and failed ones (the `dead` queue) after 90 days (`src/infra/jobs/queues.ts`; `test/arch/privacy-facts.test.ts` ties the notice to these numbers). See item 14a.
     - **Users**: no deletion rule exists for the `users` table.
     - **Archived registry entries**: no deletion rule exists for archived student lists.
 14a. **Background jobs row**, „Úlohy na pozadí (jen identifikátory)“: „dokončené 2 dny, nespuštěné 14 dní, neúspěšné 90 dní“. Reviewer: DPO. Note: „Ověřit dobu uchování úloh na pozadí.“
     The numbers are the queue settings of `mail.send` and `dead`. A job carries a template name and two ids, never an address; the address is read from the database when the mail is sent.
+14b. **Mail ledger row**, „Záznam o odeslaných e-mailech“: „91 dní“. Reviewer: DPO. Note: „Ověřit dobu uchování záznamu o odeslaných e-mailech.“
+    The ledger (`mail_ledger`, ADR 0016) records each mail the worker sent or skipped: the template name, the recipient's and the subject's ids, a state, a short code and Microsoft's request id; never an address, subject line or text. `mail.prune` deletes a row 91 days after it settled (`MAIL_LEDGER_RETENTION_DAYS` in `src/domain/retention`; `test/arch/privacy-facts.test.ts` ties the notice to it), one day more than a failed job is kept, so replaying a failed job never mails twice. Only the worker may read or write it; the web has no grant. Deleting a user deletes their rows.
+    - It outlives the 1 September purge of decided access requests: for up to 91 days a row still names a request id whose request is gone.
+    - Backups include it (ids only), so it lives on in the backups for their retention (item 14).
 15. **Archive row**, „Porady, schválené a zveřejněné body, vytvořené dokumenty“: „trvale, jako archiv porad“. Reviewer: DPO. Note: „Ověřit trvalé uchování podle spisového a skartačního plánu.“
     „Trvale“ against the school's spisový a skartační plán and zákon 499/2004 Sb. is **unverified**. The generated documents are insert-only by design.
 16. **Blocked requests row**, „bez časového omezení, aby blokace platila“. Reviewer: DPO. Note: „Ověřit dobu uchování zablokovaných žádostí.“

@@ -55,6 +55,14 @@ export const retentionSections = [
             review: { by: 'dpo', note: 'Ověřit dobu uchování úloh na\u00A0pozadí.' },
           },
           {
+            term: 'Záznam o\u00A0odeslaných e-mailech',
+            value: `${facts.mailLogKeptDays}\u00A0dní`,
+            review: {
+              by: 'dpo',
+              note: 'Ověřit dobu uchování záznamu o\u00A0odeslaných e-mailech.',
+            },
+          },
+          {
             term: 'Technické záznamy',
             value: `v\u00A0záznamech serveru; jejich rozsah omezuje velikost (${facts.logMegabytes}\u00A0MB, nejvýše ${facts.logFiles}\u00A0souborů na\u00A0službu), ne čas`,
             review: { by: 'dpo', note: 'Ověřit dobu uchování technických záznamů.' },

@@ -65,8 +65,14 @@ describe('database roles (ADR 0010)', () => {
   });
 
   it('grants every table exactly the default privileges, unless listed here', async () => {
-    // The audit log is append-only: no UPDATE (migration 0004).
-    const EXCEPTIONS: Record<string, string> = { audit_events: 'DELETE,INSERT,SELECT' };
+    // The audit log is append-only: no UPDATE (migration 0004). Only the worker writes
+    // delivery state, so the mail tables have no app grant at all (0009, ADR 0016);
+    // the backup keeps its read on them, since backups include the ledger.
+    const EXCEPTIONS: Record<string, string | null> = {
+      audit_events: 'DELETE,INSERT,SELECT',
+      mail_gate: null,
+      mail_ledger: null,
+    };
     const grants = await database.owner<{ table: string; grantee: string; privileges: string }>(
       `SELECT c.relname AS table, g.grantee,
               coalesce(string_agg(g.privilege_type, ',' ORDER BY g.privilege_type), '') AS privileges
@@ -84,15 +90,16 @@ describe('database roles (ADR 0010)', () => {
       )
     ).map((t) => t.name);
     expect(tables.length).toBeGreaterThan(0);
+    expect(tables).toEqual(expect.arrayContaining(Object.keys(EXCEPTIONS)));
     expect(grants).toEqual(
-      tables.flatMap((table) => [
-        {
-          table,
-          grantee: 'autoporada_app',
-          privileges: EXCEPTIONS[table] ?? 'DELETE,INSERT,SELECT,UPDATE',
-        },
-        { table, grantee: 'autoporada_backup', privileges: 'SELECT' },
-      ]),
+      tables.flatMap((table) => {
+        const listed = EXCEPTIONS[table];
+        const app = listed === undefined ? 'DELETE,INSERT,SELECT,UPDATE' : listed;
+        return [
+          ...(app === null ? [] : [{ table, grantee: 'autoporada_app', privileges: app }]),
+          { table, grantee: 'autoporada_backup', privileges: 'SELECT' },
+        ];
+      }),
     );
   });
 
