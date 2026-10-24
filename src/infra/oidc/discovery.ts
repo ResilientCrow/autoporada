@@ -12,7 +12,7 @@ export interface ProviderOptions {
   /** `ssps.cz`: Entra skips its account picker for the school's domain. */
   readonly domainHint: string | null;
   readonly production: boolean;
-  /** Tests only: an in-process identity provider. */
+  /** An in-process identity provider in tests; the app-token budget fetch (app-token.ts). */
   readonly fetch?: client.CustomFetch;
   readonly timeoutSeconds?: number;
 }

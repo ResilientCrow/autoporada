@@ -77,6 +77,7 @@ export async function createTestIdp(): Promise<TestIdp> {
   };
   let trusted: { pem: string; x5tS256: string } | undefined;
   const usedJtis = new Set<string>();
+  const GRAPH_AUDIENCE = 'https://graph.microsoft.com';
   const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   /** Entra's checks of a certificate client assertion (its certificate credentials page). */
@@ -153,7 +154,9 @@ export async function createTestIdp(): Promise<TestIdp> {
     seen.tokenRequests.push(body);
     if (tokenFailure === 'network') throw new TypeError('fetch failed');
     if (tokenFailure === 'timeout') {
+      // As fetch does: an aborted signal rejects at once, a later abort when it comes.
       return new Promise((_, reject) => {
+        if (signal?.aborted) reject(signal.reason);
         signal?.addEventListener('abort', () => reject(signal.reason));
       });
     }
@@ -172,7 +175,14 @@ export async function createTestIdp(): Promise<TestIdp> {
       );
     }
     if (body.get('grant_type') === 'client_credentials') {
-      const payload = Buffer.from(JSON.stringify({ roles: appRoles })).toString('base64url');
+      // What Graph checks of an app-only token: its audience, the tenant and the expiry.
+      const claims = {
+        aud: GRAPH_AUDIENCE,
+        tid: TEST_TENANT,
+        roles: appRoles,
+        exp: Math.floor(Date.now() / 1000) + 3600,
+      };
+      const payload = Buffer.from(JSON.stringify(claims)).toString('base64url');
       return json({ token_type: 'Bearer', access_token: `e30.${payload}.`, expires_in: 3600 });
     }
     const grant = grants.get(body.get('code') ?? '');
