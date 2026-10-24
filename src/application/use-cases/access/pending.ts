@@ -1,6 +1,7 @@
 import { defineUseCase, ok } from '@/application/core';
 import { pendingAccessInput, pendingAccessOutput } from '@/contracts';
-import { ACCESS_MACHINE, availableEvents } from '@/domain/review';
+
+import { decisionEvents } from './machine';
 
 /**
  * „Žádosti o přístup“: the requests waiting for the headmaster, oldest
@@ -21,11 +22,7 @@ export const pendingAccess = defineUseCase({
     const items = requests.flatMap((request) => {
       const user = users.get(request.userId);
       if (!user) return [];
-      const events = availableEvents(ACCESS_MACHINE, request.state, {
-        kind: 'user',
-        role: actor.role,
-        isAuthor: request.userId === actor.id,
-      }).filter((event) => event !== 'cancel');
+      const events = decisionEvents(actor, request);
       return [
         {
           requestId: request.id,

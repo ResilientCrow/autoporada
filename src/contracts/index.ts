@@ -38,4 +38,11 @@ export {
   takeSignInOutput,
   type SignInError,
 } from './auth';
-export { listUsersInput, listUsersOutput, USER_GROUPS, type UserGroup } from './users';
+export {
+  getUserInput,
+  getUserOutput,
+  listUsersInput,
+  listUsersOutput,
+  USER_GROUPS,
+  type UserGroup,
+} from './users';

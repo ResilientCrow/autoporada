@@ -2,14 +2,15 @@ import type { z } from 'zod';
 
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { decideAccessInput, decideAccessOutput } from '@/contracts';
-import { ACCESS_MACHINE, transition, type AccessEvent } from '@/domain/review';
+import { ACCESS_MACHINE, transition } from '@/domain/review';
 
 import { userAccessEvent } from '../users/events';
 import { accessRequestEvent } from './events';
+import { machineActor, type DecisionEvent } from './machine';
 
 type Decision = z.output<typeof decideAccessInput>['decision'];
 
-const EVENTS: Readonly<Record<Decision, Exclude<AccessEvent, 'cancel'>>> = {
+const EVENTS: Readonly<Record<Decision, DecisionEvent>> = {
   'approve-staff': 'approve',
   'approve-student': 'approve',
   reject: 'reject',
@@ -45,11 +46,7 @@ export const decideAccess = defineUseCase({
     if (newest?.id !== request.id) return fail({ code: 'conflict' });
 
     const event = EVENTS[input.decision];
-    const step = transition(ACCESS_MACHINE, request.state, event, {
-      kind: 'user',
-      role: actor.role,
-      isAuthor: request.userId === actor.id,
-    });
+    const step = transition(ACCESS_MACHINE, request.state, event, machineActor(actor, request));
     if (!step.ok) return fromTransition(step);
     if (event === 'approve' && user.role !== 'pending') return fail({ code: 'conflict' });
 

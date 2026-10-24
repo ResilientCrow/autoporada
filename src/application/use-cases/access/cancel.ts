@@ -3,6 +3,7 @@ import { cancelAccessInput, cancelAccessOutput } from '@/contracts';
 import { ACCESS_MACHINE, transition } from '@/domain/review';
 
 import { accessRequestEvent } from './events';
+import { machineActor } from './machine';
 
 /**
  * „Zrušit žádost“: the requester takes back a request nobody has decided
@@ -21,11 +22,7 @@ export const cancelAccess = defineUseCase({
     check: () => ({ action: 'access.request' }),
   },
   async execute({ tx, actor }, input, request) {
-    const step = transition(ACCESS_MACHINE, request.state, 'cancel', {
-      kind: 'user',
-      role: actor.role,
-      isAuthor: request.userId === actor.id,
-    });
+    const step = transition(ACCESS_MACHINE, request.state, 'cancel', machineActor(actor, request));
     if (!step.ok) return fromTransition(step);
     const after = await tx.accessRequests.transition(request.id, input.version, 'cancelled');
     await tx.audit.record(accessRequestEvent('access.cancel', request, after));
