@@ -27,6 +27,9 @@ export interface JobPort {
   enqueue<N extends JobName>(name: N, data: JobCatalog[N], options: EnqueueOptions): Promise<void>;
 }
 
+/** The bound on a handler's claim and settle transactions (TxOptions.transactionTimeoutMs). */
+export const JOB_TX_TIMEOUT_MS = 5_000;
+
 /** What the runner hands a handler. */
 export interface JobInput<N extends JobName> {
   readonly id: string;

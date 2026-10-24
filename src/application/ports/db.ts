@@ -23,6 +23,8 @@ export interface TxOptions {
   readonly statementTimeoutMs?: number;
   readonly lockTimeoutMs?: number;
   readonly idleTimeoutMs?: number;
+  /** A bound on the whole transaction (PostgreSQL's transaction_timeout); none by default. */
+  readonly transactionTimeoutMs?: number;
 }
 
 /** Everything one transaction may touch, bound to its principal and one connection. */

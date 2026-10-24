@@ -24,7 +24,8 @@ function beginStatement(options: TxOptions): string {
     lockTimeoutMs: options.lockTimeoutMs ?? DEFAULT_TIMEOUTS.lockTimeoutMs,
     idleTimeoutMs: options.idleTimeoutMs ?? DEFAULT_TIMEOUTS.idleTimeoutMs,
   };
-  for (const ms of [t.statementTimeoutMs, t.lockTimeoutMs, t.idleTimeoutMs]) {
+  const whole = options.transactionTimeoutMs;
+  for (const ms of [t.statementTimeoutMs, t.lockTimeoutMs, t.idleTimeoutMs, whole ?? 1]) {
     if (!Number.isSafeInteger(ms) || ms <= 0) throw new RangeError('timeouts are positive ms');
   }
   return [
@@ -32,6 +33,8 @@ function beginStatement(options: TxOptions): string {
     `SET LOCAL statement_timeout = ${t.statementTimeoutMs}`,
     `SET LOCAL lock_timeout = ${t.lockTimeoutMs}`,
     `SET LOCAL idle_in_transaction_session_timeout = ${t.idleTimeoutMs}`,
+    // PostgreSQL 17+: past it the server ends the session, so the attempt fails as a whole.
+    ...(whole === undefined ? [] : [`SET LOCAL transaction_timeout = ${whole}`]),
   ].join('; ');
 }
 

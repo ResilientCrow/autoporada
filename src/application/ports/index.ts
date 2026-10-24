@@ -33,6 +33,7 @@ export type {
 export {
   isOutcomeCode,
   JOB_NAMES,
+  JOB_TX_TIMEOUT_MS,
   type EnqueueOptions,
   type JobCatalog,
   type JobInput,
