@@ -24,7 +24,11 @@ export function databaseUrl(name: string): string {
 }
 
 /** What `migrate` installs besides drizzle/: pg-boss's schema, and the code that sets up its queues. */
-const JOB_INSTALL_FILES = ['src/infra/jobs/install.ts', 'src/infra/jobs/queues.ts'];
+const JOB_INSTALL_FILES = [
+  'src/infra/jobs/install.ts',
+  'src/infra/jobs/queues.ts',
+  'src/infra/jobs/grants.ts',
+];
 
 function migrationsHash(): string {
   const hash = createHash('sha256');
@@ -61,12 +65,18 @@ export async function ensureTemplate(): Promise<void> {
       'SELECT shobj_description(oid, $2) AS comment FROM pg_database WHERE datname = $1',
       [TEMPLATE, 'pg_database'],
     );
-    if (rows[0]?.comment === wanted) return;
-
-    await admin.query(`DROP DATABASE IF EXISTS ${TEMPLATE} WITH (FORCE)`);
-    await admin.query(`CREATE DATABASE ${TEMPLATE}`);
-    await runMigrations(databaseUrl(TEMPLATE));
-    await admin.query(`COMMENT ON DATABASE ${TEMPLATE} IS '${wanted}'`);
+    if (rows[0]?.comment !== wanted) {
+      await admin.query(`DROP DATABASE IF EXISTS ${TEMPLATE} WITH (FORCE)`);
+      await admin.query(`CREATE DATABASE ${TEMPLATE}`);
+      await runMigrations(databaseUrl(TEMPLATE));
+      await admin.query(`COMMENT ON DATABASE ${TEMPLATE} IS '${wanted}'`);
+    }
+    // Production makes this login role in initdb; roles are cluster-wide, so it outlives the template.
+    await admin.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'autoporada_worker') THEN
+        CREATE ROLE autoporada_worker NOLOGIN IN ROLE autoporada_jobs;
+      END IF;
+    END $$`);
   });
 }
 

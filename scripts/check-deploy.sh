@@ -92,6 +92,19 @@ privileges=$(sql "SELECT concat_ws(' ',
   fail 'could not read the privileges'
 [ "$privileges" = 'autoporada_owner t f f f f f' ] || fail "unexpected privileges: $privileges"
 
+# pg-boss (ADR 0015): web inserts jobs and reads back their ids, nothing else.
+jobs=$(sql "SELECT concat_ws(' ',
+  has_table_privilege('autoporada_web', 'pgboss.job_common', 'INSERT'),
+  has_column_privilege('autoporada_web', 'pgboss.job_common', 'id', 'SELECT'),
+  has_column_privilege('autoporada_web', 'pgboss.job_common', 'data', 'SELECT'),
+  has_table_privilege('autoporada_web', 'pgboss.job_common', 'UPDATE'),
+  has_table_privilege('autoporada_web', 'pgboss.job_common', 'DELETE'),
+  has_table_privilege('autoporada_web', 'pgboss.schedule', 'INSERT'),
+  has_schema_privilege('autoporada_web', 'pgboss', 'CREATE'),
+  has_function_privilege('autoporada_web', 'pgboss.create_queue(text, jsonb)', 'EXECUTE'))") ||
+  fail 'could not read the pgboss privileges'
+[ "$jobs" = 't t f f f f f f' ] || fail "unexpected pgboss privileges: $jobs"
+
 # Caddy logs the request, but not what Entra puts in the callback URL.
 curl -sk -o /dev/null 'https://localhost/auth/callback?code=leaked-code&state=leaked-state'
 sleep 1
