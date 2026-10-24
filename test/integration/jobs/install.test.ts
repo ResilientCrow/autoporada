@@ -55,6 +55,7 @@ describe('installJobs', () => {
       expect(queues.map((queue) => queue.name).sort()).toEqual([
         '__pgboss__send-it',
         'dead',
+        'mail.prune',
         'mail.send',
       ]);
       for (const { name: queueName, policy, options } of QUEUES) {

@@ -5,6 +5,7 @@ import {
   type JobCatalog,
   type JobHandlers,
   type JobName,
+  type ScheduledJob,
   type WorkerDeps,
 } from '@/application/ports';
 import { errorCode, QUEUES } from '@/infra/jobs';
@@ -13,11 +14,14 @@ import { sleepOn } from '@/infra/system';
 
 import { STOP_TIMEOUT_MS } from './limits';
 import { runJob, type RunContext, type Sleep } from './run-job';
+import { syncSchedules } from './schedules';
 
 export interface WorkerOptions {
   /** A `createBoss('worker', …)` instance, not started. */
   readonly boss: PgBoss;
   readonly handlers: JobHandlers;
+  /** The resolved cron registry; synced after the start, before any queue is worked. */
+  readonly schedules: readonly ScheduledJob[];
   readonly deps: WorkerDeps;
   readonly log: Logger;
   /** How often an idle queue is polled. */
@@ -102,15 +106,13 @@ function workOn<N extends JobName>(boss: PgBoss, name: N, options: WorkerOptions
   );
 }
 
-/**
- * Starts pg-boss and works every queue of the catalogue through `runJob`. Schedules are
- * registered by the cron registry (row 11), not here.
- */
+/** Starts pg-boss, syncs the schedules, and works every queue of the catalogue through `runJob`. */
 export async function startWorker(options: WorkerOptions): Promise<RunningWorker> {
   const { boss, deps, log, sleep = sleepOn } = options;
   const shutdown = new AbortController();
   await startBoss(options, shutdown.signal);
   await checkQueues(boss, log);
+  await syncSchedules(boss, options.schedules, log);
   const run: RunContext = { deps, sleep, shutdown: shutdown.signal, log };
   for (const name of JOB_NAMES) await workOn(boss, name, options, run);
   log.info({ queues: JOB_NAMES, pollSeconds: options.pollSeconds }, 'worker.ready');

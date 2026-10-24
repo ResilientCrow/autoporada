@@ -6,6 +6,7 @@ import {
   type JobHandler,
   type JobInput,
   type JobOutcome,
+  type ScheduledJob,
   type WorkerDeps,
 } from '@/application/ports';
 import { createBoss, jobId } from '@/infra/jobs';
@@ -20,6 +21,14 @@ const SLOW = 30_000;
 const DATA = { template: 'access.approved', recipientId: 'r-1', subjectId: 's-1' } as const;
 
 type Step = JobOutcome | Error;
+const purged: JobOutcome = { kind: 'done', code: 'purged' };
+const PRUNE: ScheduledJob = {
+  job: 'mail.prune',
+  key: 'daily',
+  cron: '10 5 * * *',
+  data: {},
+  missed: 'once',
+};
 
 /** A worker whose `mail.send` handler plays `script`, one step per call, as autoporada_worker. */
 async function workerFor(script: Step[], sleep: Sleep = jobs.instant) {
@@ -44,7 +53,8 @@ async function workerFor(script: Step[], sleep: Sleep = jobs.instant) {
   const boss = jobs.boss();
   const worker = await startWorker({
     boss,
-    handlers: { 'mail.send': handler },
+    handlers: { 'mail.send': handler, 'mail.prune': () => Promise.resolve(purged) },
+    schedules: [PRUNE],
     deps,
     log: jobs.log,
     pollSeconds: 0.5,
@@ -182,7 +192,11 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
       const deps = { clock: jobs.clock } as unknown as WorkerDeps;
       const starting = startWorker({
         boss,
-        handlers: { 'mail.send': () => Promise.resolve({ kind: 'done', code: 'sent' }) },
+        handlers: {
+          'mail.send': () => Promise.resolve({ kind: 'done', code: 'sent' }),
+          'mail.prune': () => Promise.resolve(purged),
+        },
+        schedules: [PRUNE],
         deps,
         log: jobs.log,
         pollSeconds: 0.5,
@@ -193,6 +207,22 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
       // tries at 0, 1 and 3 s; a fourth after 4 more would end past 5 s
       expect(jobs.lines.filter((l) => l['msg'] === 'worker.start_failed')).toHaveLength(3);
       await boss.stop({ graceful: false, close: true });
+    },
+    SLOW,
+  );
+
+  it(
+    'registers the schedules while it starts, before it reports ready',
+    async () => {
+      await jobs.timing();
+      await database.owner('DELETE FROM pgboss.schedule');
+      await workerFor([]);
+      const order = jobs.lines.map((l) => l['msg']);
+      expect(order.indexOf('cron.registered')).toBeGreaterThanOrEqual(0);
+      expect(order.indexOf('cron.registered')).toBeLessThan(order.indexOf('worker.ready'));
+      expect(await database.owner(`SELECT name, key FROM pgboss.schedule`)).toEqual([
+        { name: 'mail.prune', key: 'daily' },
+      ]);
     },
     SLOW,
   );

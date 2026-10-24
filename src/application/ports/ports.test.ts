@@ -26,12 +26,12 @@ describe('ports', () => {
   });
 
   it('lists the job names the worker knows', () => {
-    expect(JOB_NAMES).toEqual(['mail.send']);
-    expectTypeOf<JobName>().toEqualTypeOf<'mail.send'>();
+    expect(JOB_NAMES).toEqual(['mail.send', 'mail.prune']);
+    expectTypeOf<JobName>().toEqualTypeOf<'mail.send' | 'mail.prune'>();
   });
 
   it('type job payloads by job name, and require a dedupe key', () => {
-    expectTypeOf<Parameters<JobPort['enqueue']>[0]>().toEqualTypeOf<'mail.send'>();
+    expectTypeOf<Parameters<JobPort['enqueue']>[0]>().toEqualTypeOf<JobName>();
     expectTypeOf<JobCatalog['mail.send']['template']>().toEqualTypeOf<TemplateName>();
     const jobs: JobPort = { enqueue: () => Promise.resolve() };
     const mail = { template: 'access.approved', recipientId: 'u1', subjectId: 'r1' } as const;

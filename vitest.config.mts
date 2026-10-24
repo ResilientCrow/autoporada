@@ -34,6 +34,7 @@ export default defineConfig({
             'test/integration/**/*.test.ts',
             'test/contract/**/*.test.ts',
             'src/application/use-cases/**/*.test.ts',
+            'src/application/jobs/**/*.test.ts',
             'test/security/**/*.test.ts',
           ],
           environment: 'node',

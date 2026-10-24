@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { JOB_NAMES } from '@/application/ports';
+
 import { QUEUES } from './index';
 
 const DAY = 86_400;
@@ -20,8 +22,25 @@ function shortestWait(retry: number, delay: number, cap: number): number {
 }
 
 describe('QUEUES', () => {
-  it('holds mail.send and its dead-letter queue, and nothing else yet', () => {
-    expect(QUEUES.map((queue) => queue.name).sort()).toEqual(['dead', 'mail.send']);
+  it('holds one queue per job name and the dead-letter queue', () => {
+    expect(QUEUES.map((queue) => queue.name).sort()).toEqual(['dead', ...[...JOB_NAMES].sort()]);
+  });
+
+  it('retries mail.prune 3 times from 5 min up to an hour, well inside its 2 days', () => {
+    expect(spec('mail.prune')).toEqual({
+      name: 'mail.prune',
+      policy: 'standard',
+      options: {
+        retryLimit: 3,
+        retryDelay: 300,
+        retryBackoff: true,
+        retryDelayMax: 3600,
+        expireInSeconds: 600,
+        retentionSeconds: 2 * DAY,
+        deleteAfterSeconds: 2 * DAY,
+        deadLetter: 'dead',
+      },
+    });
   });
 
   it('creates the dead-letter queue before any queue that names it', () => {

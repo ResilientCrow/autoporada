@@ -44,6 +44,7 @@ describe('runMigrations', () => {
     expect(queues.map((queue) => queue.name).sort()).toEqual([
       '__pgboss__send-it',
       'dead',
+      'mail.prune',
       'mail.send',
     ]);
   });

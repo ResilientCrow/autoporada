@@ -5,7 +5,7 @@ import type { TemplateName } from '@/notify';
  * keeps its rows, and minors' data must not linger there. A new job needs an
  * entry here, a queue spec, a handler and, if it is timed, a cron line.
  */
-export const JOB_NAMES = ['mail.send'] as const;
+export const JOB_NAMES = ['mail.send', 'mail.prune'] as const;
 export type JobName = (typeof JOB_NAMES)[number];
 
 export interface JobCatalog {
@@ -14,6 +14,8 @@ export interface JobCatalog {
     readonly recipientId: string;
     readonly subjectId: string;
   };
+  /** Deletes ledger rows past their retention; the cron registry sends it, never a use case. */
+  'mail.prune': Readonly<Record<string, never>>;
 }
 
 export interface EnqueueOptions {

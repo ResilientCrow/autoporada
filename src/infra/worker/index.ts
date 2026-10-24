@@ -7,4 +7,5 @@ export {
 } from './limits';
 export { logLineFor } from './log-names';
 export { runJob, type FetchedJob, type Sleep } from './run-job';
+export { syncSchedules } from './schedules';
 export { startWorker } from './worker';
