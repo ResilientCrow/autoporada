@@ -27,7 +27,13 @@ describe('navFor', () => {
     expect(hrefs(who)).toEqual(expected);
   });
 
+  it('shows the access request page to a pending user only', () => {
+    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/', '/pristup']);
+    expect(navFor(actor('submitter')).map((i) => i.href)).toEqual(['/']);
+    expect(navFor(actor('headmaster')).map((i) => i.href)).toEqual(['/']);
+  });
+
   it('uses the real routes by default', () => {
-    expect(navFor(actor('submitter'))).toEqual(NAV);
+    expect(navFor(actor('pending'))).toEqual(NAV);
   });
 });

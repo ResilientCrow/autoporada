@@ -157,7 +157,9 @@ export const test = base.extend<Fixtures>({
       expect(missing).toEqual([]);
       for (const tag of ['header', 'main', 'footer']) {
         const present = await page
-          .locator(`${tag} :is(a[href], button, input, select, textarea, [tabindex]):visible`)
+          .locator(
+            `${tag} :is(a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])):visible`,
+          )
           .count();
         if (present > 0) expect(regions, `no tab stop inside <${tag}>`).toContain(tag);
       }

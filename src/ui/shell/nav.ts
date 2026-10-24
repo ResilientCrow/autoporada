@@ -10,7 +10,10 @@ export interface NavItem {
 }
 
 /** Implemented routes only; each entry joins with its page. */
-export const NAV: readonly NavItem[] = [{ href: '/', label: cs.nav.overview, check: null }];
+export const NAV: readonly NavItem[] = [
+  { href: '/', label: cs.nav.overview, check: null },
+  { href: '/pristup', label: cs.nav.access, check: { action: 'access.request' } },
+];
 
 /** The entries this actor may use. */
 export function navFor(actor: Actor, items: readonly NavItem[] = NAV): readonly NavItem[] {

@@ -11,6 +11,7 @@ const SCREENS = [
   ['the 404 page', '/tato-stranka-neexistuje', 404, null],
   ['the gallery', '/vzornik', 200, null],
   ['the home page of a waiting teacher', '/', 200, /^Učitelka/],
+  ['the access request page of a waiting teacher', '/pristup', 200, /^Učitelka/],
   ['the sign-in page', '/prihlaseni', 200, null],
   ['the sign-in page with an error', '/prihlaseni?chyba=failed&kod=abcdef12-3456', 200, null],
   ['the sign-in page after signing out', '/prihlaseni?odhlaseno=1', 200, null],

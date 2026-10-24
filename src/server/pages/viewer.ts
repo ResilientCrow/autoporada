@@ -11,7 +11,7 @@ import { safeReturnTo } from '@/domain/identity';
 import { getContainer } from '../container';
 import { runRegistered, sessionTokenFrom } from '../pipeline';
 
-async function requestId(): Promise<string> {
+export async function requestId(): Promise<string> {
   return getContainer().requestIdFrom((await headers()).get('x-request-id'));
 }
 

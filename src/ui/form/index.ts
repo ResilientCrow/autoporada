@@ -9,4 +9,5 @@ export { TextField } from './TextField';
 export type { Problem } from './settle';
 export { SubmitButton } from './SubmitButton';
 export { useActionForm } from './use-action-form';
+export { useFocusOnRise } from './use-focus-on-rise';
 export { textOf, type FormSpec } from './spec';

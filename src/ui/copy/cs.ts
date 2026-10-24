@@ -1,3 +1,4 @@
+import { access } from './access';
 import { app, appError, home, notFound } from './app';
 import { errors, fieldIssues, form, problemActions, rules } from './forms';
 import { gallery } from './gallery';
@@ -17,6 +18,7 @@ export const cs = {
   notFound,
   appError,
   home,
+  access,
   shell,
   nav,
   gallery,
