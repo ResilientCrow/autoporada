@@ -15,6 +15,8 @@ export const LIMITS = {
   directory: { max: 30, windowMs: MINUTE, key: 'user' },
   /** Creating, submitting and proposing; never autosave. */
   submission: { max: 30, windowMs: HOUR, key: 'user' },
+  /** An abuse guard for the headmaster's writes (deciding requests): a person never reaches it. */
+  admin: { max: 600, windowMs: HOUR, key: 'user' },
   accessRequest: { max: 3, windowMs: 24 * HOUR, key: 'user' },
 } as const satisfies Record<string, Limit>;
 

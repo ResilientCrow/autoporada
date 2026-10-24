@@ -14,14 +14,24 @@ vi.mock('../container', () => ({
 }));
 
 const LIST = { users: [], total: 0 };
-const inputOf = (): unknown => (runRegistered.mock.calls[0]?.[2] as { input: unknown }).input;
+const PENDING = { items: [] as unknown[] };
+const answer = (useCase: { name: string }) => ({
+  ok: true,
+  value: useCase.name === 'access.pending' ? PENDING : LIST,
+});
+const listCall = () =>
+  runRegistered.mock.calls.find((call) => (call[1] as { name: string }).name === 'users.list');
+const inputOf = (): unknown => (listCall()?.[2] as { input: unknown }).input;
 
 describe('usersPage', () => {
   beforeEach(() => {
     resolvePrincipal.mockReset();
     resolvePrincipal.mockResolvedValue({ kind: 'user', actor: { id: 'u1', role: 'headmaster' } });
     runRegistered.mockReset();
-    runRegistered.mockResolvedValue({ ok: true, value: LIST });
+    runRegistered.mockImplementation(async (_deps: unknown, useCase: { name: string }) =>
+      answer(useCase),
+    );
+    PENDING.items = [];
   });
 
   it('is null for a visitor, without asking the use case', async () => {
@@ -31,7 +41,7 @@ describe('usersPage', () => {
   });
 
   it('asks for everyone by default and returns the list with the params used', async () => {
-    expect(await usersPage({})).toEqual({ ...LIST, q: '', group: 'all' });
+    expect(await usersPage({})).toEqual({ ...LIST, queue: [], q: '', group: 'all' });
     expect(inputOf()).toEqual({ group: 'all' });
   });
 
@@ -70,8 +80,47 @@ describe('usersPage', () => {
     expect(await usersPage({})).toBeNull();
   });
 
+  it('is null when only the queue is refused', async () => {
+    runRegistered.mockImplementation(async (_deps: unknown, useCase: { name: string }) =>
+      useCase.name === 'access.pending'
+        ? { ok: false, error: { code: 'forbidden' } }
+        : answer(useCase),
+    );
+    expect(await usersPage({})).toBeNull();
+  });
+
+  it('carries the queue, with the day asked written out in Prague time', async () => {
+    // 23:30 UTC on 30 September is 1 October in Prague (summer time).
+    PENDING.items = [
+      {
+        requestId: 'r1',
+        version: 2,
+        userId: 'u9',
+        displayName: 'Jana Nová',
+        email: 'jana@skola.example',
+        jobTitle: 'Učitelka',
+        department: null,
+        reason: 'Chci posílat zprávy',
+        requestedAt: '2026-09-30T23:30:00.000Z',
+        events: ['approve', 'reject'],
+      },
+    ];
+    expect((await usersPage({}))?.queue).toEqual([
+      {
+        requestId: 'r1',
+        version: 2,
+        displayName: 'Jana Nová',
+        jobTitle: 'Učitelka',
+        department: null,
+        reason: 'Chci posílat zprávy',
+        events: ['approve', 'reject'],
+        submitted: '1. října 2026',
+      },
+    ]);
+  });
+
   it('fails loudly on any other failure', async () => {
     runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
-    await expect(usersPage({})).rejects.toThrow('users.list: unavailable');
+    await expect(usersPage({})).rejects.toThrow('unavailable');
   });
 });

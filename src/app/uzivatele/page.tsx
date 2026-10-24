@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { decideAccess } from '@/server/actions';
 import { requireSignedIn, usersPage } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
 import { UsersList } from '@/ui/features/users';
@@ -19,7 +20,7 @@ export default async function UsersPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/uzivatele">
-      <UsersList view={model} />
+      <UsersList view={model} decideAccess={decideAccess} />
     </Shell>
   );
 }

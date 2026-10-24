@@ -1,6 +1,20 @@
 /** „Uživatelé“: the list of people and, later, the queue and the detail. */
 export const users = {
   title: 'Uživatelé',
+  queue: {
+    title: 'Žádosti o\u00A0přístup',
+    empty: 'Nic nečeká na rozhodnutí.',
+    submitted: (date: string) => `Podáno ${date}`,
+    reason: 'Důvod',
+    approveStaff: 'Schválit jako zaměstnance',
+    approveStudent: 'Schválit jako studenta',
+    reject: 'Zamítnout',
+    studentHint: 'Student smí jen posílat podklady.',
+    said: {
+      approved: 'Žádost byla schválena. Uživatel se musí znovu přihlásit.',
+      rejected: 'Žádost byla zamítnuta.',
+    },
+  },
   people: {
     title: 'Lidé',
     searchLabel: 'Hledat podle jména nebo e-mailu',

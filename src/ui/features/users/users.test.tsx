@@ -1,11 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { cs, users } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import { UsersList } from './index';
+import type { QueueItemView } from './Queue';
 import type { UsersView } from './UsersList';
 
 const person = (id: string, over: Partial<UsersView['users'][number]> = {}) => ({
@@ -19,6 +20,7 @@ const person = (id: string, over: Partial<UsersView['users'][number]> = {}) => (
 });
 
 const view = (over: Partial<UsersView> = {}): UsersView => ({
+  queue: [],
   users: [person('a'), person('b', { role: 'pending', isStudent: true, status: 'blocked' })],
   total: 2,
   q: '',
@@ -26,7 +28,8 @@ const view = (over: Partial<UsersView> = {}): UsersView => ({
   ...over,
 });
 
-const render = (v: UsersView) => renderToStaticMarkup(<UsersList view={v} />);
+const decide = vi.fn(async () => ({ ok: true as const, data: { state: 'approved' as const } }));
+const render = (v: UsersView) => renderToStaticMarkup(<UsersList view={v} decideAccess={decide} />);
 
 describe('UsersList', () => {
   it('has the page title, the „Lidé“ section and clean markup', () => {
@@ -92,5 +95,81 @@ describe('UsersList', () => {
   it('writes a missing e-mail out as nothing', () => {
     const html = render(view({ users: [person('c', { email: null })], total: 1 }));
     expect(html).not.toContain('break-all');
+  });
+});
+
+const waiting = (id: string, over: Partial<QueueItemView> = {}): QueueItemView => ({
+  requestId: id,
+  version: 1,
+  displayName: `Žadatel ${id}`,
+  jobTitle: 'Učitelka',
+  department: 'Druhý stupeň',
+  reason: 'Chci posílat zprávy.\nDěkuji.',
+  submitted: '1. října 2026',
+  events: ['approve', 'reject'],
+  ...over,
+});
+
+describe('the queue of requests', () => {
+  const { queue } = users;
+  const html = render(view({ queue: [waiting('r1'), waiting('r2', { events: ['reject'] })] }));
+  const items = html.match(/<li class="space-y-2[^>]*>[\s\S]*?<\/li>/g) ?? [];
+
+  it('comes above „Lidé“ with a focusable heading and an empty status region', () => {
+    expect(html).toContain(`${queue.title}</h2>`);
+    expect(html).toMatch(/<h2 [^>]*tabindex="-1"[^>]*>/);
+    expect(html.indexOf(queue.title)).toBeLessThan(html.indexOf(users.people.title));
+    expect(html).toContain('<div role="status"></div>');
+    expect(html.match(/<noscript>/g)).toHaveLength(1);
+  });
+
+  it('shows who asked, what and when, with the reason keeping its line breaks', () => {
+    expect(items).toHaveLength(2);
+    expect(items[0]).toContain('Žadatel r1');
+    expect(items[0]).toContain('Učitelka');
+    expect(items[0]).toContain('Druhý stupeň');
+    expect(items[0]).toContain(queue.submitted('1. října 2026'));
+    expect(items[0]).toContain(queue.reason);
+    expect(items[0]).toMatch(
+      /class="[^"]*whitespace-pre-line[^"]*break-words|class="[^"]*break-words[^"]*whitespace-pre-line/,
+    );
+  });
+
+  it('offers the allowed decisions, off until hydrated', () => {
+    expect(items[0]).toContain(`>${queue.approveStaff}</button>`);
+    expect(items[0]).toContain(`>${queue.approveStudent}</button>`);
+    expect(items[0]).toContain(`>${queue.reject}</button>`);
+    expect(items[0]).toContain(queue.studentHint);
+    expect(items[0]?.match(/<button [^>]*name="decision"/g)).toHaveLength(3);
+    for (const button of items[0]?.match(/<button [^>]*>/g) ?? []) {
+      expect(button).toContain('disabled');
+    }
+    expect(items[0]).toContain('value="approve-staff"');
+    expect(items[0]).toContain('value="approve-student"');
+    expect(items[0]).toContain('value="reject"');
+  });
+
+  it('offers only the decisions the item allows', () => {
+    expect(items[1]).toContain(`>${queue.reject}</button>`);
+    expect(items[1]).not.toContain(queue.approveStaff);
+    expect(items[1]).not.toContain(queue.approveStudent);
+    expect(items[1]).not.toContain(queue.studentHint);
+  });
+
+  it('leaves out missing job title and department', () => {
+    const bare = render(view({ queue: [waiting('r3', { jobTitle: null, department: null })] }));
+    expect(bare).not.toContain('Učitelka');
+  });
+
+  it('says when nothing waits, without forms or a no-script notice', () => {
+    const empty = render(view({ queue: [] }));
+    expect(empty).toContain(queue.empty);
+    expect(empty).not.toContain('id="rozhodnuti');
+    expect(empty).not.toContain('<noscript>');
+  });
+
+  it('has clean markup', () => {
+    expect(html).not.toContain('style=');
+    expect(cspMarkupProblems(html)).toEqual([]);
   });
 });

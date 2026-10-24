@@ -57,6 +57,17 @@ export function summaryItems(
   return [...known, ...unknown];
 }
 
+/**
+ * A field's value among `values`. The controls offer nothing else, so a missing
+ * or unknown one is a bug and throws.
+ */
+export function choiceOf<T extends string>(data: FormData, name: string, values: readonly T[]): T {
+  const value = data.get(name);
+  const found = values.find((candidate) => candidate === value);
+  if (found === undefined) throw new Error(`The form sent no valid "${name}".`);
+  return found;
+}
+
 /** A field's text from submitted data; '' when it is absent or not text (a file). */
 export function textOf(data: FormData, name: string): string {
   const value = data.get(name);

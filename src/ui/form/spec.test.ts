@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { FieldIssueCode } from '@/contracts';
 import { fieldIssues } from '@/ui/copy';
-import { fieldId, fieldMessage, summaryItems, textOf, type FieldSpec, type FormSpec } from './spec';
+import {
+  fieldId,
+  fieldMessage,
+  summaryItems,
+  textOf,
+  choiceOf,
+  type FieldSpec,
+  type FormSpec,
+} from './spec';
 
 const title: FieldSpec = {
   label: 'Název',
@@ -62,5 +70,24 @@ describe('textOf', () => {
     expect(textOf(data, 'a')).toBe('abc');
     expect(textOf(data, 'missing')).toBe('');
     expect(textOf(data, 'file')).toBe('');
+  });
+});
+
+describe('choiceOf', () => {
+  const values = ['a', 'b'] as const;
+
+  it('returns a known value', () => {
+    const data = new FormData();
+    data.set('pick', 'b');
+    expect(choiceOf(data, 'pick', values)).toBe('b');
+  });
+
+  it('throws when the value is missing, unknown or not text', () => {
+    const data = new FormData();
+    expect(() => choiceOf(data, 'pick', values)).toThrow('pick');
+    data.set('pick', 'c');
+    expect(() => choiceOf(data, 'pick', values)).toThrow('pick');
+    data.set('pick', new Blob(['a']), 'a.txt');
+    expect(() => choiceOf(data, 'pick', values)).toThrow('pick');
   });
 });
