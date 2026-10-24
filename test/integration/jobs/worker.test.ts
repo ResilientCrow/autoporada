@@ -31,7 +31,11 @@ const PRUNE: ScheduledJob = {
 };
 
 /** A worker whose `mail.send` handler plays `script`, one step per call, as autoporada_worker. */
-async function workerFor(script: Step[], sleep: Sleep = jobs.instant) {
+async function workerFor(
+  script: Step[],
+  sleep: Sleep = jobs.instant,
+  facts?: Record<string, unknown>,
+) {
   const calls: JobInput<'mail.send'>[] = [];
   const handler: JobHandler<'mail.send'> = async (deps, job) => {
     calls.push(job);
@@ -59,6 +63,7 @@ async function workerFor(script: Step[], sleep: Sleep = jobs.instant) {
     log: jobs.log,
     pollSeconds: 0.5,
     sleep,
+    facts,
   });
   return { boss, worker, calls };
 }
@@ -91,6 +96,18 @@ const settled = (id: string, state: string) =>
   expect.poll(async () => (await row(id))?.state, { timeout: 15_000 }).toBe(state);
 
 describe('startWorker over pg-boss (as autoporada_worker)', () => {
+  it(
+    'logs worker.ready once, with the facts the composition root hands it',
+    async () => {
+      await jobs.timing();
+      await workerFor([], jobs.instant, { version: '1.2.3', transport: 'smtp' });
+      const ready = jobs.lines.filter((l) => l['msg'] === 'worker.ready');
+      expect(ready).toHaveLength(1);
+      expect(ready[0]).toMatchObject({ version: '1.2.3', transport: 'smtp', pollSeconds: 0.5 });
+    },
+    SLOW,
+  );
+
   it(
     'retries a failed attempt and completes the next one, keeping only the code',
     async () => {

@@ -30,6 +30,8 @@ export interface WorkerOptions {
   readonly sleep?: Sleep;
   /** How long a failing start is retried before the worker gives up (60 s). */
   readonly startWithinMs?: number;
+  /** Fields of the `worker.ready` line besides the queues: version, schema, transport. */
+  readonly facts?: Readonly<Record<string, unknown>>;
 }
 
 export interface RunningWorker {
@@ -115,7 +117,10 @@ export async function startWorker(options: WorkerOptions): Promise<RunningWorker
   await syncSchedules(boss, options.schedules, log);
   const run: RunContext = { deps, sleep, shutdown: shutdown.signal, log };
   for (const name of JOB_NAMES) await workOn(boss, name, options, run);
-  log.info({ queues: JOB_NAMES, pollSeconds: options.pollSeconds }, 'worker.ready');
+  log.info(
+    { ...options.facts, queues: JOB_NAMES, pollSeconds: options.pollSeconds },
+    'worker.ready',
+  );
   return {
     async stop() {
       shutdown.abort();

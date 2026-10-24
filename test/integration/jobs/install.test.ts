@@ -1,11 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { createRequire } from 'node:module';
 
 import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createLogger } from '@/infra/log';
-import { QUEUES, createBoss, installJobs } from '@/infra/jobs';
+import { PGBOSS_SCHEMA_VERSION, QUEUES, createBoss, installJobs } from '@/infra/jobs';
 
 import { databaseUrl } from '../../support/template-db';
 
@@ -13,9 +12,7 @@ const SLOW = 60_000;
 const name = `autoporada_test_jobs_${randomBytes(4).toString('hex')}`;
 const url = databaseUrl(name);
 const log = createLogger({ service: 'test', level: 'error' });
-const packageSchema = (
-  createRequire(import.meta.url)('pg-boss/package.json') as { pgboss: { schema: number } }
-).pgboss.schema;
+const packageSchema = PGBOSS_SCHEMA_VERSION;
 
 async function sql<T extends object>(text: string, database: string = name): Promise<T[]> {
   const client = new Client({ connectionString: databaseUrl(database) });
