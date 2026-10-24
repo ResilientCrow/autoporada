@@ -179,4 +179,22 @@ describe('AccessRequestRepo (port contract)', () => {
       await expect(move(world.as(by), created, 'approved')).rejects.toBeInstanceOf(ScopeViolation);
     }
   });
+
+  it('lets a person have one pending request at a time', async () => {
+    const user = await world.seed.user({ role: 'pending' });
+    const other = await world.seed.user({ role: 'pending' });
+    await request(user);
+    await expect(request(user)).rejects.toMatchObject({
+      name: 'ConstraintViolation',
+      constraint: 'access_requests_one_pending',
+    });
+    await expect(request(other)).resolves.toMatchObject({ state: 'pending' });
+  });
+
+  it('lets them ask again once the request is decided', async () => {
+    const user = await world.seed.user({ role: 'pending' });
+    const head = await world.seed.user({ role: 'headmaster' });
+    await move(world.as(head), await request(user), 'rejected');
+    await expect(request(user)).resolves.toMatchObject({ state: 'pending', version: 1 });
+  });
 });

@@ -1,4 +1,5 @@
 import {
+  ConstraintViolation,
   scopeOf,
   ScopeViolation,
   StaleVersion,
@@ -63,6 +64,11 @@ export function fakeAccessRequestRepo(tx: FakeTxState, ctx: TxContext): AccessRe
       ) {
         throw new ScopeViolation();
       }
+      // As the access_requests_one_pending unique index.
+      const open = [...accessRequests.values()].some(
+        (r) => r.userId === userId && r.state === 'pending',
+      );
+      if (open) throw new ConstraintViolation('access_requests_one_pending');
       return save({
         id: newId(tx.draft),
         userId,

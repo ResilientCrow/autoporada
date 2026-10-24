@@ -25,4 +25,6 @@ export function fromTransition(
  */
 export const CONSTRAINT_RULES: Readonly<Record<KnownConstraint, RuleCode>> = {
   users_active_headmaster: 'last-headmaster',
+  users_student_role: 'student-role',
+  access_requests_one_pending: 'request-pending',
 };

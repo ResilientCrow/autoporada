@@ -59,4 +59,6 @@ export interface FakeTxState {
   /** Rows this transaction wrote in audited tables (ADR 0011). */
   readonly written: AuditTarget[];
   readonly exempted: AuditTarget[];
+  /** Deferred constraint checks (triggers that fire at commit); a throw rolls the transaction back. */
+  readonly atCommit: (() => void)[];
 }

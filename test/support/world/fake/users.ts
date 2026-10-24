@@ -1,4 +1,5 @@
 import {
+  ConstraintViolation,
   scopeOf,
   ScopeViolation,
   StaleVersion,
@@ -77,6 +78,21 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       const user = find(id);
       if (!user || user.version !== expectedVersion) throw new StaleVersion();
       const { role = user.role, isStudent = user.isStudent, status = user.status } = patch;
+      // As the users_student_role CHECK.
+      if (isStudent && role !== 'pending' && role !== 'submitter') {
+        throw new ConstraintViolation('users_student_role');
+      }
+      // As the deferred users_active_headmaster trigger: checked at commit.
+      if (user.role === 'headmaster' && user.status === 'active') {
+        if (role !== 'headmaster' || status !== 'active') {
+          tx.atCommit.push(() => {
+            const left = [...users.values()].some(
+              (u) => u.role === 'headmaster' && u.status === 'active',
+            );
+            if (!left) throw new ConstraintViolation('users_active_headmaster');
+          });
+        }
+      }
       // As the users_end_sessions trigger: a change of access ends the user's sessions.
       if (role !== user.role || isStudent !== user.isStudent || status !== user.status) {
         for (const [id, session] of tx.draft.sessions) {

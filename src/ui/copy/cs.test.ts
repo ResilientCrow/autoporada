@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RULE_CODES } from '@/contracts';
 import { typographizeText } from '@/domain/cs';
+import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
 import { cs, pageTitle } from './cs';
 
@@ -21,7 +22,10 @@ function entries(node: unknown, path = ''): [string, string][] {
 
 const NBSP = '\u00A0';
 const NBSP_AFTER = /(?:§|čl\.|odst\.|písm\.) (?=\S)/;
-const NUMBER_UNIT = /\d (?=(?:hodin|hodiny|hodina|minut|minuty|let|roky|roku|dní|dny|MB|KB|%))/;
+const NUMBER_UNIT =
+  /\d (?=(?:hodin|hodiny|hodina|minut|minuty|let|roky|roku|dní|dnů|dny|znaků|znaky|MB|KB|%))/;
+/** A plain space inside a number of four or more digits. */
+const THOUSANDS = /\d \d{3}\b/;
 const POSTAL_CODE = /\d{3} \d{2} (?=\p{Lu})|\d{3} (?=\d{2}\p{Zs}\p{Lu})/u;
 
 /** What the typography oracle does not know: legal references, number + unit, postal codes. */
@@ -29,6 +33,7 @@ function extraProblems(text: string): string[] {
   return [
     NBSP_AFTER.test(text) && 'legal reference',
     NUMBER_UNIT.test(text) && 'number and unit',
+    THOUSANDS.test(text) && 'thousands',
     POSTAL_CODE.test(text) && 'postal code',
   ].filter((p): p is string => p !== false);
 }
@@ -44,6 +49,9 @@ describe('extra typography rule', () => {
     ['za 24 hodin', ['number and unit']],
     ['do 5 MB', ['number and unit']],
     ['170 00 Praha 7', ['postal code']],
+    ['do 1 000 znaků', ['number and unit', 'thousands']],
+    [`do 1${NBSP}000${NBSP}znaků`, []],
+    ['za 30 dnů', ['number and unit']],
   ])('%s -> %j', (text, expected) => {
     expect(extraProblems(text)).toEqual(expected);
   });
@@ -90,6 +98,10 @@ describe('typography', () => {
 describe('error copy', () => {
   it('has a text for every rule code, and nothing else', () => {
     expect(Object.keys(cs.rules).sort()).toEqual([...RULE_CODES].sort());
+  });
+
+  it('names the cooldown in days', () => {
+    expect(cs.rules['request-cooldown']).toContain(`${ACCESS_COOLDOWN_DAYS}${NBSP}dní`);
   });
 });
 

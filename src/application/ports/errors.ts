@@ -4,7 +4,11 @@
  */
 
 /** Constraints a race can trip at commit; the runner maps each to a rule. */
-export const KNOWN_CONSTRAINTS = ['users_active_headmaster'] as const;
+export const KNOWN_CONSTRAINTS = [
+  'users_active_headmaster',
+  'users_student_role',
+  'access_requests_one_pending',
+] as const;
 export type KnownConstraint = (typeof KNOWN_CONSTRAINTS)[number];
 
 /** A versioned update matched no row: someone else changed it first. */

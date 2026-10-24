@@ -42,6 +42,7 @@ export function createFakeDb(): FakeDb {
       life,
       written: [],
       exempted: [],
+      atCommit: [],
     };
     const auditBefore = tx.draft.audit.length;
     const view: Tx = {
@@ -55,6 +56,7 @@ export function createFakeDb(): FakeDb {
     };
     try {
       const value = await inTransactionScope(() => work(view));
+      for (const check of tx.atCommit) check();
       if (injected) throw injected;
       const seeding = ctx.principal.kind === 'system' && ctx.principal.reason === 'test.seed';
       if (!seeding) checkAuditCoverage(tx, auditBefore);

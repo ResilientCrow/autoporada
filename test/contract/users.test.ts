@@ -175,4 +175,42 @@ describe('UserRepo (port contract)', () => {
     await change(world.as(head), user, patch);
     expect(await world.tx(cli, (tx) => tx.sessions.find(tokenSha256), 'read')).toBeNull();
   });
+
+  it('never lets a student have more than the submitter role', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    await expect(change(cli, user, { role: 'reviewer', isStudent: true })).rejects.toMatchObject({
+      name: 'ConstraintViolation',
+      constraint: 'users_student_role',
+    });
+    await expect(change(cli, user, { isStudent: true })).resolves.toMatchObject({
+      isStudent: true,
+    });
+  });
+
+  it.each([
+    ['demoting', { role: 'reviewer' }],
+    ['blocking', { status: 'blocked' }],
+    ['deactivating', { status: 'deactivated' }],
+  ] as const)(
+    'keeps one active headmaster: %s the last one fails at commit',
+    async (_name, patch) => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      await expect(change(cli, head, patch)).rejects.toMatchObject({
+        name: 'ConstraintViolation',
+        constraint: 'users_active_headmaster',
+      });
+      expect(await world.tx(cli, (tx) => tx.users.get(head.id), 'read')).toMatchObject({
+        role: 'headmaster',
+        status: 'active',
+      });
+    },
+  );
+
+  it('allows demoting a headmaster while another stays active', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    await world.seed.user({ role: 'headmaster' });
+    await expect(change(cli, head, { role: 'reviewer' })).resolves.toMatchObject({
+      role: 'reviewer',
+    });
+  });
 });

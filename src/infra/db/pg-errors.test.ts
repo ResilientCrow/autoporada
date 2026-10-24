@@ -35,6 +35,12 @@ describe('toPortError', () => {
     const mapped = toPortError(pgError('23514', 'users_active_headmaster'));
     expect(mapped).toEqual(new ConstraintViolation('users_active_headmaster'));
     expect(toPortError(pgError('23514', 'users_student_role'))).toEqual(
+      new ConstraintViolation('users_student_role'),
+    );
+    expect(toPortError(pgError('23505', 'access_requests_one_pending'))).toEqual(
+      new ConstraintViolation('access_requests_one_pending'),
+    );
+    expect(toPortError(pgError('23514', 'users_other_check'))).toEqual(
       new DatabaseFailure('23514'),
     );
   });
