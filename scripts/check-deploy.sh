@@ -52,7 +52,12 @@ CLIENT_ID=autoporada-check
 CERT_THUMBPRINT=$thumbprint
 ENV
 as_root 'cp /work/env .env' || fail 'could not fill in .env'
-as_root './install.sh' >/dev/null || fail 'install.sh is not idempotent'
+installed=$(as_root './install.sh') || fail 'install.sh is not idempotent'
+# The hint for a volume made before M7 names the upgrade SQL, which ships next to it.
+printf '%s\n' "$installed" | grep -qF 'docker compose exec -T postgres psql' || fail 'install.sh prints no upgrade command'
+hint_file=$(printf '%s\n' "$installed" | sed -n 's/.* -f - <//p')
+[ "$hint_file" = postgres/upgrade/m7-roles.sql ] && [ -s "$work/deploy/$hint_file" ] ||
+  fail "the upgrade command of install.sh names a missing file: $hint_file"
 compose up -d --no-build >/dev/null 2>&1 || fail 'compose up failed'
 
 i=0
@@ -187,6 +192,23 @@ worker_rights=$(sql "SELECT concat_ws(' ',
   (SELECT rolcreaterole FROM pg_roles WHERE rolname = 'autoporada_worker'))") ||
   fail 'could not read the worker privileges'
 [ "$worker_rights" = 't t f f f f f 0 f 0 f f f f f' ] || fail "unexpected worker privileges: $worker_rights"
+
+# The upgrade SQL for a volume made before M7 (deploy/postgres/upgrade): this volume already has the
+# roles, so both runs take the "exists" path. They must succeed, leave the worker a member of the
+# jobs group only, with CONNECT, and set the password of the secret file (a login proves it; the
+# loopback address is trusted in this image, so it connects by the container's own address).
+upgrade() { compose exec -T postgres psql -X -U pgadmin -d postgres -v ON_ERROR_STOP=1 -q -f - <"$root/deploy/postgres/upgrade/m7-roles.sql" 2>&1; }
+out=$(upgrade) || fail "the upgrade SQL failed on its first run: $out"
+out=$(upgrade) || fail "the upgrade SQL is not idempotent: $out"
+upgraded=$(sql "SELECT concat_ws(' ',
+  has_database_privilege('autoporada_worker', 'autoporada', 'CONNECT'),
+  pg_has_role('autoporada_worker', 'autoporada_jobs', 'MEMBER'),
+  (SELECT count(*) FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.member WHERE r.rolname = 'autoporada_worker'),
+  (SELECT rolcanlogin FROM pg_roles WHERE rolname = 'autoporada_worker'))") || fail 'could not read the upgraded roles'
+[ "$upgraded" = 't t 1 t' ] || fail "unexpected worker role after the upgrade SQL: $upgraded"
+login=$(compose exec -T postgres sh -c 'PGPASSWORD=$(cat /run/secrets/pg_worker_password) psql -X -h $(hostname -i) -U autoporada_worker -d autoporada -tAc "SELECT current_user"' 2>&1) ||
+  fail "the worker role cannot log in with its secret after the upgrade SQL: $login"
+[ "$login" = autoporada_worker ] || fail "the worker login answered: $login"
 
 # The probe of SMOKE-TEST step 3 starts and asks Entra (which does not know
 # this tenant): its configuration is complete without the web-only secrets.

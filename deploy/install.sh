@@ -70,5 +70,8 @@ if [ -n "$missing" ]; then
 fi
 echo 'install.sh: ready. The database passwords take effect on the first start'
 echo '  of an empty volume only; changing one later needs ALTER ROLE as well.'
-echo '  A volume made before the worker existed needs its login role once (psql as pgadmin):'
-echo '  CREATE ROLE autoporada_worker LOGIN PASSWORD <secrets/pg_worker_password> IN ROLE autoporada_jobs;'
+echo
+echo 'install.sh: a data volume made before the worker existed (M7) needs its database roles'
+echo '  once, or migrate fails. Run this before docker compose up -d (safe to repeat):'
+echo '    docker compose up -d --wait postgres'
+echo '    docker compose exec -T postgres psql -X -U pgadmin -d postgres -v ON_ERROR_STOP=1 -f - <postgres/upgrade/m7-roles.sql'
