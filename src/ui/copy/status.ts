@@ -18,5 +18,10 @@ export const status = {
     blocked: 'Zablokovaný',
     deactivated: 'Deaktivovaný',
   },
+  issue: {
+    open: 'Koná se',
+    skipped: 'Nekoná se',
+    generated: 'Vygenerováno',
+  },
   student: 'Student',
 } as const;

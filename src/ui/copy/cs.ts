@@ -2,6 +2,7 @@ import { access } from './access';
 import { app, appError, home, notFound } from './app';
 import { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
 import { gallery } from './gallery';
+import { issues } from './issues';
 import { nav } from './nav';
 import { privacy } from './privacy';
 import { shell } from './shell';
@@ -24,6 +25,7 @@ export const cs = {
   shell,
   nav,
   gallery,
+  issues,
   privacy,
   errors,
   status,

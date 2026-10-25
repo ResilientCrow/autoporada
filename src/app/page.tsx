@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { setSkipped } from '@/server/actions';
 import { homePage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
-import { Overview } from '@/ui/features/overview';
+import { MeetingStrip, Overview } from '@/ui/features/overview';
 import { Shell } from '@/ui/shell';
 
 export const metadata: Metadata = { title: pageTitle(cs.home.title) };
@@ -16,6 +17,9 @@ export default async function HomePage() {
   return (
     <Shell viewer={viewer} current="/">
       <Overview actor={viewer.actor} home={model} />
+      {model.kind === 'member' && model.strip !== null && (
+        <MeetingStrip days={model.strip} setSkipped={setSkipped} />
+      )}
     </Shell>
   );
 }

@@ -1,5 +1,5 @@
 import type { Role, UserStatus } from '@/domain/actor';
-import type { AccessState, RequestStanding } from '@/domain/review';
+import type { AccessState, IssueStatus, RequestStanding } from '@/domain/review';
 import { status } from '@/ui/copy';
 import type { StatusTone } from '@/ui/kit';
 
@@ -27,6 +27,13 @@ export const ACCOUNT_LOOK: Readonly<Record<UserStatus, Look>> = {
   active: { tone: 'done', label: status.account.active },
   blocked: { tone: 'stopped', label: status.account.blocked },
   deactivated: { tone: 'neutral', label: status.account.deactivated },
+};
+
+/** A meeting Monday: held (still ahead), cancelled by the headmaster, or its document made. */
+export const ISSUE_LOOK: Readonly<Record<IssueStatus, Look>> = {
+  open: { tone: 'waiting', label: status.issue.open },
+  skipped: { tone: 'stopped', label: status.issue.skipped },
+  generated: { tone: 'done', label: status.issue.generated },
 };
 
 export const STUDENT_LOOK: Look = { tone: 'neutral', label: status.student };

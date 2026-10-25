@@ -2,13 +2,25 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { ROLES, USER_STATUSES } from '@/domain/actor';
-import { ACCESS_MACHINE, type AccessState } from '@/domain/review';
+import { ACCESS_MACHINE, ISSUE_MACHINE, type AccessState, type IssueStatus } from '@/domain/review';
 import { cs } from '@/ui/copy';
 
-import { ACCESS_LOOK, ACCOUNT_LOOK, Chip, ROLE_LOOK, STANDING_LOOK, STUDENT_LOOK } from './index';
+import {
+  ACCESS_LOOK,
+  ACCOUNT_LOOK,
+  Chip,
+  ISSUE_LOOK,
+  ROLE_LOOK,
+  STANDING_LOOK,
+  STUDENT_LOOK,
+} from './index';
 
 const ACCESS_STATES: readonly AccessState[] = [
   ...new Set(Object.values(ACCESS_MACHINE).flatMap((t) => [...t.from, t.to])),
+];
+
+const ISSUE_STATUSES: readonly IssueStatus[] = [
+  ...new Set(Object.values(ISSUE_MACHINE).flatMap((t) => [...t.from, t.to])),
 ];
 
 describe('status looks', () => {
@@ -16,6 +28,7 @@ describe('status looks', () => {
     expect(Object.keys(ACCESS_LOOK).sort()).toEqual([...ACCESS_STATES].sort());
     expect(Object.keys(ROLE_LOOK).sort()).toEqual([...ROLES].sort());
     expect(Object.keys(ACCOUNT_LOOK).sort()).toEqual([...USER_STATUSES].sort());
+    expect(Object.keys(ISSUE_LOOK).sort()).toEqual([...ISSUE_STATUSES].sort());
   });
 
   it('take their labels from the copy', () => {
@@ -23,12 +36,14 @@ describe('status looks', () => {
       ...Object.values(ACCESS_LOOK),
       ...Object.values(ROLE_LOOK),
       ...Object.values(ACCOUNT_LOOK),
+      ...Object.values(ISSUE_LOOK),
       STUDENT_LOOK,
     ].map((look) => look.label);
     const copy = [
       ...Object.values(cs.status.access),
       ...Object.values(cs.status.role),
       ...Object.values(cs.status.account),
+      ...Object.values(cs.status.issue),
       cs.status.student,
     ];
     expect(labels).toEqual(copy);
@@ -44,6 +59,9 @@ describe('status looks', () => {
     ['account active', ACCOUNT_LOOK.active, 'done'],
     ['account blocked', ACCOUNT_LOOK.blocked, 'stopped'],
     ['account deactivated', ACCOUNT_LOOK.deactivated, 'neutral'],
+    ['issue open', ISSUE_LOOK.open, 'waiting'],
+    ['issue skipped', ISSUE_LOOK.skipped, 'stopped'],
+    ['issue generated', ISSUE_LOOK.generated, 'done'],
     ['student', STUDENT_LOOK, 'neutral'],
   ] as const)('%s has the tone %s', (_name, look, tone) => {
     expect(look.tone).toBe(tone);
@@ -62,6 +80,7 @@ describe('status looks', () => {
       ...Object.values(ACCESS_LOOK),
       ...Object.values(ROLE_LOOK),
       ...Object.values(ACCOUNT_LOOK),
+      ...Object.values(ISSUE_LOOK),
       STUDENT_LOOK,
     ];
     expect(all.filter((look) => look.tone === 'attention')).toEqual([]);
