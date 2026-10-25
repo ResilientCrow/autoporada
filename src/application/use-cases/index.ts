@@ -10,6 +10,7 @@ import {
   signOut,
   takeSignIn,
 } from './auth';
+import { setSkipped } from './issues';
 import { me } from './profile';
 import { changeUserAccess, getUser, listUsers } from './users';
 
@@ -23,6 +24,7 @@ export {
   signOut,
   takeSignIn,
 } from './auth';
+export { setSkipped } from './issues';
 export { me } from './profile';
 export { changeUserAccess, getUser, listUsers } from './users';
 
@@ -45,6 +47,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   recordRejection,
   requestAccess,
   resolveSession,
+  setSkipped,
   signOut,
   takeSignIn,
 ];
