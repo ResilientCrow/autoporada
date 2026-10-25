@@ -1,4 +1,6 @@
 /** One test per screen; each screen joins in the commit that restyles it. */
+import type { Page } from '@playwright/test';
+
 import { access, cs, stepUpNotice, users } from '@/ui/copy';
 
 import { ageSession } from './db';
@@ -7,6 +9,10 @@ import { expect, openUserDetail, sessionToken, test, withDates } from './fixture
 const TITLE_SUFFIX = / – Autoporada$/;
 
 const HEADMASTER = /^Ředitel/;
+
+/** Notices the main region shows: a form's live region is there from the start, empty until it speaks. */
+const shownNotices = (page: Page) =>
+  page.getByRole('main').getByRole('status').filter({ hasText: /\S/ });
 
 /** What a waiting user's home page offers per standing: the link's text and the chip, if any. */
 const HOME_STANDINGS = [
@@ -49,7 +55,7 @@ for (const [name, url, status, persona] of SCREENS) {
     await hydrated();
     if (persona === HEADMASTER && url === '/') {
       await expect(page.getByText(cs.status.account.active, { exact: true })).toBeVisible();
-      await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
+      await expect(shownNotices(page)).toHaveCount(0);
       await expect(page.locator('a[aria-current="page"]')).toHaveCount(1);
     }
     const standing = HOME_STANDINGS.find(([, who]) => who === persona);
@@ -62,7 +68,7 @@ for (const [name, url, status, persona] of SCREENS) {
       const chips = page.getByRole('main').getByText(cs.status.access.pending, { exact: true });
       await expect(chips).toHaveCount(chip === cs.status.access.pending ? 1 : 0);
       if (chip) await expect(page.getByRole('main').getByText(chip, { exact: true })).toBeVisible();
-      await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
+      await expect(shownNotices(page)).toHaveCount(0);
     }
     await checkScreen(name);
   });
