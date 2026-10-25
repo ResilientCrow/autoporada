@@ -38,6 +38,8 @@ const row = (recipientId: string, dedupeKey: string) => ({
   recipientId,
   subjectId: '00000000-0000-7000-8000-00000000a001',
   unknownSends: 0,
+  capFrom: 0,
+  jobId: '00000000-0000-7000-8000-00000000b001',
 });
 
 const keys = () =>

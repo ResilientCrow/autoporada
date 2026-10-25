@@ -38,6 +38,15 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
       throw new DatabaseFailure('23514');
     }
   };
+  /** mail_ledger_unknown_sends and mail_ledger_cap_from */
+  const countsAllowed = ({
+    unknownSends,
+    capFrom,
+  }: Pick<LedgerRow, 'unknownSends' | 'capFrom'>) => {
+    if (unknownSends < 0 || capFrom < 0 || capFrom > unknownSends) {
+      throw new DatabaseFailure('23514');
+    }
+  };
   /** mail_ledger_recipient_id_users_id_fk */
   const recipientExists = (recipientId: string) => {
     if (!users.has(recipientId)) throw new DatabaseFailure('23503');
@@ -66,6 +75,7 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
     async claim(row) {
       enter(true);
       lengthsAllowed(row.dedupeKey);
+      countsAllowed(row);
       recipientExists(row.recipientId);
       const before = mailLedger.get(row.dedupeKey);
       mailLedger.set(row.dedupeKey, {
@@ -84,13 +94,15 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
       if (!before) throw new Error('settle: the key has no ledger row');
       codeAllowed(settlement.code);
       lengthsAllowed(dedupeKey, settlement.graphRequestId);
+      const unknownSends = settlement.unknownSends ?? before.unknownSends;
+      countsAllowed({ unknownSends, capFrom: before.capFrom });
       mailLedger.set(dedupeKey, {
         ...before,
         state: settlement.state,
         code: settlement.code,
         settledAt: now,
         graphRequestId: settlement.graphRequestId ?? null,
-        unknownSends: settlement.unknownSends ?? before.unknownSends,
+        unknownSends,
       });
     },
     async skip({ code, ...row }) {
@@ -98,14 +110,14 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
       lengthsAllowed(row.dedupeKey);
       recipientExists(row.recipientId);
       codeAllowed(code);
-      const before: Pick<LedgerRow, 'unknownSends' | 'attempts' | 'claimedAt'> = mailLedger.get(
-        row.dedupeKey,
-      ) ?? { unknownSends: 0, attempts: 0, claimedAt: null };
+      const claimed = mailLedger.get(row.dedupeKey);
       mailLedger.set(row.dedupeKey, {
         ...row,
-        unknownSends: before.unknownSends,
-        attempts: before.attempts,
-        claimedAt: before.claimedAt,
+        unknownSends: claimed?.unknownSends ?? 0,
+        capFrom: claimed?.capFrom ?? 0,
+        jobId: claimed?.jobId ?? null,
+        attempts: claimed?.attempts ?? 0,
+        claimedAt: claimed?.claimedAt ?? null,
         state: 'skipped',
         code,
         settledAt: now,

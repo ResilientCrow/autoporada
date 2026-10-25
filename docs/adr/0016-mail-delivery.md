@@ -38,14 +38,19 @@ told "no" or "wait" gets to see.
    resend are at most two copies; then the job goes to the dead-letter queue
    as `ambiguous`. A lost decision mail is worse than a rare duplicate. A
    `sending` row left by a dead attempt counts as an unknown outcome, and a
-   `deferred` key that had unknown sends is sent as a resend too. A redrive is
-   an operator's decision, and the revived job's first claim starts the count
-   again: a key left `sending` or `unknown` is sent at once, as a resend, and
-   a `failed` key is sent again, as a resend if it had unknown sends. The
-   revived job's retries keep the cap. A resend that is delivered is logged as
-   `mail.resend_unknown_outcome`. A resend whose answer is again ambiguous,
-   refused or deferred is logged as `mail.unknown`, `mail.systemic` or
-   `mail.deferred`. The ledger's `unknown_sends` counts every possible copy.
+   `deferred` key that had unknown sends is sent as a resend too. The
+   ledger's `unknown_sends` counts every possible copy and is never lowered;
+   the cap counts the unknown sends since the last redrive (`cap_from`). A
+   redrive is an operator's decision, honoured at the revived job's first
+   claim, not its first attempt, which can end before it claims: until then
+   the ledger's `job_id` names another job. A key left `sending`, `unknown`
+   or `deferred` is sent at once and a `failed` key is sent again, each as a
+   resend if a copy may be out, and the cap starts again from there. Once the revived job
+   has claimed, its retries keep the cap and stop at a `failed` key. A resend
+   that is delivered is logged as `mail.resend_unknown_outcome`. A resend
+   whose answer is again ambiguous, an auth refusal or not sent is logged as
+   `mail.unknown`, `mail.systemic` or `mail.deferred`; one held by a 429, 503
+   or 409 is logged as `mail.waiting`.
 4. **Classification** is a table by status, never by response text:
 
    | Answer | Ledger | Job |

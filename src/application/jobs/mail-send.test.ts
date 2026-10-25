@@ -16,24 +16,35 @@ import { JOB_HANDLERS } from './index';
 const world = setupWorld();
 type UserSeed = NonNullable<Parameters<typeof world.seed.user>[0]>;
 const ORIGIN = 'https://autoporada.test';
+type MailJob = ReturnType<typeof mailJob>;
 const EMAIL = 'jana.novakova@ssps.cz';
 
-/** The handler on the worker's side (autoporada_worker in the pg world); seeding runs on app. */
+interface Run {
+  /** The id of a job an operator revived from the dead letters; the original job's otherwise. */
+  readonly redrive?: string;
+  readonly attempt?: number;
+}
+
+/**
+ * The handler on the worker's side (autoporada_worker in the pg world); seeding runs on app.
+ * Every run is the same original job (`id`) unless it names a revived one.
+ */
 function handler() {
   const mail = createFakeMail();
   const deps: WorkerDeps = { db: world.workerDb, clock: world.clock, appOrigin: ORIGIN, mail };
-  const run = (job: ReturnType<typeof mailJob>, redriven = false, attempt = 1) => {
+  const id = randomUUID();
+  const run = (job: MailJob, { redrive, attempt = 1 }: Run = {}) => {
     const { data, dedupeKey } = job;
     const input: JobInput<'mail.send'> = {
-      id: randomUUID(),
+      id: redrive ?? id,
       data,
       attempt,
       dedupeKey,
-      redriven,
+      redriven: redrive !== undefined,
     };
     return JOB_HANDLERS['mail.send'](deps, input);
   };
-  return { mail, run };
+  return { mail, run, id };
 }
 
 const ledger = (key: string): Promise<LedgerRow | null> =>
@@ -110,7 +121,7 @@ describe('the mail.send handler', () => {
 
   it('sends the approval outside any transaction and records it as sent', async () => {
     const { job } = await decided('approved');
-    const { mail, run } = handler();
+    const { mail, run, id } = handler();
     expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
     expect(mail.calls).toEqual([
       {
@@ -120,7 +131,8 @@ describe('the mail.send handler', () => {
     ]);
     expect(await ledger(job.dedupeKey)).toMatchObject({
       ...{ state: 'sent', code: 'sent', graphRequestId: 'request-1', attempts: 1 },
-      ...{ unknownSends: 0, claimedAt: world.clock.now(), settledAt: world.clock.now() },
+      ...{ unknownSends: 0, capFrom: 0, jobId: id },
+      ...{ claimedAt: world.clock.now(), settledAt: world.clock.now() },
     });
   });
 
@@ -153,7 +165,10 @@ describe('the mail.send handler', () => {
     const { mail, run } = handler();
     await run(job);
     expect(await run(job)).toEqual({ kind: 'done', code: 'already.sent' });
-    expect(await run(job, true)).toEqual({ kind: 'done', code: 'already.sent' });
+    expect(await run(job, { redrive: randomUUID() })).toEqual({
+      kind: 'done',
+      code: 'already.sent',
+    });
     expect(mail.calls).toHaveLength(1);
   });
 
@@ -266,11 +281,65 @@ describe('the mail.send handler', () => {
       const { job } = await decided('approved');
       const { mail, run } = handler();
       mail.script(UNKNOWN, UNKNOWN);
-      for (let attempt = 0; attempt < 3; attempt += 1) await run(job);
-      expect(await run(job, true)).toEqual({ kind: 'done', code: 'resent' });
-      expect(await run(job, true)).toEqual({ kind: 'done', code: 'already.sent' });
+      for (let attempt = 1; attempt <= 3; attempt += 1) await run(job, { attempt });
+      const redrive = randomUUID();
+      expect(await run(job, { redrive })).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job, { redrive, attempt: 2 })).toEqual({
+        kind: 'done',
+        code: 'already.sent',
+      });
       expect(mail.calls).toHaveLength(3);
-      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 0 });
+      // Every possible copy stays counted; the cap counts from the redrive.
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        ...{ state: 'sent', unknownSends: 2, capFrom: 2, jobId: redrive },
+      });
+    });
+  });
+
+  describe('a redrive whose first attempt ends before it claims', () => {
+    const SECOND = 1_000;
+    /**
+     * Closes the gate, then runs the revived job's attempt 1: it is held there without a claim,
+     * and a shutdown (or a throw, or an expiry) ends the attempt. Its attempt 2 runs once the
+     * gate opens.
+     */
+    async function heldAtTheGate(run: ReturnType<typeof handler>['run'], job: MailJob) {
+      const until = new Date(world.clock.now().getTime() + 30 * SECOND);
+      await world.workerDb.transaction(
+        { principal: system('job:test'), now: world.clock.now(), requestId: 'seed' },
+        { mode: 'write' },
+        (tx) => tx.mailLedger.closeGate(until, 'throttled.429'),
+      );
+      const before = await ledger(job.dedupeKey);
+      const redrive = randomUUID();
+      expect(await run(job, { redrive })).toEqual({ kind: 'wait', until, code: 'wait.gate' });
+      expect(await ledger(job.dedupeKey)).toEqual(before);
+      world.clock.set(until);
+      return () => run(job, { redrive, attempt: 2 });
+    }
+
+    it('sends a rejected key on the revived job’s attempt 2', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script({ kind: 'rejected', code: 'rejected.400' });
+      expect(await run(job)).toEqual({ kind: 'dead', code: 'rejected.400' });
+      const secondAttempt = await heldAtTheGate(run, job);
+      expect(await secondAttempt()).toEqual({ kind: 'done', code: 'sent' });
+      expect(mail.calls).toHaveLength(2);
+    });
+
+    it('resends a key left unknown at the cap on the revived job’s attempt 2', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler();
+      mail.script(
+        { kind: 'unknown', code: 'unknown.timeout' },
+        { kind: 'unknown', code: 'unknown.reset' },
+      );
+      await run(job);
+      await run(job, { attempt: 2 });
+      const secondAttempt = await heldAtTheGate(run, job);
+      expect(await secondAttempt()).toEqual({ kind: 'done', code: 'resent' });
+      expect(mail.calls).toHaveLength(3);
     });
   });
 
@@ -282,26 +351,69 @@ describe('the mail.send handler', () => {
       const { mail, run } = handler();
       mail.script(UNKNOWN, UNKNOWN);
       await run(job);
-      await run(job, false, 2);
+      await run(job, { attempt: 2 });
       expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'unknown', unknownSends: 2 });
-      return { job, mail, run };
+      return { job, mail, run, redrive: randomUUID() };
     }
 
     it('sends at once, flagged, instead of failing the key as ambiguous', async () => {
-      const { job, mail, run } = await leftUnknown();
-      expect(await run(job, true, 1)).toEqual({ kind: 'done', code: 'resent' });
+      const { job, mail, run, redrive } = await leftUnknown();
+      expect(await run(job, { redrive })).toEqual({ kind: 'done', code: 'resent' });
       expect(mail.calls).toHaveLength(3);
-      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 0 });
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        ...{ state: 'sent', unknownSends: 2, capFrom: 2 },
+      });
     });
 
     it('keeps the cap for the revived job’s own retries: two more calls at most', async () => {
-      const { job, mail, run } = await leftUnknown();
+      const { job, mail, run, redrive } = await leftUnknown();
       mail.script(UNKNOWN, UNKNOWN);
-      expect(await run(job, true, 1)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
-      expect(await run(job, true, 2)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
-      expect(await run(job, true, 3)).toEqual({ kind: 'dead', code: 'ambiguous' });
+      expect(await run(job, { redrive })).toEqual({ kind: 'retry', code: 'unknown.timeout' });
+      expect(await run(job, { redrive, attempt: 2 })).toEqual({
+        kind: 'retry',
+        code: 'unknown.timeout',
+      });
+      expect(await run(job, { redrive, attempt: 3 })).toEqual({ kind: 'dead', code: 'ambiguous' });
       expect(mail.calls).toHaveLength(4);
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        ...{ state: 'failed', code: 'ambiguous', unknownSends: 4, capFrom: 2 },
+      });
     });
+
+    it('logs the revived send a resend after it was throttled: the 202 may be a third copy', async () => {
+      const { job, mail, run, redrive } = await leftUnknown();
+      mail.script({ kind: 'throttled', retryAfterMs: 7_000, code: 'throttled.429' });
+      expect(await run(job, { redrive })).toMatchObject({ kind: 'wait', code: 'throttled.429' });
+      expect(await ledger(job.dedupeKey)).toMatchObject({
+        ...{ state: 'deferred', unknownSends: 2, capFrom: 2 },
+      });
+      world.clock.advance(7_000);
+      expect(await run(job, { redrive })).toEqual({ kind: 'done', code: 'resent' });
+      expect(mail.calls).toHaveLength(4);
+      expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', code: 'resent' });
+    });
+  });
+
+  it('gives a redriven deferred key two more unknown sends before it is ambiguous', async () => {
+    const UNKNOWN = { kind: 'unknown', code: 'unknown.timeout' } as const;
+    const { job } = await decided('approved');
+    const { mail, run } = handler();
+    // One unknown send, then auth refusals until the job ran out of retries.
+    mail.script(UNKNOWN, { kind: 'auth', code: 'auth.403' });
+    await run(job);
+    await run(job, { attempt: 2 });
+    expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'deferred', unknownSends: 1 });
+    world.clock.advance(24 * 3_600_000);
+    const redrive = randomUUID();
+    mail.script(UNKNOWN, UNKNOWN);
+    expect(await run(job, { redrive })).toEqual({ kind: 'retry', code: 'unknown.timeout' });
+    expect(await run(job, { redrive, attempt: 2 })).toEqual({
+      kind: 'retry',
+      code: 'unknown.timeout',
+    });
+    expect(await run(job, { redrive, attempt: 3 })).toEqual({ kind: 'dead', code: 'ambiguous' });
+    expect(mail.calls).toHaveLength(4);
+    expect(await ledger(job.dedupeKey)).toMatchObject({ unknownSends: 3, capFrom: 1 });
   });
 
   it('logs a resend after unknown, then deferred: the 202 may be a second copy', async () => {
@@ -309,10 +421,10 @@ describe('the mail.send handler', () => {
     const { mail, run } = handler();
     mail.script({ kind: 'unknown', code: 'unknown.timeout' }, { kind: 'auth', code: 'auth.403' });
     await run(job);
-    await run(job, false, 2);
+    await run(job, { attempt: 2 });
     expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'deferred', unknownSends: 1 });
     world.clock.advance(24 * 3_600_000);
-    expect(await run(job, false, 3)).toEqual({ kind: 'done', code: 'resent' });
+    expect(await run(job, { attempt: 3 })).toEqual({ kind: 'done', code: 'resent' });
   });
 
   describe('pacing (one gate and a 20-per-minute window, kept in the ledger)', () => {

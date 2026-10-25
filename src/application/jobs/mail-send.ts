@@ -27,7 +27,7 @@ const ADDRESS = z.email().regex(/^[\x21-\x7e]+$/);
 
 type Data = JobInput<'mail.send'>['data'];
 /** What the ledger's rules read of the job itself. */
-type Revival = Pick<JobInput<'mail.send'>, 'redriven' | 'attempt'>;
+type Revival = Pick<JobInput<'mail.send'>, 'redriven' | 'id'>;
 
 /** A key claimed in the ledger: the call may go out. */
 interface Claimed {
@@ -52,7 +52,7 @@ async function claim(tx: Tx, dedupeKey: string, data: Data, job: Revival) {
   const { now } = tx.ctx;
   await tx.mailLedger.lockGate();
   const row = await tx.mailLedger.get(dedupeKey);
-  const decision = claimDecision({ row, redriven: job.redriven, attempt: job.attempt });
+  const decision = claimDecision({ row, redriven: job.redriven, jobId: job.id });
   if (decision.kind === 'stop') return decision.outcome;
   const recipient = await tx.users.get(data.recipientId);
   if (!recipient) return done('skipped.recipient-gone');
@@ -72,8 +72,8 @@ async function claim(tx: Tx, dedupeKey: string, data: Data, job: Revival) {
   const calls = await tx.mailLedger.callsSince(new Date(now.getTime() - WINDOW_MS));
   const wait = paceDecision({ gate, calls, now });
   if (wait) return wait;
-  const { unknownSends, resend } = decision;
-  await tx.mailLedger.claim({ dedupeKey, ...data, unknownSends });
+  const { unknownSends, capFrom, resend } = decision;
+  await tx.mailLedger.claim({ dedupeKey, ...data, unknownSends, capFrom, jobId: job.id });
   return { kind: 'send', to, about, resend, unknownSends } satisfies Claimed;
 }
 

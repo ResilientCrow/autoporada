@@ -26,8 +26,12 @@ export const mailLedger = pgTable(
     /** The request or user the mail is about; no foreign key, it may be purged first. */
     subjectId: uuid().notNull(),
     state: text().$type<LedgerRow['state']>().notNull(),
-    /** Sends whose outcome is unknown; at two the key goes to the dead letters. */
+    /** Sends whose outcome is unknown: every possible copy, never lowered. */
     unknownSends: integer().notNull().default(0),
+    /** `unknown_sends` at the last redrive; two unknown sends past it send the key to the dead letters. */
+    capFrom: integer().notNull().default(0),
+    /** The pg-boss job that last claimed the key: an id, not personal data. */
+    jobId: uuid(),
     attempts: integer().notNull().default(0),
     /** When a Graph or SMTP call was last started for this key. */
     claimedAt: at(),
@@ -45,6 +49,7 @@ export const mailLedger = pgTable(
       sql`${t.state} IN ('sending', 'unknown', 'sent', 'deferred', 'skipped', 'failed')`,
     ),
     check('mail_ledger_unknown_sends', sql`${t.unknownSends} >= 0`),
+    check('mail_ledger_cap_from', sql`${t.capFrom} >= 0 AND ${t.capFrom} <= ${t.unknownSends}`),
     check(
       'mail_ledger_code',
       sql`${t.code} ~ '^[a-z]+(\\.[A-Za-z0-9_-]+)*$' AND length(${t.code}) <= 40`,

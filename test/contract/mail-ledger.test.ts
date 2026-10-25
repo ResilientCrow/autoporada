@@ -31,13 +31,31 @@ const ledger = <T>(
     (tx) => work(tx.mailLedger),
   );
 
-const claimRow = (recipientId: string, key = 'access.approved:1', unknownSends = 0): ClaimRow => ({
+/** The pg-boss job that claims, and a job an operator revived from the dead letters. */
+const JOB_ID = '00000000-0000-7000-8000-00000000b001';
+const REVIVED_ID = '00000000-0000-7000-8000-00000000b002';
+
+const claimRow = (
+  recipientId: string,
+  key = 'access.approved:1',
+  unknownSends = 0,
+  claim: Partial<Pick<ClaimRow, 'jobId' | 'capFrom'>> = {},
+): ClaimRow => ({
   dedupeKey: key,
   template: 'access.approved',
   recipientId,
   subjectId: '00000000-0000-7000-8000-00000000a001',
   unknownSends,
+  capFrom: 0,
+  jobId: JOB_ID,
+  ...claim,
 });
+
+/** The fields a skip writes: a skip names no job and starts no cap. */
+const skipRow = (recipientId: string, key = 'access.approved:1') => {
+  const { jobId: _job, capFrom: _cap, unknownSends: _unknown, ...row } = claimRow(recipientId, key);
+  return row;
+};
 
 const later = (ms: number) => new Date(world.clock.now().getTime() + ms);
 
@@ -103,10 +121,13 @@ describe('MailLedgerPort (port contract)', () => {
 
   it('records a skip as settled now, never claimed, over any earlier row', async () => {
     const user = await world.seed.user();
-    const row = { ...claimRow(user.id), code: 'skipped.stale' };
+    const row = { ...skipRow(user.id), code: 'skipped.stale' };
     await ledger((l) => l.skip(row));
     expect(await ledger((l) => l.get(row.dedupeKey))).toEqual({
-      ...claimRow(user.id),
+      ...skipRow(user.id),
+      unknownSends: 0,
+      capFrom: 0,
+      jobId: null,
       state: 'skipped',
       code: 'skipped.stale',
       attempts: 0,
@@ -115,17 +136,65 @@ describe('MailLedgerPort (port contract)', () => {
       graphRequestId: null,
     });
 
-    await ledger((l) => l.claim(claimRow(user.id, 'access.approved:2')));
+    await ledger((l) => l.claim(claimRow(user.id, 'access.approved:2', 1, { capFrom: 1 })));
     await ledger((l) => l.settle('access.approved:2', { state: 'deferred', code: 'auth.403' }));
     world.clock.advance(SECOND);
     await ledger((l) =>
-      l.skip({ ...claimRow(user.id, 'access.approved:2'), code: 'skipped.stale' }),
+      l.skip({ ...skipRow(user.id, 'access.approved:2'), code: 'skipped.stale' }),
     );
     expect(await ledger((l) => l.get('access.approved:2'))).toMatchObject({
       state: 'skipped',
       code: 'skipped.stale',
       attempts: 1,
+      unknownSends: 1,
+      capFrom: 1,
+      jobId: JOB_ID,
       settledAt: world.clock.now(),
+    });
+  });
+
+  it('records the job that claimed the key and where its cap starts, overwritten by each claim', async () => {
+    const user = await world.seed.user();
+    await ledger((l) => l.claim(claimRow(user.id, 'access.approved:1', 0)));
+    await ledger((l) =>
+      l.settle('access.approved:1', { state: 'unknown', code: 'unknown.timeout', unknownSends: 2 }),
+    );
+    expect(await ledger((l) => l.get('access.approved:1'))).toMatchObject({
+      ...{ unknownSends: 2, capFrom: 0, jobId: JOB_ID },
+    });
+    await ledger((l) =>
+      l.claim(claimRow(user.id, 'access.approved:1', 2, { jobId: REVIVED_ID, capFrom: 2 })),
+    );
+    expect(await ledger((l) => l.get('access.approved:1'))).toMatchObject({
+      ...{ state: 'sending', unknownSends: 2, capFrom: 2, jobId: REVIVED_ID, attempts: 2 },
+    });
+  });
+
+  it('keeps the cap start within the unknown count, and both non-negative, as the CHECKs do', async () => {
+    const user = await world.seed.user();
+    const refused = new DatabaseFailure('23514');
+    const claim = (key: string, unknownSends: number, capFrom: number) =>
+      ledger((l) => l.claim(claimRow(user.id, key, unknownSends, { capFrom })));
+    await expect(claim('cap.above', 1, 2)).rejects.toEqual(refused);
+    await expect(claim('cap.negative', 0, -1)).rejects.toEqual(refused);
+    await expect(claim('unknown.negative', -1, 0)).rejects.toEqual(refused);
+    for (const key of ['cap.above', 'cap.negative', 'unknown.negative']) {
+      expect(await ledger((l) => l.get(key))).toBeNull();
+    }
+
+    await claim('cap.kept', 2, 2);
+    await expect(
+      ledger((l) =>
+        l.settle('cap.kept', { state: 'unknown', code: 'unknown.reset', unknownSends: 1 }),
+      ),
+    ).rejects.toEqual(refused);
+    await expect(
+      ledger((l) =>
+        l.settle('cap.kept', { state: 'unknown', code: 'unknown.reset', unknownSends: -1 }),
+      ),
+    ).rejects.toEqual(refused);
+    expect(await ledger((l) => l.get('cap.kept'))).toMatchObject({
+      ...{ state: 'sending', unknownSends: 2, capFrom: 2 },
     });
   });
 
@@ -135,14 +204,14 @@ describe('MailLedgerPort (port contract)', () => {
       new DatabaseFailure('23503'),
     );
     await expect(
-      ledger((l) => l.skip({ ...claimRow(ghost), code: 'skipped.no-address' })),
+      ledger((l) => l.skip({ ...skipRow(ghost), code: 'skipped.no-address' })),
     ).rejects.toEqual(new DatabaseFailure('23503'));
   });
 
   it('refuses a code outside the closed set, as the CHECK does', async () => {
     const user = await world.seed.user();
     await expect(
-      ledger((l) => l.skip({ ...claimRow(user.id, 'bad.skip'), code: 'no-address' })),
+      ledger((l) => l.skip({ ...skipRow(user.id, 'bad.skip'), code: 'no-address' })),
     ).rejects.toEqual(new DatabaseFailure('23514'));
     await ledger((l) => l.claim(claimRow(user.id, 'bad.settle')));
     await expect(
@@ -160,7 +229,7 @@ describe('MailLedgerPort (port contract)', () => {
       new DatabaseFailure('23514'),
     );
     await expect(
-      ledger((l) => l.skip({ ...claimRow(user.id, key(121)), code: 'skipped.no-address' })),
+      ledger((l) => l.skip({ ...skipRow(user.id, key(121)), code: 'skipped.no-address' })),
     ).rejects.toEqual(new DatabaseFailure('23514'));
     expect(await ledger((l) => l.get(key(121)))).toBeNull();
 
@@ -214,7 +283,7 @@ describe('MailLedgerPort (port contract)', () => {
     await ledger((l) => l.settle('sent', { state: 'sent', code: 'sent' }));
     await claim('failed');
     await ledger((l) => l.settle('failed', { state: 'failed', code: 'rejected.400' }));
-    await ledger((l) => l.skip({ ...claimRow(user.id, 'skipped'), code: 'skipped.stale' }));
+    await ledger((l) => l.skip({ ...skipRow(user.id, 'skipped'), code: 'skipped.stale' }));
 
     const since = (instant: Date) => ledger((l) => l.callsSince(instant));
     expect(await since(new Date(start.getTime() - 1))).toEqual({ count: 4, oldest: start });
@@ -293,7 +362,7 @@ describe('MailLedgerPort (port contract)', () => {
     const user = await world.seed.user();
     await ledger((l) => l.claim(claimRow(user.id, 'old.sent')));
     await ledger((l) => l.settle('old.sent', { state: 'sent', code: 'sent' }));
-    await ledger((l) => l.skip({ ...claimRow(user.id, 'old.skipped'), code: 'skipped.stale' }));
+    await ledger((l) => l.skip({ ...skipRow(user.id, 'old.skipped'), code: 'skipped.stale' }));
     await ledger((l) => l.claim(claimRow(user.id, 'old.sending')));
     world.clock.advance(DAY);
     await ledger((l) => l.claim(claimRow(user.id, 'new.sent')));

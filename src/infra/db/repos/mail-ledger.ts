@@ -62,6 +62,8 @@ export function createMailLedgerRepo(db: TxDatabase, ctx: TxContext): MailLedger
         subjectId: row.subjectId,
         state: 'sending' as const,
         unknownSends: row.unknownSends,
+        capFrom: row.capFrom,
+        jobId: row.jobId,
         claimedAt: now,
         settledAt: null,
         code: null,
