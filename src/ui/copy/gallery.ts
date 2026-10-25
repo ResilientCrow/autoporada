@@ -69,6 +69,8 @@ export const gallery = {
       agree: 'Souhlasím s\u00A0podmínkami',
       agreeHint: 'Bez souhlasu nelze pokračovat.',
       options: { student: 'Student', teacher: 'Učitel' },
+      shift: 'Směna',
+      shifts: { morning: 'Ranní', afternoon: 'Odpolední' },
     },
     failed: {
       name: 'Jméno',

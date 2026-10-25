@@ -41,16 +41,18 @@ describe('Gallery', () => {
   it('shows the error form with its issues and the plain form without', () => {
     expect(html).toContain(cs.gallery.forms.failed.reasonTooLong);
     expect(html).toContain(cs.fieldIssues.required);
-    expect(html.match(/aria-invalid="true"/g)).toHaveLength(4);
+    expect(html.match(/aria-invalid="true"/g)).toHaveLength(5);
     // Two summaries, plus one problem notice per code (eleven).
     expect(html.match(/role="alert"/g)).toHaveLength(13);
     expect(html).toContain(cs.form.summaryTitle);
   });
 
-  it('shows a select and a checkbox, clean and with an issue each', () => {
+  it('shows a select, a checkbox and a radio group, clean and with an issue each', () => {
     const { controls } = cs.gallery.forms;
     expect(html.match(/<select /g)).toHaveLength(2);
     expect(html.match(/type="checkbox"/g)).toHaveLength(2);
+    expect(html.match(/<fieldset [^>]*role="radiogroup"/g)).toHaveLength(2);
+    expect(html).toMatch(/<fieldset [^>]*role="radiogroup"[^>]*aria-invalid="true"/);
     expect(html).toContain(controls.roleHint);
     expect(html).toContain(cs.fieldIssues.invalid);
     expect(html).toMatch(/<select [^>]*aria-invalid="true"/);

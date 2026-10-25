@@ -61,6 +61,21 @@ describe('inventory of entry points', () => {
     }
   });
 
+  it('lets only an autosaving editor’s actions skip the refresh (ADR 0017)', async () => {
+    const skipping: string[] = [];
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'action' && info.refresh === 'none') skipping.push(info.useCase.name);
+      }
+    }
+    // Row 28 adds points.save, M8b the future pair: each change updates ADR 0017 item 1.
+    expect(
+      skipping.sort(),
+      'The actions with refresh: none changed: update ADR 0017 item 1 and this list together.',
+    ).toEqual(['points.create']);
+  });
+
   it('registers every use case exactly once, under a unique name', async () => {
     const defined = new Set<unknown>();
     for (const file of USE_CASE_MODULES) {

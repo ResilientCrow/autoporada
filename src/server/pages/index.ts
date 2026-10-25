@@ -11,6 +11,7 @@ import { first, type SearchParams } from './params';
 
 export { accessPage } from './access';
 export { homePage } from './home';
+export { newPointPage } from './points';
 export { userPage } from './user';
 export { usersPage } from './users';
 export { getViewer, optionalSignedIn, requireSignedIn } from './viewer';
