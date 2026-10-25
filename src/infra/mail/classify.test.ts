@@ -33,6 +33,21 @@ describe('classifying a Graph answer', () => {
     expect(answer(202, null, null)).toEqual({ kind: 'sent', requestId: null });
   });
 
+  it('keeps a request-id only when it is a short token the ledger can store', () => {
+    const kept = '0d1e2f3a-4b5c-6d7e-8f90-a1b2c3d4e5f6';
+    expect(answer(202, null, kept)).toEqual({ kind: 'sent', requestId: kept });
+    expect(answer(202, null, 'a'.repeat(64))).toEqual({
+      kind: 'sent',
+      requestId: 'a'.repeat(64),
+    });
+    for (const bad of ['a'.repeat(65), '', 'two words', 'id\nline', 'ünï', "id'; --"]) {
+      expect(answer(202, null, bad), JSON.stringify(bad)).toEqual({
+        kind: 'sent',
+        requestId: null,
+      });
+    }
+  });
+
   it.each<[number, string | null, MailResult]>([
     [429, '7', { kind: 'throttled', retryAfterMs: 7_000, code: 'throttled.429' }],
     [

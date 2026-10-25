@@ -38,10 +38,17 @@ function named(prefix: string, code: string | undefined, fallback: string): stri
     : `${prefix}.${fallback}`;
 }
 
+/** What a Graph request-id looks like (a GUID); the ledger column holds at most 64 characters. */
+const REQUEST_ID = /^[A-Za-z0-9-]{1,64}$/;
+
 /** By status alone (the bodies of 403s are a guess, design §3); never throws. */
 export function classifyAnswer(answer: ProviderAnswer, now: Date): MailResult {
   const { status } = answer;
-  if (status === 202) return { kind: 'sent', requestId: answer.requestId };
+  if (status === 202) {
+    // A header from a proxy or a misbehaving peer must never fail the settle after the mail left.
+    const { requestId } = answer;
+    return { kind: 'sent', requestId: requestId && REQUEST_ID.test(requestId) ? requestId : null };
+  }
   if (status === 429 || status === 503 || status === 409) {
     const delay = retryAfterMs(answer.retryAfter, now);
     return { kind: 'throttled', retryAfterMs: delay, code: `throttled.${status}` };

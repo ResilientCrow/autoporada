@@ -152,6 +152,34 @@ describe('MailLedgerPort (port contract)', () => {
     expect(await ledger((l) => l.get('bad.settle'))).toMatchObject({ state: 'sending' });
   });
 
+  it('bounds the dedupe key at 120 characters and the Graph request id at 64, as the CHECKs do', async () => {
+    const user = await world.seed.user();
+    const key = (length: number) => `k:${'x'.repeat(length - 2)}`;
+    await ledger((l) => l.claim(claimRow(user.id, key(120))));
+    await expect(ledger((l) => l.claim(claimRow(user.id, key(121))))).rejects.toEqual(
+      new DatabaseFailure('23514'),
+    );
+    await expect(
+      ledger((l) => l.skip({ ...claimRow(user.id, key(121)), code: 'skipped.no-address' })),
+    ).rejects.toEqual(new DatabaseFailure('23514'));
+    expect(await ledger((l) => l.get(key(121)))).toBeNull();
+
+    await ledger((l) => l.claim(claimRow(user.id, 'long.id')));
+    await expect(
+      ledger((l) =>
+        l.settle('long.id', { state: 'sent', code: 'sent', graphRequestId: 'a'.repeat(65) }),
+      ),
+    ).rejects.toEqual(new DatabaseFailure('23514'));
+    expect(await ledger((l) => l.get('long.id'))).toMatchObject({ state: 'sending' });
+    await ledger((l) =>
+      l.settle('long.id', { state: 'sent', code: 'sent', graphRequestId: 'a'.repeat(64) }),
+    );
+    expect(await ledger((l) => l.get('long.id'))).toMatchObject({
+      state: 'sent',
+      graphRequestId: 'a'.repeat(64),
+    });
+  });
+
   it('closes the gate to the latest instant it was given, and keeps that one code', async () => {
     await ledger((l) => l.closeGate(later(30 * SECOND), 'throttled.429'));
     expect(await ledger((l) => l.gate())).toEqual({

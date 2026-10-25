@@ -32,6 +32,12 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
   const codeAllowed = (code: string) => {
     if (!isOutcomeCode(code)) throw new DatabaseFailure('23514');
   };
+  /** mail_ledger_dedupe_key_length and mail_ledger_graph_request_id_length */
+  const lengthsAllowed = (dedupeKey: string, graphRequestId?: string | null) => {
+    if (dedupeKey.length > 120 || (graphRequestId?.length ?? 0) > 64) {
+      throw new DatabaseFailure('23514');
+    }
+  };
   /** mail_ledger_recipient_id_users_id_fk */
   const recipientExists = (recipientId: string) => {
     if (!users.has(recipientId)) throw new DatabaseFailure('23503');
@@ -59,6 +65,7 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
     },
     async claim(row) {
       enter(true);
+      lengthsAllowed(row.dedupeKey);
       recipientExists(row.recipientId);
       const before = mailLedger.get(row.dedupeKey);
       mailLedger.set(row.dedupeKey, {
@@ -76,6 +83,7 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
       const before = mailLedger.get(dedupeKey);
       if (!before) throw new Error('settle: the key has no ledger row');
       codeAllowed(settlement.code);
+      lengthsAllowed(dedupeKey, settlement.graphRequestId);
       mailLedger.set(dedupeKey, {
         ...before,
         state: settlement.state,
@@ -87,6 +95,7 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
     },
     async skip({ code, ...row }) {
       enter(true);
+      lengthsAllowed(row.dedupeKey);
       recipientExists(row.recipientId);
       codeAllowed(code);
       const before: Pick<LedgerRow, 'unknownSends' | 'attempts' | 'claimedAt'> = mailLedger.get(
