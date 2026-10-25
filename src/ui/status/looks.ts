@@ -1,6 +1,6 @@
 import type { Role, UserStatus } from '@/domain/actor';
-import type { AccessState, IssueStatus, RequestStanding } from '@/domain/review';
-import { status } from '@/ui/copy';
+import type { AccessState, IssueStatus, PointState, RequestStanding } from '@/domain/review';
+import { points, status } from '@/ui/copy';
 import type { StatusTone } from '@/ui/kit';
 
 export interface Look {
@@ -34,6 +34,17 @@ export const ISSUE_LOOK: Readonly<Record<IssueStatus, Look>> = {
   open: { tone: 'waiting', label: status.issue.open },
   skipped: { tone: 'stopped', label: status.issue.skipped },
   generated: { tone: 'done', label: status.issue.generated },
+};
+
+/** A point's state: „Vrácený k úpravě“ is the one that asks the author for something. */
+export const POINT_LOOK: Readonly<Record<PointState, Look>> = {
+  draft: { tone: 'neutral', label: points.state.draft },
+  submitted: { tone: 'waiting', label: points.state.submitted },
+  returned: { tone: 'attention', label: points.state.returned },
+  approved: { tone: 'done', label: points.state.approved },
+  rejected: { tone: 'stopped', label: points.state.rejected },
+  withdrawn: { tone: 'neutral', label: points.state.withdrawn },
+  published: { tone: 'done', label: points.state.published },
 };
 
 export const STUDENT_LOOK: Look = { tone: 'neutral', label: status.student };

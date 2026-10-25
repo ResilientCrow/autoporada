@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { newPointPage } from './index';
+import { newPointPage, pointPage } from './index';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
 const runRegistered = vi.hoisted(() => vi.fn());
@@ -52,5 +52,131 @@ describe('newPointPage', () => {
   it('fails loudly on any other failure', async () => {
     runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
     await expect(newPointPage()).rejects.toThrow('pointTypes.list: unavailable');
+  });
+});
+
+describe('pointPage', () => {
+  const LOADED = {
+    id: ID,
+    kind: 'report',
+    version: 3,
+    state: 'draft',
+    editable: true,
+    updatedAt: '2026-10-02T08:00:00.000Z',
+    earliestMonday: null,
+    submittedAt: null,
+    isAuthor: true,
+    content: {
+      title: 'Exkurze do Terezína',
+      eventDate: '2027-01-14',
+      endDate: '2027-01-15',
+      timeFrom: '07:00',
+      timeTo: '14:30',
+      campus: 'radlice',
+      place: 'v učebně S206',
+      opening: 'Úvodní věta.',
+      openingEdited: false,
+      body: { type: 'doc', content: [] },
+      bullets: [],
+      statements: [],
+    },
+    type: { id: TYPE_ID, name: 'Exkurze', titleGender: 'f', defaultBullets: [] },
+    timeline: [],
+  };
+  beforeEach(() => runRegistered.mockResolvedValue({ ok: true, value: LOADED }));
+
+  it('is null for a visitor, without asking the use case', async () => {
+    resolvePrincipal.mockResolvedValue(null);
+    expect(await pointPage(ID)).toBeNull();
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it('asks for the point by id', async () => {
+    await pointPage(ID);
+    expect(calledWith()[1].name).toBe('points.get');
+    expect(calledWith()[2].input).toEqual({ id: ID });
+  });
+
+  it('writes the dates and times out, and passes the rest through', async () => {
+    expect(await pointPage(ID)).toEqual({
+      id: ID,
+      kind: 'report',
+      state: 'draft',
+      title: 'Exkurze do Terezína',
+      typeName: 'Exkurze',
+      facts: {
+        eventDate: '14. ledna 2027',
+        endDate: '15. ledna 2027',
+        timeFrom: '7.00',
+        timeTo: '14.30',
+        campus: 'radlice',
+        place: 'v učebně S206',
+      },
+    });
+  });
+
+  it('shows nothing the page does not use', async () => {
+    const model = await pointPage(ID);
+    expect(Object.keys(model ?? {}).sort()).toEqual(
+      ['facts', 'id', 'kind', 'state', 'title', 'typeName'].sort(),
+    );
+  });
+
+  it('leaves unset values null, and a point without a type has no type name', async () => {
+    runRegistered.mockResolvedValue({
+      ok: true,
+      value: {
+        ...LOADED,
+        kind: 'pokyn',
+        type: null,
+        content: {
+          ...LOADED.content,
+          eventDate: null,
+          endDate: null,
+          timeFrom: null,
+          timeTo: null,
+          campus: null,
+          place: null,
+        },
+      },
+    });
+    expect(await pointPage(ID)).toMatchObject({
+      kind: 'pokyn',
+      typeName: null,
+      facts: {
+        eventDate: null,
+        endDate: null,
+        timeFrom: null,
+        timeTo: null,
+        campus: null,
+        place: null,
+      },
+    });
+  });
+
+  it.each(['', '   ', '\t\n'])('treats a blank place (%j) as unset', async (place) => {
+    runRegistered.mockResolvedValue({
+      ok: true,
+      value: { ...LOADED, content: { ...LOADED.content, place } },
+    });
+    expect((await pointPage(ID))?.facts.place).toBeNull();
+  });
+
+  it('trims the place it shows', async () => {
+    runRegistered.mockResolvedValue({
+      ok: true,
+      value: { ...LOADED, content: { ...LOADED.content, place: '  v učebně S206 ' } },
+    });
+    expect((await pointPage(ID))?.facts.place).toBe('v učebně S206');
+  });
+
+  it.each(['forbidden', 'not-found', 'invalid-input'])('is null on %s', async (code) => {
+    runRegistered.mockResolvedValue({ ok: false, error: { code } });
+    expect(await pointPage('nonsense')).toBeNull();
+  });
+
+  it('fails loudly on any other failure', async () => {
+    runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
+    await expect(pointPage(ID)).rejects.toThrow('points.get: unavailable');
   });
 });

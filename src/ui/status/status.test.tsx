@@ -2,7 +2,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { ROLES, USER_STATUSES } from '@/domain/actor';
-import { ACCESS_MACHINE, ISSUE_MACHINE, type AccessState, type IssueStatus } from '@/domain/review';
+import {
+  ACCESS_MACHINE,
+  ISSUE_MACHINE,
+  POINT_MACHINE,
+  type AccessState,
+  type IssueStatus,
+  type PointState,
+} from '@/domain/review';
 import { cs } from '@/ui/copy';
 
 import {
@@ -10,6 +17,7 @@ import {
   ACCOUNT_LOOK,
   Chip,
   ISSUE_LOOK,
+  POINT_LOOK,
   ROLE_LOOK,
   STANDING_LOOK,
   STUDENT_LOOK,
@@ -23,12 +31,23 @@ const ISSUE_STATUSES: readonly IssueStatus[] = [
   ...new Set(Object.values(ISSUE_MACHINE).flatMap((t) => [...t.from, t.to])),
 ];
 
+const POINT_STATES: readonly PointState[] = [
+  ...new Set(Object.values(POINT_MACHINE).flatMap((t) => [...t.from, t.to])),
+];
+
 describe('status looks', () => {
   it('cover every access state, role and account status, and nothing else', () => {
     expect(Object.keys(ACCESS_LOOK).sort()).toEqual([...ACCESS_STATES].sort());
     expect(Object.keys(ROLE_LOOK).sort()).toEqual([...ROLES].sort());
     expect(Object.keys(ACCOUNT_LOOK).sort()).toEqual([...USER_STATUSES].sort());
     expect(Object.keys(ISSUE_LOOK).sort()).toEqual([...ISSUE_STATUSES].sort());
+  });
+
+  it('cover every state a point can reach, labelled from the copy', () => {
+    expect(Object.keys(POINT_LOOK).sort()).toEqual([...POINT_STATES].sort());
+    expect(Object.values(POINT_LOOK).map((look) => look.label)).toEqual(
+      Object.values(cs.points.state),
+    );
   });
 
   it('take their labels from the copy', () => {
@@ -62,6 +81,13 @@ describe('status looks', () => {
     ['issue open', ISSUE_LOOK.open, 'waiting'],
     ['issue skipped', ISSUE_LOOK.skipped, 'stopped'],
     ['issue generated', ISSUE_LOOK.generated, 'done'],
+    ['point draft', POINT_LOOK.draft, 'neutral'],
+    ['point submitted', POINT_LOOK.submitted, 'waiting'],
+    ['point returned', POINT_LOOK.returned, 'attention'],
+    ['point approved', POINT_LOOK.approved, 'done'],
+    ['point rejected', POINT_LOOK.rejected, 'stopped'],
+    ['point withdrawn', POINT_LOOK.withdrawn, 'neutral'],
+    ['point published', POINT_LOOK.published, 'done'],
     ['student', STUDENT_LOOK, 'neutral'],
   ] as const)('%s has the tone %s', (_name, look, tone) => {
     expect(look.tone).toBe(tone);
