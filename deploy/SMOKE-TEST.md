@@ -171,6 +171,7 @@ active reviewer or headmaster who is not a student.
 | `web` restarts with `Invalid configuration` | `.env` or a secret file is wrong | The message names the setting; `sudo ./install.sh` again |
 | `mail.systemic` | Graph refuses the send (403, 401) or Entra refuses the token | Normal for up to 2 hours after the role assignment; later, check the scope (ENTRA-SETUP §3) |
 | `auth.token.AADSTS…` in the ledger `code` | Entra refused the app's token | Look the code up as above; run `auth:probe` |
+| `mail.deferred` with a `net.*` code (`net.unavailable`, `net.ECONNREFUSED` …) | The worker cannot reach Microsoft (egress, DNS or a proxy); nothing was sent, and the mail is retried | Open `login.microsoftonline.com` and `graph.microsoft.com` for the worker (ENTRA-SETUP §4), or set `NODE_USE_ENV_PROXY=1` and `HTTPS_PROXY` for it as for web |
 | `mail.waiting` | The mail waits for the 20-a-minute window or a `Retry-After` | Normal; nothing to do |
 | `job.dead` | A job is in the dead-letter queue; `jobs:status` lists it with its code | `ambiguous`: the mail probably arrived, so do not redrive without asking the recipient; a redrive may send up to two more copies. `rejected.*`: Graph refused the mail for good; fix the address or the data first. Other codes: fix the cause, then `docker compose run --rm cli jobs:redrive` (running `cli` with no command prints the usage) |
 | `worker.start_failed` with the hint `run migrate` | The job queue's tables are behind the code | `docker compose up -d` runs `migrate` first; check `docker compose logs migrate` |
