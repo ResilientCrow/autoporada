@@ -16,6 +16,11 @@ import { runAction, sessionTokenFrom, type ActionOptions } from '../pipeline';
  * After a write that succeeded, the page re-renders in the same response
  * (`refresh`, ADR 0013): the client never refreshes or redirects itself. A
  * failure does not refresh, or it would reset the form showing the problem.
+ * The exception is an autosaving editor (ADR 0017): its actions pass
+ * `refresh: 'none'`, since a refresh would remount the editor under the
+ * author's hands, and that client calls `router.replace` after `points.create`
+ * and `router.refresh` for „Načíst aktuální stav“. The inventory test pins
+ * which actions may.
  */
 export function defineAction<In, Out>(
   useCase: UseCase<In, Out>,
@@ -24,6 +29,7 @@ export function defineAction<In, Out>(
   if (useCase.principal !== 'user') {
     throw new Error(`${useCase.name}: an action runs as the signed-in user`);
   }
+  const refreshAfterWrite = (options.refresh ?? 'page') === 'page';
   const action = async (input: In) => {
     const container = getContainer();
     const head = await headers();
@@ -32,9 +38,14 @@ export function defineAction<In, Out>(
       requestId: container.requestIdFrom(head.get('x-request-id')),
     };
     const result = await runAction(container, request, useCase, options, input);
-    if (useCase.mode === 'write' && result.ok) refresh();
+    if (refreshAfterWrite && useCase.mode === 'write' && result.ok) refresh();
     return result;
   };
-  markWrapped(action, { kind: 'action', useCase, rateLimit: options.rateLimit });
+  markWrapped(action, {
+    kind: 'action',
+    useCase,
+    rateLimit: options.rateLimit,
+    refresh: refreshAfterWrite ? 'page' : 'none',
+  });
   return action;
 }

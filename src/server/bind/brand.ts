@@ -8,6 +8,8 @@ export type WrappedInfo =
       readonly kind: 'action';
       readonly useCase: AnyUseCase;
       readonly rateLimit: LimitName | 'none';
+      /** Always set: the default is written out (ADR 0017). */
+      readonly refresh: 'page' | 'none';
     }
   | {
       readonly kind: 'route';

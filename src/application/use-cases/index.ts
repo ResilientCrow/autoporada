@@ -22,6 +22,7 @@ import {
   submitPoint,
   withdrawPoint,
 } from './points';
+import { listPointTypes } from './point-types';
 import { me } from './profile';
 import { changeUserAccess, getUser, listUsers } from './users';
 
@@ -47,6 +48,7 @@ export {
   submitPoint,
   withdrawPoint,
 } from './points';
+export { listPointTypes } from './point-types';
 export { me } from './profile';
 export { changeUserAccess, getUser, listUsers } from './users';
 
@@ -66,6 +68,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   getUser,
   issueWindow,
   listMyPoints,
+  listPointTypes,
   listUsers,
   me,
   myAccess,

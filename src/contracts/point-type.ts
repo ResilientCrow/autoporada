@@ -26,3 +26,10 @@ export const defaultBulletsSchema = z
   .array(bulletSpecSchema)
   .max(POINT_LIMITS.bullets)
   .refine(uniqueKeys, { message: 'duplicate-key' });
+
+/** The chooser's list: no input yet (the headmaster's `includeInactive` comes with the type admin). */
+export const listPointTypesInput = z.strictObject({});
+export const listPointTypesOutput = z.object({
+  /** The active types in `position` order. */
+  types: z.array(z.object({ id: z.uuid(), name: z.string() })),
+});

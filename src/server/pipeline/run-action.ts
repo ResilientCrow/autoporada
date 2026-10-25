@@ -31,6 +31,12 @@ type UserLimitName = {
 export interface ActionOptions {
   /** Required: no limit is a written-down decision too. */
   readonly rateLimit: UserLimitName | 'none';
+  /**
+   * Whether the page re-renders after a successful write. Default `'page'`
+   * (ADR 0013 item 4); `'none'` only for an autosaving editor's actions
+   * (ADR 0017), whose client keeps the editor mounted.
+   */
+  readonly refresh?: 'page' | 'none';
 }
 
 /** Runs a registered use case; an unlisted one is a bug in the code, never a request. */

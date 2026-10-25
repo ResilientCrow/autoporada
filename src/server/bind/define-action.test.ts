@@ -58,7 +58,12 @@ describe('defineAction', () => {
   });
 
   it('brands what it makes, and nothing else', () => {
-    expect(wrappedInfo(action)).toEqual({ kind: 'action', useCase: me, rateLimit: 'none' });
+    expect(wrappedInfo(action)).toEqual({
+      kind: 'action',
+      useCase: me,
+      rateLimit: 'none',
+      refresh: 'page',
+    });
     expect(wrappedInfo(async () => ({ ok: true }))).toBeUndefined();
   });
 
@@ -87,6 +92,26 @@ describe('defineAction', () => {
       runAction.mockResolvedValue({ ok: false, error: { code: 'conflict' } });
       await answer({});
       expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh after a successful write when the action says refresh: none', async () => {
+      const autosave = defineAction(write, { rateLimit: 'none', refresh: 'none' });
+      runAction.mockResolvedValue({ ok: true, data: {} });
+      expect(await autosave({})).toEqual({ ok: true, data: {} });
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh after a failed write that says refresh: none either', async () => {
+      const autosave = defineAction(write, { rateLimit: 'none', refresh: 'none' });
+      runAction.mockResolvedValue({ ok: false, error: { code: 'conflict' } });
+      await autosave({});
+      expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('reports the refresh it was given, and writes the default out', () => {
+      const none = defineAction(write, { rateLimit: 'submission', refresh: 'none' });
+      expect(wrappedInfo(none)).toMatchObject({ kind: 'action', refresh: 'none' });
+      expect(wrappedInfo(answer)).toMatchObject({ kind: 'action', refresh: 'page' });
     });
 
     it('does not refresh after a read', async () => {
