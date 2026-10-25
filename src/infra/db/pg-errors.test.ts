@@ -40,8 +40,18 @@ describe('toPortError', () => {
     expect(toPortError(pgError('23505', 'access_requests_one_pending'))).toEqual(
       new ConstraintViolation('access_requests_one_pending'),
     );
-    expect(toPortError(pgError('23514', 'users_other_check'))).toEqual(
-      new DatabaseFailure('23514'),
+  });
+
+  it('logs an unregistered constraint by its name, a schema identifier', () => {
+    expect(toPortError(pgError('23514', 'points_dates'))).toEqual(
+      new DatabaseFailure('db.constraint.points_dates'),
+    );
+    expect(toPortError(wrapped(pgError('23505', 'points_author_client_ref_key')))).toEqual(
+      new DatabaseFailure('db.constraint.points_author_client_ref_key'),
+    );
+    // A raised check_violation names its own constraint (the version_bump trigger).
+    expect(toPortError(pgError('23514', 'version_bump'))).toEqual(
+      new DatabaseFailure('db.constraint.version_bump'),
     );
   });
 

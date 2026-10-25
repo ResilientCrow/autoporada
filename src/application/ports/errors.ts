@@ -44,7 +44,11 @@ export class TxClosed extends Error {
   override readonly name = 'TxClosed';
 }
 
-/** Any other database failure, by SQLSTATE only. */
+/**
+ * Any other database failure, by a code only: the SQLSTATE, or a schema
+ * identifier such as `db.constraint.<name>` for an unregistered constraint
+ * (ADR 0022). Never the SQL, its parameters or the message.
+ */
 export class DatabaseFailure extends Error {
   override readonly name = 'DatabaseFailure';
   constructor(readonly sqlstate: string) {

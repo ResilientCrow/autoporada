@@ -13,6 +13,8 @@ import type { FakeTxState } from './state';
 
 const SENDS: readonly LedgerState[] = ['sending', 'unknown', 'sent', 'failed'];
 const DELIVERY_PRINCIPAL = /^(job|cli):/;
+/** An unregistered constraint, as infra/db/pg-errors.ts reports it. */
+const refusedBy = (constraint: string) => new DatabaseFailure(`db.constraint.${constraint}`);
 
 /**
  * The mail ledger over the fake state, with the same scope, foreign key and
@@ -30,26 +32,26 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
   };
   /** mail_ledger_code: the CHECK is isOutcomeCode's pattern and length. */
   const codeAllowed = (code: string) => {
-    if (!isOutcomeCode(code)) throw new DatabaseFailure('23514');
+    if (!isOutcomeCode(code)) throw refusedBy('mail_ledger_code');
   };
-  /** mail_ledger_dedupe_key_length and mail_ledger_graph_request_id_length */
   const lengthsAllowed = (dedupeKey: string, graphRequestId?: string | null) => {
-    if (dedupeKey.length > 120 || (graphRequestId?.length ?? 0) > 64) {
-      throw new DatabaseFailure('23514');
-    }
+    if (dedupeKey.length > 120) throw refusedBy('mail_ledger_dedupe_key_length');
+    if ((graphRequestId?.length ?? 0) > 64) throw refusedBy('mail_ledger_graph_request_id_length');
   };
-  /** mail_ledger_unknown_sends and mail_ledger_cap_from */
+  /**
+   * PostgreSQL runs a table's CHECKs in name order, so a negative count with a
+   * cap of zero or more is refused by mail_ledger_cap_from first.
+   */
   const countsAllowed = ({
     unknownSends,
     capFrom,
   }: Pick<LedgerRow, 'unknownSends' | 'capFrom'>) => {
-    if (unknownSends < 0 || capFrom < 0 || capFrom > unknownSends) {
-      throw new DatabaseFailure('23514');
-    }
+    if (capFrom < 0 || capFrom > unknownSends) throw refusedBy('mail_ledger_cap_from');
+    // Never reached after cap_from, as in PostgreSQL; it mirrors the CHECK.
+    if (unknownSends < 0) throw refusedBy('mail_ledger_unknown_sends');
   };
-  /** mail_ledger_recipient_id_users_id_fk */
   const recipientExists = (recipientId: string) => {
-    if (!users.has(recipientId)) throw new DatabaseFailure('23503');
+    if (!users.has(recipientId)) throw refusedBy('mail_ledger_recipient_id_users_id_fk');
   };
 
   return {

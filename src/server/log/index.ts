@@ -8,8 +8,10 @@ export interface Log {
 }
 
 /**
- * What may be logged about an error. Database errors are logged by SQLSTATE
- * only; our own errors carry no user data (a rule checked in review).
+ * What may be logged about an error. Database errors are logged by their code
+ * only (the SQLSTATE, or `db.constraint.<name>`; ADR 0022), never by SQL,
+ * parameters or message; our own errors carry no user data (a rule checked in
+ * review).
  */
 export function errorSummary(error: unknown): Record<string, unknown> {
   if (error instanceof DatabaseFailure) return { name: error.name, sqlstate: error.sqlstate };

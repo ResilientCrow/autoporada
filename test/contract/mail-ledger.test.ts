@@ -58,6 +58,8 @@ const skipRow = (recipientId: string, key = 'access.approved:1') => {
 };
 
 const later = (ms: number) => new Date(world.clock.now().getTime() + ms);
+/** A CHECK or foreign key refusal, named as infra/db/pg-errors.ts reports it. */
+const refusedBy = (constraint: string) => new DatabaseFailure(`db.constraint.${constraint}`);
 
 describe('MailLedgerPort (port contract)', () => {
   it('starts every test with no rows and an open gate', async () => {
@@ -172,7 +174,7 @@ describe('MailLedgerPort (port contract)', () => {
 
   it('keeps the cap start within the unknown count, and both non-negative, as the CHECKs do', async () => {
     const user = await world.seed.user();
-    const refused = new DatabaseFailure('23514');
+    const refused = refusedBy('mail_ledger_cap_from');
     const claim = (key: string, unknownSends: number, capFrom: number) =>
       ledger((l) => l.claim(claimRow(user.id, key, unknownSends, { capFrom })));
     await expect(claim('cap.above', 1, 2)).rejects.toEqual(refused);
@@ -200,23 +202,22 @@ describe('MailLedgerPort (port contract)', () => {
 
   it('refuses a row for a recipient who does not exist', async () => {
     const ghost = randomUUID();
-    await expect(ledger((l) => l.claim(claimRow(ghost)))).rejects.toEqual(
-      new DatabaseFailure('23503'),
-    );
+    const refused = refusedBy('mail_ledger_recipient_id_users_id_fk');
+    await expect(ledger((l) => l.claim(claimRow(ghost)))).rejects.toEqual(refused);
     await expect(
       ledger((l) => l.skip({ ...skipRow(ghost), code: 'skipped.no-address' })),
-    ).rejects.toEqual(new DatabaseFailure('23503'));
+    ).rejects.toEqual(refused);
   });
 
   it('refuses a code outside the closed set, as the CHECK does', async () => {
     const user = await world.seed.user();
     await expect(
       ledger((l) => l.skip({ ...skipRow(user.id, 'bad.skip'), code: 'no-address' })),
-    ).rejects.toEqual(new DatabaseFailure('23514'));
+    ).rejects.toEqual(refusedBy('mail_ledger_code'));
     await ledger((l) => l.claim(claimRow(user.id, 'bad.settle')));
     await expect(
       ledger((l) => l.settle('bad.settle', { state: 'sent', code: `sent.${'x'.repeat(40)}` })),
-    ).rejects.toEqual(new DatabaseFailure('23514'));
+    ).rejects.toEqual(refusedBy('mail_ledger_code'));
     expect(await ledger((l) => l.get('bad.skip'))).toBeNull();
     expect(await ledger((l) => l.get('bad.settle'))).toMatchObject({ state: 'sending' });
   });
@@ -225,12 +226,11 @@ describe('MailLedgerPort (port contract)', () => {
     const user = await world.seed.user();
     const key = (length: number) => `k:${'x'.repeat(length - 2)}`;
     await ledger((l) => l.claim(claimRow(user.id, key(120))));
-    await expect(ledger((l) => l.claim(claimRow(user.id, key(121))))).rejects.toEqual(
-      new DatabaseFailure('23514'),
-    );
+    const tooLong = refusedBy('mail_ledger_dedupe_key_length');
+    await expect(ledger((l) => l.claim(claimRow(user.id, key(121))))).rejects.toEqual(tooLong);
     await expect(
       ledger((l) => l.skip({ ...skipRow(user.id, key(121)), code: 'skipped.no-address' })),
-    ).rejects.toEqual(new DatabaseFailure('23514'));
+    ).rejects.toEqual(tooLong);
     expect(await ledger((l) => l.get(key(121)))).toBeNull();
 
     await ledger((l) => l.claim(claimRow(user.id, 'long.id')));
@@ -238,7 +238,7 @@ describe('MailLedgerPort (port contract)', () => {
       ledger((l) =>
         l.settle('long.id', { state: 'sent', code: 'sent', graphRequestId: 'a'.repeat(65) }),
       ),
-    ).rejects.toEqual(new DatabaseFailure('23514'));
+    ).rejects.toEqual(refusedBy('mail_ledger_graph_request_id_length'));
     expect(await ledger((l) => l.get('long.id'))).toMatchObject({ state: 'sending' });
     await ledger((l) =>
       l.settle('long.id', { state: 'sent', code: 'sent', graphRequestId: 'a'.repeat(64) }),

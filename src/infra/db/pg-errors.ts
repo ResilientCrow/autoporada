@@ -12,9 +12,10 @@ import {
 } from '@/application/ports';
 
 /**
- * Database errors leave infra as port errors (ADR 0011). Drizzle's wrapper
- * spells out the failed SQL and its parameters, which hold minors' data, and
- * a PostgreSQL message can quote a value; only the SQLSTATE survives.
+ * Database errors leave infra as port errors (ADR 0011, 0022). Drizzle's
+ * wrapper spells out the failed SQL and its parameters, which hold minors'
+ * data, and a PostgreSQL message can quote a value; only the SQLSTATE or the
+ * name of the constraint that refused survives.
  */
 
 const RETRYABLE = new Set(['40001', '40P01']);
@@ -40,6 +41,8 @@ function fromDatabaseError(error: DatabaseError): Error {
   if (code === '55P03') return new LockTimeout();
   if (RETRYABLE.has(code)) return new TransactionConflict();
   if (known(error.constraint)) return new ConstraintViolation(error.constraint);
+  // Any other hit is a bug or a bypassed check; the name is a schema identifier, safe to log.
+  if (error.constraint) return new DatabaseFailure(`db.constraint.${error.constraint}`);
   return new DatabaseFailure(code);
 }
 
