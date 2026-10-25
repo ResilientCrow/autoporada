@@ -4,6 +4,7 @@ import type { Clock } from './clock';
 import type { IssueRepo } from './issues';
 import type { JobPort } from './jobs';
 import type { MailLedgerPort } from './mail-ledger';
+import type { PointTypeRepo } from './point-types';
 import type { Principal } from './principal';
 import type { SessionRepo } from './sessions';
 import type { SignInRepo } from './sign-ins';
@@ -36,6 +37,7 @@ export interface Tx {
   readonly signIns: SignInRepo;
   readonly sessions: SessionRepo;
   readonly issues: IssueRepo;
+  readonly pointTypes: PointTypeRepo;
   readonly audit: AuditPort;
   readonly jobs: JobPort;
   /** The worker's delivery state; refuses every principal but jobs and the CLI. */

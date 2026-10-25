@@ -14,6 +14,7 @@ import {
   type AccessRequestRecord,
   type AppDeps,
   type Db,
+  type PointTypeRecord,
   type Principal,
   type Tx,
   type TxMode,
@@ -29,6 +30,7 @@ import {
   auditRows,
   deleteUser,
   insertAccessRequest,
+  insertPointType,
   jobRows,
   lockWaits,
   resetTables,
@@ -58,6 +60,10 @@ interface AccessRequestSeed {
 /** A request row as the seed writes it, before the database gives it an id and a version. */
 type AccessRequestRow = Omit<AccessRequestRecord, 'id' | 'version'>;
 
+/** A point type to seed; migration 0014's placeholders are not in either world (resetTables empties them). */
+type PointTypeSeed = Partial<Omit<PointTypeRecord, 'id' | 'version' | 'name' | 'position'>> &
+  Pick<PointTypeRecord, 'name' | 'position'>;
+
 const SEED_REASON = 'Učím informatiku od září.';
 
 export interface World {
@@ -80,6 +86,8 @@ export interface World {
     user(seed?: UserSeed): Promise<UserRecord>;
     /** Written straight into the table, past the repository's rules and the audit log. */
     accessRequest(seed: AccessRequestSeed): Promise<AccessRequestRecord>;
+    /** Written straight into the table: no port writes point types before commit 49. */
+    pointType(seed: PointTypeSeed): Promise<PointTypeRecord>;
   };
   readonly inspect: {
     audit(): Promise<readonly AuditRow[]>;
@@ -111,6 +119,7 @@ interface Backend {
   audit(): Promise<readonly AuditRow[]>;
   jobs(): Promise<readonly JobRow[]>;
   insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
+  insertPointType(row: Omit<PointTypeRecord, 'id' | 'version'>): Promise<PointTypeRecord>;
   deleteUser(id: string): Promise<void>;
 }
 
@@ -175,6 +184,14 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             : user;
         }),
       accessRequest: (seed) => backend().insertAccessRequest(accessRequestRow(seed, clock.now())),
+      pointType: (seed) =>
+        backend().insertPointType({
+          titleGender: null,
+          defaultBullets: [],
+          active: true,
+          locked: false,
+          ...seed,
+        }),
     },
     inspect: {
       audit: () => backend().audit(),
@@ -210,6 +227,11 @@ function fakeBackend(db: FakeDb): Backend {
       accessRequests.set(request.id, request);
       return request;
     },
+    async insertPointType(row) {
+      const type = { ...row, id: newId(db.state()), version: 1 };
+      db.state().pointTypes.set(type.id, type);
+      return type;
+    },
     async deleteUser(id) {
       eraseFakeUser(db.state(), id);
     },
@@ -224,6 +246,7 @@ function pgBackend(database: TestDatabase): Backend {
     audit: () => auditRows(database),
     jobs: () => jobRows(database),
     insertAccessRequest: (row) => insertAccessRequest(database, row),
+    insertPointType: (row) => insertPointType(database, row),
     deleteUser: (id) => deleteUser(database, id),
   };
 }

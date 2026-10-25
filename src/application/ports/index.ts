@@ -57,6 +57,7 @@ export type {
   SkipRow,
 } from './mail-ledger';
 export type { JobHandler, JobHandlers, WorkerDeps } from './worker';
+export type { PointTypeRecord, PointTypeRepo } from './point-types';
 export {
   scopeOf,
   system,

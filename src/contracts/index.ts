@@ -41,6 +41,7 @@ export {
   type SignInError,
 } from './auth';
 export { issuesWindowInput, issuesWindowOutput, setSkippedInput, setSkippedOutput } from './issues';
+export { defaultBulletsSchema } from './point-type';
 export {
   changeUserAccessInput,
   changeUserAccessOutput,

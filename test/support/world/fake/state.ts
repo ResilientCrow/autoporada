@@ -9,6 +9,7 @@ import {
   type JobName,
   type LedgerRow,
   type PendingSignIn,
+  type PointTypeRecord,
   type SessionRecord,
   type UserRecord,
 } from '@/application/ports';
@@ -25,6 +26,8 @@ export interface FakeState {
   readonly jobs: JobRow[];
   /** issues, by ISO Monday (issues_monday_key). */
   readonly issues: Map<string, IssueRecord>;
+  /** point_types, by id. Migration 0014's seeds are not here: a test makes the types it needs. */
+  readonly pointTypes: Map<string, PointTypeRecord>;
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
   /** mail_gate's one row, as migration 0009 inserts it. */
@@ -56,6 +59,7 @@ export const emptyState = (): FakeState => ({
   audit: [],
   jobs: [],
   issues: new Map(),
+  pointTypes: new Map(),
   mailLedger: new Map(),
   mailGate: { notBefore: null, code: null },
   nextId: 1,
