@@ -30,7 +30,7 @@ module.exports = {
           '\\.d\\.ts$',
           '^src/app/',
           '^src/(worker|cli)/main\\.ts$',
-          '^src/(proxy|instrumentation)\\.ts$',
+          '^src/(proxy|instrumentation|instrumentation-client)\\.ts$',
           ...TESTS,
         ],
       },
@@ -197,6 +197,14 @@ module.exports = {
         ],
       },
       to: { path: '^src/server/(container\\.ts$|bind/|pages/|routes/|actions/)' },
+    },
+    {
+      name: 'instrumentation-client-is-light',
+      comment:
+        'ADR 0023: the browser runs it before hydration; it switches zod to jitless and imports nothing else.',
+      severity: 'error',
+      from: { path: '^src/instrumentation-client\\.ts$' },
+      to: { pathNot: npm('zod') },
     },
     {
       name: 'proxy-is-light',
