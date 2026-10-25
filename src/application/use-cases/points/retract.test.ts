@@ -1,17 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
 import { DRAFT_CAP } from '@/domain/report';
 
-import { FIRST_MONDAY, pointFixtures, readyProposal, START } from '../../../../test/support/points';
+import { FIRST_MONDAY, pointFixtures, readyProposal } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { retractPoint, submitPoint } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = pointFixtures(world);
-beforeEach(() => world.clock.set(START));
 
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
 const retract = (by: UserRecord, id: string, expectedVersion = 2) =>

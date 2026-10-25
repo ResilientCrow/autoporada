@@ -1,7 +1,8 @@
 /**
  * One API over two worlds (ADR 0011): the same test runs against in-memory
  * fakes in `pnpm test` and against PostgreSQL in `pnpm test:integration`.
- * Call setupWorld() at the top of a test file; every test starts empty.
+ * Call setupWorld() at the top of a test file; every test starts empty, at
+ * the clock's start.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -251,8 +252,14 @@ function pgBackend(database: TestDatabase): Backend {
   };
 }
 
-/** The world this test project runs in, fresh for every test. */
+/** The world this test project runs in, fresh for every test, its clock back at its start. */
 export function setupWorld(): World {
+  const world = openWorld();
+  beforeEach(() => world.clock.reset());
+  return world;
+}
+
+function openWorld(): World {
   const kind = inject('world');
   if (kind === 'pg') {
     const database = setupTestDatabase();

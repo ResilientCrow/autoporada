@@ -12,6 +12,7 @@ import type { PointState } from '@/domain/review';
 import { calDate, parseIsoDate } from '@/domain/time';
 
 import type { World } from './world';
+import { CLOCK_START } from './world/clock';
 
 /** A required people bullet and an optional text bullet, as a report type's spec. */
 const BULLETS: readonly BulletSpec[] = [
@@ -72,8 +73,8 @@ export const readyReport = (over: Record<string, unknown> = {}) =>
 export const readyProposal = (over: Record<string, unknown> = {}) =>
   wire({ title: 'Nákup projektoru', body: doc(paragraph('Navrhuji koupit projektor.')), ...over });
 
-/** The world clock's start, Monday 19 October 2026; the world does not reset its clock. */
-export const START = new Date('2026-10-19T08:00:00Z');
+/** The world clock's start, Monday 19 October 2026, where every test begins. */
+export const START = CLOCK_START;
 /** The first Monday whose deadline is ahead at START. */
 export const FIRST_MONDAY = calDate(2026, 10, 26);
 

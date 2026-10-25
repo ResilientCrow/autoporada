@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
 import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
@@ -23,7 +23,6 @@ import { savePoint, submitPoint } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = pointFixtures(world);
-beforeEach(() => world.clock.set(START));
 
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
 const submit = (by: UserRecord, id: string, content: unknown, expectedVersion = 1) =>
