@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 export const PORT = 3100;
 
 /** Same values as .env.example; the server validates them at boot. */
@@ -14,6 +16,9 @@ export const E2E_ENV = {
   MAIL_FROM: 'autoporada@example.org',
   SMTP_URL: 'smtp://localhost:1025',
   GOTENBERG_URL: 'http://localhost:3001',
+  // The people search reads the invented people of docker/dev (the path must be absolute).
+  DIRECTORY: 'dev',
+  DIRECTORY_DEV_PATH: fileURLToPath(new URL('../../docker/dev/directory.json', import.meta.url)),
   // Own database per run (test/e2e/global-setup.ts); the seed makes "reditel" the headmaster.
   BOOTSTRAP_HEADMASTER_OID: '0d000000-0000-4000-8000-000000000003',
 };

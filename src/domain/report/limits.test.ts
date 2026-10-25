@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { PERSON_FIELD_MAX } from '@/domain/cs';
 import { LIMITS as RICH_LIMITS } from '@/domain/richtext';
 
-import { POINT_LIMITS, PERSON_FIELD_MAX as REEXPORTED } from './index';
+import { DIRECTORY_LIMITS, POINT_LIMITS, PERSON_FIELD_MAX as REEXPORTED } from './index';
 
 describe('POINT_LIMITS', () => {
   it('pins the bounds of design section 14', () => {
@@ -27,6 +27,10 @@ describe('POINT_LIMITS', () => {
       statementAffiliation: 120,
       contentBytes: 200_000,
     });
+  });
+
+  it('pins the bounds of the people search (design sections 4 and 14)', () => {
+    expect(DIRECTORY_LIMITS).toEqual({ hits: 10, minQuery: 3, displayName: 160 });
   });
 
   it('shares the person caps with the paste parser instead of copying them', () => {

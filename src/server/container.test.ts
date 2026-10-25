@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { testCertificate } from '../../test/support/oidc/cert';
@@ -109,13 +111,52 @@ describe('web container', () => {
     const { getContainer } = await import('./container');
     const report = getContainer().bootReport(new Date());
     expect(report).toEqual({
-      facts: { environment: 'development', credential: { kind: 'secret' } },
+      facts: { environment: 'development', credential: { kind: 'secret' }, directory: 'off' },
       errors: [],
       warnings: [
         'BOOTSTRAP_HEADMASTER_OID is set: empty it once the headmaster has signed in (plan §4)',
       ],
     });
     expect(JSON.stringify(report)).not.toContain(oid);
+  });
+
+  it('answers directory.off unless the dev directory is configured', async () => {
+    for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    const { directory } = getContainer();
+    expect(await directory.search('novakova', new AbortController().signal)).toEqual({
+      ok: false,
+      code: 'directory.off',
+    });
+  });
+
+  it('searches the dev file when DIRECTORY=dev, and reports the kind but not the path', async () => {
+    const path = resolve('docker/dev/directory.json');
+    const env = { ...ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: path };
+    for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    const container = getContainer();
+    const result = await container.directory.search('novakova', new AbortController().signal);
+    expect(result.ok && result.value[0]?.displayName).toBe('Jana Nováková');
+    const report = container.bootReport(new Date());
+    expect(report.facts).toMatchObject({ directory: 'dev' });
+    expect(JSON.stringify(report)).not.toContain(path);
+  });
+
+  it('refuses to boot when the dev file is missing, naming the key only', async () => {
+    const path = '/nonexistent/secret-place/directory.json';
+    const env = { ...ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: path };
+    for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    let error: unknown;
+    try {
+      getContainer();
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect(String(error)).toMatch(/DIRECTORY_DEV_PATH: cannot read the file/);
+    expect(String(error)).not.toContain('secret-place');
   });
 
   it('refuses to serve in production without the Server Actions key', async () => {

@@ -46,6 +46,19 @@ export const POINT_LIMITS = {
 } as const;
 
 /**
+ * The bounds of the school people search (design sections 4 and 14): the Graph
+ * adapter, the dev adapter, the hit contract and the search box all read these.
+ */
+export const DIRECTORY_LIMITS = {
+  /** Hits one search answers with. */
+  hits: 10,
+  /** Shorter queries answer nothing: three characters is where a prefix search starts to mean something. */
+  minQuery: 3,
+  /** The `displayName` cap of a directory hit. */
+  displayName: 160,
+} as const;
+
+/**
  * The drafts an author may hold at once (design section 6). Only `draft`
  * counts: a returned point is there because a reviewer sent it back, and
  * that must never stop its author from starting another.

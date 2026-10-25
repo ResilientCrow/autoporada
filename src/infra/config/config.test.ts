@@ -348,3 +348,68 @@ describe('loadConfig: the Entra certificate', () => {
     expect(config.oidc.domainHint).toBe('ssps.cz');
   });
 });
+
+describe('loadConfig: the people directory', () => {
+  const prodFiles = secretFiles({
+    '/run/secrets/entra_key': KEY_PEM,
+    '/run/secrets/entra_cert': CERT_PEM,
+  });
+  const DEV_FILE = '/srv/autoporada/docker/dev/directory.json';
+
+  it('is off unless DIRECTORY says otherwise', () => {
+    expect(loadConfig(DEV_ENV, noFiles).directory).toEqual({ kind: 'off' });
+    expect(loadConfig({ ...DEV_ENV, DIRECTORY: '' }, noFiles).directory).toEqual({ kind: 'off' });
+    expect(loadConfig(PROD_ENV, prodFiles).directory).toEqual({ kind: 'off' });
+  });
+
+  it('reads the dev file from an absolute path', () => {
+    const env = { ...DEV_ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: DEV_FILE };
+    expect(loadConfig(env, noFiles).directory).toEqual({ kind: 'dev', path: DEV_FILE });
+  });
+
+  it('needs the path for dev', () => {
+    const problems = problemsOf(() => loadConfig({ ...DEV_ENV, DIRECTORY: 'dev' }, noFiles));
+    expect(problems).toEqual(['DIRECTORY_DEV_PATH: is required when DIRECTORY=dev']);
+  });
+
+  it('refuses a relative path', () => {
+    const env = { ...DEV_ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: 'docker/dev/directory.json' };
+    expect(problemsOf(() => loadConfig(env, noFiles))).toEqual([
+      'DIRECTORY_DEV_PATH: must be an absolute path',
+    ]);
+  });
+
+  it.each([undefined, 'off'])('refuses a stray path with DIRECTORY=%s', (directory) => {
+    const env = { ...DEV_ENV, DIRECTORY: directory, DIRECTORY_DEV_PATH: DEV_FILE };
+    expect(problemsOf(() => loadConfig(env, noFiles))).toEqual([
+      'DIRECTORY_DEV_PATH: is only for DIRECTORY=dev',
+    ]);
+  });
+
+  it('refuses an unknown directory', () => {
+    const problems = problemsOf(() => loadConfig({ ...DEV_ENV, DIRECTORY: 'ldap' }, noFiles));
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/^DIRECTORY: /);
+  });
+
+  it('does not read the path as a secret file', () => {
+    // NAME_FILE means "NAME from a Docker secret"; the dev path must not end in _FILE.
+    const env = { ...DEV_ENV, DIRECTORY: 'dev', DIRECTORY_DEV_FILE: DEV_FILE };
+    expect(problemsOf(() => loadConfig(env, noFiles))).toEqual([
+      'DIRECTORY_DEV_PATH: is required when DIRECTORY=dev',
+    ]);
+  });
+
+  it('refuses dev and the dev path in production', () => {
+    const env = { ...PROD_ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: DEV_FILE };
+    expect(problemsOf(() => loadConfig(env, prodFiles))).toEqual([
+      'DIRECTORY: dev is not allowed in production',
+      'DIRECTORY_DEV_PATH: is not allowed in production',
+    ]);
+    const stray = { ...PROD_ENV, DIRECTORY_DEV_PATH: DEV_FILE };
+    expect(problemsOf(() => loadConfig(stray, prodFiles))).toEqual([
+      'DIRECTORY_DEV_PATH: is only for DIRECTORY=dev',
+      'DIRECTORY_DEV_PATH: is not allowed in production',
+    ]);
+  });
+});

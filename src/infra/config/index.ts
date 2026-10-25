@@ -31,6 +31,8 @@ export interface Config {
   readonly mail:
     | { readonly transport: 'graph'; readonly from: string }
     | { readonly transport: 'smtp'; readonly from: string; readonly smtpUrl: string };
+  /** Where people search gets its answers; graph joins in M8b. */
+  readonly directory: { readonly kind: 'off' } | { readonly kind: 'dev'; readonly path: string };
   readonly gotenbergUrl: string;
   readonly serverActionsKey: string | undefined;
   readonly bootstrapHeadmasterOid: string | undefined;
@@ -73,6 +75,10 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
       c.MAIL_TRANSPORT === 'smtp'
         ? { transport: 'smtp', from: c.MAIL_FROM, smtpUrl: c.SMTP_URL ?? '' }
         : { transport: 'graph', from: c.MAIL_FROM },
+    directory:
+      c.DIRECTORY === 'dev' && c.DIRECTORY_DEV_PATH
+        ? { kind: 'dev', path: c.DIRECTORY_DEV_PATH }
+        : { kind: 'off' },
     gotenbergUrl: c.GOTENBERG_URL.replace(/\/$/, ''),
     serverActionsKey: c.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
     bootstrapHeadmasterOid: c.BOOTSTRAP_HEADMASTER_OID?.toLowerCase(),

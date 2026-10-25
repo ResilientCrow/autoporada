@@ -1,8 +1,11 @@
+import { readFileSync } from 'node:fs';
+
 import type { AnyUseCase } from '@/application/core';
-import type { AppDeps, UserPrincipal } from '@/application/ports';
+import type { AppDeps, DirectoryPort, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { getConfig, requireServerActionsKey, type Config } from '@/infra/config';
 import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
+import { createDirectory } from '@/infra/directory';
 import { createProducer } from '@/infra/jobs';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
 import { createIdentityProvider, describeCredential, loadClientCredential } from '@/infra/oidc';
@@ -30,6 +33,8 @@ export interface WebContainer {
   readonly requestIdFrom: (header: string | null) => string;
   /** The sign-in routes' dependencies (Entra, its expectations, the first headmaster). */
   readonly auth: AuthDeps;
+  /** People search for the search route; answers `directory.off` unless the configuration turns it on. */
+  readonly directory: DirectoryPort;
   /** What the boot log says about this process. */
   readonly bootReport: (now: Date) => BootReport;
 }
@@ -81,6 +86,8 @@ function buildWeb(config: Config): WebContainer {
     clock: systemClock,
   };
   const { oidc } = config;
+  // A bad dev file stops the boot, like a bad credential below.
+  const directory = createDirectory(config.directory, (path) => readFileSync(path, 'utf8'));
   // Loading the credential checks the key against the certificate: a bad pair stops the boot.
   const credential = loadClientCredential(oidc.credential);
   const auth: AuthDeps = {
@@ -108,10 +115,15 @@ function buildWeb(config: Config): WebContainer {
     environment: config.environment,
     requestIdFrom,
     auth,
+    directory,
     bootReport: (now) => {
       const { facts, errors, warnings } = describeCredential(credential, now);
       return {
-        facts: { environment: config.environment, credential: facts },
+        facts: {
+          environment: config.environment,
+          credential: facts,
+          directory: config.directory.kind,
+        },
         errors,
         warnings: config.bootstrapHeadmasterOid ? [...warnings, BOOTSTRAP_STILL_SET] : warnings,
       };

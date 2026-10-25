@@ -61,6 +61,10 @@ const shape = z.object({
     .string()
     .regex(/^smtp:\/\//, 'must be an smtp:// URL')
     .optional(),
+  /** People search: `dev` reads a JSON file, `off` answers that search is off (production until S2). */
+  DIRECTORY: z.enum(['dev', 'off']).default('off'),
+  /** Not `*_FILE`: readEnv would read that as the Docker-secret form of a DIRECTORY_DEV. */
+  DIRECTORY_DEV_PATH: z.string().startsWith('/', 'must be an absolute path').optional(),
   GOTENBERG_URL: httpUrl,
   NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: serverActionsKey.optional(),
   BOOTSTRAP_HEADMASTER_OID: z.guid().optional(),
@@ -80,6 +84,12 @@ export const rawConfigSchema = shape.superRefine((c, ctx) => {
   }
   if (c.MAIL_TRANSPORT === 'smtp' && !c.SMTP_URL) {
     problem('SMTP_URL', 'is required when MAIL_TRANSPORT=smtp');
+  }
+  if (c.DIRECTORY === 'dev' && !c.DIRECTORY_DEV_PATH) {
+    problem('DIRECTORY_DEV_PATH', 'is required when DIRECTORY=dev');
+  }
+  if (c.DIRECTORY !== 'dev' && c.DIRECTORY_DEV_PATH) {
+    problem('DIRECTORY_DEV_PATH', 'is only for DIRECTORY=dev');
   }
   const hasCert = Boolean(c.OIDC_CLIENT_KEY && c.OIDC_CLIENT_CERT);
   if (Boolean(c.OIDC_CLIENT_KEY) !== Boolean(c.OIDC_CLIENT_CERT)) {
@@ -103,6 +113,8 @@ export const rawConfigSchema = shape.superRefine((c, ctx) => {
   }
   if (!hasCert) problem('OIDC_CLIENT_KEY', 'certificate credential is required in production');
   if (c.MAIL_TRANSPORT !== 'graph') problem('MAIL_TRANSPORT', 'must be graph in production');
+  if (c.DIRECTORY === 'dev') problem('DIRECTORY', 'dev is not allowed in production');
+  if (c.DIRECTORY_DEV_PATH) problem('DIRECTORY_DEV_PATH', 'is not allowed in production');
 });
 
 export type LogLevel = (typeof LOG_LEVELS)[number];

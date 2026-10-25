@@ -10,6 +10,7 @@ export {
   type Json,
 } from './audit';
 export type { Clock } from './clock';
+export type { DirectoryCode, DirectoryPerson, DirectoryPort, DirectoryResult } from './directory';
 export type { AppDeps, Db, Tx, TxContext, TxMode, TxOptions } from './db';
 export {
   ConstraintViolation,
