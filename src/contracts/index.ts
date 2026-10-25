@@ -45,10 +45,14 @@ export {
   createPointInput,
   createPointOutput,
   parsePointJsonb,
+  retractPointInput,
+  retractPointOutput,
   savePointInput,
   savePointOutput,
   submitPointInput,
   submitPointOutput,
+  withdrawPointInput,
+  withdrawPointOutput,
   type PointJsonb,
 } from './point';
 export { defaultBulletsSchema } from './point-type';

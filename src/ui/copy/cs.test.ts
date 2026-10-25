@@ -127,7 +127,7 @@ describe('error copy', () => {
 
   it('names the draft cap the use case counts against', () => {
     expect(cs.rules['draft-cap']).toBe(
-      `Máte ${DRAFT_CAP}${NBSP}rozpracovaných bodů. Dokončete nebo zrušte některé z${NBSP}nich.`,
+      `Rozpracovaných bodů můžete mít nejvýše ${DRAFT_CAP}. Dokončete nebo zrušte některé z${NBSP}nich.`,
     );
   });
 

@@ -11,7 +11,7 @@ import {
   takeSignIn,
 } from './auth';
 import { issueWindow, setSkipped } from './issues';
-import { createPoint, savePoint, submitPoint } from './points';
+import { createPoint, retractPoint, savePoint, submitPoint, withdrawPoint } from './points';
 import { me } from './profile';
 import { changeUserAccess, getUser, listUsers } from './users';
 
@@ -26,7 +26,7 @@ export {
   takeSignIn,
 } from './auth';
 export { issueWindow, setSkipped } from './issues';
-export { createPoint, savePoint, submitPoint } from './points';
+export { createPoint, retractPoint, savePoint, submitPoint, withdrawPoint } from './points';
 export { me } from './profile';
 export { changeUserAccess, getUser, listUsers } from './users';
 
@@ -51,9 +51,11 @@ export const USE_CASES: readonly AnyUseCase[] = [
   recordRejection,
   requestAccess,
   resolveSession,
+  retractPoint,
   savePoint,
   setSkipped,
   signOut,
   submitPoint,
   takeSignIn,
+  withdrawPoint,
 ];

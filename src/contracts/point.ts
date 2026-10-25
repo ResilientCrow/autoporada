@@ -198,3 +198,11 @@ export const savePointOutput = pointVersion;
 /** „Odeslat ke kontrole“: the content the editor holds, saved and handed in at once. */
 export const submitPointInput = z.strictObject({ ...pointWrite, content: pointContentSchema });
 export const submitPointOutput = pointVersion;
+
+/** „Stáhnout“: a submitted point back to the drafts. */
+export const retractPointInput = z.strictObject(pointWrite);
+export const retractPointOutput = pointVersion;
+
+/** „Zrušit bod“; `confirmed` is the checkbox (ADR 0013 item 10). */
+export const withdrawPointInput = z.strictObject({ ...pointWrite, confirmed: z.boolean() });
+export const withdrawPointOutput = pointVersion;
