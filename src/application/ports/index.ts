@@ -57,6 +57,12 @@ export type {
   SkipRow,
 } from './mail-ledger';
 export type { JobHandler, JobHandlers, WorkerDeps } from './worker';
+export type {
+  NewPointEvent,
+  PointEventName,
+  PointEventRecord,
+  PointEventRepo,
+} from './point-events';
 export type { PointTypeRecord, PointTypeRepo } from './point-types';
 export type { NewPoint, PointPatch, PointRecord, PointRepo, PointSummary } from './points';
 export {

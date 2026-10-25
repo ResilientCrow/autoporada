@@ -14,6 +14,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import type { PointEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
 import type { DraftBullet, DraftStatement } from '@/domain/report';
 import type { RichDoc } from '@/domain/richtext';
@@ -141,8 +142,8 @@ export const pointEvents = pgTable(
       .references(() => points.id, { onDelete: 'cascade' }),
     /** Null for a system event (publish, M10). */
     actorId: uuid().references(() => users.id),
-    /** A `PointEvent`, or 'edit' for a reviewer's edit. */
-    event: text().notNull(),
+    /** A transition of POINT_MACHINE, or 'edit' for a reviewer's edit. */
+    event: text().$type<PointEventName>().notNull(),
     fromState: pointState().notNull(),
     toState: pointState().notNull(),
     note: text(),

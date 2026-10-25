@@ -5,6 +5,7 @@ import {
   StaleVersion,
   type PointRecord,
   type PointRepo,
+  type Principal,
   type TxContext,
 } from '@/application/ports';
 import { parsePointJsonb } from '@/contracts';
@@ -58,18 +59,23 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
   }
 }
 
+/** Whether the principal's read scope admits the point: the fake of `visiblePoints`. */
+export const pointReadable =
+  (principal: Principal) =>
+  (p: FakePoint): boolean =>
+    admits(scopeOf(principal, 'point'), {
+      ownerId: p.authorId,
+      state: p.state,
+      everSubmitted: p.submittedAt !== null,
+    });
+
 const record = ({ clientRef: _ref, ...point }: FakePoint): PointRecord => point;
 
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const { principal, now } = ctx;
   const { points } = tx.draft;
-  const visible = (p: FakePoint) =>
-    admits(scopeOf(principal, 'point'), {
-      ownerId: p.authorId,
-      state: p.state,
-      everSubmitted: p.submittedAt !== null,
-    });
+  const visible = pointReadable(principal);
   const find = (id: string) => {
     const point = points.get(id);
     return point && visible(point) ? record(point) : null;

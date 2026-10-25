@@ -9,6 +9,7 @@ import {
   type JobName,
   type LedgerRow,
   type PendingSignIn,
+  type PointEventRecord,
   type PointRecord,
   type PointTypeRecord,
   type SessionRecord,
@@ -31,6 +32,8 @@ export interface FakeState {
   readonly pointTypes: Map<string, PointTypeRecord>;
   /** points, by id; the client ref is kept next to the record. */
   readonly points: Map<string, FakePoint>;
+  /** point_events, by id. */
+  readonly pointEvents: Map<string, PointEventRecord>;
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
   /** mail_gate's one row, as migration 0009 inserts it. */
@@ -66,6 +69,7 @@ export const emptyState = (): FakeState => ({
   issues: new Map(),
   pointTypes: new Map(),
   points: new Map(),
+  pointEvents: new Map(),
   mailLedger: new Map(),
   mailGate: { notBefore: null, code: null },
   nextId: 1,
@@ -73,13 +77,17 @@ export const emptyState = (): FakeState => ({
 
 /**
  * Deletes a user as `DELETE FROM users` would: requests, sessions, sign-ins
- * and ledger rows cascade; a request they decided (decided_by) or a point
- * they wrote (points_author_id_users_id_fk) refuses it.
+ * and ledger rows cascade; a request they decided (decided_by), a point
+ * they wrote (points_author_id_users_id_fk) or a point event they caused
+ * (point_events_actor_id_users_id_fk) refuses it.
  */
 export function eraseFakeUser(state: FakeState, id: string): void {
   const requests = [...state.accessRequests.values()];
   if (requests.some((r) => r.decidedBy === id)) throw new DatabaseFailure('23503');
   if ([...state.points.values()].some((p) => p.authorId === id)) {
+    throw new DatabaseFailure('23503');
+  }
+  if ([...state.pointEvents.values()].some((e) => e.actorId === id)) {
     throw new DatabaseFailure('23503');
   }
   for (const r of requests) if (r.userId === id) state.accessRequests.delete(r.id);

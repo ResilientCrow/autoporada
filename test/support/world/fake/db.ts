@@ -6,6 +6,7 @@ import { fakeAudit, fakeJobs } from './effects';
 import { fakeIssueRepo } from './issues';
 import { fakeMailLedger } from './mail-ledger';
 import { checkAuditCoverage } from './oracle';
+import { fakePointEventRepo } from './point-events';
 import { fakePointTypeRepo } from './point-types';
 import { fakePointRepo } from './points';
 import { emptyState, type FakeState, type FakeTxState } from './state';
@@ -58,6 +59,7 @@ export function createFakeDb(): FakeDb {
       issues: fakeIssueRepo(tx, ctx),
       pointTypes: fakePointTypeRepo(tx),
       points: fakePointRepo(tx, ctx),
+      pointEvents: fakePointEventRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),
       jobs: fakeJobs(tx),
       mailLedger: fakeMailLedger(tx, ctx),

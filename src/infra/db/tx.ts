@@ -6,6 +6,7 @@ import type { JobPort, Tx, TxContext } from '@/application/ports';
 import { guardClient, guardPort, type TxLife } from './guard';
 import { createAccessRequestRepo } from './repos/access-requests';
 import { createAuditWriter } from './repos/audit';
+import { createPointEventRepo } from './repos/events';
 import { createIssueRepo } from './repos/issues';
 import { createMailLedgerRepo } from './repos/mail-ledger';
 import { createPointTypeRepo } from './repos/point-types';
@@ -35,6 +36,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     issues: guard(createIssueRepo(db, ctx)),
     pointTypes: guard(createPointTypeRepo(db)),
     points: guard({ ...createPointReads(db, ctx), ...createPointWrites(db, ctx) }),
+    pointEvents: guard(createPointEventRepo(db, ctx)),
     audit: guard(createAuditWriter(db, ctx)),
     jobs: guard(jobsOn(guarded)),
     mailLedger: guard(createMailLedgerRepo(db, ctx)),
