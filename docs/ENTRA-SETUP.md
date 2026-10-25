@@ -138,7 +138,10 @@ an Exchange retention policy on it.
     `acme-v02.api.letsencrypt.org`;
   - the worker (the mail sender) needs only `login.microsoftonline.com` and
     `graph.microsoft.com`. Where the firewall can limit a service, please
-    allow only those two from the server for it;
+    allow only those two from the server for it. The worker's network has
+    the fixed bridge name `ap-egress` (`deploy/compose.yaml`): match it in a
+    host firewall rule (the `DOCKER-USER` chain or nftables). Two stacks
+    cannot share one host with this name;
   - during installs and updates, which build the images on the server:
     `github.com` (the source), `registry.npmjs.org` (packages), and the
     container registries `registry-1.docker.io`, `auth.docker.io`,

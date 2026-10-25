@@ -44,7 +44,10 @@ docker compose exec postgres psql -U pgadmin -d autoporada
 ## First start
 
 4. **`docker compose up -d`.**
-   - [ ] `docker compose ps -a`: `migrate` exited 0; `postgres` and `web` are healthy.
+   - [ ] `docker compose ps -a`: `migrate` exited 0; `postgres`, `web` and
+         `worker` are healthy.
+   - [ ] `docker compose logs worker` shows `worker.ready` with
+         `transport: graph` and the pg-boss schema number (`pgbossSchema`).
    - [ ] `docker compose logs caddy` shows the certificate obtained.
    - [ ] `docker compose logs web` shows „web process configured“ with the
          certificate's thumbprint and days left, and the warning that
@@ -121,9 +124,13 @@ active reviewer or headmaster who is not a student.
           and whether `X-Auto-Response-Suppress` and `X-Autoporada-Dedupe`
           survive in the received headers.
 18. **RBAC propagation.** While the scope is new, the first mail may be refused.
-    - [ ] `psql`: `SELECT state, code, settled_at FROM mail_ledger ORDER BY claimed_at DESC LIMIT 5;`
-          shows `auth.*` rows and then `sent`, with no intervention. Record how
-          long it took.
+    The ledger keeps one row per key and updates it in place, so look while
+    the mail is pending, with the key `mail:test` printed (`mail.check:<uuid>`).
+    - [ ] `psql`: `SELECT state, code, attempts, claimed_at, settled_at FROM mail_ledger WHERE dedupe_key = '<key>';`
+          shows `deferred` with an `auth.*` code while Exchange refuses, then
+          `sent`, with no intervention.
+    - [ ] Record how long it took: from the `at` of the `cli.mail-test` row in
+          `audit_events` to the final `settled_at`. `attempts` counts the tries.
 19. **A real decision.** Approve an access request.
     - [ ] The requester gets the mail within a minute.
     - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
@@ -132,8 +139,14 @@ active reviewer or headmaster who is not a student.
     - [ ] The bounce lands in the `autoporada@ssps.cz` inbox.
     - [ ] The person IT named for that inbox can open it.
 21. **Daylight saving.** After the first night the clocks change:
-    - [ ] `docker compose run --rm cli jobs:status` shows no dead job, and the
-          scheduled jobs ran once, not twice or not at all.
+    - [ ] `docker compose run --rm cli jobs:status` shows no dead job
+          (it prints counts only).
+    - [ ] `psql`: `SELECT created_on, completed_on, state FROM pgboss.job WHERE name = 'mail.prune' ORDER BY created_on;`
+          has one row per Prague day (completed jobs are kept 2 days), none
+          missing and none doubled. Or the worker log's `cron.registered` line
+          has a `next` at 05:10 Prague time. The only schedule runs at 05:10,
+          outside the hour the clocks change, so this checks that it kept its
+          wall-clock time, not a double fire inside the hour.
 22. **Shutdown.**
     - [ ] `docker compose stop worker` returns within 50 s.
 
@@ -158,5 +171,7 @@ active reviewer or headmaster who is not a student.
 | `mail.systemic` | Graph refuses the send (403, 401) or Entra refuses the token | Normal for up to 2 hours after the role assignment; later, check the scope (ENTRA-SETUP §3) |
 | `auth.token.AADSTS…` in the ledger `code` | Entra refused the app's token | Look the code up as above; run `auth:probe` |
 | `mail.waiting` | The mail waits for the 20-a-minute window or a `Retry-After` | Normal; nothing to do |
-| `job.dead` | A job used up its retries | Fix the cause, then `docker compose run --rm cli jobs:redrive` (running `cli` with no command prints the usage) |
+| `job.dead` | A job is in the dead-letter queue; `jobs:status` lists it with its code | `ambiguous`: the mail probably arrived, so do not redrive without asking the recipient; a redrive may send up to two more copies. `rejected.*`: Graph refused the mail for good; fix the address or the data first. Other codes: fix the cause, then `docker compose run --rm cli jobs:redrive` (running `cli` with no command prints the usage) |
 | `worker.start_failed` with the hint `run migrate` | The job queue's tables are behind the code | `docker compose up -d` runs `migrate` first; check `docker compose logs migrate` |
+| `migrate` fails with `pgboss holds what migrate did not make` | A queue or a pending background command in `pgboss` that migrate did not create, for example after a bam wait timed out | Nothing was changed. Look at the named queues and `pgboss.bam` rows; remove them only when you know how they got there (ADR 0015), then run `docker compose up -d` again |
+| `migrate` fails with `permission denied to create role` | A data volume made before the worker (M7) lacks its database roles | Run once (safe to repeat), as `install.sh` prints: `docker compose up -d --wait postgres`, then `docker compose exec -T postgres psql -X -U pgadmin -d postgres -v ON_ERROR_STOP=1 -f - <postgres/upgrade/m7-roles.sql`, then `docker compose up -d` |

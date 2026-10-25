@@ -16,8 +16,12 @@ and its own image.
 
 1. **pg-boss** is pinned to an exact version and installed by
    `pnpm cli migrate` as the schema owner, in its own `pgboss` schema, under
-   the advisory lock that migrations already take. Its schema number is
-   asserted in a test. A pg-boss upgrade is one commit: version, test and
+   the advisory lock that migrations already take. `migrate` first refuses to
+   run over `pgboss` rows it did not make: a queue it does not know, a
+   partitioned queue, a queue on another table, or background commands
+   (`bam`) that are not finished. If its wait for `bam` times out, those rows
+   stay, and the next `migrate` refuses until an operator looks. Its schema
+   number is asserted in a test. A pg-boss upgrade is one commit: version, test and
    template rebuild.
 2. **Queues** are specified in code (`infra/jobs/queues.ts`), one entry per
    job name, and a job without a spec fails the type check. Policy `standard`;
@@ -37,14 +41,16 @@ and its own image.
    | Role | Login | Privileges |
    |---|---|---|
    | owner (migrator) | yes | owns both schemas; used only by `migrate` and `cli` |
-   | `autoporada_app` | no (group) | DML on `public` except the mail tables; on `pgboss` only `SELECT` on `queue` and `version`, and `INSERT` plus `SELECT (id)` on `job` and `job_common` |
-   | `autoporada_jobs` | no (group) | DML on `pgboss`; `SELECT` on the `public` tables its handlers read, extended by each milestone and listed in a test; the mail tables |
+   | `autoporada_app` | no (group) | DML on `public` except the mail tables; on `pgboss` only `SELECT` on `queue` and `version`, `INSERT` plus `SELECT (id)` on `job` and `job_common`, and `EXECUTE` on `pgboss.job_now()` |
+   | `autoporada_jobs` | no (group) | on `pgboss`, table by table what a supervising, scheduling worker uses (`src/infra/jobs/grants.ts`), and nothing on `bam`; `SELECT` on the `public` tables its handlers read, extended by each milestone and listed in a test; the mail tables |
    | `autoporada_backup` | no (group) | `SELECT` on `public` and the migration history |
 
    `autoporada_web` stays a member of `autoporada_app`. `autoporada_worker`
    is a member of `autoporada_jobs` only: it owns nothing, runs no DDL, and
    cannot write users, sessions or audit events. `EXECUTE` on `pgboss`
-   functions is revoked from PUBLIC and granted to the group. Backups take
+   functions is revoked from PUBLIC and granted to the group; the web gets
+   `job_now()` only. `bam` gets nothing, because the owner's `migrate` runs
+   its rows as SQL. Backups take
    nothing from `pgboss`; that is configured with the backup sidecar in M11.
 5. **Cron** is a registry of resolved schedules, not hand-written cron strings.
    The zone is always Europe/Prague. Hour 02 is refused, because it is
@@ -60,7 +66,10 @@ and its own image.
    35 s for a job in flight, inside a 50 s grace period. The worker sits on
    `data` and its own `egress` network, never on `edge`, so Caddy cannot route
    to it. `egress` allows any host; only the school firewall narrows it to
-   `login.microsoftonline.com` and `graph.microsoft.com`.
+   `login.microsoftonline.com` and `graph.microsoft.com`. The network has the
+   fixed bridge name `ap-egress`, the handle for a host firewall rule (the
+   `DOCKER-USER` chain or nftables). Because the name is fixed, two stacks
+   cannot run on one host.
 8. **Fences** (dependency-cruiser):
    - `web-never-sends-mail`: the web entry points cannot reach, even
      transitively, `infra/mail`, `infra/worker`, `application/jobs` or
@@ -84,7 +93,9 @@ and its own image.
   or the schedule, and cannot alter or delete a job.
 - Every later job needs its `autoporada_jobs` grants added and listed in the
   grants test.
-- Each pg-boss release is a deliberate upgrade, never a drive-by.
+- Each pg-boss release is a deliberate upgrade, never a drive-by. A table it
+  adds stays denied to the worker until a reviewed commit grants it, so an
+  upgrade that persists new state needs its grants added.
 - `migrate` takes longer, because it waits for pg-boss's background
   migration to finish before it returns.
 - A worker started before `migrate` ran stops with a message that says so,

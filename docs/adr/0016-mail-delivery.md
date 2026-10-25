@@ -34,20 +34,33 @@ told "no" or "wait" gets to see.
    window is the gap between the HTTP answer and the next write. The ledger
    removes the duplicate in the last row, which pg-boss alone cannot, and it
    is the only record of delivery, because nothing is kept in the mailbox.
-3. **Ambiguous outcomes are resent**, at most twice per key. Then the job
-   goes to the dead-letter queue as `ambiguous`. A lost decision mail is worse
-   than a rare duplicate. A `sending` row left by a dead attempt counts as an
-   unknown outcome, and a resend is logged as `mail.resend_unknown_outcome`.
+3. **Ambiguous outcomes are resent once per key.** The first send and one
+   resend are at most two copies; then the job goes to the dead-letter queue
+   as `ambiguous`. A lost decision mail is worse than a rare duplicate. A
+   `sending` row left by a dead attempt counts as an unknown outcome, and a
+   `deferred` key that had unknown sends is sent as a resend too. A redrive is
+   an operator's decision, and the revived job's first claim starts the count
+   again: a key left `sending` or `unknown` is sent at once, as a resend, and
+   a `failed` key is sent again, as a resend if it had unknown sends. The
+   revived job's retries keep the cap. A resend that is delivered is logged as
+   `mail.resend_unknown_outcome`. A resend whose answer is again ambiguous,
+   refused or deferred is logged as `mail.unknown`, `mail.systemic` or
+   `mail.deferred`. The ledger's `unknown_sends` counts every possible copy.
 4. **Classification** is a table by status, never by response text:
 
    | Answer | Ledger | Job |
    |---|---|---|
    | 202 | `sent` | done |
    | 429, 503, 409 | `deferred`, gate closed until `Retry-After` | wait |
-   | refused, DNS, TLS, IdP unreachable | `deferred` | retry |
+   | refused, DNS, TLS, connect timeout, IdP unreachable | `deferred` (`net.*`) | retry |
    | timeout, reset, 500, 502, 504 | `unknown` | retry |
    | 401 after a token refresh, 403, IdP refusal | `deferred`, gate closed 60 s | retry |
    | 400, 404, 413, other 4xx | `failed` | dead-letter at once |
+
+   A connect timeout means the request never left, so it is not a timeout in
+   the sense of the row below. Known limit: a budget abort that fires before
+   the Graph fetch starts still reads as `unknown.timeout`: it counts toward
+   the cap, and the next send is a resend although nothing went out.
 
    A 403 is expected on the first day, while Exchange RBAC propagates for up
    to 2 hours. Retries (15, backoff from 30 s to 15 min) therefore span about
@@ -101,7 +114,9 @@ told "no" or "wait" gets to see.
 
 ## Consequences
 
-- A person may, rarely, get a decision mail twice, never more than twice.
+- A person may, rarely, get a decision mail twice. An operator redrive of an
+  `ambiguous` dead letter may send up to two more copies, because the count
+  starts again; IT asks the recipient first (SMOKE-TEST).
 - Messages are not copied to Sent Items. Bounces (NDRs) land in the shared
   mailbox, and nothing reads them yet. IT names a reader and sets a retention
   policy on that inbox (ENTRA-SETUP).

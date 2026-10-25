@@ -225,7 +225,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 - `.env` is validated by Zod in `instrumentation.ts` at boot; a bad value stops the server.
 - `APP_ENV` (development / test / production) switches on production hardening. It is separate from `NODE_ENV`, which `next start` always sets to production, and is required whenever `NODE_ENV=production`.
 - A Server Actions key given as a Docker secret is copied into `process.env` at boot, because Next.js reads it only from there.
-- Four DB roles: `migrator`, `app`, `jobs` and `backup` (ADR 0010, 0015). The login roles are `autoporada_web` (in `app`) and `autoporada_worker` (in `jobs` only). The web can only insert jobs and read their ids; only the worker reads the mail ledger.
+- Four DB roles: `migrator`, `app`, `jobs` and `backup` (ADR 0010, 0015). The login roles are `autoporada_web` (in `app`) and `autoporada_worker` (in `jobs` only). The web can read the queue list, insert jobs and read back their ids; only the worker reads the mail ledger.
 - An alert fires 45 days before the certificate expires.
 
 **Graph least privilege**
@@ -236,7 +236,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 **Containers**
 - Non-root, `read_only`, `cap_drop: ALL`, `no-new-privileges`, pinned digests.
 - Internal networks: Gotenberg and Postgres are never exposed.
-- The worker is built from its own distroless target and sits on `data` and `egress`, never on `edge`. `egress` allows any host; the school firewall narrows it to `login.microsoftonline.com` and `graph.microsoft.com`. There is exactly one worker replica.
+- The worker is built from its own distroless target and sits on `data` and `egress`, never on `edge`. `egress` allows any host (bridge name `ap-egress`); the school firewall narrows it to `login.microsoftonline.com` and `graph.microsoft.com`. There is exactly one worker replica.
 - A `cli` maintenance container gives IT a shell for debugging.
 
 **Logs.** pino redacts cookies, tokens, `code` and request bodies. PG errors are logged as code only, actors as UUIDs, and the error page shows a `reqId`.
