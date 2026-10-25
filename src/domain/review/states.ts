@@ -23,8 +23,14 @@ export type PointState =
 export type PointEvent =
   'submit' | 'retract' | 'withdraw' | 'approve' | 'return' | 'reject' | 'publish' | 'unpublish';
 
+/** Where a point is still the author's to change and to hand in. */
+const POINT_AUTHOR_STATES: readonly PointState[] = ['draft', 'returned'];
+
+/** True while the author may still change the point: a draft or a returned one. */
+export const authorEditsPoint = (state: PointState): boolean => POINT_AUTHOR_STATES.includes(state);
+
 export const POINT_MACHINE: Machine<PointState, PointEvent, ReviewActor> = {
-  submit: { from: ['draft', 'returned'], to: 'submitted', allowed: author },
+  submit: { from: POINT_AUTHOR_STATES, to: 'submitted', allowed: author },
   /** „Stáhnout“: back to a draft before anyone decided. */
   retract: { from: ['submitted'], to: 'draft', allowed: author },
   withdraw: { from: ['draft', 'returned', 'submitted'], to: 'withdrawn', allowed: author },
@@ -53,7 +59,7 @@ export const POINT_MACHINE: Machine<PointState, PointEvent, ReviewActor> = {
  * approved it, which is self-approval by another route.
  */
 export function canEditPoint(state: PointState, actor: ReviewActor): boolean {
-  if (author(actor) && (state === 'draft' || state === 'returned')) return true;
+  if (author(actor) && authorEditsPoint(state)) return true;
   if (state === 'approved') return approver(actor);
   return reviewer(actor) && state === 'submitted';
 }

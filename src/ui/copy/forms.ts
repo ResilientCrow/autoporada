@@ -36,6 +36,7 @@ export const rules = {
   'request-cooldown': `Novou žádost lze podat nejdříve ${ACCESS_COOLDOWN_DAYS}\u00A0dní po zamítnutí.`,
   'request-blocked': 'Další žádosti o\u00A0přístup nelze podat. Obraťte se prosím na vedení školy.',
   'draft-cap': `Máte ${DRAFT_CAP}\u00A0rozpracovaných bodů. Dokončete nebo zrušte některé z\u00A0nich.`,
+  'point-not-editable': 'Bod už nelze upravovat, protože se změnil jeho stav.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {

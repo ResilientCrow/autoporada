@@ -17,6 +17,7 @@ export {
   ACCESS_EVENTS,
   ACCESS_MACHINE,
   ACCESS_STATES,
+  authorEditsPoint,
   canEditFuture,
   canEditPoint,
   FUTURE_MACHINE,

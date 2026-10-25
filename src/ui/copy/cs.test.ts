@@ -130,6 +130,12 @@ describe('error copy', () => {
       `Máte ${DRAFT_CAP}${NBSP}rozpracovaných bodů. Dokončete nebo zrušte některé z${NBSP}nich.`,
     );
   });
+
+  it('tells an author why their point no longer saves', () => {
+    expect(cs.rules['point-not-editable']).toBe(
+      'Bod už nelze upravovat, protože se změnil jeho stav.',
+    );
+  });
 });
 
 describe('step-up copy', () => {
