@@ -56,9 +56,23 @@ export function isOutcomeCode(code: string): boolean {
   return code.length <= OUTCOME_CODE_MAX && OUTCOME_CODE.test(code);
 }
 
+/** What Graph's request id looks like (a GUID); the ledger column holds at most 64 characters. */
+export const GRAPH_REQUEST_ID = /^[A-Za-z0-9-]{1,64}$/;
+
+/**
+ * What a sent mail adds to its log line: a closed shape, never free text. It is logged,
+ * never stored in the queue's output.
+ */
+export interface DoneDetail {
+  /** Microsoft's request id, null when the answer carried none. */
+  readonly graphRequestId: string | null;
+  /** How long the transport call took, in whole milliseconds. */
+  readonly ms: number;
+}
+
 export type JobOutcome =
   /** Finished: sent, resent, skipped, already settled, purged. */
-  | { readonly kind: 'done'; readonly code: OutcomeCode }
+  | { readonly kind: 'done'; readonly code: OutcomeCode; readonly detail?: DoneDetail }
   /** Not yet: a closed gate or window. The runner holds until `until`, then asks again. */
   | { readonly kind: 'wait'; readonly until: Date; readonly code: OutcomeCode }
   /** Transient failure: the queue retries with its backoff. */

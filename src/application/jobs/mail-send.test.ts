@@ -29,8 +29,16 @@ interface Run {
  * The handler on the worker's side (autoporada_worker in the pg world); seeding runs on app.
  * Every run is the same original job (`id`) unless it names a revived one.
  */
-function handler() {
-  const mail = createFakeMail();
+function handler({ takesMs = 0 }: { readonly takesMs?: number } = {}) {
+  const fake = createFakeMail();
+  /** The transport call takes `takesMs` on the world's clock. */
+  const mail: typeof fake = {
+    ...fake,
+    send: (outgoing) => {
+      world.clock.advance(takesMs);
+      return fake.send(outgoing);
+    },
+  };
   const deps: WorkerDeps = { db: world.workerDb, clock: world.clock, appOrigin: ORIGIN, mail };
   const id = randomUUID();
   const run = (job: MailJob, { redrive, attempt = 1 }: Run = {}) => {
@@ -46,6 +54,13 @@ function handler() {
   };
   return { mail, run, id };
 }
+
+/** A delivered mail: its code and a closed detail (the fake transport answers at once). */
+const delivered = (code: 'sent' | 'resent') => ({
+  kind: 'done',
+  code,
+  detail: { graphRequestId: expect.any(String), ms: 0 },
+});
 
 const ledger = (key: string): Promise<LedgerRow | null> =>
   world.workerDb.transaction(
@@ -122,7 +137,7 @@ describe('the mail.send handler', () => {
   it('sends the approval outside any transaction and records it as sent', async () => {
     const { job } = await decided('approved');
     const { mail, run, id } = handler();
-    expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+    expect(await run(job)).toEqual(delivered('sent'));
     expect(mail.calls).toEqual([
       {
         mail: { to: EMAIL, ...renderMail('access.approved', {}, ORIGIN), dedupeKey: job.dedupeKey },
@@ -136,10 +151,58 @@ describe('the mail.send handler', () => {
     });
   });
 
+  describe('the detail of a sent mail', () => {
+    it('carries the request id and the transport call time from the clock', async () => {
+      const { job } = await decided('approved');
+      const { run } = handler({ takesMs: 183 });
+      expect(await run(job)).toEqual({
+        kind: 'done',
+        code: 'sent',
+        detail: { graphRequestId: 'request-1', ms: 183 },
+      });
+    });
+
+    it('carries it on a resend too', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler({ takesMs: 40 });
+      mail.script({ kind: 'unknown', code: 'unknown.timeout' });
+      await run(job);
+      expect(await run(job)).toEqual({
+        kind: 'done',
+        code: 'resent',
+        detail: { graphRequestId: 'request-2', ms: 40 },
+      });
+    });
+
+    it('carries a null request id when Graph gave none', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler({ takesMs: 5 });
+      mail.script({ kind: 'sent', requestId: null });
+      expect(await run(job)).toEqual({
+        kind: 'done',
+        code: 'sent',
+        detail: { graphRequestId: null, ms: 5 },
+      });
+    });
+
+    it('never reports a negative time when the clock steps back during the call', async () => {
+      const { job } = await decided('approved');
+      const { run } = handler({ takesMs: -5 });
+      expect(await run(job)).toMatchObject({ detail: { ms: 0 } });
+    });
+
+    it('has no detail on an outcome that sent nothing', async () => {
+      const { job } = await decided('approved');
+      const { mail, run } = handler({ takesMs: 9 });
+      mail.script({ kind: 'not-sent', code: 'net.ENOTFOUND' });
+      expect(await run(job)).toEqual({ kind: 'retry', code: 'net.ENOTFOUND' });
+    });
+  });
+
   it('tells a rejected requester from which day they may ask again', async () => {
     const { request, job } = await decided('rejected');
     const { mail, run } = handler();
-    expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+    expect(await run(job)).toEqual(delivered('sent'));
     const retryFrom = instantToWallClock(cooldownEnd(request.decidedAt ?? new Date(0))).date;
     expect(mail.calls[0]?.mail).toMatchObject(renderMail('access.rejected', { retryFrom }, ORIGIN));
   });
@@ -153,7 +216,7 @@ describe('the mail.send handler', () => {
           ? mailJob(template, { userId: user.id, versionAfter: user.version })
           : mailJob(template, { recipientId: user.id, checkId: randomUUID() });
       const { mail, run } = handler();
-      expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+      expect(await run(job)).toEqual(delivered('sent'));
       expect(mail.calls.map((c) => c.mail.subject)).toEqual([
         renderMail(template, {}, ORIGIN).subject,
       ]);
@@ -245,7 +308,7 @@ describe('the mail.send handler', () => {
       const { mail, run } = handler();
       mail.script(UNKNOWN);
       expect(await run(job)).toEqual({ kind: 'retry', code: 'unknown.timeout' });
-      expect(await run(job)).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job)).toEqual(delivered('resent'));
       expect(mail.calls).toHaveLength(2);
       expect(await ledger(job.dedupeKey)).toMatchObject({
         ...{ state: 'sent', code: 'resent', unknownSends: 1, attempts: 2 },
@@ -258,7 +321,7 @@ describe('the mail.send handler', () => {
       mail.script(new Error('the worker died after the provider took the mail'));
       await expect(run(job)).rejects.toThrow(/worker died/);
       expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sending', unknownSends: 0 });
-      expect(await run(job)).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job)).toEqual(delivered('resent'));
       expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', unknownSends: 1 });
       expect(mail.calls.map((c) => c.mail)).toEqual([mail.calls[0]?.mail, mail.calls[0]?.mail]);
     });
@@ -283,7 +346,7 @@ describe('the mail.send handler', () => {
       mail.script(UNKNOWN, UNKNOWN);
       for (let attempt = 1; attempt <= 3; attempt += 1) await run(job, { attempt });
       const redrive = randomUUID();
-      expect(await run(job, { redrive })).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job, { redrive })).toEqual(delivered('resent'));
       expect(await run(job, { redrive, attempt: 2 })).toEqual({
         kind: 'done',
         code: 'already.sent',
@@ -324,7 +387,7 @@ describe('the mail.send handler', () => {
       mail.script({ kind: 'rejected', code: 'rejected.400' });
       expect(await run(job)).toEqual({ kind: 'dead', code: 'rejected.400' });
       const secondAttempt = await heldAtTheGate(run, job);
-      expect(await secondAttempt()).toEqual({ kind: 'done', code: 'sent' });
+      expect(await secondAttempt()).toEqual(delivered('sent'));
       expect(mail.calls).toHaveLength(2);
     });
 
@@ -338,7 +401,7 @@ describe('the mail.send handler', () => {
       await run(job);
       await run(job, { attempt: 2 });
       const secondAttempt = await heldAtTheGate(run, job);
-      expect(await secondAttempt()).toEqual({ kind: 'done', code: 'resent' });
+      expect(await secondAttempt()).toEqual(delivered('resent'));
       expect(mail.calls).toHaveLength(3);
     });
   });
@@ -358,7 +421,7 @@ describe('the mail.send handler', () => {
 
     it('sends at once, flagged, instead of failing the key as ambiguous', async () => {
       const { job, mail, run, redrive } = await leftUnknown();
-      expect(await run(job, { redrive })).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job, { redrive })).toEqual(delivered('resent'));
       expect(mail.calls).toHaveLength(3);
       expect(await ledger(job.dedupeKey)).toMatchObject({
         ...{ state: 'sent', unknownSends: 2, capFrom: 2 },
@@ -388,7 +451,7 @@ describe('the mail.send handler', () => {
         ...{ state: 'deferred', unknownSends: 2, capFrom: 2 },
       });
       world.clock.advance(7_000);
-      expect(await run(job, { redrive })).toEqual({ kind: 'done', code: 'resent' });
+      expect(await run(job, { redrive })).toEqual(delivered('resent'));
       expect(mail.calls).toHaveLength(4);
       expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'sent', code: 'resent' });
     });
@@ -424,7 +487,7 @@ describe('the mail.send handler', () => {
     await run(job, { attempt: 2 });
     expect(await ledger(job.dedupeKey)).toMatchObject({ state: 'deferred', unknownSends: 1 });
     world.clock.advance(24 * 3_600_000);
-    expect(await run(job, { attempt: 3 })).toEqual({ kind: 'done', code: 'resent' });
+    expect(await run(job, { attempt: 3 })).toEqual(delivered('resent'));
   });
 
   describe('pacing (one gate and a 20-per-minute window, kept in the ledger)', () => {
@@ -458,7 +521,7 @@ describe('the mail.send handler', () => {
       expect(mail.calls).toHaveLength(0);
       expect(await ledger(job.dedupeKey)).toBeNull();
       world.clock.set(until);
-      expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+      expect(await run(job)).toEqual(delivered('sent'));
     });
 
     it('holds the 21st mail of a minute until the oldest send leaves the window', async () => {
@@ -469,7 +532,7 @@ describe('the mail.send handler', () => {
       const until = new Date(first.getTime() + 60 * SECOND);
       expect(await run(job)).toEqual({ kind: 'wait', until, code: 'wait.window' });
       world.clock.set(until);
-      expect(await run(job)).toEqual({ kind: 'done', code: 'sent' });
+      expect(await run(job)).toEqual(delivered('sent'));
       expect(mail.calls).toHaveLength(20);
     });
 
@@ -478,7 +541,7 @@ describe('the mail.send handler', () => {
       mail.script({ kind: 'not-sent', code: 'net.ENOTFOUND' });
       await run((await decided('approved')).job);
       await sendMany(19);
-      expect(await run((await decided('approved')).job)).toEqual({ kind: 'done', code: 'sent' });
+      expect(await run((await decided('approved')).job)).toEqual(delivered('sent'));
     });
 
     it('closes the gate for a Retry-After and waits for it, burning no retry', async () => {

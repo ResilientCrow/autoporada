@@ -5,10 +5,12 @@ import type { TemplateName } from '@/notify';
 
 import {
   AUDIT_EXEMPTIONS,
+  GRAPH_REQUEST_ID,
   isOutcomeCode,
   JOB_NAMES,
   scopeOf,
   system,
+  type DoneDetail,
   type JobCatalog,
   type JobHandlers,
   type JobName,
@@ -56,6 +58,20 @@ describe('ports', () => {
       },
     };
     expect(Object.keys(handlers)).toEqual(['mail.send']);
+  });
+
+  it('lets only a done outcome carry a closed detail', () => {
+    expectTypeOf<DoneDetail>().toEqualTypeOf<{
+      readonly graphRequestId: string | null;
+      readonly ms: number;
+    }>();
+    type Done = Extract<JobOutcome, { kind: 'done' }>;
+    expectTypeOf<Done['detail']>().toEqualTypeOf<DoneDetail | undefined>();
+    expectTypeOf<Extract<JobOutcome, { kind: 'retry' | 'dead' | 'wait' }>>().not.toHaveProperty(
+      'detail',
+    );
+    expect(GRAPH_REQUEST_ID.test('a1b2c3d4-0000-4e5f-8a9b-1c2d3e4f5a6b')).toBe(true);
+    expect(GRAPH_REQUEST_ID.test('jana@ssps.cz')).toBe(false);
   });
 
   it('classify what a mail transport answers', () => {

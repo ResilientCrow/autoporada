@@ -5,6 +5,7 @@ import {
   JOB_TX_TIMEOUT_MS,
   system,
   type AccessRequestRecord,
+  type DoneDetail,
   type JobHandler,
   type JobInput,
   type JobOutcome,
@@ -40,7 +41,8 @@ interface Claimed {
   readonly unknownSends: number;
 }
 
-const done = (code: string): JobOutcome => ({ kind: 'done', code });
+const done = (code: string, detail?: DoneDetail): JobOutcome =>
+  detail ? { kind: 'done', code, detail } : { kind: 'done', code };
 
 /**
  * Under the gate lock: the ledger's rules, then the recipient and the
@@ -90,6 +92,7 @@ function outcomeOf(
   result: MailResult,
   claimed: Claimed,
   now: Date,
+  ms: number,
 ): { settlement: Settlement; outcome: JobOutcome; closeGate?: Date } {
   const later = (ms: number) => new Date(now.getTime() + ms);
   switch (result.kind) {
@@ -97,7 +100,7 @@ function outcomeOf(
       const code = claimed.resend ? 'resent' : 'sent';
       return {
         settlement: { state: 'sent', code, graphRequestId: result.requestId },
-        outcome: done(code),
+        outcome: done(code, { graphRequestId: result.requestId, ms }),
       };
     }
     case 'rejected':
@@ -151,9 +154,12 @@ export const mailSend: JobHandler<'mail.send'> = async ({ db, clock, mail, appOr
   const claimed = await write((tx) => claim(tx, key, job.data, job));
   if (claimed.kind !== 'send') return claimed;
   const { subject, text } = render(job.data.template, claimed.about, appOrigin);
+  const startedAt = clock.now().getTime();
   const result = await mail.send({ to: claimed.to, subject, text, dedupeKey: key });
+  // A clock that stepped back mid-call must not log a negative time.
+  const ms = Math.max(0, clock.now().getTime() - startedAt);
   return write(async (tx) => {
-    const { settlement, outcome, closeGate } = outcomeOf(result, claimed, tx.ctx.now);
+    const { settlement, outcome, closeGate } = outcomeOf(result, claimed, tx.ctx.now, ms);
     await tx.mailLedger.settle(key, settlement);
     if (closeGate) await tx.mailLedger.closeGate(closeGate, settlement.code);
     return outcome;

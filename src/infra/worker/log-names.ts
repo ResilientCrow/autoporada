@@ -2,7 +2,8 @@ import type { JobOutcome } from '@/application/ports';
 
 /**
  * The worker's fixed log message names (ADR 0016): IT greps for them. A job's
- * line carries ids and its outcome code only, never an address.
+ * line carries ids and its outcome code only (a sent mail adds Graph's request id and the call
+ * time in ms), never an address.
  */
 type LogName =
   | 'mail.sent'

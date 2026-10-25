@@ -183,6 +183,89 @@ describe('runJob', () => {
     expect(await h.run()).toMatchObject({ status: 'completed', output: { code: 'invalid.code' } });
   });
 
+  describe('the detail of a sent mail', () => {
+    const detail = { graphRequestId: 'a1b2c3d4-0000-4e5f-8a9b-1c2d3e4f5a6b', ms: 183 };
+    /** A handler may hand back anything; the runner must hold it to the closed shape. */
+    const doneWith = (value: unknown): JobOutcome =>
+      ({ kind: 'done', code: 'sent', detail: value }) as JobOutcome;
+
+    it('logs graphRequestId and ms on the mail.sent line, and the same on a resend', async () => {
+      const h = harness(doneWith(detail), { kind: 'done', code: 'resent', detail });
+      await h.run();
+      await h.run();
+      expect(h.lines).toMatchObject([
+        { level: 'info', msg: 'mail.sent', code: 'sent', ...detail },
+        { level: 'warn', msg: 'mail.resend_unknown_outcome', code: 'resent', ...detail },
+      ]);
+    });
+
+    it('logs a null request id as null', async () => {
+      const h = harness(doneWith({ graphRequestId: null, ms: 0 }));
+      await h.run();
+      expect(h.lines[0]).toMatchObject({ msg: 'mail.sent', graphRequestId: null, ms: 0 });
+    });
+
+    it('keeps the detail out of what pg-boss stores: the output is { code } only', async () => {
+      const h = harness(doneWith(detail));
+      expect(await h.run()).toEqual({
+        id: jobId('mail.send', KEY),
+        status: 'completed',
+        output: { code: 'sent' },
+      });
+    });
+
+    it.each([
+      ['a negative ms', { graphRequestId: 'abc-123', ms: -1 }],
+      ['a fractional ms', { graphRequestId: 'abc-123', ms: 1.5 }],
+      ['an ms that is not a number', { graphRequestId: 'abc-123', ms: '12' }],
+      ['an infinite ms', { graphRequestId: 'abc-123', ms: Infinity }],
+      ['a request id with an address in it', { graphRequestId: 'jana@ssps.cz', ms: 5 }],
+      ['an empty request id', { graphRequestId: '', ms: 5 }],
+      ['a request id of 65 characters', { graphRequestId: 'a'.repeat(65), ms: 5 }],
+      ['a request id that is not a string', { graphRequestId: 7, ms: 5 }],
+      ['no ms', { graphRequestId: 'abc-123' }],
+      ['no request id', { ms: 5 }],
+      ['an extra field', { ...detail, to: 'jana@ssps.cz' }],
+      ['free text', 'sent to jana@ssps.cz'],
+      ['null', null],
+      ['an array', [detail]],
+    ])('drops %s, and still logs the mail.sent line', async (_name, malformed) => {
+      const h = harness(doneWith(malformed));
+      expect(await h.run()).toMatchObject({ status: 'completed', output: { code: 'sent' } });
+      expect(h.lines).toHaveLength(1);
+      const [line] = h.lines;
+      expect(line).toMatchObject({ msg: 'mail.sent', code: 'sent' });
+      expect(line).not.toHaveProperty('graphRequestId');
+      expect(line).not.toHaveProperty('ms');
+      expect(JSON.stringify(h.lines)).not.toContain('@');
+    });
+
+    it('accepts a request id of 1 and of 64 characters', async () => {
+      const h = harness(
+        doneWith({ graphRequestId: 'a', ms: 0 }),
+        doneWith({ graphRequestId: 'A-'.repeat(32), ms: 7 }),
+      );
+      await h.run();
+      await h.run();
+      expect(h.lines).toMatchObject([
+        { graphRequestId: 'a', ms: 0 },
+        { graphRequestId: 'A-'.repeat(32), ms: 7 },
+      ]);
+    });
+
+    it('keeps a valid detail when the code is replaced, and logs nothing from a non-done outcome', async () => {
+      const h = harness(
+        { kind: 'done', code: 'Sent to jana@ssps.cz', detail } as JobOutcome,
+        { kind: 'retry', code: 'net.ENOTFOUND', detail } as unknown as JobOutcome,
+      );
+      await h.run();
+      await h.run();
+      expect(h.lines[0]).toMatchObject({ code: 'invalid.code', ...detail });
+      expect(h.lines[1]).not.toHaveProperty('graphRequestId');
+      expect(h.lines[1]).not.toHaveProperty('ms');
+    });
+  });
+
   it('logs each outcome under its fixed name with ids and the code only', async () => {
     const h = harness(waitFor(30 * SECOND), { kind: 'retry', code: 'auth.403' });
     await h.run();

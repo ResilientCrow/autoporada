@@ -1,5 +1,7 @@
 import {
+  GRAPH_REQUEST_ID,
   isOutcomeCode,
+  type DoneDetail,
   type JobCatalog,
   type JobHandler,
   type JobName,
@@ -54,13 +56,35 @@ function thrownOutcome(error: unknown): JobOutcome {
   return { kind: 'retry', code: isOutcomeCode(code) ? code : 'error.unknown' };
 }
 
-/** Holds the handler to the closed code set and a real instant. */
-function checked(outcome: JobOutcome): JobOutcome {
+/** The detail only if it is exactly a request id of the known pattern (or null) and whole ms. */
+function closedDetail(value: unknown): DoneDetail | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const keys = Object.keys(value);
+  if (keys.length !== 2 || !keys.includes('graphRequestId') || !keys.includes('ms')) {
+    return undefined;
+  }
+  const { graphRequestId, ms } = value as Record<string, unknown>;
+  const idOk =
+    graphRequestId === null ||
+    (typeof graphRequestId === 'string' && GRAPH_REQUEST_ID.test(graphRequestId));
+  if (!idOk || typeof ms !== 'number' || !Number.isSafeInteger(ms) || ms < 0) return undefined;
+  return { graphRequestId, ms };
+}
+
+/** Holds the handler to the closed code set, a real instant and, on a done, the closed detail. */
+function checked(raw: JobOutcome): JobOutcome {
+  const outcome = raw.kind === 'done' ? cleaned(raw) : raw;
   if (!isOutcomeCode(outcome.code)) return { ...outcome, code: 'invalid.code' };
   if (outcome.kind === 'wait' && Number.isNaN(outcome.until.getTime())) {
     return { kind: 'retry', code: 'invalid.until' };
   }
   return outcome;
+}
+
+/** A done outcome with only a valid detail: nothing else a handler attached gets through. */
+function cleaned({ code, detail }: Extract<JobOutcome, { kind: 'done' }>): JobOutcome {
+  const valid = closedDetail(detail);
+  return valid ? { kind: 'done', code, detail: valid } : { kind: 'done', code };
 }
 
 /** A string field of a payload, if it has one. */
@@ -106,7 +130,8 @@ export async function runJob<N extends JobName>(
   };
   const report = (outcome: JobOutcome): JobOutcome => {
     const { name, level, hint } = logLineFor(outcome);
-    log[level]({ ...fields, code: outcome.code, ...(hint && { hint }) }, name);
+    const detail = outcome.kind === 'done' ? outcome.detail : undefined;
+    log[level]({ ...fields, code: outcome.code, ...(hint && { hint }), ...detail }, name);
     return outcome;
   };
   const settle = (outcome: JobOutcome): JobResult => ({

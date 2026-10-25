@@ -31,9 +31,11 @@ export type {
   VerifiedClaims,
 } from './identity-provider';
 export {
+  GRAPH_REQUEST_ID,
   isOutcomeCode,
   JOB_NAMES,
   JOB_TX_TIMEOUT_MS,
+  type DoneDetail,
   type EnqueueOptions,
   type JobCatalog,
   type JobInput,
