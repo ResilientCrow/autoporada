@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 import { Client } from 'pg';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { createLogger } from '@/infra/log';
 import { PGBOSS_SCHEMA_VERSION, QUEUES, createBoss, installJobs } from '@/infra/jobs';
@@ -38,6 +38,8 @@ async function readQueues() {
 describe('installJobs', () => {
   beforeAll(() => sql(`CREATE DATABASE ${name}`, 'postgres'));
   afterAll(() => sql(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`, 'postgres'));
+  // Every test starts on a database pg-boss has never touched, and installs what it needs.
+  beforeEach(() => sql('DROP SCHEMA IF EXISTS pgboss CASCADE'));
 
   it(
     'installs the schema at the version the package expects, with every queue, and is repeatable',
@@ -68,6 +70,7 @@ describe('installJobs', () => {
   it(
     'puts a queue changed by hand back to the code, without touching its policy',
     async () => {
+      await installJobs(url, { log });
       await sql(
         `UPDATE pgboss.queue SET retry_limit = 1, expire_seconds = 7 WHERE name = 'mail.send'`,
       );
@@ -82,11 +85,17 @@ describe('installJobs', () => {
     'leaves no connection to the database behind',
     async () => {
       await installJobs(url, { log });
-      const sessions = await sql<{ n: number }>(
-        `SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = '${name}'`,
-        'postgres',
-      );
-      expect(sessions).toEqual([{ n: 0 }]);
+      // The server ends a backend a moment after its client disconnects; a leaked connection stays.
+      await expect
+        .poll(
+          () =>
+            sql<{ n: number }>(
+              `SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = '${name}'`,
+              'postgres',
+            ),
+          { timeout: 5_000 },
+        )
+        .toEqual([{ n: 0 }]);
     },
     SLOW,
   );
@@ -138,6 +147,7 @@ describe('installJobs', () => {
   ])(
     'refuses to migrate over %s, naming only the queue or the status',
     async (_what, plant, remove, reason) => {
+      await installJobs(url, { log });
       await sql(plant);
       try {
         const refused = await installJobs(url, { log }).then(
@@ -149,9 +159,11 @@ describe('installJobs', () => {
         expect(message).toMatch(reason);
         expect(message).not.toMatch(/GRANT|x_i1/);
         // refused before pg-boss started: nothing ran, nothing is left connected
-        expect(
-          await sql(`SELECT 1 FROM pg_stat_activity WHERE datname = '${name}'`, 'postgres'),
-        ).toEqual([]);
+        await expect
+          .poll(() => sql(`SELECT 1 FROM pg_stat_activity WHERE datname = '${name}'`, 'postgres'), {
+            timeout: 5_000,
+          })
+          .toEqual([]);
       } finally {
         await sql(remove);
       }
@@ -163,6 +175,7 @@ describe('installJobs', () => {
   it(
     'makes a producer that does not migrate refuse a schema it is not written for',
     async () => {
+      await installJobs(url, { log });
       await sql(`UPDATE pgboss.version SET version = ${packageSchema - 1}`);
       const producer = createBoss('producer', { url, applicationName: 'autoporada-test', log });
       try {
