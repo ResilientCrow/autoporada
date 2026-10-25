@@ -64,7 +64,14 @@ export type {
   PointEventRepo,
 } from './point-events';
 export type { PointTypeRecord, PointTypeRepo } from './point-types';
-export type { NewPoint, PointPatch, PointRecord, PointRepo, PointSummary } from './points';
+export type {
+  NewPoint,
+  PointCursor,
+  PointPatch,
+  PointRecord,
+  PointRepo,
+  PointSummary,
+} from './points';
 export {
   scopeOf,
   system,

@@ -1,9 +1,10 @@
-import { and, desc, eq, type SQL } from 'drizzle-orm';
+import { and, desc, eq, lt, or, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
   scopeOf,
   ScopeViolation,
+  type PointCursor,
   type PointRecord,
   type PointRepo,
   type TxContext,
@@ -92,6 +93,14 @@ export const visiblePoints = (ctx: TxContext): SQL | undefined =>
     submittedAt: points.submittedAt,
   });
 
+/** The rows after `before` in the list's order: an older change, or the same instant and a lower id. */
+const after = (before: PointCursor | undefined): SQL | undefined =>
+  before &&
+  or(
+    lt(points.updatedAt, before.updatedAt),
+    and(eq(points.updatedAt, before.updatedAt), lt(points.id, before.id)),
+  );
+
 const SUMMARY_ROW = {
   id: points.id,
   kind: points.kind,
@@ -124,13 +133,18 @@ export function createPointReads(
       const [row] = await byId(id).for('update');
       return row ? toRecord(row) : null;
     },
-    async listMine(limit) {
+    async listMine(limit, before) {
       const { principal } = ctx;
       if (principal.kind !== 'user') throw new ScopeViolation();
       const rows = await db
         .select(SUMMARY_ROW)
         .from(points)
-        .where(scopeWhere({ kind: 'own', userId: principal.actor.id }, { owner: points.authorId }))
+        .where(
+          and(
+            scopeWhere({ kind: 'own', userId: principal.actor.id }, { owner: points.authorId }),
+            after(before),
+          ),
+        )
         .orderBy(desc(points.updatedAt), desc(points.id))
         .limit(limit);
       return rows.map((row) => ({

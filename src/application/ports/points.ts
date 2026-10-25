@@ -49,6 +49,9 @@ export type PointSummary = Pick<
 > &
   Pick<PointContent, 'title' | 'eventDate'>;
 
+/** Where a page of the author's list ended: its last row's change and id. */
+export type PointCursor = Pick<PointRecord, 'updatedAt' | 'id'>;
+
 /**
  * Points, scoped by the policy's read scope for the transaction's principal
  * (`own-or-submitted` for reviewers): a point outside it is not found, never
@@ -78,6 +81,10 @@ export interface PointRepo {
    * against POINT_MACHINE and readiness.
    */
   update(id: string, expectedVersion: number, patch: PointPatch): Promise<PointRecord>;
-  /** The user's own points, last changed first. ScopeViolation for the system. */
-  listMine(limit: number): Promise<readonly PointSummary[]>;
+  /**
+   * The user's own points, last changed first, ties to the higher id; with
+   * `before`, only the rows strictly after that cursor in this order.
+   * ScopeViolation for the system.
+   */
+  listMine(limit: number, before?: PointCursor): Promise<readonly PointSummary[]>;
 }

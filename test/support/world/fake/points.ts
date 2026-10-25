@@ -3,6 +3,7 @@ import {
   scopeOf,
   ScopeViolation,
   StaleVersion,
+  type PointCursor,
   type PointRecord,
   type PointRepo,
   type Principal,
@@ -152,30 +153,29 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       };
       return save(after, before);
     },
-    async listMine(limit) {
+    async listMine(limit, before) {
       guard(tx, false);
       if (principal.kind !== 'user') throw new ScopeViolation();
-      return (
-        [...points.values()]
-          .filter((p) =>
-            admits({ kind: 'own', userId: principal.actor.id }, { ownerId: p.authorId }),
-          )
-          // Ties go to the higher id, compared as PostgreSQL compares uuids.
-          .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime() || (a.id < b.id ? 1 : -1))
-          .slice(0, limit)
-          .map((p) => ({
-            id: p.id,
-            kind: p.kind,
-            typeId: p.typeId,
-            state: p.state,
-            title: p.content.title,
-            eventDate: p.content.eventDate,
-            earliestMonday: p.earliestMonday,
-            submittedAt: p.submittedAt,
-            version: p.version,
-            updatedAt: p.updatedAt,
-          }))
-      );
+      // Ties go to the higher id; lowercase uuid text compares as PostgreSQL compares uuids.
+      const newer = (a: PointCursor, b: PointCursor) =>
+        b.updatedAt.getTime() - a.updatedAt.getTime() || (a.id < b.id ? 1 : -1);
+      return [...points.values()]
+        .filter((p) => admits({ kind: 'own', userId: principal.actor.id }, { ownerId: p.authorId }))
+        .filter((p) => !before || newer(p, before) > 0)
+        .sort(newer)
+        .slice(0, limit)
+        .map((p) => ({
+          id: p.id,
+          kind: p.kind,
+          typeId: p.typeId,
+          state: p.state,
+          title: p.content.title,
+          eventDate: p.content.eventDate,
+          earliestMonday: p.earliestMonday,
+          submittedAt: p.submittedAt,
+          version: p.version,
+          updatedAt: p.updatedAt,
+        }));
     },
   };
 }

@@ -324,6 +324,28 @@ describe('PointRepo (port contract)', () => {
     expect(await failure(read(cli, (tx) => tx.points.listMine(10)))).toBeInstanceOf(ScopeViolation);
   });
 
+  it('lists the rows strictly after a cursor, in the same order, ties broken by id', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const oldest = await create(world.as(author));
+    world.clock.advance(60_000);
+    const tied = [(await create(world.as(author))).point, (await create(world.as(author))).point];
+    world.clock.advance(60_000);
+    const newest = await create(world.as(author));
+    await create(world.as(await world.seed.user({ role: 'submitter' })));
+    const [high, low] = tied.sort((a, b) => (a.id < b.id ? 1 : -1));
+    const after = (point: PointRecord, limit = 10) =>
+      read(world.as(author), (tx) => tx.points.listMine(limit, point));
+
+    expect(await after(newest.point)).toEqual([
+      summary(high!),
+      summary(low!),
+      summary(oldest.point),
+    ]);
+    expect(await after(high!)).toEqual([summary(low!), summary(oldest.point)]);
+    expect(await after(high!, 1)).toEqual([summary(low!)]);
+    expect(await after(oldest.point)).toEqual([]);
+  });
+
   it('refuses bullets or statements the contract refuses, before writing', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const twice: PointContent = { ...FULL, bullets: [PEOPLE, PEOPLE] };
