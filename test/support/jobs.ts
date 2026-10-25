@@ -26,7 +26,8 @@ const FAST = { retryDelay: 1, retryBackoff: false, expireInSeconds: 5 };
 
 /**
  * `mail.send`'s timing as production sets it. The queue lives in the per-file database, so a
- * change one test makes would stay for the next: every `timing()` starts from this.
+ * change one test makes would stay for the next: every test starts from this, and so does
+ * every `timing()`.
  */
 const { retryLimit, retryDelay, retryBackoff, expireInSeconds } = QUEUE_SPECS['mail.send'].options;
 const PRODUCTION = { retryLimit, retryDelay, retryBackoff, expireInSeconds };
@@ -42,10 +43,20 @@ export function setupJobs(database: TestDatabase) {
   const bosses: PgBoss[] = [];
 
   beforeEach(async () => {
-    // The send window and the gate are state of the database, not of the test: the pg world's
-    // resetTables does the same.
+    // The send window, the gate and the queue timing are state of the database, not of the test:
+    // the pg world's resetTables does the same.
     await database.owner('TRUNCATE pgboss.job, mail_ledger');
     await database.owner('UPDATE mail_gate SET not_before = NULL, code = NULL');
+    await database.owner(
+      `UPDATE pgboss.queue SET retry_limit = $1, retry_delay = $2, retry_backoff = $3, expire_seconds = $4
+       WHERE name = 'mail.send'`,
+      [
+        PRODUCTION.retryLimit,
+        PRODUCTION.retryDelay,
+        PRODUCTION.retryBackoff,
+        PRODUCTION.expireInSeconds,
+      ],
+    );
     lines.length = 0;
   });
   afterEach(async () => {
