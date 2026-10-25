@@ -18,7 +18,11 @@ record that supersedes it.
 | [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted; partly superseded by 0015 |
 | [0011](0011-application-core.md) | Application core: principal-bound transactions and one pipeline | Accepted |
 | [0012](0012-ui-foundation.md) | UI foundation: brand-only Tailwind, audited React Aria, no inline styles | Accepted |
-| [0013](0013-forms-submit-through-actions.md) | Forms submit through actions: one hook, typed problems, refresh after success | Accepted |
+| [0013](0013-forms-submit-through-actions.md) | Forms submit through actions: one hook, typed problems, refresh after success | Accepted; items 1 and 4, and the no-client-refresh rule, superseded in part by 0017 |
 | [0014](0014-access-and-users.md) | Access requests and user administration | Accepted; item 13 superseded by 0016 |
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
-| [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted |
+| [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
+| [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted |
+| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted |
+| [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
+| [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted |
