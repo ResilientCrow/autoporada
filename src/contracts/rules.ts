@@ -8,5 +8,6 @@ export const RULE_CODES = [
   'request-pending',
   'request-cooldown',
   'request-blocked',
+  'draft-cap',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];

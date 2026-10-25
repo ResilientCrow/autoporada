@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { Salutation } from '@/domain/cs';
 import {
   POINT_LIMITS,
+  type PointKind,
   type DraftBullet,
   type DraftPerson,
   type DraftStatement,
@@ -82,3 +83,16 @@ export function parsePointJsonb(value: { [K in keyof PointJsonb]: unknown }): Po
   if (!body.ok || !bullets.success || !statements.success) return null;
   return { body: body.doc, bullets: bullets.data, statements: statements.data };
 }
+
+/**
+ * „Začít“ on the chooser, or a finance or pokyn proposal. `clientRef` is the
+ * draft's id in the browser, so a retry returns the same draft. A report
+ * names its type; finance and pokyn name none (the use case checks the pair
+ * and that the type is on offer).
+ */
+export const createPointInput = z.strictObject({
+  clientRef: z.uuid(),
+  kind: z.enum(['report', 'finance', 'pokyn']) satisfies z.ZodType<PointKind>,
+  typeId: z.uuid().nullable(),
+});
+export const createPointOutput = z.object({ id: z.uuid() });

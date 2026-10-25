@@ -41,7 +41,7 @@ export {
   type SignInError,
 } from './auth';
 export { issuesWindowInput, issuesWindowOutput, setSkippedInput, setSkippedOutput } from './issues';
-export { parsePointJsonb, type PointJsonb } from './point';
+export { createPointInput, createPointOutput, parsePointJsonb, type PointJsonb } from './point';
 export { defaultBulletsSchema } from './point-type';
 export {
   changeUserAccessInput,

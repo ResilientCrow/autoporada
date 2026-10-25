@@ -1,5 +1,6 @@
 import type { ErrorCode, FieldIssueCode, RuleCode } from '@/contracts';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
+import { DRAFT_CAP } from '@/domain/report';
 import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
 /** Why an action did not happen; `invalid-input` here is the case with no field to point at. */
@@ -34,6 +35,7 @@ export const rules = {
   'request-pending': 'Žádost už čeká na rozhodnutí vedení školy.',
   'request-cooldown': `Novou žádost lze podat nejdříve ${ACCESS_COOLDOWN_DAYS}\u00A0dní po zamítnutí.`,
   'request-blocked': 'Další žádosti o\u00A0přístup nelze podat. Obraťte se prosím na vedení školy.',
+  'draft-cap': `Máte ${DRAFT_CAP}\u00A0rozpracovaných bodů. Dokončete nebo zrušte některé z\u00A0nich.`,
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {
