@@ -1,0 +1,50 @@
+# Autoporada
+
+Weekly management-meeting ("Porada vedení školy") app for a Czech school: Czech UI, generates the DOCX. Stack: Next.js 16, React 19, TypeScript strict, Zod 4, Drizzle on PostgreSQL 18, pg-boss 12, Vitest, Playwright. This Next.js has breaking changes: read `node_modules/next/dist/docs/` before writing Next code.
+
+## Commands (pnpm)
+
+- `pnpm dev:services` starts Postgres, Mailpit, mock IdP, Gotenberg (compose.dev.yaml); `dev:services:down` stops them.
+- `pnpm dev` (web), `pnpm dev:worker` (worker), `pnpm db:migrate` (= `pnpm cli migrate`), `pnpm cli <command>`.
+- `pnpm build`; `pnpm build:node` bundles `dist/worker.mjs` (and the CLI) with esbuild.
+
+## Gate before calling work done
+
+```
+pnpm -s typecheck && pnpm -s lint && pnpm -s lint:arch && pnpm -s lint:unused && pnpm -s lint:chars && pnpm -s lint:palette && pnpm -s format:check && pnpm -s test:all
+```
+
+Then, when the change warrants it:
+
+- `pnpm test:e2e`: needs dev services up and port 3100 free. Its global setup runs `dist/worker.mjs`, which must not be older than `src/`, so run `pnpm build:node` first. Never run it together with `check-deploy.sh`.
+- `pnpm test:render` needs `dev:services` (Gotenberg, poppler-utils); not part of the gate.
+- Docker checks: build the web, worker and tools images as `:check` (commands in the header of `scripts/check-deploy.sh`), then `pnpm -s lint:compose`, `scripts/check-web-image.sh autoporada-web:check` and `scripts/check-deploy.sh` (needs ports 80 and 443).
+
+## Layers (enforced by `.dependency-cruiser.cjs`; changing a rule means updating ADR 0004)
+
+`src/`: `domain` (pure, imports only domain) <- `snapshot`, `contracts`, `notify` (zod + domain only) <- `document` (compose, model, render-docx, render-html) <- `application` (core, ports, use-cases, jobs, notifications; no I/O) <- `infra` (implements ports; a leaf). Edges and composition roots: `server` (container.ts binds infra), `app` (thin routes, reach server only via `actions|routes|pages/index.ts`), `ui` (theme, copy, kit, form, shell, status, features; fixed set, ADR 0012), `worker/main.ts`, `cli/main.ts`.
+
+- Cross-module imports go through `index.ts` only.
+- Only infra imports drizzle, pg, pg-boss, openid-client, jose; only `infra/mail/smtp.ts` imports nodemailer (`nodemailer-only-in-smtp`).
+- `web-never-sends-mail`: server/app never reach infra/mail, infra/worker, application/jobs or nodemailer, even transitively. The web only enqueues.
+- `worker-isolated`: worker never imports server, app or ui.
+- `use-cases-not-into-jobs`: use cases enqueue via application/notifications, never import application/jobs.
+- `docx` only in `document/render-docx`; React Aria only in `ui/kit` and `ui/form`; `.tsx` only in app, ui and `document/render-html`.
+- No circular imports, no orphans, no `test/` imports from `src/`.
+
+## Conventions
+
+- Two test worlds: Vitest `unit` runs against in-memory fakes (`provide: world=fake`), `integration` runs the same suites against PostgreSQL (`world=pg`, a database per test file). Port contracts live in `test/contract` and run in both worlds; helpers in `test/support/world`.
+- Errors and logs carry codes, never messages, addresses, subjects or provider text (ADR 0015, 0016).
+- Czech UI copy lives in `src/ui/copy`. `lint:chars` forbids raw invisible or look-alike characters in `src`, `test/support`, `scripts`: write NBSP as `\u00a0`.
+- Migrations: edit the Drizzle schema, run `pnpm db:generate`, never edit a committed migration.
+- Commits: one per feature or fix, Conventional Commits, no AI or Co-Authored-By trailers. Run the gate first.
+- The template `.docx` is never committed (only `test/fixtures/template/format-facts.json`, from `pnpm facts:extract <template.docx>`).
+- Untracked `AGENTS.md` is rewritten by `next dev`; keep it uncommitted.
+
+## Where to look
+
+- `docs/plan.md`: plan of record; milestones and commit plan in section 10.
+- `docs/adr/`: decisions (index in README). An ADR is never edited; add one that supersedes it.
+- `docs/features.md`, `docs/glossary.md`: product behavior and terms.
+- `deploy/SMOKE-TEST.md`, `docs/ENTRA-SETUP.md`: deploy and tenant setup. `docs/gdpr/privacy-review.md`: GDPR review.
