@@ -13,6 +13,7 @@ export {
   schoolYear,
   weekdayName,
 } from './dates/format';
+export { countWord, type PluralForms } from './numbers/plural';
 export { typographize, typographizeText } from './typography/typography';
 export { declineToken, type Confidence, type DeclinedToken } from './names/decline';
 export { splitFullName, suggestGenitive, type GenitiveSuggestion } from './names/genitive';
