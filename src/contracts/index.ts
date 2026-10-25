@@ -46,6 +46,7 @@ export {
   createPointInput,
   createPointOutput,
   parsePointJsonb,
+  parsePointPeople,
   retractPointInput,
   retractPointOutput,
   savePointInput,
@@ -66,6 +67,7 @@ export {
   pointStatusInput,
   pointStatusOutput,
 } from './point-read';
+export { recentPeopleInput, recentPeopleOutput } from './people';
 export { defaultBulletsSchema } from './point-type';
 export {
   changeUserAccessInput,

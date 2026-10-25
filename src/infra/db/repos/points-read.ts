@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, or, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -9,7 +9,7 @@ import {
   type PointRepo,
   type TxContext,
 } from '@/application/ports';
-import { parsePointJsonb, type PointJsonb } from '@/contracts';
+import { parsePointJsonb, parsePointPeople, type PointJsonb } from '@/contracts';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
@@ -93,6 +93,15 @@ export const visiblePoints = (ctx: TxContext): SQL | undefined =>
     submittedAt: points.submittedAt,
   });
 
+/** The user's own rows, whatever the read scope: the system has none. */
+function ownPoints({ principal }: TxContext): SQL | undefined {
+  if (principal.kind !== 'user') throw new ScopeViolation();
+  return scopeWhere({ kind: 'own', userId: principal.actor.id }, { owner: points.authorId });
+}
+
+/** The author's list order: last changed first, ties to the higher id. */
+const NEWEST_FIRST = [desc(points.updatedAt), desc(points.id)];
+
 /** The rows after `before` in the list's order: an older change, or the same instant and a lower id. */
 const after = (before: PointCursor | undefined): SQL | undefined =>
   before &&
@@ -117,7 +126,7 @@ const SUMMARY_ROW = {
 export function createPointReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine'> {
+): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine' | 'ownRecent'> {
   const byId = (id: string) =>
     db
       .select(POINT_ROW)
@@ -134,24 +143,34 @@ export function createPointReads(
       return row ? toRecord(row) : null;
     },
     async listMine(limit, before) {
-      const { principal } = ctx;
-      if (principal.kind !== 'user') throw new ScopeViolation();
       const rows = await db
         .select(SUMMARY_ROW)
         .from(points)
-        .where(
-          and(
-            scopeWhere({ kind: 'own', userId: principal.actor.id }, { owner: points.authorId }),
-            after(before),
-          ),
-        )
-        .orderBy(desc(points.updatedAt), desc(points.id))
+        .where(and(ownPoints(ctx), after(before)))
+        .orderBy(...NEWEST_FIRST)
         .limit(limit);
       return rows.map((row) => ({
         ...row,
         eventDate: dateOrNull(row.eventDate),
         earliestMonday: dateOrNull(row.earliestMonday),
       }));
+    },
+    async ownRecent({ limit, since }) {
+      const rows = await db
+        .select({
+          bullets: points.bullets,
+          statements: points.statements,
+          updatedAt: points.updatedAt,
+        })
+        .from(points)
+        .where(and(ownPoints(ctx), gte(points.updatedAt, since)))
+        .orderBy(...NEWEST_FIRST)
+        .limit(limit);
+      return rows.map((row) => {
+        const people = parsePointPeople(row);
+        if (!people) throw new DatabaseFailure(PARSE_FAILURE);
+        return { ...people, updatedAt: row.updatedAt };
+      });
     },
   };
 }

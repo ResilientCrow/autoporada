@@ -1,3 +1,4 @@
+import type { RecentSource } from '@/domain/people';
 import type { PointContent, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
@@ -87,4 +88,14 @@ export interface PointRepo {
    * ScopeViolation for the system.
    */
   listMine(limit: number, before?: PointCursor): Promise<readonly PointSummary[]>;
+  /**
+   * The people memory's read (design section 4): the bullets, statements and
+   * change instant of the user's own points changed at or after `since`, in
+   * any state, in `listMine`'s order, at most `limit`. Own whatever the read scope, so a
+   * reviewer remembers only whom they named. ScopeViolation for the system.
+   */
+  ownRecent(query: {
+    readonly limit: number;
+    readonly since: Date;
+  }): Promise<readonly RecentSource[]>;
 }

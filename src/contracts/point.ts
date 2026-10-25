@@ -38,7 +38,7 @@ const { person: PERSON } = POINT_LIMITS;
 
 const salutationSchema = z.enum(['pan', 'pani', 'slecna']) satisfies z.ZodType<Salutation>;
 
-const draftPersonSchema = z.strictObject({
+export const draftPersonSchema = z.strictObject({
   graphId: capped(POINT_LIMITS.graphId).optional(),
   salutation: salutationSchema.nullable(),
   titlesBefore: capped(PERSON.title).optional(),
@@ -93,10 +93,22 @@ export type PointJsonb = Pick<PointContent, 'body' | 'bullets' | 'statements'>;
  */
 export function parsePointJsonb(value: { [K in keyof PointJsonb]: unknown }): PointJsonb | null {
   const body = parseRichDoc(value.body, 'outline');
+  const people = parsePointPeople(value);
+  if (!body.ok || !people) return null;
+  return { body: body.doc, ...people };
+}
+
+/** The jsonb columns that name people: what the people memory reads, without the body. */
+type PointPeopleJsonb = Pick<PointContent, 'bullets' | 'statements'>;
+
+/** The one parse of a point's bullets and statements; null when the contract refuses either. */
+export function parsePointPeople(value: {
+  [K in keyof PointPeopleJsonb]: unknown;
+}): PointPeopleJsonb | null {
   const bullets = draftBulletsSchema.safeParse(value.bullets);
   const statements = draftStatementsSchema.safeParse(value.statements);
-  if (!body.ok || !bullets.success || !statements.success) return null;
-  return { body: body.doc, bullets: bullets.data, statements: statements.data };
+  if (!bullets.success || !statements.success) return null;
+  return { bullets: bullets.data, statements: statements.data };
 }
 
 /**

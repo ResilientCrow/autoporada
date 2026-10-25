@@ -1,0 +1,1 @@
+export { recentPeopleOf } from './recent';

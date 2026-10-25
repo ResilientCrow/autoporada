@@ -72,6 +72,10 @@ export const pointReadable =
 
 const record = ({ clientRef: _ref, ...point }: FakePoint): PointRecord => point;
 
+/** `listMine`'s order: last changed first, ties to the higher id (uuid text compares as PostgreSQL's uuids). */
+const newer = (a: PointCursor, b: PointCursor) =>
+  b.updatedAt.getTime() - a.updatedAt.getTime() || (a.id < b.id ? 1 : -1);
+
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const { principal, now } = ctx;
@@ -80,6 +84,15 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const find = (id: string) => {
     const point = points.get(id);
     return point && visible(point) ? record(point) : null;
+  };
+  /** The user's own points, whatever the read scope; the system has none. */
+  const own = () => {
+    guard(tx, false);
+    if (principal.kind !== 'user') throw new ScopeViolation();
+    const userId = principal.actor.id;
+    return [...points.values()].filter((p) =>
+      admits({ kind: 'own', userId }, { ownerId: p.authorId }),
+    );
   };
   const save = (row: FakePoint, before?: FakePoint) => {
     refuse(tx.draft, row, before);
@@ -154,13 +167,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       return save(after, before);
     },
     async listMine(limit, before) {
-      guard(tx, false);
-      if (principal.kind !== 'user') throw new ScopeViolation();
-      // Ties go to the higher id; lowercase uuid text compares as PostgreSQL compares uuids.
-      const newer = (a: PointCursor, b: PointCursor) =>
-        b.updatedAt.getTime() - a.updatedAt.getTime() || (a.id < b.id ? 1 : -1);
-      return [...points.values()]
-        .filter((p) => admits({ kind: 'own', userId: principal.actor.id }, { ownerId: p.authorId }))
+      return own()
         .filter((p) => !before || newer(p, before) > 0)
         .sort(newer)
         .slice(0, limit)
@@ -175,6 +182,17 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           submittedAt: p.submittedAt,
           version: p.version,
           updatedAt: p.updatedAt,
+        }));
+    },
+    async ownRecent({ limit, since }) {
+      return own()
+        .filter((p) => p.updatedAt >= since)
+        .sort(newer)
+        .slice(0, limit)
+        .map(({ content: { bullets, statements }, updatedAt }) => ({
+          bullets,
+          statements,
+          updatedAt,
         }));
     },
   };
