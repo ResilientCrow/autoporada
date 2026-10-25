@@ -100,7 +100,7 @@ services:
     build: { context: .., dockerfile: docker/app/Dockerfile, target: worker }
     user: '65532:65532'
     init: true
-    # Its stop timeout is 35 s (src/infra/worker/limits.ts); check-compose wants at least 45 s.
+    # Its stop timeout is STOP_TIMEOUT_MS (src/infra/worker/limits.ts); check-compose wants 10 s more.
     stop_grace_period: 50s
     environment:
       <<: *app-env
@@ -174,8 +174,13 @@ networks:
   edge: {}
   # No way out: only web, worker, migrate and cli reach the database.
   data: { internal: true }
-  # egress: any host; the school firewall restricts it (docs/ENTRA-SETUP.md §4). Caddy is not on it.
-  egress: {}
+  # egress: any host; the school firewall restricts it (docs/ENTRA-SETUP.md §4). Caddy is not on
+  # it. The fixed bridge name is the handle for a host firewall rule (DOCKER-USER or nftables):
+  # without it Docker picks a new br-<id> whenever the network is recreated. check-compose
+  # asserts it.
+  egress:
+    driver_opts:
+      com.docker.network.bridge.name: ap-egress
 
 volumes:
   pgdata: {}

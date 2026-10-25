@@ -193,6 +193,11 @@ worker_rights=$(sql "SELECT concat_ws(' ',
   fail 'could not read the worker privileges'
 [ "$worker_rights" = 't t f f f f f 0 f 0 f f f f f' ] || fail "unexpected worker privileges: $worker_rights"
 
+# The egress network has its stable bridge name, the handle of a host firewall rule (ENTRA-SETUP §4).
+[ "$(docker network inspect "${project}_egress" -f '{{index .Options "com.docker.network.bridge.name"}}')" = ap-egress ] ||
+  fail 'the egress network has no bridge name ap-egress'
+[ -d /sys/class/net/ap-egress ] || fail 'the host has no bridge interface ap-egress'
+
 # The upgrade SQL for a volume made before M7 (deploy/postgres/upgrade): this volume already has the
 # roles, so both runs take the "exists" path. They must succeed, leave the worker a member of the
 # jobs group only, with CONNECT, and set the password of the secret file (a login proves it; the
