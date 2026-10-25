@@ -27,10 +27,12 @@ function fakeAdmin(
     counts?: Awaited<ReturnType<JobsAdmin['counts']>>;
     dead?: DeadJob[];
     moved?: number;
+    deadQueue?: string;
   } = {},
 ) {
   const redrive = vi.fn(() => Promise.resolve(parts.moved ?? 0));
   const admin: JobsAdmin = {
+    deadQueue: parts.deadQueue ?? 'dead',
     counts: () => Promise.resolve(parts.counts ?? []),
     deadJobs: () => Promise.resolve(parts.dead ?? []),
     redrive,
@@ -58,6 +60,19 @@ describe('jobs:status', () => {
       'mail.prune: no jobs',
       'mail.send: 2 created, 12 completed, 1 failed',
     ]);
+  });
+
+  it('names the dead-letter queue as the admin says, not by a literal', async () => {
+    const { admin } = fakeAdmin({
+      deadQueue: 'graveyard',
+      counts: [
+        { queue: 'mail.send', states: { created: 1 } },
+        { queue: 'graveyard', states: { created: 1 } },
+      ],
+      dead: [dead()],
+    });
+    const lines = await jobsStatus(admin, []);
+    expect(lines.slice(0, 2)).toEqual(['mail.send: 1 created', 'graveyard: 1']);
   });
 
   it('lists each dead job with id, source queue, template, key, creation and code, and no more', async () => {

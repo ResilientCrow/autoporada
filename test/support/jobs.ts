@@ -6,7 +6,7 @@
 import type { PgBoss } from 'pg-boss';
 import { afterEach, beforeEach } from 'vitest';
 
-import { createBoss, QUEUES } from '@/infra/jobs';
+import { createBoss, QUEUE_SPECS } from '@/infra/jobs';
 import { createLogger } from '@/infra/log';
 import type { Sleep } from '@/infra/worker';
 
@@ -28,12 +28,8 @@ const FAST = { retryDelay: 1, retryBackoff: false, expireInSeconds: 5 };
  * `mail.send`'s timing as production sets it. The queue lives in the per-file database, so a
  * change one test makes would stay for the next: every `timing()` starts from this.
  */
-const PRODUCTION = (() => {
-  const options = QUEUES.find((spec) => spec.name === 'mail.send')?.options;
-  if (!options) throw new Error('QUEUES has no mail.send');
-  const { retryLimit, retryDelay, retryBackoff, expireInSeconds } = options;
-  return { retryLimit, retryDelay, retryBackoff, expireInSeconds };
-})();
+const { retryLimit, retryDelay, retryBackoff, expireInSeconds } = QUEUE_SPECS['mail.send'].options;
+const PRODUCTION = { retryLimit, retryDelay, retryBackoff, expireInSeconds };
 
 export function setupJobs(database: TestDatabase) {
   const clock = new FixedClock();

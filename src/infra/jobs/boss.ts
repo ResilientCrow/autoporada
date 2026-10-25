@@ -83,6 +83,14 @@ export function errorCode(error: unknown): string | null {
   return identifier(error, 'code', CODE);
 }
 
+/**
+ * Whether pg-boss refused to start because its schema is behind the code. Known by the text of
+ * the error (never logged, since a message can quote a connection string); the hint is `run migrate`.
+ */
+export function needsMigration(error: unknown): boolean {
+  return error instanceof Error && /requires migrations/.test(error.message);
+}
+
 type BossEvent = 'error' | 'warning';
 
 /**

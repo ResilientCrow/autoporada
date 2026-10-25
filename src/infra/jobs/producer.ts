@@ -5,7 +5,7 @@ import { DatabaseFailure, TxClosed, type JobName, type JobPort } from '@/applica
 import type { Logger } from '../log';
 import { sleepOn } from '../system';
 
-import { createBoss, errorCode } from './boss';
+import { createBoss, errorCode, needsMigration } from './boss';
 import { jobId } from './ids';
 
 interface ProducerOptions {
@@ -54,10 +54,14 @@ export function createProducer(options: ProducerOptions) {
         return;
       } catch (error) {
         const nextMs = Math.min(retry.initialMs * 2 ** (attempt - 1), retry.maxMs);
-        // Never the message: it can quote a connection string. A schema behind the code is known by its text.
-        const migrations = error instanceof Error && /requires migrations/.test(error.message);
+        // Never the message: it can quote a connection string.
         log.warn(
-          { attempt, code: errorCode(error), nextMs, ...(migrations && { hint: 'run migrate' }) },
+          {
+            attempt,
+            code: errorCode(error),
+            nextMs,
+            ...(needsMigration(error) && { hint: 'run migrate' }),
+          },
           'jobs.producer_unavailable',
         );
         await sleep(nextMs, stopping.signal);

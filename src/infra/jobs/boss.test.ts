@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { FixedClock } from '../../../test/support/world/clock';
 import { createLogger } from '../log';
 
-import { bossOptions, createBoss } from './index';
+import { bossOptions, createBoss, needsMigration } from './index';
 
 // Nothing listens here, and nothing in this file starts an instance: building must open no connection.
 const URL = 'postgres://owner:secret@127.0.0.1:9/autoporada';
@@ -207,5 +207,19 @@ describe('bossOptions', () => {
 
   it('refuses a role that is not a plain identifier', () => {
     expect(() => bossOptions('producer', { ...base, role: 'x --evil' })).toThrow(/role/);
+  });
+});
+
+describe('needsMigration', () => {
+  it('knows pg-boss refusing a schema that is behind, by its text', () => {
+    expect(
+      needsMigration(new Error('Migrations are required: pg-boss requires migrations (v24)')),
+    ).toBe(true);
+  });
+
+  it('is false for any other failure, and for what is not an Error', () => {
+    expect(needsMigration(new Error('connect ECONNREFUSED 127.0.0.1:5432'))).toBe(false);
+    expect(needsMigration('requires migrations')).toBe(false);
+    expect(needsMigration(undefined)).toBe(false);
   });
 });

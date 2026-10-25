@@ -1,5 +1,5 @@
 import { JOB_TX_TIMEOUT_MS, type JobName } from '@/application/ports';
-import { QUEUES } from '@/infra/jobs';
+import { QUEUE_SPECS } from '@/infra/jobs';
 import { SEND_BUDGET_MS } from '@/infra/mail';
 
 /** One claim, one send, one settle: the longest a single handler call works. */
@@ -24,7 +24,5 @@ export const STOP_TIMEOUT_MS = 35_000;
  * A test's shorter queue timing never shortens it.
  */
 export function executionBudgetMs(queue: JobName): number {
-  const expireInSeconds = QUEUES.find((spec) => spec.name === queue)?.options.expireInSeconds;
-  if (expireInSeconds === undefined) throw new Error(`no expiry for queue ${queue}`);
-  return expireInSeconds * 1_000 - CALL_MS - DEADLINE_MARGIN_MS;
+  return QUEUE_SPECS[queue].options.expireInSeconds * 1_000 - CALL_MS - DEADLINE_MARGIN_MS;
 }

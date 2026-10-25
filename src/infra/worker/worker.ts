@@ -8,7 +8,7 @@ import {
   type ScheduledJob,
   type WorkerDeps,
 } from '@/application/ports';
-import { errorCode, QUEUES } from '@/infra/jobs';
+import { errorCode, needsMigration, QUEUES } from '@/infra/jobs';
 import type { Logger } from '@/infra/log';
 import { sleepOn } from '@/infra/system';
 
@@ -55,9 +55,8 @@ async function startBoss(
       await boss.start();
       return;
     } catch (error) {
-      // Never the message: it can quote a connection string. A schema behind the code is known by its text.
-      const migrations = error instanceof Error && /requires migrations/.test(error.message);
-      const hint = migrations ? 'run migrate' : undefined;
+      // Never the message: it can quote a connection string.
+      const hint = needsMigration(error) ? 'run migrate' : undefined;
       log.warn({ attempt, code: errorCode(error), hint }, 'worker.start_failed');
       if (deps.clock.now().getTime() + delayMs > giveUpAt) {
         throw new Error(`worker: the job queue did not start in ${startWithinMs} ms`, {

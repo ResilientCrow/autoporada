@@ -1,10 +1,8 @@
 import { createLogger } from '../log';
 
 import { createBoss } from './boss';
-import { QUEUES } from './queues';
+import { DEAD_QUEUE, QUEUES } from './queues';
 
-/** The dead-letter queue the operator looks at (QUEUES names it as every other queue's deadLetter). */
-const DEAD = 'dead';
 /** `findJobs` reads at most this many: more dead jobs than that is an incident, not a list. */
 const DEAD_LIST_LIMIT = 1_000;
 
@@ -23,6 +21,8 @@ function field(source: unknown, key: string): string | null {
 
 /** What the CLI's `JobsAdmin` (src/cli/jobs.ts) asks for, declared again because infra cannot see the CLI. */
 interface JobsAdminHandle {
+  /** The dead-letter queue's name: the CLI never spells it. */
+  readonly deadQueue: string;
   counts(): Promise<{ queue: string; states: Record<string, number> }[]>;
   deadJobs(): Promise<
     {
@@ -51,6 +51,7 @@ export async function withJobsAdmin<T>(
     // inside the try: a start that fails has opened the pool already, and only stop() closes it
     await boss.start();
     return await run({
+      deadQueue: DEAD_QUEUE,
       async counts() {
         const { rows } = await boss.getDb().executeSql(
           `SELECT q.name AS queue, j.state::text AS state, count(j.id)::int AS n
@@ -67,7 +68,7 @@ export async function withJobsAdmin<T>(
         return [...byQueue].map(([queue, states]) => ({ queue, states }));
       },
       async deadJobs() {
-        const jobs = await boss.findJobs(DEAD, { limit: DEAD_LIST_LIMIT });
+        const jobs = await boss.findJobs(DEAD_QUEUE, { limit: DEAD_LIST_LIMIT });
         return jobs.map((job) => ({
           id: job.id,
           sourceQueue: job.sourceName,
@@ -78,7 +79,7 @@ export async function withJobsAdmin<T>(
         }));
       },
       redrive: ({ ids, source }) =>
-        boss.redrive(DEAD, {
+        boss.redrive(DEAD_QUEUE, {
           ...(ids && { ids: [...ids] }),
           ...(source !== undefined && { sourceName: source }),
         }),

@@ -23,6 +23,8 @@ interface QueueCount {
 
 /** What these commands need of the job queues. */
 export interface JobsAdmin {
+  /** The name of the dead-letter queue, as the job queue itself has it. */
+  readonly deadQueue: string;
   counts(): Promise<readonly QueueCount[]>;
   deadJobs(): Promise<readonly DeadJob[]>;
   /** Moves dead jobs back to their source queue as new jobs; returns how many moved. */
@@ -32,7 +34,6 @@ export interface JobsAdmin {
   }): Promise<number>;
 }
 
-const DEAD_QUEUE = 'dead';
 /** Left to right, the life of a job. */
 const STATE_ORDER = ['created', 'retry', 'active', 'completed', 'cancelled', 'failed'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -61,10 +62,10 @@ export async function jobsStatus(admin: JobsAdmin, args: readonly string[]): Pro
   if (args.length > 0) throw new Error(`Usage: ${JOBS_STATUS_USAGE}`);
   const [counts, dead] = await Promise.all([admin.counts(), admin.deadJobs()]);
   const queues = counts
-    .filter(({ queue }) => queue !== DEAD_QUEUE)
+    .filter(({ queue }) => queue !== admin.deadQueue)
     .toSorted((a, b) => a.queue.localeCompare(b.queue))
     .map(queueLine);
-  return [...queues, `${DEAD_QUEUE}: ${dead.length}`, ...dead.map(deadLine)];
+  return [...queues, `${admin.deadQueue}: ${dead.length}`, ...dead.map(deadLine)];
 }
 
 type Selector = Parameters<JobsAdmin['redrive']>[0];

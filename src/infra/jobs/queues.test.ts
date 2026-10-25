@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { JOB_NAMES } from '@/application/ports';
 
-import { QUEUES } from './index';
+import { QUEUE_SPECS, QUEUES } from './index';
 
 const DAY = 86_400;
 const HOUR = 3_600;
@@ -24,6 +24,13 @@ function shortestWait(retry: number, delay: number, cap: number): number {
 describe('QUEUES', () => {
   it('holds one queue per job name and the dead-letter queue', () => {
     expect(QUEUES.map((queue) => queue.name).sort()).toEqual(['dead', ...[...JOB_NAMES].sort()]);
+  });
+
+  it('lists the keyed specs, the dead-letter queue first, each under its own name', () => {
+    expect(QUEUES.map((queue) => queue.name)).toEqual(['dead', ...JOB_NAMES]);
+    for (const queue of QUEUES) {
+      expect(queue).toEqual({ name: queue.name, ...QUEUE_SPECS[queue.name] });
+    }
   });
 
   it('retries mail.prune 3 times from 5 min up to an hour, well inside its 2 days', () => {
