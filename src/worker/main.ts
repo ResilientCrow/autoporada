@@ -11,12 +11,24 @@ import { createLogger } from '@/infra/log';
 import { createMailPort } from '@/infra/mail';
 import { createAppTokenSource, describeCredential, loadClientCredential } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
-import { startHealth, startWorker, type RunningWorker } from '@/infra/worker';
+import { createProcessEnd, startHealth, startWorker, type RunningWorker } from '@/infra/worker';
 
 import app from '../../package.json' with { type: 'json' };
 
 const APPLICATION_NAME = 'autoporada-worker';
 const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
+
+/** A bad setting is named by key, never by value; anything else by its class and code (a message can quote a URL). */
+function logFailed(error: unknown): void {
+  const fields =
+    error instanceof ConfigError
+      ? { problems: error.problems }
+      : { name: error instanceof Error ? error.name : 'unknown', code: errorCode(error) };
+  const cause = error instanceof Error && typeof error.cause === 'string' ? error.cause : undefined;
+  createLogger({ service: 'worker', level: 'info' }).fatal({ ...fields, cause }, 'worker.failed');
+}
+
+const end = createProcessEnd((code) => process.exit(code), logFailed);
 
 async function main(): Promise<void> {
   const config = getConfig();
@@ -76,8 +88,7 @@ async function main(): Promise<void> {
     log.info({}, 'worker.stopping');
     stopping.abort();
     running.health?.stop();
-    // a start that failed has nothing to stop; main() reports it
-    const worker = await running.worker?.catch(() => undefined);
+    const worker = await end.started(running.worker);
     await worker?.stop();
     await producer.stop();
     await pool.end();
@@ -89,13 +100,10 @@ async function main(): Promise<void> {
       process.exit(1);
     }
     signalled = true;
-    void shutDown().then(
-      () => process.exit(0),
-      (error: unknown) => {
-        log.error({ code: errorCode(error) }, 'worker.stop_failed');
-        process.exit(1);
-      },
-    );
+    void shutDown().then(end.stopped, (error: unknown) => {
+      log.error({ code: errorCode(error) }, 'worker.stop_failed');
+      process.exit(1);
+    });
   };
   process.on('SIGTERM', onSignal);
   process.on('SIGINT', onSignal);
@@ -122,12 +130,5 @@ async function main(): Promise<void> {
 try {
   await main();
 } catch (error) {
-  // A bad setting is named by key, never by value; anything else by its class and code (a message can quote a URL).
-  const fields =
-    error instanceof ConfigError
-      ? { problems: error.problems }
-      : { name: error instanceof Error ? error.name : 'unknown', code: errorCode(error) };
-  const cause = error instanceof Error && typeof error.cause === 'string' ? error.cause : undefined;
-  createLogger({ service: 'worker', level: 'info' }).fatal({ ...fields, cause }, 'worker.failed');
-  process.exit(1);
+  end.failed(error);
 }
