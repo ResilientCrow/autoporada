@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ROLES, type Actor, type Role } from '@/domain/actor';
 import type { FutureKind } from '@/domain/calendar';
-import type { FutureState } from '@/domain/review';
+import type { FutureState, PointState } from '@/domain/review';
 
 import { admits, can, readScope, type Scope } from './index';
 
@@ -18,6 +18,29 @@ const FUTURE_STATES: readonly FutureState[] = [
   'cancelled',
 ];
 
+const POINT_STATES: readonly PointState[] = [
+  'draft',
+  'submitted',
+  'returned',
+  'approved',
+  'rejected',
+  'withdrawn',
+  'published',
+];
+
+/**
+ * A state with the `everSubmitted` flags it can really carry: only a draft
+ * (never submitted, or retracted) and a withdrawn row may lack a submit;
+ * every other state is reached through one, and `submitted_at` is never
+ * cleared.
+ */
+function reachable<S extends string>(states: readonly S[]) {
+  return fc.tuple(fc.constantFrom(...states), fc.boolean()).map(([state, flag]) => ({
+    state,
+    everSubmitted: state === 'draft' || state === 'withdrawn' ? flag : true,
+  }));
+}
+
 const anyActor: fc.Arbitrary<Actor> = fc.record({
   id: fc.constantFrom(...IDS),
   role: fc.constantFrom(...ROLES),
@@ -29,10 +52,22 @@ const anyActor: fc.Arbitrary<Actor> = fc.record({
 describe('readScope agrees with can()', () => {
   it('for points', () => {
     fc.assert(
-      fc.property(anyActor, fc.constantFrom(...IDS), (a, authorId) => {
-        const visible = admits(readScope(a, 'point'), { ownerId: authorId });
-        expect(visible).toBe(can(a, { action: 'point.view', point: { authorId } }));
-      }),
+      fc.property(
+        anyActor,
+        fc.constantFrom(...IDS),
+        fc.constantFrom(...POINT_STATES),
+        fc.boolean(),
+        (a, authorId, state, everSubmitted) => {
+          const visible = admits(readScope(a, 'point'), {
+            ownerId: authorId,
+            state,
+            everSubmitted,
+          });
+          expect(visible).toBe(
+            can(a, { action: 'point.view', point: { authorId, state, everSubmitted } }),
+          );
+        },
+      ),
     );
   });
 
@@ -42,10 +77,13 @@ describe('readScope agrees with can()', () => {
         anyActor,
         fc.constantFrom(...IDS),
         fc.constantFrom<FutureKind>('jednani', 'akce'),
-        fc.constantFrom(...FUTURE_STATES),
-        (a, authorId, kind, state) => {
-          const visible = admits(readScope(a, 'futureItem'), { ownerId: authorId, kind, state });
-          expect(visible).toBe(can(a, { action: 'future.view', item: { authorId, kind, state } }));
+        reachable(FUTURE_STATES),
+        (a, authorId, kind, { state, everSubmitted }) => {
+          const row = { ownerId: authorId, kind, state, everSubmitted };
+          const visible = admits(readScope(a, 'futureItem'), row);
+          expect(visible).toBe(
+            can(a, { action: 'future.view', item: { authorId, kind, state, everSubmitted } }),
+          );
         },
       ),
     );
@@ -94,7 +132,56 @@ describe('readScope for users follows users.view', () => {
   });
 });
 
+describe('readScope for points and future items', () => {
+  const actor = (role: Role, extra: Partial<Actor> = {}): Actor => ({
+    id: 'me',
+    role,
+    status: 'active',
+    isStudent: false,
+    ...extra,
+  });
+  const submitted: Scope = { kind: 'own-or-submitted', userId: 'me' };
+
+  it.each<[string, Actor, Scope, Scope]>([
+    ['pending', actor('pending'), { kind: 'none' }, { kind: 'none' }],
+    [
+      'submitter',
+      actor('submitter'),
+      { kind: 'own', userId: 'me' },
+      { kind: 'own-or-approved-akce', userId: 'me' },
+    ],
+    ['reviewer', actor('reviewer'), submitted, submitted],
+    ['headmaster', actor('headmaster'), submitted, submitted],
+    [
+      'student marked reviewer',
+      actor('reviewer', { isStudent: true }),
+      { kind: 'own', userId: 'me' },
+      { kind: 'own-or-approved-akce', userId: 'me' },
+    ],
+    [
+      'blocked reviewer',
+      actor('reviewer', { status: 'blocked' }),
+      { kind: 'none' },
+      { kind: 'none' },
+    ],
+  ])('%s', (_name, a, points, futureItems) => {
+    expect(readScope(a, 'point')).toEqual(points);
+    expect(readScope(a, 'futureItem')).toEqual(futureItems);
+  });
+});
+
 describe('admits', () => {
+  it('shows reviewers their own rows and others’ once submitted and not in draft', () => {
+    const scope: Scope = { kind: 'own-or-submitted', userId: 'me' };
+    expect(admits(scope, { ownerId: 'me', state: 'draft', everSubmitted: false })).toBe(true);
+    expect(admits(scope, { ownerId: 'x', state: 'submitted', everSubmitted: true })).toBe(true);
+    expect(admits(scope, { ownerId: 'x', state: 'draft', everSubmitted: true })).toBe(false);
+    expect(admits(scope, { ownerId: 'x', state: 'withdrawn', everSubmitted: false })).toBe(false);
+    // A row that does not say it was submitted is not admitted.
+    expect(admits(scope, { ownerId: 'x', state: 'approved' })).toBe(false);
+    expect(admits(scope, { ownerId: 'x', everSubmitted: true })).toBe(false);
+  });
+
   it('shows submitters their own future items and every approved akce', () => {
     const scope: Scope = { kind: 'own-or-approved-akce', userId: 'me' };
     expect(admits(scope, { ownerId: 'me', kind: 'jednani', state: 'draft' })).toBe(true);

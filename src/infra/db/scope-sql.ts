@@ -1,13 +1,18 @@
-import { and, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, isNotNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import type { Scope } from '@/domain/policy';
 
-/** The columns a scope filters on. Future items also need kind and state. */
+/**
+ * The columns a scope filters on. Points also need state and submittedAt,
+ * future items kind, state and submittedAt.
+ */
 export interface ScopeColumns {
   readonly owner: AnyPgColumn;
   readonly kind?: AnyPgColumn;
   readonly state?: AnyPgColumn;
+  /** Set at every submit and never cleared, so not null means "ever submitted". */
+  readonly submittedAt?: AnyPgColumn;
 }
 
 /**
@@ -29,6 +34,14 @@ export function scopeWhere(scope: Scope, columns: ScopeColumns): SQL | undefined
       return or(
         eq(columns.owner, scope.userId),
         and(eq(columns.kind, 'akce'), eq(columns.state, 'approved')),
+      );
+    case 'own-or-submitted':
+      if (!columns.state || !columns.submittedAt) {
+        throw new Error('scopeWhere: own-or-submitted needs state and submittedAt columns');
+      }
+      return or(
+        eq(columns.owner, scope.userId),
+        and(isNotNull(columns.submittedAt), ne(columns.state, 'draft')),
       );
   }
 }

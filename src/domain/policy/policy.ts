@@ -18,6 +18,10 @@ interface Owned {
 }
 type PointRef = Owned & { readonly state: PointState };
 type FutureRef = Owned & { readonly state: FutureState; readonly kind: FutureKind };
+/** `everSubmitted`: submitted at least once (`submitted_at` is never cleared). */
+type Seen<S> = Owned & { readonly state: S; readonly everSubmitted: boolean };
+type PointView = Seen<PointState>;
+type FutureView = Seen<FutureState> & { readonly kind: FutureKind };
 
 /** Everything the app can be asked to do, with the resource it is done to. */
 export type Check =
@@ -25,11 +29,11 @@ export type Check =
   | { readonly action: 'profile.manage' }
   | { readonly action: 'directory.search' }
   | { readonly action: 'point.create' }
-  | { readonly action: 'point.view'; readonly point: Owned }
+  | { readonly action: 'point.view'; readonly point: PointView }
   | { readonly action: 'point.edit'; readonly point: PointRef }
   | { readonly action: 'point.transition'; readonly point: PointRef; readonly event: PointEvent }
   | { readonly action: 'future.create' }
-  | { readonly action: 'future.view'; readonly item: FutureRef }
+  | { readonly action: 'future.view'; readonly item: FutureView }
   | { readonly action: 'future.edit'; readonly item: FutureRef }
   | { readonly action: 'future.transition'; readonly item: FutureRef; readonly event: FutureEvent }
   | { readonly action: 'review.queue' }
@@ -55,6 +59,10 @@ function reviewActor(actor: Actor, owned: Owned): ReviewActor {
 }
 
 const has = (actor: Actor, minimum: Role) => atLeast(actor.role, minimum);
+/** Drafts stay with their author: reviewers see only what was handed in (SSU-5). */
+const seen = <S extends string>(actor: Actor, row: Seen<S>) =>
+  row.authorId === actor.id ||
+  (has(actor, 'reviewer') && row.everSubmitted && row.state !== 'draft');
 /** The registry and archive name every student; students never see them. */
 const staffReviewer = (actor: Actor) => has(actor, 'reviewer') && !actor.isStudent;
 
@@ -88,7 +96,7 @@ export function can(subject: Actor, check: Check): boolean {
     case 'future.create':
       return has(actor, 'submitter');
     case 'point.view':
-      return check.point.authorId === actor.id || has(actor, 'reviewer');
+      return seen(actor, check.point);
     case 'point.edit':
       return canEditPoint(check.point.state, reviewActor(actor, check.point));
     case 'point.transition':
@@ -99,9 +107,7 @@ export function can(subject: Actor, check: Check): boolean {
       ).includes(check.event);
     case 'future.view':
       return (
-        check.item.authorId === actor.id ||
-        has(actor, 'reviewer') ||
-        (check.item.kind === 'akce' && check.item.state === 'approved')
+        seen(actor, check.item) || (check.item.kind === 'akce' && check.item.state === 'approved')
       );
     case 'future.edit':
       return canEditFuture(check.item.state, reviewActor(actor, check.item));
