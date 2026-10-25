@@ -1,0 +1,143 @@
+import { and, desc, eq, type SQL } from 'drizzle-orm';
+
+import {
+  DatabaseFailure,
+  scopeOf,
+  ScopeViolation,
+  type PointRecord,
+  type PointRepo,
+  type TxContext,
+} from '@/application/ports';
+import { parsePointJsonb, type PointJsonb } from '@/contracts';
+import { parseIsoDate, parseWallTime } from '@/domain/time';
+
+import { scopeWhere } from '../scope-sql';
+import { points } from '../schema';
+import type { TxDatabase } from './database';
+
+/** The columns a PointRecord is made of; new columns stay out until named here. */
+export const POINT_ROW = {
+  id: points.id,
+  kind: points.kind,
+  authorId: points.authorId,
+  typeId: points.typeId,
+  state: points.state,
+  title: points.title,
+  eventDate: points.eventDate,
+  endDate: points.endDate,
+  timeFrom: points.timeFrom,
+  timeTo: points.timeTo,
+  campus: points.campus,
+  place: points.place,
+  opening: points.opening,
+  openingEdited: points.openingEdited,
+  body: points.body,
+  bullets: points.bullets,
+  statements: points.statements,
+  earliestMonday: points.earliestMonday,
+  submittedAt: points.submittedAt,
+  version: points.version,
+  updatedAt: points.updatedAt,
+};
+
+type PointRow = Pick<typeof points.$inferSelect, keyof typeof POINT_ROW>;
+
+/** The failure code of jsonb the contract refuses; it never carries the payload (ADR 0015). */
+const PARSE_FAILURE = 'db.parse.points';
+
+/** The jsonb columns through the contract's one parse, on read and before write. */
+export function parseJsonb(value: { [K in keyof PointJsonb]: unknown }): PointJsonb {
+  const parsed = parsePointJsonb(value);
+  if (!parsed) throw new DatabaseFailure(PARSE_FAILURE);
+  return parsed;
+}
+
+const dateOrNull = (iso: string | null) => (iso === null ? null : parseIsoDate(iso));
+/** PostgreSQL gives `time` as HH:MM:SS; points keep minutes. */
+const timeOrNull = (text: string | null) =>
+  text === null ? null : parseWallTime(text.slice(0, 5));
+
+export function toRecord(row: PointRow): PointRecord {
+  const { id, kind, authorId, typeId, state, version, updatedAt, submittedAt } = row;
+  return {
+    id,
+    kind,
+    authorId,
+    typeId,
+    state,
+    content: {
+      title: row.title,
+      eventDate: dateOrNull(row.eventDate),
+      endDate: dateOrNull(row.endDate),
+      timeFrom: timeOrNull(row.timeFrom),
+      timeTo: timeOrNull(row.timeTo),
+      campus: row.campus,
+      place: row.place,
+      opening: row.opening,
+      openingEdited: row.openingEdited,
+      ...parseJsonb(row),
+    },
+    earliestMonday: dateOrNull(row.earliestMonday),
+    submittedAt,
+    version,
+    updatedAt,
+  };
+}
+
+/** The rows the principal may see: the SQL projection of the policy's read scope. */
+export const visiblePoints = (ctx: TxContext): SQL | undefined =>
+  scopeWhere(scopeOf(ctx.principal, 'point'), {
+    owner: points.authorId,
+    state: points.state,
+    submittedAt: points.submittedAt,
+  });
+
+const SUMMARY_ROW = {
+  id: points.id,
+  kind: points.kind,
+  typeId: points.typeId,
+  state: points.state,
+  title: points.title,
+  eventDate: points.eventDate,
+  earliestMonday: points.earliestMonday,
+  submittedAt: points.submittedAt,
+  version: points.version,
+  updatedAt: points.updatedAt,
+};
+
+export function createPointReads(
+  db: TxDatabase,
+  ctx: TxContext,
+): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine'> {
+  const byId = (id: string) =>
+    db
+      .select(POINT_ROW)
+      .from(points)
+      .where(and(eq(points.id, id), visiblePoints(ctx)));
+
+  return {
+    async get(id) {
+      const [row] = await byId(id);
+      return row ? toRecord(row) : null;
+    },
+    async loadForWrite(id) {
+      const [row] = await byId(id).for('update');
+      return row ? toRecord(row) : null;
+    },
+    async listMine(limit) {
+      const { principal } = ctx;
+      if (principal.kind !== 'user') throw new ScopeViolation();
+      const rows = await db
+        .select(SUMMARY_ROW)
+        .from(points)
+        .where(scopeWhere({ kind: 'own', userId: principal.actor.id }, { owner: points.authorId }))
+        .orderBy(desc(points.updatedAt), desc(points.id))
+        .limit(limit);
+      return rows.map((row) => ({
+        ...row,
+        eventDate: dateOrNull(row.eventDate),
+        earliestMonday: dateOrNull(row.earliestMonday),
+      }));
+    },
+  };
+}

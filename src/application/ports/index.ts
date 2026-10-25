@@ -58,6 +58,7 @@ export type {
 } from './mail-ledger';
 export type { JobHandler, JobHandlers, WorkerDeps } from './worker';
 export type { PointTypeRecord, PointTypeRepo } from './point-types';
+export type { NewPoint, PointPatch, PointRecord, PointRepo, PointSummary } from './points';
 export {
   scopeOf,
   system,

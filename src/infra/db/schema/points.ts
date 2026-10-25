@@ -72,17 +72,17 @@ export const points = pgTable(
     endDate: date({ mode: 'string' }),
     timeFrom: time(),
     timeTo: time(),
-    campus: text(),
+    campus: text().$type<Campus>(),
     place: text(),
     opening: text().notNull().default(''),
     openingEdited: boolean().notNull().default(false),
     body: jsonb().$type<RichDoc>().notNull(),
     bullets: jsonb()
-      .$type<DraftBullet[]>()
+      .$type<readonly DraftBullet[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
     statements: jsonb()
-      .$type<DraftStatement[]>()
+      .$type<readonly DraftStatement[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
     /** Set once, at the first submit. */

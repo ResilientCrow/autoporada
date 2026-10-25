@@ -2,25 +2,27 @@ import { z } from 'zod';
 
 import { POINT_LIMITS, type BulletSpec } from '@/domain/report';
 
-/** A bullet a point type offers; the key is a stable slug that drafts copy. */
+/** A bullet's key: a stable slug that a draft's bullet copies from its type. */
+export const bulletKeySchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]*$/)
+  .max(POINT_LIMITS.bulletKey);
+
+/** Refines a list of bullets: a draft bullet finds its spec by key, so no two share one. */
+export const uniqueKeys = (bullets: readonly { readonly key: string }[]) =>
+  new Set(bullets.map((b) => b.key)).size === bullets.length;
+
+/** A bullet a point type offers. */
 const bulletSpecSchema = z.strictObject({
-  key: z
-    .string()
-    .regex(/^[a-z][a-z0-9-]*$/)
-    .max(POINT_LIMITS.bulletKey),
+  key: bulletKeySchema,
   label: z.string().min(1).max(POINT_LIMITS.bulletLabel),
   kind: z.enum(['people', 'text']),
   required: z.boolean(),
   role: z.literal('organisers').optional(),
 }) satisfies z.ZodType<BulletSpec>;
 
-/**
- * `point_types.default_bullets`, as stored and as the admin form sends it.
- * A draft bullet finds its spec by key, so no two bullets share one.
- */
+/** `point_types.default_bullets`, as stored and as the admin form sends it. */
 export const defaultBulletsSchema = z
   .array(bulletSpecSchema)
   .max(POINT_LIMITS.bullets)
-  .refine((bullets) => new Set(bullets.map((b) => b.key)).size === bullets.length, {
-    message: 'duplicate-key',
-  });
+  .refine(uniqueKeys, { message: 'duplicate-key' });

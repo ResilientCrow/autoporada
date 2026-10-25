@@ -9,6 +9,8 @@ import { createAuditWriter } from './repos/audit';
 import { createIssueRepo } from './repos/issues';
 import { createMailLedgerRepo } from './repos/mail-ledger';
 import { createPointTypeRepo } from './repos/point-types';
+import { createPointReads } from './repos/points-read';
+import { createPointWrites } from './repos/points-write';
 import { createSessionRepo } from './repos/sessions';
 import { createSignInRepo } from './repos/sign-ins';
 import { createUserRepo } from './repos/users';
@@ -32,6 +34,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     sessions: guard(createSessionRepo(db, ctx)),
     issues: guard(createIssueRepo(db, ctx)),
     pointTypes: guard(createPointTypeRepo(db)),
+    points: guard({ ...createPointReads(db, ctx), ...createPointWrites(db, ctx) }),
     audit: guard(createAuditWriter(db, ctx)),
     jobs: guard(jobsOn(guarded)),
     mailLedger: guard(createMailLedgerRepo(db, ctx)),

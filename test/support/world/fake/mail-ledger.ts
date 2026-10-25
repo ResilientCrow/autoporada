@@ -1,5 +1,4 @@
 import {
-  DatabaseFailure,
   isOutcomeCode,
   ScopeViolation,
   type LedgerRow,
@@ -8,13 +7,11 @@ import {
   type TxContext,
 } from '@/application/ports';
 
-import { guard } from './guards';
+import { guard, refusedBy } from './guards';
 import type { FakeTxState } from './state';
 
 const SENDS: readonly LedgerState[] = ['sending', 'unknown', 'sent', 'failed'];
 const DELIVERY_PRINCIPAL = /^(job|cli):/;
-/** An unregistered constraint, as infra/db/pg-errors.ts reports it. */
-const refusedBy = (constraint: string) => new DatabaseFailure(`db.constraint.${constraint}`);
 
 /**
  * The mail ledger over the fake state, with the same scope, foreign key and

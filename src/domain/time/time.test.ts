@@ -12,7 +12,9 @@ import {
   parseIsoDate,
   parseWallTime,
   toIsoDate,
+  toIsoTime,
   wallClockToInstant,
+  wallTime,
 } from './index';
 
 const d = parseIsoDate;
@@ -94,6 +96,15 @@ describe('WallTime', () => {
 
   it.each(['24:00', '9:5', '9.05', '12:60', 'noon'])('rejects %s', (s) => {
     expect(() => parseWallTime(s)).toThrow(RangeError);
+  });
+
+  it('writes two-digit hours and minutes that parse back', () => {
+    expect(toIsoTime(wallTime(9, 5))).toBe('09:05');
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 23 }), fc.integer({ min: 0, max: 59 }), (h, m) => {
+        expect(parseWallTime(toIsoTime(wallTime(h, m)))).toEqual(wallTime(h, m));
+      }),
+    );
   });
 });
 

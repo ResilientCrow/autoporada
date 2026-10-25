@@ -29,6 +29,11 @@ export function parseWallTime(text: string): WallTime {
   return wallTime(Number(match[1]), Number(match[2]));
 }
 
+/** `HH:MM`, as parseWallTime reads it back. */
+export function toIsoTime(t: WallTime): string {
+  return `${String(t.hour).padStart(2, '0')}:${String(t.minute).padStart(2, '0')}`;
+}
+
 export function minutesOfDay(t: WallTime): number {
   return t.hour * 60 + t.minute;
 }

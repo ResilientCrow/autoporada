@@ -13,6 +13,13 @@ export {
   type CalDate,
   type IsoWeekday,
 } from './cal-date';
-export { compareTimes, minutesOfDay, parseWallTime, wallTime, type WallTime } from './wall-time';
+export {
+  compareTimes,
+  minutesOfDay,
+  parseWallTime,
+  toIsoTime,
+  wallTime,
+  type WallTime,
+} from './wall-time';
 export { instantToWallClock, PRAGUE, wallClockToInstant } from './zone';
 export { CLOCK_SKEW_MS } from './skew';
