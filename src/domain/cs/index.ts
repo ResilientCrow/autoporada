@@ -17,7 +17,14 @@ export { countWord, type PluralForms } from './numbers/plural';
 export { typographize, typographizeText } from './typography/typography';
 export { declineToken, type Confidence, type DeclinedToken } from './names/decline';
 export { splitFullName, suggestGenitive, type GenitiveSuggestion } from './names/genitive';
-export { formatName, SALUTATION, type PersonName, type Salutation, type Sex } from './names/person';
+export {
+  formatName,
+  PERSON_FIELD_MAX,
+  SALUTATION,
+  type PersonName,
+  type Salutation,
+  type Sex,
+} from './names/person';
 export {
   compareClass,
   compareStudents,
@@ -36,6 +43,15 @@ export {
   type ListOptions,
   type Person,
 } from './people/list';
+export {
+  parsePeopleList,
+  PASTE_MAX_CHARS,
+  PASTE_MAX_LINES,
+  type KnownName,
+  type PasteRejected,
+  type PasteResult,
+  type PasteRow,
+} from './people/paste';
 export {
   openingSentence,
   responsibleVerb,
