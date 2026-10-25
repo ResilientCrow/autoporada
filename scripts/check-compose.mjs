@@ -7,12 +7,15 @@
 // every image is either built here or pinned by digest. The worker (ADR 0015)
 // is long-running with a healthcheck and a stop grace period that fits its stop
 // timeout, shares no network with Caddy, runs as one replica, and each secret
-// reaches only the services named for it (a secret nobody listed reaches nobody, and a
-// bind mount under deploy/secrets counts as holding one). The egress network keeps a
-// fixed bridge name so a host firewall rule can target it (docs/ENTRA-SETUP.md §4).
+// reaches only the services named for it: a declared secret's file is the file of its own
+// name in deploy/secrets, a secret nobody listed reaches nobody, and no other way carries
+// the secrets or the cluster files into a container (a bind mount of deploy/secrets, of
+// anything inside it or of anything above it, a symlinked bind source, env_file, configs,
+// volumes_from, a volume other than pgdata, pgdata outside postgres). The egress network
+// keeps a fixed bridge name so a host firewall rule can target it (docs/ENTRA-SETUP.md §4).
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { isAbsolute, relative, resolve } from 'node:path';
 
 const PLACEHOLDERS = {
   APP_VERSION: 'check',
@@ -53,13 +56,18 @@ const STOP_TIMEOUT_SECONDS = (() => {
 })();
 const MIN_GRACE_SECONDS = STOP_TIMEOUT_SECONDS + GRACE_MARGIN_SECONDS;
 const SECRETS_DIR = resolve('deploy/secrets');
+/** The one named volume (the cluster files) and the only service that may mount it. */
+const DATA_VOLUME = 'pgdata';
+const DATA_VOLUME_HOLDER = 'postgres';
 const ARGS = ['compose', '-f', 'deploy/compose.yaml', '--env-file', '/dev/null'];
 
+// --no-env-resolution keeps env_file entries in the output instead of inlining their contents.
 const config = JSON.parse(
-  execFileSync('docker', [...ARGS, '--profile', 'tools', 'config', '--format', 'json'], {
-    env: { ...process.env, ...PLACEHOLDERS },
-    encoding: 'utf8',
-  }),
+  execFileSync(
+    'docker',
+    [...ARGS, '--profile', 'tools', 'config', '--no-env-resolution', '--format', 'json'],
+    { env: { ...process.env, ...PLACEHOLDERS }, encoding: 'utf8' },
+  ),
 );
 
 const problems = [];
@@ -104,13 +112,46 @@ const hasHealthcheck = (service) => {
   const check = service.healthcheck;
   return Boolean(check?.test) && check.disable !== true && check.test[0] !== 'NONE';
 };
-const underSecrets = (volume) =>
-  volume.type === 'bind' &&
-  (resolve(volume.source) === SECRETS_DIR || resolve(volume.source).startsWith(`${SECRETS_DIR}/`));
+/** The path with its symlinks resolved; the path as written when it does not exist (deploy/secrets is made by install.sh). */
+function real(path) {
+  try {
+    return realpathSync(path);
+  } catch {
+    return resolve(path);
+  }
+}
+const isSymlink = (path) => {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
+const isWithin = (parent, child) => {
+  const rel = relative(parent, child);
+  return rel !== '..' && !rel.startsWith('../') && !isAbsolute(rel);
+};
+/** deploy/secrets, anything inside it and anything above it (deploy/, the checkout, /) show the secrets. */
+const exposesSecrets = (source) =>
+  [resolve(source), real(source)].some((path) =>
+    [SECRETS_DIR, real(SECRETS_DIR)].some((dir) => isWithin(dir, path) || isWithin(path, dir)),
+  );
 
-for (const secret of Object.keys(config.secrets ?? {})) {
+for (const [secret, declared] of Object.entries(config.secrets ?? {})) {
   if (!SECRET_HOLDERS[secret]) {
     problems.push(`secret ${secret}: has no entry in SECRET_HOLDERS (list who may hold it)`);
+  }
+  if (declared.file !== resolve(SECRETS_DIR, secret)) {
+    problems.push(
+      `secret ${secret}: its file must be deploy/secrets/${secret} (is ${declared.file})`,
+    );
+  }
+}
+for (const [volume, declared] of Object.entries(config.volumes ?? {})) {
+  if (volume !== DATA_VOLUME || Object.keys(declared).some((key) => key !== 'name')) {
+    problems.push(
+      `volume ${volume}: only a plain ${DATA_VOLUME} volume may be declared (no driver, no bind options)`,
+    );
   }
 }
 
@@ -126,8 +167,21 @@ for (const [name, service] of Object.entries(config.services)) {
     if (!SECRET_HOLDERS[secret]?.includes(name)) problem(`must not hold the secret ${secret}`);
   }
   for (const volume of service.volumes ?? []) {
-    if (underSecrets(volume)) problem(`must not bind-mount ${volume.source} (use compose secrets)`);
+    if (volume.type === 'bind') {
+      if (exposesSecrets(volume.source)) {
+        problem(`must not bind-mount ${volume.source} (it is, holds or is held by deploy/secrets)`);
+      } else if (isSymlink(volume.source)) {
+        problem(`must not bind-mount ${volume.source}: it is a symlink (mount the real path)`);
+      }
+    }
+    if (volume.source === DATA_VOLUME && name !== DATA_VOLUME_HOLDER) {
+      problem(`must not mount ${DATA_VOLUME} (only ${DATA_VOLUME_HOLDER} does)`);
+    }
   }
+  if (service.env_file) problem('must not use env_file (configuration is .env, secrets are files)');
+  if (service.configs) problem('must not use configs');
+  if (service.volumes_from)
+    problem('must not use volumes_from (it inherits another service mounts)');
 }
 
 const worker = config.services.worker;
