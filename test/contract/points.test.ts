@@ -164,6 +164,75 @@ describe('PointRepo (port contract)', () => {
     expect(await refused).toBeInstanceOf(ScopeViolation);
   });
 
+  it('begins a create with the user’s own point for the clientRef and their draft count', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const clientRef = nextRef();
+    const mine = await create(world.as(author), { clientRef });
+    await create(world.as(author), { kind: 'finance', typeId: null });
+    const returned = await create(world.as(author));
+    await update(world.as(author), returned.point, { state: 'returned' });
+    const theirRef = nextRef();
+    await create(world.as(colleague), { clientRef: theirRef });
+    const begin = (by: Principal, ref: string) => world.tx(by, (tx) => tx.points.beginCreate(ref));
+    // A returned point is not a draft, and a colleague's drafts are not the user's.
+    expect(await begin(world.as(author), clientRef)).toEqual({ existing: mine.point, drafts: 2 });
+    expect(await begin(world.as(author), theirRef)).toEqual({ existing: null, drafts: 2 });
+    expect(await begin(world.as(colleague), clientRef)).toEqual({ existing: null, drafts: 1 });
+    expect(await failure(begin(cli, clientRef))).toBeInstanceOf(ScopeViolation);
+  });
+
+  it('serialises one user’s creates from beginCreate until the transaction ends', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const order: string[] = [];
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let begun = () => {};
+    const isBegun = new Promise<void>((resolve) => {
+      begun = resolve;
+    });
+    const first = audited(world.as(author), async (tx) => {
+      await tx.points.beginCreate(nextRef());
+      order.push('first begun');
+      begun();
+      await held;
+      const { point } = await tx.points.create({
+        clientRef: nextRef(),
+        kind: 'pokyn',
+        typeId: null,
+        content: EMPTY,
+      });
+      order.push('first created');
+      return point;
+    });
+    await isBegun;
+    if (world.pg) {
+      // Another author is not held up (the fake runs one transaction at a time).
+      const theirs = await world.tx(world.as(colleague), (tx) => tx.points.beginCreate(nextRef()));
+      expect(theirs).toEqual({ existing: null, drafts: 0 });
+    }
+    const second = world.tx(world.as(author), async (tx) => {
+      const begin = await tx.points.beginCreate(nextRef());
+      order.push('second begun');
+      return begin;
+    });
+    if (world.pg) {
+      const pg = world.pg;
+      await expect.poll(() => pg.lockWaits(), { timeout: 5_000 }).toBe(1);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(order).toEqual(['first begun']);
+    release();
+    const [, after] = await Promise.all([first, second]);
+    expect(order).toEqual(['first begun', 'first created', 'second begun']);
+    // The second sees the first's committed draft.
+    expect(after).toEqual({ existing: null, drafts: 1 });
+  });
+
   it('updates against the expected version, raises it by one and keeps unpatched fields', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { point } = await create(world.as(author));

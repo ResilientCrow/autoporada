@@ -42,3 +42,10 @@ export const POINT_LIMITS = {
    */
   contentBytes: 200_000,
 } as const;
+
+/**
+ * The drafts an author may hold at once (design section 6). Only `draft`
+ * counts: a returned point is there because a reviewer sent it back, and
+ * that must never stop its author from starting another.
+ */
+export const DRAFT_CAP = 50;

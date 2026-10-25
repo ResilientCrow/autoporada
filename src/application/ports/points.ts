@@ -28,6 +28,12 @@ export interface NewPoint {
   readonly content: PointContent;
 }
 
+/** What `beginCreate` reports, under the lock. */
+interface CreateStart {
+  readonly existing: PointRecord | null;
+  readonly drafts: number;
+}
+
 /** What a versioned update changes; a field left out keeps its value. */
 export interface PointPatch {
   readonly content?: PointContent;
@@ -56,6 +62,13 @@ export interface PointRepo {
    * a point always has a user as its author.
    */
   create(point: NewPoint): Promise<{ readonly point: PointRecord; readonly inserted: boolean }>;
+  /**
+   * What a create decides on: the user's own point with this `clientRef`, and
+   * how many of their points are drafts. It first takes a lock on the user
+   * held until the transaction ends, so two of their creates never both pass
+   * the draft cap; other users are not held up. ScopeViolation for the system.
+   */
+  beginCreate(clientRef: string): Promise<CreateStart>;
   get(id: string): Promise<PointRecord | null>;
   /** As `get`, and holds the row lock (SELECT … FOR UPDATE) until the transaction ends. */
   loadForWrite(id: string): Promise<PointRecord | null>;

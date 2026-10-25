@@ -6,5 +6,6 @@ export type {
   PointContent,
   PointKind,
 } from './content';
-export { PERSON_FIELD_MAX, POINT_LIMITS } from './limits';
+export { newDraft } from './draft';
+export { DRAFT_CAP, PERSON_FIELD_MAX, POINT_LIMITS } from './limits';
 export { openingInput } from './opening';
