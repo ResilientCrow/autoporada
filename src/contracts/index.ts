@@ -40,6 +40,15 @@ export {
   takeSignInOutput,
   type SignInError,
 } from './auth';
+export {
+  directoryHit,
+  directorySearchRequest,
+  directorySearchResponse,
+  searchGateInput,
+  searchGateOutput,
+  type DirectoryHit,
+  type DirectoryNotice,
+} from './directory';
 export { issuesWindowInput, issuesWindowOutput, setSkippedInput, setSkippedOutput } from './issues';
 export {
   contentWire,

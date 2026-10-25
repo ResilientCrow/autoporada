@@ -42,7 +42,7 @@ describe('inventory of entry points', () => {
     }
   });
 
-  it('wraps only registered use cases, and limits sign-in routes by address', async () => {
+  it('wraps only registered use cases, limits sign-in routes by address, and signs in for the api', async () => {
     const registered = new Set<unknown>(USE_CASES);
     for (const file of [...ACTION_MODULES, ...ROUTE_FILES]) {
       for (const value of Object.values(await exportsOf(file))) {
@@ -52,6 +52,10 @@ describe('inventory of entry points', () => {
         const url = file.replace(/\/\([^/]+\)(?=\/)/g, '');
         if (info?.kind === 'route' && url.startsWith('src/app/auth/')) {
           expect(info.rateLimit, file).toBe('auth');
+        }
+        // The browser's own fetches (the people search) are never public.
+        if (info?.kind === 'route' && url.startsWith('src/app/api/')) {
+          expect(info.access, file).toBe('session');
         }
       }
     }

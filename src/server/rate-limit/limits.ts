@@ -12,7 +12,8 @@ const HOUR = 60 * MINUTE;
 export const LIMITS = {
   /** Loose: the whole school signs in from one NAT address. Tune at the M4 smoke test. */
   auth: { max: 600, windowMs: MINUTE, key: 'ip' },
-  directory: { max: 30, windowMs: MINUTE, key: 'user' },
+  /** A class of fifteen needs about 45 searches a minute. */
+  directory: { max: 120, windowMs: MINUTE, key: 'user' },
   /** Creating, submitting and proposing; never autosave. */
   submission: { max: 30, windowMs: HOUR, key: 'user' },
   /** An abuse guard for the headmaster's writes (deciding requests): a person never reaches it. */

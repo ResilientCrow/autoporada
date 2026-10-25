@@ -54,6 +54,8 @@ export const DIRECTORY_LIMITS = {
   hits: 10,
   /** Shorter queries answer nothing: three characters is where a prefix search starts to mean something. */
   minQuery: 3,
+  /** The longest query the route takes: no name is longer, and Graph's adapter trims to less. */
+  query: 64,
   /** The `displayName` cap of a directory hit. */
   displayName: 160,
 } as const;

@@ -30,7 +30,7 @@ describe('POINT_LIMITS', () => {
   });
 
   it('pins the bounds of the people search (design sections 4 and 14)', () => {
-    expect(DIRECTORY_LIMITS).toEqual({ hits: 10, minQuery: 3, displayName: 160 });
+    expect(DIRECTORY_LIMITS).toEqual({ hits: 10, minQuery: 3, query: 64, displayName: 160 });
   });
 
   it('shares the person caps with the paste parser instead of copying them', () => {

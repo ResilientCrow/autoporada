@@ -1,21 +1,17 @@
 import { z } from 'zod';
 
 import type { DirectoryPerson, DirectoryPort, DirectoryResult } from '@/application/ports';
+import { directoryHit } from '@/contracts';
 import { foldForSearch } from '@/domain/cs';
-import { DIRECTORY_LIMITS, PERSON_FIELD_MAX } from '@/domain/report';
+import { DIRECTORY_LIMITS } from '@/domain/report';
 import { ConfigError } from '@/infra/config';
 
 import { MAX_DEV_PEOPLE } from './limits';
 
 export type ReadFile = (path: string) => string;
 
-const person = z.strictObject({
-  graphId: z.guid(),
-  givenName: z.string().min(1).max(PERSON_FIELD_MAX.name),
-  familyName: z.string().min(1).max(PERSON_FIELD_MAX.name),
-  displayName: z.string().min(1).max(DIRECTORY_LIMITS.displayName),
-});
-const people = z.array(person).max(MAX_DEV_PEOPLE);
+/** The file holds what a search may answer, so the route's hit contract checks it. */
+const people = z.array(directoryHit).max(MAX_DEV_PEOPLE);
 
 /** A person with the words a query is matched against, folded once. */
 interface Entry {

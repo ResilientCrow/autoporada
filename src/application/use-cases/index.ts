@@ -11,7 +11,7 @@ import {
   takeSignIn,
 } from './auth';
 import { issueWindow, setSkipped } from './issues';
-import { recentPeopleOf } from './people';
+import { recentPeopleOf, searchGate } from './people';
 import {
   createPoint,
   getPoint,
@@ -36,7 +36,7 @@ export {
   takeSignIn,
 } from './auth';
 export { issueWindow, setSkipped } from './issues';
-export { recentPeopleOf } from './people';
+export { recentPeopleOf, searchGate } from './people';
 export {
   createPoint,
   getPoint,
@@ -77,6 +77,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   resolveSession,
   retractPoint,
   savePoint,
+  searchGate,
   setSkipped,
   signOut,
   submitPoint,
