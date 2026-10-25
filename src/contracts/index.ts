@@ -40,7 +40,7 @@ export {
   takeSignInOutput,
   type SignInError,
 } from './auth';
-export { setSkippedInput, setSkippedOutput } from './issues';
+export { issuesWindowInput, issuesWindowOutput, setSkippedInput, setSkippedOutput } from './issues';
 export {
   changeUserAccessInput,
   changeUserAccessOutput,

@@ -1,21 +1,12 @@
-import { DEADLINE_RULE, defineUseCase, fail, fromTransition, ok } from '@/application/core';
+import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
-import { PLACEMENT_WEEKS, submitMonday } from '@/domain/calendar';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
-import {
-  addDays,
-  compareDates,
-  instantToWallClock,
-  isoWeekday,
-  mondayOf,
-  parseIsoDate,
-  type CalDate,
-} from '@/domain/time';
+import { compareDates, isoWeekday, parseIsoDate, type CalDate } from '@/domain/time';
 
+import { readWindow } from './calendar';
 import { ensureIssue } from './ensure';
 import { issueEvent } from './events';
 
-const WEEK = 7;
 const ACTIONS = { skip: 'issue.skipped', unskip: 'issue.unskipped' } as const;
 /** What a client that saw no row for the Monday read: an untouched issue. */
 const UNTOUCHED_VERSION = 1;
@@ -50,10 +41,7 @@ export const setSkipped = defineUseCase({
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
-    const current = mondayOf(instantToWallClock(now).date);
-    const known = await tx.issues.between(current, addDays(current, WEEK * PLACEMENT_WEEKS));
-    const first = submitMonday(now, DEADLINE_RULE, known);
-    const last = addDays(first, WEEK * (PLACEMENT_WEEKS - 1));
+    const { first, last } = await readWindow(tx, now);
     if (compareDates(monday, first) < 0 || compareDates(monday, last) > 0) {
       return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     }

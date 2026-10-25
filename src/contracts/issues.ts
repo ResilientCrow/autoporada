@@ -15,3 +15,19 @@ export const setSkippedOutput = z.object({
   status: z.enum(['open', 'generated', 'skipped']),
   version: z.number().int().positive(),
 });
+
+/** The calendar the Přehled, the standing line and the lists read: no input. */
+export const issuesWindowInput = z.strictObject({});
+export const issuesWindowOutput = z.object({
+  /** The first Monday whose deadline is still ahead. */
+  submitMonday: z.iso.date(),
+  /** The rows from this week's Monday to 26 weeks on, earliest first; a Monday without a row has none. */
+  issues: z.array(
+    z.object({
+      monday: z.iso.date(),
+      deadlineAt: z.iso.datetime(),
+      status: z.enum(['open', 'generated', 'skipped']),
+      version: z.number().int().positive(),
+    }),
+  ),
+});
