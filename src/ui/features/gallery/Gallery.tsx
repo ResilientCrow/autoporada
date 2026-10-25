@@ -6,6 +6,7 @@ import { SlantLabel } from '@/ui/kit';
 import { ControlDemos } from './ControlDemos';
 import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
+import { PeopleDemos } from './PeopleDemos';
 import { ProblemDemos } from './ProblemDemos';
 import { StatusDemos } from './StatusDemos';
 
@@ -32,6 +33,10 @@ export function Gallery({ unavailable = false }: { readonly unavailable?: boolea
       <section aria-labelledby="ovladaci-prvky">
         <h2 id="ovladaci-prvky">{cs.gallery.forms.controls.title}</h2>
         <ControlDemos />
+      </section>
+      <section aria-labelledby="osoby">
+        <h2 id="osoby">{cs.gallery.people.title}</h2>
+        <PeopleDemos />
       </section>
       <section aria-labelledby="chyby">
         <h2 id="chyby">{cs.gallery.problems.title}</h2>

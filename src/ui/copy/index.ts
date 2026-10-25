@@ -4,6 +4,7 @@ export { cs, pageTitle } from './cs';
 export { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
 export { gallery } from './gallery';
 export { issues } from './issues';
+export { people } from './people';
 export { points } from './points';
 export { status } from './status';
 export { users } from './users';

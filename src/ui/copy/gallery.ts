@@ -46,6 +46,17 @@ export const gallery = {
       network: 'Spojení selhalo',
     },
   },
+  people: {
+    title: 'Výběr osob',
+    live: {
+      label: 'Přidat osobu',
+      hint: 'Zkuste „nov“, „Karel Dvořák“ nebo slova „chyba“, „rychle“ a\u00A0„odhlášen“ pro jednotlivá oznámení.',
+    },
+    off: { label: 'Přidat osobu (adresář vypnutý)' },
+    added: 'Přidané osoby',
+    none: 'Zatím nikdo.',
+    triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
+  },
   forms: {
     title: 'Formulář',
     submit: 'Odeslat',

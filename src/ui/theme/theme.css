@@ -43,6 +43,11 @@
   --ap-focus: var(--color-light);
 }
 
+/* A popover as wide as the control that opened it (React Aria sets --trigger-width). */
+@utility popover-fit {
+  width: var(--trigger-width);
+}
+
 @layer base {
   html {
     color-scheme: light;

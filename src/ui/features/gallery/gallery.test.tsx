@@ -26,6 +26,7 @@ describe('Gallery', () => {
     cs.gallery.notices.title,
     cs.gallery.forms.title,
     cs.gallery.forms.controls.title,
+    cs.gallery.people.title,
     cs.gallery.problems.title,
   ])('has the section %s', (title) => {
     expect(html).toMatch(new RegExp(`<h2 [^>]*>${title}</h2>`));
@@ -35,7 +36,12 @@ describe('Gallery', () => {
     for (const label of Object.values(cs.gallery.statuses).slice(1)) expect(html).toContain(label);
     expect(html).toContain(cs.gallery.notices.info);
     expect(html).toContain(cs.gallery.notices.problem);
-    expect(html.match(/role="status"/g)).toHaveLength(1); // the empty live region of the demo
+    // The live form's region, and two per search box (the notice and the add announcement); the
+    // kit notices above carry no role, and the off box's notice is its only text in a region.
+    expect(html.match(/role="status"/g)).toHaveLength(5);
+    expect(html.match(/<p id="[^"]+" role="status" data-live-announcer="true">[^<]/g)).toHaveLength(
+      1,
+    );
   });
 
   it('shows the error form with its issues and the plain form without', () => {
@@ -68,6 +74,15 @@ describe('Gallery', () => {
   it('has the live form, quiet until submitted', () => {
     expect(html).toContain(cs.gallery.forms.live.name);
     expect(html).not.toContain(cs.gallery.forms.live.sent);
+  });
+
+  it('shows the people search box against the stub directory, and once with the directory off', () => {
+    const { people } = cs.gallery;
+    expect(html).toContain(people.live.label);
+    expect(html).toContain(people.off.label);
+    expect(html.match(/role="combobox"/g)).toHaveLength(2);
+    expect(html).toContain(cs.people.search.notice.off);
+    expect(html).toContain(people.none);
   });
 
   it('renders markup the CSP accepts', () => {

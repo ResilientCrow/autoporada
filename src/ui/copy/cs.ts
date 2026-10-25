@@ -4,6 +4,7 @@ import { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from '
 import { gallery } from './gallery';
 import { issues } from './issues';
 import { nav } from './nav';
+import { people } from './people';
 import { points } from './points';
 import { privacy } from './privacy';
 import { shell } from './shell';
@@ -28,6 +29,7 @@ export const cs = {
   gallery,
   issues,
   points,
+  people,
   privacy,
   errors,
   status,
