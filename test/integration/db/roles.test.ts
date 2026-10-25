@@ -46,7 +46,7 @@ describe('database roles (ADR 0010)', () => {
   });
 
   it('checks public.users for the last headmaster, whatever a session put in pg_temp', async () => {
-    await database.owner('TRUNCATE users CASCADE');
+    await database.truncate('users');
     const [head] = await database.owner<{ id: string }>(
       `INSERT INTO users (tid, oid, display_name, role)
        VALUES (gen_random_uuid(), gen_random_uuid(), 'Ředitel', 'headmaster') RETURNING id`,
@@ -65,13 +65,16 @@ describe('database roles (ADR 0010)', () => {
   });
 
   it('grants every table exactly the default privileges, unless listed here', async () => {
-    // The audit log is append-only: no UPDATE (migration 0004). Only the worker writes
-    // delivery state, so the mail tables have no app grant at all (0009, ADR 0016);
-    // the backup keeps its read on them, since backups include the ledger.
+    // The audit log and the point events are append-only: no UPDATE (migrations 0004,
+    // 0016), and the app never deletes an event (their point's cascade runs as the
+    // owner). Only the worker writes delivery state, so the mail tables have no app
+    // grant at all (0009, ADR 0016); the backup keeps its read on them, since backups
+    // include the ledger.
     const EXCEPTIONS: Record<string, string | null> = {
       audit_events: 'DELETE,INSERT,SELECT',
       mail_gate: null,
       mail_ledger: null,
+      point_events: 'INSERT,SELECT',
     };
     const grants = await database.owner<{ table: string; grantee: string; privileges: string }>(
       `SELECT c.relname AS table, g.grantee,

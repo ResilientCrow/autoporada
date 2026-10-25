@@ -7,3 +7,4 @@ export * from './audit';
 export * from './mail';
 export * from './issues';
 export * from './point-types';
+export * from './points';

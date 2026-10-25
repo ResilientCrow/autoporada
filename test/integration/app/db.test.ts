@@ -80,7 +80,7 @@ describe('Db.transaction', () => {
   });
 
   it('reports a deferred trigger that refuses the COMMIT', async () => {
-    await database.owner('TRUNCATE users CASCADE');
+    await database.truncate('users');
     const head = await run(async (tx) => {
       const user = await tx.users.upsertFromClaims(identity());
       return tx.users.changeAccess(user.id, user.version, { role: 'headmaster' });

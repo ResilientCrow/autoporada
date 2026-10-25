@@ -17,6 +17,11 @@ import { adminUrl, databaseUrl, recreateFromTemplate } from './template-db';
 
 const APP_ROLE = 'autoporada_app';
 const WORKER_ROLE = 'autoporada_worker';
+/** The triggers that refuse TRUNCATE to everyone: [table, trigger]. */
+const TRUNCATE_GUARDS = [
+  ['audit_events', 'audit_events_no_truncate'],
+  ['point_events', 'point_events_no_truncate'],
+] as const;
 
 async function asAdmin<T>(run: (client: Client) => Promise<T>, database?: string): Promise<T> {
   const client = new Client({ connectionString: database ? databaseUrl(database) : adminUrl() });
@@ -41,6 +46,12 @@ export interface TestDatabase {
   readonly name: string;
   /** Runs SQL as the owner, for setup and for assertions on the catalog. */
   owner<R extends object>(sql: string, params?: unknown[]): Promise<R[]>;
+  /**
+   * Empties `tables` and every table that references them, as the owner. The
+   * append-only logs refuse TRUNCATE even from the owner (0004, 0016), so it
+   * switches their guards off inside its own transaction; the app never can.
+   */
+  truncate(tables: string): Promise<void>;
   /** A connection of its own as autoporada_app, for tests of concurrent transactions. */
   connect(): Promise<Client>;
 }
@@ -115,6 +126,14 @@ export function setupTestDatabase(): TestDatabase {
       return workerHandle.app;
     },
     owner: (sql, params) => asAdmin(async (c) => (await c.query(sql, params)).rows, name),
+    truncate: (tables) =>
+      asAdmin(async (c) => {
+        await c.query(`BEGIN;
+          ${TRUNCATE_GUARDS.map(([t, g]) => `ALTER TABLE ${t} DISABLE TRIGGER ${g};`).join('\n')}
+          TRUNCATE ${tables} RESTART IDENTITY CASCADE;
+          ${TRUNCATE_GUARDS.map(([t, g]) => `ALTER TABLE ${t} ENABLE TRIGGER ${g};`).join('\n')}
+          COMMIT;`);
+      }, name),
     async connect() {
       const client = new Client({
         connectionString: databaseUrl(name),

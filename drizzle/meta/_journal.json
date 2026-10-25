@@ -106,6 +106,20 @@
       "when": 1792947401850,
       "tag": "0014_point_type_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792948231069,
+      "tag": "0015_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792948239421,
+      "tag": "0016_point_guards",
+      "breakpoints": true
     }
   ]
 }

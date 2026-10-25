@@ -4,10 +4,9 @@ import type { TestDatabase } from '../../database';
 import type { AuditRow, JobRow } from '../fake/state';
 
 /**
- * Empties every table before a test, as the owner. The audit log refuses
- * TRUNCATE even from the owner, so the reset switches that trigger off
- * inside its own transaction; the app role can never do this. The mail
- * gate's one row comes back, as migration 0009 inserted it.
+ * Empties every table before a test, as the owner, past the append-only
+ * guards (`TestDatabase.truncate`). The mail gate's one row comes back, as
+ * migration 0009 inserted it.
  */
 export async function resetTables(database: TestDatabase): Promise<void> {
   const [row] = await database.owner<{ tables: string | null }>(
@@ -17,14 +16,8 @@ export async function resetTables(database: TestDatabase): Promise<void> {
   // The queue's rows go too; its queues stay, as the migrated template made them.
   await database.owner('TRUNCATE pgboss.job');
   if (!row?.tables) return;
-  await database.owner(
-    `BEGIN;
-     ALTER TABLE audit_events DISABLE TRIGGER audit_events_no_truncate;
-     TRUNCATE ${row.tables} RESTART IDENTITY CASCADE;
-     ALTER TABLE audit_events ENABLE TRIGGER audit_events_no_truncate;
-     INSERT INTO mail_gate DEFAULT VALUES;
-     COMMIT;`,
-  );
+  await database.truncate(row.tables);
+  await database.owner('INSERT INTO mail_gate DEFAULT VALUES');
 }
 
 /** The audit log in the shape the fake world keeps it. */

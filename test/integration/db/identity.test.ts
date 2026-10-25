@@ -46,7 +46,7 @@ describe('users', () => {
 
 describe('at least one active headmaster', () => {
   const KEEP = violation('23514', 'users_active_headmaster');
-  beforeEach(() => database.owner('TRUNCATE users CASCADE'));
+  beforeEach(() => database.truncate('users'));
   const setRole = (id: string, role: NewUser['role']) =>
     database.db.update(users).set({ role }).where(eq(users.id, id));
 
