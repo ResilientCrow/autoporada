@@ -7,5 +7,5 @@ export type {
   PointKind,
 } from './content';
 export { newDraft } from './draft';
-export { DRAFT_CAP, PERSON_FIELD_MAX, POINT_LIMITS } from './limits';
+export { contentBytes, DRAFT_CAP, PERSON_FIELD_MAX, POINT_LIMITS } from './limits';
 export { openingInput } from './opening';

@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { POINT_LIMITS, type DraftPerson } from '@/domain/report';
 import { richDocFromText } from '@/domain/richtext';
 
-import { draftBulletsSchema, draftStatementsSchema, parsePointJsonb } from './point';
+import {
+  draftBulletsSchema,
+  draftStatementsSchema,
+  parsePointJsonb,
+  savePointInput,
+} from './point';
 
 const person = (over: Record<string, unknown> = {}): DraftPerson => ({
   salutation: 'pani',
@@ -157,5 +162,67 @@ describe('parsePointJsonb', () => {
     ['a statement with a bad quote', { statements: [statement({ quote: 7 })] }],
   ])('refuses %s', (_name, over) => {
     expect(parsePointJsonb({ ...jsonb, ...over })).toBeNull();
+  });
+});
+
+describe('savePointInput', () => {
+  const content = (over: Record<string, unknown> = {}) => ({
+    title: '',
+    eventDate: null,
+    endDate: null,
+    timeFrom: null,
+    timeTo: null,
+    campus: null,
+    place: null,
+    opening: '',
+    openingEdited: false,
+    body: { type: 'doc', content: [] },
+    bullets: [],
+    statements: [],
+    ...over,
+  });
+  const input = (over: Record<string, unknown> = {}) => ({
+    id: '6f1c3d0e-0000-4000-8000-000000000001',
+    expectedVersion: 1,
+    content: content(over),
+  });
+
+  it.each([
+    ['title', POINT_LIMITS.title],
+    ['opening', POINT_LIMITS.opening],
+    ['place', POINT_LIMITS.place],
+  ])('bounds the %s', (field, max) => {
+    expect(ok(savePointInput, input({ [field]: x(max) }))).toBe(true);
+    expect(ok(savePointInput, input({ [field]: x(max + 1) }))).toBe(false);
+  });
+
+  it.each([
+    ['an unknown field', { tags: [] }],
+    ['an unknown campus', { campus: 'karlin' }],
+    ['a date with a time', { eventDate: '2027-01-14T10:00' }],
+    ['a body that is not a doc', { body: { type: 'paragraph', content: [] } }],
+    [
+      'a body node with an extra field',
+      { body: { type: 'doc', content: [{ type: 'paragraph', attrs: { indent: 0 }, id: 1 }] } },
+    ],
+    ['a body over its own cap', { body: richDocFromText(x(POINT_LIMITS.bodyBytes)) }],
+    [
+      'a newline inside a body text',
+      {
+        body: {
+          type: 'doc',
+          content: [
+            { type: 'paragraph', attrs: { indent: 0 }, content: [{ type: 'text', text: 'a\nb' }] },
+          ],
+        },
+      },
+    ],
+  ])('refuses %s', (_name, over) => {
+    expect(ok(savePointInput, input(over))).toBe(false);
+  });
+
+  it('refuses an unknown field next to the content, and a version below one', () => {
+    expect(ok(savePointInput, { ...input(), state: 'draft' })).toBe(false);
+    expect(ok(savePointInput, { ...input(), expectedVersion: 0 })).toBe(false);
   });
 });

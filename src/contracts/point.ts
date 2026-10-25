@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-import type { Salutation } from '@/domain/cs';
+import type { Campus, Salutation } from '@/domain/cs';
 import {
+  contentBytes,
   POINT_LIMITS,
   type PointKind,
   type DraftBullet,
@@ -9,7 +10,8 @@ import {
   type DraftStatement,
   type PointContent,
 } from '@/domain/report';
-import { parseRichDoc } from '@/domain/richtext';
+import { LIMITS as RICH_LIMITS, parseRichDoc } from '@/domain/richtext';
+import { compareDates, parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { bulletKeySchema, uniqueKeys } from './point-type';
 
@@ -96,3 +98,99 @@ export const createPointInput = z.strictObject({
   typeId: z.uuid().nullable(),
 });
 export const createPointOutput = z.object({ id: z.uuid() });
+
+/** ISO text read into a domain value; text the parser refuses is an issue, never a throw. */
+const parsedText = <T>(max: number, parse: (text: string) => T) =>
+  z
+    .string()
+    .max(max)
+    .transform((text, ctx) => {
+      try {
+        return parse(text);
+      } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        ctx.addIssue({ code: 'custom', message: 'invalid' });
+        return z.NEVER;
+      }
+    });
+const isoDate = parsedText(10, parseIsoDate).nullable();
+const wallTime = parsedText(5, parseWallTime).nullable();
+
+/** Every `Campus` once: the compiler refuses a missing or an unknown one. */
+const CAMPUSES: Readonly<Record<Campus, Campus>> = {
+  smichov: 'smichov',
+  radlice: 'radlice',
+  'na-vidouli': 'na-vidouli',
+  jinde: 'jinde',
+};
+const campusSchema = z.enum(CAMPUSES) satisfies z.ZodType<Campus>;
+
+const richTextSchema = z.strictObject({
+  type: z.literal('text'),
+  text: z.string().min(1).max(RICH_LIMITS.maxBytes),
+  marks: z
+    .array(z.strictObject({ type: z.enum(['bold', 'italic']) }))
+    .max(2)
+    .optional(),
+});
+const richParagraphSchema = z.strictObject({
+  type: z.literal('paragraph'),
+  attrs: z.strictObject({ indent: z.number().int().min(0).max(3) }),
+  content: z.array(richTextSchema).max(RICH_LIMITS.maxNodes).optional(),
+});
+
+/**
+ * The body as the editor sends it, then the rich text module's own parse
+ * (sizes, characters) at the widest profile, as it is stored. Which profile a
+ * kind may use is known only once the point is loaded: the use case's rule.
+ */
+const bodySchema = z
+  .strictObject({
+    type: z.literal('doc'),
+    content: z.array(richParagraphSchema).max(RICH_LIMITS.maxNodes),
+  })
+  .transform((doc, ctx) => {
+    const parsed = parseRichDoc(doc, 'outline');
+    if (parsed.ok) return parsed.doc;
+    ctx.addIssue({ code: 'custom', message: 'invalid' });
+    return z.NEVER;
+  });
+
+/**
+ * A point's content as the editor sends it: every field bounded, an end date
+ * never before the start (`points_dates`), and all of it within
+ * `contentBytes`. A draft may be unfinished; readiness asks for the rest.
+ */
+const pointContentSchema = z
+  .strictObject({
+    title: capped(POINT_LIMITS.title),
+    eventDate: isoDate,
+    endDate: isoDate,
+    timeFrom: wallTime,
+    timeTo: wallTime,
+    campus: campusSchema.nullable(),
+    place: capped(POINT_LIMITS.place).nullable(),
+    opening: capped(POINT_LIMITS.opening),
+    openingEdited: z.boolean(),
+    body: bodySchema,
+    bullets: draftBulletsSchema,
+    statements: draftStatementsSchema,
+  })
+  .superRefine((content, ctx) => {
+    const { eventDate, endDate } = content;
+    if (endDate && (!eventDate || compareDates(endDate, eventDate) < 0)) {
+      ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'invalid' });
+    }
+    if (contentBytes(content) > POINT_LIMITS.contentBytes) {
+      ctx.addIssue({ code: 'custom', message: 'too-long', params: { code: 'too-long' } });
+    }
+  }) satisfies z.ZodType<PointContent>;
+
+/** The author's autosave: the whole content against the version the editor holds. */
+export const savePointInput = z.strictObject({
+  id: z.uuid(),
+  expectedVersion: z.number().int().positive(),
+  content: pointContentSchema,
+});
+/** The new version, which the editor sends with its next save. */
+export const savePointOutput = z.object({ version: z.number().int().positive() });

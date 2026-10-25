@@ -1,6 +1,8 @@
 import { PERSON_FIELD_MAX } from '@/domain/cs';
 import { LIMITS as RICH_LIMITS } from '@/domain/richtext';
 
+import type { PointContent } from './content';
+
 /** Defined once in domain/cs, because the paste parser needs the same caps. */
 export { PERSON_FIELD_MAX };
 
@@ -49,3 +51,13 @@ export const POINT_LIMITS = {
  * that must never stop its author from starting another.
  */
 export const DRAFT_CAP = 50;
+
+/**
+ * What `contentBytes` caps: UTF-8 bytes of the content's JSON, as `bodyBytes`
+ * is measured. It measures the domain form, where a date or a time is an
+ * object, a few bytes longer than its ISO text on the wire; a counter in the
+ * browser measures the same way.
+ */
+export function contentBytes(content: PointContent): number {
+  return new TextEncoder().encode(JSON.stringify(content)).length;
+}
