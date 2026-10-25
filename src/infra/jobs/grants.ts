@@ -1,6 +1,13 @@
 import type { Client } from 'pg';
 
 /**
+ * The worker's read of pgboss.queue and its insert there. `migrate` revokes the insert while it
+ * checks the queue and migrates, and grants it back with this statement on every way out.
+ */
+export const QUEUE_INSERT_GRANT = 'GRANT SELECT, INSERT ON pgboss.queue TO autoporada_jobs';
+export const QUEUE_INSERT_REVOKE = 'REVOKE INSERT ON pgboss.queue FROM autoporada_jobs';
+
+/**
  * What the web and the worker may do in the pg-boss schema (ADR 0015). Run as the owner after
  * every install; idempotent. The grants in `public` (users, access_requests) are in
  * drizzle/0008_job_roles.sql.
@@ -27,7 +34,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON pgboss.job, pgboss.job_common TO autopor
 GRANT SELECT, INSERT, UPDATE, DELETE ON pgboss.schedule TO autoporada_jobs;
 -- the queue cache; create_queue's insert (ON CONFLICT DO NOTHING) of the cron queue at every
 -- start; the monitor's and the sweep's claims and cached counts, never a queue's name, table or settings
-GRANT SELECT, INSERT ON pgboss.queue TO autoporada_jobs;
+${QUEUE_INSERT_GRANT};
 GRANT UPDATE (monitor_claim_on, monitor_on, maintain_on, deferred_count, blocked_count, queued_count,
   ready_count, active_count, failed_count, total_count, retained_count, retained_on,
   singletons_active, ready_history) ON pgboss.queue TO autoporada_jobs;

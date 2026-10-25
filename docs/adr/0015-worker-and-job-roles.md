@@ -19,10 +19,16 @@ and its own image.
    the advisory lock that migrations already take. `migrate` first refuses to
    run over `pgboss` rows it did not make: a queue it does not know, a
    partitioned queue, a queue on another table, or background commands
-   (`bam`) that are not finished. If its wait for `bam` times out, those rows
-   stay, and the next `migrate` refuses until an operator looks. Its schema
-   number is asserted in a test. A pg-boss upgrade is one commit: version, test and
-   template rebuild.
+   (`bam`) that are not finished. The worker may insert queue rows, so the
+   check runs in one transaction that revokes the worker's INSERT on
+   `pgboss.queue` and takes a SHARE lock on it, which waits up to 30 s for
+   inserts in flight. The revoke stays until pg-boss has migrated, whether or
+   not that succeeds, so no row appears between the check and the migration.
+   If a session holds the queue past the timeout, `migrate` refuses and names
+   the cause; stop the worker and run it again. If its wait for `bam` times
+   out, those rows stay, and the next `migrate` refuses until an operator
+   looks. Its schema number is asserted in a test. A pg-boss upgrade is one
+   commit: version, test and template rebuild.
 2. **Queues** are specified in code (`infra/jobs/queues.ts`), one entry per
    job name, and a job without a spec fails the type check. Policy `standard`;
    the job id is derived from the dedupe key, so enqueueing the same key twice

@@ -125,7 +125,8 @@ active reviewer or headmaster who is not a student.
           survive in the received headers.
 18. **RBAC propagation.** While the scope is new, the first mail may be refused.
     The ledger keeps one row per key and updates it in place, so look while
-    the mail is pending, with the key `mail:test` printed (`mail.check:<uuid>`).
+    the mail is pending, with the key that `mail:test` printed
+    (`mail.check:<uuid>`).
     - [ ] `psql`: `SELECT state, code, attempts, claimed_at, settled_at FROM mail_ledger WHERE dedupe_key = '<key>';`
           shows `deferred` with an `auth.*` code while Exchange refuses, then
           `sent`, with no intervention.
@@ -174,4 +175,5 @@ active reviewer or headmaster who is not a student.
 | `job.dead` | A job is in the dead-letter queue; `jobs:status` lists it with its code | `ambiguous`: the mail probably arrived, so do not redrive without asking the recipient; a redrive may send up to two more copies. `rejected.*`: Graph refused the mail for good; fix the address or the data first. Other codes: fix the cause, then `docker compose run --rm cli jobs:redrive` (running `cli` with no command prints the usage) |
 | `worker.start_failed` with the hint `run migrate` | The job queue's tables are behind the code | `docker compose up -d` runs `migrate` first; check `docker compose logs migrate` |
 | `migrate` fails with `pgboss holds what migrate did not make` | A queue or a pending background command in `pgboss` that migrate did not create, for example after a bam wait timed out | Nothing was changed. Look at the named queues and `pgboss.bam` rows; remove them only when you know how they got there (ADR 0015), then run `docker compose up -d` again |
+| `migrate` fails with `a session holds pgboss.queue` | A session (normally the running worker) kept writing the queue table for 30 s, so migrate could not check it | Nothing was changed. `docker compose stop worker`, then `docker compose up -d` again |
 | `migrate` fails with `permission denied to create role` | A data volume made before the worker (M7) lacks its database roles | Run once (safe to repeat), as `install.sh` prints: `docker compose up -d --wait postgres`, then `docker compose exec -T postgres psql -X -U pgadmin -d postgres -v ON_ERROR_STOP=1 -f - <postgres/upgrade/m7-roles.sql`, then `docker compose up -d` |
