@@ -5,3 +5,4 @@
 export * from './identity';
 export * from './audit';
 export * from './mail';
+export * from './issues';

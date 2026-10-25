@@ -4,6 +4,7 @@ import {
   type AuditTarget,
   type EnqueueOptions,
   type GateRow,
+  type IssueRecord,
   type JobCatalog,
   type JobName,
   type LedgerRow,
@@ -22,6 +23,8 @@ export interface FakeState {
   readonly sessions: Map<string, SessionRecord & { readonly tokenSha256: string }>;
   readonly audit: AuditRow[];
   readonly jobs: JobRow[];
+  /** issues, by ISO Monday (issues_monday_key). */
+  readonly issues: Map<string, IssueRecord>;
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
   /** mail_gate's one row, as migration 0009 inserts it. */
@@ -52,6 +55,7 @@ export const emptyState = (): FakeState => ({
   sessions: new Map(),
   audit: [],
   jobs: [],
+  issues: new Map(),
   mailLedger: new Map(),
   mailGate: { notBefore: null, code: null },
   nextId: 1,

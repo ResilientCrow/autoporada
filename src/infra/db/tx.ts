@@ -6,6 +6,7 @@ import type { JobPort, Tx, TxContext } from '@/application/ports';
 import { guardClient, guardPort, type TxLife } from './guard';
 import { createAccessRequestRepo } from './repos/access-requests';
 import { createAuditWriter } from './repos/audit';
+import { createIssueRepo } from './repos/issues';
 import { createMailLedgerRepo } from './repos/mail-ledger';
 import { createSessionRepo } from './repos/sessions';
 import { createSignInRepo } from './repos/sign-ins';
@@ -28,6 +29,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     accessRequests: guard(createAccessRequestRepo(db, ctx)),
     signIns: guard(createSignInRepo(db, ctx)),
     sessions: guard(createSessionRepo(db, ctx)),
+    issues: guard(createIssueRepo(db, ctx)),
     audit: guard(createAuditWriter(db, ctx)),
     jobs: guard(jobsOn(guarded)),
     mailLedger: guard(createMailLedgerRepo(db, ctx)),

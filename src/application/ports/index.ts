@@ -45,6 +45,7 @@ export {
   type OutcomeCode,
   type ScheduledJob,
 } from './jobs';
+export type { IssueRecord, IssueRepo, NewIssue } from './issues';
 export type { MailPort, MailResult, OutgoingMail } from './mail';
 export type {
   ClaimRow,
