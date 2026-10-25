@@ -10,8 +10,21 @@ import {
   type DraftStatement,
   type PointContent,
 } from '@/domain/report';
-import { LIMITS as RICH_LIMITS, parseRichDoc } from '@/domain/richtext';
-import { compareDates, parseIsoDate, parseWallTime } from '@/domain/time';
+import {
+  LIMITS as RICH_LIMITS,
+  parseRichDoc,
+  type RichParagraph,
+  type RichText,
+} from '@/domain/richtext';
+import {
+  compareDates,
+  parseIsoDate,
+  parseWallTime,
+  toIsoDate,
+  toIsoTime,
+  type CalDate,
+  type WallTime,
+} from '@/domain/time';
 
 import { bulletKeySchema, uniqueKeys } from './point-type';
 
@@ -92,9 +105,14 @@ export function parsePointJsonb(value: { [K in keyof PointJsonb]: unknown }): Po
  * names its type; finance and pokyn name none (the use case checks the pair
  * and that the type is on offer).
  */
+export const pointKindSchema = z.enum([
+  'report',
+  'finance',
+  'pokyn',
+]) satisfies z.ZodType<PointKind>;
 export const createPointInput = z.strictObject({
   clientRef: z.uuid(),
-  kind: z.enum(['report', 'finance', 'pokyn']) satisfies z.ZodType<PointKind>,
+  kind: pointKindSchema,
   typeId: z.uuid().nullable(),
 });
 export const createPointOutput = z.object({ id: z.uuid() });
@@ -139,22 +157,43 @@ const richParagraphSchema = z.strictObject({
   content: z.array(richTextSchema).max(RICH_LIMITS.maxNodes).optional(),
 });
 
+/** The body as the editor sends it and a read gives it back. */
+const richDocWire = z.strictObject({
+  type: z.literal('doc'),
+  content: z.array(richParagraphSchema).max(RICH_LIMITS.maxNodes),
+});
+
 /**
- * The body as the editor sends it, then the rich text module's own parse
- * (sizes, characters) at the widest profile, as it is stored. Which profile a
- * kind may use is known only once the point is loaded: the use case's rule.
+ * The body, then the rich text module's own parse (sizes, characters) at the
+ * widest profile, as it is stored. Which profile a kind may use is known only
+ * once the point is loaded: the use case's rule.
  */
-const bodySchema = z
-  .strictObject({
-    type: z.literal('doc'),
-    content: z.array(richParagraphSchema).max(RICH_LIMITS.maxNodes),
-  })
-  .transform((doc, ctx) => {
-    const parsed = parseRichDoc(doc, 'outline');
-    if (parsed.ok) return parsed.doc;
-    ctx.addIssue({ code: 'custom', message: 'invalid' });
-    return z.NEVER;
-  });
+const bodySchema = richDocWire.transform((doc, ctx) => {
+  const parsed = parseRichDoc(doc, 'outline');
+  if (parsed.ok) return parsed.doc;
+  ctx.addIssue({ code: 'custom', message: 'invalid' });
+  return z.NEVER;
+});
+
+/** The fields of a point's content, with its dates, times and body as one side of the wire has them. */
+const contentFields = <D extends z.ZodType, T extends z.ZodType, B extends z.ZodType>(
+  date: D,
+  time: T,
+  body: B,
+) => ({
+  title: capped(POINT_LIMITS.title),
+  eventDate: date,
+  endDate: date,
+  timeFrom: time,
+  timeTo: time,
+  campus: campusSchema.nullable(),
+  place: capped(POINT_LIMITS.place).nullable(),
+  opening: capped(POINT_LIMITS.opening),
+  openingEdited: z.boolean(),
+  body,
+  bullets: draftBulletsSchema,
+  statements: draftStatementsSchema,
+});
 
 /**
  * A point's content as the editor sends it: every field bounded, an end date
@@ -162,20 +201,7 @@ const bodySchema = z
  * `contentBytes`. A draft may be unfinished; readiness asks for the rest.
  */
 const pointContentSchema = z
-  .strictObject({
-    title: capped(POINT_LIMITS.title),
-    eventDate: isoDate,
-    endDate: isoDate,
-    timeFrom: wallTime,
-    timeTo: wallTime,
-    campus: campusSchema.nullable(),
-    place: capped(POINT_LIMITS.place).nullable(),
-    opening: capped(POINT_LIMITS.opening),
-    openingEdited: z.boolean(),
-    body: bodySchema,
-    bullets: draftBulletsSchema,
-    statements: draftStatementsSchema,
-  })
+  .strictObject(contentFields(isoDate, wallTime, bodySchema))
   .superRefine((content, ctx) => {
     const { eventDate, endDate } = content;
     if (endDate && (!eventDate || compareDates(endDate, eventDate) < 0)) {
@@ -185,6 +211,39 @@ const pointContentSchema = z
       ctx.addIssue({ code: 'custom', message: 'too-long', params: { code: 'too-long' } });
     }
   }) satisfies z.ZodType<PointContent>;
+
+/**
+ * A point's content as a read gives it to the editor: dates and times as the
+ * ISO text the save takes, so the editor can send it back unchanged.
+ */
+export const pointContentWire = z.strictObject(
+  contentFields(z.iso.date().nullable(), z.iso.time({ precision: -1 }).nullable(), richDocWire),
+);
+
+const dateText = (date: CalDate | null) => date && toIsoDate(date);
+const timeText = (time: WallTime | null) => time && toIsoTime(time);
+const textWire = ({ text, marks }: RichText) => ({
+  type: 'text' as const,
+  text,
+  ...(marks && { marks: marks.map((mark) => ({ type: mark.type })) }),
+});
+const paragraphWire = ({ attrs, content }: RichParagraph) => ({
+  type: 'paragraph' as const,
+  attrs: { indent: attrs.indent },
+  ...(content && { content: content.map(textWire) }),
+});
+
+/** The stored content in the wire shape of `pointContentWire`. */
+export const contentWire = (content: PointContent): z.input<typeof pointContentWire> => ({
+  ...content,
+  eventDate: dateText(content.eventDate),
+  endDate: dateText(content.endDate),
+  timeFrom: timeText(content.timeFrom),
+  timeTo: timeText(content.timeTo),
+  body: { type: 'doc', content: content.body.content.map(paragraphWire) },
+  bullets: content.bullets.map((b) => (b.kind === 'people' ? { ...b, people: [...b.people] } : b)),
+  statements: [...content.statements],
+});
 
 /** A write to a point names the point and the version the page showed. */
 const pointWrite = { id: z.uuid(), expectedVersion: z.number().int().positive() };

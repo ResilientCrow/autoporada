@@ -15,7 +15,7 @@ import type { World } from './world';
 import { CLOCK_START } from './world/clock';
 
 /** A required people bullet and an optional text bullet, as a report type's spec. */
-const BULLETS: readonly BulletSpec[] = [
+export const BULLETS: readonly BulletSpec[] = [
   { key: 'organisers', label: 'Organizátoři', kind: 'people', required: true, role: 'organisers' },
   { key: 'results', label: 'Výsledky', kind: 'text', required: false },
 ];

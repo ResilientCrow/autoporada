@@ -2,8 +2,8 @@ import { defineUseCase, fail, ok } from '@/application/core';
 import { savePointInput, savePointOutput } from '@/contracts';
 import { authorEditsPoint } from '@/domain/review';
 
+import { pointView, pointWriteAccess } from './access';
 import { kindIssues, typeSpec } from './checks';
-import { pointView, pointWriteAccess } from './load-for-write';
 
 /**
  * The author's autosave (design section 8, ADR 0017): the whole content

@@ -1,8 +1,8 @@
 import { defineUseCase, ok } from '@/application/core';
 import { retractPointInput, retractPointOutput } from '@/contracts';
 
+import { pointWriteAccess } from './access';
 import { move, moveCheck } from './append-event';
-import { pointWriteAccess } from './load-for-write';
 
 /**
  * „Stáhnout“ (design section 9): a submitted point back to the author's

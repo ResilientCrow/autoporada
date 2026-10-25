@@ -6,9 +6,9 @@ import { missingForSubmit, submittedContent } from '@/domain/report';
 import { instantToWallClock } from '@/domain/time';
 
 import { ensureIssue, readWindow } from '../issues';
+import { pointWriteAccess } from './access';
 import { move, moveCheck } from './append-event';
 import { kindIssues, readinessIssues, typeSpec } from './checks';
-import { pointWriteAccess } from './load-for-write';
 
 interface FirstSubmit {
   readonly patch: Pick<PointPatch, 'earliestMonday'>;

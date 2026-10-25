@@ -1,8 +1,8 @@
 import { defineUseCase, fail, ok } from '@/application/core';
 import { withdrawPointInput, withdrawPointOutput } from '@/contracts';
 
+import { pointWriteAccess } from './access';
 import { move, moveCheck } from './append-event';
-import { pointWriteAccess } from './load-for-write';
 
 /**
  * „Zrušit bod“ (design section 9), from a draft, a returned or a submitted

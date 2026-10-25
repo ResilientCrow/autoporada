@@ -1,6 +1,7 @@
 import type { ResourceAccess } from '@/application/core';
 import type { PointRecord } from '@/application/ports';
 import type { Check } from '@/domain/policy';
+import { authorEditsPoint } from '@/domain/review';
 
 /** What every write to a point names: the point and the version the page showed. */
 interface PointWrite {
@@ -30,4 +31,31 @@ export const pointView = (point: PointRecord) => ({
   authorId: point.authorId,
   state: point.state,
   everSubmitted: point.submittedAt !== null,
+});
+
+/**
+ * The access of a read of one point: the scoped repository without the row
+ * lock, so a point outside the reader's scope is not-found (a colleague's
+ * draft, a retracted point, any point for a pending or inactive account).
+ */
+export function pointReadAccess<I extends { readonly id: string }>(): ResourceAccess<
+  I,
+  PointRecord
+> {
+  return {
+    kind: 'resource',
+    load: (tx, { id }) => tx.points.get(id),
+    expectedVersion: 'unversioned',
+    check: (point) => ({ action: 'point.view', point: pointView(point) }),
+  };
+}
+
+/**
+ * Where the point stands for the reader. `editable` is the save's rule: the
+ * author, while the point is theirs to change; a reviewer's edit is another path.
+ */
+export const pointStanding = (point: PointRecord, readerId: string) => ({
+  version: point.version,
+  state: point.state,
+  editable: point.authorId === readerId && authorEditsPoint(point.state),
 });
