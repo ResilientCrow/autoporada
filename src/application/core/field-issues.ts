@@ -3,7 +3,8 @@ import type { z } from 'zod';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
 
 const SEGMENT = /^[A-Za-z][A-Za-z0-9]{0,40}$/;
-const MAX_FIELDS = 50;
+/** The most field issues one answer carries. */
+export const MAX_FIELDS = 50;
 const CODES: ReadonlySet<unknown> = new Set<FieldIssueCode>([
   'required',
   'too-short',

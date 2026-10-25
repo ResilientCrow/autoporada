@@ -47,6 +47,8 @@ export {
   parsePointJsonb,
   savePointInput,
   savePointOutput,
+  submitPointInput,
+  submitPointOutput,
   type PointJsonb,
 } from './point';
 export { defaultBulletsSchema } from './point-type';

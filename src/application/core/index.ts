@@ -8,6 +8,7 @@ export {
   type UseCase,
 } from './define-use-case';
 export { fromTransition } from './failure';
+export { MAX_FIELDS } from './field-issues';
 export { DEADLINE_RULE } from './issue-rule';
 export {
   fail,

@@ -186,11 +186,15 @@ const pointContentSchema = z
     }
   }) satisfies z.ZodType<PointContent>;
 
+/** A write to a point names the point and the version the page showed. */
+const pointWrite = { id: z.uuid(), expectedVersion: z.number().int().positive() };
+/** The new version, which the page sends with its next write. */
+const pointVersion = z.object({ version: z.number().int().positive() });
+
 /** The author's autosave: the whole content against the version the editor holds. */
-export const savePointInput = z.strictObject({
-  id: z.uuid(),
-  expectedVersion: z.number().int().positive(),
-  content: pointContentSchema,
-});
-/** The new version, which the editor sends with its next save. */
-export const savePointOutput = z.object({ version: z.number().int().positive() });
+export const savePointInput = z.strictObject({ ...pointWrite, content: pointContentSchema });
+export const savePointOutput = pointVersion;
+
+/** „Odeslat ke kontrole“: the content the editor holds, saved and handed in at once. */
+export const submitPointInput = z.strictObject({ ...pointWrite, content: pointContentSchema });
+export const submitPointOutput = pointVersion;
