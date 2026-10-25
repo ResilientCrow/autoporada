@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { DirectoryPerson, DirectoryPort, DirectoryResult } from '@/application/ports';
 import { directoryHit } from '@/contracts';
-import { foldForSearch } from '@/domain/cs';
+import { foldForSearch, matchesWordPrefixes, searchWords } from '@/domain/cs';
 import { DIRECTORY_LIMITS } from '@/domain/report';
 import { ConfigError } from '@/infra/config';
 
@@ -18,12 +18,6 @@ interface Entry {
   readonly person: DirectoryPerson;
   readonly words: readonly string[];
 }
-
-/** Words of folded text: spaces, hyphens and brackets all separate, as in Graph's tokenizer. */
-const words = (text: string): string[] =>
-  foldForSearch(text)
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter(Boolean);
 
 function load(path: string, readFile: ReadFile): Entry[] {
   // Dev and test only: a bad file stops the boot, with the key and no content (ADR 0015).
@@ -46,7 +40,11 @@ function load(path: string, readFile: ReadFile): Entry[] {
   if (!parsed.success) return refuse(`is not a list of at most ${MAX_DEV_PEOPLE} people`);
   return parsed.data.map((p) => ({
     person: p,
-    words: [...words(p.givenName), ...words(p.familyName), ...words(p.displayName)],
+    words: [
+      ...searchWords(p.givenName),
+      ...searchWords(p.familyName),
+      ...searchWords(p.displayName),
+    ],
   }));
 }
 
@@ -63,10 +61,10 @@ export function createDevDirectory(path: string, readFile: ReadFile): DirectoryP
         const folded = foldForSearch(query).trim();
         if (folded.length < DIRECTORY_LIMITS.minQuery)
           return Promise.resolve({ ok: true, value: [] });
-        const wanted = words(folded);
+        const wanted = searchWords(folded);
         if (wanted.length === 0) return Promise.resolve({ ok: true, value: [] });
         const value = entries
-          .filter((entry) => wanted.every((w) => entry.words.some((word) => word.startsWith(w))))
+          .filter((entry) => matchesWordPrefixes(wanted, entry.words))
           .slice(0, DIRECTORY_LIMITS.hits)
           .map((entry) => entry.person);
         return Promise.resolve({ ok: true, value });
