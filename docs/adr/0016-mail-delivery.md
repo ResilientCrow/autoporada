@@ -65,7 +65,12 @@ told "no" or "wait" gets to see.
    A connect timeout means the request never left, so it is not a timeout in
    the sense of the row below. Known limit: a budget abort that fires before
    the Graph fetch starts still reads as `unknown.timeout`: it counts toward
-   the cap, and the next send is a resend although nothing went out.
+   the cap, and the next send is a resend although nothing went out. The
+   other way: every `ERR_TLS_*` and `ERR_SSL_*` code reads as not sent, and a
+   few of them (a bad record, a peer's alert) can end a connection after the
+   request was written, so that rare mail may arrive twice without being
+   counted. Host and network unreachable, like a timeout, mean not sent only
+   when `connect` raised them.
 
    A 403 is expected on the first day, while Exchange RBAC propagates for up
    to 2 hours. Retries (15, backoff from 30 s to 15 min) therefore span about

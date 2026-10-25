@@ -12,15 +12,14 @@ export interface ProviderAnswer {
 
 /**
  * The connection never carried the request: refused, no address, no TCP connection in time
- * (undici's connect timeout), TLS refused before the write.
+ * (undici's connect timeout), TLS refused before the write. Each is raised by connect(), name
+ * resolution or the handshake only; a code a read or write can raise is guarded below.
  */
 const NOT_WRITTEN = new Set([
   'ECONNREFUSED',
   'UND_ERR_CONNECT_TIMEOUT',
   'ENOTFOUND',
   'EAI_AGAIN',
-  'EHOSTUNREACH',
-  'ENETUNREACH',
   'CERT_HAS_EXPIRED',
   'CERT_NOT_YET_VALID',
   'DEPTH_ZERO_SELF_SIGNED_CERT',
@@ -28,6 +27,12 @@ const NOT_WRITTEN = new Set([
   'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
   'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
 ]);
+/**
+ * Codes that also reach an established socket: the kernel reports an ICMP "unreachable" or an
+ * exhausted retransmit as the error of a later read or write, after the request may have
+ * left. They mean not written only when `connect` raised them.
+ */
+const NOT_WRITTEN_ON_CONNECT = new Set(['ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH']);
 const TLS_CODE = /^ERR_(TLS|SSL)_/;
 
 /** `prefix.code` when it is a valid outcome code (an errno, at most 40 characters), else `prefix.fallback`. */
@@ -80,7 +85,9 @@ function socketCause(error: TypeError): SocketCause {
 function notWritten({ code, syscall }: SocketCause): boolean {
   if (!code) return false;
   return (
-    NOT_WRITTEN.has(code) || TLS_CODE.test(code) || (code === 'ETIMEDOUT' && syscall === 'connect')
+    NOT_WRITTEN.has(code) ||
+    TLS_CODE.test(code) ||
+    (NOT_WRITTEN_ON_CONNECT.has(code) && syscall === 'connect')
   );
 }
 

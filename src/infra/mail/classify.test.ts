@@ -134,6 +134,66 @@ describe('classifying a call that got no answer', () => {
       { kind: 'unknown', code: 'unknown.ETIMEDOUT' },
     ],
     [
+      'no route to the host while connecting',
+      fetchFailed('EHOSTUNREACH', { syscall: 'connect' }),
+      { kind: 'not-sent', code: 'net.EHOSTUNREACH' },
+    ],
+    [
+      'no route to the host on every address',
+      new TypeError('fetch failed', {
+        cause: new AggregateError([
+          Object.assign(new Error('x'), { code: 'EHOSTUNREACH', syscall: 'connect' }),
+          Object.assign(new Error('y'), { code: 'EHOSTUNREACH', syscall: 'connect' }),
+        ]),
+      }),
+      { kind: 'not-sent', code: 'net.EHOSTUNREACH' },
+    ],
+    [
+      'no route to the host once connected (the kernel reports it on a read)',
+      fetchFailed('EHOSTUNREACH', { syscall: 'read' }),
+      { kind: 'unknown', code: 'unknown.EHOSTUNREACH' },
+    ],
+    [
+      'no route to the host on a write',
+      fetchFailed('EHOSTUNREACH', { syscall: 'write' }),
+      { kind: 'unknown', code: 'unknown.EHOSTUNREACH' },
+    ],
+    [
+      'no route to the host that names no call',
+      fetchFailed('EHOSTUNREACH'),
+      { kind: 'unknown', code: 'unknown.EHOSTUNREACH' },
+    ],
+    [
+      'no route to the network while connecting',
+      fetchFailed('ENETUNREACH', { syscall: 'connect' }),
+      { kind: 'not-sent', code: 'net.ENETUNREACH' },
+    ],
+    [
+      'no route to the network on every address',
+      new TypeError('fetch failed', {
+        cause: new AggregateError([
+          Object.assign(new Error('x'), { code: 'ENETUNREACH', syscall: 'connect' }),
+          Object.assign(new Error('y'), { code: 'ENETUNREACH', syscall: 'connect' }),
+        ]),
+      }),
+      { kind: 'not-sent', code: 'net.ENETUNREACH' },
+    ],
+    [
+      'no route to the network once connected (the kernel reports it on a read)',
+      fetchFailed('ENETUNREACH', { syscall: 'read' }),
+      { kind: 'unknown', code: 'unknown.ENETUNREACH' },
+    ],
+    [
+      'no route to the network on a write',
+      fetchFailed('ENETUNREACH', { syscall: 'write' }),
+      { kind: 'unknown', code: 'unknown.ENETUNREACH' },
+    ],
+    [
+      'no route to the network that names no call',
+      fetchFailed('ENETUNREACH'),
+      { kind: 'unknown', code: 'unknown.ENETUNREACH' },
+    ],
+    [
       'a reset after the write',
       fetchFailed('ECONNRESET'),
       { kind: 'unknown', code: 'unknown.ECONNRESET' },
