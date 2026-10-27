@@ -18,12 +18,15 @@ export function SelectField({
   name,
   options,
   defaultValue,
+  value,
   description,
   onChange,
 }: {
   readonly name: string;
   readonly options: readonly SelectOption[];
   readonly defaultValue?: string;
+  /** Controlled use, with `onChange`; leave `defaultValue` out. */
+  readonly value?: string;
   readonly description?: string;
   readonly onChange?: (value: string) => void;
 }) {
@@ -41,7 +44,8 @@ export function SelectField({
       <select
         id={field.id}
         name={name}
-        defaultValue={defaultValue ?? options[0]?.value}
+        value={value}
+        defaultValue={value === undefined ? (defaultValue ?? options[0]?.value) : undefined}
         aria-required={field.required ? true : undefined}
         aria-invalid={field.invalid ? true : undefined}
         aria-describedby={field.describedBy}

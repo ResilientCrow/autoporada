@@ -91,6 +91,16 @@ describe('Gallery', () => {
     expect(html.match(new RegExp(cs.people.chips.flag.class, 'g'))).toHaveLength(1);
   });
 
+  it('puts the demo with people in a form of its own, whose send is disabled until the page is live', () => {
+    expect(html.match(/<form class="flex flex-col gap-2">/g)).toHaveLength(1);
+    expect(html).toMatch(
+      new RegExp(
+        `<form class="flex flex-col gap-2">.*<button type="submit" disabled="" [^>]*>${cs.gallery.people.chips.send}</button></div></form>`,
+        's',
+      ),
+    );
+  });
+
   it('renders markup the CSP accepts', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
   });

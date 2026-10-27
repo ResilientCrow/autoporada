@@ -27,6 +27,9 @@ export function TextField({
   description,
   multiline = false,
   defaultValue,
+  value,
+  onChange,
+  onBlur,
   maxLength,
   autoComplete,
 }: {
@@ -34,6 +37,10 @@ export function TextField({
   readonly description?: string;
   readonly multiline?: boolean;
   readonly defaultValue?: string;
+  /** Controlled use: the text, and what to do with a change and on leaving the field. */
+  readonly value?: string;
+  readonly onChange?: (value: string) => void;
+  readonly onBlur?: () => void;
   readonly maxLength?: number;
   readonly autoComplete?: string;
 }) {
@@ -53,6 +60,9 @@ export function TextField({
       isRequired={required}
       isInvalid={code !== undefined}
       defaultValue={defaultValue}
+      value={value}
+      onChange={onChange}
+      onBlur={onBlur}
       maxLength={maxLength}
       autoComplete={autoComplete}
       className="flex flex-col gap-1"

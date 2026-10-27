@@ -58,6 +58,8 @@ export const gallery = {
       label: 'Přidat osobu (s\u00A0již přidanými)',
       list: 'Osoby s\u00A0již přidanými',
       hint: 'Dva lidé mají co ověřit: jeden nemá zvolené oslovení, druhý třídu z\u00A0loňského roku. Přidat se dá jen jedna osoba navíc.',
+      /** The demo's form is only there to show that a key in the field does not send it. */
+      send: 'Odeslat',
     },
     triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
   },

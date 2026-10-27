@@ -403,9 +403,18 @@ const chipBox = (page: Page) =>
 const chipList = (page: Page) => page.locator(`ul[aria-label="${people.chips.list}"]`);
 const chipRows = (page: Page) => chipList(page).locator('> li');
 const chipRow = (page: Page, name: string) => chipRows(page).filter({ hasText: name });
-const removeButton = (page: Page, name: string) =>
-  page.getByRole('button', { name: chips.removeLabel(name), exact: true });
+const rowButton = (page: Page, kind: 'edit' | 'remove', name: string) =>
+  page.getByRole('button', {
+    name: kind === 'edit' ? chips.editLabel(name) : chips.removeLabel(name),
+    exact: true,
+  });
+const editorOf = (page: Page, name: string) =>
+  page.getByRole('group', { name: chips.editorLabel(name), exact: true });
+/** The one open editor: its name follows the name being edited, so it is found by place, not by name. */
+const openEditor = (page: Page) => chipList(page).getByRole('group');
 const said = (page: Page, message: string) => page.getByRole('status').filter({ hasText: message });
+/** The demo's own form, which records a send in `data-sent`. */
+const chipForm = (page: Page) => page.locator('form').filter({ has: chipBox(page) });
 
 /**
  * Focus in the box opens the recents list. It hides the chips and the bulk row from assistive
@@ -441,6 +450,154 @@ test('the chips are a list of people, each flagged for what is left to check', a
   await expectAccessible();
 });
 
+test('Hotovo closes the editor and puts focus back on that chip’s Upravit; Enter is Hotovo, not a send', async ({
+  page,
+  hydrated,
+  expectAccessible,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const edit = rowButton(page, 'edit', 'Petr Svoboda');
+  await edit.click();
+  const editor = openEditor(page);
+  await expect(editorOf(page, 'Petr Svoboda')).toBeVisible();
+  await expect(edit).toHaveAttribute('aria-expanded', 'true');
+  await expectAccessible();
+
+  // One editor at a time: opening Karel's closes Petr's.
+  await rowButton(page, 'edit', 'Karel Dvořák').click();
+  await expect(editor).toHaveCount(1);
+  await expect(editorOf(page, 'Petr Svoboda')).toHaveCount(0);
+  await expect(editorOf(page, 'Karel Dvořák')).toBeVisible();
+
+  await edit.click();
+  await editor.getByLabel(chips.editor.salutation).selectOption('pan');
+  // The demo sits in a form with a send button, so an Enter that was let through would send it.
+  const form = chipForm(page);
+  await expect(form).not.toHaveAttribute('data-sent', 'true');
+  await editor.getByLabel(chips.editor.titlesBefore).fill('Ing.');
+  await editor.getByLabel(chips.editor.titlesBefore).press('Enter');
+  await expect(editor).toHaveCount(0);
+  await expect(edit).toBeFocused();
+  await expect(chipRow(page, 'Petr Svoboda')).toContainText('Ing. Petr Svoboda');
+  await expect(chipRow(page, 'Petr Svoboda')).not.toContainText(chips.flag.salutation);
+  await expect(form).not.toHaveAttribute('data-sent', 'true');
+
+  // The same form does send when its own button is pressed, so the check above can fail.
+  await form.getByRole('button', { name: people.chips.send }).click();
+  await expect(form).toHaveAttribute('data-sent', 'true');
+});
+
+test('an empty given name or surname keeps the editor open, also when it is closed or another is opened', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const petr = rowButton(page, 'edit', 'Petr Svoboda');
+  await petr.click();
+  const editor = openEditor(page);
+  await editor.getByLabel(chips.editor.familyName).fill('');
+  await editor.getByRole('button', { name: chips.editor.done }).click();
+  await expect(editor).toBeVisible();
+  await expect(editor).toContainText(cs.fieldIssues.required);
+
+  // Neither its own Upravit nor another chip's closes it. The chip's name follows the emptied
+  // surname, so its Upravit is found by place and its editor goes by the given name alone.
+  await chipList(page).getByRole('button', { expanded: true }).click();
+  await expect(editor).toBeVisible();
+  await rowButton(page, 'edit', 'Karel Dvořák').click();
+  await expect(editorOf(page, 'Petr')).toBeVisible();
+  await expect(editorOf(page, 'Karel Dvořák')).toHaveCount(0);
+  await expect(editor).toContainText(cs.fieldIssues.required);
+
+  // Once it is fixed, switching closes Petr's and opens Karel's.
+  await editor.getByLabel(chips.editor.familyName).fill('Svobodová');
+  await rowButton(page, 'edit', 'Karel Dvořák').click();
+  await expect(editorOf(page, 'Petr Svobodová')).toHaveCount(0);
+  await expect(editorOf(page, 'Karel Dvořák')).toBeVisible();
+  await expect(chipRow(page, 'Petr Svobodová')).toHaveCount(1);
+});
+
+test('closing or switching an editor trims its fields as Hotovo does', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const karel = rowButton(page, 'edit', 'Karel Dvořák');
+  await karel.click();
+  const editor = openEditor(page);
+  await editor.getByLabel(chips.editor.givenName).fill('  Karel  ');
+  // Closing by its own Upravit.
+  await karel.click();
+  await expect(editor).toHaveCount(0);
+  await karel.click();
+  await expect(editor.getByLabel(chips.editor.givenName)).toHaveValue('Karel');
+
+  // Switching to another chip.
+  await editor.getByLabel(chips.editor.familyName).fill(' Dvořák ');
+  await rowButton(page, 'edit', 'Petr Svoboda').click();
+  await karel.click();
+  await expect(editor.getByLabel(chips.editor.familyName)).toHaveValue('Dvořák');
+});
+
+test('a class is written the way lists do; one the author changed is current, one left alone stays flagged', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const karel = rowButton(page, 'edit', 'Karel Dvořák');
+
+  // Opened and closed with the class untouched: still last year's, still flagged.
+  await karel.click();
+  const editor = openEditor(page);
+  await editor.getByRole('button', { name: chips.editor.done }).click();
+  await expect(chipRow(page, 'Karel Dvořák')).toContainText(chips.flag.class);
+
+  // Changed and left by Tab: written out, and current.
+  await karel.click();
+  const klass = editor.getByLabel(chips.editor.affiliation);
+  await klass.fill('2c');
+  await klass.blur();
+  await expect(klass).toHaveValue('2.C');
+  await expect(chipRow(page, 'Karel Dvořák')).not.toContainText(chips.flag.class);
+  await editor.getByRole('button', { name: chips.editor.done }).click();
+
+  // Changed and finished with Enter in the field itself: written out the same way, no stray blur undoes it.
+  const petr = rowButton(page, 'edit', 'Petr Svoboda');
+  await petr.click();
+  await editor.getByLabel(chips.editor.affiliation).fill(' 3b ');
+  await editor.getByLabel(chips.editor.affiliation).press('Enter');
+  await expect(editor).toHaveCount(0);
+  await expect(petr).toBeFocused();
+  await expect(chipRow(page, 'Petr Svoboda')).toContainText('(3.B)');
+  await expect(chipRow(page, 'Petr Svoboda')).not.toContainText(chips.flag.class);
+  await petr.click();
+  await expect(editor.getByLabel(chips.editor.affiliation)).toHaveValue('3.B');
+  await expect(chipRow(page, 'Karel Dvořák')).toContainText('(2.C)');
+});
+
+test('„Třída platí“ clears the flag of an old class, and an emptied class takes its flag with it', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  await rowButton(page, 'edit', 'Karel Dvořák').click();
+  const editor = openEditor(page);
+  await editor.getByRole('button', { name: chips.editor.classValid }).click();
+  await expect(chipRow(page, 'Karel Dvořák')).not.toContainText(chips.flag.class);
+  await expect(editor.getByLabel(chips.editor.affiliation)).toHaveValue('3.B');
+
+  await editor.getByLabel(chips.editor.affiliation).fill('');
+  await editor.getByRole('button', { name: chips.editor.done }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(chipRow(page, 'Karel Dvořák')).not.toContainText('3.B');
+  await expect(chipRow(page, 'Karel Dvořák')).not.toContainText(chips.flag.class);
+});
+
 test('removing a chip moves focus to the next one, or to the box when there is none, and says so', async ({
   page,
   hydrated,
@@ -449,26 +606,62 @@ test('removing a chip moves focus to the next one, or to the box when there is n
   await hydrated();
 
   // The middle one: the next chip's Odebrat.
-  await removeButton(page, 'Petr Svoboda').click();
-  await expect(removeButton(page, 'Karel Dvořák')).toBeFocused();
+  await rowButton(page, 'remove', 'Petr Svoboda').click();
+  await expect(rowButton(page, 'remove', 'Karel Dvořák')).toBeFocused();
   await expect(said(page, chips.removed('Petr Svoboda', 2))).toHaveCount(1);
 
   // The last of several has no next chip: the box takes focus, and its list opens over the chips.
-  await removeButton(page, 'Karel Dvořák').click();
+  await rowButton(page, 'remove', 'Karel Dvořák').click();
   await expect(chipBox(page)).toBeFocused();
   await expect(said(page, chips.removed('Karel Dvořák', 1))).toHaveCount(1);
   await expect(chipRows(page)).toHaveCount(1);
   await closeList(page);
 
   // The only one: the box again, and no empty list left behind.
-  await removeButton(page, 'Jana Nováková').click();
+  await rowButton(page, 'remove', 'Jana Nováková').click();
   await expect(chipBox(page)).toBeFocused();
   await expect(said(page, chips.removed('Jana Nováková', 0))).toHaveCount(1);
   await closeList(page);
   await expect(chipList(page)).toHaveCount(0);
 });
 
-test('an add is announced once and offers the bulk salutation, which says what it set', async ({
+test('moving a chip says its new place and keeps focus on the button that moved', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  await rowButton(page, 'edit', 'Petr Svoboda').click();
+  const editor = openEditor(page);
+  const names = chipList(page).locator('> li > div:first-child > span:first-child');
+  const down = editor.getByRole('button', { name: chips.editor.down });
+  const up = editor.getByRole('button', { name: chips.editor.up });
+
+  await down.click();
+  await expect(said(page, chips.moved('Petr Svoboda', 3, 3))).toHaveCount(1);
+  await expect(names).toHaveText(['Jana Nováková', 'Mgr. Karel Dvořák', 'Petr Svoboda']);
+  await expect(down).toBeFocused();
+
+  await up.click();
+  await expect(said(page, chips.moved('Petr Svoboda', 2, 3))).toHaveCount(1);
+  await expect(names).toHaveText(['Jana Nováková', 'Petr Svoboda', 'Mgr. Karel Dvořák']);
+  await expect(up).toBeFocused();
+
+  // At an end nothing moves, but the place is said again, with a message that was not there before.
+  await rowButton(page, 'edit', 'Karel Dvořák').click();
+  await editor.getByRole('button', { name: chips.editor.down }).click();
+  await expect(said(page, chips.moved('Karel Dvořák', 3, 3))).toHaveCount(1);
+  await expect(names).toHaveText(['Jana Nováková', 'Petr Svoboda', 'Mgr. Karel Dvořák']);
+  await expect(editor.getByRole('button', { name: chips.editor.down })).toBeFocused();
+
+  await rowButton(page, 'edit', 'Jana Nováková').click();
+  await editor.getByRole('button', { name: chips.editor.up }).click();
+  await expect(said(page, chips.moved('Jana Nováková', 1, 3))).toHaveCount(1);
+  await expect(names).toHaveText(['Jana Nováková', 'Petr Svoboda', 'Mgr. Karel Dvořák']);
+  await expect(editor.getByRole('button', { name: chips.editor.up })).toBeFocused();
+});
+
+test('an add is announced once and offers the bulk salutation, which says what it set and leaves the chips in view', async ({
   page,
   hydrated,
 }) => {
@@ -488,14 +681,18 @@ test('an add is announced once and offers the bulk salutation, which says what i
   await closeList(page);
   await expect(chipRow(page, 'Zuzana Kubíčková')).toContainText(chips.flag.salutation);
 
-  // The bulk setter fills the empty salutations only: the flags of Petr and Zuzana go, and it
-  // says how many it set.
+  // The bulk setter fills the empty salutations only: Jana stays paní. Focus goes to the first
+  // chip it set, not to the box, whose list would open over them.
   await expect(bulk).toBeVisible();
   await bulk.getByRole('button', { name: 'slečna' }).click();
   await expect(said(page, chips.bulk.done(2))).toHaveCount(1);
   await expect(bulk).toHaveCount(0);
+  await expect(rowButton(page, 'edit', 'Petr Svoboda')).toBeFocused();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
   await expect(chipList(page).getByText(chips.flag.salutation)).toHaveCount(0);
-  await expect(chipRows(page)).toHaveCount(4);
+  await rowButton(page, 'edit', 'Jana Nováková').click();
+  await expect(openEditor(page).getByLabel(chips.editor.salutation)).toHaveValue('pani');
+  await openEditor(page).getByRole('button', { name: chips.editor.done }).click();
 });
 
 test('an add past the cap is refused with a notice, never as an add', async ({

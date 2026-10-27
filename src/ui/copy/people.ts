@@ -20,16 +20,23 @@ export const people = {
     },
   },
   chips: {
+    edit: 'Upravit',
     remove: 'Odebrat',
     /**
-     * The button's accessible name carries the person, or a list of them sounds the same
+     * The buttons' accessible names carry the person, or a list of them sounds the same
      * everywhere; after a colon, so the name stays in the nominative.
      */
+    editLabel: (name: string) => `Upravit: ${name}`,
     removeLabel: (name: string) => `Odebrat: ${name}`,
+    /** Names the open editor. */
+    editorLabel: (name: string) => `Úprava: ${name}`,
     flag: { salutation: 'Zvolte oslovení', class: 'ověřte třídu' },
     /** Said after Odebrat; the total no longer counts the person. */
     removed: (name: string, total: number) =>
       `Odebráno: ${name}. Celkem: ${countWord(total, PERSON)}.`,
+    /** Said after Nahoru or Dolů; `place` counts from one. */
+    moved: (name: string, place: number, total: number) =>
+      `${name}, pozice ${place} z\u00A0${total}.`,
     /** Shown and said when an add is refused at the cap. */
     full: (limit: number) => `Osobu nelze přidat: nejvýše ${countWord(limit, PERSON)}.`,
     bulk: {
@@ -37,6 +44,19 @@ export const people = {
       setLabel: (salutation: string) => `Všem nastavit oslovení: ${salutation}`,
       /** Said after it; `count` is the people it set. */
       done: (count: number) => `Oslovení nastaveno: ${countWord(count, PERSON)}.`,
+    },
+    editor: {
+      salutation: 'Oslovení',
+      none: 'Nezvoleno',
+      affiliation: 'Třída nebo organizace',
+      givenName: 'Jméno',
+      familyName: 'Příjmení',
+      titlesBefore: 'Tituly před',
+      titlesAfter: 'Tituly za',
+      classValid: 'Třída platí',
+      up: 'Nahoru',
+      down: 'Dolů',
+      done: 'Hotovo',
     },
   },
 } as const;

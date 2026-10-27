@@ -9,11 +9,13 @@ import { calDate } from '@/domain/time';
 import { gallery } from '@/ui/copy';
 import {
   PeopleField,
+  useHydrated,
   type Chip,
   type Directory,
   type DirectoryFetcher,
   type RawAnswer,
 } from '@/ui/form';
+import { buttonStyles } from '@/ui/kit';
 
 const { people } = gallery;
 
@@ -105,14 +107,8 @@ const TODAY = calDate(2026, 10, 27);
 
 /** Three invented people: one with no salutation, one with last year's class, one in order. */
 const START: readonly Chip[] = [
-  {
-    key: 'jana',
-    person: { salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' },
-  },
-  {
-    key: 'petr',
-    person: { salutation: null, givenName: 'Petr', familyName: 'Svoboda' },
-  },
+  { key: 'jana', person: { salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' } },
+  { key: 'petr', person: { salutation: null, givenName: 'Petr', familyName: 'Svoboda' } },
   {
     key: 'karel',
     person: {
@@ -134,6 +130,7 @@ function PickerDemo({
   start = [],
   limit,
   hint,
+  enclosed = false,
 }: {
   readonly label: string;
   readonly listLabel: string;
@@ -141,10 +138,14 @@ function PickerDemo({
   readonly start?: readonly Chip[];
   readonly limit?: number;
   readonly hint?: string;
+  /** Inside a `<form>` that records a send in `data-sent`, to show a key in the field is not one. */
+  readonly enclosed?: boolean;
 }) {
   const [chips, setChips] = useState<readonly Chip[]>(start);
-  return (
-    <div className="flex flex-col gap-2">
+  const [sent, setSent] = useState(false);
+  const hydrated = useHydrated();
+  const field = (
+    <>
       <PeopleField
         label={label}
         listLabel={listLabel}
@@ -157,7 +158,26 @@ function PickerDemo({
         limit={limit}
       />
       {hint === undefined ? null : <p>{hint}</p>}
-    </div>
+    </>
+  );
+  return enclosed ? (
+    <form
+      data-sent={sent ? 'true' : undefined}
+      onSubmit={(event) => {
+        event.preventDefault();
+        setSent(true);
+      }}
+      className="flex flex-col gap-2"
+    >
+      {field}
+      <div>
+        <button type="submit" disabled={!hydrated} className={buttonStyles('secondary')}>
+          {people.chips.send}
+        </button>
+      </div>
+    </form>
+  ) : (
+    <div className="flex flex-col gap-2">{field}</div>
   );
 }
 
@@ -179,6 +199,7 @@ export function PeopleDemos() {
         start={START}
         limit={START.length + 1}
         hint={people.chips.hint}
+        enclosed
       />
     </div>
   );
