@@ -130,6 +130,20 @@ describe('web container', () => {
     });
   });
 
+  it('tells the pages the directory is off unless the dev directory is configured', async () => {
+    for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    expect(getContainer().directoryMode).toBe('off');
+  });
+
+  it('tells the pages the directory is on when DIRECTORY=dev', async () => {
+    const path = resolve('docker/dev/directory.json');
+    const env = { ...ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: path };
+    for (const [name, value] of Object.entries(env)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    expect(getContainer().directoryMode).toBe('on');
+  });
+
   it('searches the dev file when DIRECTORY=dev, and reports the kind but not the path', async () => {
     const path = resolve('docker/dev/directory.json');
     const env = { ...ENV, DIRECTORY: 'dev', DIRECTORY_DEV_PATH: path };

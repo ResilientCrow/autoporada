@@ -62,9 +62,6 @@ export function editorSpec(
   };
 }
 
-/** The fields of an editor with no bullets, until the editor renders them. */
-export const EDITOR_SPEC: FormSpec = editorSpec([], []);
-
 /**
  * Autosave is the only way this form saves, so it never submits: React Aria's ComboBox
  * (in the people rows to come) lets Enter through while its list is closed, and a native

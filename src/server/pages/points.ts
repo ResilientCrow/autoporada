@@ -1,11 +1,13 @@
 import type { z } from 'zod';
 
-import { getPoint, listPointTypes } from '@/application/use-cases';
+import type { UserPrincipal } from '@/application/ports';
+import { getPoint, listPointTypes, recentPeopleOf } from '@/application/use-cases';
 import type { getPointOutput, listPointTypesOutput } from '@/contracts';
 import { formatLongDate, formatTime, type Campus } from '@/domain/cs';
-import type { PointKind } from '@/domain/report';
+import type { RecentPerson } from '@/domain/people';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
-import { parseIsoDate, parseWallTime } from '@/domain/time';
+import { instantToWallClock, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
@@ -37,11 +39,18 @@ export async function newPointPage(): Promise<NewPointPageModel | null> {
 
 /**
  * What the report editor starts from: the version it was loaded at (its key and the
- * first `expectedVersion`) and the content as the save takes it back.
+ * first `expectedVersion`), the content as the save takes it back, the bullets its type
+ * offers (which may be removed), the Prague day the picker counts the school year from,
+ * the people the author named in their recent points, and whether the school directory
+ * is searched at all.
  */
 interface PointEditorModel {
   readonly version: number;
   readonly content: Loaded['content'];
+  readonly spec: readonly BulletSpec[];
+  readonly today: CalDate;
+  readonly recents: readonly RecentPerson[];
+  readonly directory: 'on' | 'off';
 }
 
 /**
@@ -71,7 +80,11 @@ export interface PointPageModel {
 const dateText = (iso: string | null) => (iso === null ? null : formatLongDate(parseIsoDate(iso)));
 const timeText = (iso: string | null) => (iso === null ? null : formatTime(parseWallTime(iso)));
 
-function shaped({ id, kind, state, type, content, version, editable }: Loaded): PointPageModel {
+function shaped(
+  { id, kind, state, type, content, version, editable }: Loaded,
+  recents: readonly RecentPerson[],
+  today: CalDate,
+): PointPageModel {
   return {
     id,
     kind,
@@ -86,11 +99,36 @@ function shaped({ id, kind, state, type, content, version, editable }: Loaded): 
       campus: content.campus,
       place: content.place?.trim() || null,
     },
-    editor: editable ? { version, content } : null,
+    editor: editable
+      ? {
+          version,
+          content,
+          spec: type?.defaultBullets ?? [],
+          today,
+          recents,
+          directory: getContainer().directoryMode,
+        }
+      : null,
   };
 }
 
-/** One point's page, or null for a visitor or a refusal, a malformed id and an unknown or foreign point included (404). */
+/**
+ * The author's recent people, for the picker. The memory is a convenience: any refusal or
+ * failure opens the editor with none.
+ */
+async function recentsOf(viewer: UserPrincipal): Promise<readonly RecentPerson[]> {
+  const found = await runRegistered(getContainer(), recentPeopleOf, {
+    principal: viewer,
+    requestId: await requestId(),
+    input: {},
+  });
+  return found.ok ? found.value.people : [];
+}
+
+/**
+ * One point's page, or null for a visitor or a refusal, a malformed id and an unknown or
+ * foreign point included (404). The recent people are read only when the editor shows.
+ */
 export async function pointPage(id: string): Promise<PointPageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
@@ -102,5 +140,8 @@ export async function pointPage(id: string): Promise<PointPageModel | null> {
       input: { id },
     }),
   );
-  return loaded && shaped(loaded);
+  if (loaded === null) return null;
+  const recents = loaded.editable ? await recentsOf(viewer) : [];
+  const today = instantToWallClock(getContainer().app.clock.now()).date;
+  return shaped(loaded, recents, today);
 }

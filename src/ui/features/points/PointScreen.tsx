@@ -1,6 +1,9 @@
-import type { PointKind } from '@/domain/report';
+import type { RecentPerson } from '@/domain/people';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
+import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
+import type { Directory } from '@/ui/form';
 
 import { editorKey } from './editor-key';
 import type { PointContentWire } from './fields';
@@ -16,7 +19,17 @@ export interface PointScreenModel {
   readonly title: string;
   readonly typeName: string | null;
   readonly facts: PointFactsView;
-  readonly editor: { readonly version: number; readonly content: PointContentWire } | null;
+  readonly editor: PointEditorModel | null;
+}
+
+/** What the editor starts from: the saved content, the type's bullets, today and the author's recent people. */
+interface PointEditorModel {
+  readonly version: number;
+  readonly content: PointContentWire;
+  readonly spec: readonly BulletSpec[];
+  readonly today: CalDate;
+  readonly recents: readonly RecentPerson[];
+  readonly directory: Directory;
 }
 
 /**
@@ -52,6 +65,10 @@ export function PointScreen({
           typeLabel={point.typeName ?? points.kind[point.kind]}
           version={editor.version}
           content={editor.content}
+          spec={editor.spec}
+          today={editor.today}
+          recents={editor.recents}
+          directory={editor.directory}
           savePoint={savePoint}
           pointStatus={pointStatus}
         />

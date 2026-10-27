@@ -1,14 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { POINT_LIMITS } from '@/domain/report';
+import { POINT_LIMITS, type BulletSpec } from '@/domain/report';
+import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 import { Form } from '@/ui/form';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import { BodyField, ReportFields } from './ReportFields';
-import { EDITOR_FORM_ID, EDITOR_FORM_STATE, EDITOR_SPEC } from './editor-form';
+import { EDITOR_FORM_ID, EDITOR_FORM_STATE, editorSpec } from './editor-form';
 import { PointEditor } from './PointEditor';
 import { PointScreen } from './PointScreen';
 
@@ -45,13 +46,28 @@ const CONTENT: Content = {
   statements: [],
 };
 
-const editor = (content: Content = CONTENT, typeLabel = 'Exkurze') =>
+const SPEC: readonly BulletSpec[] = [
+  { key: 'organizatori', label: 'Organizátoři', kind: 'people', required: false },
+  { key: 'ucastnici', label: 'Účastníci', kind: 'people', required: true },
+];
+const TODAY = calDate(2026, 10, 27);
+
+const editor = (
+  content: Content = CONTENT,
+  typeLabel = 'Exkurze',
+  spec: readonly BulletSpec[] = SPEC,
+  directory: 'on' | 'off' = 'on',
+) =>
   renderToStaticMarkup(
     <PointEditor
       id={ID}
       typeLabel={typeLabel}
       version={3}
       content={content}
+      spec={spec}
+      today={TODAY}
+      recents={[]}
+      directory={directory}
       savePoint={never}
       pointStatus={never}
     />,
@@ -63,7 +79,7 @@ const fields = (
   issues: Record<string, string> = {},
 ) =>
   renderToStaticMarkup(
-    <Form id={EDITOR_FORM_ID} spec={EDITOR_SPEC} state={EDITOR_FORM_STATE}>
+    <Form id={EDITOR_FORM_ID} spec={editorSpec([], [])} state={EDITOR_FORM_STATE}>
       <ReportFields
         content={content}
         issues={issues}
@@ -207,6 +223,59 @@ describe('PointEditor', () => {
   });
 });
 
+describe('PointEditor with bullets', () => {
+  const PERSON = { salutation: 'pan', givenName: 'Jan', familyName: 'Novák' } as const;
+  const WITH_BULLETS: Content = {
+    ...CONTENT,
+    bullets: [
+      { key: 'organizatori', label: 'Organizátoři', kind: 'people', order: 'input', people: [] },
+      { key: 'ucastnici', label: 'Účastníci', kind: 'people', order: 'input', people: [PERSON] },
+    ],
+  };
+  const html = editor(WITH_BULLETS);
+
+  it('shows the bullets between the place and the further paragraphs', () => {
+    const at = (text: string) => html.indexOf(text);
+    expect(at('>Organizátoři (nepovinné)</legend>')).toBeGreaterThan(at(points.facts.place));
+    expect(at('>Organizátoři (nepovinné)</legend>')).toBeLessThan(at('>Účastníci</legend>'));
+    expect(at('>Účastníci</legend>')).toBeLessThan(at(points.editor.body));
+  });
+
+  it('keeps a required bullet of the type, and lets an optional one go', () => {
+    expect(html).toContain('aria-label="Odebrat řádek „Organizátoři“"');
+    expect(html).not.toContain('aria-label="Odebrat řádek „Účastníci“"');
+  });
+
+  it('knows no bullets of a type for a point without one', () => {
+    const bare = editor(WITH_BULLETS, points.kind.pokyn, []);
+    expect(bare).toContain('aria-label="Odebrat řádek „Účastníci“"');
+  });
+
+  it('is still a form that never submits by itself, with the people fields inside it', () => {
+    expect(html).toMatch(/role="combobox"/);
+    expect(html).toMatch(/<form [^>]*id="bod"/);
+    expect(html).not.toMatch(/<form [^>]*\saction=/);
+    expect(html).toMatch(/<form [^>]*noValidate/);
+  });
+
+  it('is clean for the Content-Security-Policy', () => {
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('says up front that the directory is off, in every people row, when the server says so', () => {
+    const off = editor(WITH_BULLETS, 'Exkurze', SPEC, 'off');
+    const notice = new RegExp(
+      `role="status" data-live-announcer="true">${cs.people.search.notice.off}<`,
+      'g',
+    );
+    expect(off.match(notice)).toHaveLength(2);
+  });
+
+  it('shows no such notice when the directory is on', () => {
+    expect(html).not.toContain(cs.people.search.notice.off);
+  });
+});
+
 describe('the date echo', () => {
   const echoOfInput = (html: string, label: string) => {
     const ids = /aria-describedby="([^"]*)"/.exec(controlOf(html, label))?.[1]?.split(' ') ?? [];
@@ -306,6 +375,14 @@ describe('ReportFields with the messages of a refused save', () => {
 });
 
 describe('PointScreen', () => {
+  const EDITOR = {
+    version: 3,
+    content: CONTENT,
+    spec: SPEC,
+    today: TODAY,
+    recents: [],
+    directory: 'on' as const,
+  };
   const POINT = {
     id: ID,
     kind: 'report' as const,
@@ -325,7 +402,7 @@ describe('PointScreen', () => {
     renderToStaticMarkup(<PointScreen point={point} savePoint={never} pointStatus={never} />);
 
   it('shows the header and the editor to the author of a draft report', () => {
-    const html = screen({ ...POINT, editor: { version: 3, content: CONTENT } });
+    const html = screen({ ...POINT, editor: EDITOR });
     expect(html).toContain('<h1');
     expect(html).toMatch(/<form [^>]*id="bod"/);
     // The read view's own values are not on the page.
@@ -347,7 +424,7 @@ describe('PointScreen', () => {
         ...POINT,
         kind,
         typeName: null,
-        editor: { version: 1, content: CONTENT },
+        editor: { ...EDITOR, version: 1 },
       });
       expect(html).toContain('<h1');
       expect(html).not.toContain('<form');
@@ -359,7 +436,7 @@ describe('PointScreen', () => {
     const html = screen({
       ...POINT,
       typeName: null,
-      editor: { version: 1, content: CONTENT },
+      editor: { ...EDITOR, version: 1 },
     });
     expect(html).toMatch(/<dd[^>]*>Zpráva<\/dd>/);
   });

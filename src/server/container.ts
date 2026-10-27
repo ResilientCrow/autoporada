@@ -35,6 +35,12 @@ export interface WebContainer {
   readonly auth: AuthDeps;
   /** People search for the search route; answers `directory.off` unless the configuration turns it on. */
   readonly directory: DirectoryPort;
+  /**
+   * What the pages tell the people picker: whether the school directory is searched at all
+   * (`off` under `DIRECTORY=off`, so the picker says so up front and never calls the route).
+   * The same two words as the picker's `Directory`, which the server may not import.
+   */
+  readonly directoryMode: 'on' | 'off';
   /** What the boot log says about this process. */
   readonly bootReport: (now: Date) => BootReport;
 }
@@ -116,6 +122,7 @@ function buildWeb(config: Config): WebContainer {
     requestIdFrom,
     auth,
     directory,
+    directoryMode: config.directory.kind === 'off' ? 'off' : 'on',
     bootReport: (now) => {
       const { facts, errors, warnings } = describeCredential(credential, now);
       return {

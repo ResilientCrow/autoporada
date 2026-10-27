@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { z } from 'zod';
 
 import type {
@@ -11,17 +11,23 @@ import type {
   savePointOutput,
   ServerAction,
 } from '@/contracts';
+import type { RecentPerson } from '@/domain/people';
+import type { BulletSpec } from '@/domain/report';
+import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
-import { AutosaveStatus, Form, useAutosave } from '@/ui/form';
+import { AutosaveStatus, Form, useAutosave, type Directory } from '@/ui/form';
+import { Notice } from '@/ui/kit';
 
 import type { FieldIssues } from '@/contracts';
 
 import { saveAnswer, statusAnswer } from './answers';
-import { EDITOR_FORM_ID, EDITOR_FORM_STATE, EDITOR_SPEC } from './editor-form';
+import { keyBullets } from './bullet-chips';
+import { Bullets, type BulletsUpdate } from './Bullets';
+import { EDITOR_FORM_ID, EDITOR_FORM_STATE, editorSpec } from './editor-form';
 import { bodyText, type PointContentWire } from './fields';
 import { BodyField, ReportFields } from './ReportFields';
-import { withPatch, type Patch } from './report-patch';
-import { issuesAfter, saveIssues } from './save-issues';
+import { bulletsEdit, withPatch, type Edit, type Patch } from './report-patch';
+import { issuesAfter, issuesAfterRows, saveIssues } from './save-issues';
 
 export type SavePointAction = ServerAction<
   z.input<typeof savePointInput>,
@@ -48,6 +54,10 @@ export function PointEditor({
   typeLabel,
   version,
   content: initial,
+  spec,
+  today,
+  recents,
+  directory,
   savePoint,
   pointStatus,
 }: {
@@ -56,11 +66,27 @@ export function PointEditor({
   readonly typeLabel: string;
   readonly version: number;
   readonly content: PointContentWire;
+  /** The type's bullets: which the author must keep, and which they may take out. */
+  readonly spec: readonly BulletSpec[];
+  /** The day the people's classes are worked out for. */
+  readonly today: CalDate;
+  /** The people this author put on their latest points, to offer first. */
+  readonly recents: readonly RecentPerson[];
+  /** Whether the school directory is searched at all (`DIRECTORY=off` is `off`). */
+  readonly directory: Directory;
   readonly savePoint: SavePointAction;
   readonly pointStatus: PointStatusAction;
 }) {
   const router = useRouter();
-  const [content, setContent] = useState(initial);
+  // The chips carry the keys a people field tracks them by, minted once here and kept
+  // through every edit; the content holds the bullets without them, as the save takes them.
+  const [edit, setEdit] = useState<Edit>(() => ({
+    content: initial,
+    bullets: keyBullets(initial.bullets),
+  }));
+  // The latest edit, for a change that follows another before the page renders again.
+  const latest = useRef(edit);
+  const { content, bullets } = edit;
   const [bodyInput, setBodyInput] = useState(() => bodyText(initial.body));
   // What the contract refused in the last save, until a save is accepted.
   const [refused, setRefused] = useState<FieldIssues | null>(null);
@@ -92,18 +118,28 @@ export function PointEditor({
     onRefresh,
   });
 
-  const change = (patch: Patch) => {
-    const next = withPatch(content, patch);
-    setContent(next);
-    autosave.onChange(next);
+  const apply = (next: Edit) => {
+    latest.current = next;
+    setEdit(next);
+    autosave.onChange(next.content);
+  };
+  const change = (patch: Patch) =>
+    apply({ ...latest.current, content: withPatch(latest.current.content, patch) });
+  // A refusal names bullets by their place, so a change of the rows retires those messages.
+  const changeBullets = (update: BulletsUpdate) => {
+    const before = latest.current.bullets;
+    const next = bulletsEdit(latest.current, update);
+    apply(next);
+    setRefused((previous) => issuesAfterRows(previous, before, next.bullets));
   };
 
   // Inline only: the form's own issues would lead with the error summary and take focus.
-  const shown = refused === null ? null : saveIssues(refused, content);
+  const shown = refused === null ? null : saveIssues(refused, content, spec);
   const state = { ...EDITOR_FORM_STATE, problem: shown?.problem ?? null };
+  const issues = shown?.messages ?? NO_MESSAGES;
 
   return (
-    <Form id={EDITOR_FORM_ID} spec={EDITOR_SPEC} state={state}>
+    <Form id={EDITOR_FORM_ID} spec={editorSpec(bullets, spec)} state={state}>
       <AutosaveStatus {...autosave.status} />
       <dl>
         <dt className="font-bold">{points.editor.type}</dt>
@@ -111,15 +147,26 @@ export function PointEditor({
       </dl>
       <ReportFields
         content={content}
-        issues={shown?.messages ?? NO_MESSAGES}
+        issues={issues}
         readOnly={autosave.readOnly}
         onChange={change}
         onBlur={autosave.onBlur}
       />
-      {/* The people bullets and the opening sentence belong here, before the body. */}
+      {/* The opening sentence belongs after the bullets, before the body. */}
+      <Bullets
+        bullets={bullets}
+        spec={spec}
+        issues={issues}
+        readOnly={autosave.readOnly}
+        today={today}
+        recents={recents}
+        directory={directory}
+        onChange={changeBullets}
+        onBlur={autosave.onBlur}
+      />
       <BodyField
         text={bodyInput}
-        issue={shown?.messages['body']}
+        issue={issues['body']}
         readOnly={autosave.readOnly}
         onChange={(text, body) => {
           setBodyInput(text);
@@ -127,6 +174,7 @@ export function PointEditor({
         }}
         onBlur={autosave.onBlur}
       />
+      {shown?.notice ? <Notice tone="problem">{shown.notice}</Notice> : null}
       {/* The statements follow the body; the readiness list and the submit button come last. */}
     </Form>
   );
