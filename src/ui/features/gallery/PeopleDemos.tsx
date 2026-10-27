@@ -45,7 +45,7 @@ const recent = (given: string, family: string, day: number, rest: Partial<Recent
     ...rest,
   }) satisfies RecentPerson;
 
-/** Ten recents, so the empty box shows the newest eight; Jana is also in the directory (listed once). */
+/** Eleven recents, so the empty box shows the newest eight; Jana is also in the directory (listed once). */
 const RECENTS: readonly RecentPerson[] = [
   recent('Jana', 'Nováková', 24, { graphId: id(2), salutation: 'pani' }),
   recent('Tomáš', 'Nováček', 23, { affiliation: '3.B' }),
@@ -57,6 +57,8 @@ const RECENTS: readonly RecentPerson[] = [
   recent('Zdeněk', 'Veselý', 17),
   recent('Řehoř', 'Černý', 16),
   recent('Ivana', 'Malá', 15),
+  // Settles the order of „Hlaváček Radslav“ in the paste sample: the parser alone cannot tell.
+  recent('Radslav', 'Hlaváček', 14),
 ];
 
 /** The slow query: its answer takes this long, and comes even though the box aborted it. */
@@ -185,6 +187,10 @@ function PickerDemo({
 export function PeopleDemos() {
   return (
     <div className="flex flex-col gap-6">
+      <div>
+        <p>{people.paste.hint}</p>
+        <pre className="font-mono">{people.paste.sample.join('\n')}</pre>
+      </div>
       <PickerDemo
         label={people.live.label}
         listLabel={people.added}

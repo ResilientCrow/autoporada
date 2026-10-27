@@ -2,17 +2,17 @@
 
 import { useEffect, useId, useRef, useState, type RefCallback } from 'react';
 
-import { SALUTATION, SALUTATIONS, type Salutation } from '@/domain/cs';
+import type { Salutation } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { DraftPerson } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
 import { people } from '@/ui/copy';
-import { buttonStyles } from '@/ui/kit';
 
 import { LiveStatus } from '../LiveStatus';
 
 import {
   addChip,
+  addChips,
   confirmClass,
   DEFAULT_LIMIT,
   editChip,
@@ -32,7 +32,10 @@ import {
 } from './chips-state';
 import { ChipEditor } from './ChipEditor';
 import type { Directory } from './directory-state';
+import { PasteList } from './PasteList';
+import { pastedMessage, type Chosen } from './paste-state';
 import { PersonChip } from './PersonChip';
+import { SalutationButtons } from './SalutationButtons';
 import { SearchBox } from './SearchBox';
 import type { DirectoryFetcher } from './use-directory';
 
@@ -79,7 +82,6 @@ export function PeopleField({
   // What the editor's handlers read: a blur that fires while the editor closes still
   // sees the chips and the editor as the last step left them, not as its render did.
   const latest = useRef({ chips: value, editing });
-  const bulkId = useId();
   const editorId = useId();
 
   useEffect(() => {
@@ -131,6 +133,34 @@ export function PeopleField({
     return true;
   }
 
+  /**
+   * The paste list's add: as many as fit, then focus on the first new chip and one message.
+   * Returns how many were taken, so the preview keeps the rest.
+   */
+  function addPasted(items: readonly Chosen[]): number {
+    const batch = addChips(
+      latest.current.chips,
+      items.map((item) => item.person),
+      items.map(() => crypto.randomUUID()),
+      limit,
+      today,
+    );
+    if (batch.added > 0) {
+      emit(batch.chips);
+      setInserted(true);
+      if (batch.first !== null) focusOn({ key: batch.first, button: 'edit' });
+    }
+    say(
+      pastedMessage(
+        batch,
+        items.map((item) => item.doubt),
+        limit,
+        today,
+      ),
+    );
+    return batch.added;
+  }
+
   /** Upravit: the open editor is finished first; if it cannot be, it stays and shows why. */
   function toggle(key: string) {
     const switched = switchEditor(latest.current.chips, latest.current.editing, key, today);
@@ -170,23 +200,9 @@ export function PeopleField({
         fetcher={fetcher}
         inputRef={search}
       />
+      <PasteList recents={recents} onAdd={addPasted} onChecked={say} />
       {showsBulk(value, inserted) ? (
-        <div role="group" aria-labelledby={bulkId} className="flex flex-wrap items-center gap-2">
-          <span id={bulkId} className="font-bold">
-            {copy.bulk.label}
-          </span>
-          {SALUTATIONS.map((salutation) => (
-            <button
-              key={salutation}
-              type="button"
-              aria-label={copy.bulk.setLabel(SALUTATION[salutation].label)}
-              onClick={() => bulk(salutation)}
-              className={buttonStyles('secondary')}
-            >
-              {SALUTATION[salutation].label}
-            </button>
-          ))}
-        </div>
+        <SalutationButtons label={copy.bulk.label} setLabel={copy.bulk.setLabel} onPick={bulk} />
       ) : null}
       {value.length === 0 ? null : (
         <ul aria-label={listLabel} className="flex flex-col gap-2">

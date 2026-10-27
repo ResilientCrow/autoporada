@@ -91,6 +91,46 @@ export function addChip(
   return { ok: true, chips: [...chips, { key, person }], say: addedMessage(person, chips.length) };
 }
 
+/** A batch add: the chips, the new ones among them, where focus goes, and how many fitted or not. */
+export interface AddedMany {
+  readonly chips: readonly Chip[];
+  /** The chips this add made, in the order given. */
+  readonly fresh: readonly Chip[];
+  /** The key of the first new chip, for focus; null when nothing was added. */
+  readonly first: string | null;
+  readonly added: number;
+  readonly refused: number;
+}
+
+/**
+ * Adds a list of people the author has just typed or pasted, as many as the
+ * room under `limit` holds (the first ones; the rest are `refused`, never
+ * cut mid-way). A class they brought is the author's own current knowledge, so
+ * it is written the way the lists write it and dated this school year, which
+ * leaves it unflagged. Their salutation stays as it is.
+ */
+export function addChips(
+  chips: readonly Chip[],
+  people: readonly DraftPerson[],
+  keys: readonly string[],
+  limit: number,
+  today: CalDate,
+): AddedMany {
+  const room = Math.max(0, limit - chips.length);
+  const taken = people.slice(0, Math.min(room, keys.length));
+  const fresh = taken.map((person, i) => ({
+    key: keys[i] ?? '',
+    person: settled(person, undefined, today),
+  }));
+  return {
+    chips: fresh.length === 0 ? chips : [...chips, ...fresh],
+    fresh,
+    first: fresh[0]?.key ?? null,
+    added: fresh.length,
+    refused: people.length - fresh.length,
+  };
+}
+
 /**
  * Removes a chip. Focus goes to the next chip's Odebrat, and to the search box
  * when there is no next one: the last chip's removal does not look back.

@@ -1,4 +1,4 @@
-import { countWord, type PluralForms } from '@/domain/cs';
+import { countWord, PASTE_MAX_CHARS, PASTE_MAX_LINES, type PluralForms } from '@/domain/cs';
 
 /** „osoba“, „osoby“, „osob“: the count in the announcements. */
 const PERSON: PluralForms = { one: 'osoba', few: 'osoby', many: 'osob' };
@@ -18,6 +18,45 @@ export const people = {
       rateLimited: 'Hledáte příliš rychle. Zkuste to za chvíli, nebo osobu zadejte ručně.',
       signedOut: 'Byli jste odhlášeni. Hledání v\u00A0adresáři bude fungovat po novém přihlášení.',
     },
+  },
+  paste: {
+    summary: 'Vložit seznam',
+    label: 'Seznam osob',
+    hint: `Jedna osoba na\u00A0řádek, nejvýše ${PASTE_MAX_LINES}\u00A0řádků a\u00A0${PASTE_MAX_CHARS}\u00A0znaků. Třídu připište za jméno, například „Jana Nováková 3.B“.`,
+    check: 'Zkontrolovat',
+    /** Beside the preview when the text was longer than the limits. */
+    truncated: `Seznam byl zkrácen: čte se nejvýše ${PASTE_MAX_LINES}\u00A0řádků a\u00A0${PASTE_MAX_CHARS}\u00A0znaků.`,
+    /** The preview found no one and rejected nothing. */
+    nothing: 'V\u00A0textu nebyla nalezena žádná osoba.',
+    /** Said once after „Zkontrolovat“; `rejected` counts the lines that are no person. */
+    read: (count: number, rejected: number) =>
+      `Přečteno: ${countWord(count, PERSON)}.${rejected === 0 ? '' : ` Nelze přečíst řádků: ${rejected}.`}`,
+    caption: 'Náhled seznamu',
+    columns: { pick: 'Přidat', person: 'Přečteno', salutation: 'Oslovení', check: 'Kontrola' },
+    /** The checkbox's name carries the line as typed, so a long table is not a column of the same word. */
+    pickLabel: (source: string) => `Přidat: ${source}`,
+    salutationLabel: (source: string) => `Oslovení: ${source}`,
+    doubt: 'Zkontrolujte jméno',
+    swap: 'Prohodit jméno a\u00A0příjmení',
+    swapLabel: (source: string) => `Prohodit jméno a\u00A0příjmení: ${source}`,
+    bulk: {
+      label: 'Řádkům bez oslovení nastavit:',
+      setLabel: (salutation: string) => `Řádkům bez oslovení nastavit: ${salutation}`,
+    },
+    rejected: {
+      title: 'Tyto řádky nelze přečíst:',
+      line: (line: number) => `Řádek ${line}:`,
+      reason: {
+        'no-surname': 'chybí příjmení',
+        'too-long': 'jméno, titul nebo třída je příliš dlouhá',
+      },
+    },
+    add: (count: number) => `Přidat vybrané (${count})`,
+    /** Said once after the add; `needLook` counts the added people that still ask for a look. */
+    added: (count: number, needLook: number) =>
+      `Přidáno: ${countWord(count, PERSON)}. Kontrolu vyžadují: ${needLook}.`,
+    /** Added to it when some rows did not fit under the cap; they stay in the preview. */
+    leftOut: (count: number) => `Nevešlo se: ${countWord(count, PERSON)}.`,
   },
   chips: {
     edit: 'Upravit',

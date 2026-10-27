@@ -2,7 +2,6 @@
 
 import type { KeyboardEvent, RefCallback } from 'react';
 
-import { SALUTATION, SALUTATIONS } from '@/domain/cs';
 import type { DraftPerson } from '@/domain/report';
 import { PERSON_FIELD_MAX } from '@/domain/report';
 import { people } from '@/ui/copy';
@@ -15,6 +14,7 @@ import { TextField } from '../TextField';
 
 import type { ChipButton, Fields } from './chips-state';
 import { spokenName } from './directory-state';
+import { SALUTATION_OPTIONS, salutationOf } from './salutations';
 
 const { editor: copy } = people.chips;
 
@@ -27,11 +27,6 @@ const SPEC: FormSpec = {
   titlesBefore: { label: copy.titlesBefore },
   titlesAfter: { label: copy.titlesAfter },
 };
-
-const SALUTATION_OPTIONS = [
-  { value: '', label: copy.none },
-  ...SALUTATIONS.map((value) => ({ value, label: SALUTATION[value].label })),
-];
 
 /**
  * The inline editor below a chip (design section 5): native controls through
@@ -79,9 +74,7 @@ export function ChipEditor({
           name="salutation"
           options={SALUTATION_OPTIONS}
           value={person.salutation ?? ''}
-          onChange={(value) =>
-            onPatch({ salutation: SALUTATIONS.find((s) => s === value) ?? null })
-          }
+          onChange={(value) => onPatch({ salutation: salutationOf(value) })}
         />
         <TextField
           name="affiliation"

@@ -716,6 +716,207 @@ test('an add past the cap is refused with a notice, never as an add', async ({
   await expect(box).toBeFocused();
 });
 
+const { paste } = cs.people;
+
+/** „Vložit seznam“ of the demo `n` (0 live, 1 directory off, 2 with people in it). */
+const pasteOf = (page: Page, n: number) => page.locator('details').nth(n);
+const previewRows = (details: Locator) => details.getByRole('table').locator('tbody > tr');
+/** Opens the paste, types the sample, and reads it. */
+async function checkSample(details: Locator) {
+  await details.locator('summary').click();
+  await details.getByLabel(paste.label, { exact: true }).fill(people.paste.sample.join('\n'));
+  await details.getByRole('button', { name: paste.check, exact: true }).click();
+  await expect(details.getByRole('table', { name: paste.caption })).toBeVisible();
+}
+
+test('a pasted list is read into a preview: doubts start unchecked, a bad line is listed', async ({
+  page,
+  hydrated,
+  expectAccessible,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const details = pasteOf(page, 0);
+  // The demo shows the sample it is tested with, so a visitor can try the same.
+  await expect(page.getByText(people.paste.hint)).toBeVisible();
+  await expect(page.locator('pre').filter({ hasText: people.paste.sample[0] })).toContainText(
+    people.paste.sample.join('\n'),
+  );
+  await checkSample(details);
+
+  await expect(previewRows(details)).toHaveCount(4);
+  // Read once, said once: the counts of the people and of the lines that are none.
+  await expect(said(page, paste.read(4, 1))).toHaveCount(1);
+  const doubtful = previewRows(details).filter({ hasText: 'Zdislav Hruška' });
+  await expect(doubtful.getByRole('checkbox')).not.toBeChecked();
+  await expect(doubtful).toContainText(paste.doubt);
+  const certain = previewRows(details).filter({ hasText: 'Lenka Marešová (3.B)' });
+  await expect(certain.getByRole('checkbox')).toBeChecked();
+  await expect(certain).not.toContainText(paste.doubt);
+  // A recent person settles the order: „Hlaváček Radslav“ is read the other way and starts checked.
+  const known = previewRows(details).filter({ hasText: 'Radslav Hlaváček' });
+  await expect(known.getByRole('checkbox')).toBeChecked();
+  await expect(known).not.toContainText(paste.doubt);
+  await expect(details.getByRole('button', { name: paste.add(3), exact: true })).toBeEnabled();
+  await expect(details.getByRole('listitem').filter({ hasText: 'Marie' })).toContainText(
+    `${paste.rejected.line(4)} ${paste.rejected.reason['no-surname']}`,
+  );
+  await expectAccessible();
+
+  // The swap puts the surname first and takes the doubt away.
+  await doubtful.getByRole('button', { name: paste.swap }).click();
+  await expect(previewRows(details).filter({ hasText: 'Hruška Zdislav' })).not.toContainText(
+    paste.doubt,
+  );
+  await expect(details.getByRole('button', { name: paste.add(3), exact: true })).toBeVisible();
+});
+
+test('„Přidat vybrané“ adds the checked people, focuses the first new chip and says it once', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const details = pasteOf(page, 0);
+  await checkSample(details);
+  const chipsOf = page.locator(`ul[aria-label="${people.added}"]`);
+
+  // The bulk setter fills the rows still at none; one row keeps its own choice.
+  await previewRows(details)
+    .filter({ hasText: 'Ondřej Pech' })
+    .getByRole('combobox')
+    .selectOption('slecna');
+  await details.getByRole('button', { name: paste.bulk.setLabel('pan'), exact: true }).click();
+  await expect(
+    previewRows(details).filter({ hasText: 'Ondřej Pech' }).getByRole('combobox'),
+  ).toHaveValue('slecna');
+  await expect(
+    previewRows(details).filter({ hasText: 'Lenka Marešová' }).getByRole('combobox'),
+  ).toHaveValue('pan');
+
+  // Checking the doubtful row leaves its order a guess: that is the one that needs a look.
+  await previewRows(details).filter({ hasText: 'Zdislav Hruška' }).getByRole('checkbox').check();
+  await details.getByRole('button', { name: paste.add(4), exact: true }).click();
+
+  await expect(chipsOf.locator('> li')).toHaveCount(4);
+  await expect(
+    chipsOf.getByRole('button', { name: chips.editLabel('Lenka Marešová'), exact: true }),
+  ).toBeFocused();
+  await expect(said(page, paste.added(4, 1))).toHaveCount(1);
+  // A pasted class is the author's own: dated this year, so not flagged.
+  await expect(chipsOf.locator('> li').first()).toContainText('(3.B)');
+  await expect(chipsOf).not.toContainText(chips.flag.class);
+  await expect(chipsOf).not.toContainText(chips.flag.salutation);
+  // The added rows left the preview; the rejected line is still listed, and is all the text holds.
+  await expect(details.getByRole('table')).toHaveCount(0);
+  await expect(details.getByRole('listitem').filter({ hasText: 'Marie' })).toHaveCount(1);
+  await expect(details.getByLabel(paste.label, { exact: true })).toHaveValue('Marie');
+});
+
+test('after an add the text holds only what is left, so a second check never brings the added back', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const details = pasteOf(page, 0);
+  const text = details.getByLabel(paste.label, { exact: true });
+  await checkSample(details);
+  const chipsOf = page.locator(`ul[aria-label="${people.added}"]`);
+
+  // Zdislav (a guess) stays unchecked, so he stays; so does the line that is no person.
+  await details.getByRole('button', { name: paste.add(3), exact: true }).click();
+  await expect(chipsOf.locator('> li')).toHaveCount(3);
+  await expect(text).toHaveValue('Zdislav Hruška\nMarie');
+  await expect(previewRows(details)).toHaveCount(1);
+  await expect(details.getByText(paste.rejected.line(2))).toBeVisible();
+
+  // Fix the bad line and read again: the two lines are there, the three added are not.
+  await text.fill('Zdislav Hruška\nMarie Nováková');
+  await details.getByRole('button', { name: paste.check, exact: true }).click();
+  await expect(said(page, paste.read(2, 0))).toHaveCount(1);
+  await expect(previewRows(details)).toHaveCount(2);
+  await expect(previewRows(details).filter({ hasText: 'Lenka' })).toHaveCount(0);
+  await expect(previewRows(details).filter({ hasText: 'Ondřej' })).toHaveCount(0);
+  await expect(previewRows(details).filter({ hasText: 'Radslav' })).toHaveCount(0);
+
+  // Adding the whole preview empties the text and the preview.
+  await previewRows(details).filter({ hasText: 'Zdislav' }).getByRole('checkbox').check();
+  await details.getByRole('button', { name: paste.add(2), exact: true }).click();
+  await expect(chipsOf.locator('> li')).toHaveCount(5);
+  await expect(text).toHaveValue('');
+  await expect(details.getByRole('table')).toHaveCount(0);
+});
+
+test('a text with nobody in it is said, and a text past the limit is read whole entries only', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const details = pasteOf(page, 0);
+  const text = details.getByLabel(paste.label, { exact: true });
+  const check = details.getByRole('button', { name: paste.check, exact: true });
+  await details.locator('summary').click();
+
+  await text.fill('  \n  ');
+  await check.click();
+  await expect(details.getByText(paste.nothing)).toBeVisible();
+  await expect(said(page, paste.nothing)).toHaveCount(1);
+
+  // The names are far from the line start, so a cut at 4000 characters falls inside one.
+  // Typed in (insertText), not filled: a fill would skip the textarea's own length limit.
+  const long = Array.from({ length: 50 }, () => `${' '.repeat(73)}Jana Nováková`).join('\n');
+  await text.fill('');
+  await text.focus();
+  await page.keyboard.insertText(long);
+  await expect(text).toHaveValue(long);
+  await check.click();
+  await expect(details.getByText(paste.truncated)).toBeVisible();
+  const rows = previewRows(details);
+  await expect(rows.first()).toBeVisible();
+  expect(await rows.count()).toBeGreaterThan(0);
+  for (const row of await rows.all()) await expect(row).toContainText('Jana Nováková');
+  await expect(details.getByText(paste.rejected.title)).toHaveCount(0);
+  await expect(said(page, paste.truncated)).toHaveCount(1);
+});
+
+test('a paste past the cap adds what fits, keeps the rest in the preview and says so', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const details = pasteOf(page, 2);
+  await checkSample(details);
+  const form = chipForm(page);
+
+  // Enter in the text, a checkbox or a select never sends the demo's form.
+  await details.getByLabel(paste.label, { exact: true }).press('Enter');
+  await previewRows(details).first().getByRole('checkbox').press('Enter');
+  await previewRows(details).first().getByRole('combobox').press('Enter');
+  await expect(details.getByLabel(paste.label, { exact: true })).toHaveValue(
+    `${people.paste.sample.join('\n')}\n`,
+  );
+  await expect(form).not.toHaveAttribute('data-sent', 'true');
+
+  // Three are checked (the doubtful one is not), one place is left: Lenka fits; the rest stay.
+  await details.getByRole('button', { name: paste.add(3), exact: true }).click();
+  await expect(chipRows(page)).toHaveCount(4);
+  await expect(said(page, `${paste.added(1, 1)} ${paste.leftOut(2)}`)).toHaveCount(1);
+  await expect(previewRows(details)).toHaveCount(3);
+  await expect(details.getByRole('button', { name: paste.add(2), exact: true })).toBeVisible();
+  await expect(chipRow(page, 'Lenka Marešová')).toHaveCount(1);
+  await expect(previewRows(details).filter({ hasText: 'Lenka' })).toHaveCount(0);
+
+  // The field is full now: nothing fits, the notice is said, and nothing is lost.
+  await details.getByRole('button', { name: paste.add(2), exact: true }).click();
+  await expect(said(page, chips.full(4))).toHaveCount(1);
+  await expect(chipRows(page)).toHaveCount(4);
+  await expect(previewRows(details)).toHaveCount(3);
+  await expect(form).not.toHaveAttribute('data-sent', 'true');
+});
+
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 

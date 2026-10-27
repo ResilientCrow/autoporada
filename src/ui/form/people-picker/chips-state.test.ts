@@ -5,6 +5,7 @@ import type { DraftPerson } from '@/domain/report';
 
 import {
   addChip,
+  addChips,
   confirmClass,
   editChip,
   finishEdit,
@@ -507,5 +508,63 @@ describe('announcements', () => {
     const p = person('Jan', 'Novák');
     expect(removedMessage(p, 2)).toContain(`2${NBSP}osoby`);
     expect(removedMessage(p, 5)).toContain(`5${NBSP}osob`);
+  });
+});
+
+describe('addChips', () => {
+  const many = [person('Jana', 'Nováková'), person('Petr', 'Novák'), person('Eva', 'Novotná')];
+
+  it('adds them in order under the keys it is given, after the chips already there', () => {
+    const added = addChips([A], many, ['k1', 'k2', 'k3'], 10, TODAY);
+    expect(keys(added.chips)).toEqual(['a', 'k1', 'k2', 'k3']);
+    expect(added.fresh.map((c) => c.person.familyName)).toEqual(['Nováková', 'Novák', 'Novotná']);
+    expect(added.added).toBe(3);
+    expect(added.refused).toBe(0);
+  });
+
+  it('names the first new chip, for focus, and none when nothing was added', () => {
+    expect(addChips([A], many, ['k1', 'k2', 'k3'], 10, TODAY).first).toBe('k1');
+    expect(addChips([A, B], many, ['k1', 'k2', 'k3'], 2, TODAY).first).toBeNull();
+    expect(addChips([], [], [], 10, TODAY).first).toBeNull();
+  });
+
+  it('adds only what the room under the limit holds and counts the rest as refused', () => {
+    const added = addChips([A, B], many, ['k1', 'k2', 'k3'], 4, TODAY);
+    expect(keys(added.chips)).toEqual(['a', 'b', 'k1', 'k2']);
+    expect(added.added).toBe(2);
+    expect(added.refused).toBe(1);
+    expect(added.fresh.map((c) => c.key)).toEqual(['k1', 'k2']);
+  });
+
+  it('refuses all of them at the limit and leaves the chips as they were', () => {
+    const before = [A, B];
+    const added = addChips(before, many, ['k1', 'k2', 'k3'], 2, TODAY);
+    expect(added.chips).toBe(before);
+    expect(added.added).toBe(0);
+    expect(added.refused).toBe(3);
+  });
+
+  it('dates a pasted class this school year and writes it the way the lists do', () => {
+    const [fresh] = addChips(
+      [],
+      [person('Tomáš', 'Nováček', { affiliation: ' 3b ' })],
+      ['k'],
+      10,
+      TODAY,
+    ).fresh;
+    expect(fresh?.person.affiliation).toBe('3.B');
+    expect(fresh?.person.affiliationYear).toBe('2026/2027');
+    expect(flagsOf(fresh?.person ?? person('', ''), TODAY)).not.toContain('class');
+  });
+
+  it('gives a pasted person with no class no year, and keeps the salutation unguessed', () => {
+    const [fresh] = addChips(
+      [],
+      [person('Eva', 'Novotná', { affiliationYear: '2020/2021' })],
+      ['k'],
+      10,
+      TODAY,
+    ).fresh;
+    expect(fresh?.person).toEqual(person('Eva', 'Novotná'));
   });
 });

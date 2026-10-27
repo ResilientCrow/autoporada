@@ -61,6 +61,15 @@ export const gallery = {
       /** The demo's form is only there to show that a key in the field does not send it. */
       send: 'Odeslat',
     },
+    paste: {
+      /** Shown above the demos, so a visitor can use „Vložit seznam“. */
+      hint: 'Do\u00A0„Vložit seznam“ zkuste vložit:',
+      /**
+       * Five lines to read: a class, a name order that is a guess, one in the other order that
+       * a recent person settles, and one that is no person.
+       */
+      sample: ['Lenka Marešová 3.B', 'Zdislav Hruška', 'Hlaváček Radslav', 'Marie', 'Ondřej Pech'],
+    },
     triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
   },
   forms: {
