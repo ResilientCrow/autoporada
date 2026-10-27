@@ -57,6 +57,15 @@ export const points = {
     /** The content as a whole is over its size cap: the one issue that names no field. */
     tooLong: 'Bod je příliš dlouhý. Zkraťte některé texty nebo odeberte část osob.',
   },
+  /** The opening sentence: made from the fields until the author writes it themselves. */
+  opening: {
+    label: 'Úvodní věta',
+    changed: 'Údaje se změnily. Úvodní větu jste upravili ručně.',
+    recreate: 'Vytvořit znovu',
+    confirm: 'Nahradit vaši větu novou?',
+    replace: 'Ano, nahradit',
+    keep: 'Ponechat',
+  },
   /** The type's bullets and the author's own (design section 7). */
   bullets: {
     order: 'Pořadí',

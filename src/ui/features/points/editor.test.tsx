@@ -65,6 +65,7 @@ const editor = (
       version={3}
       content={content}
       spec={spec}
+      titleGender="f"
       today={TODAY}
       recents={[]}
       directory={directory}
@@ -241,6 +242,19 @@ describe('PointEditor with bullets', () => {
     expect(at('>Účastníci</legend>')).toBeLessThan(at(points.editor.body));
   });
 
+  it('shows the opening sentence after the bullets and before the further paragraphs', () => {
+    const sentence = editor({ ...WITH_BULLETS, opening: 'Proběhla exkurze.', openingEdited: true });
+    const at = (text: string) => sentence.indexOf(text);
+    expect(at('>Účastníci</legend>')).toBeLessThan(at(points.opening.label));
+    expect(at(points.opening.label)).toBeLessThan(at(points.editor.body));
+    expect(sentence).toMatch(/<textarea[^>]*>Proběhla exkurze\.<\/textarea>/);
+  });
+
+  it('shows no notice on load, even for a sentence the author wrote', () => {
+    const sentence = editor({ ...WITH_BULLETS, opening: 'Moje věta.', openingEdited: true });
+    expect(sentence).not.toContain(points.opening.changed);
+  });
+
   it('keeps a required bullet of the type, and lets an optional one go', () => {
     expect(html).toContain('aria-label="Odebrat řádek „Organizátoři“"');
     expect(html).not.toContain('aria-label="Odebrat řádek „Účastníci“"');
@@ -379,6 +393,7 @@ describe('PointScreen', () => {
     version: 3,
     content: CONTENT,
     spec: SPEC,
+    titleGender: 'f' as const,
     today: TODAY,
     recents: [],
     directory: 'on' as const,

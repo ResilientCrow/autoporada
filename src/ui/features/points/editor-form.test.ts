@@ -35,11 +35,12 @@ describe('editorSpec', () => {
       'timeTo',
       'campus',
       'place',
+      'opening',
       'body',
     ]);
   });
 
-  it('puts the bullets between the place and the body, in the order of the draft', () => {
+  it('puts the bullets between the place and the opening sentence, in the order of the draft', () => {
     expect(Object.keys(spec)).toEqual([
       'title',
       'eventDate',
@@ -58,6 +59,7 @@ describe('editorSpec', () => {
       'bullets.3.order',
       'bullets.4.label',
       'bullets.4.text',
+      'opening',
       'body',
     ]);
   });
@@ -80,6 +82,12 @@ describe('editorSpec', () => {
     expect(spec['bullets.3.people']?.label).toBe(points.bullets.unnamed(4));
     expect(spec['bullets.4.text']?.label).toBe('Hosté');
     expect(spec['bullets.4.text']?.required).toBe(false);
+  });
+});
+
+describe('the opening sentence field', () => {
+  it('is named „Úvodní věta“ and asked for, since submitting needs it', () => {
+    expect(editorSpec([], [])['opening']).toEqual({ label: points.opening.label, required: true });
   });
 });
 

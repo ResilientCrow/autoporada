@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { UserPrincipal } from '@/application/ports';
 import { getPoint, listPointTypes, recentPeopleOf } from '@/application/use-cases';
 import type { getPointOutput, listPointTypesOutput } from '@/contracts';
-import { formatLongDate, formatTime, type Campus } from '@/domain/cs';
+import { formatLongDate, formatTime, type Campus, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
@@ -40,14 +40,15 @@ export async function newPointPage(): Promise<NewPointPageModel | null> {
 /**
  * What the report editor starts from: the version it was loaded at (its key and the
  * first `expectedVersion`), the content as the save takes it back, the bullets its type
- * offers (which may be removed), the Prague day the picker counts the school year from,
- * the people the author named in their recent points, and whether the school directory
- * is searched at all.
+ * offers (which may be removed), its title gender (the opening sentence agrees with it),
+ * the Prague day the picker counts the school year from, the people the author named in
+ * their recent points, and whether the school directory is searched at all.
  */
 interface PointEditorModel {
   readonly version: number;
   readonly content: Loaded['content'];
   readonly spec: readonly BulletSpec[];
+  readonly titleGender: TitleGender | null;
   readonly today: CalDate;
   readonly recents: readonly RecentPerson[];
   readonly directory: 'on' | 'off';
@@ -104,6 +105,7 @@ function shaped(
           version,
           content,
           spec: type?.defaultBullets ?? [],
+          titleGender: type?.titleGender ?? null,
           today,
           recents,
           directory: getContainer().directoryMode,

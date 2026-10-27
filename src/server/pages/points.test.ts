@@ -147,6 +147,7 @@ describe('pointPage', () => {
         version: 3,
         content: LOADED.content,
         spec: SPEC,
+        titleGender: 'f',
         today: calDate(2026, 10, 27),
         recents: RECENTS,
         directory: 'on',
@@ -227,6 +228,17 @@ describe('pointPage', () => {
     it('has no bullets of a type for a point without one', async () => {
       loadedAs({ type: null });
       expect((await pointPage(ID))?.editor?.spec).toEqual([]);
+    });
+
+    it('carries the type’s title gender, which the opening sentence agrees with', async () => {
+      expect((await pointPage(ID))?.editor?.titleGender).toBe('f');
+    });
+
+    it('has no title gender for a type without one, or for a point without a type', async () => {
+      loadedAs({ type: { ...LOADED.type, titleGender: null } });
+      expect((await pointPage(ID))?.editor?.titleGender).toBeNull();
+      loadedAs({ type: null });
+      expect((await pointPage(ID))?.editor?.titleGender).toBeNull();
     });
 
     it('carries today in Prague, which the picker counts the school year from', async () => {

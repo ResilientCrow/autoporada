@@ -58,6 +58,7 @@ export function editorSpec(
   return {
     ...BEFORE_BULLETS,
     ...Object.assign({}, ...bullets.map((bullet, i) => bulletFields(bullet, i, spec))),
+    opening: { label: points.opening.label, required: true },
     body: { label: points.editor.body },
   };
 }

@@ -11,6 +11,7 @@ import type {
   savePointOutput,
   ServerAction,
 } from '@/contracts';
+import type { TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
@@ -26,6 +27,17 @@ import { Bullets, type BulletsUpdate } from './Bullets';
 import { EDITOR_FORM_ID, EDITOR_FORM_STATE, editorSpec } from './editor-form';
 import { bodyText, type PointContentWire } from './fields';
 import { BodyField, ReportFields } from './ReportFields';
+import { OpeningSentence } from './OpeningSentence';
+import {
+  basisAfterTyping,
+  generated,
+  keptBasis,
+  noticeShown,
+  replaced,
+  typed,
+  withOpeningEdit,
+  type OpeningContext,
+} from './opening-state';
 import { bulletsEdit, withPatch, type Edit, type Patch } from './report-patch';
 import { issuesAfter, issuesAfterRows, saveIssues } from './save-issues';
 
@@ -55,6 +67,7 @@ export function PointEditor({
   version,
   content: initial,
   spec,
+  titleGender,
   today,
   recents,
   directory,
@@ -68,6 +81,8 @@ export function PointEditor({
   readonly content: PointContentWire;
   /** The type's bullets: which the author must keep, and which they may take out. */
   readonly spec: readonly BulletSpec[];
+  /** The type's grammatical gender for the opening sentence; null where it is not known („Jiné“). */
+  readonly titleGender: TitleGender | null;
   /** The day the people's classes are worked out for. */
   readonly today: CalDate;
   /** The people this author put on their latest points, to offer first. */
@@ -118,7 +133,18 @@ export function PointEditor({
     onRefresh,
   });
 
-  const apply = (next: Edit) => {
+  const ctx: OpeningContext = { titleGender, spec };
+  // What the fields made when the text became the author's or when they chose to keep it,
+  // in this page's memory only: a reload starts from what the loaded fields make, with no
+  // notice. Only those two moments (and the load) move it; an answer resolves a notice.
+  const [basis, setBasis] = useState(() => generated(initial, titleGender, spec));
+  // The question „Nahradit vaši větu novou?“ is open.
+  const [asking, setAsking] = useState(false);
+
+  // The one way in for a change, fields and bullets alike: a sentence the author has not
+  // edited is made again from the fields before it is shown and saved.
+  const apply = (changed: Edit) => {
+    const next = withOpeningEdit(changed, ctx);
     latest.current = next;
     setEdit(next);
     autosave.onChange(next.content);
@@ -131,6 +157,23 @@ export function PointEditor({
     const next = bulletsEdit(latest.current, update);
     apply(next);
     setRefused((previous) => issuesAfterRows(previous, before, next.bullets));
+  };
+
+  // Typing closes the question, so „Ano, nahradit“ never overwrites text typed after asking.
+  const typeOpening = (text: string) => {
+    const before = latest.current.content;
+    setBasis((current) => basisAfterTyping(before, current, ctx));
+    setAsking(false);
+    apply({ ...latest.current, content: typed(before, text) });
+  };
+  // The recompute in `apply` writes the sentence once the flag is cleared.
+  const replaceOpening = () => {
+    setAsking(false);
+    apply({ ...latest.current, content: replaced(latest.current.content) });
+  };
+  const keepOpening = () => {
+    setAsking(false);
+    setBasis(keptBasis(latest.current.content, ctx));
   };
 
   // Inline only: the form's own issues would lead with the error summary and take focus.
@@ -152,7 +195,6 @@ export function PointEditor({
         onChange={change}
         onBlur={autosave.onBlur}
       />
-      {/* The opening sentence belongs after the bullets, before the body. */}
       <Bullets
         bullets={bullets}
         spec={spec}
@@ -162,6 +204,18 @@ export function PointEditor({
         recents={recents}
         directory={directory}
         onChange={changeBullets}
+        onBlur={autosave.onBlur}
+      />
+      <OpeningSentence
+        text={content.opening}
+        stale={noticeShown(content, ctx, basis)}
+        asking={asking}
+        issue={issues['opening']}
+        readOnly={autosave.readOnly}
+        onType={typeOpening}
+        onAsk={() => setAsking(true)}
+        onReplace={replaceOpening}
+        onKeep={keepOpening}
         onBlur={autosave.onBlur}
       />
       <BodyField

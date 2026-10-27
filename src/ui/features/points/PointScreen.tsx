@@ -1,3 +1,4 @@
+import type { TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
@@ -22,11 +23,12 @@ export interface PointScreenModel {
   readonly editor: PointEditorModel | null;
 }
 
-/** What the editor starts from: the saved content, the type's bullets, today and the author's recent people. */
+/** What the editor starts from: the saved content, the type's bullets and title gender, today and the author's recent people. */
 interface PointEditorModel {
   readonly version: number;
   readonly content: PointContentWire;
   readonly spec: readonly BulletSpec[];
+  readonly titleGender: TitleGender | null;
   readonly today: CalDate;
   readonly recents: readonly RecentPerson[];
   readonly directory: Directory;
@@ -66,6 +68,7 @@ export function PointScreen({
           version={editor.version}
           content={editor.content}
           spec={editor.spec}
+          titleGender={editor.titleGender}
           today={editor.today}
           recents={editor.recents}
           directory={editor.directory}

@@ -36,20 +36,29 @@ export function bodyFromText(text: string): Body {
   };
 }
 
-function isDate(text: string): boolean {
+/**
+ * A date or time the editor holds as text, read; none when there is none or the text is not
+ * one (the parse's RangeError: a day that does not exist). Readiness reports what the save
+ * would refuse, so the editor reads tolerantly.
+ */
+export function readText<T>(text: string | null, parse: (text: string) => T): T | null {
+  if (text === null) return null;
   try {
-    return toIsoDate(parseIsoDate(text)) === text;
-  } catch {
-    return false;
+    return parse(text);
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
   }
 }
 
+function isDate(text: string): boolean {
+  const date = readText(text, parseIsoDate);
+  return date !== null && toIsoDate(date) === text;
+}
+
 function isTime(text: string): boolean {
-  try {
-    return toIsoTime(parseWallTime(text)) === text;
-  } catch {
-    return false;
-  }
+  const time = readText(text, parseWallTime);
+  return time !== null && toIsoTime(time) === text;
 }
 
 /**

@@ -49,6 +49,12 @@ describe('saveIssues', () => {
     });
   });
 
+  it('puts the opening sentence’s issue under the opening sentence', () => {
+    const out = saveIssues({ 'content.opening': 'too-long' }, content(null), []);
+    expect(out.messages).toEqual({ opening: fieldIssues['too-long'] });
+    expect(out.problem).toBeNull();
+  });
+
   it('keeps every field of a spec that has one, without the content prefix', () => {
     const { messages, problem } = saveIssues(
       { 'content.title': 'too-long', 'content.place': 'too-long' },
@@ -59,7 +65,7 @@ describe('saveIssues', () => {
     expect(problem).toBeNull();
   });
 
-  it.each([['content.bullets.0.label'], ['id'], ['content.opening'], ['toString']])(
+  it.each([['content.bullets.0.label'], ['id'], ['toString']])(
     'turns the issue on %j, which no field of the editor shows, into a problem notice',
     (path) => {
       expect(saveIssues({ [path]: 'too-long' }, content(null), [])).toEqual({
