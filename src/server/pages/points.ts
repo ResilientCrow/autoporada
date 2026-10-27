@@ -35,7 +35,19 @@ export async function newPointPage(): Promise<NewPointPageModel | null> {
   return listed && { types: listed.types };
 }
 
-/** What a point's header and read view show: dates and times written out, nothing else. */
+/**
+ * What the report editor starts from: the version it was loaded at (its key and the
+ * first `expectedVersion`) and the content as the save takes it back.
+ */
+interface PointEditorModel {
+  readonly version: number;
+  readonly content: Loaded['content'];
+}
+
+/**
+ * What a point's header and read view show, dates and times written out, and what
+ * the editor needs, only while it is shown (the author, a draft or returned point).
+ */
 export interface PointPageModel {
   readonly id: string;
   readonly kind: PointKind;
@@ -52,12 +64,14 @@ export interface PointPageModel {
     readonly campus: Campus | null;
     readonly place: string | null;
   };
+  /** Null unless the viewer is the author and the point can still be edited. */
+  readonly editor: PointEditorModel | null;
 }
 
 const dateText = (iso: string | null) => (iso === null ? null : formatLongDate(parseIsoDate(iso)));
 const timeText = (iso: string | null) => (iso === null ? null : formatTime(parseWallTime(iso)));
 
-function shaped({ id, kind, state, type, content }: Loaded): PointPageModel {
+function shaped({ id, kind, state, type, content, version, editable }: Loaded): PointPageModel {
   return {
     id,
     kind,
@@ -72,6 +86,7 @@ function shaped({ id, kind, state, type, content }: Loaded): PointPageModel {
       campus: content.campus,
       place: content.place?.trim() || null,
     },
+    editor: editable ? { version, content } : null,
   };
 }
 

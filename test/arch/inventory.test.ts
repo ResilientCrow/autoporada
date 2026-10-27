@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { isUseCase } from '@/application/core';
 import { USE_CASES } from '@/application/use-cases';
 import { wrappedInfo } from '@/server/bind';
+import { LIMITS } from '@/server/rate-limit';
 
 import {
   ACTION_MODULES,
@@ -69,11 +70,25 @@ describe('inventory of entry points', () => {
         if (info?.kind === 'action' && info.refresh === 'none') skipping.push(info.useCase.name);
       }
     }
-    // Row 28 adds points.save, M8b the future pair: each change updates ADR 0017 item 1.
+    // M8b adds the future pair: each change updates ADR 0017 item 1.
     expect(
       skipping.sort(),
       'The actions with refresh: none changed: update ADR 0017 item 1 and this list together.',
-    ).toEqual(['points.create']);
+    ).toEqual(['points.create', 'points.save']);
+  });
+
+  it('gives the editor’s save and its conflict check the autosave limit, per user', async () => {
+    const limited: Record<string, string> = {};
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'action' && info.rateLimit === 'autosave') {
+          limited[info.useCase.name] = info.rateLimit;
+        }
+      }
+    }
+    expect(Object.keys(limited).sort()).toEqual(['points.save', 'points.status']);
+    expect(LIMITS.autosave).toEqual({ max: 120, windowMs: 60_000, key: 'user' });
   });
 
   it('registers every use case exactly once, under a unique name', async () => {

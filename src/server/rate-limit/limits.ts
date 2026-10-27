@@ -14,6 +14,12 @@ export const LIMITS = {
   auth: { max: 600, windowMs: MINUTE, key: 'ip' },
   /** A class of fifteen needs about 45 searches a minute. */
   directory: { max: 120, windowMs: MINUTE, key: 'user' },
+  /**
+   * The editor's autosave (points.save, and later future.save) and its conflict check
+   * (points.status): a save every 1.5 s is 40 a minute, so this leaves room for several
+   * tabs and a retry ladder, and still stops a script.
+   */
+  autosave: { max: 120, windowMs: MINUTE, key: 'user' },
   /** Creating, submitting and proposing; never autosave. */
   submission: { max: 30, windowMs: HOUR, key: 'user' },
   /** An abuse guard for the headmaster's writes (deciding requests): a person never reaches it. */

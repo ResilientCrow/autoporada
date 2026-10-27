@@ -1,6 +1,7 @@
 'use client';
 
 import { NativeFieldError, useNativeField } from './native-field';
+import { chooseOnPress, keepOnPress } from './radio-press';
 
 export interface RadioOption {
   readonly value: string;
@@ -13,16 +14,25 @@ export interface RadioOption {
  * field issue. The fieldset carries the id (the error summary focuses it), the
  * description and the error wiring; each radio row is a label around the
  * input, at least 44 px tall. The order is legend, description, error, radios.
+ * With `value` and `onChange` it is controlled.
  */
 export function RadioGroupField({
   name,
   options,
   defaultValue,
+  value,
+  onChange,
+  readOnly = false,
   description,
 }: {
   readonly name: string;
   readonly options: readonly RadioOption[];
   readonly defaultValue?: string;
+  /** Controlled use, with `onChange`; leave `defaultValue` out. An empty string checks none. */
+  readonly value?: string;
+  readonly onChange?: (value: string) => void;
+  /** Shown, but a press changes nothing, controlled or not (an autosaving editor waiting on its banner). */
+  readonly readOnly?: boolean;
   readonly description?: string;
 }) {
   const field = useNativeField(name, { description });
@@ -34,6 +44,7 @@ export function RadioGroupField({
       role="radiogroup"
       aria-required={field.required ? true : undefined}
       aria-invalid={field.invalid ? true : undefined}
+      aria-readonly={readOnly ? true : undefined}
       aria-describedby={field.describedBy}
       className="flex flex-col gap-1"
     >
@@ -49,7 +60,15 @@ export function RadioGroupField({
             type="radio"
             name={name}
             value={option.value}
-            defaultChecked={option.value === defaultValue}
+            {...(value === undefined
+              ? {
+                  defaultChecked: option.value === defaultValue,
+                  onClick: (event) => keepOnPress(readOnly, event),
+                }
+              : {
+                  checked: option.value === value,
+                  onChange: () => chooseOnPress(option.value, readOnly, onChange),
+                })}
             className="size-6 shrink-0 accent-digital"
           />
           <span>{option.label}</span>

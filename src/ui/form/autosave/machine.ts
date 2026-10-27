@@ -24,6 +24,8 @@ export type SaveAnswer =
   | { readonly kind: 'not-editable' }
   | { readonly kind: 'unauthenticated' }
   | { readonly kind: 'rate-limited'; readonly retryAfterSeconds: number }
+  /** The server refused the content itself: a retry of the same text would fail the same way. */
+  | { readonly kind: 'invalid' }
   | { readonly kind: 'failed' };
 export type StatusAnswer =
   | { readonly kind: 'ok'; readonly version: number; readonly editable: boolean }
@@ -128,6 +130,17 @@ function lose<C>(s: AutosaveState<C>, seconds: number | null): Step<C> {
   };
 }
 
+/**
+ * The server will refuse this text however often it is sent, so the ladder and the banner
+ * (which promise a retry) are no answer. The text waits, unsaved, for the author's next
+ * change, pause or blur; the editor shows what to fix. Text typed during the flight keeps
+ * its pause, or goes out now when the pause came during the flight.
+ */
+function park<C>(s: AutosaveState<C>): Step<C> {
+  const next = { ...s, unsent: true, due: false, checking: false, attempt: 0, serverVersion: null };
+  return s.unsent && s.due ? send(next) : stay({ ...next, phase: 'dirty' });
+}
+
 function answered<C>(s: AutosaveState<C>, a: SaveAnswer, at: WallTime): Step<C> {
   switch (a.kind) {
     case 'ok': {
@@ -145,6 +158,8 @@ function answered<C>(s: AutosaveState<C>, a: SaveAnswer, at: WallTime): Step<C> 
       const sec = a.retryAfterSeconds;
       return lose(s, Number.isFinite(sec) && sec > 0 ? Math.min(sec, MAX_WAIT_S) : null);
     }
+    case 'invalid':
+      return park(s);
     case 'failed':
       return lose(s, null);
   }

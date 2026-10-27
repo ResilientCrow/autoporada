@@ -112,13 +112,14 @@ describe('pointPage', () => {
         campus: 'radlice',
         place: 'v učebně S206',
       },
+      editor: { version: 3, content: LOADED.content },
     });
   });
 
   it('shows nothing the page does not use', async () => {
     const model = await pointPage(ID);
     expect(Object.keys(model ?? {}).sort()).toEqual(
-      ['facts', 'id', 'kind', 'state', 'title', 'typeName'].sort(),
+      ['editor', 'facts', 'id', 'kind', 'state', 'title', 'typeName'].sort(),
     );
   });
 
@@ -168,6 +169,25 @@ describe('pointPage', () => {
       value: { ...LOADED, content: { ...LOADED.content, place: '  v učebně S206 ' } },
     });
     expect((await pointPage(ID))?.facts.place).toBe('v učebně S206');
+  });
+
+  describe('the editor part', () => {
+    const loadedAs = (changes: object) =>
+      runRegistered.mockResolvedValue({ ok: true, value: { ...LOADED, ...changes } });
+
+    it('carries the version and the content as the save takes it, for a draft its author may edit', async () => {
+      loadedAs({ version: 7, state: 'returned' });
+      expect((await pointPage(ID))?.editor).toEqual({ version: 7, content: LOADED.content });
+    });
+
+    it.each([
+      ['a submitted point', { state: 'submitted', editable: false }],
+      ['a point read by someone who is not its author', { isAuthor: false, editable: false }],
+      ['an approved point', { state: 'approved', editable: false }],
+    ])('is null for %s', async (_name, changes) => {
+      loadedAs(changes);
+      expect((await pointPage(ID))?.editor).toBeNull();
+    });
   });
 
   it.each(['forbidden', 'not-found', 'invalid-input'])('is null on %s', async (code) => {

@@ -1,15 +1,16 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { pointStatus, savePoint } from '@/server/actions';
 import { pointPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, points } from '@/ui/copy';
-import { PointFacts, PointHeader } from '@/ui/features/points';
+import { PointScreen } from '@/ui/features/points';
 import { Shell } from '@/ui/shell';
 
 /** No point title in the tab: a title can name people, and the tab title reaches history and shared screens. */
 export const metadata: Metadata = { title: pageTitle(points.title.point) };
 
-/** One point: the header and, for now, the read view of every state (the editor joins with row 28). */
+/** One point: the editor for its author while it is a draft or returned, the read view otherwise. */
 export default async function PointPage({
   params,
 }: {
@@ -21,15 +22,7 @@ export default async function PointPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/body">
-      <div className="space-y-4">
-        <PointHeader
-          kind={model.kind}
-          state={model.state}
-          title={model.title}
-          typeName={model.typeName}
-        />
-        <PointFacts facts={model.facts} />
-      </div>
+      <PointScreen point={model} savePoint={savePoint} pointStatus={pointStatus} />
     </Shell>
   );
 }

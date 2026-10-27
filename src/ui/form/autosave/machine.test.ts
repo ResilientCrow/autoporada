@@ -252,6 +252,79 @@ describe('the retry ladder', () => {
   });
 });
 
+describe('a save the server refused as invalid', () => {
+  const invalid: E = answer({ kind: 'invalid' });
+  const parked = (state: S) =>
+    expect(state).toMatchObject({
+      phase: 'dirty',
+      unsent: true,
+      attempt: 0,
+      due: false,
+      checking: false,
+    });
+
+  it('parks the text: dirty, unsent, no timer, no ladder, no banner', () => {
+    const { state, last } = run([invalid], at('saving'));
+    parked(state);
+    expect(state).toMatchObject({ version: 3, content: 'a' });
+    expect(last).toEqual([]);
+    expect(warnOnUnload(state)).toBe(true);
+  });
+
+  it('does not take a step down the ladder, however often it comes', () => {
+    const again = run([ev('blur'), invalid, ev('blur'), invalid, ev('blur'), invalid], at('dirty'));
+    parked(again.state);
+    expect(again.trail.filter((effects) => effects.some((e) => e.type === 'timer'))).toEqual([]);
+  });
+
+  it('sends again on the next blur, against the same version', () => {
+    const parkedState = run([invalid], at('saving')).state;
+    expect(run([ev('blur')], parkedState).last).toEqual([cancel('debounce'), save('a', 3)]);
+  });
+
+  it('sends again on the next change after its pause', () => {
+    const parkedState = run([invalid], at('saving')).state;
+    const typed = run([change('ab')], parkedState);
+    expect(typed.last).toEqual([debounce]);
+    expect(run([ev('debounced')], typed.state).last).toEqual([save('ab', 3)]);
+  });
+
+  it('sends the text typed during the flight when the pause came during it', () => {
+    const mid = run([change('a'), ev('blur'), change('ab'), ev('debounced')]).state;
+    const landed = run([invalid], mid);
+    expect(landed.state.phase).toBe('saving');
+    expect(landed.last).toEqual([save('ab', 3)]);
+  });
+
+  it('leaves the text typed during the flight to the pause', () => {
+    const mid = run([change('a'), ev('blur'), change('ab')]).state;
+    const landed = run([invalid], mid);
+    parked(landed.state);
+    expect(landed.last).toEqual([]);
+    expect(run([ev('debounced')], landed.state).last).toEqual([save('ab', 3)]);
+  });
+
+  it('is not a conflict check: nothing asks the status', () => {
+    expect(run([invalid], at('saving')).last.some((e) => e.type === 'status')).toBe(false);
+  });
+
+  it('clears a ladder that had started', () => {
+    const waiting = run([failure, ev('retryElapsed'), invalid], at('saving'));
+    parked(waiting.state);
+  });
+
+  it('ignores an invalid answer that nothing waits for', () => {
+    expect(run([invalid], at('saved')).state).toEqual(at('saved'));
+  });
+
+  it('a flush answered invalid takes the path of any other refused flush', () => {
+    const left = run([ev('leave')], at('dirty')).state;
+    const { state, last } = run([{ type: 'flushed', answer: { kind: 'invalid' }, at: AT }], left);
+    expect(state).toMatchObject({ phase: 'dirty', unsent: true, attempt: 0 });
+    expect(last).toEqual([debounce]);
+  });
+});
+
 describe('rate limiting', () => {
   const limited = (retryAfterSeconds: number) =>
     answer({ kind: 'rate-limited', retryAfterSeconds });

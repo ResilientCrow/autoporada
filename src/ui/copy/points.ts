@@ -45,4 +45,14 @@ export const points = {
     place: 'Místo',
     none: 'Zatím bez údajů.',
   },
+  /** The report editor's fields; the labels it shares with the read view are in `facts`. */
+  editor: {
+    type: 'Typ',
+    title: 'Název',
+    placeHint: 'například v\u00A0učebně S206',
+    body: 'Další odstavce',
+    /** The contract refuses an end date before the start, or one with no start at all. */
+    endBeforeStart: 'Datum konce nesmí být před datem začátku.',
+    endWithoutStart: 'Vyplňte také datum začátku.',
+  },
 } as const;

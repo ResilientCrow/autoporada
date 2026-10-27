@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import {
   FieldError,
   Input,
@@ -32,6 +33,11 @@ export function TextField({
   onBlur,
   maxLength,
   autoComplete,
+  type,
+  readOnly = false,
+  describedBy,
+  after,
+  issue,
 }: {
   readonly name: string;
   readonly description?: string;
@@ -43,6 +49,20 @@ export function TextField({
   readonly onBlur?: () => void;
   readonly maxLength?: number;
   readonly autoComplete?: string;
+  /** A native input type such as `date` or `time`; the default is text. */
+  readonly type?: string;
+  /** Shown and focusable, but not editable (an autosaving editor waiting on its banner). */
+  readonly readOnly?: boolean;
+  /** The id of text the page renders after the control, which describes it (the date echo). */
+  readonly describedBy?: string;
+  /** Rendered after the control, inside the field. */
+  readonly after?: ReactNode;
+  /**
+   * A message that belongs under this field but is not one of the form's `issues` (an
+   * autosave refused the text): shown inline and wired as the field's error, with no
+   * error summary and no focus move.
+   */
+  readonly issue?: string;
 }) {
   const { formId, spec, issues } = useFormContext();
   const field = spec[name];
@@ -50,7 +70,7 @@ export function TextField({
   const code = issues?.[name];
   const required = field.required === true;
   const label = required ? field.label : `${field.label} ${form.optional}`;
-  const message = code === undefined ? '' : fieldMessage(spec, name, code);
+  const message = issue ?? (code === undefined ? '' : fieldMessage(spec, name, code));
   const hiddenPrefix = `${form.errorPrefix} `;
 
   return (
@@ -58,13 +78,16 @@ export function TextField({
       id={fieldId(formId, name)}
       name={name}
       isRequired={required}
-      isInvalid={code !== undefined}
+      isInvalid={code !== undefined || issue !== undefined}
       defaultValue={defaultValue}
       value={value}
       onChange={onChange}
       onBlur={onBlur}
       maxLength={maxLength}
       autoComplete={autoComplete}
+      type={type}
+      isReadOnly={readOnly}
+      aria-describedby={describedBy}
       className="flex flex-col gap-1"
     >
       <Label className="font-bold">{label}</Label>
@@ -75,6 +98,7 @@ export function TextField({
         <span>{message}</span>
       </FieldError>
       {multiline ? <TextArea rows={5} className={CONTROL} /> : <Input className={CONTROL} />}
+      {after}
     </AriaTextField>
   );
 }
