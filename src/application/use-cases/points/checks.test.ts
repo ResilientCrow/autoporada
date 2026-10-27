@@ -11,6 +11,7 @@ describe('readinessIssues', () => {
   it.each([
     ['title-required', 'required'],
     ['body-required', 'required'],
+    ['body-too-long', 'too-long'],
     ['event-date-required', 'required'],
     ['opening-required', 'required'],
     ['label-required', 'required'],

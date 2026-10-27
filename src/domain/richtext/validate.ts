@@ -36,6 +36,19 @@ function jsonSize(input: unknown): number | undefined {
   }
 }
 
+/** Paragraphs and their text nodes: what `LIMITS.maxNodes` counts. */
+const nodeCount = (paragraphs: readonly unknown[]): number =>
+  paragraphs.reduce<number>(
+    (n, p) => n + 1 + (isRecord(p) && Array.isArray(p['content']) ? p['content'].length : 0),
+    0,
+  );
+
+/** Whether a document is over the size or the node limit that `parseRichDoc` enforces. */
+export function exceedsLimits(doc: RichDoc): boolean {
+  const size = jsonSize(doc);
+  return size === undefined || size > LIMITS.maxBytes || nodeCount(doc.content) > LIMITS.maxNodes;
+}
+
 function onlyKeys(
   node: Record<string, unknown>,
   allowed: readonly string[],
@@ -123,12 +136,7 @@ export function parseRichDoc(input: unknown, profile: RichProfile): ParseResult 
   const rawContent = input['content'] ?? [];
   if (!Array.isArray(rawContent)) return { ok: false, errors: ['doc.content: expected a list'] };
 
-  const nodes = rawContent.reduce<number>(
-    (n, p: unknown) =>
-      n + 1 + (isRecord(p) && Array.isArray(p['content']) ? p['content'].length : 0),
-    0,
-  );
-  if (nodes > LIMITS.maxNodes)
+  if (nodeCount(rawContent) > LIMITS.maxNodes)
     return { ok: false, errors: [`document has more than ${LIMITS.maxNodes} nodes`] };
 
   const content = rawContent

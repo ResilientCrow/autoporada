@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import {
+  exceedsLimits,
   isRichDocEmpty,
   LIMITS,
   paragraphRuns,
@@ -268,5 +269,49 @@ describe('helpers', () => {
     expect(
       paragraphRuns(outline.content[1] ?? { type: 'paragraph', attrs: { indent: 0 } }),
     ).toEqual([{ text: 'kontakt: ' }, { text: 'správa', bold: true }]);
+  });
+});
+
+describe('exceedsLimits', () => {
+  const texts = (n: number): RichDoc => ({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        attrs: { indent: 0 },
+        content: Array.from({ length: n }, () => ({ type: 'text' as const, text: 'a' })),
+      },
+    ],
+  });
+  const bytes = (doc: RichDoc) => new TextEncoder().encode(JSON.stringify(doc)).length;
+  /** One paragraph of `ž` (two bytes each) padded with `a` to exactly `size` bytes. */
+  const sized = (size: number): RichDoc => {
+    const empty = bytes(richDocFromText('x')) - 1;
+    const rest = size - empty;
+    return richDocFromText('ž'.repeat(Math.floor(rest / 2)) + 'a'.repeat(rest % 2));
+  };
+
+  it('passes a document with exactly the most nodes', () => {
+    expect(exceedsLimits(texts(LIMITS.maxNodes - 1))).toBe(false);
+  });
+
+  it('refuses one node more', () => {
+    expect(exceedsLimits(texts(LIMITS.maxNodes))).toBe(true);
+  });
+
+  it('passes a document of exactly the most bytes', () => {
+    const doc = sized(LIMITS.maxBytes);
+    expect(bytes(doc)).toBe(LIMITS.maxBytes);
+    expect(exceedsLimits(doc)).toBe(false);
+  });
+
+  it('refuses one byte more', () => {
+    expect(exceedsLimits(sized(LIMITS.maxBytes + 1))).toBe(true);
+  });
+
+  it('agrees with parseRichDoc on both limits', () => {
+    for (const doc of [texts(1998), texts(1999), texts(2000), sized(LIMITS.maxBytes + 1)]) {
+      expect(exceedsLimits(doc)).toBe(!parseRichDoc(doc, 'paragraphs').ok);
+    }
   });
 });

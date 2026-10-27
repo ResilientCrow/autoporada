@@ -63,6 +63,7 @@ export function kindIssues(
 const ISSUE: Readonly<Record<ProblemCode, FieldIssueCode>> = {
   'title-required': 'required',
   'body-required': 'required',
+  'body-too-long': 'too-long',
   'event-date-required': 'required',
   'time-to-without-from': 'invalid',
   'time-to-before-from': 'invalid',

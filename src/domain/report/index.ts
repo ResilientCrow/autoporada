@@ -16,6 +16,7 @@ export {
 } from './limits';
 export { openingInput } from './opening';
 export { displayName, isParticipant, nameKey, participantsOf, samePerson } from './people';
+export { reportBody } from './report-body';
 export {
   missingForSubmit,
   submittedContent,

@@ -14,4 +14,4 @@ export {
   type Run,
 } from './rich-doc';
 export { hasForbiddenCharacters, stripForbiddenCharacters } from './characters';
-export { parseRichDoc, type ParseResult } from './validate';
+export { exceedsLimits, parseRichDoc, type ParseResult } from './validate';

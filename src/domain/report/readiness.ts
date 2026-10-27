@@ -1,12 +1,14 @@
-import { isRichDocEmpty } from '@/domain/richtext';
+import { exceedsLimits, isRichDocEmpty } from '@/domain/richtext';
 import { compareDates, compareTimes } from '@/domain/time';
 
 import type { BulletSpec, DraftBullet, DraftPerson, PointContent, PointKind } from './content';
 import { displayName, isParticipant } from './people';
+import { reportBody } from './report-body';
 
 export type ProblemCode =
   | 'title-required'
   | 'body-required'
+  | 'body-too-long'
   | 'event-date-required'
   | 'time-to-without-from'
   | 'time-to-before-from'
@@ -64,7 +66,7 @@ function timeProblems(content: PointContent): Problem[] {
   if (timeTo === null) return [];
   if (timeFrom === null) return [problem('time-to-without-from', 'content.timeTo')];
   const oneDay = endDate === null || (eventDate !== null && compareDates(endDate, eventDate) === 0);
-  return oneDay && compareTimes(timeTo, timeFrom) < 0
+  return oneDay && compareTimes(timeTo, timeFrom) <= 0
     ? [problem('time-to-before-from', 'content.timeTo')]
     : [];
 }
@@ -79,6 +81,12 @@ function headProblems(content: PointContent): Problem[] {
 
 const openingProblems = (content: PointContent): Problem[] =>
   blank(content.opening) ? [problem('opening-required', 'content.opening')] : [];
+
+/** The body saves within the rich text limits; with the opening in front it may not. */
+const bodyProblems = (content: PointContent): Problem[] =>
+  exceedsLimits(reportBody(content.opening, content.body))
+    ? [problem('body-too-long', 'content.body')]
+    : [];
 
 /** A required bullet is filled when it has a person, or text that is not blank. */
 function requiredBulletProblem(bullet: DraftBullet, index: number): Problem[] {
@@ -194,13 +202,17 @@ function speakerWarnings(content: PointContent): Warning[] {
  * a blank title or opening fails here before the database's
  * `points_submitted_complete` CHECK could.
  *
- * Together with `submittedContent`, the report rules cover exactly what
- * `reportFromContent` would drop: a person without a salutation, a people
- * bullet without people, an empty text bullet, a statement without a genitive
- * or a quote. A point that passes, once `submittedContent` has dropped its empty
- * optional bullets, loses nothing in the preview or the snapshot. Two rules go
- * beyond the drops: a person needs a family name and a kept bullet a label,
- * which the snapshot requires.
+ * Together with `submittedContent`, the report rules cover everything
+ * `reportFromContent` leaves out or changes: a person without a salutation or a
+ * family name, a people bullet without people or a label, an empty text bullet,
+ * a statement without a genitive or a quote, a time to that is not after the
+ * time from on one day (`time-to-before-from`, `time-to-without-from`), and an
+ * opening plus body over the rich text limits (`body-too-long`). A newline or a
+ * tab in a plain field is not a problem: `reportFromContent` collapses it into a
+ * space. So a point that passes, once `submittedContent` has dropped its empty
+ * optional bullets, loses nothing in the preview or the snapshot and gives a
+ * report the snapshot parses. An end date before the start is refused by the
+ * save, not here.
  */
 export function missingForSubmit(
   kind: PointKind,
@@ -218,6 +230,7 @@ export function missingForSubmit(
       ...headProblems(content),
       ...bulletProblems(content, spec, schoolYear),
       ...openingProblems(content),
+      ...bodyProblems(content),
       ...statementProblems(content),
     ],
     warnings: speakerWarnings(content),

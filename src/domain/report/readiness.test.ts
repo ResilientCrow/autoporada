@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Salutation } from '@/domain/cs';
-import { emptyRichDoc, richDocFromText } from '@/domain/richtext';
+import { emptyRichDoc, LIMITS, richDocFromText, type RichDoc } from '@/domain/richtext';
 import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
@@ -115,6 +115,16 @@ describe('missingForSubmit: report', () => {
     [
       'time to before time from on a one-day event',
       { ...ready, timeFrom: t('12:00'), timeTo: t('10:00') },
+      { code: 'time-to-before-from', path: 'content.timeTo', params: {} },
+    ],
+    [
+      'time to equal to time from on a one-day event, which the snapshot refuses',
+      { ...ready, timeFrom: t('10:00'), timeTo: t('10:00') },
+      { code: 'time-to-before-from', path: 'content.timeTo', params: {} },
+    ],
+    [
+      'time to equal to time from when the end date equals the start',
+      { ...ready, endDate: d('2026-10-14'), timeFrom: t('10:00'), timeTo: t('10:00') },
       { code: 'time-to-before-from', path: 'content.timeTo', params: {} },
     ],
     [
@@ -301,8 +311,12 @@ describe('missingForSubmit: report', () => {
     expect(check(content)).toEqual({ problems: [], warnings: [] });
   });
 
-  it('treats a time to before the time from as fine when it is not before it', () => {
-    expect(check({ ...ready, timeFrom: t('10:00'), timeTo: t('10:00') }).problems).toEqual([]);
+  it('treats a time to after the time from, or a later day, as fine', () => {
+    expect(check({ ...ready, timeFrom: t('10:00'), timeTo: t('10:01') }).problems).toEqual([]);
+    expect(
+      check({ ...ready, endDate: d('2026-10-15'), timeFrom: t('10:00'), timeTo: t('10:00') })
+        .problems,
+    ).toEqual([]);
     expect(check({ ...ready, timeFrom: null, timeTo: null }).problems).toEqual([]);
   });
 
@@ -584,5 +598,69 @@ describe('submittedContent', () => {
     );
     expect(check(content)).toEqual({ problems: [], warnings: [] });
     expect(check(submittedContent(content, SPEC))).toEqual({ problems: [], warnings: [] });
+  });
+});
+
+describe('missingForSubmit: the body with the opening', () => {
+  const bytes = (doc: RichDoc) => new TextEncoder().encode(JSON.stringify(doc)).length;
+  const TOO_LONG = { code: 'body-too-long', path: 'content.body', params: {} };
+
+  const paragraph = (text: string): RichDoc['content'][number] => ({
+    type: 'paragraph',
+    attrs: { indent: 0 },
+    content: [{ type: 'text', text }],
+  });
+  /** A one-paragraph body that, after the opening, makes the whole weigh `size` bytes. */
+  function bodyWeighing(opening: string, size: number): RichDoc {
+    const whole = (text: string): RichDoc => ({
+      type: 'doc',
+      content: [...richDocFromText(opening).content, paragraph(text)],
+    });
+    const fill = size - (bytes(whole('x')) - 1);
+    return { type: 'doc', content: [paragraph('a'.repeat(fill))] };
+  }
+
+  it('passes the opening and a body of exactly the most bytes', () => {
+    const body = bodyWeighing(ready.opening, LIMITS.maxBytes);
+    expect(check({ ...ready, body }).problems).toEqual([]);
+  });
+
+  it('refuses one byte more, which the body alone does not reach', () => {
+    const body = bodyWeighing(ready.opening, LIMITS.maxBytes + 1);
+    expect(bytes(body)).toBeLessThan(LIMITS.maxBytes);
+    expect(check({ ...ready, body }).problems).toEqual([TOO_LONG]);
+  });
+
+  const manyTexts = (n: number): RichDoc => ({
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        attrs: { indent: 0 },
+        content: Array.from({ length: n }, () => ({ type: 'text' as const, text: 'a' })),
+      },
+    ],
+  });
+
+  it('passes the opening and a body of exactly the most nodes', () => {
+    // The opening is a paragraph and its text: two nodes; the body paragraph is one more.
+    expect(check({ ...ready, body: manyTexts(LIMITS.maxNodes - 3) }).problems).toEqual([]);
+  });
+
+  it('refuses one node more, which the body alone does not reach', () => {
+    const body = manyTexts(LIMITS.maxNodes - 2);
+    expect(check({ ...ready, body }).problems).toEqual([TOO_LONG]);
+  });
+
+  it('counts the opening’s lines, one paragraph each', () => {
+    const body = manyTexts(LIMITS.maxNodes - 4);
+    expect(check({ ...ready, opening: 'Jedna.\nDva.', body }).problems).toEqual([TOO_LONG]);
+  });
+
+  it('does not count a blank opening, which is reported on its own', () => {
+    const body = manyTexts(LIMITS.maxNodes - 1);
+    expect(check({ ...ready, opening: ' ', body }).problems).toEqual([
+      { code: 'opening-required', path: 'content.opening', params: {} },
+    ]);
   });
 });
