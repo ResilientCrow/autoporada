@@ -1,13 +1,19 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useState } from 'react';
 
 import type { DirectoryHit } from '@/contracts';
 import { foldForSearch, matchesWordPrefixes, searchWords } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
-import type { DraftPerson } from '@/domain/report';
+import { calDate } from '@/domain/time';
 import { gallery } from '@/ui/copy';
-import { SearchBox, type Directory, type DirectoryFetcher, type RawAnswer } from '@/ui/form';
+import {
+  PeopleField,
+  type Chip,
+  type Directory,
+  type DirectoryFetcher,
+  type RawAnswer,
+} from '@/ui/form';
 
 const { people } = gallery;
 
@@ -94,51 +100,86 @@ const stubDirectory: DirectoryFetcher = (query, signal) => {
   return later(reply({ hits }), slow ? SLOW_MS : FAST_MS, slow ? null : signal);
 };
 
-/** A search box and what it added, so the demo shows the hand-over. */
+/** The date the demo counts its school year from, so a stale class stays stale. */
+const TODAY = calDate(2026, 10, 27);
+
+/** Three invented people: one with no salutation, one with last year's class, one in order. */
+const START: readonly Chip[] = [
+  {
+    key: 'jana',
+    person: { salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' },
+  },
+  {
+    key: 'petr',
+    person: { salutation: null, givenName: 'Petr', familyName: 'Svoboda' },
+  },
+  {
+    key: 'karel',
+    person: {
+      salutation: 'pan',
+      titlesBefore: 'Mgr.',
+      givenName: 'Karel',
+      familyName: 'Dvořák',
+      affiliation: '3.B',
+      affiliationYear: '2025/2026',
+    },
+  },
+];
+
+/** A people field over the invented directory, with its chips kept here as an editor would. */
 function PickerDemo({
   label,
+  listLabel,
   directory,
+  start = [],
+  limit,
   hint,
 }: {
   readonly label: string;
+  readonly listLabel: string;
   readonly directory: Directory;
+  readonly start?: readonly Chip[];
+  readonly limit?: number;
   readonly hint?: string;
 }) {
-  const [added, setAdded] = useState<readonly DraftPerson[]>([]);
-  const addedId = useId();
+  const [chips, setChips] = useState<readonly Chip[]>(start);
   return (
     <div className="flex flex-col gap-2">
-      <SearchBox
+      <PeopleField
         label={label}
+        listLabel={listLabel}
+        value={chips}
+        onChange={setChips}
+        today={TODAY}
         recents={RECENTS}
         directory={directory}
-        count={added.length}
-        onAdd={(person) => setAdded((before) => [...before, person])}
         fetcher={stubDirectory}
+        limit={limit}
       />
       {hint === undefined ? null : <p>{hint}</p>}
-      <p id={addedId} className="font-bold">
-        {people.added}
-      </p>
-      {added.length === 0 ? (
-        <p>{people.none}</p>
-      ) : (
-        <ul aria-labelledby={addedId} className="list-disc pl-6">
-          {added.map((person, i) => (
-            <li key={i}>{[person.givenName, person.familyName].filter(Boolean).join(' ')}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
 
-/** The people search box twice: against the invented directory, and with the directory off. */
+/** The people field three times: against the invented directory, with the directory off, and with people in it. */
 export function PeopleDemos() {
   return (
     <div className="flex flex-col gap-6">
-      <PickerDemo label={people.live.label} directory="on" hint={people.live.hint} />
-      <PickerDemo label={people.off.label} directory="off" />
+      <PickerDemo
+        label={people.live.label}
+        listLabel={people.added}
+        directory="on"
+        hint={people.live.hint}
+      />
+      <PickerDemo label={people.off.label} listLabel={people.added} directory="off" />
+      <PickerDemo
+        label={people.chips.label}
+        listLabel={people.chips.list}
+        directory="on"
+        start={START}
+        limit={START.length + 1}
+        hint={people.chips.hint}
+      />
     </div>
   );
 }

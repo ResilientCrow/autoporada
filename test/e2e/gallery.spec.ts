@@ -389,6 +389,136 @@ test('after a rate limit the box waits out Retry-After before it asks again', as
   await expect(directory).toBeVisible({ timeout: 5_000 });
 });
 
+const { chips } = cs.people;
+
+/** The demo with people in it: Jana (paní), Petr (no salutation), Karel (a class of last year); room for one more. */
+const chipBox = (page: Page) =>
+  page.getByRole('combobox', { name: people.chips.label, exact: true });
+/**
+ * The list and its rows are found by CSS, not by role: while the box's own list is open React Aria
+ * hides the rest of the page from assistive technology, and a role query then finds nothing, which
+ * would let a "no such chip" check pass for the wrong reason. Buttons are found by role, so the
+ * list is closed first (closeList).
+ */
+const chipList = (page: Page) => page.locator(`ul[aria-label="${people.chips.list}"]`);
+const chipRows = (page: Page) => chipList(page).locator('> li');
+const chipRow = (page: Page, name: string) => chipRows(page).filter({ hasText: name });
+const removeButton = (page: Page, name: string) =>
+  page.getByRole('button', { name: chips.removeLabel(name), exact: true });
+const said = (page: Page, message: string) => page.getByRole('status').filter({ hasText: message });
+
+/**
+ * Focus in the box opens the recents list. It hides the chips and the bulk row from assistive
+ * technology, so close it before a role query looks for them. Waits briefly for it to open, and
+ * goes on if it does not. Escape closes the list; it never empties a typed text here because the
+ * box is empty whenever this is called.
+ */
+async function closeList(page: Page) {
+  const list = page.getByRole('listbox');
+  await list.waitFor({ state: 'visible', timeout: 1_000 }).then(
+    () => page.keyboard.press('Escape'),
+    () => undefined,
+  );
+  await expect(list).toHaveCount(0);
+}
+
+test('the chips are a list of people, each flagged for what is left to check', async ({
+  page,
+  hydrated,
+  expectAccessible,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  await expect(chipRows(page)).toHaveCount(3);
+  await expect(chipRow(page, 'Petr Svoboda')).toContainText(chips.flag.salutation);
+  await expect(chipRow(page, 'Karel Dvořák')).toContainText(chips.flag.class);
+  await expect(chipRow(page, 'Jana Nováková')).not.toContainText(chips.flag.salutation);
+  await expect(chipRow(page, 'Jana Nováková')).not.toContainText(chips.flag.class);
+  // Every target is at least 44 px, whatever the screen.
+  for (const button of await chipList(page).getByRole('button').all()) {
+    expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  await expectAccessible();
+});
+
+test('removing a chip moves focus to the next one, or to the box when there is none, and says so', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+
+  // The middle one: the next chip's Odebrat.
+  await removeButton(page, 'Petr Svoboda').click();
+  await expect(removeButton(page, 'Karel Dvořák')).toBeFocused();
+  await expect(said(page, chips.removed('Petr Svoboda', 2))).toHaveCount(1);
+
+  // The last of several has no next chip: the box takes focus, and its list opens over the chips.
+  await removeButton(page, 'Karel Dvořák').click();
+  await expect(chipBox(page)).toBeFocused();
+  await expect(said(page, chips.removed('Karel Dvořák', 1))).toHaveCount(1);
+  await expect(chipRows(page)).toHaveCount(1);
+  await closeList(page);
+
+  // The only one: the box again, and no empty list left behind.
+  await removeButton(page, 'Jana Nováková').click();
+  await expect(chipBox(page)).toBeFocused();
+  await expect(said(page, chips.removed('Jana Nováková', 0))).toHaveCount(1);
+  await closeList(page);
+  await expect(chipList(page)).toHaveCount(0);
+});
+
+test('an add is announced once and offers the bulk salutation, which says what it set', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const box = chipBox(page);
+  const bulk = page.getByRole('group', { name: chips.bulk.label });
+  await expect(bulk).toHaveCount(0); // people that were already there are not offered it
+
+  await box.pressSequentially('Zuzana Kubíčková');
+  await page.keyboard.press('Enter');
+  await expect(said(page, search.added('Zuzana Kubíčková', 4))).toHaveCount(1);
+  await expect(box).toBeFocused();
+  await expect(chipRows(page)).toHaveCount(4);
+  // Focus in the box reopens the recents list, which hides the chips and the bulk row from
+  // assistive technology; close it before looking for them by role.
+  await closeList(page);
+  await expect(chipRow(page, 'Zuzana Kubíčková')).toContainText(chips.flag.salutation);
+
+  // The bulk setter fills the empty salutations only: the flags of Petr and Zuzana go, and it
+  // says how many it set.
+  await expect(bulk).toBeVisible();
+  await bulk.getByRole('button', { name: 'slečna' }).click();
+  await expect(said(page, chips.bulk.done(2))).toHaveCount(1);
+  await expect(bulk).toHaveCount(0);
+  await expect(chipList(page).getByText(chips.flag.salutation)).toHaveCount(0);
+  await expect(chipRows(page)).toHaveCount(4);
+});
+
+test('an add past the cap is refused with a notice, never as an add', async ({
+  page,
+  hydrated,
+}) => {
+  await page.goto('/vzornik');
+  await hydrated();
+  const box = chipBox(page);
+  // The cap is four here: the fourth fits, the fifth is refused and stays typed.
+  await box.pressSequentially('Zuzana Kubíčková');
+  await page.keyboard.press('Enter');
+  await expect(chipRows(page)).toHaveCount(4);
+  await box.pressSequentially('Alena Malá');
+  await page.keyboard.press('Enter');
+  await expect(said(page, chips.full(4))).toHaveCount(1);
+  await expect(page.getByText('Přidáno: Alena Malá')).toHaveCount(0);
+  await expect(chipRow(page, 'Alena Malá')).toHaveCount(0);
+  await expect(chipRows(page)).toHaveCount(4);
+  await expect(box).toHaveValue('Alena Malá');
+  await expect(box).toBeFocused();
+});
+
 test.describe('without JavaScript', () => {
   test.use({ javaScriptEnabled: false });
 

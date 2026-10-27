@@ -13,10 +13,8 @@ import { DIRECTORY_LIMITS, type DraftPerson } from '@/domain/report';
 import { people } from '@/ui/copy';
 
 import { CONTROL } from '../control-styles';
-import { LiveStatus } from '../LiveStatus';
 
 import {
-  addedMessage,
   manualPerson,
   matchRecents,
   optionLabel,
@@ -90,30 +88,33 @@ function SearchInput({
  * The search box of the people picker (design section 5): a combobox over two
  * groups, the author's recent people (filtered in the browser) and the school
  * directory (asked after 300 ms), and a last option to add the typed name by
- * hand. Adding hands the person to `onAdd`, empties the box, keeps focus in it
- * and says so. Notices (directory off, down, rate-limited, signed out) are
- * status text beside the box, never an empty listbox. `count` is the people
- * already in the field, for the announcement. `fetcher` defaults to the route.
+ * hand. Adding hands the person to `onAdd`; when that takes the person the box
+ * empties, and either way focus stays in it. What is said about the add is the
+ * field's to say (it knows whether the add was taken), so the box has no live
+ * region of its own. Notices (directory off, down, rate-limited, signed out) are
+ * status text beside the box, never an empty listbox. `fetcher` defaults to the
+ * route; `inputRef` reaches the input for a focus that has to come back to it.
  */
 export function SearchBox({
   label,
   recents,
   directory,
-  count,
   onAdd,
   fetcher,
+  inputRef,
 }: {
   readonly label: string;
   readonly recents: readonly RecentPerson[];
   readonly directory: Directory;
-  readonly count: number;
-  readonly onAdd: (person: DraftPerson) => void;
+  /** Returns whether the person was taken; a refused one stays typed in the box. */
+  readonly onAdd: (person: DraftPerson) => boolean;
   readonly fetcher?: DirectoryFetcher;
+  readonly inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   const [text, setText] = useState('');
-  const [said, setSaid] = useState({ message: '', count: 0 });
   const focusedHit = useRef<string | null>(null);
-  const input = useRef<HTMLInputElement | null>(null);
+  const ownInput = useRef<HTMLInputElement | null>(null);
+  const input = inputRef ?? ownInput;
   const noticeId = useId();
   const found = useDirectory({ text, directory, fetcher, focused: focusedHit });
 
@@ -122,9 +123,7 @@ export function SearchBox({
   const notice = directory === 'off' ? 'off' : found.notice;
 
   function add(person: DraftPerson) {
-    onAdd(person);
-    setText('');
-    setSaid((before) => ({ message: addedMessage(person, count), count: before.count + 1 }));
+    if (onAdd(person)) setText('');
     input.current?.focus();
   }
 
@@ -198,10 +197,6 @@ export function SearchBox({
         </Popover>
       </ComboBox>
       <SearchNotice id={noticeId} notice={notice} />
-      {/* Not hidden from assistive technology while the list is open (see SearchNotice). */}
-      <div data-live-announcer="true">
-        <LiveStatus message={said.message} count={said.count} />
-      </div>
     </div>
   );
 }

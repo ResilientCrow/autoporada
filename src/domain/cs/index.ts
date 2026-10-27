@@ -21,6 +21,7 @@ export {
   formatName,
   PERSON_FIELD_MAX,
   SALUTATION,
+  SALUTATIONS,
   type PersonName,
   type Salutation,
   type Sex,

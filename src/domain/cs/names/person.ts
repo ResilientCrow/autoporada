@@ -1,5 +1,7 @@
 /** Code identifiers for the three formal salutations used in the document. */
 export type Salutation = 'pan' | 'pani' | 'slecna';
+/** Every salutation once, in the order a picker lists them. */
+export const SALUTATIONS = ['pan', 'pani', 'slecna'] as const satisfies readonly Salutation[];
 export type Sex = 'm' | 'f';
 
 export interface PersonName {

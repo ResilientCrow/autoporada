@@ -23,7 +23,7 @@ const RECENTS: readonly RecentPerson[] = [
 
 const box = (directory: 'on' | 'off', recents: readonly RecentPerson[] = RECENTS) =>
   renderToStaticMarkup(
-    <SearchBox label={LABEL} recents={recents} directory={directory} count={0} onAdd={() => {}} />,
+    <SearchBox label={LABEL} recents={recents} directory={directory} onAdd={() => true} />,
   );
 
 describe('SearchBox on the server', () => {
@@ -73,11 +73,10 @@ describe('SearchBox on the server', () => {
     expect(html).not.toContain('role="listbox"');
   });
 
-  it('keeps the add announcement apart from the notice, both live regions that the open list leaves exposed', () => {
+  it('has the notice as its one live region: what is said about an add is the field\u2019s to say', () => {
     const html = box('on');
-    expect(html.match(/role="status"/g)).toHaveLength(2);
-    // Both are marked, so the open list does not hide them from assistive technology.
-    expect(html).toContain('<div data-live-announcer="true"><div role="status"></div></div>');
+    expect(html.match(/role="status"/g)).toHaveLength(1);
+    expect(html).not.toContain('<div role="status">');
   });
 });
 

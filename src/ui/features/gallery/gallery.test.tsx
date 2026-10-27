@@ -36,9 +36,9 @@ describe('Gallery', () => {
     for (const label of Object.values(cs.gallery.statuses).slice(1)) expect(html).toContain(label);
     expect(html).toContain(cs.gallery.notices.info);
     expect(html).toContain(cs.gallery.notices.problem);
-    // The live form's region, and two per search box (the notice and the add announcement); the
-    // kit notices above carry no role, and the off box's notice is its only text in a region.
-    expect(html.match(/role="status"/g)).toHaveLength(5);
+    // The live form's region, and two per people field (the directory notice and the announcements);
+    // the kit notices above carry no role, and the off box's notice is its only text in a region.
+    expect(html.match(/role="status"/g)).toHaveLength(7);
     expect(html.match(/<p id="[^"]+" role="status" data-live-announcer="true">[^<]/g)).toHaveLength(
       1,
     );
@@ -76,13 +76,19 @@ describe('Gallery', () => {
     expect(html).not.toContain(cs.gallery.forms.live.sent);
   });
 
-  it('shows the people search box against the stub directory, and once with the directory off', () => {
+  it('shows the people field against the stub directory, with the directory off, and with people in it', () => {
     const { people } = cs.gallery;
     expect(html).toContain(people.live.label);
     expect(html).toContain(people.off.label);
-    expect(html.match(/role="combobox"/g)).toHaveLength(2);
+    expect(html).toContain(people.chips.label);
+    expect(html.match(/role="combobox"/g)).toHaveLength(3);
     expect(html).toContain(cs.people.search.notice.off);
-    expect(html).toContain(people.none);
+    // Only the demo with people draws a list; one person lacks a salutation, one has an old class.
+    expect(html.match(new RegExp(`<ul [^>]*aria-label="${people.chips.list}"`, 'g'))).toHaveLength(
+      1,
+    );
+    expect(html.match(new RegExp(cs.people.chips.flag.salutation, 'g'))).toHaveLength(1);
+    expect(html.match(new RegExp(cs.people.chips.flag.class, 'g'))).toHaveLength(1);
   });
 
   it('renders markup the CSP accepts', () => {

@@ -54,7 +54,11 @@ export const gallery = {
     },
     off: { label: 'Přidat osobu (adresář vypnutý)' },
     added: 'Přidané osoby',
-    none: 'Zatím nikdo.',
+    chips: {
+      label: 'Přidat osobu (s\u00A0již přidanými)',
+      list: 'Osoby s\u00A0již přidanými',
+      hint: 'Dva lidé mají co ověřit: jeden nemá zvolené oslovení, druhý třídu z\u00A0loňského roku. Přidat se dá jen jedna osoba navíc.',
+    },
     triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
   },
   forms: {

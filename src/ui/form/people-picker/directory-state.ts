@@ -215,10 +215,14 @@ export function personOfHit(hit: DirectoryHit): DraftPerson {
   };
 }
 
+/** The name as it is spoken in announcements: no titles, so no full stop doubles. */
+export function spokenName(person: DraftPerson): string {
+  return [person.givenName, person.familyName].filter(Boolean).join(' ');
+}
+
 /** What is said after an add; `count` is the people in the field before it. */
 export function addedMessage(person: DraftPerson, count: number): string {
-  const name = [person.givenName, person.familyName].filter(Boolean).join(' ');
-  return people.search.added(name, count + 1);
+  return people.search.added(spokenName(person), count + 1);
 }
 
 /** One option's text: the name as lists write it, and the class or organisation in brackets. */
