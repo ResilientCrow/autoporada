@@ -1,8 +1,8 @@
-import { formatName, type PersonName } from '@/domain/cs';
 import { isRichDocEmpty } from '@/domain/richtext';
 import { compareDates, compareTimes } from '@/domain/time';
 
 import type { BulletSpec, DraftBullet, DraftPerson, PointContent, PointKind } from './content';
+import { displayName, isParticipant } from './people';
 
 export type ProblemCode =
   | 'title-required'
@@ -56,19 +56,6 @@ const problem = (code: ProblemCode, path: string, params: Params = {}): Problem 
 
 const blank = (text: string | undefined | null): boolean => (text ?? '').trim() === '';
 
-/** formatName leaves the salutation out, so any value serves for a person who has none yet. */
-function nameOf(p: DraftPerson): string {
-  const trim = (s: string | undefined) => s?.trim() ?? '';
-  const name: PersonName = {
-    salutation: p.salutation ?? 'pan',
-    titlesBefore: trim(p.titlesBefore),
-    givenName: trim(p.givenName),
-    familyName: trim(p.familyName),
-    titlesAfter: trim(p.titlesAfter),
-  };
-  return formatName(name);
-}
-
 const emptyBullet = (b: DraftBullet): boolean =>
   b.kind === 'people' ? b.people.length === 0 : blank(b.text);
 
@@ -115,7 +102,7 @@ function personProblems(
   if (blank(person.familyName))
     return [problem('person-name-required', `${path}.familyName`, { position, label })];
   if (person.salutation === null) {
-    return [problem('salutation-required', `${path}.salutation`, { name: nameOf(person) })];
+    return [problem('salutation-required', `${path}.salutation`, { name: displayName(person) })];
   }
   return [];
 }
@@ -126,7 +113,7 @@ function staleClass(people: readonly (readonly [DraftPerson, string])[], year: s
   );
   const first = stale[0];
   if (first === undefined) return [];
-  const names = [...new Set(stale.map(([p]) => nameOf(p)))];
+  const names = [...new Set(stale.map(([p]) => displayName(p)))];
   return [problem('class-stale', `${first[1]}.affiliation`, { names })];
 }
 
@@ -184,26 +171,12 @@ function statementProblems(content: PointContent): Problem[] {
   });
 }
 
-/**
- * The same person: by graphId when both have one, else by given and family
- * name, ignoring case and titles (a typed copy of a listed person still matches).
- * The two names stay apart in the key: „Jan Novák“ „Svoboda“ is not „Jan“
- * „Novák Svoboda“.
- */
-function samePerson(a: DraftPerson, b: DraftPerson): boolean {
-  if (a.graphId !== undefined && b.graphId !== undefined) return a.graphId === b.graphId;
-  const key = (p: DraftPerson) =>
-    `${p.givenName.trim()}|${p.familyName.trim()}`.toLocaleLowerCase('cs');
-  return key(a) === key(b);
-}
-
 function speakerWarnings(content: PointContent): Warning[] {
-  const participants = content.bullets.flatMap((b) => (b.kind === 'people' ? b.people : []));
   const warnings: Warning[] = [];
   content.statements.forEach(({ speaker }, i) => {
-    if (speaker === null || blank(nameOf(speaker))) return;
-    if (participants.some((p) => samePerson(p, speaker))) return;
-    const params = { n: i + 1, name: nameOf(speaker) };
+    if (speaker === null || blank(displayName(speaker))) return;
+    if (isParticipant(content, speaker)) return;
+    const params = { n: i + 1, name: displayName(speaker) };
     warnings.push({
       code: 'speaker-not-participant',
       path: `content.statements.${i}.speaker`,

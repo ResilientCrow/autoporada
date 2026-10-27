@@ -15,6 +15,7 @@ export {
   POINT_LIMITS,
 } from './limits';
 export { openingInput } from './opening';
+export { displayName, isParticipant, nameKey, participantsOf, samePerson } from './people';
 export {
   missingForSubmit,
   submittedContent,
