@@ -22,9 +22,10 @@ record that supersedes it.
 | [0014](0014-access-and-users.md) | Access requests and user administration | Accepted; item 13 superseded by 0016 |
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
 | [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
-| [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted |
+| [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted; items 5 and 7 superseded in part by 0024 |
 | [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
 | [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted |
 | [0022](0022-database-errors-by-constraint-name.md) | Database errors by constraint name | Accepted |
 | [0023](0023-zod-jitless-in-the-browser.md) | Zod runs jitless in the browser | Accepted |
+| [0024](0024-autosave-announcements-and-flush-answers.md) | Autosave: one announcement, flush answers while the page lives | Accepted |
