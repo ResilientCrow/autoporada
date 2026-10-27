@@ -27,6 +27,7 @@ describe('Gallery', () => {
     cs.gallery.forms.title,
     cs.gallery.forms.controls.title,
     cs.gallery.people.title,
+    cs.gallery.autosave.title,
     cs.gallery.problems.title,
   ])('has the section %s', (title) => {
     expect(html).toMatch(new RegExp(`<h2 [^>]*>${title}</h2>`));
@@ -37,7 +38,8 @@ describe('Gallery', () => {
     expect(html).toContain(cs.gallery.notices.info);
     expect(html).toContain(cs.gallery.notices.problem);
     // The live form's region, and two per people field (the directory notice and the announcements);
-    // the kit notices above carry no role, and the off box's notice is its only text in a region.
+    // the autosave demo has none (its banners are alerts); the kit notices above carry no role,
+    // and the off box's notice is its only text in a region.
     expect(html.match(/role="status"/g)).toHaveLength(7);
     expect(html.match(/<p id="[^"]+" role="status" data-live-announcer="true">[^<]/g)).toHaveLength(
       1,

@@ -1,5 +1,6 @@
 import { access } from './access';
 import { app, appError, home, notFound } from './app';
+import { autosave } from './autosave';
 import { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
 import { gallery } from './gallery';
 import { issues } from './issues';
@@ -29,6 +30,7 @@ export const cs = {
   gallery,
   issues,
   points,
+  autosave,
   people,
   privacy,
   errors,

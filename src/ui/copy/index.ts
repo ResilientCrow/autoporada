@@ -1,5 +1,6 @@
 export { access } from './access';
 export { app, appError } from './app';
+export { autosave } from './autosave';
 export { cs, pageTitle } from './cs';
 export { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
 export { gallery } from './gallery';

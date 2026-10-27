@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { cs } from '@/ui/copy';
 import { SlantLabel } from '@/ui/kit';
 
+import { AutosaveDemo } from './AutosaveDemo';
 import { ControlDemos } from './ControlDemos';
 import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
@@ -37,6 +38,10 @@ export function Gallery({ unavailable = false }: { readonly unavailable?: boolea
       <section aria-labelledby="osoby">
         <h2 id="osoby">{cs.gallery.people.title}</h2>
         <PeopleDemos />
+      </section>
+      <section aria-labelledby="ukladani">
+        <h2 id="ukladani">{cs.gallery.autosave.title}</h2>
+        <AutosaveDemo />
       </section>
       <section aria-labelledby="chyby">
         <h2 id="chyby">{cs.gallery.problems.title}</h2>

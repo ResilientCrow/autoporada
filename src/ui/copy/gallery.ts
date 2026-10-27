@@ -72,6 +72,21 @@ export const gallery = {
     },
     triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
   },
+  autosave: {
+    title: 'Automatické ukládání',
+    label: 'Poznámka',
+    hint: 'Ukládá se po pauze 1,5\u00A0sekundy, při opuštění pole a\u00A0při odchodu ze stránky. Tlačítka níže určují, jak skončí příští uložení.',
+    arm: {
+      ok: 'Bez potíží',
+      conflict: 'Střet',
+      failed: 'Selhání',
+      locked: 'Zamčený bod',
+      signedOut: 'Odhlášení',
+    },
+    armed: (what: string) => `Příští uložení: ${what}`,
+    refreshed: (count: number) => `Aktuální stav načten: ${count}`,
+    leave: 'Odejít na úvodní stránku',
+  },
   forms: {
     title: 'Formulář',
     submit: 'Odeslat',

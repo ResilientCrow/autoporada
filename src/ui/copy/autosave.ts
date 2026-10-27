@@ -1,0 +1,29 @@
+import { problemActions, rules } from './forms';
+
+/**
+ * Autosaving editors (ADR 0017): the status line, the four banners and what is said
+ * when one appears. „Bod“ is the noun of every editor that uses it: a future point is a bod too.
+ */
+export const autosave = {
+  saving: 'Ukládám…',
+  saved: (time: string) => `Uloženo v\u00A0${time}`,
+  unsaved: 'Neuložené změny',
+  failed: {
+    text: 'Změny se nepodařilo uložit. Zkontrolujte připojení.',
+    retry: 'Zkusit znovu',
+  },
+  conflict: {
+    text: 'Bod se mezitím změnil v\u00A0jiném okně.',
+    reload: problemActions.reload,
+    keepMine: 'Ponechat moji verzi',
+  },
+  locked: {
+    text: rules['point-not-editable'],
+    reload: problemActions.reload,
+  },
+  signedOut: {
+    text: 'Byli jste odhlášeni. Přihlaste se znovu v\u00A0novém okně a\u00A0pak klikněte na Uložit.',
+    signIn: problemActions.signIn,
+    save: 'Uložit',
+  },
+} as const;

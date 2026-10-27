@@ -935,3 +935,147 @@ test.describe('without JavaScript', () => {
     expect(page.url()).toBe(url);
   });
 });
+
+const { autosave: demo } = cs.gallery;
+const { autosave: words } = cs;
+const SEEN = '**/vzornik/ulozeni';
+
+/** Answers the demo's pretend saves and records what was sent. */
+async function recordSaves(page: Page): Promise<{ content: string; expectedVersion: number }[]> {
+  const seen: { content: string; expectedVersion: number }[] = [];
+  await page.route(SEEN, async (route) => {
+    seen.push(route.request().postDataJSON() as { content: string; expectedVersion: number });
+    await route.fulfill({ status: 204 });
+  });
+  return seen;
+}
+
+const note = (page: Page) => page.getByLabel(demo.label, { exact: true });
+const arm = (page: Page, label: string) =>
+  page.getByRole('button', { name: label, exact: true }).click();
+
+test('the autosave demo saves after the pause and says when', async ({ page, hydrated }) => {
+  const seen = await recordSaves(page);
+  await page.goto('/vzornik');
+  await hydrated();
+  await note(page).fill('První text');
+  await expect(page.getByText(words.unsaved, { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Uloženo v\u00A0\d{1,2}\.\d{2}$/)).toBeVisible();
+  expect(seen).toEqual([{ content: 'První text', expectedVersion: 1 }]);
+  // The next save carries the version the answer brought.
+  await note(page).fill('První text a druhý');
+  await note(page).blur();
+  await expect.poll(() => seen.length).toBe(2);
+  expect(seen[1]).toEqual({ content: 'První text a druhý', expectedVersion: 2 });
+  await expect(page.getByText(/^Uloženo v\u00a0\d{1,2}\.\d{2}$/)).toBeVisible();
+});
+
+test('a soft navigation away flushes the text that is still waiting', async ({
+  page,
+  hydrated,
+}) => {
+  const seen = await recordSaves(page);
+  await page.goto('/vzornik');
+  await hydrated();
+  await note(page).fill('Rozepsáno těsně před odchodem');
+  await expect(note(page)).toBeFocused();
+  // A click would blur the field and save at once; this follows the link with the focus still in
+  // the field, so only the flush on unmount can send the text.
+  await page
+    .getByRole('link', { name: demo.leave, exact: true })
+    .evaluate((a) => (a as HTMLElement).click());
+  await expect.poll(() => seen.map((s) => s.content)).toEqual(['Rozepsáno těsně před odchodem']);
+  await expect(page).not.toHaveURL(/vzornik/);
+});
+
+test('a conflict shows the banner, makes the field read-only and "Ponechat moji verzi" saves', async ({
+  page,
+  hydrated,
+  expectAccessible,
+}) => {
+  const seen = await recordSaves(page);
+  await page.goto('/vzornik');
+  await hydrated();
+  await arm(page, demo.arm.conflict);
+  await note(page).fill('Moje verze');
+  await note(page).blur();
+  const banner = page.getByRole('alert').filter({ hasText: words.conflict.text });
+  await expect(banner).toBeVisible();
+  await expect(note(page)).toHaveAttribute('readonly', '');
+  // Spoken once: the banner's alert is the announcement, and no status region repeats it.
+  await expect(page.getByRole('alert').filter({ hasText: words.conflict.text })).toHaveCount(1);
+  await expect(page.getByRole('status').filter({ hasText: words.conflict.text })).toHaveCount(0);
+  await expect(page.getByText(words.conflict.text, { exact: true })).toHaveCount(1);
+  await expect(note(page)).not.toBeFocused();
+  await expectAccessible();
+
+  await banner.getByRole('button', { name: words.conflict.keepMine, exact: true }).click();
+  await expect(page.getByText(/^Uloženo v/)).toBeVisible();
+  await expect(banner).toHaveCount(0);
+  // The pressed button went with the banner; focus is back in the field.
+  await expect(note(page)).toBeFocused();
+  // And nothing of the banner's sentence is left on the page.
+  await expect(page.getByText(words.conflict.text, { exact: true })).toHaveCount(0);
+  expect(seen.map((s) => s.expectedVersion)).toEqual([1, 2]);
+
+  // "Načíst aktuální stav" asks for the refresh.
+  await arm(page, demo.arm.locked);
+  await note(page).fill('Ještě něco');
+  await note(page).blur();
+  const locked = page.getByRole('alert').filter({ hasText: words.locked.text });
+  await expect(locked).toBeVisible();
+  await locked.getByRole('button', { name: words.locked.reload, exact: true }).click();
+  await expect(page.getByText(demo.refreshed(1), { exact: true })).toBeVisible();
+});
+
+test('a signed-out author keeps the text and "Uložit" saves it again', async ({
+  page,
+  hydrated,
+}) => {
+  const seen = await recordSaves(page);
+  await page.goto('/vzornik');
+  await hydrated();
+  await arm(page, demo.arm.signedOut);
+  await note(page).fill('Text, který nesmí zmizet');
+  await note(page).blur();
+  const banner = page.getByRole('alert').filter({ hasText: words.signedOut.text });
+  await expect(banner).toBeVisible();
+  await expect(note(page)).toHaveValue('Text, který nesmí zmizet');
+  const link = banner.getByRole('link', { name: words.signedOut.signIn });
+  await expect(link).toHaveAttribute('href', '/prihlaseni');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await banner.getByRole('button', { name: words.signedOut.save, exact: true }).click();
+  await expect(page.getByText(/^Uloženo v/)).toBeVisible();
+  await expect(note(page)).toBeFocused();
+  expect(seen.map((s) => s.content)).toEqual([
+    'Text, který nesmí zmizet',
+    'Text, který nesmí zmizet',
+  ]);
+});
+
+test('after the retry ladder "Zkusit znovu" saves again and puts focus back in the field', async ({
+  page,
+  hydrated,
+}) => {
+  const seen = await recordSaves(page);
+  await page.clock.install();
+  await page.goto('/vzornik');
+  await hydrated();
+  await arm(page, demo.arm.failed);
+  await note(page).fill('Text při výpadku');
+  await note(page).blur();
+  // The first save and the retries after 5, 15 and 60 seconds all fail (each answer takes 300 ms).
+  for (const wait of [300, 5_300, 15_300, 60_300]) await page.clock.runFor(wait);
+  const banner = page.getByRole('alert').filter({ hasText: words.failed.text });
+  await expect(banner).toBeVisible();
+  await expect(page.getByText(words.failed.text, { exact: true })).toHaveCount(1);
+  await arm(page, demo.arm.ok);
+  await banner.getByRole('button', { name: words.failed.retry, exact: true }).click();
+  await expect(note(page)).toBeFocused();
+  await page.clock.runFor(300);
+  await expect(page.getByText(/^Uloženo v/)).toBeVisible();
+  await expect(banner).toHaveCount(0);
+  await expect(note(page)).toBeFocused();
+  await expect(page.getByText(words.failed.text, { exact: true })).toHaveCount(0);
+  expect(seen.length).toBe(5);
+});
