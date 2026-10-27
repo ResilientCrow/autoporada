@@ -289,9 +289,11 @@ describe('Bullets: custom rows', () => {
     expect(fieldsetOf(html, 'Účastníci')).not.toContain(points.bullets.label);
   });
 
-  it('take the id of the readiness path of their label', () => {
-    expect(html).toContain(`id="${fieldId(EDITOR_FORM_ID, 'bullets.3.label')}"`);
-    expect(html).toContain(`id="${fieldId(EDITOR_FORM_ID, 'bullets.4.label')}"`);
+  // Focus after an add goes to the element with this id, so it must be the input itself.
+  it('put the id of the readiness path of their label on the input', () => {
+    for (const path of ['bullets.3.label', 'bullets.4.label']) {
+      expect(html).toMatch(new RegExp(`<input[^>]*id="${fieldId(EDITOR_FORM_ID, path)}"`));
+    }
   });
 });
 

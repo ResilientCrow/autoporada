@@ -31,11 +31,10 @@ const CONTROLS = 'input, textarea, select';
 function focusTarget(target: RowFocus, rows: HTMLElement | null, add: HTMLElement | null) {
   if (target === 'add') return add?.focus();
   if (target.control === 'label') {
-    // The field's id sits on its wrapper, not on the input.
-    const wrapper = document.getElementById(
-      fieldId(EDITOR_FORM_ID, bulletField(target.row, 'label')),
-    );
-    return wrapper?.querySelector<HTMLElement>(CONTROLS)?.focus();
+    // The field's id sits on the input itself.
+    return document
+      .getElementById(fieldId(EDITOR_FORM_ID, bulletField(target.row, 'label')))
+      ?.focus();
   }
   rows?.children[target.row]?.querySelector<HTMLElement>(CONTROLS)?.focus();
 }
