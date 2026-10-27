@@ -1,12 +1,13 @@
 import { eventEndedBefore } from '@/domain/calendar';
-import { csCollator, renderPeople, type Salutation } from '@/domain/cs';
+import { csCollator } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime } from '@/domain/time';
-import type { SnapshotBullet, SnapshotReport } from '@/snapshot';
+import type { SnapshotReport } from '@/snapshot';
 
 import type { Block } from '../model';
 import type { ComposeContext } from './context';
 import { futureBullet } from './future';
-import { finalRuns, finalText, point, quoted, richBlocks, statementLabel } from './text';
+import { reportBlocks } from './report';
+import { point } from './text';
 
 const minutes = (t?: string) => (t ? parseWallTime(t).hour * 60 + parseWallTime(t).minute : -1);
 
@@ -17,35 +18,6 @@ function compareReports(a: SnapshotReport, b: SnapshotReport): number {
     minutes(a.timeFrom) - minutes(b.timeFrom) ||
     csCollator.compare(a.title, b.title)
   );
-}
-
-function bulletLine(bullet: SnapshotBullet, groupOrder?: readonly Salutation[]): Block {
-  const text =
-    bullet.kind === 'text'
-      ? bullet.text
-      : renderPeople(bullet.people, {
-          join: 'comma',
-          order: bullet.order,
-          ...(groupOrder && { groupOrder }),
-        });
-  return {
-    kind: 'reportLine',
-    label: finalText(`${bullet.label}:`),
-    runs: finalRuns([{ text: ` ${text}` }]),
-  };
-}
-
-function reportBlocks(report: SnapshotReport, ctx: ComposeContext): Block[] {
-  const groupOrder = ctx.snapshot.options.groupOrder;
-  return point(report.title, [
-    ...richBlocks(report.body, ctx.tokens),
-    ...report.bullets.map((b) => bulletLine(b, groupOrder)),
-    ...report.statements.map((s) => ({
-      kind: 'reportLine' as const,
-      label: statementLabel(s.speakerGenitive, s.affiliation),
-      runs: [{ text: ` ${quoted(s.quote)}` }],
-    })),
-  ]);
 }
 
 /** Reports of finished events, oldest first, then „Další doposud známé akce školy“. */
@@ -65,5 +37,10 @@ export function composeProvoz(ctx: ComposeContext): Block[] {
           ctx.future.later.map((item) => futureBullet(item, ctx.snapshot.options.groupOrder)),
         )
       : [];
-  return [...reports.flatMap((r) => reportBlocks(r, ctx)), ...later];
+  return [
+    ...reports.flatMap((r) =>
+      reportBlocks(r, { groupOrder: ctx.snapshot.options.groupOrder, tokens: ctx.tokens }),
+    ),
+    ...later,
+  ];
 }
