@@ -77,7 +77,12 @@ export {
   pointStatusOutput,
 } from './point-read';
 export { recentPeopleInput, recentPeopleOutput } from './people';
-export { defaultBulletsSchema, listPointTypesInput, listPointTypesOutput } from './point-type';
+export {
+  bulletKeySchema,
+  defaultBulletsSchema,
+  listPointTypesInput,
+  listPointTypesOutput,
+} from './point-type';
 export {
   changeUserAccessInput,
   changeUserAccessOutput,

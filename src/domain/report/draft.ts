@@ -3,7 +3,7 @@ import { emptyRichDoc } from '@/domain/richtext';
 import type { BulletSpec, DraftBullet, PointContent } from './content';
 
 /** A type's bullet as the draft's own, still unfilled; people keep the order they are added in. */
-function draftBullet({ key, label, kind }: BulletSpec): DraftBullet {
+export function draftBullet({ key, label, kind }: BulletSpec): DraftBullet {
   return kind === 'people'
     ? { key, label, kind, order: 'input', people: [] }
     : { key, label, kind, text: '' };

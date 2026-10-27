@@ -6,7 +6,7 @@ export type {
   PointContent,
   PointKind,
 } from './content';
-export { newDraft } from './draft';
+export { draftBullet, newDraft } from './draft';
 export {
   contentBytes,
   DIRECTORY_LIMITS,

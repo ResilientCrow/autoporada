@@ -5,6 +5,8 @@ const PERSON: PluralForms = { one: 'osoba', few: 'osoby', many: 'osob' };
 
 /** „Osoby“: the people picker (design section 5): the search box, and the chips below it. */
 export const people = {
+  /** „1 osoba“, „3 osoby“, „5 osob“: a count under a row's legend. */
+  count: (n: number) => countWord(n, PERSON),
   search: {
     recents: 'Dříve použité',
     directory: 'Z\u00A0adresáře školy',

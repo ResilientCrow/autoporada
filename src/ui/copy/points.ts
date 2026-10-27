@@ -54,5 +54,32 @@ export const points = {
     /** The contract refuses an end date before the start, or one with no start at all. */
     endBeforeStart: 'Datum konce nesmí být před datem začátku.',
     endWithoutStart: 'Vyplňte také datum začátku.',
+    /** The content as a whole is over its size cap: the one issue that names no field. */
+    tooLong: 'Bod je příliš dlouhý. Zkraťte některé texty nebo odeberte část osob.',
+  },
+  /** The type's bullets and the author's own (design section 7). */
+  bullets: {
+    order: 'Pořadí',
+    orderOption: {
+      input: 'V\u00A0pořadí zadání',
+      'class-surname': 'Podle třídy a\u00A0příjmení',
+    } as const satisfies Record<'input' | 'class-surname', string>,
+    label: 'Název řádku',
+    /** Names a row the author has not named yet, counting from one. */
+    unnamed: (n: number) => `Řádek č.\u00A0${n}`,
+    /** The search box inside a people row; the row's legend says whose people. */
+    addPerson: 'Přidat osobu',
+    /** Names the chip list of a row, so several lists on the page are told apart. */
+    peopleList: (label: string) => `Osoby: ${label}`,
+    addPeopleRow: 'Přidat řádek s\u00A0osobami',
+    addTextRow: 'Přidat řádek s\u00A0textem',
+    remove: 'Odebrat řádek',
+    removeLabel: (label: string) => `Odebrat řádek „${label}“`,
+    removeUnnamed: (n: number) => `Odebrat řádek č.\u00A0${n}`,
+    full: (limit: number) => `Bod může mít nejvýše ${limit}\u00A0řádků.`,
+    /** Brings back a row of the type the author took out; `label` is the type's. */
+    restore: (label: string) => `Vrátit řádek „${label}“`,
+    /** Under a people row the contract refused. */
+    tooManyPeople: 'Řádek má příliš mnoho osob.',
   },
 } as const;
