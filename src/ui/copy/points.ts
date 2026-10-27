@@ -119,4 +119,21 @@ export const points = {
     add: 'Přidat vyjádření',
     full: (limit: number) => `Bod může mít nejvýše ${limit}\u00A0vyjádření.`,
   },
+  /** The live preview of the point (design section 8). */
+  preview: {
+    label: 'Náhled bodu',
+    empty: 'Náhled se zobrazí, až vyplníte název a\u00A0datum začátku.',
+    /** Colon form, so no noun has to agree with the count. */
+    omittedPeople: (n: number) =>
+      `Osoby bez oslovení nebo příjmení se v\u00A0náhledu nezobrazí: ${n}.`,
+    omittedRows: (n: number) =>
+      `Prázdné nebo nepojmenované řádky se v\u00A0náhledu nezobrazí: ${n}.`,
+    omittedStatements: (n: number) => `Neúplná vyjádření se v\u00A0náhledu nezobrazí: ${n}.`,
+  },
+  /** Below the wide layout the form and the preview take turns. */
+  layout: {
+    legend: 'Zobrazit',
+    form: 'Formulář',
+    preview: 'Náhled',
+  },
 } as const;

@@ -149,6 +149,7 @@ describe('pointPage', () => {
         spec: SPEC,
         titleGender: 'f',
         today: calDate(2026, 10, 27),
+        schoolYear: '2026/2027',
         recents: RECENTS,
         directory: 'on',
       },
@@ -243,6 +244,10 @@ describe('pointPage', () => {
 
     it('carries today in Prague, which the picker counts the school year from', async () => {
       expect((await pointPage(ID))?.editor?.today).toEqual(calDate(2026, 10, 27));
+    });
+
+    it('carries the school year of today, by the rule the submit uses', async () => {
+      expect((await pointPage(ID))?.editor?.schoolYear).toBe('2026/2027');
     });
 
     it('carries the author’s recent people, asked for as the viewer with no input', async () => {

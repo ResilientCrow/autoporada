@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
 import type { z } from 'zod';
@@ -38,6 +39,7 @@ import {
   withOpeningEdit,
   type OpeningContext,
 } from './opening-state';
+import { LayoutToggle } from './LayoutToggle';
 import { bulletsEdit, statementsEdit, withPatch, type Edit, type Patch } from './report-patch';
 import { issuesAfter, issuesAfterRows, issuesAfterStatementRows, saveIssues } from './save-issues';
 import { Statements, type StatementsUpdate } from './Statements';
@@ -51,6 +53,10 @@ export type PointStatusAction = ServerAction<
   z.input<typeof pointStatusInput>,
   z.output<typeof pointStatusOutput>
 >;
+
+// Loaded as its own chunk, and still rendered on the server: the page shows the paper
+// without waiting for the script. The form works without it either way.
+const Preview = dynamic(() => import('./Preview').then((loaded) => loaded.Preview));
 
 const NO_MESSAGES: Readonly<Record<string, string>> = {};
 
@@ -71,6 +77,7 @@ export function PointEditor({
   spec,
   titleGender,
   today,
+  schoolYear,
   recents,
   directory,
   savePoint,
@@ -87,6 +94,8 @@ export function PointEditor({
   readonly titleGender: TitleGender | null;
   /** The day the people's classes are worked out for. */
   readonly today: CalDate;
+  /** Today's school year („2026/2027“), a stand-in for the preview until the loader knows the placement Monday. */
+  readonly schoolYear: string;
   /** The people this author put on their latest points, to offer first. */
   readonly recents: readonly RecentPerson[];
   /** Whether the school directory is searched at all (`DIRECTORY=off` is `off`). */
@@ -195,7 +204,7 @@ export function PointEditor({
   const state = { ...EDITOR_FORM_STATE, problem: shown?.problem ?? null };
   const issues = shown?.messages ?? NO_MESSAGES;
 
-  return (
+  const form = (
     <Form
       id={EDITOR_FORM_ID}
       spec={editorSpec(bullets, spec, content.statements.length)}
@@ -260,5 +269,8 @@ export function PointEditor({
       {shown?.notice ? <Notice tone="problem">{shown.notice}</Notice> : null}
       {/* The readiness list and the submit button come last. */}
     </Form>
+  );
+  return (
+    <LayoutToggle form={form} preview={<Preview content={content} schoolYear={schoolYear} />} />
   );
 }

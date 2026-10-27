@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { firstPresent, shouldMoveFocus } from './focus-target';
+import { firstPresent, revealSteps, shouldMoveFocus } from './focus-target';
 
 describe('shouldMoveFocus', () => {
   it.each([
@@ -23,5 +23,38 @@ describe('firstPresent', () => {
 
   it('is null when none is on the page', () => {
     expect(firstPresent([{ current: null }, { current: null }])).toBeNull();
+  });
+});
+
+describe('revealSteps', () => {
+  it.each([
+    [
+      { closedDetails: 0, inHiddenPane: false },
+      { openDetails: 0, showForm: false },
+    ],
+    [
+      { closedDetails: 1, inHiddenPane: false },
+      { openDetails: 1, showForm: false },
+    ],
+    [
+      { closedDetails: 3, inHiddenPane: false },
+      { openDetails: 3, showForm: false },
+    ],
+    [
+      { closedDetails: 0, inHiddenPane: true },
+      { openDetails: 0, showForm: true },
+    ],
+    [
+      { closedDetails: 2, inHiddenPane: true },
+      { openDetails: 2, showForm: true },
+    ],
+  ])('%o → %o', (state, steps) => {
+    expect(revealSteps(state)).toEqual(steps);
+  });
+
+  it('never opens a negative or fractional number of details', () => {
+    expect(revealSteps({ closedDetails: -1, inHiddenPane: false }).openDetails).toBe(0);
+    expect(revealSteps({ closedDetails: Number.NaN, inHiddenPane: false }).openDetails).toBe(0);
+    expect(revealSteps({ closedDetails: 1.9, inHiddenPane: false }).openDetails).toBe(1);
   });
 });

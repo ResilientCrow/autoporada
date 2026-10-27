@@ -21,7 +21,7 @@ export default async function PointPage({
   const model = await pointPage(id);
   if (model === null) notFound();
   return (
-    <Shell viewer={viewer} current="/body">
+    <Shell viewer={viewer} current="/body" width="wide">
       <PointScreen point={model} savePoint={savePoint} pointStatus={pointStatus} />
     </Shell>
   );

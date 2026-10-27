@@ -43,6 +43,12 @@
   --ap-focus: var(--color-light);
 }
 
+/* A pane that fits the screen under the sticky top offset (top-4) with the same gap below, and scrolls inside. */
+@utility pane-fit {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
 /* A popover as wide as the control that opened it (React Aria sets --trigger-width). */
 @utility popover-fit {
   width: var(--trigger-width);

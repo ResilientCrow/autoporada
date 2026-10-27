@@ -52,7 +52,8 @@ const SPEC: readonly BulletSpec[] = [
 ];
 const TODAY = calDate(2026, 10, 27);
 
-const editor = (
+/** The whole editor: the layout toggle around the form and the preview. */
+const editorPage = (
   content: Content = CONTENT,
   typeLabel = 'Exkurze',
   spec: readonly BulletSpec[] = SPEC,
@@ -67,12 +68,19 @@ const editor = (
       spec={spec}
       titleGender="f"
       today={TODAY}
+      schoolYear="2026/2027"
       recents={[]}
       directory={directory}
       savePoint={never}
       pointStatus={never}
     />,
   );
+
+/** The form alone: the layout toggle's own radios stay out of the checks on the form's fields. */
+const editor = (...args: Parameters<typeof editorPage>) => {
+  const page = editorPage(...args);
+  return page.slice(page.indexOf('<form'), page.indexOf('</form>') + '</form>'.length);
+};
 
 const fields = (
   readOnly = false,
@@ -111,6 +119,13 @@ function controlOf(html: string, label: string): string {
 }
 
 describe('PointEditor', () => {
+  it('stands in the layout toggle, the form beside the preview pane', () => {
+    const page = editorPage();
+    expect(page).toContain(`>${points.layout.form}</span>`);
+    expect(page).toContain(`>${points.layout.preview}</span>`);
+    expect(page.indexOf('<form')).toBeGreaterThan(page.indexOf(points.layout.legend));
+  });
+
   const html = editor();
 
   it.each([
@@ -395,6 +410,7 @@ describe('PointScreen', () => {
     spec: SPEC,
     titleGender: 'f' as const,
     today: TODAY,
+    schoolYear: '2026/2027',
     recents: [],
     directory: 'on' as const,
   };

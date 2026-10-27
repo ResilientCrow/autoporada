@@ -19,3 +19,22 @@ export function shouldMoveFocus(state: {
 export function firstPresent<T>(candidates: readonly { readonly current: T | null }[]): T | null {
   return candidates.find((candidate) => candidate.current !== null)?.current ?? null;
 }
+
+/** The event a field fires, bubbling, when it must be shown before it can take focus; the phone layout's toggle listens for it. */
+export const REVEAL_EVENT = 'reveal';
+
+/**
+ * What it takes to show a field that is on the page but not on screen: how many
+ * closed `<details>` around it to open (every one of them),
+ * and whether the form's pane is hidden, so the toggle must switch to „Formulář“.
+ */
+export function revealSteps(state: {
+  readonly closedDetails: number;
+  readonly inHiddenPane: boolean;
+}): {
+  readonly openDetails: number;
+  readonly showForm: boolean;
+} {
+  const count = Math.floor(state.closedDetails);
+  return { openDetails: count > 0 ? count : 0, showForm: state.inHiddenPane };
+}

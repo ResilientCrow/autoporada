@@ -2,7 +2,8 @@ import type { z } from 'zod';
 
 import type { savePointInput } from '@/contracts';
 import { formatTitleDate, type Campus } from '@/domain/cs';
-import { stripForbiddenCharacters } from '@/domain/richtext';
+import type { PointContent } from '@/domain/report';
+import { parseRichDoc, stripForbiddenCharacters } from '@/domain/richtext';
 import { parseIsoDate, parseWallTime, toIsoDate, toIsoTime } from '@/domain/time';
 
 /** A point's content as the save takes it, and as the page hands it to the editor. */
@@ -49,6 +50,22 @@ export function readText<T>(text: string | null, parse: (text: string) => T): T 
     if (error instanceof RangeError) return null;
     throw error;
   }
+}
+
+/**
+ * The editor's content in the domain's shape, for the preview. Total: it reads what is typed so far,
+ * so a date or time that is not one is none, and a body the rich text module refuses is empty.
+ */
+export function pointContentOf(content: PointContentWire): PointContent {
+  const body = parseRichDoc(content.body, 'outline');
+  return {
+    ...content,
+    eventDate: readText(content.eventDate, parseIsoDate),
+    endDate: readText(content.endDate, parseIsoDate),
+    timeFrom: readText(content.timeFrom, parseWallTime),
+    timeTo: readText(content.timeTo, parseWallTime),
+    body: body.ok ? body.doc : { type: 'doc', content: [] },
+  };
 }
 
 function isDate(text: string): boolean {

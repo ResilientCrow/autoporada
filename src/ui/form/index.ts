@@ -17,5 +17,8 @@ export { StepUpNotice } from './StepUpNotice';
 export { SubmitButton } from './SubmitButton';
 export { useActionForm } from './use-action-form';
 export { useHydrated } from './use-hydrated';
+export { REVEAL_EVENT } from './focus-target';
+/** @public Row 36's readiness links are its first consumer. */
+export { revealAndFocus } from './reveal-and-focus';
 export { useFocusFirstOnRise, useFocusOnRise } from './use-focus-on-rise';
 export { choiceOf, fieldId, flagOf, textOf, type FormSpec } from './spec';

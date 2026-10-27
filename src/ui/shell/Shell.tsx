@@ -12,18 +12,23 @@ import { NavLink } from './NavLink';
  * The frame of every page: skip link first, then the dark brand header, the
  * one `main` (the skip link's target) and the footer. Static, never sticky,
  * and the header wraps on narrow screens. A signed-in viewer adds the
- * navigation the policy allows, their name and the sign-out button.
+ * navigation the policy allows, their name and the sign-out button. `width="wide"` lets the
+ * header, the page and the footer grow together from the wide layout (`lg:`, 1024 px) on, for
+ * a page with two columns.
  */
 export function Shell({
   viewer,
   current,
+  width = 'text',
   children,
 }: {
   readonly viewer?: { readonly displayName: string; readonly actor: Actor };
   readonly current?: `/${string}`;
+  readonly width?: 'text' | 'wide';
   readonly children: ReactNode;
 }) {
   const items = viewer ? navFor(viewer.actor) : [];
+  const max = width === 'wide' ? 'max-w-3xl lg:max-w-6xl' : 'max-w-3xl';
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -33,7 +38,7 @@ export function Shell({
         {cs.shell.skipLink}
       </a>
       <header className="surface-dark">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 p-4">
+        <div className={`mx-auto flex ${max} flex-wrap items-center gap-x-4 gap-y-2 p-4`}>
           <Link
             href="/"
             prefetch={false}
@@ -64,11 +69,11 @@ export function Shell({
           )}
         </div>
       </header>
-      <main id="obsah" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 p-4">
+      <main id="obsah" tabIndex={-1} className={`mx-auto w-full ${max} flex-1 p-4`}>
         {children}
       </main>
       <footer className="surface-dark">
-        <div className="mx-auto flex max-w-3xl flex-wrap gap-x-4 gap-y-1 p-4">
+        <div className={`mx-auto flex ${max} flex-wrap gap-x-4 gap-y-1 p-4`}>
           <p>{cs.shell.school}</p>
           <Link href="/ochrana-osobnich-udaju" prefetch={false}>
             {cs.shell.privacy}

@@ -77,6 +77,32 @@ describe('Shell with a viewer', () => {
   });
 });
 
+describe('Shell width', () => {
+  const containers = (markup: string) => {
+    const header = /<header [^>]*><div class="([^"]*)"/.exec(markup)?.[1] ?? '';
+    const main = /<main [^>]*class="([^"]*)"/.exec(markup)?.[1] ?? '';
+    const footer = /<footer [^>]*><div class="([^"]*)"/.exec(markup)?.[1] ?? '';
+    return { header, main, footer };
+  };
+
+  it('is text width by default: header, main and footer stop at max-w-3xl', () => {
+    for (const classes of Object.values(containers(html))) {
+      expect(classes).toContain('max-w-3xl');
+      expect(classes).not.toContain('lg:max-w-6xl');
+    }
+  });
+
+  it('is wide on request: header, main and footer widen together from lg', () => {
+    const wide = renderToStaticMarkup(<Shell width="wide">{cs.gallery.intro}</Shell>);
+    const found = containers(wide);
+    expect(Object.keys(found)).toHaveLength(3);
+    for (const classes of Object.values(found)) {
+      expect(classes).toContain('max-w-3xl');
+      expect(classes).toContain('lg:max-w-6xl');
+    }
+  });
+});
+
 describe('Shell without a viewer', () => {
   it('has neither navigation nor sign-out', () => {
     expect(html).not.toContain('<nav');

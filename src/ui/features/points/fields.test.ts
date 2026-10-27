@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { calDate, wallTime } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import {
@@ -11,6 +12,8 @@ import {
   pickedDate,
   typedDate,
   pickedTime,
+  pointContentOf,
+  type PointContentWire,
 } from './fields';
 
 const para = (text: string) => ({
@@ -170,5 +173,77 @@ describe('campusOf', () => {
 
   it('offers every campus the copy names, and no other', () => {
     expect([...CAMPUSES].sort()).toEqual(Object.keys(cs.points.campus).sort());
+  });
+});
+
+describe('pointContentOf', () => {
+  const wire = (patch: Partial<PointContentWire> = {}): PointContentWire => ({
+    title: 'Exkurze',
+    eventDate: '2027-01-14',
+    endDate: '2027-01-15',
+    timeFrom: '07:30',
+    timeTo: '15:00',
+    campus: 'radlice',
+    place: 'v\u00a0učebně S206',
+    opening: 'Úvod.',
+    openingEdited: true,
+    body: { type: 'doc', content: [para('První')] },
+    bullets: [{ key: 'ucastnici', label: 'Účastníci', kind: 'text', text: 'Třída 3.B' }],
+    statements: [{ speaker: null, speakerGenitive: 'ředitele', quote: 'Dobrý den.' }],
+    ...patch,
+  });
+
+  it('reads the dates, times and body into the domain shape', () => {
+    const content = pointContentOf(wire());
+    expect(content.eventDate).toEqual(calDate(2027, 1, 14));
+    expect(content.endDate).toEqual(calDate(2027, 1, 15));
+    expect(content.timeFrom).toEqual(wallTime(7, 30));
+    expect(content.timeTo).toEqual(wallTime(15, 0));
+    expect(content.body).toEqual({ type: 'doc', content: [para('První')] });
+  });
+
+  it('carries the rest across as it is', () => {
+    const content = pointContentOf(wire());
+    expect(content).toMatchObject({
+      title: 'Exkurze',
+      campus: 'radlice',
+      place: 'v\u00a0učebně S206',
+      opening: 'Úvod.',
+      openingEdited: true,
+    });
+    expect(content.bullets).toEqual(wire().bullets);
+    expect(content.statements).toEqual(wire().statements);
+  });
+
+  it('keeps no date or time that is missing', () => {
+    const content = pointContentOf(
+      wire({ eventDate: null, endDate: null, timeFrom: null, timeTo: null }),
+    );
+    expect([content.eventDate, content.endDate, content.timeFrom, content.timeTo]).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('never throws on input in progress: a day that is not one, or text that is not a date, is none', () => {
+    const content = pointContentOf(
+      wire({ eventDate: '2027-02-30', endDate: '20270-01-14', timeFrom: '25:00', timeTo: 'abc' }),
+    );
+    expect([content.eventDate, content.endDate, content.timeFrom, content.timeTo]).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('shows an empty body for a body the rich text module refuses', () => {
+    const body = {
+      type: 'doc' as const,
+      content: [{ type: 'heading' }],
+    } as unknown as PointContentWire['body'];
+    expect(pointContentOf(wire({ body })).body).toEqual({ type: 'doc', content: [] });
   });
 });
