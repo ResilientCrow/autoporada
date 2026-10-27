@@ -37,6 +37,7 @@ describe('the status line', () => {
     ['failed', autosave.unsaved],
     ['conflict', autosave.unsaved],
     ['locked', autosave.unsaved],
+    ['gone', autosave.unsaved],
     ['signedOut', autosave.unsaved],
   ] as const)('%s says %j and is not live', (phase, text) => {
     const html = render(phase, { savedAt: wallTime(14, 32) });
@@ -58,8 +59,8 @@ describe('the banners', () => {
   it('failed: the text and "Zkusit znovu"', () => {
     const html = render('failed');
     expect(alerts(html)).toHaveLength(1);
-    expect(html).toContain(autosave.failed.text);
-    expect(buttons(html)).toEqual([autosave.failed.retry]);
+    expect(html).toContain('Změny se nepodařilo uložit. Zkontrolujte připojení.');
+    expect(buttons(html)).toEqual(['Zkusit znovu']);
   });
 
   it('conflict: the text, "Načíst aktuální stav" and "Ponechat moji verzi"', () => {
@@ -73,6 +74,14 @@ describe('the banners', () => {
     const html = render('locked');
     expect(alerts(html)).toHaveLength(1);
     expect(html).toContain('Bod už nelze upravovat, protože se změnil jeho stav.');
+    expect(buttons(html)).toEqual(['Načíst aktuální stav']);
+  });
+
+  it('gone: the not-found sentence, not the state sentence, and "Načíst aktuální stav" only', () => {
+    const html = render('gone');
+    expect(alerts(html)).toHaveLength(1);
+    expect(html).toContain('Položka neexistuje, nebo k\u00A0ní nemáte přístup.');
+    expect(html).not.toContain(autosave.locked.text);
     expect(buttons(html)).toEqual(['Načíst aktuální stav']);
   });
 
@@ -90,7 +99,7 @@ describe('the banners', () => {
   });
 
   it('never moves focus: no autofocus and no focus target on the banner', () => {
-    for (const phase of ['failed', 'conflict', 'locked', 'signedOut'] as const) {
+    for (const phase of ['failed', 'conflict', 'locked', 'gone', 'signedOut'] as const) {
       expect(render(phase)).not.toMatch(/autofocus|tabindex="-1"/i);
     }
   });
@@ -98,7 +107,7 @@ describe('the banners', () => {
 
 describe('the announcement', () => {
   it('is the banner itself: it mounts on entry as role=alert, and no status region repeats it', () => {
-    for (const phase of ['failed', 'conflict', 'locked', 'signedOut'] as const) {
+    for (const phase of ['failed', 'conflict', 'locked', 'gone', 'signedOut'] as const) {
       const html = render(phase);
       expect(alerts(html)).toHaveLength(1);
       expect(html).not.toMatch(/role="status"/);
@@ -117,6 +126,7 @@ describe('the announcement', () => {
       failed: autosave.failed.text,
       conflict: autosave.conflict.text,
       locked: autosave.locked.text,
+      gone: autosave.gone.text,
       signedOut: autosave.signedOut.text,
     };
     for (const [phase, text] of Object.entries(texts)) {
@@ -126,7 +136,7 @@ describe('the announcement', () => {
 });
 
 describe('markup', () => {
-  it.each(['saved', 'failed', 'conflict', 'locked', 'signedOut'] as const)(
+  it.each(['saved', 'failed', 'conflict', 'locked', 'gone', 'signedOut'] as const)(
     '%s has no style attribute and passes the CSP check',
     (phase) => {
       const html = render(phase, { savedAt: wallTime(1, 2) });

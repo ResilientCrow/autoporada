@@ -19,6 +19,7 @@ function lineOf(phase: Phase, savedAt: WallTime | null): string {
     case 'failed':
     case 'conflict':
     case 'locked':
+    case 'gone':
     case 'signedOut':
       return autosave.unsaved;
   }
@@ -34,7 +35,7 @@ function Banner({ text, children }: { readonly text: string; readonly children: 
 }
 
 /**
- * The status line (visual only: `aria-live="off"`) and, for the four states that need
+ * The status line (visual only: `aria-live="off"`) and, for the five states that need
  * the author, a banner with its buttons. A banner is a `role="alert"` that mounts on entry
  * into its phase, so its insertion is the one announcement; no status region repeats it.
  * Focus never moves into it.
@@ -76,6 +77,13 @@ export function AutosaveStatus({
         <Banner text={autosave.locked.text}>
           <Button variant="primary" onPress={onReload}>
             {autosave.locked.reload}
+          </Button>
+        </Banner>
+      ) : null}
+      {phase === 'gone' ? (
+        <Banner text={autosave.gone.text}>
+          <Button variant="primary" onPress={onReload}>
+            {autosave.gone.reload}
           </Button>
         </Banner>
       ) : null}

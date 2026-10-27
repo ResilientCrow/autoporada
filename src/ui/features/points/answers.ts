@@ -11,6 +11,7 @@ export function saveAnswer(result: ActionResult<z.output<typeof savePointOutput>
   if (error.code === 'invalid-input') return { kind: 'invalid' };
   if (error.code === 'conflict') return { kind: 'conflict' };
   if (error.code === 'unauthenticated') return { kind: 'unauthenticated' };
+  if (error.code === 'not-found') return { kind: 'gone' };
   if (error.code === 'rate-limited') {
     return { kind: 'rate-limited', retryAfterSeconds: error.retryAfterSeconds };
   }
@@ -24,5 +25,7 @@ export function statusAnswer(
 ): StatusAnswer {
   if (result.ok)
     return { kind: 'ok', version: result.data.version, editable: result.data.editable };
-  return result.error.code === 'unauthenticated' ? { kind: 'unauthenticated' } : { kind: 'failed' };
+  const { code } = result.error;
+  if (code === 'unauthenticated') return { kind: 'unauthenticated' };
+  return code === 'not-found' ? { kind: 'gone' } : { kind: 'failed' };
 }

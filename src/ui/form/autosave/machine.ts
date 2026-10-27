@@ -4,7 +4,7 @@ export const DEBOUNCE_MS = 1_500;
 export const RETRY_STEPS = [5, 15, 60] as const;
 
 export type Phase =
-  'idle' | 'dirty' | 'saving' | 'saved' | 'conflict' | 'locked' | 'failed' | 'signedOut';
+  'idle' | 'dirty' | 'saving' | 'saved' | 'conflict' | 'locked' | 'gone' | 'failed' | 'signedOut';
 
 export interface AutosaveState<C> {
   readonly phase: Phase;
@@ -22,6 +22,8 @@ export type SaveAnswer =
   | { readonly kind: 'ok'; readonly version: number }
   | { readonly kind: 'conflict' }
   | { readonly kind: 'not-editable' }
+  /** The server finds no such point for this author (ADR 0013 item 3): the gone banner offers a reload. */
+  | { readonly kind: 'gone' }
   | { readonly kind: 'unauthenticated' }
   | { readonly kind: 'rate-limited'; readonly retryAfterSeconds: number }
   /** The server refused the content itself: a retry of the same text would fail the same way. */
@@ -29,6 +31,7 @@ export type SaveAnswer =
   | { readonly kind: 'failed' };
 export type StatusAnswer =
   | { readonly kind: 'ok'; readonly version: number; readonly editable: boolean }
+  | { readonly kind: 'gone' }
   | { readonly kind: 'unauthenticated' }
   | { readonly kind: 'failed' };
 
@@ -72,7 +75,9 @@ type Step<C> = { readonly state: AutosaveState<C>; readonly effects: readonly Ef
 
 /** The longest a retry waits, whatever the server asks: the last step of the ladder. */
 const MAX_WAIT_S = 60;
-const READ_ONLY: ReadonlySet<Phase> = new Set(['conflict', 'locked', 'signedOut']);
+const READ_ONLY: ReadonlySet<Phase> = new Set(['conflict', 'locked', 'gone', 'signedOut']);
+/** The point can never be saved again, so leaving flushes nothing; only a reload gets out. */
+const NO_SAVE: ReadonlySet<Phase> = new Set(['locked', 'gone']);
 const DEBOUNCE: Effect<never> = { type: 'timer', name: 'debounce', ms: DEBOUNCE_MS };
 const CANCEL_DEBOUNCE: Effect<never> = { type: 'cancel', name: 'debounce' };
 
@@ -105,7 +110,7 @@ function early<C>(s: AutosaveState<C>, timerFired: boolean): Step<C> {
 /** The state may not be saved any more as it is: the banner says why (its alert is the announcement). */
 function halt<C>(
   s: AutosaveState<C>,
-  phase: 'failed' | 'conflict' | 'locked' | 'signedOut',
+  phase: 'failed' | 'conflict' | 'locked' | 'gone' | 'signedOut',
   serverVersion: number | null = null,
 ): Step<C> {
   return {
@@ -152,6 +157,8 @@ function answered<C>(s: AutosaveState<C>, a: SaveAnswer, at: WallTime): Step<C> 
       return { state: { ...s, unsent: true, checking: true }, effects: [{ type: 'status' }] };
     case 'not-editable':
       return halt(s, 'locked');
+    case 'gone':
+      return halt(s, 'gone');
     case 'unauthenticated':
       return halt(s, 'signedOut');
     case 'rate-limited': {
@@ -168,6 +175,7 @@ function answered<C>(s: AutosaveState<C>, a: SaveAnswer, at: WallTime): Step<C> 
 function statused<C>(s: AutosaveState<C>, a: StatusAnswer): Step<C> {
   if (a.kind === 'unauthenticated') return halt(s, 'signedOut');
   if (a.kind === 'failed') return lose(s, null);
+  if (a.kind === 'gone') return halt(s, 'gone');
   // Editable: a newer version of the same point; otherwise its state moved on.
   return a.editable ? halt(s, 'conflict', a.version) : halt(s, 'locked');
 }
@@ -243,7 +251,7 @@ export function step<C>(s: AutosaveState<C>, e: AutosaveEvent<C>): Step<C> {
       };
     }
     case 'leave': {
-      const flush = s.phase === 'locked' ? [] : flushOf(s);
+      const flush = NO_SAVE.has(s.phase) ? [] : flushOf(s);
       return { state: flush.length > 0 ? { ...s, unsent: false } : s, effects: flush };
     }
   }

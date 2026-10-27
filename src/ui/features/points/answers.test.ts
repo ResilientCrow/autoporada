@@ -32,13 +32,20 @@ describe('saveAnswer', () => {
 
   it.each([
     { code: 'forbidden' },
-    { code: 'not-found' },
     { code: 'busy' },
     { code: 'step-up-required' },
     { code: 'unavailable', requestId: 'req-1' },
     { code: 'rule', rule: 'draft-cap' },
   ] as const)('maps %j to a failed save', (error) => {
     expect(saveAnswer(fail(error))).toEqual({ kind: 'failed' });
+  });
+});
+
+describe('a point the server does not find', () => {
+  // ADR 0013 item 3: the form keeps what was typed and offers „Načíst aktuální stav“.
+  it('is a gone save, on the save and on the status check', () => {
+    expect(saveAnswer(fail({ code: 'not-found' }))).toEqual({ kind: 'gone' });
+    expect(statusAnswer(fail({ code: 'not-found' }))).toEqual({ kind: 'gone' });
   });
 });
 
@@ -57,7 +64,6 @@ describe('statusAnswer', () => {
   });
 
   it.each([
-    { code: 'not-found' },
     { code: 'forbidden' },
     { code: 'rate-limited', retryAfterSeconds: 3 },
     { code: 'unavailable', requestId: 'req-1' },

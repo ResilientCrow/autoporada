@@ -1,7 +1,7 @@
-import { problemActions, rules } from './forms';
+import { errors, problemActions, rules } from './forms';
 
 /**
- * Autosaving editors (ADR 0017): the status line, the four banners and what is said
+ * Autosaving editors (ADR 0017): the status line, the five banners and what is said
  * when one appears. „Bod“ is the noun of every editor that uses it: a future point is a bod too.
  */
 export const autosave = {
@@ -19,6 +19,10 @@ export const autosave = {
   },
   locked: {
     text: rules['point-not-editable'],
+    reload: problemActions.reload,
+  },
+  gone: {
+    text: errors['not-found'],
     reload: problemActions.reload,
   },
   signedOut: {

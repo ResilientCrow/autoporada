@@ -78,6 +78,7 @@ const REACH: Record<Phase, readonly E[]> = {
     status({ kind: 'ok', version: 9, editable: true }),
   ],
   locked: [change('a'), ev('blur'), answer({ kind: 'not-editable' })],
+  gone: [change('a'), ev('blur'), answer({ kind: 'gone' })],
   signedOut: [change('a'), ev('blur'), answer({ kind: 'unauthenticated' })],
 };
 const at = (phase: Phase) => run(REACH[phase]).state;
@@ -413,7 +414,7 @@ describe('conflict, status and locked', () => {
   });
 
   it('"Načíst aktuální stav" asks for the refresh and keeps the state', () => {
-    for (const phase of ['conflict', 'locked'] as const) {
+    for (const phase of ['conflict', 'locked', 'gone'] as const) {
       const { state, last } = run([ev('reload')], at(phase));
       expect(last).toEqual([{ type: 'refresh' }]);
       expect(state).toEqual(at(phase));
@@ -449,9 +450,132 @@ describe('conflict, status and locked', () => {
   });
 
   it('keep mine and reload mean nothing outside their states', () => {
-    for (const phase of ['idle', 'dirty', 'saved', 'failed', 'locked', 'signedOut'] as const) {
+    for (const phase of [
+      'idle',
+      'dirty',
+      'saved',
+      'failed',
+      'locked',
+      'gone',
+      'signedOut',
+    ] as const) {
       expect(run([ev('keepMine')], at(phase)).state).toEqual(at(phase));
     }
+  });
+});
+
+describe('"Ponechat moji verzi" against a server that moved on', () => {
+  // The design asks the status again before the save; the machine sends at once against the
+  // version the conflict's status read. A save that is stale or locked answers exactly as
+  // the status would have, so the two end in the same banner.
+  const kept = () => run([ev('keepMine')], at('conflict'));
+
+  it('a point that stopped being editable meanwhile answers locked', () => {
+    const { state, last } = run([answer({ kind: 'not-editable' })], kept().state);
+    expect(state).toMatchObject({ phase: 'locked', content: 'a', unsent: true });
+    expect(last).toEqual([cancel('debounce')]);
+  });
+
+  it('a point that changed again answers conflict, so the status is asked once more', () => {
+    const again = run([answer({ kind: 'conflict' })], kept().state);
+    expect(again.last).toEqual([{ type: 'status' }]);
+    const shown = run([status({ kind: 'ok', version: 12, editable: true })], again.state);
+    expect(shown.state).toMatchObject({ phase: 'conflict', serverVersion: 12, content: 'a' });
+    // The next "Ponechat moji verzi" uses the newer version.
+    expect(run([ev('keepMine')], shown.state).last).toEqual([save('a', 12)]);
+  });
+
+  it('a point that changed again and then locked ends in locked', () => {
+    const again = run([answer({ kind: 'conflict' })], kept().state).state;
+    expect(run([status({ kind: 'ok', version: 12, editable: false })], again).state.phase).toBe(
+      'locked',
+    );
+  });
+
+  it('a lost session ends in signedOut, and "Uložit" sends the same content again', () => {
+    const out = run([answer({ kind: 'unauthenticated' })], kept().state);
+    expect(out.state.phase).toBe('signedOut');
+    expect(run([ev('retry')], out.state).last).toEqual([save('a', 9)]);
+  });
+
+  it('a save that fails goes down the ladder from the first step, with the status version', () => {
+    const { state, last } = run([failure], kept().state);
+    expect(state).toMatchObject({ phase: 'dirty', attempt: 1, version: 9 });
+    expect(last).toEqual([retryIn(5)]);
+    expect(run([ev('retryElapsed')], state).last).toEqual([save('a', 9)]);
+  });
+});
+
+describe('the answers that belong to the conflict check', () => {
+  const checking = () => run([answer({ kind: 'conflict' })], at('saving')).state;
+
+  it('ignores a status that nobody asked for', () => {
+    for (const phase of ['idle', 'dirty', 'saving', 'saved', 'failed', 'conflict'] as const) {
+      const out = run([status({ kind: 'ok', version: 9, editable: false })], at(phase));
+      expect(out).toMatchObject({ state: at(phase), last: [] });
+    }
+  });
+
+  it('ignores a second status once the first has been taken', () => {
+    const shown = run([status({ kind: 'ok', version: 9, editable: true })], checking()).state;
+    expect(run([status({ kind: 'ok', version: 11, editable: false })], shown).state).toEqual(shown);
+  });
+
+  it('ignores a save answer while the status is out: the conflict has been answered', () => {
+    for (const late of [ok(4), answer({ kind: 'not-editable' }), failure]) {
+      expect(run([late], checking())).toMatchObject({ state: checking(), last: [] });
+    }
+  });
+
+  it('keeps the text typed while the status is out, and "Ponechat moji verzi" sends it', () => {
+    const typed = run([change('ab')], checking());
+    expect(typed.state).toMatchObject({ phase: 'saving', checking: true, content: 'ab' });
+    const shown = run([status({ kind: 'ok', version: 9, editable: true })], typed.state);
+    expect(shown.state).toMatchObject({ phase: 'conflict', content: 'ab', unsent: true });
+    // The pause that was running is dropped; it cannot send into the banner.
+    expect(shown.last).toEqual([cancel('debounce')]);
+    expect(run([ev('keepMine')], shown.state).last).toEqual([save('ab', 9)]);
+  });
+
+  it('a pause that fires while the status is out sends nothing', () => {
+    const typed = run([change('ab')], checking()).state;
+    expect(run([ev('debounced')], typed).last).toEqual([]);
+    expect(run([ev('blur')], typed).last).toEqual([]);
+  });
+});
+
+describe('a point or session the server no longer knows', () => {
+  it('a save that finds no point reaches the gone banner, not the locked one', () => {
+    const { state, last } = run([answer({ kind: 'gone' })], at('saving'));
+    expect(state).toMatchObject({ phase: 'gone', content: 'a', unsent: true });
+    expect(last).toEqual([cancel('debounce')]);
+  });
+
+  it('a status that finds no point reaches the gone banner', () => {
+    const asked = run([answer({ kind: 'conflict' })], at('saving')).state;
+    const { state, last } = run([status({ kind: 'gone' })], asked);
+    expect(state.phase).toBe('gone');
+    expect(last).toEqual([cancel('debounce')]);
+  });
+
+  it('"Načíst aktuální stav" is the way out, and nothing more is flushed', () => {
+    const gone = run([answer({ kind: 'gone' })], at('saving')).state;
+    expect(run([ev('reload')], gone).last).toEqual([{ type: 'refresh' }]);
+    expect(run([ev('leave')], gone).last).toEqual([]);
+  });
+});
+
+describe('the banner buttons outside their states', () => {
+  it('"Zkusit znovu" and "Uložit" mean nothing without a banner that has them', () => {
+    for (const phase of ['idle', 'dirty', 'saving', 'saved', 'conflict', 'locked'] as const) {
+      expect(run([ev('retry')], at(phase))).toMatchObject({ state: at(phase), last: [] });
+    }
+  });
+
+  it('"Načíst aktuální stav" from a signed-out editor only refreshes: the text cannot be saved', () => {
+    const { state, last } = run([ev('reload')], at('signedOut'));
+    expect(last).toEqual([{ type: 'refresh' }]);
+    expect(state).toEqual(at('signedOut'));
   });
 });
 
@@ -472,7 +596,7 @@ describe('signed out', () => {
 });
 
 describe('read-only states', () => {
-  it.each(['conflict', 'locked', 'signedOut'] as const)(
+  it.each(['conflict', 'locked', 'gone', 'signedOut'] as const)(
     '%s ignores changes and the timers',
     (phase) => {
       expect(isReadOnly(phase)).toBe(true);
@@ -506,8 +630,8 @@ describe('leaving', () => {
     },
   );
 
-  it('does not flush in locked', () => {
-    expect(run([ev('leave')], at('locked')).last).toEqual([]);
+  it.each(['locked', 'gone'] as const)('does not flush in %s', (phase) => {
+    expect(run([ev('leave')], at(phase)).last).toEqual([]);
   });
 
   it.each(['idle', 'saved'] as const)('has nothing to flush in %s', (phase) => {
@@ -609,7 +733,7 @@ describe('the answer to a flush while the page lives on', () => {
     expect(last).toEqual([debounce]);
   });
 
-  it.each(['failed', 'conflict', 'locked', 'signedOut'] as const)(
+  it.each(['failed', 'conflict', 'locked', 'gone', 'signedOut'] as const)(
     'a failed flush in %s only keeps the text marked unsent',
     (phase) => {
       const { state, last } = run([flushedAnswer({ kind: 'failed' })], left(phase));
@@ -652,6 +776,7 @@ describe('warnOnUnload', () => {
     ['conflict', true],
     ['signedOut', true],
     ['locked', true],
+    ['gone', true],
   ] as const)('%s -> %j', (phase, warns) => {
     expect(warnOnUnload(at(phase))).toBe(warns);
   });
