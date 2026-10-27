@@ -9,6 +9,7 @@ import {
   parseRichDoc,
   richDocFromText,
   richDocToPlainText,
+  singleLine,
   type RichDoc,
 } from './index';
 
@@ -313,5 +314,22 @@ describe('exceedsLimits', () => {
     for (const doc of [texts(1998), texts(1999), texts(2000), sized(LIMITS.maxBytes + 1)]) {
       expect(exceedsLimits(doc)).toBe(!parseRichDoc(doc, 'paragraphs').ok);
     }
+  });
+});
+
+describe('singleLine', () => {
+  it.each([
+    ['a\nb', 'a b'],
+    ['a\r\nb', 'a b'],
+    ['a\tb', 'a b'],
+    ['a \n \t \n b', 'a b'],
+    ['  a\n\n\nb  ', 'a b'],
+    ['\ta\t', 'a'],
+    ['a  b', 'a  b'],
+    ['\n \t', ''],
+    ['', ''],
+    ['a\u00a0b', 'a\u00a0b'],
+  ])('turns %j into %j', (input, expected) => {
+    expect(singleLine(input)).toBe(expected);
   });
 });

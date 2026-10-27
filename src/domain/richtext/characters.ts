@@ -24,3 +24,13 @@ export function hasForbiddenCharacters(text: string, { allowTab }: { allowTab: b
 export function stripForbiddenCharacters(text: string): string {
   return text.replace(STRIPPED, '');
 }
+
+/**
+ * Form input for a field that prints on one line: every run of spaces that
+ * holds a newline or a tab becomes one space, and the ends are trimmed. The
+ * snapshot refuses a tab or a newline in such a field, and the document
+ * prints what is stored.
+ */
+export function singleLine(text: string): string {
+  return text.replace(/ *[\t\r\n][ \t\r\n]*/g, ' ').trim();
+}
