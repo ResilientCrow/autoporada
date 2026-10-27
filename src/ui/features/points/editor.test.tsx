@@ -456,3 +456,26 @@ describe('PointScreen', () => {
     expect(html).toMatch(/<dd[^>]*>Zpráva<\/dd>/);
   });
 });
+
+describe('PointEditor: the statements', () => {
+  const speaker = { salutation: 'pan', givenName: 'Jan', familyName: 'Novák' } as const;
+  const withStatements: Content = {
+    ...CONTENT,
+    bullets: [
+      { key: 'ucastnici', label: 'Účastníci', kind: 'people', order: 'input', people: [speaker] },
+    ],
+    statements: [{ speaker, speakerGenitive: 'pana Jana Nováka', quote: 'Děkuji.' }],
+  };
+
+  it('stands after „Další odstavce“, with the card of each statement', () => {
+    const html = editor(withStatements);
+    expect(html.indexOf(points.editor.body)).toBeLessThan(html.indexOf(points.statements.heading));
+    expect(html).toContain(points.statements.legend(1));
+    expect(html).toContain('value="pana Jana Nováka"');
+    expect(html).toMatch(/<textarea[^>]*>Děkuji\.<\/textarea>/);
+  });
+
+  it('offers the add button even with no statement', () => {
+    expect(editor()).toContain(points.statements.add);
+  });
+});

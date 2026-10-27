@@ -52,7 +52,7 @@ export function saveIssues(
   content: PointContentWire,
   bulletSpec: readonly BulletSpec[],
 ): SaveIssues {
-  const spec = editorSpec(content.bullets, bulletSpec);
+  const spec = editorSpec(content.bullets, bulletSpec, content.statements.length);
   const messages: Record<string, string> = {};
   let problem: Problem | null = Object.keys(fields).length === 0 ? NOTICE : null;
   let notice: string | null = null;
@@ -77,6 +77,13 @@ export function issuesAfter(
   return result.error.code === 'invalid-input' ? result.error.fields : previous;
 }
 
+/** The issues without those whose path starts with `prefix`; nothing left is null (an empty set would read as a refusal that names nothing). */
+function without(previous: FieldIssues, prefix: string): FieldIssues | null {
+  const kept = Object.entries(previous).filter(([path]) => !path.startsWith(prefix));
+  if (kept.length === Object.keys(previous).length) return previous;
+  return kept.length === 0 ? null : Object.fromEntries(kept);
+}
+
 /** A refused save names bullets by their place: `content.bullets.2.text`. */
 const BULLET_PATH = 'content.bullets.';
 
@@ -94,8 +101,17 @@ export function issuesAfterRows(
 ): FieldIssues | null {
   if (previous === null) return null;
   const same = before.length === after.length && before.every((b, i) => b.key === after[i]?.key);
-  if (same) return previous;
-  const kept = Object.entries(previous).filter(([path]) => !path.startsWith(BULLET_PATH));
-  if (kept.length === Object.keys(previous).length) return previous;
-  return kept.length === 0 ? null : Object.fromEntries(kept);
+  return same ? previous : without(previous, BULLET_PATH);
+}
+
+/** The statements are named by their place too: `content.statements.1.quote`. */
+const STATEMENT_PATH = 'content.statements.';
+
+/**
+ * The issues to keep after a statement was added, removed or moved: the indices no longer
+ * mean the cards they did, so the statements' messages go. An edit inside a card never
+ * comes here, and keeps them.
+ */
+export function issuesAfterStatementRows(previous: FieldIssues | null): FieldIssues | null {
+  return previous === null ? null : without(previous, STATEMENT_PATH);
 }

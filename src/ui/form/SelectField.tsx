@@ -20,6 +20,7 @@ export function SelectField({
   defaultValue,
   value,
   description,
+  issue,
   onChange,
 }: {
   readonly name: string;
@@ -28,9 +29,15 @@ export function SelectField({
   /** Controlled use, with `onChange`; leave `defaultValue` out. */
   readonly value?: string;
   readonly description?: string;
+  /**
+   * A message that belongs under this field but is not one of the form's `issues` (an
+   * autosave refused the value): shown inline and wired as the field's error, as
+   * `TextField`'s is.
+   */
+  readonly issue?: string;
   readonly onChange?: (value: string) => void;
 }) {
-  const field = useNativeField(name, { description });
+  const field = useNativeField(name, { description, issue });
 
   return (
     <div className="flex flex-col gap-1">

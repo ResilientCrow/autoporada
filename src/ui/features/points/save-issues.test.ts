@@ -5,7 +5,7 @@ import type { BulletSpec } from '@/domain/report';
 import { cs } from '@/ui/copy';
 
 import type { PointContentWire } from './fields';
-import { issuesAfter, issuesAfterRows, saveIssues } from './save-issues';
+import { issuesAfter, issuesAfterRows, issuesAfterStatementRows, saveIssues } from './save-issues';
 
 const { points, fieldIssues } = cs;
 
@@ -243,5 +243,69 @@ describe('issuesAfterRows', () => {
     expect(
       issuesAfterRows({ 'content.bullets.0.people': 'too-long' }, rows('a'), rows()),
     ).toBeNull();
+  });
+});
+
+describe('saveIssues for the statements', () => {
+  const withStatements = (): PointContentWire => ({
+    ...content(null),
+    statements: [
+      { speaker: null, speakerGenitive: '', quote: '' },
+      { speaker: null, speakerGenitive: '', quote: '' },
+    ],
+  });
+
+  it('puts the issue of a statement’s field under that field', () => {
+    const out = saveIssues(
+      {
+        'content.statements.0.quote': 'too-long',
+        'content.statements.1.speakerGenitive': 'too-long',
+        'content.statements.1.affiliation': 'too-long',
+      },
+      withStatements(),
+      [],
+    );
+    expect(out.messages).toEqual({
+      'statements.0.quote': fieldIssues['too-long'],
+      'statements.1.speakerGenitive': fieldIssues['too-long'],
+      'statements.1.affiliation': fieldIssues['too-long'],
+    });
+    expect(out.problem).toBeNull();
+  });
+
+  it.each([['content.statements.2.quote'], ['content.statements.0.speaker.givenName']])(
+    'sends the issue on %j, which names no control, to the problem notice',
+    (path) => {
+      expect(saveIssues({ [path]: 'too-long' }, withStatements(), [])).toEqual({
+        messages: {},
+        problem: { code: 'invalid-input' },
+        notice: null,
+      });
+    },
+  );
+});
+
+describe('issuesAfterStatementRows', () => {
+  const FIELDS = {
+    'content.endDate': 'invalid',
+    'content.statements.0.quote': 'too-long',
+    'content.statements.1.speakerGenitive': 'too-long',
+  } as const;
+
+  it('is null while nothing was refused', () => {
+    expect(issuesAfterStatementRows(null)).toBeNull();
+  });
+
+  it('drops the issues of the statements, which name them by place, and keeps the others', () => {
+    expect(issuesAfterStatementRows(FIELDS)).toEqual({ 'content.endDate': 'invalid' });
+  });
+
+  it('keeps the very issues when none names a statement', () => {
+    const other = { content: 'too-long', 'content.bullets.0.text': 'too-long' } as const;
+    expect(issuesAfterStatementRows(other)).toBe(other);
+  });
+
+  it('becomes null when only statement issues were there', () => {
+    expect(issuesAfterStatementRows({ 'content.statements.0.quote': 'too-long' })).toBeNull();
   });
 });

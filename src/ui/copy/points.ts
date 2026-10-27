@@ -91,4 +91,32 @@ export const points = {
     /** Under a people row the contract refused. */
     tooManyPeople: 'Řádek má příliš mnoho osob.',
   },
+  /** The statements of a report (design section 7). */
+  statements: {
+    heading: 'Vyjádření',
+    legend: (n: number) => `Vyjádření č.\u00A0${n}`,
+    speaker: 'Kdo',
+    /** Opens the one-slot people field. */
+    other: 'Jiná osoba…',
+    /** The select's first option while nobody is chosen yet. */
+    choose: 'Vyberte…',
+    /** Names the people field of „Jiná osoba…“, so the cards' fields are told apart. */
+    otherList: (n: number) => `Mluvčí: vyjádření č.\u00A0${n}`,
+    genitive: 'Ve 2.\u00A0pádě',
+    /** Under the genitive while the speaker has no salutation yet. */
+    needSalutation: 'Nejdřív zvolte oslovení.',
+    /** Under the genitive while it is the unchecked suggestion. */
+    check: (suggestion: string) => `Zkontrolujte tvar: ${suggestion}`,
+    affiliation: 'Funkce nebo třída',
+    quote: 'Citace',
+    up: 'Nahoru',
+    down: 'Dolů',
+    remove: 'Odebrat',
+    /** The buttons' accessible names carry the card's number. */
+    upLabel: (n: number) => `Nahoru vyjádření č.\u00A0${n}`,
+    downLabel: (n: number) => `Dolů vyjádření č.\u00A0${n}`,
+    removeLabel: (n: number) => `Odebrat vyjádření č.\u00A0${n}`,
+    add: 'Přidat vyjádření',
+    full: (limit: number) => `Bod může mít nejvýše ${limit}\u00A0vyjádření.`,
+  },
 } as const;

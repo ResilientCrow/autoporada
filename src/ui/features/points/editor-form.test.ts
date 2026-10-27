@@ -5,7 +5,7 @@ import { cs } from '@/ui/copy';
 import { fieldId } from '@/ui/form';
 
 import type { Bullet } from './bullets-state';
-import { bulletField, EDITOR_FORM_ID, editorSpec } from './editor-form';
+import { bulletField, EDITOR_FORM_ID, editorSpec, statementField } from './editor-form';
 
 const { points } = cs;
 
@@ -100,5 +100,55 @@ describe('bulletField', () => {
 
   it('gives an id through the form’s own helper', () => {
     expect(fieldId(EDITOR_FORM_ID, bulletField(2, 'people'))).toBe('bod-bullets-2-people');
+  });
+});
+
+describe('the statements’ fields', () => {
+  const spec = editorSpec([], [], 2);
+
+  it('follow the body, four to a statement, in page order', () => {
+    expect(Object.keys(spec).slice(-9)).toEqual([
+      'body',
+      'statements.0.speaker',
+      'statements.0.speakerGenitive',
+      'statements.0.affiliation',
+      'statements.0.quote',
+      'statements.1.speaker',
+      'statements.1.speakerGenitive',
+      'statements.1.affiliation',
+      'statements.1.quote',
+    ]);
+  });
+
+  it('are none while there is no statement', () => {
+    expect(Object.keys(editorSpec([], [])).some((name) => name.startsWith('statements.'))).toBe(
+      false,
+    );
+  });
+
+  it('are named as the card shows them, and asked for except the function or class', () => {
+    expect(spec['statements.1.speaker']).toEqual({
+      label: points.statements.speaker,
+      required: true,
+    });
+    expect(spec['statements.1.speakerGenitive']).toEqual({
+      label: points.statements.genitive,
+      required: true,
+    });
+    expect(spec['statements.1.quote']).toEqual({ label: points.statements.quote, required: true });
+    expect(spec['statements.1.affiliation']).toEqual({ label: points.statements.affiliation });
+  });
+});
+
+describe('statementField', () => {
+  it('is the path readiness reports, without the content prefix', () => {
+    expect(statementField(0, 'speaker')).toBe('statements.0.speaker');
+    expect(statementField(3, 'speakerGenitive')).toBe('statements.3.speakerGenitive');
+    expect(statementField(9, 'quote')).toBe('statements.9.quote');
+  });
+
+  it('gives an id through the form’s own helper, for the buttons as well', () => {
+    expect(fieldId(EDITOR_FORM_ID, statementField(2, 'quote'))).toBe('bod-statements-2-quote');
+    expect(fieldId(EDITOR_FORM_ID, statementField(2, 'down'))).toBe('bod-statements-2-down');
   });
 });

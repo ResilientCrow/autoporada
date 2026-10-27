@@ -44,15 +44,34 @@ export interface Edit {
   readonly bullets: readonly KeyedBullet[];
 }
 
+type Statements = readonly PointContentWire['statements'][number][];
+
+/** Whether two lists hold the very same items in the same order. */
+function sameItems<T>(a: readonly T[], b: readonly T[]): boolean {
+  return a.length === b.length && a.every((item, i) => item === b[i]);
+}
+
 /**
  * The edit after a change to the bullets, `update` applied to the edit's own bullets (not
  * to what a render last showed, so two changes in one tick both stay), with the content
- * following them.
+ * following them. A change that leaves every bullet as it was (a refused add, a copy)
+ * hands back the very edit it was given, so the caller can tell nothing changed.
  */
 export function bulletsEdit(
   edit: Edit,
   update: (previous: readonly KeyedBullet[]) => KeyedBullet[],
 ): Edit {
   const bullets = update(edit.bullets);
+  if (sameItems(bullets, edit.bullets)) return edit;
   return { content: withPatch(edit.content, bulletsPatch(bullets)), bullets };
+}
+
+/**
+ * The edit after a change to the statements, `update` applied to the edit's own statements.
+ * Like `bulletsEdit`, a change that leaves every statement as it was hands back the very edit.
+ */
+export function statementsEdit(edit: Edit, update: (previous: Statements) => Statements): Edit {
+  const statements = update(edit.content.statements);
+  if (sameItems(statements, edit.content.statements)) return edit;
+  return { ...edit, content: withPatch(edit.content, { statements: [...statements] }) };
 }

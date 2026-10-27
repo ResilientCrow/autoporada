@@ -294,6 +294,45 @@ describe('SelectField and CheckboxField', () => {
   });
 });
 
+describe('SelectField with an issue of its own', () => {
+  const OPTIONS = [
+    { value: 'a', label: 'Alfa' },
+    { value: 'b', label: 'Beta' },
+  ];
+  const spec: FormSpec = { kind: { label: 'Druh' } };
+  const MESSAGE = 'Tuto volbu nelze uložit.';
+  const render = (issue?: string, issues: FormState['issues'] = null) =>
+    renderToStaticMarkup(
+      <Form id="c" spec={spec} state={idle(issues)}>
+        <SelectField name="kind" options={OPTIONS} description="Nápověda." issue={issue} />
+      </Form>,
+    );
+
+  it('shows the message and ties it to the select, after the description', () => {
+    const html = render(MESSAGE);
+    expect(html).toMatch(/<select [^>]*aria-invalid="true"/);
+    expect(html).toMatch(/<select [^>]*aria-describedby="c-kind-description c-kind-error"/);
+    expect(html).toMatch(new RegExp(`<div id="c-kind-error"[^>]*>.*${MESSAGE}`));
+    expect(html).toContain(`<span class="sr-only">${cs.form.errorPrefix} </span>`);
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('is clean without it', () => {
+    const html = render();
+    expect(html).not.toContain('aria-invalid=');
+    expect(html).not.toContain('c-kind-error');
+  });
+
+  it('shows its own message in place of the form issue for the same field', () => {
+    const html = render(MESSAGE, { kind: 'required' });
+    expect(html).toMatch(new RegExp(`<div id="c-kind-error"[^>]*>.*${MESSAGE}.*</div>`));
+    expect(html).not.toMatch(
+      new RegExp(`<div id="c-kind-error"[^>]*>(?:(?!</div>).)*${cs.fieldIssues.required}`),
+    );
+    expect(html.match(/id="c-kind-error"/g)).toHaveLength(1);
+  });
+});
+
 describe('FormProblem', () => {
   const PATH = encodeURIComponent('/uzivatele/u 1');
   const problems: readonly [Problem, string][] = [

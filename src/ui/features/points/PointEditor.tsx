@@ -38,8 +38,10 @@ import {
   withOpeningEdit,
   type OpeningContext,
 } from './opening-state';
-import { bulletsEdit, withPatch, type Edit, type Patch } from './report-patch';
-import { issuesAfter, issuesAfterRows, saveIssues } from './save-issues';
+import { bulletsEdit, statementsEdit, withPatch, type Edit, type Patch } from './report-patch';
+import { issuesAfter, issuesAfterRows, issuesAfterStatementRows, saveIssues } from './save-issues';
+import { Statements, type StatementsUpdate } from './Statements';
+import { withSyncedSpeakers } from './statements-state';
 
 export type SavePointAction = ServerAction<
   z.input<typeof savePointInput>,
@@ -142,9 +144,10 @@ export function PointEditor({
   const [asking, setAsking] = useState(false);
 
   // The one way in for a change, fields and bullets alike: a sentence the author has not
-  // edited is made again from the fields before it is shown and saved.
+  // edited is made again from the fields before it is shown and saved, and after a change to
+  // the bullets the statements' speakers follow the people they name.
   const apply = (changed: Edit) => {
-    const next = withOpeningEdit(changed, ctx);
+    const next = withSyncedSpeakers(latest.current, withOpeningEdit(changed, ctx), recents);
     latest.current = next;
     setEdit(next);
     autosave.onChange(next.content);
@@ -155,8 +158,19 @@ export function PointEditor({
   const changeBullets = (update: BulletsUpdate) => {
     const before = latest.current.bullets;
     const next = bulletsEdit(latest.current, update);
+    // A change that changes nothing (a refused add) is no change: nothing to save.
+    if (next === latest.current) return;
     apply(next);
     setRefused((previous) => issuesAfterRows(previous, before, next.bullets));
+  };
+
+  // A refusal names statements by their place too: adding, removing or moving retires those messages.
+  const changeStatements = (update: StatementsUpdate, rows: boolean) => {
+    const next = statementsEdit(latest.current, update);
+    // A change that changes nothing (a blur without an edit) is no change: nothing to save.
+    if (next === latest.current) return;
+    apply(next);
+    if (rows) setRefused((previous) => issuesAfterStatementRows(previous));
   };
 
   // Typing closes the question, so „Ano, nahradit“ never overwrites text typed after asking.
@@ -182,7 +196,11 @@ export function PointEditor({
   const issues = shown?.messages ?? NO_MESSAGES;
 
   return (
-    <Form id={EDITOR_FORM_ID} spec={editorSpec(bullets, spec)} state={state}>
+    <Form
+      id={EDITOR_FORM_ID}
+      spec={editorSpec(bullets, spec, content.statements.length)}
+      state={state}
+    >
       <AutosaveStatus {...autosave.status} />
       <dl>
         <dt className="font-bold">{points.editor.type}</dt>
@@ -228,8 +246,19 @@ export function PointEditor({
         }}
         onBlur={autosave.onBlur}
       />
+      <Statements
+        bullets={content.bullets}
+        statements={content.statements}
+        issues={issues}
+        readOnly={autosave.readOnly}
+        today={today}
+        recents={recents}
+        directory={directory}
+        onChange={changeStatements}
+        onBlur={autosave.onBlur}
+      />
       {shown?.notice ? <Notice tone="problem">{shown.notice}</Notice> : null}
-      {/* The statements follow the body; the readiness list and the submit button come last. */}
+      {/* The readiness list and the submit button come last. */}
     </Form>
   );
 }

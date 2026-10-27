@@ -5,7 +5,7 @@ import type { BulletSpec } from '@/domain/report';
 import { keyBullets, type KeyedBullet } from './bullet-chips';
 import { applyRowOp, setPeople } from './bullets-state';
 import type { PointContentWire } from './fields';
-import { bulletsEdit, bulletsPatch, patchFor, withPatch } from './report-patch';
+import { bulletsEdit, bulletsPatch, patchFor, statementsEdit, withPatch } from './report-patch';
 
 const CONTENT: PointContentWire = {
   title: 'Exkurze',
@@ -166,5 +166,65 @@ describe('bulletsEdit', () => {
     const second = bulletsEdit(first, op('add'));
     expect(second.content.bullets[0]).toMatchObject({ people: [PERSON] });
     expect(second.content.bullets).toHaveLength(3);
+  });
+
+  // A change that changes nothing is no change: no save follows it.
+  const same = (previous: readonly KeyedBullet[]) => [...previous];
+
+  it('hands bulletsEdit’s very edit back when the bullets come out the same', () => {
+    expect(bulletsEdit(START, same)).toBe(START);
+    expect(bulletsEdit(START, (previous) => previous as KeyedBullet[])).toBe(START);
+  });
+
+  it('hands bulletsEdit’s very edit back for a refused add or restore', () => {
+    const full = bulletsEdit(START, (b) => {
+      const refused = applyRowOp(b, SPEC, { kind: 'restore', key: 'ucastnici' });
+      return refused.ok ? refused.bullets : [...b];
+    });
+    expect(full).toBe(START);
+  });
+
+  it('still changes when one bullet is another object', () => {
+    const next = bulletsEdit(START, (b) =>
+      setPeople(b, 'organizatori', [{ key: 'k', person: PERSON }]),
+    );
+    expect(next).not.toBe(START);
+  });
+});
+
+describe('statementsEdit', () => {
+  const A = { speaker: null, speakerGenitive: '', quote: 'A' };
+  const B = { speaker: null, speakerGenitive: '', quote: 'B' };
+  const edit = { content: { ...CONTENT, statements: [A, B] }, bullets: keyBullets([]) };
+
+  it('puts the statements into the content, leaving the bullets and the rest as they were', () => {
+    const next = statementsEdit(edit, (previous) => [...previous, A]);
+    expect(next.content.statements).toEqual([A, B, A]);
+    expect(next.content.title).toBe(CONTENT.title);
+    expect(next.bullets).toBe(edit.bullets);
+    expect(edit.content.statements).toEqual([A, B]);
+  });
+
+  it('applies the change to the edit’s own statements', () => {
+    const first = statementsEdit(edit, (previous) => previous.toSpliced(0, 1));
+    const second = statementsEdit(first, (previous) => [...previous, B]);
+    expect(second.content.statements).toEqual([B, B]);
+  });
+
+  it('hands back the very edit when the update returns the same statements', () => {
+    expect(statementsEdit(edit, (previous) => previous as typeof edit.content.statements)).toBe(
+      edit,
+    );
+  });
+
+  it('hands back the very edit when the update returns a copy with the same statements', () => {
+    expect(statementsEdit(edit, (previous) => [...previous])).toBe(edit);
+  });
+
+  it('changes when one statement is another object or the order differs', () => {
+    expect(statementsEdit(edit, (previous) => [{ ...A }, previous[1] as typeof A])).not.toBe(edit);
+    expect(
+      statementsEdit(edit, (previous) => [previous[1] as typeof A, previous[0] as typeof A]),
+    ).not.toBe(edit);
   });
 });

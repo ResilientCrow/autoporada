@@ -3,6 +3,7 @@ import { points } from '@/ui/copy';
 import type { FormSpec, FormState } from '@/ui/form';
 
 import { bulletTitle, isCustom, removable, type Bullet } from './bullets-state';
+import type { StatementControl } from './statements-state';
 
 export const EDITOR_FORM_ID = 'bod';
 
@@ -22,6 +23,28 @@ export type BulletPart = 'people' | 'order' | 'text' | 'label';
 /** The name of one control of the bullet at `index`; its id is `fieldId(EDITOR_FORM_ID, name)`. */
 export function bulletField(index: number, part: BulletPart): string {
   return `bullets.${index}.${part}`;
+}
+
+/** What a statement's controls are called: the tail of the path readiness reports (`statements.0.quote`), and the ids of its buttons. */
+export type StatementPart =
+  'speaker' | 'speakerGenitive' | 'affiliation' | 'quote' | StatementControl;
+
+/** The name of one control of the statement at `index`; its id is `fieldId(EDITOR_FORM_ID, name)`. */
+export function statementField(index: number, part: StatementPart): string {
+  return `statements.${index}.${part}`;
+}
+
+/** The declarations of one statement's fields, in page order. */
+function statementFields(index: number): FormSpec {
+  return {
+    [statementField(index, 'speaker')]: { label: points.statements.speaker, required: true },
+    [statementField(index, 'speakerGenitive')]: {
+      label: points.statements.genitive,
+      required: true,
+    },
+    [statementField(index, 'affiliation')]: { label: points.statements.affiliation },
+    [statementField(index, 'quote')]: { label: points.statements.quote, required: true },
+  };
 }
 
 /** The declarations of one bullet's controls, in page order. */
@@ -49,17 +72,20 @@ function bulletFields(
  * The report editor's fields, in page order. A draft may be unfinished, so nothing
  * here is enforced: the title and the first date carry no „(nepovinné)“ because
  * submitting asks for them (readiness). The bullets are the draft's own, so the spec
- * follows them: `spec` is the type's, which says which are required.
+ * follows them: `spec` is the type's, which says which are required. The statements
+ * (`statements` of them) follow the body.
  */
 export function editorSpec(
   bullets: readonly Bullet<unknown>[],
   spec: readonly BulletSpec[],
+  statements = 0,
 ): FormSpec {
   return {
     ...BEFORE_BULLETS,
     ...Object.assign({}, ...bullets.map((bullet, i) => bulletFields(bullet, i, spec))),
     opening: { label: points.opening.label, required: true },
     body: { label: points.editor.body },
+    ...Object.assign({}, ...Array.from({ length: statements }, (_, i) => statementFields(i))),
   };
 }
 
