@@ -5,6 +5,7 @@ import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { PointEditor } from './PointEditor';
+import type * as UseSubmit from './use-submit';
 
 /**
  * What the editor does with the autosave hook's answer: the banner it mounts and the
@@ -13,12 +14,26 @@ import { PointEditor } from './PointEditor';
 const hook = vi.hoisted(() => ({
   phase: 'idle' as string,
   readOnly: false,
+  sending: false,
 }));
+
+// The press cannot happen in a node render, so a send in flight is set by hand as well.
+vi.mock('./use-submit', async (importOriginal) => {
+  const real = await importOriginal<typeof UseSubmit>();
+  return {
+    ...real,
+    useSubmit: (...args: Parameters<typeof real.useSubmit>) => ({
+      ...real.useSubmit(...args),
+      sending: hook.sending,
+    }),
+  };
+});
 
 vi.mock('@/ui/form', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useAutosave: () => ({
     readOnly: hook.readOnly,
+    afterLanded: () => Promise.resolve(null),
     onChange: () => undefined,
     onBlur: () => undefined,
     status: {
@@ -70,9 +85,10 @@ const CONTENT: Content = {
 type Phase =
   'idle' | 'dirty' | 'saving' | 'saved' | 'conflict' | 'locked' | 'gone' | 'failed' | 'signedOut';
 
-function page(phase: Phase, readOnly: boolean): string {
+function page(phase: Phase, readOnly: boolean, sending = false): string {
   hook.phase = phase;
   hook.readOnly = readOnly;
+  hook.sending = sending;
   return renderToStaticMarkup(
     <PointEditor
       id="0b0c1d2e-3f40-4152-8364-758697a8b9ca"
@@ -89,6 +105,7 @@ function page(phase: Phase, readOnly: boolean): string {
       recents={[]}
       directory="off"
       savePoint={never}
+      submitPoint={never}
       pointStatus={never}
     />,
   );
@@ -142,6 +159,7 @@ function openControls(form: string): string[] {
 beforeEach(() => {
   hook.phase = 'idle';
   hook.readOnly = false;
+  hook.sending = false;
 });
 
 describe('the editor while the autosave is waiting for the author', () => {
@@ -178,6 +196,20 @@ describe('the editor while the autosave is waiting for the author', () => {
       expect(form).not.toMatch(/\sreadonly=""|\sdisabled=""|aria-readonly/i);
     },
   );
+});
+
+describe('the editor while a submit is on its way', () => {
+  // Text typed after the press would be flushed on unmount against the old version, conflict
+  // and be lost, and the point would go in without it: the form holds still until it is answered.
+  it('makes every field read-only; only the pending submit button is left', () => {
+    const open = openControls(formOf(page('saved', false, true)));
+    expect(open).toHaveLength(1);
+    expect(open[0]).toContain('data-pending');
+  });
+
+  it('a send that is not on its way leaves the fields editable', () => {
+    expect(openControls(formOf(page('saved', false, false))).length).toBeGreaterThan(10);
+  });
 });
 
 describe('the editor with a banner', () => {

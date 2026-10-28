@@ -1,3 +1,4 @@
+import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,6 +8,7 @@ import { cspMarkupProblems } from '../../../test/support/markup';
 
 import {
   CheckboxField,
+  ErrorSummary,
   Form,
   FormProblem,
   LiveStatus,
@@ -23,6 +25,10 @@ import {
 import { retryAfterText } from './settle';
 
 const nav = vi.hoisted(() => ({ search: '' }));
+const reveal = vi.hoisted(() => ({ calls: [] as unknown[] }));
+vi.mock('./reveal-and-focus', () => ({
+  revealAndFocus: (element: unknown) => reveal.calls.push(element),
+}));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/uzivatele/u 1',
   useSearchParams: () => new URLSearchParams(nav.search),
@@ -511,5 +517,80 @@ describe('StepUpNotice', () => {
 
   it('has clean markup', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+});
+
+describe('ErrorSummary entries', () => {
+  /** The keys React reconciles the entries by: the summary has no hooks, so it can be called. */
+  function keysOf(items: readonly { id: string | null; text: string }[]): (string | null)[] {
+    const keys: (string | null)[] = [];
+    const walk = (node: ReactNode) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!isValidElement(node)) return;
+      const element = node as ReactElement<{ children?: ReactNode }>;
+      if (element.type === 'ul') {
+        const children = element.props.children;
+        for (const child of Array.isArray(children) ? children : [children])
+          if (isValidElement(child)) keys.push(child.key);
+        return;
+      }
+      walk(element.props.children);
+    };
+    walk(ErrorSummary({ items, summaryRef: null }));
+    return keys;
+  }
+
+  it('keys entries that lead to the same control apart', () => {
+    const keys = keysOf([
+      { id: 'f-people', text: 'U osoby A zvolte oslovení.' },
+      { id: 'f-people', text: 'U osoby B zvolte oslovení.' },
+      { id: null, text: 'Přidejte vyjádření.' },
+      { id: null, text: 'Přidejte vyjádření.' },
+    ]);
+    expect(keys).toHaveLength(4);
+    expect(new Set(keys).size).toBe(4);
+  });
+
+  it('moves a linked entry to its control through revealAndFocus, and leaves a missing control alone', () => {
+    const control = { id: 'f-people' };
+    const preventDefault = vi.fn();
+    vi.stubGlobal('document', {
+      getElementById: (id: string) => (id === 'f-people' ? control : null),
+    });
+    try {
+      const summary = ErrorSummary({
+        items: [
+          { id: 'f-people', text: 'A' },
+          { id: 'f-gone', text: 'B' },
+        ],
+        summaryRef: null,
+      });
+      const entries: ReactElement<{ id: string; text: string }>[] = [];
+      const collect = (node: ReactNode) => {
+        if (Array.isArray(node)) return node.forEach(collect);
+        if (!isValidElement(node)) return;
+        const element = node as ReactElement<{ children?: ReactNode; id?: string; text?: string }>;
+        if (typeof element.type === 'function' && element.props.text !== undefined)
+          entries.push(element as never);
+        else collect(element.props.children);
+      };
+      collect(summary);
+      const click = (entry: ReactElement<{ id: string; text: string }>) => {
+        const item = (entry.type as (props: unknown) => ReactElement<{ children: ReactElement }>)(
+          entry.props,
+        );
+        const link = item.props.children as ReactElement<{ onClick: (e: unknown) => void }>;
+        link.props.onClick({ preventDefault });
+      };
+      reveal.calls.length = 0;
+      click(entries[0] as never);
+      expect(reveal.calls).toEqual([control]);
+      expect(preventDefault).toHaveBeenCalledOnce();
+      click(entries[1] as never);
+      expect(reveal.calls).toEqual([control]);
+      expect(preventDefault).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

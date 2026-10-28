@@ -11,8 +11,6 @@ import { REVEAL_EVENT, revealSteps } from './focus-target';
  * Call it from an event handler (such as a readiness link's click), never from an effect: the
  * toggle's `reveal` listener switches the pane with `flushSync`, which React allows only
  * outside rendering and effects.
- *
- * @public Row 36's readiness links are its first consumer.
  */
 export function revealAndFocus(element: HTMLElement): void {
   const closed: HTMLDetailsElement[] = [];

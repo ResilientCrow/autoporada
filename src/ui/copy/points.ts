@@ -1,6 +1,42 @@
 import type { Campus } from '@/domain/cs';
-import type { PointKind } from '@/domain/report';
+import type { Params, PointKind, ProblemCode, Warning } from '@/domain/report';
 import type { PointState } from '@/domain/review';
+
+const word = (params: Params, key: string): string => String(params[key]);
+const words = (params: Params, key: string): string => {
+  const value = params[key];
+  return Array.isArray(value) ? value.join(', ') : String(value);
+};
+
+/** What each readiness problem says; a new code in the domain fails the type check until it is written here. */
+const PROBLEM: Readonly<Record<ProblemCode, (params: Params) => string>> = {
+  'title-required': () => 'Vyplňte název.',
+  'body-required': () => 'Vyplňte text návrhu.',
+  'body-too-long': () => 'Text je příliš dlouhý.',
+  'event-date-required': () => 'Vyplňte datum začátku.',
+  'time-to-without-from': () => 'Vyplňte také čas od.',
+  'time-to-before-from': () => 'Čas do musí být později než čas od.',
+  'opening-required': () => 'Úvodní věta nesmí být prázdná.',
+  'label-required': (p) => `Pojmenujte řádek č.\u00A0${word(p, 'n')}.`,
+  'people-required': (p) => `Doplňte alespoň jednu osobu do řádku „${word(p, 'label')}“.`,
+  'text-required': (p) => `Vyplňte řádek „${word(p, 'label')}“.`,
+  'people-none': () => 'Doplňte alespoň jednu osobu.',
+  'person-name-required': (p) =>
+    `Doplňte příjmení u osoby č.\u00A0${word(p, 'position')} v\u00A0řádku „${word(p, 'label')}“.`,
+  'salutation-required': (p) => `U osoby ${word(p, 'name')} zvolte oslovení.`,
+  'class-stale': (p) => `Ověřte třídu u osob: ${words(p, 'names')}.`,
+  'statements-required': () => 'Přidejte alespoň jedno vyjádření.',
+  'speaker-required': (p) => `U vyjádření č.\u00A0${word(p, 'n')} zvolte, kdo mluví.`,
+  'genitive-required': (p) =>
+    `U vyjádření č.\u00A0${word(p, 'n')} vyplňte jméno mluvčího ve 2.\u00A0pádě.`,
+  'quote-required': (p) => `U vyjádření č.\u00A0${word(p, 'n')} vyplňte citaci.`,
+};
+
+/** What each readiness warning says; a new warning code in the domain fails the type check until it is written here. */
+const WARNING: Readonly<Record<Warning['code'], (params: Params) => string>> = {
+  // Not a problem: a speaker picked through „Jiná osoba…“ never was a participant.
+  'speaker-not-participant': (p) => `Mluvčí ${word(p, 'name')} není mezi účastníky.`,
+};
 
 /** „Body“: starting a point and the header and values of one point. */
 export const points = {
@@ -129,6 +165,18 @@ export const points = {
     omittedRows: (n: number) =>
       `Prázdné nebo nepojmenované řádky se v\u00A0náhledu nezobrazí: ${n}.`,
     omittedStatements: (n: number) => `Neúplná vyjádření se v\u00A0náhledu nezobrazí: ${n}.`,
+  },
+  /** The list under the form and the button that hands the point in (design sections 6 and 9). */
+  readiness: {
+    heading: 'Před odesláním',
+    ok: 'Vše potřebné je vyplněno.',
+    problems: 'Chybí nebo nesedí',
+    warnings: 'Stojí za kontrolu',
+    problem: (code: ProblemCode, params: Params) => PROBLEM[code](params),
+    warning: (code: Warning['code'], params: Params) => WARNING[code](params),
+  },
+  submit: {
+    button: 'Odeslat ke kontrole',
   },
   /** Below the wide layout the form and the preview take turns. */
   layout: {

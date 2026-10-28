@@ -40,10 +40,13 @@ import {
   type OpeningContext,
 } from './opening-state';
 import { LayoutToggle } from './LayoutToggle';
+import { SubmitPanel } from './SubmitPanel';
 import { bulletsEdit, statementsEdit, withPatch, type Edit, type Patch } from './report-patch';
 import { issuesAfter, issuesAfterRows, issuesAfterStatementRows, saveIssues } from './save-issues';
 import { Statements, type StatementsUpdate } from './Statements';
 import { withSyncedSpeakers } from './statements-state';
+import { readOnlyWhile } from './submit-press';
+import { useSubmit, type SubmitPointAction } from './use-submit';
 
 export type SavePointAction = ServerAction<
   z.input<typeof savePointInput>,
@@ -81,6 +84,7 @@ export function PointEditor({
   recents,
   directory,
   savePoint,
+  submitPoint,
   pointStatus,
 }: {
   readonly id: string;
@@ -94,13 +98,14 @@ export function PointEditor({
   readonly titleGender: TitleGender | null;
   /** The day the people's classes are worked out for. */
   readonly today: CalDate;
-  /** Today's school year („2026/2027“), a stand-in for the preview until the loader knows the placement Monday. */
+  /** Today's school year („2026/2027“): the one the submit's readiness checks the classes against. */
   readonly schoolYear: string;
   /** The people this author put on their latest points, to offer first. */
   readonly recents: readonly RecentPerson[];
   /** Whether the school directory is searched at all (`DIRECTORY=off` is `off`). */
   readonly directory: Directory;
   readonly savePoint: SavePointAction;
+  readonly submitPoint: SubmitPointAction;
   readonly pointStatus: PointStatusAction;
 }) {
   const router = useRouter();
@@ -143,6 +148,18 @@ export function PointEditor({
     status,
     onRefresh,
   });
+  // „Odeslat ke kontrole“ is never disabled for what is missing: a press with problems lists them
+  // (the client's own check first, the server's as the backstop). The form holds still while a send is
+  // on its way.
+  const submit = useSubmit({
+    id,
+    spec,
+    schoolYear,
+    latest,
+    submitPoint,
+    afterLanded: autosave.afterLanded,
+  });
+  const readOnly = readOnlyWhile(autosave.readOnly, submit.sending);
 
   const ctx: OpeningContext = { titleGender, spec };
   // What the fields made when the text became the author's or when they chose to keep it,
@@ -201,74 +218,90 @@ export function PointEditor({
 
   // Inline only: the form's own issues would lead with the error summary and take focus.
   const shown = refused === null ? null : saveIssues(refused, content, spec);
-  const state = { ...EDITOR_FORM_STATE, problem: shown?.problem ?? null };
+  const state = {
+    ...EDITOR_FORM_STATE,
+    problem: submit.problem ?? shown?.problem ?? null,
+    attempt: submit.problemAttempt,
+  };
   const issues = shown?.messages ?? NO_MESSAGES;
 
   const form = (
-    <Form
-      id={EDITOR_FORM_ID}
-      spec={editorSpec(bullets, spec, content.statements.length)}
-      state={state}
-    >
-      <AutosaveStatus {...autosave.status} />
-      <dl>
-        <dt className="font-bold">{points.editor.type}</dt>
-        <dd>{typeLabel}</dd>
-      </dl>
-      <ReportFields
-        content={content}
-        issues={issues}
-        readOnly={autosave.readOnly}
-        onChange={change}
-        onBlur={autosave.onBlur}
-      />
-      <Bullets
-        bullets={bullets}
-        spec={spec}
-        issues={issues}
-        readOnly={autosave.readOnly}
-        today={today}
-        recents={recents}
-        directory={directory}
-        onChange={changeBullets}
-        onBlur={autosave.onBlur}
-      />
-      <OpeningSentence
-        text={content.opening}
-        stale={noticeShown(content, ctx, basis)}
-        asking={asking}
-        issue={issues['opening']}
-        readOnly={autosave.readOnly}
-        onType={typeOpening}
-        onAsk={() => setAsking(true)}
-        onReplace={replaceOpening}
-        onKeep={keepOpening}
-        onBlur={autosave.onBlur}
-      />
-      <BodyField
-        text={bodyInput}
-        issue={issues['body']}
-        readOnly={autosave.readOnly}
-        onChange={(text, body) => {
-          setBodyInput(text);
-          change({ body });
-        }}
-        onBlur={autosave.onBlur}
-      />
-      <Statements
-        bullets={content.bullets}
-        statements={content.statements}
-        issues={issues}
-        readOnly={autosave.readOnly}
-        today={today}
-        recents={recents}
-        directory={directory}
-        onChange={changeStatements}
-        onBlur={autosave.onBlur}
-      />
-      {shown?.notice ? <Notice tone="problem">{shown.notice}</Notice> : null}
-      {/* The readiness list and the submit button come last. */}
-    </Form>
+    <div className="bar-room">
+      <Form
+        id={EDITOR_FORM_ID}
+        spec={editorSpec(bullets, spec, content.statements.length)}
+        state={state}
+      >
+        <AutosaveStatus {...autosave.status} />
+        <dl>
+          <dt className="font-bold">{points.editor.type}</dt>
+          <dd>{typeLabel}</dd>
+        </dl>
+        <ReportFields
+          content={content}
+          issues={issues}
+          readOnly={readOnly}
+          onChange={change}
+          onBlur={autosave.onBlur}
+        />
+        <Bullets
+          bullets={bullets}
+          spec={spec}
+          issues={issues}
+          readOnly={readOnly}
+          today={today}
+          recents={recents}
+          directory={directory}
+          onChange={changeBullets}
+          onBlur={autosave.onBlur}
+        />
+        <OpeningSentence
+          text={content.opening}
+          stale={noticeShown(content, ctx, basis)}
+          asking={asking}
+          issue={issues['opening']}
+          readOnly={readOnly}
+          onType={typeOpening}
+          onAsk={() => setAsking(true)}
+          onReplace={replaceOpening}
+          onKeep={keepOpening}
+          onBlur={autosave.onBlur}
+        />
+        <BodyField
+          text={bodyInput}
+          issue={issues['body']}
+          readOnly={readOnly}
+          onChange={(text, body) => {
+            setBodyInput(text);
+            change({ body });
+          }}
+          onBlur={autosave.onBlur}
+        />
+        <Statements
+          bullets={content.bullets}
+          statements={content.statements}
+          issues={issues}
+          readOnly={readOnly}
+          today={today}
+          recents={recents}
+          directory={directory}
+          onChange={changeStatements}
+          onBlur={autosave.onBlur}
+        />
+        {shown?.notice ? <Notice tone="problem">{shown.notice}</Notice> : null}
+        <SubmitPanel
+          kind="report"
+          content={content}
+          spec={spec}
+          schoolYear={schoolYear}
+          summary={submit.summary}
+          attempt={submit.summaryAttempt}
+          pending={submit.sending}
+          held={autosave.readOnly}
+          onSubmit={() => void submit.press()}
+        />
+      </Form>
+    </div>
   );
   return (
     <LayoutToggle form={form} preview={<Preview content={content} schoolYear={schoolYear} />} />

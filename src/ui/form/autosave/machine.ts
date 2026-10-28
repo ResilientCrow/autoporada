@@ -55,7 +55,11 @@ export type AutosaveEvent<C> =
   | { readonly type: 'retry' }
   | { readonly type: 'keepMine' }
   | { readonly type: 'reload' }
-  | { readonly type: 'leave' };
+  | { readonly type: 'leave' }
+  /** A call that needs the saved version („Odeslat ke kontrole“, „Stáhnout“): what is unsent goes out first. */
+  | { readonly type: 'submit' }
+  /** The server's answer to that call; only the ones that move the editor out of the way matter here. */
+  | { readonly type: 'submitted'; readonly answer: SaveAnswer; readonly at: WallTime };
 
 export function initialState<C>(version: number): AutosaveState<C> {
   return {
@@ -210,6 +214,24 @@ function flushed<C>(s: AutosaveState<C>, a: SaveAnswer, at: WallTime): Step<C> {
   return stay({ ...s, unsent: true });
 }
 
+/** A refresh or a call after the save first sends what is unsent, from the states that hold unsent text. */
+function flushing<C>(s: AutosaveState<C>): {
+  readonly state: AutosaveState<C>;
+  readonly flush: readonly Effect<C>[];
+} {
+  const saveable = s.phase === 'dirty' || s.phase === 'saving' || s.phase === 'failed';
+  const flush = saveable ? flushOf(s) : [];
+  return { state: flush.length > 0 ? { ...s, unsent: false } : s, flush };
+}
+
+/** The answers to such a call that stop the editor like the same answers to a save. */
+const SUBMIT_HALTS: ReadonlySet<SaveAnswer['kind']> = new Set([
+  'conflict',
+  'not-editable',
+  'gone',
+  'unauthenticated',
+]);
+
 /** Every change of state, with what the hook must do about it (timers, calls, flushes). */
 export function step<C>(s: AutosaveState<C>, e: AutosaveEvent<C>): Step<C> {
   switch (e.type) {
@@ -243,13 +265,17 @@ export function step<C>(s: AutosaveState<C>, e: AutosaveEvent<C>): Step<C> {
         ? send({ ...s, attempt: 0, version: s.serverVersion ?? s.version })
         : stay(s);
     case 'reload': {
-      const saveable = s.phase === 'dirty' || s.phase === 'saving' || s.phase === 'failed';
-      const flush = saveable ? flushOf(s) : [];
-      return {
-        state: flush.length > 0 ? { ...s, unsent: false } : s,
-        effects: [...flush, { type: 'refresh' }],
-      };
+      const { state, flush } = flushing(s);
+      return { state, effects: [...flush, { type: 'refresh' }] };
     }
+    case 'submit': {
+      const { state, flush } = flushing(s);
+      return { state, effects: flush };
+    }
+    case 'submitted':
+      return SUBMIT_HALTS.has(e.answer.kind)
+        ? answered({ ...s, phase: 'saving' }, e.answer, e.at)
+        : stay(s);
     case 'leave': {
       const flush = NO_SAVE.has(s.phase) ? [] : flushOf(s);
       return { state: flush.length > 0 ? { ...s, unsent: false } : s, effects: flush };

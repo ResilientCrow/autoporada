@@ -2,6 +2,7 @@ export { AutosaveStatus, useAutosave, type SaveAnswer, type StatusAnswer } from 
 export type { FormState } from './context';
 export { Form } from './Form';
 export { CheckboxField } from './CheckboxField';
+export { ErrorSummary } from './ErrorSummary';
 export { FormProblem } from './FormProblem';
 export { LiveStatus } from './LiveStatus';
 export { NativeFieldError } from './native-field';
@@ -18,7 +19,6 @@ export { SubmitButton } from './SubmitButton';
 export { useActionForm } from './use-action-form';
 export { useHydrated } from './use-hydrated';
 export { REVEAL_EVENT } from './focus-target';
-/** @public Row 36's readiness links are its first consumer. */
 export { revealAndFocus } from './reveal-and-focus';
 export { useFocusFirstOnRise, useFocusOnRise } from './use-focus-on-rise';
-export { choiceOf, fieldId, flagOf, textOf, type FormSpec } from './spec';
+export { choiceOf, fieldId, flagOf, textOf, type FormSpec, type SummaryEntry } from './spec';

@@ -5,25 +5,19 @@ import type { MouseEvent, Ref } from 'react';
 import { form } from '@/ui/copy';
 import { Icon } from '@/ui/kit';
 
+import { revealAndFocus } from './reveal-and-focus';
 import type { SummaryEntry } from './spec';
 
 /**
- * A linked entry scrolls the field's label into view, then focuses the control
- * without a second scroll. An unlinked one (a path the spec lacks) is plain text.
+ * A linked entry moves focus to its control, opening what hides it first (a closed `<details>`,
+ * the phone layout's hidden pane). An unlinked one (a path the spec lacks) is plain text.
  */
 function SummaryItem({ id, text }: SummaryEntry) {
   function focusControl(event: MouseEvent<HTMLAnchorElement>) {
     const control = id === null ? null : document.getElementById(id);
     if (control === null) return;
     event.preventDefault();
-    const label =
-      control instanceof HTMLInputElement ||
-      control instanceof HTMLTextAreaElement ||
-      control instanceof HTMLSelectElement
-        ? control.labels?.[0]
-        : undefined;
-    (label ?? control).scrollIntoView({ block: 'center' });
-    control.focus({ preventScroll: true });
+    revealAndFocus(control);
   }
 
   if (id === null) return <li>{text}</li>;
@@ -61,8 +55,9 @@ export function ErrorSummary({
         </h2>
         <ul className="list-disc pl-6">
           {items.map((item, i) => (
-            // Unlinked entries can share a generic text; ids are unique.
-            <SummaryItem key={item.id ?? `unlinked-${i}`} id={item.id} text={item.text} />
+            // Entries can share an id (the people of one row lead to the row's one control) or a
+            // text; the position tells them apart.
+            <SummaryItem key={`${i}:${String(item.id)}`} id={item.id} text={item.text} />
           ))}
         </ul>
       </div>

@@ -100,6 +100,8 @@ export function useAutosave<C>({ initialVersion, save, status, onRefresh }: Auto
 
   return {
     readOnly: isReadOnly(state.phase),
+    /** Runs a call (submit, withdraw) once everything typed has been saved, with the version it landed on; null while a banner holds the editor. */
+    afterLanded: runner.afterLanded,
     onChange,
     onBlur,
     status: {

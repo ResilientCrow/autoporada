@@ -2,6 +2,7 @@ import type { WallTime } from '@/domain/time';
 
 import {
   initialState,
+  isReadOnly,
   step,
   type AutosaveEvent,
   type AutosaveState,
@@ -24,6 +25,15 @@ export interface Runner<C> {
   readonly stop: () => void;
   /** Swaps the calls the page owns (its latest closures); timers and state carry on. */
   readonly use: (calls: Pick<Ports<C>, 'save' | 'status' | 'refresh'>) => void;
+  /**
+   * Runs `send` (the page's own call: submit, withdraw) once what is unsent and any save in flight
+   * have landed, with the version they brought, so a pending autosave never turns it into a conflict.
+   * Its answer goes to the machine like a save's and comes back. Resolves null, sending nothing,
+   * while a banner holds the editor read-only and after `stop`; a throw is a failed answer.
+   */
+  readonly afterLanded: (
+    send: (expectedVersion: number) => Promise<SaveAnswer>,
+  ) => Promise<SaveAnswer | null>;
 }
 
 const FAILED: SaveAnswer = { kind: 'failed' };
@@ -83,11 +93,34 @@ export function createRunner<C>(initialPorts: Ports<C>, version: number): Runner
     void done.then(() => flushes.delete(done));
   }
 
-  function refresh(): void {
+  /** Everything sent so far: the flushes and the save in flight. */
+  function landed(): Promise<unknown> {
     const pending = [...flushes];
     if (inFlight !== null) pending.push(inFlight.then(() => undefined));
-    if (pending.length === 0) ports.refresh();
-    else void Promise.all(pending).then(() => ports.refresh());
+    return Promise.all(pending);
+  }
+
+  function refresh(): void {
+    const pending = flushes.size + (inFlight === null ? 0 : 1);
+    if (pending === 0) ports.refresh();
+    else void landed().then(() => ports.refresh());
+  }
+
+  async function afterLanded(
+    send: (expectedVersion: number) => Promise<SaveAnswer>,
+  ): Promise<SaveAnswer | null> {
+    if (!running || isReadOnly(state.phase)) return null;
+    dispatch({ type: 'submit' });
+    await landed();
+    if (!running) return null;
+    let answer: SaveAnswer;
+    try {
+      answer = await send(state.version);
+    } catch {
+      answer = FAILED;
+    }
+    dispatch({ type: 'submitted', answer, at: ports.now() });
+    return answer;
   }
 
   function dispatch(event: AutosaveEvent<C>): void {
@@ -136,6 +169,7 @@ export function createRunner<C>(initialPorts: Ports<C>, version: number): Runner
     start: () => {
       running = true;
     },
+    afterLanded,
     use: (calls) => {
       ports = { ...ports, ...calls };
     },

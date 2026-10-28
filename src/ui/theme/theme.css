@@ -54,6 +54,29 @@
   width: var(--trigger-width);
 }
 
+/*
+ * A form that ends in the sticky `.submit-bar` (about 3.5rem high) keeps its controls clear of it when the
+ * browser scrolls one into view (Tab, a readiness link), which includes the fieldset of a people row and the error
+ * summary that links and a press move focus to. Scoped to the form's own controls: a margin on the
+ * page would also reach the gallery's search listbox (test/e2e/gallery.spec.ts).
+ */
+@utility bar-room {
+  &
+    :where(
+      input,
+      textarea,
+      select,
+      button,
+      summary,
+      a,
+      fieldset,
+      [tabindex],
+      [contenteditable]
+    ):not(.submit-bar *) {
+    scroll-margin-bottom: 5rem;
+  }
+}
+
 @layer base {
   html {
     color-scheme: light;

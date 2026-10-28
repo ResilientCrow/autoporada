@@ -13,6 +13,8 @@ function harness(version = 3) {
   const waiting: ((a: SaveAnswer) => void)[] = [];
   const statusWaiting: ((a: StatusAnswer) => void)[] = [];
   const refreshed: string[] = [];
+  const submits: Request[] = [];
+  let submitAnswer: SaveAnswer = { kind: 'ok', version: 99 };
   const runner: Runner<string> = createRunner<string>(
     {
       save: (request) => {
@@ -31,7 +33,16 @@ function harness(version = 3) {
     waiting.shift()?.(a);
     await vi.advanceTimersByTimeAsync(0);
   };
-  return { runner, calls, answer, statusWaiting, refreshed };
+  const answerSubmit = (a: SaveAnswer) => {
+    submitAnswer = a;
+  };
+  /** What the page does: closes over its content and sends it with the version the flush brought. */
+  const afterLanded = (content: string) =>
+    runner.afterLanded((expectedVersion) => {
+      submits.push({ content, expectedVersion });
+      return Promise.resolve(submitAnswer);
+    });
+  return { runner, calls, answer, statusWaiting, refreshed, submits, answerSubmit, afterLanded };
 }
 
 const change = (runner: Runner<string>, content: string) =>
@@ -147,6 +158,92 @@ describe('the conflict path', () => {
     expect(calls).toEqual([{ content: 'a', expectedVersion: 3 }]);
     await answer({ kind: 'ok', version: 4 });
     expect(refreshed).toEqual(['refresh']);
+  });
+});
+
+describe('sending after what is typed has landed', () => {
+  it('sends the content at once when nothing is unsent', async () => {
+    const { afterLanded, submits } = harness();
+    const answer = await afterLanded('a');
+    expect(submits).toEqual([{ content: 'a', expectedVersion: 3 }]);
+    expect(answer).toEqual({ kind: 'ok', version: 99 });
+  });
+
+  it('waits for the flush of what was typed last and uses the version it brought', async () => {
+    const { runner, afterLanded, calls, answer, submits } = harness();
+    change(runner, 'a');
+    const done = afterLanded('ab');
+    expect(calls).toEqual([{ content: 'a', expectedVersion: 3 }]);
+    expect(submits).toEqual([]);
+    await answer({ kind: 'ok', version: 4 });
+    await done;
+    expect(submits).toEqual([{ content: 'ab', expectedVersion: 4 }]);
+  });
+
+  it('waits for a save in flight', async () => {
+    const { runner, afterLanded, answer, submits } = harness();
+    change(runner, 'a');
+    runner.dispatch({ type: 'blur' });
+    const done = afterLanded('a');
+    expect(submits).toEqual([]);
+    await answer({ kind: 'ok', version: 4 });
+    await done;
+    expect(submits).toEqual([{ content: 'a', expectedVersion: 4 }]);
+  });
+
+  it('is refused while a banner holds the editor read-only', async () => {
+    const { runner, afterLanded, answer, statusWaiting, submits } = harness();
+    change(runner, 'a');
+    runner.dispatch({ type: 'blur' });
+    await answer({ kind: 'conflict' });
+    statusWaiting.shift()?.({ kind: 'ok', version: 9, editable: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runner.state().phase).toBe('conflict');
+    expect(await afterLanded('a')).toBeNull();
+    expect(submits).toEqual([]);
+  });
+
+  it('a conflict on the submit asks the status and ends in the conflict banner', async () => {
+    const { afterLanded, runner, statusWaiting, answerSubmit } = harness();
+    answerSubmit({ kind: 'conflict' });
+    expect(await afterLanded('a')).toEqual({ kind: 'conflict' });
+    expect(statusWaiting).toHaveLength(1);
+    statusWaiting.shift()?.({ kind: 'ok', version: 9, editable: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runner.state()).toMatchObject({ phase: 'conflict', serverVersion: 9 });
+  });
+
+  it('after a stop it sends nothing', async () => {
+    const { runner, afterLanded, submits } = harness();
+    runner.stop();
+    expect(await afterLanded('a')).toBeNull();
+    expect(submits).toEqual([]);
+  });
+
+  it('answers failed when the send throws or rejects, and tells the machine', async () => {
+    const { runner } = harness();
+    expect(
+      await runner.afterLanded(() => {
+        throw new Error('boom');
+      }),
+    ).toEqual({ kind: 'failed' });
+    expect(await runner.afterLanded(() => Promise.reject(new Error('boom')))).toEqual({
+      kind: 'failed',
+    });
+    expect(runner.state().phase).toBe('idle');
+  });
+
+  it('hands the send the version it landed on and the answer back, for any call', async () => {
+    const { runner, answer } = harness();
+    change(runner, 'a');
+    let seen = -1;
+    const done = runner.afterLanded((version) => {
+      seen = version;
+      return Promise.resolve({ kind: 'ok', version: version + 1 });
+    });
+    await answer({ kind: 'ok', version: 7 });
+    expect(await done).toEqual({ kind: 'ok', version: 8 });
+    expect(seen).toBe(7);
   });
 });
 

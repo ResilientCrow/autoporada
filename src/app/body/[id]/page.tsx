@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { pointStatus, savePoint } from '@/server/actions';
+import { pointStatus, savePoint, submitPoint } from '@/server/actions';
 import { pointPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, points } from '@/ui/copy';
 import { PointScreen } from '@/ui/features/points';
@@ -22,7 +22,12 @@ export default async function PointPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/body" width="wide">
-      <PointScreen point={model} savePoint={savePoint} pointStatus={pointStatus} />
+      <PointScreen
+        point={model}
+        savePoint={savePoint}
+        submitPoint={submitPoint}
+        pointStatus={pointStatus}
+      />
     </Shell>
   );
 }

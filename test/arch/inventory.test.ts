@@ -91,6 +91,21 @@ describe('inventory of entry points', () => {
     expect(LIMITS.autosave).toEqual({ max: 120, windowMs: 60_000, key: 'user' });
   });
 
+  it('lets the submit refresh the page, under the submission limit', async () => {
+    const found: Record<string, unknown> = {};
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'action' && info.useCase.name === 'points.submit')
+          found[info.useCase.name] = [info.rateLimit, info.refresh];
+      }
+    }
+    // It moves the state, so the page remounts as the read view (ADR 0017 item 1).
+    expect(found).toEqual({
+      'points.submit': ['submission', 'page'],
+    });
+  });
+
   it('registers every use case exactly once, under a unique name', async () => {
     const defined = new Set<unknown>();
     for (const file of USE_CASE_MODULES) {

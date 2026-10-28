@@ -39,7 +39,15 @@ const failure: E = answer({ kind: 'failed' });
 const status = (a: StatusAnswer): E => ({ type: 'statused', answer: a });
 const ev = (
   type:
-    'blur' | 'hidden' | 'debounced' | 'retryElapsed' | 'retry' | 'keepMine' | 'reload' | 'leave',
+    | 'blur'
+    | 'hidden'
+    | 'debounced'
+    | 'retryElapsed'
+    | 'retry'
+    | 'keepMine'
+    | 'reload'
+    | 'leave'
+    | 'submit',
 ): E => ({ type });
 
 /** Runs events from `from`, returning the last state and every step's effects. */
@@ -448,6 +456,48 @@ describe('conflict, status and locked', () => {
   it('a refresh from a save in flight with nothing newer only refreshes', () => {
     expect(run([ev('reload')], at('saving')).last).toEqual([{ type: 'refresh' }]);
   });
+
+  it('a submit from a dirty or failed editor flushes what is unsent and asks for no refresh', () => {
+    for (const phase of ['dirty', 'failed'] as const) {
+      const { state, last } = run([ev('submit')], at(phase));
+      expect(last).toEqual([...stopTimers, { type: 'flush', content: 'a', expectedVersion: 3 }]);
+      expect(state.unsent).toBe(false);
+    }
+    expect(run([ev('submit')], at('saved')).last).toEqual([]);
+  });
+
+  it('a submit that the server answers with a conflict asks the status, like a save', () => {
+    const { state, last } = run(
+      [{ type: 'submitted', answer: { kind: 'conflict' }, at: AT }],
+      at('saved'),
+    );
+    expect(last).toEqual([{ type: 'status' }]);
+    expect(state).toMatchObject({ phase: 'saving', checking: true });
+    expect(run([status({ kind: 'ok', version: 9, editable: true })], state).state).toMatchObject({
+      phase: 'conflict',
+      serverVersion: 9,
+    });
+    expect(run([status({ kind: 'ok', version: 9, editable: false })], state).state.phase).toBe(
+      'locked',
+    );
+  });
+
+  it.each([
+    ['not-editable', 'locked'],
+    ['gone', 'gone'],
+    ['unauthenticated', 'signedOut'],
+  ] as const)('a submit answered %s halts as %s', (kind, phase) => {
+    const { state } = run([{ type: 'submitted', answer: { kind }, at: AT }], at('saved'));
+    expect(state.phase).toBe(phase);
+  });
+
+  it.each([{ kind: 'ok', version: 5 }, { kind: 'invalid' }, { kind: 'failed' }] as const)(
+    'a submit answered %o changes nothing here (the panel shows it)',
+    (answer) => {
+      const before = at('saved');
+      expect(run([{ type: 'submitted', answer, at: AT }], before).state).toEqual(before);
+    },
+  );
 
   it('keep mine and reload mean nothing outside their states', () => {
     for (const phase of [

@@ -4,6 +4,7 @@ import {
   createPoint as createPointUseCase,
   pointStatus as pointStatusUseCase,
   savePoint as savePointUseCase,
+  submitPoint as submitPointUseCase,
 } from '@/application/use-cases';
 
 import { defineAction } from '@/server/bind';
@@ -33,3 +34,12 @@ export const savePoint = defineAction(savePointUseCase, {
  * still be saved. A read, so the default refresh does nothing.
  */
 export const pointStatus = defineAction(pointStatusUseCase, { rateLimit: 'autosave' });
+
+/**
+ * „Odeslat ke kontrole“: saves the content and hands the point in. It moves the state, so it
+ * refreshes the page, which remounts as the read view; the editor's own client has already waited
+ * for its autosave to land (`useAutosave().submit`).
+ */
+export const submitPoint = defineAction(submitPointUseCase, {
+  rateLimit: 'submission',
+});

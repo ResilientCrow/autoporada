@@ -11,6 +11,7 @@ import type { PointContentWire } from './fields';
 import { PointEditor, type PointStatusAction, type SavePointAction } from './PointEditor';
 import { PointFacts, type PointFactsView } from './PointFacts';
 import { PointHeader } from './PointHeader';
+import type { SubmitPointAction } from './use-submit';
 
 /** What /body/[id] hands the screen: the header and read view values, and the editor's start when it shows. */
 export interface PointScreenModel {
@@ -43,10 +44,12 @@ interface PointEditorModel {
 export function PointScreen({
   point,
   savePoint,
+  submitPoint,
   pointStatus,
 }: {
   readonly point: PointScreenModel;
   readonly savePoint: SavePointAction;
+  readonly submitPoint: SubmitPointAction;
   readonly pointStatus: PointStatusAction;
 }) {
   // Proposals get their own fields with M8b; until then only a report is edited here.
@@ -75,6 +78,7 @@ export function PointScreen({
           recents={editor.recents}
           directory={editor.directory}
           savePoint={savePoint}
+          submitPoint={submitPoint}
           pointStatus={pointStatus}
         />
       )}

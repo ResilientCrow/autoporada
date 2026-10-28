@@ -72,6 +72,7 @@ const editorPage = (
       recents={[]}
       directory={directory}
       savePoint={never}
+      submitPoint={never}
       pointStatus={never}
     />,
   );
@@ -430,7 +431,9 @@ describe('PointScreen', () => {
     },
   };
   const screen = (point: Parameters<typeof PointScreen>[0]['point']) =>
-    renderToStaticMarkup(<PointScreen point={point} savePoint={never} pointStatus={never} />);
+    renderToStaticMarkup(
+      <PointScreen point={point} savePoint={never} submitPoint={never} pointStatus={never} />,
+    );
 
   it('shows the header and the editor to the author of a draft report', () => {
     const html = screen({ ...POINT, editor: EDITOR });
