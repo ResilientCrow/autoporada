@@ -1,4 +1,4 @@
-import type { Campus } from '@/domain/cs';
+import { countWord, type Campus, type PluralForms } from '@/domain/cs';
 import type { Params, PointContent, PointKind, ProblemCode, Warning } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 
@@ -38,6 +38,9 @@ const WARNING: Readonly<Record<Warning['code'], (params: Params) => string>> = {
   'speaker-not-participant': (p) => `Mluvčí ${word(p, 'name')} není mezi účastníky.`,
 };
 
+/** „bod“, „body“, „bodů“: the count on the Přehled card. */
+const POINT: PluralForms = { one: 'bod', few: 'body', many: 'bodů' };
+
 /** The fields a reviewer's edit can name, lower case: they follow „Upraveno kontrolou:“. Keys are the point content's, every one but the flag `openingEdited` (the type check holds them to it). */
 const EDITED_FIELD = {
   title: 'název',
@@ -53,6 +56,15 @@ const EDITED_FIELD = {
   statements: 'vyjádření',
 } as const satisfies Record<Exclude<keyof PointContent, 'openingEdited'>, string>;
 const EDITED_FIELDS: ReadonlyMap<string, string> = new Map(Object.entries(EDITED_FIELD));
+
+/** The headings of „Moje body“, in the order of the list. */
+const MINE_GROUP = {
+  returned: 'Vrácené k\u00A0úpravě',
+  draft: 'Rozpracované',
+  submitted: 'Čeká na kontrolu',
+  approved: 'Schválené',
+  closed: 'Zamítnuté a\u00A0zrušené',
+} as const;
 
 /** „Body“: starting a point and the header and values of one point. */
 export const points = {
@@ -212,6 +224,20 @@ export const points = {
       confirm: 'Rozumím, že bod nepůjde do porady.',
       unconfirmed: 'Potvrďte prosím, že bod nepůjde do porady.',
     },
+  },
+  /** „Moje body“: the author's own points, grouped by where they stand (design section 9). */
+  mine: {
+    title: 'Moje body',
+    group: MINE_GROUP,
+    /** Under an approved point; `date` is day and month, „16.\u00A03.“. */
+    placement: (date: string) => `Půjde do porady z\u00A0${date}`,
+    empty: 'Zatím tu nemáte žádný bod. Začněte tlačítkem Nový bod.',
+    older: 'Starší body',
+    /** A line of the Přehled card: the group, a colon and how many points, „Rozpracované: 2 body“. */
+    line: (group: keyof typeof MINE_GROUP, n: number) =>
+      `${MINE_GROUP[group]}: ${countWord(n, POINT)}`,
+    cardEmpty: 'Zatím tu nemáte žádný bod.',
+    all: 'Všechny moje body',
   },
   /** What happened to a point, newest first. Names no one. */
   timeline: {

@@ -1,10 +1,11 @@
 import type { z } from 'zod';
 
-import { issueWindow } from '@/application/use-cases';
+import type { UserPrincipal } from '@/application/ports';
+import { listMyPoints } from '@/application/use-cases';
 import type { issuesWindowOutput } from '@/contracts';
 import { formatNumericDate } from '@/domain/cs';
 import { can } from '@/domain/policy';
-import type { IssueStatus } from '@/domain/review';
+import type { IssueStatus, PointState } from '@/domain/review';
 import { addDays, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { getContainer } from '../container';
@@ -12,6 +13,7 @@ import { runRegistered } from '../pipeline';
 
 import { myStanding } from './my-access';
 import { orNotFound } from './not-found';
+import { readWindow, standingFrom, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
 /** How many Mondays the headmaster's strip shows. */
@@ -26,12 +28,24 @@ interface MeetingDay {
   readonly version: number | null;
 }
 
-/** What the home page needs beyond the viewer: a waiting user's standing on asking for access, or the headmaster's strip of meetings. */
+/** How many of the author's points stand in each state. */
+type PointCounts = Readonly<Record<PointState, number>>;
+
+/** The „Moje body“ card: the counts of the newest page of the author's points and the standing line. */
+interface MineModel {
+  readonly counts: PointCounts;
+  /** Where a new point goes and when that closes; null where no calendar is read. */
+  readonly standing: StandingModel | null;
+}
+
+/** What the home page needs beyond the viewer: a waiting user's standing on asking for access, or the headmaster's strip of meetings and the card of whoever may start points. */
 type HomePageModel =
   | {
       readonly kind: 'member';
       /** The next Mondays, for the one who may skip a meeting; null for everyone else. */
       readonly strip: readonly MeetingDay[] | null;
+      /** Null for whoever may not start a point, and where the list is refused. */
+      readonly mine: MineModel | null;
     }
   | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
 
@@ -51,19 +65,55 @@ function meetingStrip(window: z.output<typeof issuesWindowOutput>): readonly Mee
   });
 }
 
-/** The home page's model, or null for a visitor or a refusal. A pending user costs the standing lookup and the one who may skip a meeting costs the window read. */
+const NO_POINTS: PointCounts = {
+  draft: 0,
+  submitted: 0,
+  returned: 0,
+  approved: 0,
+  rejected: 0,
+  withdrawn: 0,
+  published: 0,
+};
+
+/** The author's newest page of points, counted by state; null where the list is refused. */
+async function pointCounts(viewer: UserPrincipal): Promise<PointCounts | null> {
+  const listed = orNotFound(
+    'points.listMine',
+    await runRegistered(getContainer(), listMyPoints, {
+      principal: viewer,
+      requestId: await requestId(),
+      input: {},
+    }),
+  );
+  if (listed === null) return null;
+  return listed.points.reduce(
+    (counts, { state }) => ({ ...counts, [state]: counts[state] + 1 }),
+    NO_POINTS,
+  );
+}
+
+/**
+ * The home page's model, or null for a visitor or a refusal. Whoever may start a point costs the
+ * window read (the standing line, and for the one who may skip a meeting the strip, from the same
+ * read) and the list of their points; neither refusal takes the page away from them but the
+ * strip's, which the headmaster's page cannot do without.
+ */
 export async function homePage(): Promise<HomePageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
   if (viewer.actor.role !== 'pending') {
-    if (!can(viewer.actor, { action: 'issue.generate' })) return { kind: 'member', strip: null };
-    const window = await runRegistered(getContainer(), issueWindow, {
-      principal: viewer,
-      requestId: await requestId(),
-      input: {},
-    }).then((result) => orNotFound('issues.window', result));
-    if (window === null) return null;
-    return { kind: 'member', strip: meetingStrip(window) };
+    if (!can(viewer.actor, { action: 'point.create' })) {
+      return { kind: 'member', strip: null, mine: null };
+    }
+    const [window, counts] = await Promise.all([readWindow(viewer), pointCounts(viewer)]);
+    const mayStrip = can(viewer.actor, { action: 'issue.generate' });
+    if (mayStrip && window === null) return null;
+    const now = getContainer().app.clock.now();
+    return {
+      kind: 'member',
+      strip: mayStrip && window !== null ? meetingStrip(window) : null,
+      mine: counts && { counts, standing: window && standingFrom(window, now) },
+    };
   }
   const standing = await myStanding(viewer);
   if (standing === null) return null;

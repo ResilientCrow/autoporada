@@ -12,6 +12,7 @@ export interface NavItem {
 /** Implemented routes only; each entry joins with its page. */
 export const NAV: readonly NavItem[] = [
   { href: '/', label: cs.nav.overview, check: null },
+  { href: '/body', label: cs.nav.points, check: { action: 'point.create' } },
   { href: '/pristup', label: cs.nav.access, check: { action: 'access.request' } },
   { href: '/uzivatele', label: cs.nav.users, check: { action: 'users.view' } },
 ];

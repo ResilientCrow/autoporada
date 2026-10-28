@@ -2,8 +2,14 @@ import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
 import { DEADLINE_RULE } from '@/application/core';
-import { getPoint, issueWindow, listPointTypes, recentPeopleOf } from '@/application/use-cases';
-import type { getPointOutput, issuesWindowOutput, listPointTypesOutput } from '@/contracts';
+import { getPoint, listMyPoints, listPointTypes, recentPeopleOf } from '@/application/use-cases';
+import {
+  toKnownIssues,
+  type getPointOutput,
+  type listMyPointsOutput,
+  type listPointTypesOutput,
+} from '@/contracts';
+import { placementMonday } from '@/domain/calendar';
 import { formatLongDate, formatTime, schoolYear, type Campus, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec, PointKind } from '@/domain/report';
@@ -14,12 +20,20 @@ import {
   type AuthorMove,
   type PointState,
 } from '@/domain/review';
-import { instantToWallClock, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
+import {
+  instantToWallClock,
+  parseIsoDate,
+  parseWallTime,
+  toIsoDate,
+  type CalDate,
+} from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
 import { orNotFound } from './not-found';
+import { first, type SearchParams } from './params';
+import { readWindow, standingOf, type MeetingWindow, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
 type Loaded = z.output<typeof getPointOutput>;
@@ -61,15 +75,6 @@ interface PointEditorModel {
   readonly readinessSchoolYear: string;
   readonly recents: readonly RecentPerson[];
   readonly directory: 'on' | 'off';
-}
-
-/** The meeting calendar as the standing line needs it: `issues.window`, the instant it was read and the deadline rule. */
-interface StandingModel {
-  readonly submitMonday: string;
-  readonly issues: z.output<typeof issuesWindowOutput>['issues'];
-  /** ISO instant. */
-  readonly now: string;
-  readonly rule: typeof DEADLINE_RULE;
 }
 
 /**
@@ -203,25 +208,6 @@ function movesOf(
   return AUTHOR_MOVES.filter((move) => allowed.includes(move));
 }
 
-/** Where a draft will go and when that porada closes. Missing (null) when the calendar is refused: the line is a convenience. */
-async function standingOf(viewer: UserPrincipal, now: Date): Promise<StandingModel | null> {
-  const window = orNotFound(
-    'issues.window',
-    await runRegistered(getContainer(), issueWindow, {
-      principal: viewer,
-      requestId: await requestId(),
-      input: {},
-    }),
-  );
-  if (window === null) return null;
-  return {
-    submitMonday: window.submitMonday,
-    issues: window.issues,
-    now: now.toISOString(),
-    rule: DEADLINE_RULE,
-  };
-}
-
 /**
  * One point's page, or null for a visitor or a refusal, a malformed id and an unknown or
  * foreign point included (404). The recent people are read only when the editor shows, and the
@@ -248,4 +234,79 @@ export async function pointPage(id: string): Promise<PointPageModel | null> {
   ]);
   const moves = movesOf(loaded, viewer.actor.role);
   return shaped(loaded, { recents, today, standing, moves });
+}
+
+/** A line of „Moje body“, as the page draws it. */
+interface MyPointItem {
+  readonly id: string;
+  readonly state: PointState;
+  /** Empty while the author has not named the point. */
+  readonly title: string;
+  /** The first line of the note a returned point came back with. */
+  readonly returnNote: string | null;
+  /** The Monday an approved point goes to the porada from, ISO; null for any other point or when no porada of the window is open. */
+  readonly placement: string | null;
+}
+
+export interface MyPointsPageModel {
+  readonly rows: readonly MyPointItem[];
+  /** The cursor „Starší body“ continues from; null on the last page. */
+  readonly next: string | null;
+  /** False on a page after a cursor: an empty one there is not an author with no points. */
+  readonly first: boolean;
+}
+
+/**
+ * Where an approved point goes: the first Monday from its own that is neither skipped nor
+ * generated (design section 3: an approved point is not held back to the submit Monday).
+ */
+function placementOf(
+  { state, earliestMonday }: z.output<typeof listMyPointsOutput>['points'][number],
+  window: MeetingWindow | null,
+  now: Date,
+): string | null {
+  if (state !== 'approved' || earliestMonday === null || window === null) return null;
+  const monday = placementMonday(
+    parseIsoDate(earliestMonday),
+    now,
+    DEADLINE_RULE,
+    toKnownIssues(window.issues),
+    true,
+  );
+  return monday && toIsoDate(monday);
+}
+
+/**
+ * „Moje body“: the author's points, last changed first, one page. `?pred` is the cursor the
+ * page before it ended at; a malformed one is a 404, like a malformed id. The meeting calendar
+ * is read only when a point is approved, and a refusal of it leaves the dates out.
+ */
+export async function myPointsPage(params: SearchParams): Promise<MyPointsPageModel | null> {
+  const viewer = await getViewer();
+  if (!viewer) return null;
+  const before = first(params['pred']);
+  const listed = orNotFound(
+    'points.listMine',
+    await runRegistered(getContainer(), listMyPoints, {
+      principal: viewer,
+      requestId: await requestId(),
+      input: before === undefined ? {} : { before },
+    }),
+  );
+  if (listed === null) return null;
+  const window = listed.points.some((point) => point.state === 'approved')
+    ? await readWindow(viewer)
+    : null;
+  const now = getContainer().app.clock.now();
+  return {
+    rows: listed.points.map((point) => ({
+      id: point.id,
+      state: point.state,
+      title: point.title,
+      returnNote: point.returnNote,
+      placement: placementOf(point, window, now),
+    })),
+    next: listed.next,
+    first: before === undefined,
+  };
 }

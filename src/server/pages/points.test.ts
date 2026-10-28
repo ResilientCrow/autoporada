@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { calDate } from '@/domain/time';
 
-import { newPointPage, pointPage } from './index';
+import { myPointsPage, newPointPage, pointPage } from './index';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
 const runRegistered = vi.hoisted(() => vi.fn());
@@ -506,5 +506,190 @@ describe('pointPage', () => {
   it('fails loudly on any other failure', async () => {
     serve({ ok: false, error: { code: 'unavailable' } });
     await expect(pointPage(ID)).rejects.toThrow('points.get: unavailable');
+  });
+});
+
+describe('myPointsPage', () => {
+  const CURSOR = `1792396800000.${ID}`;
+  const summary = (over: object = {}) => ({
+    id: ID,
+    kind: 'report',
+    typeId: TYPE_ID,
+    state: 'draft',
+    title: 'Exkurze',
+    eventDate: '2026-11-20',
+    earliestMonday: null,
+    submittedAt: null,
+    returnNote: null,
+    version: 2,
+    updatedAt: '2026-10-20T08:00:00.000Z',
+    ...over,
+  });
+  const issue = (monday: string, status: string) => ({
+    monday,
+    deadlineAt: `${monday}T00:00:00.000Z`,
+    status,
+    version: 1,
+  });
+  /** Answers the list and the meeting calendar; the calendar's rows are the ones a test sets. */
+  const serve = (
+    rows: unknown[],
+    next: string | null = null,
+    window: unknown = { ok: true, value: { submitMonday: '2026-11-02', issues: [] } },
+  ) =>
+    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
+      useCase.name === 'issues.window' ? window : { ok: true, value: { points: rows, next } },
+    );
+  const askedFor = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
+  const callOf = (name: string) =>
+    runRegistered.mock.calls.find((call) => (call[1] as { name: string }).name === name) as
+      [unknown, unknown, { input: unknown; principal: unknown }] | undefined;
+  const rowsOf = async (given: unknown[], window?: unknown) => {
+    serve(given, null, window);
+    return (await myPointsPage({}))?.rows;
+  };
+
+  it('is null for a visitor, without asking a use case', async () => {
+    resolvePrincipal.mockResolvedValue(null);
+    expect(await myPointsPage({})).toBeNull();
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it('asks for the first page as the viewer, with no cursor', async () => {
+    serve([summary()]);
+    await myPointsPage({});
+    expect(callOf('points.listMine')?.[2].input).toEqual({});
+    expect(callOf('points.listMine')?.[2].principal).toEqual(await resolvePrincipal());
+  });
+
+  it('asks for the page after the cursor in ?pred, the first of a repeated one', async () => {
+    serve([summary()]);
+    await myPointsPage({ pred: [CURSOR, 'other'] });
+    expect(callOf('points.listMine')?.[2].input).toEqual({ before: CURSOR });
+  });
+
+  it('gives the rows the page uses, in the order sent, and the cursor of the next page', async () => {
+    serve(
+      [
+        summary({ id: 'a', state: 'returned', title: '', returnNote: 'Doplňte název.' }),
+        summary({ id: 'b', state: 'draft' }),
+      ],
+      CURSOR,
+    );
+    expect(await myPointsPage({})).toEqual({
+      rows: [
+        { id: 'a', state: 'returned', title: '', returnNote: 'Doplňte název.', placement: null },
+        { id: 'b', state: 'draft', title: 'Exkurze', returnNote: null, placement: null },
+      ],
+      next: CURSOR,
+      first: true,
+    });
+  });
+
+  it('knows a page after a cursor is not the first', async () => {
+    serve([summary()]);
+    expect((await myPointsPage({}))?.first).toBe(true);
+    expect((await myPointsPage({ pred: CURSOR }))?.first).toBe(false);
+  });
+
+  it('has no rows and no next page for an author with no points', async () => {
+    serve([]);
+    expect(await myPointsPage({})).toEqual({ rows: [], next: null, first: true });
+  });
+
+  describe('where an approved point goes', () => {
+    const approved = (earliestMonday: string | null, state = 'approved') =>
+      summary({ id: 'p', state, earliestMonday, submittedAt: '2026-10-20T08:00:00.000Z' });
+
+    it('is its own Monday while that porada is open, with no row or an open one', async () => {
+      expect((await rowsOf([approved('2026-11-09')]))?.[0]?.placement).toBe('2026-11-09');
+      const open = {
+        ok: true,
+        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-09', 'open')] },
+      };
+      expect((await rowsOf([approved('2026-11-09')], open))?.[0]?.placement).toBe('2026-11-09');
+    });
+
+    it('moves past a skipped or generated Monday', async () => {
+      const window = {
+        ok: true,
+        value: {
+          submitMonday: '2026-11-16',
+          issues: [issue('2026-11-09', 'skipped'), issue('2026-11-16', 'generated')],
+        },
+      };
+      expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBe('2026-11-23');
+    });
+
+    it('starts from the point’s own Monday, even one before the submit Monday', async () => {
+      const window = { ok: true, value: { submitMonday: '2026-11-16', issues: [] } };
+      expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBe('2026-11-09');
+    });
+
+    it('never names a porada that is over: an earliest Monday before the window moves to the next one', async () => {
+      // Now is Tuesday 2026-10-27 in Prague; the window starts at 2026-10-26 and has no row for 2026-10-19.
+      const window = { ok: true, value: { submitMonday: '2026-11-02', issues: [] } };
+      expect((await rowsOf([approved('2026-10-19')], window))?.[0]?.placement).toBe('2026-11-02');
+      const skipped = {
+        ok: true,
+        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-02', 'skipped')] },
+      };
+      expect((await rowsOf([approved('2026-10-19')], skipped))?.[0]?.placement).toBe('2026-11-09');
+    });
+
+    it('is none for any other state, and the calendar is not read when no point is approved', async () => {
+      serve([
+        approved('2026-11-09', 'published'),
+        summary({ state: 'submitted', earliestMonday: '2026-11-09' }),
+      ]);
+      expect((await myPointsPage({}))?.rows.map((r) => r.placement)).toEqual([null, null]);
+      expect(askedFor()).toEqual(['points.listMine']);
+    });
+
+    it('is none for an approved point with no Monday on record', async () => {
+      expect((await rowsOf([approved(null)]))?.[0]?.placement).toBeNull();
+    });
+
+    it('is none when no Monday of the window is open', async () => {
+      const closed = Array.from({ length: 26 }, (_, week) => {
+        const monday = new Date(Date.UTC(2026, 10, 9 + 7 * week)).toISOString().slice(0, 10);
+        return issue(monday, 'skipped');
+      });
+      const window = { ok: true, value: { submitMonday: '2026-11-09', issues: closed } };
+      expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBeNull();
+    });
+
+    it('reads the calendar once, as the viewer, for all the approved points', async () => {
+      serve([approved('2026-11-09'), approved('2026-11-16')]);
+      await myPointsPage({});
+      expect(askedFor().filter((name) => name === 'issues.window')).toHaveLength(1);
+      expect(callOf('issues.window')?.[2].input).toEqual({});
+    });
+
+    it.each(['forbidden', 'not-found'])(
+      'lists the points without a date when the calendar is refused (%s)',
+      async (code) => {
+        const rows = await rowsOf([approved('2026-11-09')], { ok: false, error: { code } });
+        expect(rows?.[0]).toMatchObject({ state: 'approved', placement: null });
+      },
+    );
+
+    it('fails loudly when the calendar fails otherwise', async () => {
+      serve([approved('2026-11-09')], null, { ok: false, error: { code: 'unavailable' } });
+      await expect(myPointsPage({})).rejects.toThrow('issues.window: unavailable');
+    });
+  });
+
+  it.each(['forbidden', 'not-found', 'invalid-input'])(
+    'is null on %s (a bad cursor included)',
+    async (code) => {
+      runRegistered.mockResolvedValue({ ok: false, error: { code } });
+      expect(await myPointsPage({ pred: 'nonsense' })).toBeNull();
+    },
+  );
+
+  it('fails loudly on any other failure', async () => {
+    runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
+    await expect(myPointsPage({})).rejects.toThrow('points.listMine: unavailable');
   });
 });

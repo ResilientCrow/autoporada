@@ -1,4 +1,5 @@
-import { deadline, placementMonday, type DeadlineRule, type KnownIssue } from '@/domain/calendar';
+import { toKnownIssues } from '@/contracts';
+import { deadline, placementMonday, type DeadlineRule } from '@/domain/calendar';
 import { formatDayMonth, formatTime, schoolYear, weekdayName } from '@/domain/cs';
 import {
   addDays,
@@ -46,11 +47,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  */
 export function standingOf({ submitMonday, issues, now, rule }: StandingInput): Standing | null {
   const instant = new Date(now);
-  const known: readonly KnownIssue[] = issues.map((row) => ({
-    monday: parseIsoDate(row.monday),
-    deadlineAt: new Date(row.deadlineAt),
-    status: row.status,
-  }));
+  const known = toKnownIssues(issues);
   const first = parseIsoDate(submitMonday);
   const placement = placementMonday(first, instant, rule, known, false);
   if (placement === null) return null;

@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import type { KnownIssue } from '@/domain/calendar';
+import { parseIsoDate } from '@/domain/time';
+
 /**
  * „Porada se nekoná“ and its undo. `expectedVersion` is the version of the row
  * the page showed; a Monday without a row has none, which reads as an
@@ -31,3 +34,18 @@ export const issuesWindowOutput = z.object({
     }),
   ),
 });
+
+/** The rows of `issues.window` as the calendar domain reads them (placement, standing line). */
+export function toKnownIssues(
+  rows: readonly {
+    readonly monday: string;
+    readonly deadlineAt: string;
+    readonly status: KnownIssue['status'];
+  }[],
+): readonly KnownIssue[] {
+  return rows.map((row) => ({
+    monday: parseIsoDate(row.monday),
+    deadlineAt: new Date(row.deadlineAt),
+    status: row.status,
+  }));
+}

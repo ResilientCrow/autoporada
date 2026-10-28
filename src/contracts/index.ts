@@ -49,7 +49,13 @@ export {
   type DirectoryHit,
   type DirectoryNotice,
 } from './directory';
-export { issuesWindowInput, issuesWindowOutput, setSkippedInput, setSkippedOutput } from './issues';
+export {
+  issuesWindowInput,
+  issuesWindowOutput,
+  setSkippedInput,
+  setSkippedOutput,
+  toKnownIssues,
+} from './issues';
 export {
   contentWire,
   createPointInput,
