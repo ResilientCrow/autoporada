@@ -1,11 +1,6 @@
-import {
-  DatabaseFailure,
-  ScopeViolation,
-  type SignInRepo,
-  type TxContext,
-} from '@/application/ports';
+import { ScopeViolation, type SignInRepo, type TxContext } from '@/application/ports';
 
-import { guard } from './guards';
+import { guard, refusedBy } from './guards';
 import type { FakeTxState } from './state';
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
@@ -27,7 +22,7 @@ export function fakeSignInRepo(tx: FakeTxState, ctx: TxContext): SignInRepo {
       const own = (userId: string) => signIn.purpose === 'step_up' && signIn.userId === userId;
       if (principal.kind === 'user' && !own(principal.actor.id)) throw new ScopeViolation();
       const key = hash(cookieSha256);
-      if (signIns.has(key)) throw new DatabaseFailure('23505');
+      if (signIns.has(key)) throw refusedBy('auth_transactions_cookie_hash_key');
       signIns.set(key, { ...signIn, createdAt: ctx.now });
     },
     async take(cookieSha256, state) {

@@ -17,7 +17,7 @@ import { richDocFromText } from '@/domain/richtext';
 import { calDate, wallTime } from '@/domain/time';
 
 import { UnauditedWrite } from '../support/world/fake/oracle';
-import { setupWorld } from '../support/world';
+import { erasureRefusedBy, setupWorld } from '../support/world';
 
 const world = setupWorld();
 const cli = system('cli:test');
@@ -493,7 +493,7 @@ describe('PointRepo (port contract)', () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { point } = await create(world.as(author));
     expect(await failure(world.erase.user(author.id))).toMatchObject(
-      world.kind === 'pg' ? { code: '23503' } : { sqlstate: '23503' },
+      erasureRefusedBy(world.kind, 'points_author_id_users_id_fk'),
     );
     expect(await read(cli, (tx) => tx.users.get(author.id))).toEqual(author);
     expect(await read(cli, (tx) => tx.points.get(point.id))).toEqual(point);
@@ -648,10 +648,21 @@ describe('PointRepo scope (own-or-submitted for reviewers)', () => {
       submitted: await made(SUBMIT),
       returned: await made(SUBMIT, { state: 'returned' }),
       approved: await made(SUBMIT, { state: 'approved' }),
+      rejected: await made(SUBMIT, { state: 'rejected' }),
+      published: await made(SUBMIT, { state: 'approved' }, { state: 'published' }),
+      // A returned point the author withdraws keeps its submitted_at: reviewers still see it.
+      withdrawnAfterReturn: await made(SUBMIT, { state: 'returned' }, { state: 'withdrawn' }),
     };
   };
   type Standing = keyof Awaited<ReturnType<typeof colleaguePoints>>;
-  const VISIBLE: readonly Standing[] = ['submitted', 'returned', 'approved'];
+  const VISIBLE: readonly Standing[] = [
+    'submitted',
+    'returned',
+    'approved',
+    'rejected',
+    'published',
+    'withdrawnAfterReturn',
+  ];
 
   const seen = async (by: Principal, points: Record<Standing, PointRecord>) => {
     const visible: string[] = [];

@@ -1,5 +1,4 @@
 import {
-  DatabaseFailure,
   type AccessRequestRecord,
   type AuditTarget,
   type EnqueueOptions,
@@ -15,6 +14,8 @@ import {
   type SessionRecord,
   type UserRecord,
 } from '@/application/ports';
+
+import { refusedBy } from './guards';
 
 /** What the fake database holds, mirroring the tables the ports write. */
 export interface FakeState {
@@ -77,18 +78,21 @@ export const emptyState = (): FakeState => ({
 
 /**
  * Deletes a user as `DELETE FROM users` would: requests, sessions, sign-ins
- * and ledger rows cascade; a request they decided (decided_by), a point
+ * and ledger rows cascade; a request they decided
+ * (access_requests_decided_by_users_id_fk), a point
  * they wrote (points_author_id_users_id_fk) or a point event they caused
  * (point_events_actor_id_users_id_fk) refuses it.
  */
 export function eraseFakeUser(state: FakeState, id: string): void {
   const requests = [...state.accessRequests.values()];
-  if (requests.some((r) => r.decidedBy === id)) throw new DatabaseFailure('23503');
+  if (requests.some((r) => r.decidedBy === id)) {
+    throw refusedBy('access_requests_decided_by_users_id_fk');
+  }
   if ([...state.points.values()].some((p) => p.authorId === id)) {
-    throw new DatabaseFailure('23503');
+    throw refusedBy('points_author_id_users_id_fk');
   }
   if ([...state.pointEvents.values()].some((e) => e.actorId === id)) {
-    throw new DatabaseFailure('23503');
+    throw refusedBy('point_events_actor_id_users_id_fk');
   }
   for (const r of requests) if (r.userId === id) state.accessRequests.delete(r.id);
   for (const [key, s] of state.sessions) if (s.userId === id) state.sessions.delete(key);

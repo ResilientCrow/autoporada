@@ -2,7 +2,13 @@ import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { ScopeViolation, system, type Tx, type UserRecord } from '@/application/ports';
+import {
+  DatabaseFailure,
+  ScopeViolation,
+  system,
+  type Tx,
+  type UserRecord,
+} from '@/application/ports';
 import { newSessionTimes } from '@/domain/identity';
 
 import { setupWorld } from '../support/world';
@@ -98,6 +104,14 @@ describe('SessionRepo (port contract)', () => {
     expect(await endAs(as, { userId: me.id })).toEqual([mine.id]);
     const left = await world.tx(auth, (tx) => tx.sessions.find(sha('theirs')), 'read');
     expect(left?.session.id).toBe(theirs.id);
+  });
+
+  it('refuses a second session with the same token digest, by the key that refused it', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    await signIn(user, 'token-a');
+    await expect(signIn(user, 'token-a')).rejects.toEqual(
+      new DatabaseFailure('db.constraint.sessions_token_hash_key'),
+    );
   });
 
   it('keeps finding, creating and touching to the system', async () => {

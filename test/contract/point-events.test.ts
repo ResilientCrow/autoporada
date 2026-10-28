@@ -15,7 +15,7 @@ import { richDocFromText } from '@/domain/richtext';
 import { calDate, wallTime } from '@/domain/time';
 
 import { UnauditedWrite } from '../support/world/fake/oracle';
-import { setupWorld } from '../support/world';
+import { erasureRefusedBy, setupWorld } from '../support/world';
 
 const world = setupWorld();
 const cli = system('cli:test');
@@ -330,7 +330,7 @@ describe('PointEventRepo (port contract)', () => {
       toState: 'approved',
     });
     expect(await failure(world.erase.user(reviewer.id))).toMatchObject(
-      world.kind === 'pg' ? { code: '23503' } : { sqlstate: '23503' },
+      erasureRefusedBy(world.kind, 'point_events_actor_id_users_id_fk'),
     );
     expect(await world.tx(cli, (tx) => tx.users.get(reviewer.id), 'read')).toEqual(reviewer);
     expect(await list(cli, point.id)).toEqual([event]);

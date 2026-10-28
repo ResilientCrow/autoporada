@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { ScopeViolation, system, type PendingSignIn } from '@/application/ports';
+import { DatabaseFailure, ScopeViolation, system, type PendingSignIn } from '@/application/ports';
 
 import { setupWorld } from '../support/world';
 
@@ -73,6 +73,13 @@ describe('SignInRepo (port contract)', () => {
     expect(await world.tx(login, (tx) => tx.signIns.purgeExpired(10))).toBe(1);
     const left = await world.tx(callback, (tx) => tx.signIns.take(sha('c3'), 'S'.repeat(43)));
     expect(left).not.toBeNull();
+  });
+
+  it('refuses a second sign-in for the same cookie digest, by the key that refused it', async () => {
+    await world.tx(login, (tx) => tx.signIns.save(sha('cookie'), pending()));
+    await expect(
+      world.tx(login, (tx) => tx.signIns.save(sha('cookie'), pending())),
+    ).rejects.toEqual(new DatabaseFailure('db.constraint.auth_transactions_cookie_hash_key'));
   });
 
   it('accepts digests only, never a raw cookie', async () => {

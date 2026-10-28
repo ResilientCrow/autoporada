@@ -142,6 +142,13 @@ function accessRequestRow(seed: AccessRequestSeed, now: Date): AccessRequestRow 
 
 export const TEST_TID = '00000000-0000-0000-0000-000000000001';
 
+/**
+ * What `erase.user` throws when a foreign key keeps the user, by the key's name: PostgreSQL's own
+ * error carries it in `constraint`, the fake's DatabaseFailure in its code (ADR 0022).
+ */
+export const erasureRefusedBy = (kind: World['kind'], constraint: string) =>
+  kind === 'pg' ? { constraint } : { sqlstate: `db.constraint.${constraint}` };
+
 function buildWorld(kind: World['kind'], backend: () => Backend): World {
   const clock = new FixedClock();
   const world: World = {

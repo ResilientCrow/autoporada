@@ -1,12 +1,11 @@
 import {
-  DatabaseFailure,
   ScopeViolation,
   type SessionRecord,
   type SessionRepo,
   type TxContext,
 } from '@/application/ports';
 
-import { guard } from './guards';
+import { guard, refusedBy } from './guards';
 import { newId, type FakeTxState } from './state';
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
@@ -40,7 +39,7 @@ export function fakeSessionRepo(tx: FakeTxState, ctx: TxContext): SessionRepo {
       systemOnly();
       const tokenSha256 = hash(session.tokenSha256);
       if ([...sessions.values()].some((s) => s.tokenSha256 === tokenSha256)) {
-        throw new DatabaseFailure('23505');
+        throw refusedBy('sessions_token_hash_key');
       }
       const created = {
         id: newId(tx.draft),

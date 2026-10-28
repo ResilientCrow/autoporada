@@ -9,7 +9,7 @@ import {
   type UserRecord,
 } from '@/application/ports';
 
-import { setupWorld } from '../support/world';
+import { erasureRefusedBy, setupWorld } from '../support/world';
 
 const world = setupWorld();
 
@@ -143,6 +143,16 @@ describe('AccessRequestRepo (port contract)', () => {
       decidedAt: world.clock.now(),
       version: 2,
     });
+  });
+
+  it('keeps a user who decided a request: erasing them is refused', async () => {
+    const user = await world.seed.user({ role: 'pending' });
+    const head = await world.seed.user({ role: 'headmaster' });
+    await move(world.as(head), await request(user), 'approved');
+    await expect(world.erase.user(head.id)).rejects.toMatchObject(
+      erasureRefusedBy(world.kind, 'access_requests_decided_by_users_id_fk'),
+    );
+    await expect(world.erase.user(user.id)).resolves.toBeUndefined();
   });
 
   it('moves a request on only from the version it started from', async () => {
