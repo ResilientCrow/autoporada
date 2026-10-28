@@ -1,8 +1,9 @@
 import type { z } from 'zod';
 
+import { DEADLINE_RULE } from '@/application/core';
 import { getPoint, listMyPoints, listPointTypes } from '@/application/use-cases';
 import { toKnownIssues, type listMyPointsOutput, type listPointTypesOutput } from '@/contracts';
-import { placementMonday } from '@/domain/calendar';
+import { pointMonday } from '@/domain/calendar';
 import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec } from '@/domain/report';
@@ -164,15 +165,23 @@ export interface MyPointsPageModel {
   readonly first: boolean;
 }
 
-/** Where an approved point goes: its earliest Monday, or the next one once that porada is over (design section 3). */
+/**
+ * Where an approved point goes: its first Monday, or the next open one once that porada is over or
+ * the point was handed in again after its deadline (design section 3, ADR 0018). A handed-in point
+ * always has both its first Monday and its hand-in time (`points_submitted_complete`); a row
+ * without either, which the database refuses, shows no date, like a window with no open porada.
+ */
 function placementOf(
-  { state, earliestMonday }: z.output<typeof listMyPointsOutput>['points'][number],
+  { state, earliestMonday, submittedAt }: z.output<typeof listMyPointsOutput>['points'][number],
   window: MeetingWindow | null,
   now: Date,
 ): string | null {
-  if (state !== 'approved' || earliestMonday === null || window === null) return null;
+  if (state !== 'approved' || earliestMonday === null || submittedAt === null || window === null) {
+    return null;
+  }
   const known = toKnownIssues(window.issues);
-  const monday = placementMonday(parseIsoDate(earliestMonday), now, known);
+  const point = { earliest: parseIsoDate(earliestMonday), submittedAt: new Date(submittedAt) };
+  const monday = pointMonday(point, DEADLINE_RULE, now, known);
   return monday && toIsoDate(monday);
 }
 

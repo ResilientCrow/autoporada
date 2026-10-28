@@ -15,4 +15,10 @@ export {
   type FutureSlot,
   type IssuePhase,
 } from './issue-calendar';
-export { placementMonday, PLACEMENT_WEEKS, submitMonday, type KnownIssue } from './placement';
+export {
+  placementMonday,
+  PLACEMENT_WEEKS,
+  pointMonday,
+  submitMonday,
+  type KnownIssue,
+} from './placement';

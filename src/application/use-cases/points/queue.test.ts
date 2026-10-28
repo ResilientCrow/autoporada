@@ -3,15 +3,16 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
-import { QUEUE_LIMIT } from '@/contracts';
-import { deadline, DEFAULT_DEADLINE, PLACEMENT_WEEKS } from '@/domain/calendar';
+import { QUEUE_LIMIT, toKnownIssues } from '@/contracts';
+import { deadline, DEFAULT_DEADLINE, PLACEMENT_WEEKS, placementMonday } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
 import { newDraft, type PointKind } from '@/domain/report';
 import { addDays, calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
-import { FIRST_MONDAY, pointFixtures, START } from '../../../../test/support/points';
+import { FIRST_MONDAY, pointFixtures, readyProposal, START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
-import { queuePoints } from './index';
+import { issueWindow } from '../issues';
+import { decidePoint, queuePoints, retractPoint, submitPoint } from './index';
 
 const world = setupWorld();
 const { start, snapshot } = pointFixtures(world);
@@ -233,6 +234,91 @@ describe('points.queue', () => {
       ['2026-10-26', [['pokyn', [id]]]],
       ['2026-11-02', [['pokyn', [late]]]],
     ]);
+  });
+
+  describe('a late resubmit goes to the next open Monday (ADR 0018 item 1)', () => {
+    /** Submitted on time through the use case: version 2, earliest Monday 26 October. */
+    async function submittedOnTime(author: UserRecord): Promise<string> {
+      const id = await start(author, 'pokyn');
+      const done = await world.run(submitPoint, world.as(author), {
+        id,
+        expectedVersion: 1,
+        content: readyProposal(),
+      });
+      expect(done).toEqual({ ok: true, value: { version: 2 } });
+      return id;
+    }
+
+    /** Handed in again at the world clock's time, from `expectedVersion`. */
+    const resubmit = (author: UserRecord, id: string, expectedVersion: number) =>
+      world.run(submitPoint, world.as(author), { id, expectedVersion, content: readyProposal() });
+
+    /** The Monday the standing line promises a point handed in now: standingOf's own placement. */
+    async function promised(by: UserRecord): Promise<string> {
+      const got = await world.run(issueWindow, world.as(by), {});
+      if (!got.ok) throw new Error(`window refused: ${got.error.code}`);
+      const { submitMonday, issues } = got.value;
+      const monday = placementMonday(
+        parseIsoDate(submitMonday),
+        world.clock.now(),
+        toKnownIssues(issues),
+      );
+      return toIsoDate(monday!);
+    }
+
+    it('places a point retracted and handed in again after the deadline under the next porada', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const id = await submittedOnTime(author);
+      const by = await reviewer();
+      expect((await shape(by)).mondays).toEqual([['2026-10-26', [['pokyn', [id]]]]]);
+
+      const retracted = await world.run(retractPoint, world.as(author), { id, expectedVersion: 2 });
+      expect(retracted.ok).toBe(true);
+      world.clock.set(AFTER_DEADLINE);
+      expect((await resubmit(author, id, 3)).ok).toBe(true);
+
+      expect((await shape(by)).mondays).toEqual([[await promised(by), [['pokyn', [id]]]]]);
+      expect(await promised(by)).toBe('2026-11-02');
+    });
+
+    it('does the same for a point a reviewer returned and the author handed in again', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const id = await submittedOnTime(author);
+      const by = await reviewer();
+      const returned = await world.run(decidePoint, world.as(by), {
+        id,
+        expectedVersion: 2,
+        event: 'return',
+        note: 'Doplňte prosím vyjádření.',
+      });
+      expect(returned.ok).toBe(true);
+      world.clock.set(AFTER_DEADLINE);
+      expect((await resubmit(author, id, 3)).ok).toBe(true);
+
+      expect((await shape(by)).mondays).toEqual([['2026-11-02', [['pokyn', [id]]]]]);
+      expect(await promised(by)).toBe('2026-11-02');
+    });
+
+    it('does not move a resubmitted point that is handed in again in time', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const id = await submittedOnTime(author);
+      await world.run(retractPoint, world.as(author), { id, expectedVersion: 2 });
+      world.clock.advance(60_000);
+      expect((await resubmit(author, id, 3)).ok).toBe(true);
+      expect((await shape(await reviewer())).mondays).toEqual([['2026-10-26', [['pokyn', [id]]]]]);
+    });
+
+    it('leaves a point approved after the deadline under the Monday it was handed in for', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const id = await submittedOnTime(author);
+      world.clock.set(AFTER_DEADLINE);
+      const by = await reviewer();
+      expect(
+        (await world.run(decidePoint, world.as(by), { id, expectedVersion: 2, event: 'approve' }))
+          .ok,
+      ).toBe(true);
+      expect((await shape(by)).approved).toEqual([[id, '2026-10-26']]);
+    });
   });
 
   it('moves a point still waiting on once its porada is over', async () => {

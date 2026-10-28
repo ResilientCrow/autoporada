@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEADLINE } from '@/domain/calendar';
+import { DEFAULT_DEADLINE, pointMonday } from '@/domain/calendar';
 import { addDays, parseIsoDate, toIsoDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
@@ -176,5 +176,18 @@ describe('the school year of the paper', () => {
 
   it('falls back to the given year without a standing', () => {
     expect(placementYear(null, '2026/2027')).toBe('2026/2027');
+  });
+});
+
+describe('the line and the porada a resubmit lands in', () => {
+  it('names the Monday pointMonday gives a point handed in again at that instant', () => {
+    // Sunday 25 October 2026, 21.00: the porada of the 26th has closed. A point first handed in
+    // for the 26th, retracted and sent again now, goes where the line says: the 2nd of November.
+    const now = new Date('2026-10-25T20:00:00.000Z');
+    const standing = standingOf(input(now.toISOString(), '2026-11-02'));
+    const point = { earliest: parseIsoDate('2026-10-26'), submittedAt: now };
+    const landed = pointMonday(point, DEFAULT_DEADLINE, now, []);
+    expect(landed && toIsoDate(landed)).toBe('2026-11-02');
+    expect(standing && toIsoDate(standing.placement)).toBe('2026-11-02');
   });
 });

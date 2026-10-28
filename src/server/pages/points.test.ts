@@ -693,6 +693,11 @@ describe('myPointsPage', () => {
       expect((await rowsOf([approved(null)]))?.[0]?.placement).toBeNull();
     });
 
+    it('is none for an approved point with no hand-in time on record', async () => {
+      serve([summary({ id: 'p', state: 'approved', earliestMonday: '2026-11-09' })]);
+      expect((await myPointsPage({}))?.rows[0]?.placement).toBeNull();
+    });
+
     it('is none when no Monday of the window is open', async () => {
       const closed = Array.from({ length: 26 }, (_, week) => {
         const monday = new Date(Date.UTC(2026, 10, 9 + 7 * week)).toISOString().slice(0, 10);

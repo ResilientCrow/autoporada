@@ -8,6 +8,7 @@ import {
   DEFAULT_DEADLINE as RULE,
   PLACEMENT_WEEKS,
   placementMonday,
+  pointMonday,
   submitMonday,
   targetMonday,
   type KnownIssue,
@@ -161,7 +162,7 @@ describe('placementMonday', () => {
       );
     });
 
-    it('shows a late submission, whose earliest Monday is already the next one, there', () => {
+    it('shows a start Monday that is already the next one there', () => {
       const late = submitMonday(AFTER_DEADLINE, RULE, []);
       expect(iso(late)).toBe('2026-11-02');
       expect(iso(placementMonday(late, AFTER_DEADLINE, []))).toBe('2026-11-02');
@@ -242,5 +243,58 @@ describe('placementMonday', () => {
 
   it('refuses an earliest day that is not a Monday', () => {
     expect(() => placementMonday(d('2026-10-20'), NOW, [])).toThrow(RangeError);
+  });
+});
+
+describe('pointMonday', () => {
+  // The deadline of Monday 2026-10-26 is Sunday 2026-10-25 18:00 Prague (16:00Z).
+  const ON_TIME = new Date('2026-10-23T10:00:00Z');
+  const LATE = new Date('2026-10-25T20:00:00Z');
+
+  it('keeps a point handed in on time under its Monday while reviewers finish after the deadline', () => {
+    const point = { earliest: d('2026-10-26'), submittedAt: ON_TIME };
+    expect(iso(pointMonday(point, RULE, LATE, []))).toBe('2026-10-26');
+  });
+
+  it('puts a resubmit after the deadline of its earliest Monday on the next open one', () => {
+    // First handed in for 2026-10-26, retracted or returned, handed in again Sunday 21.00.
+    const point = { earliest: d('2026-10-26'), submittedAt: LATE };
+    expect(iso(pointMonday(point, RULE, LATE, []))).toBe('2026-11-02');
+  });
+
+  it('puts a resubmit on the meeting day itself on the next open Monday, not on that day', () => {
+    // Monday 2026-11-09 08:00 Prague: its deadline passed the evening before.
+    const monday = new Date('2026-11-09T07:00:00Z');
+    const point = { earliest: d('2026-10-26'), submittedAt: monday };
+    expect(iso(pointMonday(point, RULE, monday, []))).toBe('2026-11-16');
+  });
+
+  it('goes on past skipped and generated Mondays after a late resubmit', () => {
+    const point = { earliest: d('2026-10-26'), submittedAt: LATE };
+    const list = [known('2026-11-02', 'skipped'), known('2026-11-09', 'generated')];
+    expect(iso(pointMonday(point, RULE, LATE, list))).toBe('2026-11-16');
+  });
+
+  it('honours a frozen later deadline: the Monday is still open for a resubmit', () => {
+    const frozen = [known('2026-10-26', 'open', '2026-10-26T08:00:00Z')];
+    const point = { earliest: d('2026-10-26'), submittedAt: LATE };
+    expect(iso(pointMonday(point, RULE, LATE, frozen))).toBe('2026-10-26');
+  });
+
+  it('moves a point still waiting on once its porada is over, as placementMonday does', () => {
+    const tuesday = new Date('2026-10-27T10:00:00Z');
+    const point = { earliest: d('2026-10-26'), submittedAt: ON_TIME };
+    expect(iso(pointMonday(point, RULE, tuesday, []))).toBe('2026-11-02');
+  });
+
+  it('agrees with the line a point handed in now is promised: the submit Monday, placed', () => {
+    const point = { earliest: d('2026-10-19'), submittedAt: LATE };
+    const promised = placementMonday(submitMonday(LATE, RULE, []), LATE, []);
+    expect(iso(pointMonday(point, RULE, LATE, []))).toBe(iso(promised));
+  });
+
+  it('refuses an earliest day that is not a Monday', () => {
+    const point = { earliest: d('2026-10-20'), submittedAt: ON_TIME };
+    expect(() => pointMonday(point, RULE, ON_TIME, [])).toThrow(RangeError);
   });
 });

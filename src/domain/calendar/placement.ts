@@ -51,17 +51,17 @@ function nextMonday(now: Date): CalDate {
 }
 
 /**
- * The Monday a point is shown under: the first one from the later of
- * `earliest` and the first Monday on or after today (Prague) whose issue is
- * not skipped or generated; a Monday without a row is open. A point waiting
- * for review and an approved one are placed alike, so a point handed in on
- * time stays under its Monday while reviewers finish the issue after the
- * deadline, and approving it does not move it; once that porada is over it
- * moves on (and the issue rows only reach back to this week's Monday, so a
- * past Monday would read as open). A late submission is already later:
- * its `earliest` is the submit Monday it was handed in for. `null` when none
- * of the 26 Mondays from the start qualifies. Nothing is written, so skipping
- * and unskipping move points on their own.
+ * The Monday a point is shown under, scanning from `earliest`: the first one from the later of
+ * `earliest` and the first Monday on or after today (Prague) whose issue is not skipped or
+ * generated; a Monday without a row is open. A point waiting for review and an approved one are
+ * placed alike, so a point handed in on time stays under its Monday while reviewers finish the
+ * issue after the deadline, and approving it does not move it; once that porada is over it moves
+ * on (and the issue rows only reach back to this week's Monday, so a past Monday would read as
+ * open). `null` when none of the 26 Mondays from the start qualifies. Nothing is written, so
+ * skipping and unskipping move points on their own.
+ *
+ * `earliest` alone does not say where a point goes: it is fixed at the first hand-in, so a point
+ * handed in again later must start from the Monday of that hand-in, which `pointMonday` does.
  */
 export function placementMonday(
   earliest: CalDate,
@@ -81,4 +81,32 @@ export function placementMonday(
 
 function isOpen(status: IssueStatus | undefined): boolean {
   return status === undefined || status === 'open';
+}
+
+/** What `pointMonday` reads of a point: its fixed first Monday and the time of its last hand-in. */
+interface PlacedPoint {
+  /** The Monday it was first handed in for (`earliest_monday`, fixed at that first hand-in). */
+  readonly earliest: CalDate;
+  /** When it was last handed in: a resubmit sets it; approving, returning and a reviewer's edit keep it. */
+  readonly submittedAt: Date;
+}
+
+/**
+ * The Monday a handed-in point is shown under (ADR 0018 item 1: a late submit lands in the next
+ * issue whose deadline is still ahead). It starts from the latest of the point's first Monday,
+ * the submit Monday of its last hand-in and today's, then moves past skipped and generated
+ * Mondays as `placementMonday` does. The submit Monday of the last hand-in is what a resubmit
+ * after a retract or a return needs: its `earliest` is the old first Monday, which may be over.
+ * A point handed in on time keeps its Monday after the deadline, as its hand-in was ahead of it.
+ */
+export function pointMonday(
+  { earliest, submittedAt }: PlacedPoint,
+  rule: DeadlineRule,
+  now: Date,
+  known: readonly KnownIssue[],
+): CalDate | null {
+  assertMonday(earliest);
+  const handedIn = submitMonday(submittedAt, rule, known);
+  const start = compareDates(earliest, handedIn) >= 0 ? earliest : handedIn;
+  return placementMonday(start, now, known);
 }
