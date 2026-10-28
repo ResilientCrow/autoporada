@@ -1,3 +1,4 @@
+export { DecisionBar } from './DecisionBar';
 export { MyPoints } from './MyPoints';
 export { MyPointsCard } from './MyPointsCard';
 export { PointFacts } from './PointFacts';

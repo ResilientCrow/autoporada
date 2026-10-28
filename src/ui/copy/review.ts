@@ -1,4 +1,5 @@
-import type { PointKind } from '@/domain/report';
+import { POINT_LIMITS, type PointKind } from '@/domain/report';
+import type { ReviewDecision } from '@/domain/review';
 
 /** „Kontrola“: the review queue, its card on the Přehled and a point under review (design section 10). */
 export const review = {
@@ -24,6 +25,36 @@ export const review = {
   empty: 'Ve frontě už nic nečeká.',
   /** More points wait than the queue lists; `n` is its limit. */
   capped: (n: number) => `Zobrazeno je jen ${n}\u00a0nejstarších bodů.`,
+  /** The decision bar under a point (design section 10). */
+  decision: {
+    label: 'Rozhodnutí kontroly',
+    approve: 'Schválit',
+    approveNext: 'Schválit a\u00a0pokračovat',
+    return: 'Vrátit k\u00a0úpravě',
+    reject: 'Zamítnout',
+    /** A reviewer's own submitted point, in place of „Schválit“. */
+    ownPoint: 'Vlastní bod schvaluje jiný kontrolor nebo ředitel.',
+    note: 'Poznámka pro autora',
+    noteRequired: 'Napište prosím autorovi, co je potřeba.',
+    noteTooLong: `Poznámka může mít nejvýše ${POINT_LIMITS.note}\u00a0znaků.`,
+    /** Under the note: how long it is of the most it may be. */
+    count: (n: number) => `${n} z\u00a0${POINT_LIMITS.note}\u00a0znaků`,
+    phrasesLabel: 'Rychlé věty',
+    /** Each press adds its sentence to the note. */
+    phrases: [
+      'Doplňte prosím vyjádření.',
+      'Zkontrolujte prosím jména a\u00a0třídy.',
+      'Zkraťte prosím text.',
+      'Bod patří do jiné porady.',
+    ],
+    back: 'Zpět',
+    /** Said once a decision went through, by the decision („Schválit a pokračovat“ is an approval). */
+    said: {
+      approve: 'Bod byl schválen.',
+      return: 'Bod byl vrácen autorovi k\u00a0úpravě.',
+      reject: 'Bod byl zamítnut.',
+    } as const satisfies Record<ReviewDecision, string>,
+  },
   /** The card on the Přehled, for reviewers. */
   card: {
     title: 'Kontrola',

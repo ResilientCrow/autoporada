@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { Button as AriaButton } from 'react-aria-components/Button';
 
 import { buttonStyles, type ButtonVariant } from './button-styles';
@@ -19,6 +19,7 @@ export function Button({
   isDisabled,
   isPending,
   describedBy,
+  ref,
   children,
 }: {
   readonly variant?: ButtonVariant;
@@ -30,10 +31,13 @@ export function Button({
   readonly isPending?: boolean;
   /** The id of the text that describes the button. */
   readonly describedBy?: string;
+  /** Where focus goes back to when what the button opened closes. */
+  readonly ref?: Ref<HTMLButtonElement>;
   readonly children: ReactNode;
 }) {
   return (
     <AriaButton
+      ref={ref}
       className={buttonStyles(variant)}
       type={type}
       name={name}

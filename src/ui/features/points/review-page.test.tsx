@@ -8,6 +8,7 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
+import { REVIEW_HEADING_ID } from './decision';
 import { pointContentOf } from './fields';
 import { PointReview } from './index';
 
@@ -67,6 +68,10 @@ describe('PointReview', () => {
   it('heads the page with the point’s title, its type and its state', () => {
     expect(html).toMatch(/<h1[^>]*><span[^>]*>Seminář o vodě<\/span><\/h1>/);
     expect(html).toContain(points.state.submitted);
+  });
+
+  it('lets the decision bar send focus to the title after a decision', () => {
+    expect(html).toMatch(new RegExp(`<h1 id="${REVIEW_HEADING_ID}" tabindex="-1"`));
   });
 
   it('lists the facts', () => {

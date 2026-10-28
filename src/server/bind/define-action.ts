@@ -20,7 +20,9 @@ import { runAction, sessionTokenFrom, type ActionOptions } from '../pipeline';
  * `refresh: 'none'`, since a refresh would remount the editor under the
  * author's hands, and that client calls `router.replace` after `points.create`
  * and `router.refresh` for „Načíst aktuální stav“. The inventory test pins
- * which actions may.
+ * which actions may. The decision bar (ADR 0025) refreshes as usual, then
+ * calls `router.push` after „Schválit a pokračovat“ to the next point
+ * `points.decide` names, which only the action's answer knows.
  */
 export function defineAction<In, Out>(
   useCase: UseCase<In, Out>,

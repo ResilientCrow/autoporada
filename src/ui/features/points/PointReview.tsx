@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 
+import { REVIEW_HEADING_ID } from './decision';
 import type { PointContentWire } from './fields';
 import { PointFacts, type PointFactsView } from './PointFacts';
 import { PointHeader } from './PointHeader';
@@ -26,7 +27,9 @@ interface PointReviewModel {
 
 /**
  * A point under review (design section 10): the read view the author's page shows, with the
- * reviewer's decision bar between the content and the history. The page fills `bar`.
+ * reviewer's decision bar between the content and the history. The page fills `bar`; a sticky
+ * bar sticks while the whole point scrolls, since this box is its parent. The title takes focus
+ * after a decision (the bar's host sends it there).
  */
 export function PointReview({
   point,
@@ -36,12 +39,14 @@ export function PointReview({
   readonly bar?: ReactNode;
 }) {
   return (
-    <div className="space-y-4">
+    // `bar-room`: what Tab or a link brings into view stays clear of the sticky decision bar.
+    <div className="bar-room space-y-4">
       <PointHeader
         kind={point.kind}
         state={point.state}
         title={point.title}
         typeName={point.typeName}
+        focusId={REVIEW_HEADING_ID}
       />
       <PointFacts facts={point.facts} />
       <PointReadContent

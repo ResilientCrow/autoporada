@@ -10,6 +10,7 @@ export function PointHeader({
   state,
   title,
   typeName,
+  focusId,
 }: {
   readonly kind: PointKind;
   readonly state: PointState;
@@ -17,10 +18,14 @@ export function PointHeader({
   readonly title: string;
   /** A report's type; finance and pokyn show their kind instead. */
   readonly typeName: string | null;
+  /** Makes the title a place a client host sends focus to. */
+  readonly focusId?: string;
 }) {
   return (
     <header className="space-y-2">
-      <SlantLabel level={1}>{title === '' ? points.untitled : title}</SlantLabel>
+      <SlantLabel level={1} focusId={focusId}>
+        {title === '' ? points.untitled : title}
+      </SlantLabel>
       <p className="flex flex-wrap items-center gap-2">
         <span>{typeName ?? points.kind[kind]}</span>
         <Chip look={POINT_LOOK[state]} />

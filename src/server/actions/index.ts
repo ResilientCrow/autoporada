@@ -9,4 +9,5 @@ export {
   submitPoint,
   withdrawPoint,
 } from './points';
+export { decidePoint } from './review';
 export { changeUserAccess } from './users';
