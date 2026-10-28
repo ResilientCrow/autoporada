@@ -3,6 +3,7 @@ import {
   addDays,
   compareDates,
   instantToWallClock,
+  isoWeekday,
   mondayOf,
   toIsoDate,
   type CalDate,
@@ -41,12 +42,21 @@ export function submitMonday(now: Date, rule: DeadlineRule, known: readonly Know
   }
 }
 
+/** The first Monday on or after today's Prague date: today itself on a Monday. */
+function nextMonday(now: Date): CalDate {
+  const today = instantToWallClock(now).date;
+  return isoWeekday(today) === 1 ? today : addDays(mondayOf(today), 7);
+}
+
 /**
- * The Monday a point is shown under: the first one from `earliest` (for a
- * point still waiting, from the later of `earliest` and the submit Monday)
- * whose issue is not skipped or generated. A Monday without a row is open.
- * `null` when none of the 26 Mondays from the start qualifies. Nothing is
- * written, so skipping and unskipping move points on their own.
+ * The Monday a point is shown under: the first one from `earliest` whose
+ * issue is not skipped or generated. A Monday without a row is open. A point
+ * still waiting starts from the later of `earliest` and the submit Monday; an
+ * approved one from the later of `earliest` and the first Monday on or after
+ * today (a porada that is over is never shown, and the issue rows only reach
+ * back to this week's Monday, so a past Monday would read as open). `null`
+ * when none of the 26 Mondays from the start qualifies. Nothing is written,
+ * so skipping and unskipping move points on their own.
  */
 export function placementMonday(
   earliest: CalDate,
@@ -56,7 +66,7 @@ export function placementMonday(
   approved: boolean,
 ): CalDate | null {
   assertMonday(earliest);
-  const submit = approved ? earliest : submitMonday(now, rule, known);
+  const submit = approved ? nextMonday(now) : submitMonday(now, rule, known);
   const start = compareDates(earliest, submit) >= 0 ? earliest : submit;
   const rows = byMonday(known);
   for (let week = 0; week < PLACEMENT_WEEKS; week++) {
