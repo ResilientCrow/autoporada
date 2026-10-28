@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TEMPLATE_NAMES } from '@/notify';
 
-import { DECISION_MAIL, mailJob, SUBJECT_REPO } from './index';
+import { DECISION_MAIL, mailJob } from './index';
 
 const USER = '0b6f2c1e-6f1a-4c7e-9d4b-2a1f3e5c7d90';
 const REQUEST = '5d2e8a4b-1c3f-4e6a-8b9d-7f0a1c2e3b4d';
@@ -68,15 +68,5 @@ describe('mail jobs', () => {
       expect(dedupeKey.startsWith(`${data.template}:`)).toBe(true);
       expect(dedupeKey.length).toBeLessThanOrEqual(120);
     }
-  });
-
-  it('names the repository that holds each template’s subject', () => {
-    expect(SUBJECT_REPO).toEqual({
-      'access.approved': 'accessRequests',
-      'access.rejected': 'accessRequests',
-      'access.blocked': 'accessRequests',
-      'access.granted': 'users',
-      'mail.check': 'users',
-    });
   });
 });

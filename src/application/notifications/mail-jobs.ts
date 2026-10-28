@@ -58,15 +58,6 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   }),
 };
 
-/** Where the worker reads a mail's `subjectId` back: the decided request, or the user. */
-export const SUBJECT_REPO: Readonly<Record<TemplateName, 'accessRequests' | 'users'>> = {
-  'access.approved': 'accessRequests',
-  'access.rejected': 'accessRequests',
-  'access.blocked': 'accessRequests',
-  'access.granted': 'users',
-  'mail.check': 'users',
-};
-
 interface MailJob {
   readonly data: JobCatalog['mail.send'];
   readonly dedupeKey: string;

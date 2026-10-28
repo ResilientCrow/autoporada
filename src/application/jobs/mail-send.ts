@@ -1,10 +1,9 @@
 import { z } from 'zod';
 
-import { stillApplies, SUBJECT_REPO } from '@/application/notifications';
+import { loadSubject, stillApplies, viewOf, type MailSubjects } from '@/application/notifications';
 import {
   JOB_TX_TIMEOUT_MS,
   system,
-  type AccessRequestRecord,
   type DoneDetail,
   type JobHandler,
   type JobInput,
@@ -12,10 +11,7 @@ import {
   type MailResult,
   type Settlement,
   type Tx,
-  type UserRecord,
 } from '@/application/ports';
-import { cooldownEnd } from '@/domain/review';
-import { instantToWallClock } from '@/domain/time';
 import { renderMail, type TemplateName } from '@/notify';
 
 import { claimDecision, paceDecision, WINDOW_MS } from './mail-claim';
@@ -35,7 +31,7 @@ interface Claimed {
   readonly kind: 'send';
   readonly to: string;
   /** The request or user the mail is about, as read in the claim. */
-  readonly about: AccessRequestRecord | UserRecord;
+  readonly about: MailSubjects[TemplateName];
   readonly resend: boolean;
   /** The count the claim wrote. */
   readonly unknownSends: number;
@@ -58,7 +54,7 @@ async function claim(tx: Tx, dedupeKey: string, data: Data, job: Revival) {
   if (decision.kind === 'stop') return decision.outcome;
   const recipient = await tx.users.get(data.recipientId);
   if (!recipient) return done('skipped.recipient-gone');
-  const about = await tx[SUBJECT_REPO[data.template]].get(data.subjectId);
+  const about = await loadSubject(tx, data.template, data.subjectId);
   const skip = async (code: 'skipped.no-address' | 'skipped.stale') => {
     await tx.mailLedger.skip({ dedupeKey, ...data, code });
     return done(code);
@@ -77,14 +73,6 @@ async function claim(tx: Tx, dedupeKey: string, data: Data, job: Revival) {
   const { unknownSends, capFrom, resend } = decision;
   await tx.mailLedger.claim({ dedupeKey, ...data, unknownSends, capFrom, jobId: job.id });
   return { kind: 'send', to, about, resend, unknownSends } satisfies Claimed;
-}
-
-/** Pure; the only variable in any mail is the day a rejected requester may ask again. */
-function render(template: TemplateName, about: Claimed['about'], origin: string) {
-  if (template !== 'access.rejected') return renderMail(template, {}, origin);
-  if (!('state' in about)) throw new Error('access.rejected is about a request');
-  const retryFrom = instantToWallClock(cooldownEnd(about.decidedAt ?? about.createdAt)).date;
-  return renderMail(template, { retryFrom }, origin);
 }
 
 /** How the ledger records the provider's answer, and what the queue does next. */
@@ -153,7 +141,8 @@ export const mailSend: JobHandler<'mail.send'> = async ({ db, clock, mail, appOr
     );
   const claimed = await write((tx) => claim(tx, key, job.data, job));
   if (claimed.kind !== 'send') return claimed;
-  const { subject, text } = render(job.data.template, claimed.about, appOrigin);
+  const { template } = job.data;
+  const { subject, text } = renderMail(template, viewOf(template, claimed.about), appOrigin);
   const startedAt = clock.now().getTime();
   const result = await mail.send({ to: claimed.to, subject, text, dedupeKey: key });
   // A clock that stepped back mid-call must not log a negative time.

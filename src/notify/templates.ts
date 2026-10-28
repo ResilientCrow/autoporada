@@ -19,7 +19,8 @@ export const TEMPLATE_NAMES = [
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
-interface TemplateViews {
+/** The variables each template takes. */
+export interface TemplateViews {
   'access.approved': Record<string, never>;
   /** The Prague day from which a new request can be made. */
   'access.rejected': { readonly retryFrom: CalDate };

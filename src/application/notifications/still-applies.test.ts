@@ -6,10 +6,33 @@ import { ACCESS_STATES, type AccessState } from '@/domain/review';
 
 import { stillApplies } from './index';
 
-type Recipient = Pick<UserRecord, 'role' | 'status'>;
+const AT = new Date('2026-09-01T10:00:00Z');
 
-const request = (state: AccessState): Pick<AccessRequestRecord, 'state'> => ({ state });
-const user = (role: Role, status: UserStatus = 'active'): Recipient => ({ role, status });
+const request = (state: AccessState): AccessRequestRecord => ({
+  id: 'request',
+  userId: 'user',
+  reason: 'reason',
+  state,
+  decidedBy: null,
+  decidedAt: null,
+  version: 1,
+  createdAt: AT,
+});
+const user = (role: Role, status: UserStatus = 'active'): UserRecord => ({
+  id: 'user',
+  tid: 'tid',
+  oid: 'oid',
+  displayName: 'Name',
+  email: null,
+  jobTitle: null,
+  department: null,
+  role,
+  isStudent: false,
+  status,
+  version: 1,
+  createdAt: AT,
+  updatedAt: AT,
+});
 
 const PENDING = user('pending');
 const MEMBER = user('submitter');
@@ -106,9 +129,4 @@ describe('stillApplies', () => {
       expect(stillApplies(template, null, recipient)).toBe(false);
     },
   );
-
-  it('never sends a decision about a subject that is not a request', () => {
-    expect(stillApplies('access.approved', MEMBER, MEMBER)).toBe(false);
-    expect(stillApplies('access.rejected', PENDING, PENDING)).toBe(false);
-  });
 });

@@ -1,19 +1,17 @@
-import type { AccessRequestRecord, UserRecord } from '@/application/ports';
+import type { UserRecord } from '@/application/ports';
 import type { AccessState } from '@/domain/review';
 import type { TemplateName } from '@/notify';
 
-type RequestFacts = Pick<AccessRequestRecord, 'state'>;
-type UserFacts = Pick<UserRecord, 'role' | 'status'>;
+import type { MailSubjects } from './subjects';
 
-/** What a mail's subject is when the worker reads it again: the request decided, or the user. */
-type MailSubject = RequestFacts | UserFacts;
+type UserFacts = Pick<UserRecord, 'role' | 'status'>;
 
 const member = (user: UserFacts) => user.role !== 'pending' && user.status === 'active';
 
 const decided =
   (state: AccessState, recipientFits: (user: UserFacts) => boolean) =>
-  (subject: MailSubject, recipient: UserFacts) =>
-    'state' in subject && subject.state === state && recipientFits(recipient);
+  (subject: MailSubjects['access.approved'], recipient: UserFacts) =>
+    subject.state === state && recipientFits(recipient);
 
 /**
  * Whether the mail still says something true (ADR 0016): the worker asks this
@@ -23,7 +21,7 @@ const decided =
  * an approval or a grant once the account was lowered or blocked.
  */
 const APPLIES: {
-  readonly [T in TemplateName]: (subject: MailSubject, recipient: UserFacts) => boolean;
+  readonly [T in TemplateName]: (subject: MailSubjects[T], recipient: UserFacts) => boolean;
 } = {
   'access.approved': decided('approved', member),
   'access.rejected': decided('rejected', (user) => user.role === 'pending'),
@@ -35,10 +33,11 @@ const APPLIES: {
 };
 
 /** A missing subject (a decided request purged on 1 September) never applies. */
-export function stillApplies(
-  template: TemplateName,
-  subject: MailSubject | null,
+export function stillApplies<T extends TemplateName>(
+  template: T,
+  subject: MailSubjects[T] | null,
   recipient: UserFacts,
 ): boolean {
-  return subject !== null && APPLIES[template](subject, recipient);
+  const applies: (subject: MailSubjects[T], recipient: UserFacts) => boolean = APPLIES[template];
+  return subject !== null && applies(subject, recipient);
 }
