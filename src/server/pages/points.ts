@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { DEADLINE_RULE } from '@/application/core';
+import { pointPlacement } from '@/application/core';
 import { getPoint, listMyPoints, listPointTypes, recentPeopleOf } from '@/application/use-cases';
 import {
   toKnownIssues,
@@ -9,17 +9,12 @@ import {
   type listMyPointsOutput,
   type listPointTypesOutput,
 } from '@/contracts';
-import { placementMonday } from '@/domain/calendar';
 import { formatLongDate, formatTime, schoolYear, type Campus, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec, PointKind } from '@/domain/report';
-import {
-  authorEditsPoint,
-  availableEvents,
-  POINT_MACHINE,
-  type AuthorMove,
-  type PointState,
-} from '@/domain/review';
+import type { Actor } from '@/domain/actor';
+import { can } from '@/domain/policy';
+import { authorEditsPoint, type AuthorMove, type PointState } from '@/domain/review';
 import {
   instantToWallClock,
   parseIsoDate,
@@ -198,14 +193,11 @@ async function recentsOf(viewer: UserPrincipal): Promise<readonly RecentPerson[]
 
 const AUTHOR_MOVES: readonly AuthorMove[] = ['retract', 'withdraw'];
 
-/** What the author may press from this state, by the machine; nothing for anyone else. */
-function movesOf(
-  { state, isAuthor }: Loaded,
-  role: Extract<UserPrincipal['actor'], { role: unknown }>['role'],
-): readonly AuthorMove[] {
+/** What the author may press from this state, as the policy allows; nothing for anyone else. */
+function movesOf(actor: Actor, { state, isAuthor }: Loaded): readonly AuthorMove[] {
   if (!isAuthor) return [];
-  const allowed = availableEvents(POINT_MACHINE, state, { kind: 'user', role, isAuthor });
-  return AUTHOR_MOVES.filter((move) => allowed.includes(move));
+  const point = { state, isAuthor };
+  return AUTHOR_MOVES.filter((event) => can(actor, { action: 'point.transition', point, event }));
 }
 
 /**
@@ -232,7 +224,7 @@ export async function pointPage(id: string): Promise<PointPageModel | null> {
     loaded.editable ? recentsOf(viewer) : [],
     loaded.isAuthor && authorEditsPoint(loaded.state) ? standingOf(viewer, now) : null,
   ]);
-  const moves = movesOf(loaded, viewer.actor.role);
+  const moves = movesOf(viewer.actor, loaded);
   return shaped(loaded, { recents, today, standing, moves });
 }
 
@@ -256,23 +248,15 @@ export interface MyPointsPageModel {
   readonly first: boolean;
 }
 
-/**
- * Where an approved point goes: the first Monday from its own that is neither skipped nor
- * generated (design section 3: an approved point is not held back to the submit Monday).
- */
+/** Where an approved point goes: not held back to the submit Monday (design section 3). */
 function placementOf(
   { state, earliestMonday }: z.output<typeof listMyPointsOutput>['points'][number],
   window: MeetingWindow | null,
   now: Date,
 ): string | null {
   if (state !== 'approved' || earliestMonday === null || window === null) return null;
-  const monday = placementMonday(
-    parseIsoDate(earliestMonday),
-    now,
-    DEADLINE_RULE,
-    toKnownIssues(window.issues),
-    true,
-  );
+  const known = toKnownIssues(window.issues);
+  const monday = pointPlacement('approved', parseIsoDate(earliestMonday), now, known);
   return monday && toIsoDate(monday);
 }
 

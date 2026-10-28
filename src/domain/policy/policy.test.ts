@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { ROLES, type Actor, type Role } from '@/domain/actor';
 import type { FutureKind } from '@/domain/calendar';
-import type { FutureState, PointState } from '@/domain/review';
+import {
+  FUTURE_MACHINE,
+  POINT_MACHINE,
+  type FutureEvent,
+  type FutureState,
+  type PointEvent,
+  type PointState,
+} from '@/domain/review';
 
 import { can, requiresStepUp, type Action, type Check } from './index';
 
@@ -322,5 +329,97 @@ describe('future items', () => {
     expect(
       can(actor('reviewer'), { action: 'future.edit', item: item('x', 'akce', 'submitted') }),
     ).toBe(true);
+  });
+});
+
+describe('owner given as isAuthor', () => {
+  const POINT_STATES: readonly PointState[] = [
+    'draft',
+    'submitted',
+    'returned',
+    'approved',
+    'rejected',
+    'withdrawn',
+    'published',
+  ];
+  const FUTURE_STATES: readonly FutureState[] = [
+    'draft',
+    'submitted',
+    'returned',
+    'approved',
+    'rejected',
+    'withdrawn',
+    'cancelled',
+  ];
+  const POINT_EVENTS = Object.keys(POINT_MACHINE) as PointEvent[];
+  const FUTURE_EVENTS = Object.keys(FUTURE_MACHINE) as FutureEvent[];
+
+  /** Who wrote it, given either way the policy takes. */
+  type Owner = { readonly authorId: string } | { readonly isAuthor: boolean };
+
+  interface Case {
+    readonly name: string;
+    readonly check: Check;
+  }
+  const entry = (name: string, check: Check): Case => ({ name, check });
+
+  /** Every edit and transition check of an owner given either way, by its author or not. */
+  function checks(owner: (isAuthor: boolean) => Owner): Case[] {
+    return [true, false].flatMap((isAuthor) => {
+      const who = isAuthor ? 'own' : 'other’s';
+      const points = POINT_STATES.flatMap((state) => {
+        const point = { ...owner(isAuthor), state };
+        return [
+          entry(`point.edit ${who} ${state}`, { action: 'point.edit', point }),
+          ...POINT_EVENTS.map((event) =>
+            entry(`point.transition ${who} ${state} ${event}`, {
+              action: 'point.transition',
+              point,
+              event,
+            }),
+          ),
+        ];
+      });
+      const futures = FUTURE_STATES.flatMap((state) => {
+        const item = { ...owner(isAuthor), state, kind: 'akce' as const };
+        return [
+          entry(`future.edit ${who} ${state}`, { action: 'future.edit', item }),
+          ...FUTURE_EVENTS.map((event) =>
+            entry(`future.transition ${who} ${state} ${event}`, {
+              action: 'future.transition',
+              item,
+              event,
+            }),
+          ),
+        ];
+      });
+      return [...points, ...futures];
+    });
+  }
+
+  const ACTORS: readonly [string, Actor][] = [
+    ...ROLES.map((role): [string, Actor] => [role, actor(role)]),
+    ['a student reviewer, downgraded', actor('reviewer', { isStudent: true })],
+    ['a student headmaster, downgraded', actor('headmaster', { isStudent: true })],
+    ['a deactivated reviewer', actor('reviewer', { status: 'deactivated' })],
+    ['a blocked headmaster', actor('headmaster', { status: 'blocked' })],
+  ];
+
+  it.each(ACTORS)('answers as the authorId form does, for %s', (_name, a) => {
+    const byId = checks((isAuthor) => ({ authorId: isAuthor ? a.id : 'someone-else' }));
+    const byFlag = checks((isAuthor) => ({ isAuthor }));
+    const answers = (list: Case[]) => list.map(({ name, check }) => [name, can(a, check)]);
+    expect(answers(byFlag)).toEqual(answers(byId));
+  });
+
+  it('keeps separation of duties: a reviewer decides on others’ points, never on their own', () => {
+    const reviewer = actor('reviewer');
+    const decide = (isAuthor: boolean) =>
+      can(reviewer, {
+        action: 'point.transition',
+        point: { isAuthor, state: 'submitted' },
+        event: 'approve',
+      });
+    expect([decide(false), decide(true)]).toEqual([true, false]);
   });
 });

@@ -16,8 +16,13 @@ import {
 interface Owned {
   readonly authorId: string;
 }
-type PointRef = Owned & { readonly state: PointState };
-type FutureRef = Owned & { readonly state: FutureState; readonly kind: FutureKind };
+/**
+ * Who wrote the resource an edit or a transition acts on: its author, or only whether that is the
+ * actor (a read model that names no author). Viewing always needs the author.
+ */
+type Owner = Owned | { readonly isAuthor: boolean };
+type PointRef = Owner & { readonly state: PointState };
+type FutureRef = Owner & { readonly state: FutureState; readonly kind: FutureKind };
 /** `everSubmitted`: submitted at least once (`submitted_at` is never cleared). */
 type Seen<S> = Owned & { readonly state: S; readonly everSubmitted: boolean };
 type PointView = Seen<PointState>;
@@ -54,8 +59,9 @@ export type Check =
 
 export type Action = Check['action'];
 
-function reviewActor(actor: Actor, owned: Owned): ReviewActor {
-  return { kind: 'user', role: actor.role, isAuthor: owned.authorId === actor.id };
+function reviewActor(actor: Actor, owner: Owner): ReviewActor {
+  const isAuthor = 'isAuthor' in owner ? owner.isAuthor : owner.authorId === actor.id;
+  return { kind: 'user', role: actor.role, isAuthor };
 }
 
 const has = (actor: Actor, minimum: Role) => atLeast(actor.role, minimum);

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -7,13 +7,14 @@ import {
   type PointCursor,
   type PointRecord,
   type PointRepo,
+  type QueuedPoint,
   type TxContext,
 } from '@/application/ports';
 import { parsePointJsonb, parsePointPeople, type PointJsonb } from '@/contracts';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
-import { pointEvents, points } from '../schema';
+import { pointEvents, points, pointTypes } from '../schema';
 import type { TxDatabase } from './database';
 
 /** The columns a PointRecord is made of; new columns stay out until named here. */
@@ -136,10 +137,49 @@ const SUMMARY_ROW = {
   updatedAt: points.updatedAt,
 };
 
+/** Whether the point was ever returned („Vráceno dříve“): one EXISTS per row, no second query. */
+const returnedBefore = sql<boolean>`EXISTS (
+  SELECT 1 FROM ${pointEvents} e WHERE e.point_id = "points"."id" AND e.event = 'return'
+)`.as('returned_before');
+
+const QUEUE_ROW = {
+  id: points.id,
+  kind: points.kind,
+  state: points.state,
+  title: points.title,
+  typeName: pointTypes.name,
+  earliestMonday: points.earliestMonday,
+  submittedAt: points.submittedAt,
+  returnedBefore,
+};
+
+/** A queue row; `points_submitted_complete` holds the Monday and the submission of a handed-in point. */
+function toQueued(row: Awaited<ReturnType<typeof queueRows>>[number]): QueuedPoint {
+  const { state, earliestMonday, submittedAt } = row;
+  const queued = state === 'submitted' || state === 'approved';
+  if (!queued || earliestMonday === null || submittedAt === null) {
+    throw new DatabaseFailure(PARSE_FAILURE);
+  }
+  return { ...row, state, earliestMonday: parseIsoDate(earliestMonday), submittedAt };
+}
+
+/**
+ * The submitted and approved points in scope: the submitted ones first, so approved points waiting
+ * for a porada never push one out past the limit; each the oldest submission first, ties to the lower id.
+ */
+const queueRows = (db: TxDatabase, ctx: TxContext, limit: number) =>
+  db
+    .select(QUEUE_ROW)
+    .from(points)
+    .leftJoin(pointTypes, eq(pointTypes.id, points.typeId))
+    .where(and(visiblePoints(ctx), inArray(points.state, ['submitted', 'approved'])))
+    .orderBy(sql`${points.state} = 'approved'`, asc(points.submittedAt), asc(points.id))
+    .limit(limit);
+
 export function createPointReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine' | 'ownRecent'> {
+): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine' | 'queue' | 'ownRecent'> {
   const byId = (id: string) =>
     db
       .select(POINT_ROW)
@@ -167,6 +207,9 @@ export function createPointReads(
         eventDate: dateOrNull(row.eventDate),
         earliestMonday: dateOrNull(row.earliestMonday),
       }));
+    },
+    async queue(limit) {
+      return (await queueRows(db, ctx, limit)).map(toQueued);
     },
     async ownRecent({ limit, since }) {
       const rows = await db

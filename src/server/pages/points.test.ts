@@ -32,7 +32,10 @@ const calledWith = () =>
 
 beforeEach(() => {
   resolvePrincipal.mockReset();
-  resolvePrincipal.mockResolvedValue({ kind: 'user', actor: { id: 'u1', role: 'submitter' } });
+  resolvePrincipal.mockResolvedValue({
+    kind: 'user',
+    actor: { id: 'u1', role: 'submitter', status: 'active', isStudent: false },
+  });
   runRegistered.mockReset();
   directoryMode.value = 'on';
 });
@@ -485,16 +488,31 @@ describe('pointPage', () => {
     it.each(['submitter', 'reviewer', 'headmaster'])(
       'offers a %s who did not write the submitted point no move',
       async (role) => {
-        resolvePrincipal.mockResolvedValue({ kind: 'user', actor: { id: 'u2', role } });
+        resolvePrincipal.mockResolvedValue({
+          kind: 'user',
+          actor: { id: 'u2', role, status: 'active', isStudent: false },
+        });
         loadedAs({ state: 'submitted', isAuthor: false, editable: false });
         expect((await pointPage(ID))?.moves).toEqual([]);
       },
     );
 
     it('offers the headmaster who wrote the point the author’s moves', async () => {
-      resolvePrincipal.mockResolvedValue({ kind: 'user', actor: { id: 'u1', role: 'headmaster' } });
+      resolvePrincipal.mockResolvedValue({
+        kind: 'user',
+        actor: { id: 'u1', role: 'headmaster', status: 'active', isStudent: false },
+      });
       loadedAs({ state: 'submitted', editable: false });
       expect((await pointPage(ID))?.moves).toEqual(['retract', 'withdraw']);
+    });
+
+    it('offers no move to an author whose account is no longer active: the policy decides', async () => {
+      resolvePrincipal.mockResolvedValue({
+        kind: 'user',
+        actor: { id: 'u1', role: 'submitter', status: 'deactivated', isStudent: false },
+      });
+      loadedAs({ state: 'submitted', editable: false });
+      expect((await pointPage(ID))?.moves).toEqual([]);
     });
   });
 

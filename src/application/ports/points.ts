@@ -53,6 +53,22 @@ export type PointSummary = Pick<
 > &
   Pick<PointContent, 'title' | 'eventDate'> & { readonly returnNote: string | null };
 
+/**
+ * A row of the review queue (design section 10): what `/kontrola` shows of a submitted or
+ * approved point. Both states are handed in, so the Monday and the submission are always set.
+ */
+export type QueuedPoint = Pick<PointRecord, 'id' | 'kind'> &
+  Pick<PointContent, 'title'> & {
+    /** The queue lists only these. */
+    readonly state: Extract<PointState, 'submitted' | 'approved'>;
+    readonly earliestMonday: CalDate;
+    readonly submittedAt: Date;
+    /** A report's type; null for finance and pokyn. */
+    readonly typeName: string | null;
+    /** True once the point was ever returned: „Vráceno dříve“. */
+    readonly returnedBefore: boolean;
+  };
+
 /** Where a page of the author's list ended: its last row's change and id. */
 export type PointCursor = Pick<PointRecord, 'updatedAt' | 'id'>;
 
@@ -91,6 +107,11 @@ export interface PointRepo {
    * ScopeViolation for the system.
    */
   listMine(limit: number, before?: PointCursor): Promise<readonly PointSummary[]>;
+  /**
+   * The review queue: the points in scope that are `submitted` or `approved`, the submitted ones
+   * first, then each the oldest submission first, ties to the lower id, at most `limit`.
+   */
+  queue(limit: number): Promise<readonly QueuedPoint[]>;
   /**
    * The people memory's read (design section 4): the bullets, statements and
    * change instant of the user's own points changed at or after `since`, in

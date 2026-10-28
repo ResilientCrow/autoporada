@@ -83,6 +83,10 @@ const returnNoteOf = (tx: FakeTxState, pointId: string): string | null =>
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))[0]
     ?.note ?? null;
 
+/** `queue`'s order: the oldest submission first, ties to the lower id. */
+const handedInFirst = (a: FakePoint, b: FakePoint) =>
+  (a.submittedAt?.getTime() ?? 0) - (b.submittedAt?.getTime() ?? 0) || (a.id < b.id ? -1 : 1);
+
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const { principal, now } = ctx;
@@ -191,6 +195,34 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           version: p.version,
           updatedAt: p.updatedAt,
         }));
+    },
+    async queue(limit) {
+      guard(tx, false);
+      const events = [...tx.draft.pointEvents.values()];
+      return [...points.values()]
+        .filter((p) => visible(p) && (p.state === 'submitted' || p.state === 'approved'))
+        .sort(
+          (a, b) =>
+            Number(a.state === 'approved') - Number(b.state === 'approved') || handedInFirst(a, b),
+        )
+        .slice(0, limit)
+        .map((p) => {
+          const { state } = p;
+          const queued = state === 'submitted' || state === 'approved';
+          if (!queued || p.earliestMonday === null || p.submittedAt === null) {
+            throw new DatabaseFailure('db.parse.points');
+          }
+          return {
+            id: p.id,
+            kind: p.kind,
+            state,
+            title: p.content.title,
+            typeName: (p.typeId && tx.draft.pointTypes.get(p.typeId)?.name) ?? null,
+            earliestMonday: p.earliestMonday,
+            submittedAt: p.submittedAt,
+            returnedBefore: events.some((e) => e.pointId === p.id && e.event === 'return'),
+          };
+        });
     },
     async ownRecent({ limit, since }) {
       return own()

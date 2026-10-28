@@ -140,3 +140,41 @@ export const listMyPointsOutput = z.object({
     .max(MY_POINTS_PAGE),
   next: z.string().max(CURSOR_MAX).nullable(),
 });
+
+/** The most handed-in points the review queue lists: the submitted ones first, each the oldest first. */
+export const QUEUE_LIMIT = 500;
+
+/** A point of the review queue as `/kontrola` lists it. */
+const queueRow = z.object({
+  id: z.uuid(),
+  kind: pointKindSchema,
+  title: z.string(),
+  /** A report's type; null for finance and pokyn. */
+  typeName: z.string().nullable(),
+  /** The last submission. */
+  submittedAt: instant,
+  /** „Vráceno dříve“: the point was returned at least once. */
+  returnedBefore: z.boolean(),
+});
+
+/** „Kontrola“ (design section 10): no input; the reviewer's scope decides what is in it. */
+export const queuePointsInput = z.strictObject({});
+export const queuePointsOutput = z.object({
+  /**
+   * The submitted points by the Monday they go to, earliest first, and inside a Monday by kind
+   * (report, finance, pokyn), the oldest submission first. `monday` is null, and last, for points
+   * no Monday of the window takes.
+   */
+  mondays: z.array(
+    z.object({
+      monday: day.nullable(),
+      kinds: z.array(
+        z.object({ kind: pointKindSchema, points: z.array(queueRow).max(QUEUE_LIMIT) }),
+      ),
+    }),
+  ),
+  /** The approved points not yet in an issue, the oldest submission first, each with its Monday. */
+  approved: z.array(queueRow.extend({ monday: day.nullable() })).max(QUEUE_LIMIT),
+  /** More points wait than the queue lists: past `QUEUE_LIMIT`, the approved, then the newest submitted are left out. */
+  more: z.boolean(),
+});

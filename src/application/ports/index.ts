@@ -72,6 +72,7 @@ export type {
   PointRecord,
   PointRepo,
   PointSummary,
+  QueuedPoint,
 } from './points';
 export {
   scopeOf,
