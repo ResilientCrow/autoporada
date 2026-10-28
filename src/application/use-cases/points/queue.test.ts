@@ -224,10 +224,21 @@ describe('points.queue', () => {
     ]);
   });
 
-  it('holds a submitted point to the submit Monday once its own deadline has passed', async () => {
+  it('keeps a point handed in on time under its Monday past the deadline, while reviewers finish the issue', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const id = await handIn(author, 'pokyn');
     world.clock.set(AFTER_DEADLINE);
+    const late = await handIn(author, 'pokyn', { monday: NEXT_MONDAY });
+    expect((await shape(await reviewer())).mondays).toEqual([
+      ['2026-10-26', [['pokyn', [id]]]],
+      ['2026-11-02', [['pokyn', [late]]]],
+    ]);
+  });
+
+  it('moves a point still waiting on once its porada is over', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const id = await handIn(author, 'pokyn');
+    world.clock.set(new Date('2026-10-27T10:00:00Z'));
     expect((await shape(await reviewer())).mondays).toEqual([['2026-11-02', [['pokyn', [id]]]]]);
   });
 

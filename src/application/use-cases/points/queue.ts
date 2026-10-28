@@ -1,8 +1,8 @@
-import { defineUseCase, ok, pointPlacement } from '@/application/core';
+import { defineUseCase, ok } from '@/application/core';
 import type { QueuedPoint, Tx } from '@/application/ports';
 import { QUEUE_LIMIT, queuePointsInput, queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
-import type { KnownIssue } from '@/domain/calendar';
+import { placementMonday, type KnownIssue } from '@/domain/calendar';
 import { can } from '@/domain/policy';
 import type { PointKind } from '@/domain/report';
 import { toIsoDate } from '@/domain/time';
@@ -23,7 +23,7 @@ const rowWire = (row: QueuedPoint) => ({
 
 /** The ISO Monday the point goes to, or null when no Monday of the window takes it. */
 const mondayOf = (row: QueuedPoint, now: Date, known: readonly KnownIssue[]) => {
-  const monday = pointPlacement(row.state, row.earliestMonday, now, known);
+  const monday = placementMonday(row.earliestMonday, now, known);
   return monday && toIsoDate(monday);
 };
 

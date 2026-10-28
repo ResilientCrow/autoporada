@@ -118,57 +118,86 @@ describe('submitMonday', () => {
 });
 
 describe('placementMonday', () => {
-  const NOW = new Date('2026-10-14T10:00:00Z'); // submit Monday 2026-10-19
+  const NOW = new Date('2026-10-14T10:00:00Z'); // Wednesday; submit Monday 2026-10-19
 
-  it('gives an approved point its earliest Monday when it is open', () => {
-    expect(iso(placementMonday(d('2026-10-19'), NOW, RULE, [], true))).toBe('2026-10-19');
+  it('gives a point its earliest Monday when it is open', () => {
+    expect(iso(placementMonday(d('2026-10-19'), NOW, []))).toBe('2026-10-19');
   });
 
-  it('moves an approved point past skipped and generated Mondays', () => {
+  it('moves a point past skipped and generated Mondays', () => {
     const list = [
       known('2026-10-19', 'skipped'),
       known('2026-10-26', 'generated'),
       known('2026-11-02', 'skipped'),
     ];
-    expect(iso(placementMonday(d('2026-10-19'), NOW, RULE, list, true))).toBe('2026-11-09');
+    expect(iso(placementMonday(d('2026-10-19'), NOW, list))).toBe('2026-11-09');
   });
 
   it('treats an open known issue and an unknown Monday alike', () => {
-    expect(
-      iso(placementMonday(d('2026-10-19'), NOW, RULE, [known('2026-10-19', 'open')], true)),
-    ).toBe('2026-10-19');
+    expect(iso(placementMonday(d('2026-10-19'), NOW, [known('2026-10-19', 'open')]))).toBe(
+      '2026-10-19',
+    );
   });
 
-  it('does not push an approved point forward to the submit Monday', () => {
-    // Wednesday 2026-10-14, the porada of Monday 2026-10-19 is still ahead; submit Monday 2026-10-19.
-    const ahead = new Date('2026-10-14T10:00:00Z');
-    // Friday 2026-10-16 after the Thursday deadline: submit Monday 2026-10-26.
-    const afterDeadline = new Date('2026-10-16T10:00:00Z');
-    expect(iso(placementMonday(d('2026-10-19'), ahead, RULE, [], true))).toBe('2026-10-19');
-    expect(iso(placementMonday(d('2026-10-19'), afterDeadline, RULE, [], true))).toBe('2026-10-19');
+  it('keeps a later earliest Monday', () => {
+    expect(iso(placementMonday(d('2026-11-09'), NOW, []))).toBe('2026-11-09');
   });
 
-  describe('an approved point never lands on a porada that is over', () => {
-    it('moves a past earliest Monday to the next Monday', () => {
-      // Tuesday 2026-10-27, approved for Monday 2026-10-19.
-      const tuesday = new Date('2026-10-27T10:00:00Z');
-      expect(iso(placementMonday(d('2026-10-19'), tuesday, RULE, [], true))).toBe('2026-11-02');
+  describe('a point waiting for review keeps its Monday until that porada is over', () => {
+    // Sunday 2026-10-25 21:00 Prague: the deadline of Monday 2026-10-26 (18:00) has passed.
+    const AFTER_DEADLINE = new Date('2026-10-25T20:00:00Z');
+
+    it('keeps a point handed in on time under its Monday while reviewers finish the issue', () => {
+      expect(iso(placementMonday(d('2026-10-26'), AFTER_DEADLINE, []))).toBe('2026-10-26');
     });
 
-    it('keeps today when today is the Monday of the earliest Monday', () => {
+    it('does not push a point forward to the submit Monday', () => {
+      // Friday 2026-10-16: the submit Monday is 2026-10-19 until Sunday evening, then 2026-10-26.
+      expect(iso(placementMonday(d('2026-10-19'), new Date('2026-10-16T10:00:00Z'), []))).toBe(
+        '2026-10-19',
+      );
+      expect(iso(placementMonday(d('2026-10-19'), new Date('2026-10-18T19:00:00Z'), []))).toBe(
+        '2026-10-19',
+      );
+    });
+
+    it('shows a late submission, whose earliest Monday is already the next one, there', () => {
+      const late = submitMonday(AFTER_DEADLINE, RULE, []);
+      expect(iso(late)).toBe('2026-11-02');
+      expect(iso(placementMonday(late, AFTER_DEADLINE, []))).toBe('2026-11-02');
+    });
+  });
+
+  describe('a point never lands on a porada that is over', () => {
+    it('moves a past earliest Monday to the next Monday', () => {
+      // Tuesday 2026-10-27, handed in for Monday 2026-10-26 or earlier.
+      const tuesday = new Date('2026-10-27T10:00:00Z');
+      expect(iso(placementMonday(d('2026-10-26'), tuesday, []))).toBe('2026-11-02');
+      expect(iso(placementMonday(d('2026-10-19'), tuesday, []))).toBe('2026-11-02');
+    });
+
+    it('keeps today when today is the earliest Monday', () => {
       const monday = new Date('2026-10-26T10:00:00Z');
-      expect(iso(placementMonday(d('2026-10-26'), monday, RULE, [], true))).toBe('2026-10-26');
-      expect(iso(placementMonday(d('2026-10-19'), monday, RULE, [], true))).toBe('2026-10-26');
+      expect(iso(placementMonday(d('2026-10-26'), monday, []))).toBe('2026-10-26');
+      expect(iso(placementMonday(d('2026-10-19'), monday, []))).toBe('2026-10-26');
     });
 
     it('measures today in Prague: Sunday 23:30 UTC already is the Monday', () => {
       const lateSunday = new Date('2026-10-25T23:30:00Z'); // Monday 2026-10-26 00:30 Prague
-      expect(iso(placementMonday(d('2026-10-19'), lateSunday, RULE, [], true))).toBe('2026-10-26');
+      expect(iso(placementMonday(d('2026-10-19'), lateSunday, []))).toBe('2026-10-26');
+    });
+
+    it('measures today in Prague across the spring DST change', () => {
+      const beforeMidnight = new Date('2027-03-28T21:59:59Z'); // Sunday 23:59:59 CEST
+      const afterMidnight = new Date('2027-03-28T22:00:00Z'); // Monday 00:00 CEST
+      expect(iso(placementMonday(d('2027-03-22'), beforeMidnight, []))).toBe('2027-03-29');
+      expect(iso(placementMonday(d('2027-03-22'), afterMidnight, []))).toBe('2027-03-29');
+      expect(iso(placementMonday(d('2027-03-29'), afterMidnight, []))).toBe('2027-03-29');
     });
 
     it('leaves an earliest Monday in the future as it is', () => {
       const tuesday = new Date('2026-10-27T10:00:00Z');
-      expect(iso(placementMonday(d('2026-11-16'), tuesday, RULE, [], true))).toBe('2026-11-16');
+      expect(iso(placementMonday(d('2026-11-16'), tuesday, []))).toBe('2026-11-16');
     });
 
     it('goes on past skipped and generated Mondays after the clamp', () => {
@@ -178,7 +207,7 @@ describe('placementMonday', () => {
         known('2026-11-02', 'skipped'),
         known('2026-11-09', 'generated'),
       ];
-      expect(iso(placementMonday(d('2026-10-19'), tuesday, RULE, list, true))).toBe('2026-11-16');
+      expect(iso(placementMonday(d('2026-10-19'), tuesday, list))).toBe('2026-11-16');
     });
 
     it('does not count a past Monday that is still open against the 26 weeks', () => {
@@ -186,50 +215,8 @@ describe('placementMonday', () => {
       const blocked = Array.from({ length: 25 }, (_, week) =>
         known(toIsoDate(addDays(d('2026-11-02'), 7 * week)), 'skipped'),
       );
-      expect(iso(placementMonday(d('2026-10-19'), tuesday, RULE, blocked, true))).toBe(
-        '2027-04-26',
-      );
+      expect(iso(placementMonday(d('2026-10-19'), tuesday, blocked))).toBe('2027-04-26');
     });
-  });
-
-  it('holds a waiting point back to the submit Monday', () => {
-    const later = new Date('2026-11-10T10:00:00Z');
-    expect(iso(placementMonday(d('2026-10-19'), later, RULE, [], false))).toBe('2026-11-16');
-  });
-
-  it('keeps a waiting point on a later earliest Monday', () => {
-    expect(iso(placementMonday(d('2026-11-09'), NOW, RULE, [], false))).toBe('2026-11-09');
-  });
-
-  it('skips Mondays for a waiting point from the later of earliest and submit Monday', () => {
-    const list = [known('2026-10-19', 'skipped'), known('2026-10-26', 'skipped')];
-    expect(iso(placementMonday(d('2026-10-12'), NOW, RULE, list, false))).toBe('2026-11-02');
-  });
-
-  it('uses the frozen deadline of a known issue to find the submit Monday', () => {
-    const early = known('2026-10-19', 'open', '2026-10-13T10:00:00Z');
-    expect(iso(placementMonday(d('2026-10-12'), NOW, RULE, [early], false))).toBe('2026-10-26');
-  });
-
-  it('keeps a waiting point on a Monday whose frozen deadline is later than the computed one', () => {
-    const now = new Date('2026-10-18T17:00:00Z'); // computed deadline 16:00Z has passed
-    const late = known('2026-10-19', 'open', '2026-10-18T20:00:00Z');
-    expect(iso(placementMonday(d('2026-10-12'), now, RULE, [], false))).toBe('2026-10-26');
-    expect(iso(placementMonday(d('2026-10-12'), now, RULE, [late], false))).toBe('2026-10-19');
-  });
-
-  it('follows a late submit across the autumn DST change', () => {
-    const after = new Date('2026-10-25T17:00:00Z');
-    expect(iso(placementMonday(d('2026-10-19'), after, RULE, [], false))).toBe('2026-11-02');
-    // The porada of Monday 2026-10-19 is over by then: an approved point goes to the next one.
-    expect(iso(placementMonday(d('2026-10-19'), after, RULE, [], true))).toBe('2026-10-26');
-  });
-
-  it('follows a late submit across the spring DST change', () => {
-    const before = new Date('2027-03-28T15:59:59Z');
-    const after = new Date('2027-03-28T16:00:00Z');
-    expect(iso(placementMonday(d('2027-03-22'), before, RULE, [], false))).toBe('2027-03-29');
-    expect(iso(placementMonday(d('2027-03-22'), after, RULE, [], false))).toBe('2027-04-05');
   });
 
   describe('26-week bound', () => {
@@ -245,16 +232,15 @@ describe('placementMonday', () => {
     });
 
     it('finds the 26th Monday when the 25 before it are blocked', () => {
-      expect(iso(placementMonday(start, NOW, RULE, blocked(25), true))).toBe('2027-04-12');
+      expect(iso(placementMonday(start, NOW, blocked(25)))).toBe('2027-04-12');
     });
 
     it('gives null when all 26 Mondays are skipped or generated, even if the 27th is open', () => {
-      expect(placementMonday(start, NOW, RULE, blocked(26), true)).toBeNull();
-      expect(placementMonday(start, NOW, RULE, blocked(26), false)).toBeNull();
+      expect(placementMonday(start, NOW, blocked(26))).toBeNull();
     });
   });
 
   it('refuses an earliest day that is not a Monday', () => {
-    expect(() => placementMonday(d('2026-10-20'), NOW, RULE, [], true)).toThrow(RangeError);
+    expect(() => placementMonday(d('2026-10-20'), NOW, [])).toThrow(RangeError);
   });
 });

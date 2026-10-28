@@ -33,6 +33,8 @@ function byMonday(known: readonly KnownIssue[]): ReadonlyMap<string, KnownIssue>
  * A known issue's deadline is its frozen row value whatever its status, any
  * other Monday's is computed. Skips and generated issues do not matter here: a
  * point submitted for a skipped Monday is placed later by `placementMonday`.
+ * It names the Monday a new submission is for, never where a handed-in point
+ * is shown.
  */
 export function submitMonday(now: Date, rule: DeadlineRule, known: readonly KnownIssue[]): CalDate {
   const rows = byMonday(known);
@@ -49,25 +51,26 @@ function nextMonday(now: Date): CalDate {
 }
 
 /**
- * The Monday a point is shown under: the first one from `earliest` whose
- * issue is not skipped or generated. A Monday without a row is open. A point
- * still waiting starts from the later of `earliest` and the submit Monday; an
- * approved one from the later of `earliest` and the first Monday on or after
- * today (a porada that is over is never shown, and the issue rows only reach
- * back to this week's Monday, so a past Monday would read as open). `null`
- * when none of the 26 Mondays from the start qualifies. Nothing is written,
- * so skipping and unskipping move points on their own.
+ * The Monday a point is shown under: the first one from the later of
+ * `earliest` and the first Monday on or after today (Prague) whose issue is
+ * not skipped or generated; a Monday without a row is open. A point waiting
+ * for review and an approved one are placed alike, so a point handed in on
+ * time stays under its Monday while reviewers finish the issue after the
+ * deadline, and approving it does not move it; once that porada is over it
+ * moves on (and the issue rows only reach back to this week's Monday, so a
+ * past Monday would read as open). A late submission is already later:
+ * its `earliest` is the submit Monday it was handed in for. `null` when none
+ * of the 26 Mondays from the start qualifies. Nothing is written, so skipping
+ * and unskipping move points on their own.
  */
 export function placementMonday(
   earliest: CalDate,
   now: Date,
-  rule: DeadlineRule,
   known: readonly KnownIssue[],
-  approved: boolean,
 ): CalDate | null {
   assertMonday(earliest);
-  const submit = approved ? nextMonday(now) : submitMonday(now, rule, known);
-  const start = compareDates(earliest, submit) >= 0 ? earliest : submit;
+  const today = nextMonday(now);
+  const start = compareDates(earliest, today) >= 0 ? earliest : today;
   const rows = byMonday(known);
   for (let week = 0; week < PLACEMENT_WEEKS; week++) {
     const monday = addDays(start, 7 * week);

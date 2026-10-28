@@ -1,8 +1,8 @@
 import type { z } from 'zod';
 
-import { pointPlacement } from '@/application/core';
 import { getPoint, listMyPoints, listPointTypes } from '@/application/use-cases';
 import { toKnownIssues, type listMyPointsOutput, type listPointTypesOutput } from '@/contracts';
+import { placementMonday } from '@/domain/calendar';
 import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec } from '@/domain/report';
@@ -164,7 +164,7 @@ export interface MyPointsPageModel {
   readonly first: boolean;
 }
 
-/** Where an approved point goes: not held back to the submit Monday (design section 3). */
+/** Where an approved point goes: its earliest Monday, or the next one once that porada is over (design section 3). */
 function placementOf(
   { state, earliestMonday }: z.output<typeof listMyPointsOutput>['points'][number],
   window: MeetingWindow | null,
@@ -172,7 +172,7 @@ function placementOf(
 ): string | null {
   if (state !== 'approved' || earliestMonday === null || window === null) return null;
   const known = toKnownIssues(window.issues);
-  const monday = pointPlacement('approved', parseIsoDate(earliestMonday), now, known);
+  const monday = placementMonday(parseIsoDate(earliestMonday), now, known);
   return monday && toIsoDate(monday);
 }
 

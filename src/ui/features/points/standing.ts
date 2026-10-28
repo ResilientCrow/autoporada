@@ -49,7 +49,7 @@ export function standingOf({ submitMonday, issues, now, rule }: StandingInput): 
   const instant = new Date(now);
   const known = toKnownIssues(issues);
   const first = parseIsoDate(submitMonday);
-  const placement = placementMonday(first, instant, rule, known, false);
+  const placement = placementMonday(first, instant, known);
   if (placement === null) return null;
 
   const closed = addDays(first, -7);
