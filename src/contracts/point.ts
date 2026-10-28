@@ -10,6 +10,7 @@ import {
   type DraftStatement,
   type PointContent,
 } from '@/domain/report';
+import { POINT_MACHINE, REVIEW_DECISIONS } from '@/domain/review';
 import {
   LIMITS as RICH_LIMITS,
   parseRichDoc,
@@ -277,3 +278,28 @@ export const retractPointOutput = pointVersion;
 /** „Zrušit bod“; `confirmed` is the checkbox (ADR 0013 item 10). */
 export const withdrawPointInput = z.strictObject({ ...pointWrite, confirmed: z.boolean() });
 export const withdrawPointOutput = pointVersion;
+
+/**
+ * „Schválit“, „Vrátit k úpravě“, „Zamítnout“ (design section 10). The note is for the author and
+ * only the decisions the machine says require one take it. It is trimmed and counted as
+ * `String.length` (POINT_LIMITS), so a note within the cap always passes the CHECK on
+ * `char_length`; the pipeline has already made every line break one `\n` (ADR 0011 step 2), as
+ * the bar's counter counts it. One object with a refinement, since a use case's input is one strict object: a
+ * return or a reject without a note is `required` on `note`, an approval with one is `invalid`.
+ */
+export const decidePointInput = z
+  .strictObject({
+    ...pointWrite,
+    event: z.enum(REVIEW_DECISIONS),
+    note: z.string().trim().min(1).max(POINT_LIMITS.note).optional(),
+  })
+  .superRefine(({ event, note }, ctx) => {
+    if ((POINT_MACHINE[event].requiresNote === true) === (note !== undefined)) return;
+    const code = note === undefined ? 'required' : 'invalid';
+    ctx.addIssue({ code: 'custom', path: ['note'], message: code, params: { code } });
+  });
+/** The new version, and the next submitted point of the queue the actor may approve (null: none waits). */
+export const decidePointOutput = z.object({
+  version: z.number().int().positive(),
+  next: z.uuid().nullable(),
+});

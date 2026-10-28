@@ -55,9 +55,10 @@ export type PointSummary = Pick<
 
 /**
  * A row of the review queue (design section 10): what `/kontrola` shows of a submitted or
- * approved point. Both states are handed in, so the Monday and the submission are always set.
+ * approved point. Both states are handed in, so the Monday and the submission are always set. The
+ * author never reaches the page: it tells which points the reviewer may approve (`points.decide`).
  */
-export type QueuedPoint = Pick<PointRecord, 'id' | 'kind'> &
+export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
   Pick<PointContent, 'title'> & {
     /** The queue lists only these. */
     readonly state: Extract<PointState, 'submitted' | 'approved'>;

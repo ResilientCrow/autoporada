@@ -4,7 +4,7 @@ import { getPoint, queuePoints } from '@/application/use-cases';
 import type { queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
 import { can } from '@/domain/policy';
-import type { PointEvent } from '@/domain/review';
+import { REVIEW_DECISIONS, type ReviewDecision } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
 
 import { getContainer } from '../container';
@@ -17,16 +17,17 @@ import { getViewer, requestId } from './viewer';
 /** „Kontrola“: the queue as `points.queue` answers; the page writes the dates out. */
 export type QueuePageModel = z.output<typeof queuePointsOutput>;
 
-/** A reviewer's decision on a point, in the order the bar offers them. */
-type ReviewDecision = Extract<PointEvent, 'approve' | 'return' | 'reject'>;
-const DECISIONS: readonly ReviewDecision[] = ['approve', 'return', 'reject'];
-
 /** What the decision bar may offer this viewer, worked out here so the page only renders it. */
 interface ReviewBarModel {
   /** The decisions the policy allows from the point's state (separation of duties included). */
   readonly decisions: readonly ReviewDecision[];
   /** „Upravit“: a reviewer's edit, never on their own point (SSU-6). */
   readonly canEdit: boolean;
+  /**
+   * The viewer may not approve only because the point is their own: the bar says another reviewer
+   * or the headmaster approves it (separation of duties).
+   */
+  readonly othersApprove: boolean;
 }
 
 /** /kontrola/[id]: the point as its read view shows it, and the bar's choices. */
@@ -51,11 +52,18 @@ export async function queuePage(): Promise<QueuePageModel | null> {
 /** The bar's choices for this actor; `points.get` names no author, only whether it is the viewer. */
 function barOf(actor: Actor, { state, isAuthor }: LoadedPoint): ReviewBarModel {
   const point = { state, isAuthor };
+  const decisions = REVIEW_DECISIONS.filter((event) =>
+    can(actor, { action: 'point.transition', point, event }),
+  );
+  const approvableByOthers = can(actor, {
+    action: 'point.transition',
+    point: { state, isAuthor: false },
+    event: 'approve',
+  });
   return {
-    decisions: DECISIONS.filter((event) =>
-      can(actor, { action: 'point.transition', point, event }),
-    ),
+    decisions,
     canEdit: !isAuthor && can(actor, { action: 'point.edit', point }),
+    othersApprove: !decisions.includes('approve') && approvableByOthers,
   };
 }
 

@@ -145,6 +145,7 @@ const returnedBefore = sql<boolean>`EXISTS (
 const QUEUE_ROW = {
   id: points.id,
   kind: points.kind,
+  authorId: points.authorId,
   state: points.state,
   title: points.title,
   typeName: pointTypes.name,

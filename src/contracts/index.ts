@@ -60,6 +60,8 @@ export {
   contentWire,
   createPointInput,
   createPointOutput,
+  decidePointInput,
+  decidePointOutput,
   parsePointJsonb,
   parsePointPeople,
   retractPointInput,

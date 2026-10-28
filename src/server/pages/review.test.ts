@@ -177,6 +177,7 @@ describe('reviewPointPage', () => {
       expect(await barOf('reviewer')).toEqual({
         decisions: ['approve', 'return', 'reject'],
         canEdit: true,
+        othersApprove: false,
       });
     });
 
@@ -184,6 +185,7 @@ describe('reviewPointPage', () => {
       expect(await barOf('reviewer', { isAuthor: true })).toEqual({
         decisions: ['return', 'reject'],
         canEdit: false,
+        othersApprove: true,
       });
     });
 
@@ -191,6 +193,7 @@ describe('reviewPointPage', () => {
       expect(await barOf('headmaster', { isAuthor: true })).toEqual({
         decisions: ['approve', 'return', 'reject'],
         canEdit: false,
+        othersApprove: false,
       });
     });
 
@@ -198,13 +201,24 @@ describe('reviewPointPage', () => {
       expect(await barOf('reviewer', { state: 'approved' })).toEqual({
         decisions: ['return', 'reject'],
         canEdit: true,
+        othersApprove: false,
+      });
+    });
+
+    it('says nothing of other approvers on a reviewer’s own approved point', async () => {
+      expect(await barOf('reviewer', { state: 'approved', isAuthor: true })).toMatchObject({
+        othersApprove: false,
       });
     });
 
     it.each(['returned', 'rejected', 'withdrawn', 'published'])(
       'offers nothing on a %s point',
       async (state) => {
-        expect(await barOf('headmaster', { state })).toEqual({ decisions: [], canEdit: false });
+        expect(await barOf('headmaster', { state })).toEqual({
+          decisions: [],
+          canEdit: false,
+          othersApprove: false,
+        });
       },
     );
   });

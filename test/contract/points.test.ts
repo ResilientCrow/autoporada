@@ -526,6 +526,7 @@ describe('PointRepo queue (the review queue)', () => {
   const queued = (p: PointRecord, typeName: string | null = 'Seminář', returnedBefore = false) => ({
     id: p.id,
     kind: p.kind,
+    authorId: p.authorId,
     state: p.state,
     title: p.content.title,
     typeName,
@@ -553,7 +554,7 @@ describe('PointRepo queue (the review queue)', () => {
       await tx.audit.record({ action: 'point.save', target: { type: 'point', id: pointId } });
     });
 
-  it('lists a reviewer the submitted, then the approved points of every author, oldest first', async () => {
+  it('lists a reviewer the submitted, then the approved points of every author, oldest first, each with its author', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const reviewer = await world.seed.user({ role: 'reviewer' });
     const submitted = await made(author, [at('2026-10-19T10:00:00Z')]);

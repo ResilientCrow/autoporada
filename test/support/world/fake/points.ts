@@ -215,6 +215,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           return {
             id: p.id,
             kind: p.kind,
+            authorId: p.authorId,
             state,
             title: p.content.title,
             typeName: (p.typeId && tx.draft.pointTypes.get(p.typeId)?.name) ?? null,

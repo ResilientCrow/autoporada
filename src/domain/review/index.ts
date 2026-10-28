@@ -25,6 +25,7 @@ export {
   ISSUE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,
+  REVIEW_DECISIONS,
   type AccessEvent,
   type AccessState,
   type AuthorMove,
@@ -38,4 +39,5 @@ export {
   type ReportEvent,
   type ReportState,
   type ReviewActor,
+  type ReviewDecision,
 } from './states';

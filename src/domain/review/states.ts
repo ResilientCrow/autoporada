@@ -26,6 +26,14 @@ export type PointEvent =
 /** The author's moves on their own point besides the submit: „Stáhnout“ and „Zrušit bod“. */
 export type AuthorMove = Extract<PointEvent, 'retract' | 'withdraw'>;
 
+/** A reviewer's decisions on a handed-in point, in the order the decision bar offers them. */
+export const REVIEW_DECISIONS = [
+  'approve',
+  'return',
+  'reject',
+] as const satisfies readonly PointEvent[];
+export type ReviewDecision = (typeof REVIEW_DECISIONS)[number];
+
 /** Where a point is still the author's to change and to hand in. */
 const POINT_AUTHOR_STATES: readonly PointState[] = ['draft', 'returned'];
 

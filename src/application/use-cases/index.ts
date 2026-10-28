@@ -14,6 +14,7 @@ import { issueWindow, setSkipped } from './issues';
 import { recentPeopleOf, searchGate } from './people';
 import {
   createPoint,
+  decidePoint,
   getPoint,
   listMyPoints,
   pointStatus,
@@ -41,6 +42,7 @@ export { issueWindow, setSkipped } from './issues';
 export { recentPeopleOf, searchGate } from './people';
 export {
   createPoint,
+  decidePoint,
   getPoint,
   listMyPoints,
   pointStatus,
@@ -66,6 +68,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   completeSignIn,
   createPoint,
   decideAccess,
+  decidePoint,
   getPoint,
   getUser,
   issueWindow,

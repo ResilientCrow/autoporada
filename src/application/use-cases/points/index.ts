@@ -1,4 +1,5 @@
 export { createPoint } from './create';
+export { decidePoint } from './decide';
 export { getPoint } from './get';
 export { listMyPoints } from './list-mine';
 export { retractPoint } from './retract';
