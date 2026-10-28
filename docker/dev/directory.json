@@ -132,6 +132,78 @@
     "displayName": "Radek Rozhodovaný"
   },
   {
+    "graphId": "0d000000-0000-4000-8000-000000000023",
+    "givenName": "Alena",
+    "familyName": "Autorská",
+    "displayName": "Alena Autorská"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000024",
+    "givenName": "Adam",
+    "familyName": "Autorský",
+    "displayName": "Adam Autorský"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000025",
+    "givenName": "Věra",
+    "familyName": "Vrácená",
+    "displayName": "Věra Vrácená"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000026",
+    "givenName": "Viktor",
+    "familyName": "Vrácený",
+    "displayName": "Viktor Vrácený"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000027",
+    "givenName": "Klára",
+    "familyName": "Kontrolní",
+    "displayName": "Klára Kontrolní"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000028",
+    "givenName": "Kamil",
+    "familyName": "Kontrolní",
+    "displayName": "Kamil Kontrolní"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000029",
+    "givenName": "Hana",
+    "familyName": "Ukládací",
+    "displayName": "Hana Ukládací"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-00000000002a",
+    "givenName": "Hynek",
+    "familyName": "Ukládací",
+    "displayName": "Hynek Ukládací"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-00000000002b",
+    "givenName": "Olga",
+    "familyName": "Ukázková",
+    "displayName": "Olga Ukázková"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-00000000002c",
+    "givenName": "Otakar",
+    "familyName": "Ukázkový",
+    "displayName": "Otakar Ukázkový"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-00000000002d",
+    "givenName": "Pavla",
+    "familyName": "Prohlížející",
+    "displayName": "Pavla Prohlížející"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-00000000002e",
+    "givenName": "Pavel",
+    "familyName": "Prohlížející",
+    "displayName": "Pavel Prohlížející"
+  },
+  {
     "graphId": "0d000000-0000-4000-8000-000000000101",
     "givenName": "Tomáš",
     "familyName": "Beneš",

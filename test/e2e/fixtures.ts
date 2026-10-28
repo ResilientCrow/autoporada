@@ -9,6 +9,7 @@ import {
   test as base,
   type BrowserContext,
   type BrowserContextOptions,
+  type Locator,
   type Page,
 } from '@playwright/test';
 
@@ -36,7 +37,8 @@ interface Fixtures {
   newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
   /** Waits until no submit is in flight: React Aria marks the pending button with data-pending (in a form; the kit demos show a static one). */
   settled: () => Promise<void>;
-  expectAccessible: () => Promise<void>;
+  /** Axe over the page as it is: this test's page, or another one (a second context). */
+  expectAccessible: (other?: Page) => Promise<void>;
   /** Attaches a full-page PNG to the report: the pack for the headmaster's sign-off on the look. */
   attachScreenshot: (name: string) => Promise<void>;
   /** Tab through the page: every stop shows an outline of 2 px or more. */
@@ -153,8 +155,12 @@ export const test = base.extend<Fixtures>({
   },
 
   expectAccessible: async ({ page }, provide, testInfo) => {
-    await provide(async () => {
-      const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+    await provide(async (other = page) => {
+      const result = await new AxeBuilder({ page: other })
+        .withTags(AXE_TAGS)
+        // React Aria's live announcer keeps a hidden copy of a pressed button for 7 s, as an image without a text.
+        .exclude('[data-live-announcer] [role="log"]')
+        .analyze();
       await testInfo.attach('axe', {
         body: JSON.stringify(result, null, 2),
         contentType: 'application/json',
@@ -271,14 +277,17 @@ export const test = base.extend<Fixtures>({
   },
 });
 
+/** Copy as pattern source: its characters taken literally, a no-break space matching any space. */
+const literal = (text: string) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\u00A0/g, '\\s');
+
 /** A copy template with `@1@` and `@2@` where its dates go, as a pattern. */
 export const withDates = (text: (a: string, b: string) => string) =>
-  new RegExp(
-    text('@1@', '@2@')
-      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/@\d@/g, '.+')
-      .replace(/\u00A0/g, '\\s'),
-  );
+  new RegExp(literal(text('@1@', '@2@')).replace(/@\d@/g, '.+'));
+
+/** A labelled control by its copy; an optional one has „ (nepovinné)“ after its label. */
+export const field = (within: Page | Locator, label: string) =>
+  within.getByLabel(new RegExp(`^${literal(label)}(\\s\\(nepovinné\\))?$`));
 
 /** The value of this context's session cookie: what the sessions table stores a digest of. */
 export async function sessionToken(context: BrowserContext): Promise<string> {

@@ -76,6 +76,14 @@ const PERSONAS: readonly Persona[] = [
   { subject: 'zadatel', role: 'pending' },
   { subject: 'prazdny', role: 'pending' },
   { subject: 'relace', role: 'pending' },
+  // Journeys of points.spec.ts and review.spec.ts: -d for the desktop project, -m for the mobile one,
+  // since the projects run side by side and each journey needs people of its own.
+  { subject: 'autor-d', role: 'submitter' },
+  { subject: 'autor-m', role: 'submitter' },
+  { subject: 'vraceny-d', role: 'submitter' },
+  { subject: 'vraceny-m', role: 'submitter' },
+  { subject: 'kontrolor-d', role: 'reviewer' },
+  { subject: 'kontrolor-m', role: 'reviewer' },
 ];
 
 interface Mapping {

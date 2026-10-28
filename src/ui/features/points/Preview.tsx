@@ -14,7 +14,8 @@ import { previewNotices } from './preview-notice';
  * deferred copy of the content, so typing is never held up by composing. Without a title and
  * a start date there is nothing to show, and it says what is missing; otherwise a line under
  * the paper names what the preview left out. From the wide layout it scrolls inside itself when
- * taller than the screen, and takes focus so the keyboard can scroll it.
+ * taller than the screen, and takes focus so the keyboard can scroll it. Its h2 is for screen
+ * readers only: alone on a phone, the paper's h3 would otherwise follow the page's h1.
  */
 export function Preview({
   content,
@@ -30,7 +31,10 @@ export function Preview({
   );
   const notices = previewNotices(omitted);
   return (
-    <section aria-label={points.preview.label} tabIndex={0} className="space-y-2 lg:pane-fit">
+    <section aria-labelledby="nahled" tabIndex={0} className="space-y-2 lg:pane-fit">
+      <h2 id="nahled" className="sr-only">
+        {points.preview.label}
+      </h2>
       {blocks.length === 0 ? (
         <p>{points.preview.empty}</p>
       ) : (

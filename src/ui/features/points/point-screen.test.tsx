@@ -171,6 +171,12 @@ describe('the content of the read view', () => {
     expect(html).toContain('Další odstavec.');
   });
 
+  it('puts an h2 over the paper, whose point headings are h3', () => {
+    const html = screen(SUBMITTED);
+    expect(html).toContain(`<h2 id="bod-zneni" class="text-xl">${points.read.label}</h2>`);
+    expect(html.indexOf('<h2 id="bod-zneni"')).toBeLessThan(html.indexOf('<h3'));
+  });
+
   it('is the markup of the editor’s preview of the same content, to the character', () => {
     const { blocks } = composePointPreview(pointContentOf(CONTENT), { schoolYear: '2026/2027' });
     expect(screen(SUBMITTED)).toContain(renderToStaticMarkup(<PaperBlocks blocks={blocks} />));

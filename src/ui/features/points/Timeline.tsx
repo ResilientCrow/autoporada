@@ -50,13 +50,16 @@ function lineOf({ event, note, editedFields, createdAt }: TimelineEntry): string
 
 /**
  * What happened to the point, newest first (the order the server sends): submissions, returns with
- * their note, review edits, decisions. Nothing for a point with no history.
+ * their note, review edits, decisions. Nothing for a point with no history. It renders once per
+ * page, so the heading id is fixed.
  */
 export function Timeline({ entries }: { readonly entries: readonly TimelineEntry[] }) {
   if (entries.length === 0) return null;
   return (
-    <section className="space-y-2">
-      <h2 className="text-xl">{points.timeline.label}</h2>
+    <section aria-labelledby="prubeh" className="space-y-2">
+      <h2 id="prubeh" className="text-xl">
+        {points.timeline.label}
+      </h2>
       <ol className="space-y-2">
         {entries.map((entry) => {
           const before = originalValues(entry.before);

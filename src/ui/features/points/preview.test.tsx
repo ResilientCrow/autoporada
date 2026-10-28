@@ -44,7 +44,9 @@ const preview = (content: PointContentWire = CONTENT) =>
 describe('Preview', () => {
   it('is a section named „Náhled bodu“ holding the point as the document prints it', () => {
     const html = preview();
-    expect(html).toMatch(new RegExp(`<section [^>]*aria-label="${points.preview.label}"`));
+    // Named by an h2 of its own: alone on a phone, the paper's h3 would follow the page's h1.
+    expect(html).toMatch(/<section [^>]*aria-labelledby="nahled"/);
+    expect(html).toMatch(new RegExp(`<h2 id="nahled"[^>]*>${points.preview.label}</h2>`));
     expect(html).toContain('Exkurze do Terezína');
     expect(html).toContain('Žáci navštívili památník.');
     expect(html).toContain('Druhý odstavec');
@@ -71,7 +73,7 @@ describe('Preview', () => {
   });
 
   it('keeps the section when there is nothing to show', () => {
-    expect(preview({ ...CONTENT, title: '' })).toContain(`aria-label="${points.preview.label}"`);
+    expect(preview({ ...CONTENT, title: '' })).toContain('aria-labelledby="nahled"');
   });
 
   it('shows no notice when nothing was left out', () => {

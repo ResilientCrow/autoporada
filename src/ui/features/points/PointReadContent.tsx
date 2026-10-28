@@ -25,7 +25,11 @@ export function PointReadContent({
   const { blocks } = composePointPreview(pointContentOf(content), { schoolYear });
   if (blocks.length === 0) return null;
   return (
-    <section aria-label={points.read.label}>
+    <section aria-labelledby="bod-zneni" className="space-y-2">
+      {/* The paper's point heading is an h3: without this h2 above it the page would skip a level. */}
+      <h2 id="bod-zneni" className="text-xl">
+        {points.read.label}
+      </h2>
       <PaperBlocks blocks={blocks} />
     </section>
   );

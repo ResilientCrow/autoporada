@@ -19,6 +19,12 @@ const lines = (html: string) =>
   [...html.matchAll(/<li[ >](.*?)<\/li>/gs)].map((m) => (m[1] ?? '').replace(/<[^>]+>/g, ''));
 
 describe('Timeline', () => {
+  it('is a region named by its heading', () => {
+    const html = render([entry({ event: 'approve' })]);
+    expect(html).toContain('<section aria-labelledby="prubeh"');
+    expect(html).toMatch(/<h2 id="prubeh"[^>]*>Průběh<\/h2>/);
+  });
+
   it('writes the submit with the Prague day and time', () => {
     // 15.02 UTC on 14 March 2027 is 16.02 in Prague (CET).
     expect(lines(render([entry({ event: 'submit' })]))).toEqual([
