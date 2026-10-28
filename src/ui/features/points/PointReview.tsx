@@ -27,16 +27,17 @@ interface PointReviewModel {
 
 /**
  * A point under review (design section 10): the read view the author's page shows, with the
- * reviewer's decision bar between the content and the history. The page fills `bar`; a sticky
- * bar sticks while the whole point scrolls, since this box is its parent. The title takes focus
- * after a decision (the bar's host sends it there).
+ * reviewer's decision bar between the content and the history. The page's `host` gets the read
+ * view and returns it with the bar after it, or the reviewer's editor in its place (ADR 0013: one
+ * client host around both); a sticky bar sticks while the whole point scrolls, since this box is
+ * its parent. The title takes focus after a decision or an edit (the host sends it there).
  */
 export function PointReview({
   point,
-  bar,
+  host = (read) => read,
 }: {
   readonly point: PointReviewModel;
-  readonly bar?: ReactNode;
+  readonly host?: (read: ReactNode) => ReactNode;
 }) {
   return (
     // `bar-room`: what Tab or a link brings into view stays clear of the sticky decision bar.
@@ -49,12 +50,13 @@ export function PointReview({
         focusId={REVIEW_HEADING_ID}
       />
       <PointFacts facts={point.facts} />
-      <PointReadContent
-        kind={point.kind}
-        content={point.read.content}
-        schoolYear={point.read.schoolYear}
-      />
-      {bar}
+      {host(
+        <PointReadContent
+          kind={point.kind}
+          content={point.read.content}
+          schoolYear={point.read.schoolYear}
+        />,
+      )}
       <Timeline entries={point.read.timeline} />
     </div>
   );

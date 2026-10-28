@@ -1,8 +1,7 @@
 import type { z } from 'zod';
 
-import type { UserPrincipal } from '@/application/ports';
 import { pointPlacement } from '@/application/core';
-import { getPoint, listMyPoints, listPointTypes, recentPeopleOf } from '@/application/use-cases';
+import { getPoint, listMyPoints, listPointTypes } from '@/application/use-cases';
 import { toKnownIssues, type listMyPointsOutput, type listPointTypesOutput } from '@/contracts';
 import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
@@ -18,6 +17,7 @@ import { runRegistered } from '../pipeline';
 import { orNotFound } from './not-found';
 import { first, type SearchParams } from './params';
 import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
+import { recentsOf } from './recents';
 import { readWindow, standingOf, type MeetingWindow, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
@@ -105,19 +105,6 @@ function shaped(
         }
       : null,
   };
-}
-
-/**
- * The author's recent people, for the picker. The memory is a convenience: any refusal or
- * failure opens the editor with none.
- */
-async function recentsOf(viewer: UserPrincipal): Promise<readonly RecentPerson[]> {
-  const found = await runRegistered(getContainer(), recentPeopleOf, {
-    principal: viewer,
-    requestId: await requestId(),
-    input: {},
-  });
-  return found.ok ? found.value.people : [];
 }
 
 const AUTHOR_MOVES: readonly AuthorMove[] = ['retract', 'withdraw'];

@@ -8,17 +8,19 @@ import { Button } from '@/ui/kit';
 
 import type { barChoices, Noted } from './decision';
 
-const { decision } = review;
+const { decision, edit } = review;
 
 /**
  * The closed bar: the approvals as submit buttons, „Vrátit k úpravě“ and „Zamítnout“ opening the
- * note, and on a reviewer's own point the sentence saying who approves it, beside the buttons. One
- * row from md on, so the sticky bar fits the room `bar-room` keeps clear.
+ * note, „Upravit“ opening the reviewer's editor, and on a reviewer's own point the sentence saying
+ * who approves it, beside the buttons. One row from md on, so the sticky bar fits the room
+ * `bar-room` keeps clear.
  */
 export function DecisionChoices({
   choices,
   isDisabled,
   onOpen,
+  onEdit,
   returnRef,
   rejectRef,
 }: {
@@ -26,6 +28,8 @@ export function DecisionChoices({
   /** A decision is in flight: the buttons that open the note wait too. */
   readonly isDisabled: boolean;
   readonly onOpen: (event: Noted) => void;
+  /** „Upravit“: the host puts the editor in place of the read view. */
+  readonly onEdit?: () => void;
   /** Where focus goes back to when „Zpět“ closes the note each opened. */
   readonly returnRef: Ref<HTMLButtonElement>;
   readonly rejectRef: Ref<HTMLButtonElement>;
@@ -61,6 +65,11 @@ export function DecisionChoices({
           onPress={() => onOpen('reject')}
         >
           {decision.reject}
+        </Button>
+      ) : null}
+      {choices.edit ? (
+        <Button variant="secondary" isDisabled={isDisabled} onPress={onEdit}>
+          {edit.open}
         </Button>
       ) : null}
     </div>

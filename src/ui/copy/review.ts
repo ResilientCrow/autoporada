@@ -55,6 +55,16 @@ export const review = {
       reject: 'Bod byl zamítnut.',
     } as const satisfies Record<ReviewDecision, string>,
   },
+  /** A reviewer's edit of the point (design section 10): the author is told in the history. */
+  edit: {
+    open: 'Upravit',
+    label: 'Úprava bodu',
+    save: 'Uložit úpravy',
+    cancel: 'Zrušit úpravy',
+    /** Said once an edit went through, or when there was nothing to save. */
+    saved: 'Úpravy byly uloženy.',
+    unchanged: 'Nic se nezměnilo, nebylo co uložit.',
+  },
   /** The card on the Přehled, for reviewers. */
   card: {
     title: 'Kontrola',

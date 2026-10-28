@@ -122,13 +122,26 @@ describe('saveIssues for the bullets', () => {
     expect(out.notice).toBeNull();
   });
 
-  it('says a people row has too many people, whatever the code', () => {
+  it('says a people row the save refuses has too many people', () => {
     const out = saveIssues({ 'content.bullets.0.people': 'too-long' }, withBullets(), SPEC);
     expect(out.messages).toEqual({ 'bullets.0.people': points.bullets.tooManyPeople });
     expect(
       saveIssues({ 'content.bullets.0.people': 'invalid' }, withBullets(), SPEC).messages,
     ).toEqual({
       'bullets.0.people': points.bullets.tooManyPeople,
+    });
+  });
+
+  it('says a required people row left empty is required (a review edit’s readiness)', () => {
+    const out = saveIssues(
+      { 'content.title': 'required', 'content.bullets.0.people': 'required' },
+      withBullets(),
+      SPEC,
+    );
+    expect(out).toEqual({
+      messages: { title: fieldIssues.required, 'bullets.0.people': fieldIssues.required },
+      problem: null,
+      notice: null,
     });
   });
 

@@ -32,10 +32,15 @@ function endDateMessage(content: PointContentWire): string {
 /** The contract reports the content's size on the path `content` itself. */
 const WHOLE = 'content';
 
-/** The message for one issue: the end date has two stories, a people row only one. */
+/**
+ * The message for one issue: the end date has two stories. A people row the save refuses has too
+ * many people; one a review edit's readiness asks for (`required`) says so as any field does.
+ */
 function messageFor(name: string, code: FieldIssueCode, content: PointContentWire): string {
   if (name === 'endDate') return endDateMessage(content);
-  if (/^bullets\.\d+\.people$/.test(name)) return points.bullets.tooManyPeople;
+  if (code !== 'required' && /^bullets\.\d+\.people$/.test(name)) {
+    return points.bullets.tooManyPeople;
+  }
   return fieldIssues[code];
 }
 

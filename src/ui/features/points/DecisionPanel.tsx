@@ -40,12 +40,17 @@ export function DecisionPanel({
   bar,
   decidePoint,
   onDecided,
+  canEdit = false,
+  onEdit,
 }: {
   readonly id: string;
   readonly version: number;
   readonly bar: DecisionBarModel;
   readonly decidePoint: DecidePointAction;
   readonly onDecided: (event: ReviewDecision) => void;
+  /** The page gives the reviewer's editor: the bar offers „Upravit“. */
+  readonly canEdit?: boolean;
+  readonly onEdit?: () => void;
 }) {
   const router = useRouter();
   const [noted, setNoted] = useState<Noted | null>(null);
@@ -84,7 +89,7 @@ export function DecisionPanel({
     setNoted(null);
   };
 
-  const choices = barChoices(bar);
+  const choices = barChoices(bar, canEdit);
   if (!choices.any) return null;
   const isDisabled = state.submitting !== null;
   return (
@@ -95,6 +100,7 @@ export function DecisionPanel({
             choices={choices}
             isDisabled={isDisabled}
             onOpen={open}
+            onEdit={onEdit}
             returnRef={returnRef}
             rejectRef={rejectRef}
           />

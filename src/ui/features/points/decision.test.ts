@@ -25,7 +25,14 @@ describe('the bar’s choices', () => {
   it('offers both approvals, the return and the reject', () => {
     expect(
       barChoices({ decisions: ['approve', 'return', 'reject'], othersApprove: false }),
-    ).toEqual({ approve: true, return: true, reject: true, ownPoint: false, any: true });
+    ).toEqual({
+      approve: true,
+      return: true,
+      reject: true,
+      ownPoint: false,
+      edit: false,
+      any: true,
+    });
   });
 
   it('says a reviewer’s own point is approved by someone else, in place of „Schválit“', () => {
@@ -34,12 +41,21 @@ describe('the bar’s choices', () => {
       return: true,
       reject: true,
       ownPoint: true,
+      edit: false,
       any: true,
     });
   });
 
   it('offers nothing once nothing may be decided', () => {
     expect(barChoices({ decisions: [], othersApprove: false }).any).toBe(false);
+  });
+
+  it('offers „Upravit“ only where the page gives the editor, alone if need be', () => {
+    expect(barChoices({ decisions: [], othersApprove: false }, true)).toMatchObject({
+      edit: true,
+      any: true,
+    });
+    expect(barChoices({ decisions: ['approve'], othersApprove: false }, false).edit).toBe(false);
   });
 });
 

@@ -54,8 +54,16 @@ const POINT = {
   },
 };
 const MARK = 'BAR';
-const BAR = <p>{MARK}</p>;
-const render = (bar?: ReactNode) => renderToStaticMarkup(<PointReview point={POINT} bar={bar} />);
+const EDITOR = 'EDITOR';
+/** A host as the page's: the read view, then the bar. */
+const BAR = (read: ReactNode) => (
+  <>
+    {read}
+    <p>{MARK}</p>
+  </>
+);
+const render = (host?: (read: ReactNode) => ReactNode) =>
+  renderToStaticMarkup(<PointReview point={POINT} host={host} />);
 
 describe('PointReview', () => {
   const html = render(BAR);
@@ -88,8 +96,17 @@ describe('PointReview', () => {
     expect(at('BAR')).toBeLessThan(at(`>${points.timeline.label}<`));
   });
 
+  it('hands the read view to the host, which may put the editor in its place', () => {
+    const editing = render(() => <p>{EDITOR}</p>);
+    expect(editing).toContain('EDITOR');
+    expect(editing).not.toContain('Ve středu proběhl seminář.');
+    expect(editing.indexOf('10. února 2027')).toBeLessThan(editing.indexOf('EDITOR'));
+    expect(editing.indexOf('EDITOR')).toBeLessThan(editing.indexOf(`>${points.timeline.label}<`));
+  });
+
   it('renders without a bar', () => {
     expect(render()).not.toContain('BAR');
+    expect(render()).toContain('Ve středu proběhl seminář.');
     expect(render()).toContain(`>${points.timeline.label}<`);
   });
 

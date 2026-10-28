@@ -14,6 +14,7 @@ vi.mock('../container', () => ({
     resolvePrincipal,
     requestIdFrom: () => 'req-1',
     app: { clock: { now: () => NOW } },
+    directoryMode: 'off',
   }),
 }));
 
@@ -126,11 +127,12 @@ describe('reviewPointPage', () => {
     expect(runRegistered).not.toHaveBeenCalled();
   });
 
-  it('asks for the point by id, as the viewer', async () => {
+  it('asks for the point by id, as the viewer, first', async () => {
     as('reviewer');
     serve();
     await reviewPointPage(ID);
-    expect(asked()).toEqual([['points.get', { id: ID }]]);
+    // A reviewer who may edit also has their recent people read (below).
+    expect(asked()[0]).toEqual(['points.get', { id: ID }]);
   });
 
   it('carries the header, the facts written out and the read view with its content', async () => {
@@ -160,10 +162,93 @@ describe('reviewPointPage', () => {
         ],
       },
     });
-    // No editor, standing or author's moves: the reviewer's page decides, it does not write.
+    // No author's editor, standing or moves: the reviewer decides, and edits only through `edit`.
     expect(Object.keys(model ?? {}).sort()).toEqual(
-      ['bar', 'facts', 'id', 'kind', 'read', 'state', 'title', 'typeName', 'version'].sort(),
+      [
+        'bar',
+        'edit',
+        'facts',
+        'id',
+        'kind',
+        'read',
+        'state',
+        'title',
+        'typeName',
+        'version',
+      ].sort(),
     );
+  });
+
+  describe('what the reviewer’s editor starts from', () => {
+    const RECENTS = [
+      {
+        salutation: 'pan',
+        givenName: 'Petr',
+        familyName: 'Malý',
+        lastUsed: '2026-10-20T10:00:00.000Z',
+      },
+    ];
+    const TYPE = {
+      id: ID,
+      name: 'Exkurze',
+      titleGender: 'f',
+      defaultBullets: [
+        { key: 'organisers', label: 'Organizátoři', kind: 'people', required: true },
+      ],
+    };
+    /** `points.get` answers with the point changed by `over`; `people.recent` with `recents`. */
+    const serveBoth = (
+      over: Record<string, unknown> = {},
+      recents: unknown = { ok: true, value: { people: RECENTS } },
+    ) =>
+      runRegistered.mockImplementation(async (_container, useCase: { name: string }) =>
+        useCase.name === 'people.recent'
+          ? recents
+          : { ok: true, value: { ...LOADED, type: TYPE, ...over } },
+      );
+    const editOf = async (role: string, over: Record<string, unknown> = {}) => {
+      as(role);
+      serveBoth(over);
+      return (await reviewPointPage(ID))?.edit;
+    };
+
+    it('gives a reviewer who may edit a report its content, type, day, recent people and directory', async () => {
+      expect(await editOf('reviewer')).toEqual({
+        content: LOADED.content,
+        spec: TYPE.defaultBullets,
+        titleGender: 'f',
+        today: { year: 2026, month: 10, day: 27 },
+        recents: RECENTS,
+        directory: 'off',
+      });
+      expect(asked()).toEqual([
+        ['points.get', { id: ID }],
+        ['people.recent', {}],
+      ]);
+    });
+
+    it('starts with no bullets to keep and no gender for a report without a type', async () => {
+      expect(await editOf('headmaster', { state: 'approved', type: null })).toMatchObject({
+        spec: [],
+        titleGender: null,
+      });
+    });
+
+    it('opens the editor with no recent people when they cannot be read', async () => {
+      as('reviewer');
+      serveBoth({}, { ok: false, error: { code: 'unavailable' } });
+      expect((await reviewPointPage(ID))?.edit?.recents).toEqual([]);
+    });
+
+    it.each([
+      ['the author', 'reviewer', { isAuthor: true }],
+      ['a finance point', 'reviewer', { kind: 'finance' }],
+      ['a pokyn', 'headmaster', { kind: 'pokyn' }],
+      ['a returned point', 'headmaster', { state: 'returned' }],
+    ])('is null for %s, without reading the recent people', async (_name, role, over) => {
+      expect(await editOf(role, over)).toBeNull();
+      expect(asked()).toEqual([['points.get', { id: ID }]]);
+    });
   });
 
   describe('what the decision bar may offer', () => {

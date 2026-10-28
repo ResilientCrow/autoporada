@@ -3,15 +3,19 @@ import type { z } from 'zod';
 import { getPoint, queuePoints } from '@/application/use-cases';
 import type { queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
+import type { TitleGender } from '@/domain/cs';
+import type { RecentPerson } from '@/domain/people';
 import { can } from '@/domain/policy';
+import type { BulletSpec } from '@/domain/report';
 import { REVIEW_DECISIONS, type ReviewDecision } from '@/domain/review';
-import { instantToWallClock } from '@/domain/time';
+import { instantToWallClock, type CalDate } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
 import { orNotFound } from './not-found';
 import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
+import { recentsOf } from './recents';
 import { getViewer, requestId } from './viewer';
 
 /** „Kontrola“: the queue as `points.queue` answers; the page writes the dates out. */
@@ -30,9 +34,25 @@ interface ReviewBarModel {
   readonly othersApprove: boolean;
 }
 
-/** /kontrola/[id]: the point as its read view shows it, and the bar's choices. */
+/**
+ * What the reviewer's editor (design section 10) starts from: the content as the edit sends it
+ * back, the type's bullets and title gender, the Prague day the picker counts classes from, the
+ * people the reviewer named lately and whether the school directory is searched at all.
+ */
+interface ReviewEditModel {
+  readonly content: LoadedPoint['content'];
+  readonly spec: readonly BulletSpec[];
+  readonly titleGender: TitleGender | null;
+  readonly today: CalDate;
+  readonly recents: readonly RecentPerson[];
+  readonly directory: 'on' | 'off';
+}
+
+/** /kontrola/[id]: the point as its read view shows it, the bar's choices and the editor's start. */
 export interface ReviewPointPageModel extends PointViewModel {
   readonly bar: ReviewBarModel;
+  /** Only when the viewer may edit a report („Upravit“); null otherwise, the recent people unread. */
+  readonly edit: ReviewEditModel | null;
 }
 
 /** The queue, or null for a visitor or a viewer who may not review (404). */
@@ -84,5 +104,17 @@ export async function reviewPointPage(id: string): Promise<ReviewPointPageModel 
   );
   if (loaded === null) return null;
   const today = instantToWallClock(getContainer().app.clock.now()).date;
-  return { ...pointView(loaded, today), bar: barOf(viewer.actor, loaded) };
+  const bar = barOf(viewer.actor, loaded);
+  const edit =
+    bar.canEdit && loaded.kind === 'report'
+      ? {
+          content: loaded.content,
+          spec: loaded.type?.defaultBullets ?? [],
+          titleGender: loaded.type?.titleGender ?? null,
+          today,
+          recents: await recentsOf(viewer),
+          directory: getContainer().directoryMode,
+        }
+      : null;
+  return { ...pointView(loaded, today), bar, edit };
 }

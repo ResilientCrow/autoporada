@@ -109,6 +109,23 @@ describe('inventory of entry points', () => {
     });
   });
 
+  it('lets the review’s decision and edit refresh the page, under the admin limit', async () => {
+    const found: Record<string, unknown> = {};
+    const review = ['points.decide', 'points.reviewEdit'];
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'action' && review.includes(info.useCase.name))
+          found[info.useCase.name] = [info.rateLimit, info.refresh];
+      }
+    }
+    // A reviewer's edit is explicit and audited, never an autosave (design section 10).
+    expect(found).toEqual({
+      'points.decide': ['admin', 'page'],
+      'points.reviewEdit': ['admin', 'page'],
+    });
+  });
+
   it('registers every use case exactly once, under a unique name', async () => {
     const defined = new Set<unknown>();
     for (const file of USE_CASE_MODULES) {

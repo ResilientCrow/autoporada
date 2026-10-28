@@ -36,14 +36,15 @@ export type Press = (typeof PRESSES)[number];
 /** The decisions that open the note. */
 export type Noted = Extract<ReviewDecision, 'return' | 'reject'>;
 
-/** Which parts of the bar show. */
-export function barChoices({ decisions, othersApprove }: DecisionBarModel) {
+/** Which parts of the bar show; „Upravit“ only where the page gives the reviewer's editor (`canEdit`). */
+export function barChoices({ decisions, othersApprove }: DecisionBarModel, canEdit = false) {
   return {
     approve: decisions.includes('approve'),
     return: decisions.includes('return'),
     reject: decisions.includes('reject'),
     ownPoint: othersApprove,
-    any: decisions.length > 0 || othersApprove,
+    edit: canEdit,
+    any: decisions.length > 0 || othersApprove || canEdit,
   };
 }
 
