@@ -70,6 +70,9 @@ export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
     readonly returnedBefore: boolean;
   };
 
+/** What a decision mail reads again of its point at send time (ADR 0020): who wrote it, where it stands. */
+export type PointMailFacts = Pick<PointRecord, 'id' | 'authorId' | 'state'>;
+
 /** Where a page of the author's list ended: its last row's change and id. */
 export type PointCursor = Pick<PointRecord, 'updatedAt' | 'id'>;
 
@@ -123,4 +126,9 @@ export interface PointRepo {
     readonly limit: number;
     readonly since: Date;
   }): Promise<readonly RecentSource[]>;
+  /**
+   * The worker's read: only the columns migration 0017 grants it, null for an unknown
+   * point. ScopeViolation for a user.
+   */
+  mailFacts(id: string): Promise<PointMailFacts | null>;
 }

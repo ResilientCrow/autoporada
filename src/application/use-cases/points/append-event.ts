@@ -42,16 +42,17 @@ interface MoveExtras {
  * and `patch` in one versioned update, the point event with the note, and
  * the audit event with the states only. `related` names the rows the move
  * wrote besides the point. The caller checked the move with `moveCheck`.
+ * It answers the point after the move and the id of the event it appended.
  */
 export async function move(
   tx: Tx,
   point: PointRecord,
   event: UserMove,
   { patch = {}, related, note }: MoveExtras = {},
-): Promise<PointRecord> {
+): Promise<{ readonly after: PointRecord; readonly eventId: string }> {
   const { to } = POINT_MACHINE[event];
   const after = await tx.points.update(point.id, point.version, { ...patch, state: to });
-  await tx.pointEvents.append({
+  const appended = await tx.pointEvents.append({
     pointId: point.id,
     event,
     fromState: point.state,
@@ -62,5 +63,5 @@ export async function move(
     ...pointEvent(ACTIONS[event], point, after),
     ...(related && { related }),
   });
-  return after;
+  return { after, eventId: appended.id };
 }

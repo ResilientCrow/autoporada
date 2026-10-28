@@ -40,5 +40,12 @@ describe('viewOf', () => {
     expect(viewOf('access.blocked', request(DECIDED))).toEqual({});
     expect(viewOf('access.granted', USER)).toEqual({});
     expect(viewOf('mail.check', USER)).toEqual({});
+    const decision = {
+      event: { id: 'event', pointId: 'point', event: 'return', toState: 'returned' },
+      point: { id: 'point', authorId: 'user', state: 'returned' },
+    } as const;
+    for (const template of ['point.returned', 'point.approved', 'point.rejected'] as const) {
+      expect(viewOf(template, decision)).toEqual({});
+    }
   });
 });

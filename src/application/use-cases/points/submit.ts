@@ -55,7 +55,7 @@ export const submitPoint = defineUseCase({
     }
 
     const { patch, related } = await firstSubmit(tx, point, now);
-    const after = await move(tx, point, 'submit', {
+    const { after } = await move(tx, point, 'submit', {
       patch: { ...patch, content: submittedContent(content, spec), submittedAt: now },
       ...(related && { related }),
     });

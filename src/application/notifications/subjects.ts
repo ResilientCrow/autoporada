@@ -1,5 +1,17 @@
-import type { AccessRequestRecord, Tx, UserRecord } from '@/application/ports';
+import type {
+  AccessRequestRecord,
+  PointEventMailFacts,
+  PointMailFacts,
+  Tx,
+  UserRecord,
+} from '@/application/ports';
 import type { TemplateName } from '@/notify';
+
+/** A decision on a point: the event the mail reports, and the point as it stands now. */
+export interface PointDecision {
+  readonly event: PointEventMailFacts;
+  readonly point: PointMailFacts;
+}
 
 /** What each mail is about, as the worker reads it again at send time. */
 export interface MailSubjects {
@@ -9,15 +21,24 @@ export interface MailSubjects {
   /** The user granted access: also the recipient. */
   readonly 'access.granted': UserRecord;
   readonly 'mail.check': UserRecord;
+  readonly 'point.returned': PointDecision;
+  readonly 'point.approved': PointDecision;
+  readonly 'point.rejected': PointDecision;
 }
 
 /** The repositories a subject is read from. */
-export type SubjectReaders = Pick<Tx, 'accessRequests' | 'users'>;
+export type SubjectReaders = Pick<Tx, 'accessRequests' | 'users' | 'points' | 'pointEvents'>;
 
 const request = (tx: SubjectReaders, id: string) => tx.accessRequests.get(id);
 const user = (tx: SubjectReaders, id: string) => tx.users.get(id);
+/** The event, then its point, by the worker's granted columns only (F2). */
+async function decision(tx: SubjectReaders, eventId: string): Promise<PointDecision | null> {
+  const event = await tx.pointEvents.mailFacts(eventId);
+  const point = event && (await tx.points.mailFacts(event.pointId));
+  return event && point ? { event, point } : null;
+}
 
-/** One loader per template; a subject that is gone (a purged request) reads as null. */
+/** One loader per template; a subject that is gone (a purged request, a deleted point) reads as null. */
 const SUBJECTS: {
   readonly [T in TemplateName]: (tx: SubjectReaders, id: string) => Promise<MailSubjects[T] | null>;
 } = {
@@ -26,6 +47,9 @@ const SUBJECTS: {
   'access.blocked': request,
   'access.granted': user,
   'mail.check': user,
+  'point.returned': decision,
+  'point.approved': decision,
+  'point.rejected': decision,
 };
 
 /** Reads the subject a `mail.send` job names, by the loader of its template. */

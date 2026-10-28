@@ -33,6 +33,9 @@ export interface PointEventRecord {
   readonly createdAt: Date;
 }
 
+/** What a decision mail reads again of its event at send time (ADR 0020): never the note or the edit. */
+export type PointEventMailFacts = Pick<PointEventRecord, 'id' | 'pointId' | 'event' | 'toState'>;
+
 /**
  * The history of points, append-only (nothing updates or deletes an event; deleting
  * a point deletes its events). It is scoped by the read scope of the transaction's
@@ -49,4 +52,9 @@ export interface PointEventRepo {
   append(event: NewPointEvent): Promise<PointEventRecord>;
   /** The point's events, newest first; none for a point outside the scope. */
   list(pointId: string): Promise<readonly PointEventRecord[]>;
+  /**
+   * The worker's read: only the columns migration 0017 grants it, null for an unknown
+   * event. ScopeViolation for a user.
+   */
+  mailFacts(id: string): Promise<PointEventMailFacts | null>;
 }

@@ -1,10 +1,13 @@
 /** notify may not import ui, so the sentences the mails share with the screens are compared here. */
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { typographizeText } from '@/domain/cs';
 import { cooldownEnd } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
-import { renderMail } from '@/notify';
+import { renderMail, TEMPLATE_NAMES } from '@/notify';
 import { day } from '@/server/pages/dates';
 import { access } from '@/ui/copy/access';
 
@@ -27,5 +30,25 @@ describe('mails repeat the access screens', () => {
 
   it('block: the advice to turn to the school, byte for byte', () => {
     expect(renderMail('access.blocked', {}, ORIGIN).text).toContain(access.blocked.text);
+  });
+});
+
+describe('mails link pages that exist', () => {
+  it.each(TEMPLATE_NAMES)('%s', (name) => {
+    const view =
+      name === 'access.rejected'
+        ? { retryFrom: instantToWallClock(new Date('2026-10-01T10:00:00Z')).date }
+        : {};
+    const { text } = renderMail(name, view as never, ORIGIN);
+    for (const link of text.match(/https?:\/\/\S*/g) ?? []) {
+      const path = link.slice(ORIGIN.length);
+      expect(existsSync(join(process.cwd(), 'src/app', path, 'page.tsx')), path).toBe(true);
+    }
+  });
+
+  it('sends the author of a decided point to their points, where the note and the state are', () => {
+    for (const name of ['point.returned', 'point.approved', 'point.rejected'] as const) {
+      expect(renderMail(name, {}, ORIGIN).text).toContain(`\n${ORIGIN}/body\n`);
+    }
   });
 });

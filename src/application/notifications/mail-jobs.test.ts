@@ -61,6 +61,9 @@ describe('mail jobs', () => {
       mailJob('access.blocked', { recipientId: USER, requestId: REQUEST }),
       mailJob('access.granted', { userId: USER, versionAfter: 2 }),
       mailJob('mail.check', { recipientId: USER, checkId: CHECK }),
+      mailJob('point.returned', { authorId: USER, eventId: REQUEST }),
+      mailJob('point.approved', { authorId: USER, eventId: REQUEST }),
+      mailJob('point.rejected', { authorId: USER, eventId: REQUEST }),
     ];
     expect(jobs.map((job) => job.data.template)).toEqual(TEMPLATE_NAMES);
     for (const { data, dedupeKey } of jobs) {

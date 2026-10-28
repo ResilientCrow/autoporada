@@ -258,11 +258,66 @@ describe('points.decide', () => {
     });
   });
 
-  it('enqueues no mail yet', async () => {
-    const id = await handedIn(await user());
-    const reviewer = await user('reviewer');
-    await decide(reviewer, { id, event: 'approve' });
-    await decide(reviewer, { id, event: 'return', expectedVersion: 3, note: NOTE });
-    expect(await world.inspect.jobs()).toEqual([]);
+  describe('the author’s mail', () => {
+    /** The `mail.send` job the decision recorded as `event` queued for the author. */
+    const mailFor = (template: string, author: UserRecord, eventId: string) => ({
+      name: 'mail.send',
+      data: { template, recipientId: author.id, subjectId: eventId },
+      options: { dedupeKey: `${template}:${eventId}` },
+    });
+
+    it.each([
+      ['approve', 'point.approved', undefined],
+      ['return', 'point.returned', NOTE],
+      ['reject', 'point.rejected', NOTE],
+    ] as const)(
+      '%s queues %s about the new event, in the decision’s transaction',
+      async (...row) => {
+        const [event, template, text] = row;
+        const author = await user();
+        const id = await handedIn(author);
+        const reviewer = await user('reviewer');
+        const input = { id, event, ...(text !== undefined && { note: text }) };
+        expect((await decide(reviewer, input)).ok).toBe(true);
+        const [appended] = (await snapshot(id)).events;
+        expect(await world.inspect.jobs()).toEqual([mailFor(template, author, appended!.id)]);
+      },
+    );
+
+    it('queues one mail per decision, so a second return is mailed again', async () => {
+      const author = await user();
+      const id = await handedIn(author);
+      const reviewer = await user('reviewer');
+      await decide(reviewer, { id, event: 'return', note: NOTE });
+      await moveTo(author, id, 'submitted');
+      await decide(reviewer, { id, event: 'return', expectedVersion: 4, note: NOTE });
+      const returns = (await snapshot(id)).events.filter((e) => e.event === 'return').reverse();
+      expect(returns).toHaveLength(2);
+      expect(await world.inspect.jobs()).toEqual(
+        returns.map((e) => mailFor('point.returned', author, e.id)),
+      );
+    });
+
+    it('mails nobody about their own decision on their own point', async () => {
+      const headmaster = await user('headmaster');
+      const approved = await handedIn(headmaster);
+      expect((await decide(headmaster, { id: approved, event: 'approve' })).ok).toBe(true);
+      const reviewer = await user('reviewer');
+      const returned = await handedIn(reviewer);
+      expect((await decide(reviewer, { id: returned, event: 'return', note: NOTE })).ok).toBe(true);
+      expect(await world.inspect.jobs()).toEqual([]);
+    });
+
+    it('queues nothing when the decision is refused, stale or without its note', async () => {
+      const author = await user();
+      const id = await handedIn(author);
+      const reviewer = await user('reviewer');
+      await decide(author, { id, event: 'return', note: NOTE });
+      await decide(reviewer, { id, event: 'approve', expectedVersion: 1 });
+      await decide(reviewer, { id, event: 'reject' });
+      await decide(reviewer, { id, event: 'return', note: ' ' });
+      expect(await world.inspect.jobs()).toEqual([]);
+      expect((await snapshot(id)).point?.state).toBe('submitted');
+    });
   });
 });

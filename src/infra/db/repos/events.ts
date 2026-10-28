@@ -63,5 +63,19 @@ export function createPointEventRepo(db: TxDatabase, ctx: TxContext): PointEvent
         .where(and(eq(pointEvents.pointId, pointId), visiblePoints(ctx)))
         .orderBy(desc(pointEvents.createdAt), desc(pointEvents.id));
     },
+    async mailFacts(id) {
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migration 0017 grants the worker, and no other (F2).
+      const [row] = await db
+        .select({
+          id: pointEvents.id,
+          pointId: pointEvents.pointId,
+          event: pointEvents.event,
+          toState: pointEvents.toState,
+        })
+        .from(pointEvents)
+        .where(eq(pointEvents.id, id));
+      return row ?? null;
+    },
   };
 }

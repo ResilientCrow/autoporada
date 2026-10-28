@@ -17,6 +17,9 @@ const VIEWS: {
   'access.blocked': none,
   'access.granted': none,
   'mail.check': none,
+  'point.returned': none,
+  'point.approved': none,
+  'point.rejected': none,
 };
 
 /** The template's variables, read from its subject. */

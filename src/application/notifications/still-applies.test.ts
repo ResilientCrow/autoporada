@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AccessRequestRecord, UserRecord } from '@/application/ports';
+import type { AccessRequestRecord, PointEventName, UserRecord } from '@/application/ports';
 import type { Role, UserStatus } from '@/domain/actor';
-import { ACCESS_STATES, type AccessState } from '@/domain/review';
+import { ACCESS_STATES, type AccessState, type PointState } from '@/domain/review';
 
 import { stillApplies } from './index';
 
@@ -18,8 +18,8 @@ const request = (state: AccessState): AccessRequestRecord => ({
   version: 1,
   createdAt: AT,
 });
-const user = (role: Role, status: UserStatus = 'active'): UserRecord => ({
-  id: 'user',
+const user = (role: Role, status: UserStatus = 'active', id = 'user'): UserRecord => ({
+  id,
   tid: 'tid',
   oid: 'oid',
   displayName: 'Name',
@@ -33,6 +33,28 @@ const user = (role: Role, status: UserStatus = 'active'): UserRecord => ({
   createdAt: AT,
   updatedAt: AT,
 });
+
+/** Every state and every event, so a new one cannot slip past the tables below. */
+const POINT_STATES = Object.keys({
+  draft: 0,
+  submitted: 0,
+  returned: 0,
+  approved: 0,
+  rejected: 0,
+  withdrawn: 0,
+  published: 0,
+} satisfies Record<PointState, 0>) as PointState[];
+const POINT_EVENTS = Object.keys({
+  submit: 0,
+  retract: 0,
+  withdraw: 0,
+  approve: 0,
+  return: 0,
+  reject: 0,
+  publish: 0,
+  unpublish: 0,
+  edit: 0,
+} satisfies Record<PointEventName, 0>) as PointEventName[];
 
 const PENDING = user('pending');
 const MEMBER = user('submitter');
@@ -117,14 +139,79 @@ describe('stillApplies', () => {
     });
   });
 
+  describe('decision mails about a point', () => {
+    /** The event `event` of the point, which now stands in `state`, by `authorId`. */
+    const decision = (event: PointEventName, state: PointState, authorId = 'user') => ({
+      event: { id: 'event', pointId: 'point', event, toState: state },
+      point: { id: 'point', authorId, state },
+    });
+
+    it.each([
+      ['point.returned', 'return', ['returned']],
+      ['point.approved', 'approve', ['approved', 'published']],
+      ['point.rejected', 'reject', ['rejected']],
+    ] as const)('%s (a %s event) applies only while the point is %j', (template, event, states) => {
+      for (const state of POINT_STATES) {
+        const applies = (states as readonly PointState[]).includes(state);
+        expect(stillApplies(template, decision(event, state), MEMBER)).toBe(applies);
+      }
+    });
+
+    it.each([
+      ['point.returned', 'return', 'returned'],
+      ['point.approved', 'approve', 'approved'],
+      ['point.rejected', 'reject', 'rejected'],
+    ] as const)('%s reports only a %s event', (template, reported, state) => {
+      for (const event of POINT_EVENTS) {
+        expect(stillApplies(template, decision(event, state), MEMBER)).toBe(event === reported);
+      }
+    });
+
+    it('drops a return once the author handed the point in again', () => {
+      expect(stillApplies('point.returned', decision('return', 'submitted'), MEMBER)).toBe(false);
+    });
+
+    it('drops an approval once a reviewer returned the point', () => {
+      expect(stillApplies('point.approved', decision('approve', 'returned'), MEMBER)).toBe(false);
+    });
+
+    it.each([
+      ['point.returned', 'return', 'returned'],
+      ['point.approved', 'approve', 'approved'],
+      ['point.rejected', 'reject', 'rejected'],
+    ] as const)('%s goes only to the author, about their own point', (template, event, state) => {
+      const subject = decision(event, state);
+      expect(stillApplies(template, subject, MEMBER)).toBe(true);
+      expect(stillApplies(template, subject, user('submitter', 'active', 'other'))).toBe(false);
+      const foreign = { ...subject, event: { ...subject.event, pointId: 'other-point' } };
+      expect(stillApplies(template, foreign, MEMBER)).toBe(false);
+    });
+
+    it.each([
+      ['submitter', 'active', true],
+      ['reviewer', 'active', true],
+      ['headmaster', 'active', true],
+      ['pending', 'active', false],
+      ['submitter', 'blocked', false],
+      ['submitter', 'deactivated', false],
+    ] as const)('point.returned to a %s, %s author: %s', (role, status, applies) => {
+      expect(
+        stillApplies('point.returned', decision('return', 'returned'), user(role, status)),
+      ).toBe(applies);
+    });
+  });
+
   it.each([
     ['access.approved', MEMBER],
     ['access.rejected', PENDING],
     ['access.blocked', PENDING],
     ['access.granted', MEMBER],
     ['mail.check', MEMBER],
+    ['point.returned', MEMBER],
+    ['point.approved', MEMBER],
+    ['point.rejected', MEMBER],
   ] as const)(
-    'never sends %s about a missing subject (a purged request)',
+    'never sends %s about a missing subject (a purged request, a deleted point)',
     (template, recipient) => {
       expect(stillApplies(template, null, recipient)).toBe(false);
     },

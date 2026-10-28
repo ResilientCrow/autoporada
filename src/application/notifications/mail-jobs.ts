@@ -2,6 +2,8 @@ import type { JobCatalog } from '@/application/ports';
 import type { DecisionEvent } from '@/domain/review';
 import type { TemplateName } from '@/notify';
 
+import { pointMailParts, type PointMailIds } from './point-mails';
+
 /** Which mail each access decision sends the requester (plan §9); the requester's cancel sends none. */
 export const DECISION_MAIL = {
   approve: 'access.approved',
@@ -23,6 +25,9 @@ interface MailIds {
   readonly 'access.granted': { readonly userId: string; readonly versionAfter: number };
   /** `checkId` is a uuid the CLI makes for each test mail. */
   readonly 'mail.check': { readonly recipientId: string; readonly checkId: string };
+  readonly 'point.returned': PointMailIds;
+  readonly 'point.approved': PointMailIds;
+  readonly 'point.rejected': PointMailIds;
 }
 
 interface MailParts {
@@ -56,6 +61,9 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
     subjectId: recipientId,
     key: checkId,
   }),
+  'point.returned': pointMailParts,
+  'point.approved': pointMailParts,
+  'point.rejected': pointMailParts,
 };
 
 interface MailJob {

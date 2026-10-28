@@ -334,6 +334,66 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
   });
 });
 
+describe('the decision mails’ column grants (ADR 0020: the worker reads no text people wrote)', () => {
+  const GRANTED: Readonly<Record<string, readonly string[]>> = {
+    points: ['author_id', 'id', 'state'],
+    point_events: ['event', 'id', 'point_id', 'to_state'],
+  };
+  const WITHHELD: Readonly<Record<string, readonly string[]>> = {
+    points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
+    point_events: ['note', 'before', 'edited_fields'],
+  };
+
+  /** Whether autoporada_worker holds `privilege` on each named column of `table`. */
+  async function held(table: string, columns: readonly string[], privilege: string) {
+    const rows = await database.owner<{ column: string; held: boolean }>(
+      `SELECT c AS column, has_column_privilege('autoporada_worker', $1::regclass, c, $3) AS held
+         FROM unnest($2::text[]) AS c`,
+      [table, columns, privilege],
+    );
+    return Object.fromEntries(rows.map((row) => [row.column, row.held]));
+  }
+
+  it.each(Object.keys(GRANTED))(
+    'lets the worker select exactly the granted columns of %s',
+    async (table) => {
+      const all = await database.owner<{ column: string }>(
+        `SELECT column_name AS column FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = $1 ORDER BY 1`,
+        [table],
+      );
+      const facts = await held(
+        table,
+        all.map((row) => row.column),
+        'SELECT',
+      );
+      const readable = Object.keys(facts).filter((column) => facts[column]);
+      expect(readable).toEqual(GRANTED[table]);
+    },
+  );
+
+  it.each(Object.keys(WITHHELD))('keeps what people wrote in %s out of reach', async (table) => {
+    const facts = await held(table, WITHHELD[table]!, 'SELECT');
+    expect(facts).toEqual(Object.fromEntries(WITHHELD[table]!.map((column) => [column, false])));
+    const [first] = WITHHELD[table]!;
+    expect(await sqlstateAs('autoporada_worker', `SELECT ${first} FROM ${table}`)).toBe(DENIED);
+    expect(await sqlstateAs('autoporada_worker', `SELECT * FROM ${table}`)).toBe(DENIED);
+  });
+
+  it.each(Object.keys(GRANTED))(
+    'reads the granted columns of %s and writes none',
+    async (table) => {
+      const columns = GRANTED[table]!;
+      expect(
+        await sqlstateAs('autoporada_worker', `SELECT ${columns.join(', ')} FROM ${table}`),
+      ).toBeUndefined();
+      for (const privilege of ['INSERT', 'UPDATE', 'REFERENCES']) {
+        expect(Object.values(await held(table, columns, privilege))).not.toContain(true);
+      }
+    },
+  );
+});
+
 describe('the mail ledger and gate (ADR 0016: only the worker writes delivery state)', () => {
   const MAIL_TABLES = ['mail_ledger', 'mail_gate'];
   const PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'];

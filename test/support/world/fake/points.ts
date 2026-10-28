@@ -236,5 +236,11 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           updatedAt,
         }));
     },
+    async mailFacts(id) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const point = points.get(id);
+      return point ? { id: point.id, authorId: point.authorId, state: point.state } : null;
+    },
   };
 }

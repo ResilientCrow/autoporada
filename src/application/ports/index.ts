@@ -60,6 +60,7 @@ export type {
 export type { JobHandler, JobHandlers, WorkerDeps } from './worker';
 export type {
   NewPointEvent,
+  PointEventMailFacts,
   PointEventName,
   PointEventRecord,
   PointEventRepo,
@@ -68,6 +69,7 @@ export type { PointTypeRecord, PointTypeRepo } from './point-types';
 export type {
   NewPoint,
   PointCursor,
+  PointMailFacts,
   PointPatch,
   PointRecord,
   PointRepo,

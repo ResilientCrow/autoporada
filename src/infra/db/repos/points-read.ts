@@ -180,7 +180,7 @@ const queueRows = (db: TxDatabase, ctx: TxContext, limit: number) =>
 export function createPointReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine' | 'queue' | 'ownRecent'> {
+): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine' | 'queue' | 'ownRecent' | 'mailFacts'> {
   const byId = (id: string) =>
     db
       .select(POINT_ROW)
@@ -228,6 +228,15 @@ export function createPointReads(
         if (!people) throw new DatabaseFailure(PARSE_FAILURE);
         return { ...people, updatedAt: row.updatedAt };
       });
+    },
+    async mailFacts(id) {
+      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migration 0017 grants the worker, and no other (F2).
+      const [row] = await db
+        .select({ id: points.id, authorId: points.authorId, state: points.state })
+        .from(points)
+        .where(eq(points.id, id));
+      return row ?? null;
     },
   };
 }

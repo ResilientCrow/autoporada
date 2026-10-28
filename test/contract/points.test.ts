@@ -701,6 +701,42 @@ describe('PointRepo scope (own-or-submitted for reviewers)', () => {
   });
 });
 
+describe('PointRepo mailFacts (what the decision mails read again, ADR 0020)', () => {
+  /** As the worker reads at send time: autoporada_worker in the pg world, with its column grants only. */
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:mail.send'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+
+  it('reads the author and the state of a point, and nothing it holds', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const { point } = await create(world.as(author), { content: FULL });
+    expect(await asWorker((tx) => tx.points.mailFacts(point.id))).toEqual({
+      id: point.id,
+      authorId: author.id,
+      state: 'draft',
+    });
+    await update(world.as(author), point, SUBMIT);
+    expect(await asWorker((tx) => tx.points.mailFacts(point.id))).toMatchObject({
+      state: 'submitted',
+    });
+  });
+
+  it('gives null for an unknown point', async () => {
+    const unknown = '00000000-0000-7000-8000-999999999999';
+    expect(await asWorker((tx) => tx.points.mailFacts(unknown))).toBeNull();
+  });
+
+  it('refuses a user: only the system reads mail facts', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const { point } = await create(world.as(author));
+    const refused = read(world.as(author), (tx) => tx.points.mailFacts(point.id));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('point audit coverage in the fake world', () => {
   it('names every created or updated point as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

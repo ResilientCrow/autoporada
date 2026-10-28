@@ -1,6 +1,6 @@
 /**
  * The letter around a template's paragraphs: greeting, the paragraphs, an
- * optional link to the sign-in page, the footer. Plain text, one paragraph per
+ * optional link to a page of the app, the footer. Plain text, one paragraph per
  * line, blank lines between. The strings are typeset by hand (non-breaking
  * spaces written as escapes, like src/ui/copy), so nothing here rewrites them.
  */
@@ -10,11 +10,11 @@ const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovíd
 
 export interface Body {
   readonly paragraphs: readonly string[];
-  /** Ends the body with the link to the sign-in page on the app origin. */
-  readonly signInLink?: boolean;
+  /** Ends the body with a link to this page on the app origin (ADR 0020): sign-in, the author's points or the review queue. */
+  readonly link?: '/prihlaseni' | '/body' | '/kontrola';
 }
 
 export function frame(origin: string, body: Body): string {
-  const link = body.signInLink ? [`${origin}/prihlaseni`] : [];
+  const link = body.link ? [`${origin}${body.link}`] : [];
   return [GREETING, ...body.paragraphs, ...link, FOOTER].join('\n\n') + '\n';
 }

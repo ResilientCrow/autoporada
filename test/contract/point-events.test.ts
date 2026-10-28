@@ -8,6 +8,7 @@ import {
   type PointEventRecord,
   type PointRecord,
   type Principal,
+  type Tx,
   type UserRecord,
 } from '@/application/ports';
 import { richDocFromText } from '@/domain/richtext';
@@ -333,6 +334,51 @@ describe('PointEventRepo (port contract)', () => {
     );
     expect(await world.tx(cli, (tx) => tx.users.get(reviewer.id), 'read')).toEqual(reviewer);
     expect(await list(cli, point.id)).toEqual([event]);
+  });
+});
+
+describe('PointEventRepo mailFacts (what the decision mails read again, ADR 0020)', () => {
+  /** As the worker reads at send time: autoporada_worker in the pg world, with its column grants only. */
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:mail.send'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+
+  it('reads what an event did to which point, never its note', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const point = await makePoint(author, true);
+    const [returned] = await append(world.as(reviewer), {
+      pointId: point.id,
+      event: 'return',
+      fromState: 'submitted',
+      toState: 'returned',
+      note: 'Doplňte prosím vyjádření.',
+    });
+    expect(await asWorker((tx) => tx.pointEvents.mailFacts(returned!.id))).toEqual({
+      id: returned!.id,
+      pointId: point.id,
+      event: 'return',
+      toState: 'returned',
+    });
+  });
+
+  it('gives null for an unknown event, and for a point’s id', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const point = await makePoint(author, false);
+    await append(world.as(author), { ...SUBMIT, pointId: point.id });
+    expect(await asWorker((tx) => tx.pointEvents.mailFacts(UNKNOWN_ID))).toBeNull();
+    expect(await asWorker((tx) => tx.pointEvents.mailFacts(point.id))).toBeNull();
+  });
+
+  it('refuses a user: only the system reads mail facts', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const point = await makePoint(author, false);
+    const [event] = await append(world.as(author), { ...SUBMIT, pointId: point.id });
+    const refused = world.tx(world.as(author), (tx) => tx.pointEvents.mailFacts(event!.id), 'read');
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
 });
 

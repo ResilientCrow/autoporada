@@ -9,6 +9,7 @@ import { renderMail, TEMPLATE_NAMES, type TemplateName } from './index';
 const NB = '\u00A0';
 const ORIGIN = 'https://autoporada.example';
 const LINK = `${ORIGIN}/prihlaseni`;
+const POINTS = `${ORIGIN}/body`;
 const GREETING = 'Dobrý den,';
 const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovídejte na ni prosím.';
 
@@ -21,6 +22,9 @@ const VIEWS = {
   'access.blocked': {},
   'access.granted': {},
   'mail.check': {},
+  'point.returned': {},
+  'point.approved': {},
+  'point.rejected': {},
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -59,6 +63,22 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: 'Autoporada: zkušební zpráva',
     text: letter(
       'tuto zprávu poslala Autoporada na žádost správce, aby ověřil odesílání e-mailů. Nemusíte nic dělat.',
+    ),
+  },
+  'point.returned': {
+    subject: `Autoporada: bod byl vrácen k${NB}úpravě`,
+    text: letter(
+      `váš bod pro poradu vedení byl vrácen k${NB}úpravě. Poznámku kontroly najdete v${NB}aplikaci:\n\n${POINTS}`,
+    ),
+  },
+  'point.approved': {
+    subject: 'Autoporada: bod byl schválen',
+    text: letter(`váš bod pro poradu vedení byl schválen.\n\n${POINTS}`),
+  },
+  'point.rejected': {
+    subject: 'Autoporada: bod nebyl přijat',
+    text: letter(
+      `váš bod pro poradu vedení nebyl přijat. Důvod najdete v${NB}aplikaci:\n\n${POINTS}`,
     ),
   },
 };
@@ -102,6 +122,14 @@ describe('renderMail', () => {
     }
     for (const name of ['access.rejected', 'access.blocked', 'mail.check'] as const) {
       expect(render(name).text).not.toContain('http');
+    }
+  });
+
+  it('links the author’s points from every decision mail, and nothing else', () => {
+    for (const name of ['point.returned', 'point.approved', 'point.rejected'] as const) {
+      const { text } = render(name);
+      expect(text).toContain(`\n${POINTS}\n`);
+      expect(text.match(/https?:\/\/\S*/g)).toEqual([POINTS]);
     }
   });
 

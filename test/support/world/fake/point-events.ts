@@ -77,5 +77,13 @@ export function fakePointEventRepo(tx: FakeTxState, ctx: TxContext): PointEventR
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))
       );
     },
+    async mailFacts(id) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const row = tx.draft.pointEvents.get(id);
+      return row
+        ? { id: row.id, pointId: row.pointId, event: row.event, toState: row.toState }
+        : null;
+    },
   };
 }

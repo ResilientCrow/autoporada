@@ -17,7 +17,7 @@ export const retractPoint = defineUseCase({
   output: retractPointOutput,
   access: pointWriteAccess(moveCheck('retract')),
   async execute({ tx }, _input, point) {
-    const after = await move(tx, point, 'retract');
+    const { after } = await move(tx, point, 'retract');
     return ok({ version: after.version });
   },
 });

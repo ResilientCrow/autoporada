@@ -5,7 +5,7 @@ import { frame, type Body } from './frame';
 
 /**
  * Mails are plain text and carry no personal data: the subjects are constants
- * and the only variables are the app origin and one date. The sentences that
+ * and the only variables are the app origin and one date (ADR 0016, 0020). The sentences that
  * say what the access screens say are the screens' words
  * (test/arch/notify-copy.test.ts compares them byte for byte). Non-breaking
  * spaces are written as escapes, as in src/ui/copy.
@@ -16,6 +16,9 @@ export const TEMPLATE_NAMES = [
   'access.blocked',
   'access.granted',
   'mail.check',
+  'point.returned',
+  'point.approved',
+  'point.rejected',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -27,6 +30,9 @@ export interface TemplateViews {
   'access.blocked': Record<string, never>;
   'access.granted': Record<string, never>;
   'mail.check': Record<string, never>;
+  'point.returned': Record<string, never>;
+  'point.approved': Record<string, never>;
+  'point.rejected': Record<string, never>;
 }
 
 interface RenderedMail {
@@ -46,7 +52,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         'vedení školy schválilo vaši žádost o\u00A0přístup do Autoporady. Přihlaste se prosím znovu.',
       ],
-      signInLink: true,
+      link: '/prihlaseni',
     },
   }),
   'access.rejected': ({ retryFrom }) => ({
@@ -69,7 +75,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: byl vám přidělen přístup',
     body: {
       paragraphs: ['vedení školy vám přidělilo přístup do Autoporady. Přihlaste se prosím znovu.'],
-      signInLink: true,
+      link: '/prihlaseni',
     },
   }),
   'mail.check': () => ({
@@ -78,6 +84,28 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         'tuto zprávu poslala Autoporada na žádost správce, aby ověřil odesílání e-mailů. Nemusíte nic dělat.',
       ],
+    },
+  }),
+  // A decision on a point goes to its author, without the title or the note: both are in the app.
+  // Subjects and the lower-case opening after „Dobrý den,“ follow the access mails.
+  'point.returned': () => ({
+    subject: 'Autoporada: bod byl vrácen k\u00A0úpravě',
+    body: {
+      paragraphs: [
+        'váš bod pro poradu vedení byl vrácen k\u00A0úpravě. Poznámku kontroly najdete v\u00A0aplikaci:',
+      ],
+      link: '/body',
+    },
+  }),
+  'point.approved': () => ({
+    subject: 'Autoporada: bod byl schválen',
+    body: { paragraphs: ['váš bod pro poradu vedení byl schválen.'], link: '/body' },
+  }),
+  'point.rejected': () => ({
+    subject: 'Autoporada: bod nebyl přijat',
+    body: {
+      paragraphs: ['váš bod pro poradu vedení nebyl přijat. Důvod najdete v\u00A0aplikaci:'],
+      link: '/body',
     },
   }),
 };

@@ -18,7 +18,7 @@ export const withdrawPoint = defineUseCase({
   access: pointWriteAccess(moveCheck('withdraw')),
   async execute({ tx }, { confirmed }, point) {
     if (!confirmed) return fail({ code: 'invalid-input', fields: { confirmed: 'required' } });
-    const after = await move(tx, point, 'withdraw');
+    const { after } = await move(tx, point, 'withdraw');
     return ok({ version: after.version });
   },
 });
