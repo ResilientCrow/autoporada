@@ -248,7 +248,7 @@ describe('points.get', () => {
       expect(await read(await user('reviewer'), id)).toEqual(notFound);
       expect(await read(author, id)).toMatchObject({
         ok: true,
-        value: { state: 'draft', submittedAt: START.toISOString(), editable: true },
+        value: { state: 'draft', submittedAt: null, editable: true },
       });
     });
 

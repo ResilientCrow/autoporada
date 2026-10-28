@@ -31,8 +31,8 @@ const POINT_STATES: readonly PointState[] = [
 /**
  * A state with the `everSubmitted` flags it can really carry: only a draft
  * (never submitted, or retracted) and a withdrawn row may lack a submit;
- * every other state is reached through one, and `submitted_at` is never
- * cleared.
+ * every other state is reached through one, and only a retract clears
+ * `submitted_at` (ADR 0026).
  */
 function reachable<S extends string>(states: readonly S[]) {
   return fc.tuple(fc.constantFrom(...states), fc.boolean()).map(([state, flag]) => ({

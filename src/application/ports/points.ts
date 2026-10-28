@@ -14,7 +14,7 @@ export interface PointRecord {
   readonly content: PointContent;
   /** Set once, at the first submit. */
   readonly earliestMonday: CalDate | null;
-  /** Set at every submit and never cleared: "ever submitted". */
+  /** Set at every submit, cleared by a retract: the point is handed in, or was until a decision. */
   readonly submittedAt: Date | null;
   readonly version: number;
   readonly updatedAt: Date;
@@ -40,7 +40,8 @@ export interface PointPatch {
   readonly content?: PointContent;
   readonly state?: PointState;
   readonly earliestMonday?: CalDate;
-  readonly submittedAt?: Date;
+  /** Null takes the hand-in back (a retract). */
+  readonly submittedAt?: Date | null;
 }
 
 /**

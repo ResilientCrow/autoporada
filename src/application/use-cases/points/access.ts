@@ -26,7 +26,7 @@ export function pointWriteAccess<I extends PointWrite>(
   };
 }
 
-/** A point as `point.view` sees it: `submittedAt` is never cleared, so it means "ever submitted". */
+/** A point as `point.view` sees it: `submittedAt` is set at each submit and cleared by a retract. */
 export const pointView = (point: PointRecord) => ({
   authorId: point.authorId,
   state: point.state,

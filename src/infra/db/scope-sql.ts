@@ -11,7 +11,7 @@ export interface ScopeColumns {
   readonly owner: AnyPgColumn;
   readonly kind?: AnyPgColumn;
   readonly state?: AnyPgColumn;
-  /** Set at every submit and never cleared, so not null means "ever submitted". */
+  /** Set at every submit and cleared by a retract (ADR 0026): not null means "handed in". */
   readonly submittedAt?: AnyPgColumn;
 }
 

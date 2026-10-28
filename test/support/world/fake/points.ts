@@ -171,7 +171,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         content: checked ?? before.content,
         state: state ?? before.state,
         earliestMonday: earliestMonday ?? before.earliestMonday,
-        submittedAt: submittedAt ?? before.submittedAt,
+        submittedAt: submittedAt === undefined ? before.submittedAt : submittedAt,
         version: before.version + 1,
         updatedAt: now,
       };

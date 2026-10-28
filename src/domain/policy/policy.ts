@@ -23,7 +23,7 @@ interface Owned {
 type Owner = Owned | { readonly isAuthor: boolean };
 type PointRef = Owner & { readonly state: PointState };
 type FutureRef = Owner & { readonly state: FutureState; readonly kind: FutureKind };
-/** `everSubmitted`: submitted at least once (`submitted_at` is never cleared). */
+/** `everSubmitted`: handed in and not taken back by a retract (`submitted_at` is set). */
 type Seen<S> = Owned & { readonly state: S; readonly everSubmitted: boolean };
 type PointView = Seen<PointState>;
 type FutureView = Seen<FutureState> & { readonly kind: FutureKind };

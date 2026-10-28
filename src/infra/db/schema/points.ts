@@ -88,7 +88,7 @@ export const points = pgTable(
       .default(sql`'[]'::jsonb`),
     /** Set once, at the first submit. */
     earliestMonday: date({ mode: 'string' }),
-    /** Set at every submit and never cleared: "ever submitted". */
+    /** Set at every submit, cleared by a retract (ADR 0026). */
     submittedAt: at(),
     /** The future item a report answers; its foreign key comes in M8b (commit 51). */
     futureItemId: uuid(),

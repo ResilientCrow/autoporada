@@ -7,7 +7,14 @@ import { DRAFT_CAP } from '@/domain/report';
 
 import { FIRST_MONDAY, pointFixtures, readyProposal } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
-import { retractPoint, submitPoint } from './index';
+import {
+  getPoint,
+  queuePoints,
+  retractPoint,
+  savePoint,
+  submitPoint,
+  withdrawPoint,
+} from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = pointFixtures(world);
@@ -36,19 +43,65 @@ async function refuses(id: string, run: () => Promise<unknown>, error: unknown) 
 const forbidden = { code: 'forbidden' };
 
 describe('points.retract', () => {
-  it('takes a submitted point back to the drafts and keeps when it was handed in', async () => {
+  it('takes a submitted point back to the drafts: no longer handed in, its Monday kept', async () => {
     const author = await user();
     const id = await submitted(author);
-    const submittedAt = world.clock.now();
     world.clock.advance(60_000);
     expect(await retract(author, id)).toEqual({ ok: true, value: { version: 3 } });
     expect(await get(author, id)).toMatchObject({
       state: 'draft',
       version: 3,
       earliestMonday: FIRST_MONDAY,
-      submittedAt,
+      submittedAt: null,
       content: { title: 'Nákup projektoru' },
     });
+  });
+
+  it('lets a resubmit set when the point was handed in again', async () => {
+    const author = await user();
+    const id = await submitted(author);
+    await retract(author, id);
+    world.clock.advance(60_000);
+    const again = await world.run(submitPoint, world.as(author), {
+      id,
+      expectedVersion: 3,
+      content: readyProposal(),
+    });
+    expect(again).toEqual({ ok: true, value: { version: 4 } });
+    expect(await get(author, id)).toMatchObject({
+      state: 'submitted',
+      earliestMonday: FIRST_MONDAY,
+      submittedAt: world.clock.now(),
+    });
+  });
+
+  it('keeps a draft rewritten after a retract and then withdrawn from reviewers', async () => {
+    const author = await user();
+    const id = await submitted(author);
+    await retract(author, id);
+    const rewritten = readyProposal({ title: 'Jiný návrh' });
+    const saved = await world.run(savePoint, world.as(author), {
+      id,
+      expectedVersion: 3,
+      content: rewritten,
+    });
+    expect(saved.ok).toBe(true);
+    const gone = await world.run(withdrawPoint, world.as(author), {
+      id,
+      expectedVersion: 4,
+      confirmed: true,
+    });
+    expect(gone).toEqual({ ok: true, value: { version: 5 } });
+    for (const role of ['reviewer', 'headmaster'] as const) {
+      const by = await user(role);
+      expect(await get(by, id), role).toBeNull();
+      expect(await world.run(getPoint, world.as(by), { id }), role).toEqual({
+        ok: false,
+        error: { code: 'not-found' },
+      });
+      const queue = await world.run(queuePoints, world.as(by), {});
+      expect(JSON.stringify(queue), role).not.toContain(id);
+    }
   });
 
   it('records point.retracted with the states, and the point event', async () => {
@@ -61,7 +114,13 @@ describe('points.retract', () => {
       action: 'point.retracted',
       targetType: 'point',
       targetId: id,
-      data: { diff: { state: { from: 'submitted', to: 'draft' } }, meta: { kind: 'pokyn' } },
+      data: {
+        diff: {
+          state: { from: 'submitted', to: 'draft' },
+          submittedAt: { from: world.clock.now().toISOString(), to: null },
+        },
+        meta: { kind: 'pokyn' },
+      },
       requestId: 'test',
     });
     expect(events[0]).toMatchObject({ event: 'retract', fromState: 'submitted', toState: 'draft' });
