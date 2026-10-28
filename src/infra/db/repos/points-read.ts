@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, or, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -13,7 +13,7 @@ import { parsePointJsonb, parsePointPeople, type PointJsonb } from '@/contracts'
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
-import { points } from '../schema';
+import { pointEvents, points } from '../schema';
 import type { TxDatabase } from './database';
 
 /** The columns a PointRecord is made of; new columns stay out until named here. */
@@ -110,6 +110,18 @@ const after = (before: PointCursor | undefined): SQL | undefined =>
     and(eq(points.updatedAt, before.updatedAt), lt(points.id, before.id)),
   );
 
+/**
+ * The newest `return` event's note while the point is returned (the order of `PointEventRepo.list`),
+ * else null. Drizzle writes the outer columns unqualified inside a single-table select, so `id` would
+ * read as the event's: the outer point is named in full.
+ */
+const returnNote = sql<string | null>`(
+  SELECT e.note FROM ${pointEvents} e
+  WHERE e.point_id = "points"."id" AND e.event = 'return' AND "points"."state" = 'returned'
+  ORDER BY e.created_at DESC, e.id DESC
+  LIMIT 1
+)`.as('return_note');
+
 const SUMMARY_ROW = {
   id: points.id,
   kind: points.kind,
@@ -119,6 +131,7 @@ const SUMMARY_ROW = {
   eventDate: points.eventDate,
   earliestMonday: points.earliestMonday,
   submittedAt: points.submittedAt,
+  returnNote,
   version: points.version,
   updatedAt: points.updatedAt,
 };

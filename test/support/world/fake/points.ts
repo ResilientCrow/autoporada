@@ -76,6 +76,13 @@ const record = ({ clientRef: _ref, ...point }: FakePoint): PointRecord => point;
 const newer = (a: PointCursor, b: PointCursor) =>
   b.updatedAt.getTime() - a.updatedAt.getTime() || (a.id < b.id ? 1 : -1);
 
+/** The note of the point's newest `return` event, in the events' order (PointEventRepo.list). */
+const returnNoteOf = (tx: FakeTxState, pointId: string): string | null =>
+  [...tx.draft.pointEvents.values()]
+    .filter((e) => e.pointId === pointId && e.event === 'return')
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))[0]
+    ?.note ?? null;
+
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const { principal, now } = ctx;
@@ -180,6 +187,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           eventDate: p.content.eventDate,
           earliestMonday: p.earliestMonday,
           submittedAt: p.submittedAt,
+          returnNote: p.state === 'returned' ? returnNoteOf(tx, p.id) : null,
           version: p.version,
           updatedAt: p.updatedAt,
         }));

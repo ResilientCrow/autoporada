@@ -60,6 +60,7 @@ describe('points.listMine', () => {
             eventDate: null,
             earliestMonday: '2026-10-26',
             submittedAt: minutes(2),
+            returnNote: null,
             version: 2,
             updatedAt: minutes(2),
           },
@@ -72,6 +73,7 @@ describe('points.listMine', () => {
             eventDate: null,
             earliestMonday: null,
             submittedAt: null,
+            returnNote: null,
             version: 1,
             updatedAt: minutes(0),
           },
@@ -94,6 +96,51 @@ describe('points.listMine', () => {
     expect(got.ok && got.value.points[0]?.eventDate).toBe('2027-01-14');
   });
 
+  describe('the return note', () => {
+    /** The author's pokyn, returned by a reviewer with this note. */
+    async function returned(author: UserRecord, note: string) {
+      const id = await start(author, 'pokyn');
+      await world.tx(world.as(author), async (tx) => {
+        const point = (await tx.points.get(id))!;
+        await tx.points.update(id, point.version, { state: 'returned' });
+        await tx.pointEvents.append({
+          pointId: id,
+          event: 'return',
+          fromState: 'submitted',
+          toState: 'returned',
+          note,
+        });
+        await tx.audit.record({ action: 'point.save', target: { type: 'point', id } });
+      });
+      return id;
+    }
+    const noteOf = async (author: UserRecord, id: string) => {
+      const got = await list(author);
+      return got.ok ? got.value.points.find((p) => p.id === id)?.returnNote : undefined;
+    };
+
+    it('is the first line of the note of a returned point', async () => {
+      const author = await user();
+      const id = await returned(author, 'Doplňte prosím vyjádření.\nA zkontrolujte jména.');
+      expect(await noteOf(author, id)).toBe('Doplňte prosím vyjádření.');
+    });
+
+    it.each([
+      ['a leading blank line', '\n\nDoplňte název.\nDál.', 'Doplňte název.'],
+      ['carriage returns', 'První\r\nDruhý', 'První'],
+      ['surrounding spaces', '  Doplňte název.  ', 'Doplňte název.'],
+    ])('reads the first line past %s', async (_case, note, expected) => {
+      const author = await user();
+      expect(await noteOf(author, await returned(author, note))).toBe(expected);
+    });
+
+    it('is null for a point that is not returned', async () => {
+      const author = await user();
+      const id = await start(author, 'pokyn');
+      expect(await noteOf(author, id)).toBeNull();
+    });
+  });
+
   it('pages the list: a full page names where the next one starts', async () => {
     const author = await user();
     await drafts(author, MY_POINTS_PAGE + 1);
@@ -109,6 +156,29 @@ describe('points.listMine', () => {
     expect(new Set(ids).size).toBe(MY_POINTS_PAGE + 1);
     // One instant for every row: the order falls to the ids, highest first.
     expect(ids).toEqual([...ids].sort().reverse());
+  });
+
+  it('names no next page for exactly one full page of points', async () => {
+    const author = await user();
+    await drafts(author, MY_POINTS_PAGE);
+    const only = await list(author);
+    if (!only.ok) throw new Error('the page');
+    expect(only.value.points).toHaveLength(MY_POINTS_PAGE);
+    expect(only.value.next).toBeNull();
+  });
+
+  it('holds the extra row back from the first page and starts the second with it', async () => {
+    const author = await user();
+    await drafts(author, MY_POINTS_PAGE + 1);
+    const first = await list(author);
+    if (!first.ok || first.value.next === null) throw new Error('no next page');
+    const second = await list(author, first.value.next);
+    if (!second.ok) throw new Error('second page');
+    const all = await world.tx(world.as(author), (tx) => tx.points.listMine(MY_POINTS_PAGE + 1));
+    expect(first.value.points.map((p) => p.id)).toEqual(
+      all.slice(0, MY_POINTS_PAGE).map((p) => p.id),
+    );
+    expect(second.value.points.map((p) => p.id)).toEqual([all[MY_POINTS_PAGE]?.id]);
   });
 
   it('gives an author with no points an empty list', async () => {

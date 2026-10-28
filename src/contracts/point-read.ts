@@ -118,7 +118,7 @@ const pointCursorSchema = z
 
 /** „Moje body“: the author's own points, a page at a time. */
 export const listMyPointsInput = z.strictObject({ before: pointCursorSchema.optional() });
-/** `next` is null when the page is not full. */
+/** `next` is null on the last page: set only when an older point exists. */
 export const listMyPointsOutput = z.object({
   points: z
     .array(
@@ -131,6 +131,8 @@ export const listMyPointsOutput = z.object({
         eventDate: day.nullable(),
         earliestMonday: day.nullable(),
         submittedAt: instant.nullable(),
+        /** The first line of the note the reviewer returned the point with; null unless it is `returned`. */
+        returnNote: z.string().max(2000).nullable(),
         version,
         updatedAt: instant,
       }),

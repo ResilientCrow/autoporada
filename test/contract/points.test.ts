@@ -346,6 +346,53 @@ describe('PointRepo (port contract)', () => {
     expect(await after(oldest.point)).toEqual([]);
   });
 
+  describe('the return note of listMine', () => {
+    const RETURN = { event: 'return', fromState: 'submitted', toState: 'returned' } as const;
+    /** A submitted point of the author's, returned with each note in turn, a minute apart. */
+    async function returnedWith(author: UserRecord, ...notes: string[]) {
+      const { point } = await create(world.as(author), { content: FULL });
+      let current = await update(world.as(author), point, SUBMIT);
+      for (const note of notes) {
+        world.clock.advance(60_000);
+        await world.tx(world.as(author), async (tx) => {
+          await tx.pointEvents.append({ pointId: point.id, ...RETURN, note });
+          await tx.audit.record({ action: 'point.save', target: { type: 'point', id: point.id } });
+        });
+      }
+      current = await update(world.as(author), current, { state: 'returned' });
+      return current;
+    }
+    const noteOf = async (author: UserRecord, id: string) =>
+      (await read(world.as(author), (tx) => tx.points.listMine(10))).find((row) => row.id === id)
+        ?.returnNote;
+
+    it('is the newest return event’s whole note while the point is returned', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const point = await returnedWith(author, 'Starší poznámka.', 'Doplňte název.\nA datum.');
+      expect(await noteOf(author, point.id)).toBe('Doplňte název.\nA datum.');
+    });
+
+    it('is null once the point is no longer returned, and for points that never were', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const back = await returnedWith(author, 'Doplňte název.');
+      const resubmitted = await update(world.as(author), back, { state: 'submitted' });
+      const draft = (await create(world.as(author))).point;
+      expect(await noteOf(author, resubmitted.id)).toBeNull();
+      expect(await noteOf(author, draft.id)).toBeNull();
+    });
+
+    it('is never another author’s note', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const colleague = await world.seed.user({ role: 'submitter' });
+      // The colleague's note is the newest return event in the table: only the point it belongs to may show it.
+      const mine = await returnedWith(author, 'Moje poznámka.');
+      const theirs = await returnedWith(colleague, 'Jen pro kolegu.');
+      const rows = await read(world.as(author), (tx) => tx.points.listMine(10));
+      expect(rows.map((row) => [row.id, row.returnNote])).toEqual([[mine.id, 'Moje poznámka.']]);
+      expect(theirs.id).not.toBe(mine.id);
+    });
+  });
+
   describe('ownRecent', () => {
     const people = ({ content, updatedAt }: PointRecord) => ({
       bullets: content.bullets,
@@ -462,6 +509,7 @@ const summary = (p: PointRecord) => ({
   eventDate: p.content.eventDate,
   earliestMonday: p.earliestMonday,
   submittedAt: p.submittedAt,
+  returnNote: null,
   version: p.version,
   updatedAt: p.updatedAt,
 });

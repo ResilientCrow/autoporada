@@ -43,12 +43,15 @@ export interface PointPatch {
   readonly submittedAt?: Date;
 }
 
-/** A row of the author's list: no content beyond the title and the date. */
+/**
+ * A row of the author's list: no content beyond the title and the date, and the
+ * note of the last return while the point is `returned` (whole; null otherwise).
+ */
 export type PointSummary = Pick<
   PointRecord,
   'id' | 'kind' | 'typeId' | 'state' | 'earliestMonday' | 'submittedAt' | 'version' | 'updatedAt'
 > &
-  Pick<PointContent, 'title' | 'eventDate'>;
+  Pick<PointContent, 'title' | 'eventDate'> & { readonly returnNote: string | null };
 
 /** Where a page of the author's list ended: its last row's change and id. */
 export type PointCursor = Pick<PointRecord, 'updatedAt' | 'id'>;
