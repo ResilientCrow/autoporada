@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { POINT_LIMITS, type BulletSpec } from '@/domain/report';
+import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 import { Form } from '@/ui/form';
@@ -12,6 +13,7 @@ import { BodyField, ReportFields } from './ReportFields';
 import { EDITOR_FORM_ID, EDITOR_FORM_STATE, editorSpec } from './editor-form';
 import { PointEditor } from './PointEditor';
 import { PointScreen } from './PointScreen';
+import type { StandingInput } from './standing';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => undefined, replace: () => undefined }),
@@ -58,6 +60,7 @@ const editorPage = (
   typeLabel = 'Exkurze',
   spec: readonly BulletSpec[] = SPEC,
   directory: 'on' | 'off' = 'on',
+  standing: StandingInput | null = null,
 ) =>
   renderToStaticMarkup(
     <PointEditor
@@ -68,7 +71,10 @@ const editorPage = (
       spec={spec}
       titleGender="f"
       today={TODAY}
-      schoolYear="2026/2027"
+      readinessSchoolYear="2026/2027"
+      previewSchoolYear="2026/2027"
+      standing={standing}
+      moves={{ events: ['withdraw'], retractPoint: never, withdrawPoint: never }}
       recents={[]}
       directory={directory}
       savePoint={never}
@@ -411,7 +417,7 @@ describe('PointScreen', () => {
     spec: SPEC,
     titleGender: 'f' as const,
     today: TODAY,
-    schoolYear: '2026/2027',
+    readinessSchoolYear: '2026/2027',
     recents: [],
     directory: 'on' as const,
   };
@@ -419,6 +425,9 @@ describe('PointScreen', () => {
     id: ID,
     kind: 'report' as const,
     state: 'draft' as const,
+    version: 3,
+    standing: null,
+    moves: [] as const,
     title: 'Exkurze do Terezína',
     typeName: 'Exkurze',
     facts: {
@@ -432,7 +441,14 @@ describe('PointScreen', () => {
   };
   const screen = (point: Parameters<typeof PointScreen>[0]['point']) =>
     renderToStaticMarkup(
-      <PointScreen point={point} savePoint={never} submitPoint={never} pointStatus={never} />,
+      <PointScreen
+        point={point}
+        savePoint={never}
+        submitPoint={never}
+        pointStatus={never}
+        retractPoint={never}
+        withdrawPoint={never}
+      />,
     );
 
   it('shows the header and the editor to the author of a draft report', () => {
@@ -496,5 +512,35 @@ describe('PointEditor: the statements', () => {
 
   it('offers the add button even with no statement', () => {
     expect(editor()).toContain(points.statements.add);
+  });
+});
+
+describe('the standing line in the editor', () => {
+  // Design section 6, item 11: the „Odeslání“ part holds the readiness list, the line and the button,
+  // so the author who presses the button at the bottom of a long form sees where the point goes.
+  const STANDING: StandingInput = {
+    submitMonday: '2027-03-15',
+    issues: [],
+    now: '2027-03-09T10:00:00.000Z',
+    rule: DEFAULT_DEADLINE,
+  };
+  const TEXT = `Zařadíme do porady z\u00a015.\u00a03.`;
+  const page = () => editorPage(CONTENT, 'Exkurze', SPEC, 'on', STANDING);
+
+  it('stands once, after the readiness list and before the submit button', () => {
+    const html = page();
+    expect(html.split(TEXT)).toHaveLength(2);
+    expect(html.indexOf(TEXT)).toBeGreaterThan(html.indexOf(points.readiness.heading));
+    expect(html.indexOf(TEXT)).toBeLessThan(html.indexOf(points.submit.button));
+  });
+
+  it('is inside the form, not above the editor', () => {
+    const html = page();
+    expect(html.indexOf(TEXT)).toBeGreaterThan(html.indexOf('<form'));
+    expect(html.indexOf(TEXT)).toBeLessThan(html.indexOf('</form>'));
+  });
+
+  it('is not there without a standing', () => {
+    expect(editorPage()).not.toContain('Zařadíme');
   });
 });

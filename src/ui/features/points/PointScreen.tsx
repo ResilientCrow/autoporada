@@ -1,7 +1,7 @@
 import type { TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import type { BulletSpec, PointKind } from '@/domain/report';
-import type { PointState } from '@/domain/review';
+import type { AuthorMove, PointState } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
 import type { Directory } from '@/ui/form';
@@ -11,6 +11,10 @@ import type { PointContentWire } from './fields';
 import { PointEditor, type PointStatusAction, type SavePointAction } from './PointEditor';
 import { PointFacts, type PointFactsView } from './PointFacts';
 import { PointHeader } from './PointHeader';
+import { PointTransitions } from './PointTransitions';
+import { placementYear, standingOf, type StandingInput } from './standing';
+import { StandingLine } from './StandingLine';
+import type { RetractPointAction, WithdrawPointAction } from './transition-call';
 import type { SubmitPointAction } from './use-submit';
 
 /** What /body/[id] hands the screen: the header and read view values, and the editor's start when it shows. */
@@ -18,20 +22,26 @@ export interface PointScreenModel {
   readonly id: string;
   readonly kind: PointKind;
   readonly state: PointState;
+  /** The version the page shows: what the move forms send. */
+  readonly version: number;
+  /** Where the point goes and when that closes, for the author of a draft or returned point. */
+  readonly standing: StandingInput | null;
+  /** The author's buttons from this state, as the server worked them out (none for anyone else). */
+  readonly moves: readonly AuthorMove[];
   readonly title: string;
   readonly typeName: string | null;
   readonly facts: PointFactsView;
   readonly editor: PointEditorModel | null;
 }
 
-/** What the editor starts from: the saved content, the type's bullets and title gender, today, its school year and the author's recent people. */
+/** What the editor starts from: the saved content, the type's bullets and title gender, today, today's school year (the one the submit checks classes against) and the author's recent people. */
 interface PointEditorModel {
   readonly version: number;
   readonly content: PointContentWire;
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
   readonly today: CalDate;
-  readonly schoolYear: string;
+  readonly readinessSchoolYear: string;
   readonly recents: readonly RecentPerson[];
   readonly directory: Directory;
 }
@@ -46,14 +56,20 @@ export function PointScreen({
   savePoint,
   submitPoint,
   pointStatus,
+  retractPoint,
+  withdrawPoint,
 }: {
   readonly point: PointScreenModel;
   readonly savePoint: SavePointAction;
   readonly submitPoint: SubmitPointAction;
   readonly pointStatus: PointStatusAction;
+  readonly retractPoint: RetractPointAction;
+  readonly withdrawPoint: WithdrawPointAction;
 }) {
   // Proposals get their own fields with M8b; until then only a report is edited here.
   const editor = point.kind === 'report' ? point.editor : null;
+  const moves = { events: point.moves, retractPoint, withdrawPoint };
+  const standing = point.standing && standingOf(point.standing);
   return (
     <div className="space-y-4">
       <PointHeader
@@ -63,7 +79,12 @@ export function PointScreen({
         typeName={point.typeName}
       />
       {editor === null ? (
-        <PointFacts facts={point.facts} />
+        <>
+          {/* The editor shows it with its submit button. */}
+          {point.standing === null ? null : <StandingLine standing={point.standing} />}
+          <PointFacts facts={point.facts} />
+          <PointTransitions id={point.id} version={point.version} moves={moves} />
+        </>
       ) : (
         <PointEditor
           key={editorKey({ id: point.id, version: editor.version })}
@@ -74,7 +95,10 @@ export function PointScreen({
           spec={editor.spec}
           titleGender={editor.titleGender}
           today={editor.today}
-          schoolYear={editor.schoolYear}
+          readinessSchoolYear={editor.readinessSchoolYear}
+          previewSchoolYear={placementYear(standing, editor.readinessSchoolYear)}
+          standing={point.standing}
+          moves={moves}
           recents={editor.recents}
           directory={editor.directory}
           savePoint={savePoint}

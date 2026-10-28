@@ -91,18 +91,21 @@ describe('inventory of entry points', () => {
     expect(LIMITS.autosave).toEqual({ max: 120, windowMs: 60_000, key: 'user' });
   });
 
-  it('lets the submit refresh the page, under the submission limit', async () => {
+  it('lets the submit, retract and withdraw refresh the page, under the submission limit', async () => {
     const found: Record<string, unknown> = {};
+    const moves = ['points.submit', 'points.retract', 'points.withdraw'];
     for (const file of ACTION_MODULES) {
       for (const value of Object.values(await exportsOf(file))) {
         const info = wrappedInfo(value);
-        if (info?.kind === 'action' && info.useCase.name === 'points.submit')
+        if (info?.kind === 'action' && moves.includes(info.useCase.name))
           found[info.useCase.name] = [info.rateLimit, info.refresh];
       }
     }
-    // It moves the state, so the page remounts as the read view (ADR 0017 item 1).
+    // They move the state, so the page remounts as the other view (ADR 0017 item 1).
     expect(found).toEqual({
       'points.submit': ['submission', 'page'],
+      'points.retract': ['submission', 'page'],
+      'points.withdraw': ['submission', 'page'],
     });
   });
 

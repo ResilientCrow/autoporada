@@ -40,12 +40,15 @@ import {
   type OpeningContext,
 } from './opening-state';
 import { LayoutToggle } from './LayoutToggle';
+import { PointTransitions } from './PointTransitions';
 import { SubmitPanel } from './SubmitPanel';
 import { bulletsEdit, statementsEdit, withPatch, type Edit, type Patch } from './report-patch';
 import { issuesAfter, issuesAfterRows, issuesAfterStatementRows, saveIssues } from './save-issues';
 import { Statements, type StatementsUpdate } from './Statements';
 import { withSyncedSpeakers } from './statements-state';
 import { readOnlyWhile } from './submit-press';
+import type { StandingInput } from './standing';
+import type { PointMoves } from './transition-call';
 import { useSubmit, type SubmitPointAction } from './use-submit';
 
 export type SavePointAction = ServerAction<
@@ -80,7 +83,10 @@ export function PointEditor({
   spec,
   titleGender,
   today,
-  schoolYear,
+  readinessSchoolYear,
+  previewSchoolYear,
+  standing,
+  moves,
   recents,
   directory,
   savePoint,
@@ -98,8 +104,14 @@ export function PointEditor({
   readonly titleGender: TitleGender | null;
   /** The day the people's classes are worked out for. */
   readonly today: CalDate;
-  /** Today's school year („2026/2027“): the one the submit's readiness checks the classes against. */
-  readonly schoolYear: string;
+  /** Today's school year („2026/2027“): the one the submit checks the classes against (use-cases/points/submit.ts), so the readiness list must too. */
+  readonly readinessSchoolYear: string;
+  /** The school year of the porada the point goes to: the paper's {skolniRok}. Differs from today's around 1 September. */
+  readonly previewSchoolYear: string;
+  /** Where the point goes and when that closes, shown with the submit button; null while no porada is open. */
+  readonly standing: StandingInput | null;
+  /** „Stáhnout“ and „Zrušit bod“ as far as the state allows; withdraw waits for the autosave to land. */
+  readonly moves: PointMoves;
   /** The people this author put on their latest points, to offer first. */
   readonly recents: readonly RecentPerson[];
   /** Whether the school directory is searched at all (`DIRECTORY=off` is `off`). */
@@ -154,7 +166,7 @@ export function PointEditor({
   const submit = useSubmit({
     id,
     spec,
-    schoolYear,
+    schoolYear: readinessSchoolYear,
     latest,
     submitPoint,
     afterLanded: autosave.afterLanded,
@@ -293,7 +305,8 @@ export function PointEditor({
           kind="report"
           content={content}
           spec={spec}
-          schoolYear={schoolYear}
+          schoolYear={readinessSchoolYear}
+          standing={standing}
           summary={submit.summary}
           attempt={submit.summaryAttempt}
           pending={submit.sending}
@@ -301,9 +314,20 @@ export function PointEditor({
           onSubmit={() => void submit.press()}
         />
       </Form>
+      {/* Its own form after the editor's: forms do not nest. */}
+      <PointTransitions
+        id={id}
+        version={version}
+        moves={moves}
+        around={autosave.afterLanded}
+        held={readOnly}
+      />
     </div>
   );
   return (
-    <LayoutToggle form={form} preview={<Preview content={content} schoolYear={schoolYear} />} />
+    <LayoutToggle
+      form={form}
+      preview={<Preview content={content} schoolYear={previewSchoolYear} />}
+    />
   );
 }

@@ -27,6 +27,7 @@ export {
   REPORT_MACHINE,
   type AccessEvent,
   type AccessState,
+  type AuthorMove,
   type DecisionEvent,
   type FutureEvent,
   type FutureState,

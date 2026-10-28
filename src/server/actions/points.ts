@@ -3,8 +3,10 @@
 import {
   createPoint as createPointUseCase,
   pointStatus as pointStatusUseCase,
+  retractPoint as retractPointUseCase,
   savePoint as savePointUseCase,
   submitPoint as submitPointUseCase,
+  withdrawPoint as withdrawPointUseCase,
 } from '@/application/use-cases';
 
 import { defineAction } from '@/server/bind';
@@ -41,5 +43,21 @@ export const pointStatus = defineAction(pointStatusUseCase, { rateLimit: 'autosa
  * for its autosave to land (`useAutosave().submit`).
  */
 export const submitPoint = defineAction(submitPointUseCase, {
+  rateLimit: 'submission',
+});
+
+/**
+ * „Stáhnout“: a submitted point back to the drafts. It moves the state, so it refreshes the page,
+ * which remounts as the editor.
+ */
+export const retractPoint = defineAction(retractPointUseCase, {
+  rateLimit: 'submission',
+});
+
+/**
+ * „Zrušit bod“, with the checkbox the use case insists on. It moves the state, so it refreshes the
+ * page; from the editor the client has already waited for its autosave to land.
+ */
+export const withdrawPoint = defineAction(withdrawPointUseCase, {
   rateLimit: 'submission',
 });

@@ -1,5 +1,6 @@
 export {
   formatAgendaTimeRange,
+  formatDayMonth,
   formatLongDate,
   formatLongRange,
   formatNumericDate,

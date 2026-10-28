@@ -23,6 +23,9 @@ export type PointState =
 export type PointEvent =
   'submit' | 'retract' | 'withdraw' | 'approve' | 'return' | 'reject' | 'publish' | 'unpublish';
 
+/** The author's moves on their own point besides the submit: „Stáhnout“ and „Zrušit bod“. */
+export type AuthorMove = Extract<PointEvent, 'retract' | 'withdraw'>;
+
 /** Where a point is still the author's to change and to hand in. */
 const POINT_AUTHOR_STATES: readonly PointState[] = ['draft', 'returned'];
 

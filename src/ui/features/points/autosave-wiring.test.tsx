@@ -5,6 +5,7 @@ import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { PointEditor } from './PointEditor';
+import type * as PointTransitionsModule from './PointTransitions';
 import type * as UseSubmit from './use-submit';
 
 /**
@@ -15,7 +16,21 @@ const hook = vi.hoisted(() => ({
   phase: 'idle' as string,
   readOnly: false,
   sending: false,
+  afterLanded: () => Promise.resolve(null),
+  // What the editor handed the author's moves, as the last render saw it.
+  transitions: null as { around?: unknown; held?: unknown } | null,
 }));
+
+// The real moves, but recorded: the flush wiring is the editor's to get right.
+vi.mock('./PointTransitions', async (importOriginal) => {
+  const real = await importOriginal<typeof PointTransitionsModule>();
+  return {
+    PointTransitions: (props: Parameters<typeof real.PointTransitions>[0]) => {
+      hook.transitions = props;
+      return real.PointTransitions(props);
+    },
+  };
+});
 
 // The press cannot happen in a node render, so a send in flight is set by hand as well.
 vi.mock('./use-submit', async (importOriginal) => {
@@ -33,7 +48,7 @@ vi.mock('@/ui/form', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useAutosave: () => ({
     readOnly: hook.readOnly,
-    afterLanded: () => Promise.resolve(null),
+    afterLanded: hook.afterLanded,
     onChange: () => undefined,
     onBlur: () => undefined,
     status: {
@@ -45,6 +60,9 @@ vi.mock('@/ui/form', async (importOriginal) => ({
     },
   }),
 }));
+
+// Hydrated, so the withdraw button is disabled by the page and not by the server HTML.
+vi.mock('@/ui/form/use-hydrated', () => ({ useHydrated: () => true }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => undefined, replace: () => undefined }),
@@ -101,7 +119,10 @@ function page(phase: Phase, readOnly: boolean, sending = false): string {
       ]}
       titleGender="f"
       today={calDate(2026, 10, 27)}
-      schoolYear="2026/2027"
+      readinessSchoolYear="2026/2027"
+      previewSchoolYear="2026/2027"
+      standing={null}
+      moves={{ events: ['withdraw'], retractPoint: never, withdrawPoint: never }}
       recents={[]}
       directory="off"
       savePoint={never}
@@ -160,6 +181,7 @@ beforeEach(() => {
   hook.phase = 'idle';
   hook.readOnly = false;
   hook.sending = false;
+  hook.transitions = null;
 });
 
 describe('the editor while the autosave is waiting for the author', () => {
@@ -237,5 +259,58 @@ describe('the editor with a banner', () => {
 
   it.each(['idle', 'dirty', 'saving', 'saved'] as const)('%s: no alert on the page', (phase) => {
     expect(count(page(phase, false), 'role="alert"')).toBe(0);
+  });
+});
+
+describe('the withdraw form beside the editor', () => {
+  // „Zrušit bod“ is its own form: a native form cannot nest, and the read-only rule above is about
+  // the editor's form. It holds still with the editor, by its own disabled button.
+  const withdrawForm = (html: string) =>
+    /<form[^>]*id="bod-zrusit".*?<\/form>/s.exec(html)?.[0] ?? '';
+  const buttonOf = (form: string) => /<button\b[^>]*>/.exec(form)?.[0] ?? '';
+
+  it('stands outside the editor’s form, after it', () => {
+    const html = page('saved', false);
+    const editor = formOf(html);
+    expect(editor).not.toContain(cs.points.transitions.withdraw.button);
+    expect(html.indexOf('id="bod-zrusit"')).toBeGreaterThan(html.indexOf('</form>'));
+    expect(withdrawForm(html)).toContain(cs.points.transitions.withdraw.button);
+  });
+
+  it.each(['conflict', 'locked', 'signedOut'] as const)('%s: its button is disabled', (phase) => {
+    expect(buttonOf(withdrawForm(page(phase, true)))).toContain('disabled=""');
+  });
+
+  it('a send in flight disables it', () => {
+    expect(buttonOf(withdrawForm(page('saved', false, true)))).toContain('disabled=""');
+  });
+
+  it.each(['idle', 'dirty', 'saving', 'saved', 'failed'] as const)(
+    '%s: it can be pressed',
+    (phase) => {
+      expect(buttonOf(withdrawForm(page(phase, false)))).not.toContain('disabled=""');
+    },
+  );
+});
+
+describe('the author’s moves wait for the autosave', () => {
+  // A „Zrušit bod“ pressed during a pending save must go out with the version the save landed on:
+  // the editor hands its flush primitive on, and the buttons hold still with the fields.
+  it('are handed the autosave’s own after-the-flush primitive', () => {
+    page('saved', false);
+    expect(hook.transitions?.around).toBe(hook.afterLanded);
+  });
+
+  it.each([
+    ['a banner holds the editor', true, false],
+    ['a submit is on its way', false, true],
+  ])('are held while %s', (_name, readOnly, sending) => {
+    page('saved', readOnly, sending);
+    expect(hook.transitions?.held).toBe(true);
+  });
+
+  it('are not held otherwise', () => {
+    page('saved', false, false);
+    expect(hook.transitions?.held).toBe(false);
   });
 });

@@ -18,6 +18,7 @@ export function Button({
   onPress,
   isDisabled,
   isPending,
+  describedBy,
   children,
 }: {
   readonly variant?: ButtonVariant;
@@ -27,6 +28,8 @@ export function Button({
   readonly onPress?: () => void;
   readonly isDisabled?: boolean;
   readonly isPending?: boolean;
+  /** The id of the text that describes the button. */
+  readonly describedBy?: string;
   readonly children: ReactNode;
 }) {
   return (
@@ -38,6 +41,7 @@ export function Button({
       onPress={onPress}
       isDisabled={isDisabled}
       isPending={isPending}
+      aria-describedby={describedBy}
     >
       {children}
     </AriaButton>

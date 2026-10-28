@@ -4,7 +4,7 @@ import type { ActionError } from '@/contracts';
 import type { BulletSpec } from '@/domain/report';
 
 import { editorSpec } from './editor-form';
-import { submitOutcome } from './submit-outcome';
+import { bannerOwns, submitOutcome } from './submit-outcome';
 
 const SPEC: readonly BulletSpec[] = [
   { key: 'ucastnici', label: 'Účastníci', kind: 'people', required: true },
@@ -67,5 +67,22 @@ describe('submitOutcome', () => {
     { code: 'rule', rule: 'point-not-editable' },
   ])('leaves %j to the autosave banners', (error) => {
     expect(fail(error)).toEqual({ summary: null, problem: null });
+  });
+});
+
+describe('bannerOwns', () => {
+  it.each([
+    [{ code: 'conflict' }, true],
+    [{ code: 'not-found' }, true],
+    [{ code: 'unauthenticated' }, true],
+    [{ code: 'rule', rule: 'point-not-editable' }, true],
+    [{ code: 'rule', rule: 'draft-cap' }, false],
+    [{ code: 'invalid-input', fields: { confirmed: 'required' } }, false],
+    [{ code: 'busy' }, false],
+    [{ code: 'forbidden' }, false],
+    [{ code: 'rate-limited', retryAfterSeconds: 5 }, false],
+    [{ code: 'network' }, false],
+  ] as const)('%j: %s', (error, owned) => {
+    expect(bannerOwns(error)).toBe(owned);
   });
 });

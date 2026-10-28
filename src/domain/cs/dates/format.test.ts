@@ -4,6 +4,7 @@ import { addDays, parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
   formatAgendaTimeRange,
+  formatDayMonth,
   formatLongDate,
   formatLongRange,
   formatNumericDate,
@@ -15,6 +16,13 @@ import {
   onWeekday,
   schoolYear,
 } from '../index';
+
+describe('day and month', () => {
+  it('writes „16. 3.“ with a no-break space and no year', () => {
+    expect(formatDayMonth(d('2027-03-16'))).toBe('16.\u00a03.');
+    expect(formatDayMonth(d('2026-10-05'))).toBe('5.\u00a010.');
+  });
+});
 
 describe('single dates', () => {
   it('formats the meeting title date', () => {

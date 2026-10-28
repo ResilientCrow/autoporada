@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import type { ActionResult, submitPointOutput } from '@/contracts';
+import type { ActionError, ActionResult, submitPointOutput } from '@/contracts';
 import { fieldIssues } from '@/ui/copy';
 import { fieldId, type FormSpec, type Problem, type SummaryEntry } from '@/ui/form';
 
@@ -25,6 +25,18 @@ function entry(path: string, code: keyof typeof fieldIssues, form: FormSpec): Su
 }
 
 /**
+ * The answers the autosave banners own (a conflict, a state that moved, a missing point, a lost
+ * session): wherever the editor sends something, none of them shows anywhere else, so there is one
+ * alert and focus never moves. The one rule for the submit and for the author's moves alike.
+ */
+export function bannerOwns(error: ActionError | Problem): boolean {
+  if (error.code === 'rule') return error.rule === 'point-not-editable';
+  return (
+    error.code === 'conflict' || error.code === 'not-found' || error.code === 'unauthenticated'
+  );
+}
+
+/**
  * What to show of the server's answer to a submit (`null`: the call failed). The server checks
  * what the readiness list checked, so its field issues are the backstop for a disagreement and
  * read generically. The autosave banners own a conflict, a state that moved, a missing point and
@@ -37,18 +49,18 @@ export function submitOutcome(
   if (result === null) return { summary: null, problem: { code: 'network' } };
   if (result.ok) return NO_OUTCOME;
   const { error } = result;
+  if (bannerOwns(error)) return NO_OUTCOME;
   switch (error.code) {
     case 'invalid-input': {
       const paths = Object.entries(error.fields);
       if (paths.length === 0) return { summary: null, problem: { code: 'invalid-input' } };
       return { summary: paths.map(([path, code]) => entry(path, code, form)), problem: null };
     }
+    // The banners' answers returned above; listed so a new code fails the type check here.
     case 'conflict':
     case 'not-found':
     case 'unauthenticated':
-      return NO_OUTCOME;
     case 'rule':
-      return error.rule === 'point-not-editable' ? NO_OUTCOME : { summary: null, problem: error };
     case 'busy':
     case 'forbidden':
     case 'rate-limited':

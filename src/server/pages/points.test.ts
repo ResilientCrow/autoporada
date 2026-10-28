@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { calDate } from '@/domain/time';
 
 import { newPointPage, pointPage } from './index';
@@ -106,11 +107,27 @@ describe('pointPage', () => {
     type: { id: TYPE_ID, name: 'Exkurze', titleGender: 'f', defaultBullets: SPEC },
     timeline: [],
   };
-  /** Answers each use case the page asks for: the point, then the author's recent people. */
-  const serve = (loaded: unknown, recent: unknown = { ok: true, value: { people: RECENTS } }) =>
-    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
-      useCase.name === 'people.recent' ? recent : loaded,
-    );
+  const WINDOW = {
+    submitMonday: '2026-11-02',
+    issues: [
+      {
+        monday: '2026-11-02',
+        deadlineAt: '2026-11-01T17:00:00.000Z',
+        status: 'open',
+        version: 2,
+      },
+    ],
+  };
+  /** Answers each use case the page asks for: the point, the author's recent people and the meeting calendar. */
+  const serve = (
+    loaded: unknown,
+    recent: unknown = { ok: true, value: { people: RECENTS } },
+    window: unknown = { ok: true, value: WINDOW },
+  ) =>
+    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
+      if (useCase.name === 'people.recent') return recent;
+      return useCase.name === 'issues.window' ? window : loaded;
+    });
   const askedFor = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
   beforeEach(() => {
     serve({ ok: true, value: LOADED });
@@ -143,13 +160,21 @@ describe('pointPage', () => {
         campus: 'radlice',
         place: 'v učebně S206',
       },
+      version: 3,
+      standing: {
+        submitMonday: '2026-11-02',
+        issues: WINDOW.issues,
+        now: NOW.toISOString(),
+        rule: DEFAULT_DEADLINE,
+      },
+      moves: ['withdraw'],
       editor: {
         version: 3,
         content: LOADED.content,
         spec: SPEC,
         titleGender: 'f',
         today: calDate(2026, 10, 27),
-        schoolYear: '2026/2027',
+        readinessSchoolYear: '2026/2027',
         recents: RECENTS,
         directory: 'on',
       },
@@ -159,7 +184,18 @@ describe('pointPage', () => {
   it('shows nothing the page does not use', async () => {
     const model = await pointPage(ID);
     expect(Object.keys(model ?? {}).sort()).toEqual(
-      ['editor', 'facts', 'id', 'kind', 'state', 'title', 'typeName'].sort(),
+      [
+        'editor',
+        'facts',
+        'id',
+        'kind',
+        'moves',
+        'standing',
+        'state',
+        'title',
+        'typeName',
+        'version',
+      ].sort(),
     );
   });
 
@@ -247,13 +283,13 @@ describe('pointPage', () => {
     });
 
     it('carries the school year of today, by the rule the submit uses', async () => {
-      expect((await pointPage(ID))?.editor?.schoolYear).toBe('2026/2027');
+      expect((await pointPage(ID))?.editor?.readinessSchoolYear).toBe('2026/2027');
     });
 
     it('carries the author’s recent people, asked for as the viewer with no input', async () => {
       expect((await pointPage(ID))?.editor?.recents).toEqual(RECENTS);
-      expect(askedFor()).toEqual(['points.get', 'people.recent']);
-      const [, , request] = runRegistered.mock.calls[1] as [
+      expect(askedFor()).toContain('people.recent');
+      const [, , request] = runRegistered.mock.calls[askedFor().indexOf('people.recent')] as [
         unknown,
         unknown,
         { input: unknown; principal: unknown },
@@ -300,6 +336,95 @@ describe('pointPage', () => {
       loadedAs(changes);
       await pointPage(ID);
       expect(askedFor()).toEqual(['points.get']);
+    });
+  });
+
+  describe('the standing line and the author’s moves', () => {
+    const loadedAs = (changes: object) => serve({ ok: true, value: { ...LOADED, ...changes } });
+    const windowCall = () =>
+      runRegistered.mock.calls.find((c) => (c[1] as { name: string }).name === 'issues.window');
+
+    it('reads the meeting calendar as the viewer, with no input, for the author of a draft', async () => {
+      await pointPage(ID);
+      const [, , request] = windowCall() as [
+        unknown,
+        unknown,
+        { input: unknown; principal: unknown },
+      ];
+      expect(request.input).toEqual({});
+      expect(request.principal).toEqual(await resolvePrincipal());
+    });
+
+    it('hands over the window, now and the deadline rule as they are', async () => {
+      expect((await pointPage(ID))?.standing).toEqual({
+        submitMonday: WINDOW.submitMonday,
+        issues: WINDOW.issues,
+        now: '2026-10-26T23:30:00.000Z',
+        rule: DEFAULT_DEADLINE,
+      });
+    });
+
+    it('carries the version the page showed, for a point in any state', async () => {
+      loadedAs({ version: 8, state: 'submitted', editable: false });
+      expect((await pointPage(ID))?.version).toBe(8);
+    });
+
+    it.each(['draft', 'returned'])('has a standing line for a %s of the author', async (state) => {
+      loadedAs({ state });
+      expect((await pointPage(ID))?.standing).not.toBeNull();
+    });
+
+    it.each([
+      ['a submitted point', { state: 'submitted', editable: false }],
+      ['an approved point', { state: 'approved', editable: false }],
+      ['a draft read by someone else', { isAuthor: false, editable: false }],
+    ])('has no standing line and does not read the calendar for %s', async (_name, changes) => {
+      loadedAs(changes);
+      expect((await pointPage(ID))?.standing).toBeNull();
+      expect(windowCall()).toBeUndefined();
+    });
+
+    it.each(['forbidden', 'not-found'])(
+      'shows the point without a standing line when the calendar is refused (%s)',
+      async (code) => {
+        serve({ ok: true, value: LOADED }, undefined, { ok: false, error: { code } });
+        const page = await pointPage(ID);
+        expect(page?.standing).toBeNull();
+        expect(page?.editor?.version).toBe(3);
+      },
+    );
+
+    it('fails loudly when the calendar fails otherwise', async () => {
+      serve({ ok: true, value: LOADED }, undefined, { ok: false, error: { code: 'unavailable' } });
+      await expect(pointPage(ID)).rejects.toThrow('issues.window: unavailable');
+    });
+
+    it.each([
+      ['a draft', 'draft', ['withdraw']],
+      ['a returned point', 'returned', ['withdraw']],
+      ['a submitted point', 'submitted', ['retract', 'withdraw']],
+      ['an approved point', 'approved', []],
+      ['a rejected point', 'rejected', []],
+      ['a withdrawn point', 'withdrawn', []],
+      ['a published point', 'published', []],
+    ])('offers the author of %s the moves the machine allows', async (_name, state, moves) => {
+      loadedAs({ state, editable: state === 'draft' || state === 'returned' });
+      expect((await pointPage(ID))?.moves).toEqual(moves);
+    });
+
+    it.each(['submitter', 'reviewer', 'headmaster'])(
+      'offers a %s who did not write the submitted point no move',
+      async (role) => {
+        resolvePrincipal.mockResolvedValue({ kind: 'user', actor: { id: 'u2', role } });
+        loadedAs({ state: 'submitted', isAuthor: false, editable: false });
+        expect((await pointPage(ID))?.moves).toEqual([]);
+      },
+    );
+
+    it('offers the headmaster who wrote the point the author’s moves', async () => {
+      resolvePrincipal.mockResolvedValue({ kind: 'user', actor: { id: 'u1', role: 'headmaster' } });
+      loadedAs({ state: 'submitted', editable: false });
+      expect((await pointPage(ID))?.moves).toEqual(['retract', 'withdraw']);
     });
   });
 

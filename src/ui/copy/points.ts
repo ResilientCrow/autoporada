@@ -178,6 +178,23 @@ export const points = {
   submit: {
     button: 'Odeslat ke kontrole',
   },
+  /** Which porada the point goes to and when it closes (design section 6); dates arrive written, „16.\u00A03.“. */
+  standing: {
+    before: (porada: string, weekday: string, date: string, time: string) =>
+      `Zařadíme do porady z\u00A0${porada} Uzávěrka: ${weekday} ${date} v\u00A0${time}.`,
+    closed: (closed: string, porada: string) =>
+      `Uzávěrka porady z\u00A0${closed} už proběhla. Bod půjde do porady z\u00A0${porada}`,
+    soon: 'Do uzávěrky zbývá méně než 24\u00A0hodin.',
+  },
+  /** „Stáhnout“ and „Zrušit bod“ of the author (design section 9). */
+  transitions: {
+    retract: { button: 'Stáhnout', hint: 'Bod se vrátí mezi rozpracované.' },
+    withdraw: {
+      button: 'Zrušit bod',
+      confirm: 'Rozumím, že bod nepůjde do porady.',
+      unconfirmed: 'Potvrďte prosím, že bod nepůjde do porady.',
+    },
+  },
   /** Below the wide layout the form and the preview take turns. */
   layout: {
     legend: 'Zobrazit',

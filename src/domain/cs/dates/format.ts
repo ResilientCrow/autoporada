@@ -29,6 +29,11 @@ export function formatNumericDate(d: CalDate): string {
   return `${d.day}. ${d.month}. ${d.year}`;
 }
 
+/** „16. 3.“ with a no-break space and no year — for lines about the next weeks. */
+export function formatDayMonth(d: CalDate): string {
+  return `${d.day}.\u00a0${d.month}.`;
+}
+
 /** „pondělí 19. 10. 2026“ — future-item bullets. */
 export function formatWeekdayNumeric(d: CalDate): string {
   return `${weekdayName(d)} ${formatNumericDate(d)}`;

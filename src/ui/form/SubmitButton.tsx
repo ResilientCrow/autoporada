@@ -17,11 +17,17 @@ export function SubmitButton({
   name,
   value,
   variant = 'primary',
+  isDisabled = false,
+  describedBy,
   children,
 }: {
   readonly name?: string;
   readonly value?: string;
   readonly variant?: ButtonVariant;
+  /** Held by the page (a banner, a send in flight), on top of the form's own rule. */
+  readonly isDisabled?: boolean;
+  /** The id of the text that describes the button. */
+  readonly describedBy?: string;
   readonly children: ReactNode;
 }) {
   const { submitting } = useFormContext();
@@ -34,7 +40,8 @@ export function SubmitButton({
       value={value}
       variant={variant}
       isPending={pressed}
-      isDisabled={!pressed && (!hydrated || submitting !== null)}
+      describedBy={describedBy}
+      isDisabled={!pressed && (isDisabled || !hydrated || submitting !== null)}
     >
       {children}
     </Button>

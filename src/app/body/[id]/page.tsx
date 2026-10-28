@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { pointStatus, savePoint, submitPoint } from '@/server/actions';
+import { pointStatus, retractPoint, savePoint, submitPoint, withdrawPoint } from '@/server/actions';
 import { pointPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, points } from '@/ui/copy';
 import { PointScreen } from '@/ui/features/points';
@@ -27,6 +27,8 @@ export default async function PointPage({
         savePoint={savePoint}
         submitPoint={submitPoint}
         pointStatus={pointStatus}
+        retractPoint={retractPoint}
+        withdrawPoint={withdrawPoint}
       />
     </Shell>
   );
