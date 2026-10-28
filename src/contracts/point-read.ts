@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { TitleGender } from '@/domain/cs';
+import { POINT_LIMITS } from '@/domain/report';
 import type { PointEvent, PointState } from '@/domain/review';
 
 import { pointContentWire, pointFieldsWire, pointKindSchema } from './point';
@@ -134,7 +135,7 @@ export const listMyPointsOutput = z.object({
         earliestMonday: day.nullable(),
         submittedAt: instant.nullable(),
         /** The first line of the note the reviewer returned the point with; null unless it is `returned`. */
-        returnNote: z.string().max(2000).nullable(),
+        returnNote: z.string().max(POINT_LIMITS.note).nullable(),
         version,
         updatedAt: instant,
       }),

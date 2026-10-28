@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { DatabaseFailure } from '@/application/ports';
+import { POINT_LIMITS } from '@/domain/report';
 import { toPortError } from '@/infra/db/pg-errors';
 
 import { pgErrorOf, setupTestDatabase } from '../../support/database';
@@ -12,6 +13,8 @@ const database = setupTestDatabase();
 const CHECK = '23514';
 const DENIED = '42501';
 const MAX_CONTENT = 262_144;
+// The CHECK numbers are the app's caps: each is accepted at the cap and refused one past it.
+const { title: TITLE, opening: OPENING, place: PLACE, note: NOTE } = POINT_LIMITS;
 
 let authorId = '';
 let typeId = '';
@@ -115,9 +118,9 @@ describe('point guards (migrations 0015 and 0016)', () => {
     [{ kind: 'finance' }, 'points_kind_type'],
     [{ campus: 'karlin' }, 'points_campus'],
     [{ earliest_monday: '2026-10-27' }, 'points_monday'],
-    [{ title: 'x'.repeat(201) }, 'points_lengths'],
-    [{ opening: 'x'.repeat(1001) }, 'points_lengths'],
-    [{ place: 'x'.repeat(121) }, 'points_lengths'],
+    [{ title: 'x'.repeat(TITLE + 1) }, 'points_lengths'],
+    [{ opening: 'x'.repeat(OPENING + 1) }, 'points_lengths'],
+    [{ place: 'x'.repeat(PLACE + 1) }, 'points_lengths'],
     [{ end_date: '2026-10-20' }, 'points_dates'],
     [{ event_date: '2026-10-20', end_date: '2026-10-19' }, 'points_dates'],
     [{ ...SUBMITTED, title: '' }, 'points_submitted_complete'],
@@ -129,11 +132,11 @@ describe('point guards (migrations 0015 and 0016)', () => {
     expect(await pgErrorOf(insertPoint(row))).toMatchObject({ code: CHECK, constraint });
   });
 
-  it('counts lengths in characters, not bytes', async () => {
+  it('accepts every length at its POINT_LIMITS cap, counted in characters, not bytes', async () => {
     await insertPoint({
-      title: 'č'.repeat(200),
-      opening: 'ř'.repeat(1000),
-      place: 'ž'.repeat(120),
+      title: 'č'.repeat(TITLE),
+      opening: 'ř'.repeat(OPENING),
+      place: 'ž'.repeat(PLACE),
     });
   });
 
@@ -222,7 +225,7 @@ describe('point guards (migrations 0015 and 0016)', () => {
 
   it.each([
     [{ note: '' }, 'point_events_note'],
-    [{ note: 'x'.repeat(2001) }, 'point_events_note'],
+    [{ note: 'x'.repeat(NOTE + 1) }, 'point_events_note'],
     [{ event: 'return', to_state: 'returned' }, 'point_events_note_required'],
     [{ event: 'reject', to_state: 'rejected' }, 'point_events_note_required'],
     [{ before: '{"title":"Starý"}' }, 'point_events_before_edit'],
@@ -233,7 +236,7 @@ describe('point guards (migrations 0015 and 0016)', () => {
 
   it('accepts a noted return, a system event and a reviewer edit with its previous values', async () => {
     const pointId = await insertPoint();
-    await insertEvent(pointId, { event: 'return', to_state: 'returned', note: 'x'.repeat(2000) });
+    await insertEvent(pointId, { event: 'return', to_state: 'returned', note: 'x'.repeat(NOTE) });
     await insertEvent(pointId, { actor_id: null, event: 'publish', to_state: 'published' });
     await insertEvent(pointId, {
       ...{ event: 'edit', from_state: 'submitted', to_state: 'submitted' },
