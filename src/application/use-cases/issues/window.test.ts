@@ -95,6 +95,26 @@ describe('issues.window', () => {
       ]);
     });
 
+    it('reaches the last Monday a skip may name when the submit Monday is two weeks on', async () => {
+      // Sunday 8 November, 19.00 in Prague: the deadline of 9 November has passed, so the submit
+      // Monday is 16 November and the window ends 25 weeks later, 27 weeks from this week's Monday.
+      world.clock.set(new Date('2026-11-08T18:00:00Z'));
+      const user = await world.seed.user({ role: 'submitter' });
+      const last = await seedIssue(weeks(CURRENT, 27), { status: 'skipped' });
+      await seedIssue(weeks(CURRENT, 28), { status: 'skipped' });
+      const result = await read(user);
+      expect(result).toMatchObject({ ok: true, value: { submitMonday: '2026-11-16' } });
+      if (!result.ok) throw new Error('window refused');
+      expect(result.value.issues).toEqual([
+        {
+          monday: toIsoDate(weeks(CURRENT, 27)),
+          deadlineAt: last.deadlineAt.toISOString(),
+          status: 'skipped',
+          version: 2,
+        },
+      ]);
+    });
+
     it('lets a frozen later deadline keep its Monday as the submit Monday', async () => {
       world.clock.set(NOW);
       const user = await world.seed.user({ role: 'submitter' });

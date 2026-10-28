@@ -385,7 +385,7 @@ function worstCase() {
     familyName: x(cap.name),
     titlesAfter: x(cap.title),
     affiliation: x(cap.affiliation),
-    affiliationYear: x(POINT_LIMITS.affiliationYear),
+    affiliationYear: '2026/2027', // a school year is always POINT_LIMITS.affiliationYear long
   };
   const bullets = Array.from({ length: POINT_LIMITS.bullets }, (_, i) => ({
     key: `k${i}`.padEnd(POINT_LIMITS.bulletKey, 'x'),

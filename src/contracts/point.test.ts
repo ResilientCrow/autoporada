@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { schoolYear } from '@/domain/cs';
 import { POINT_LIMITS, type DraftPerson } from '@/domain/report';
 import { richDocFromText } from '@/domain/richtext';
+import { calDate } from '@/domain/time';
 
 import {
   draftBulletsSchema,
@@ -107,6 +109,33 @@ describe('draftBulletsSchema', () => {
     ['an unknown salutation', people({ people: [person({ salutation: 'dr' })] })],
   ])('refuses %s', (_name, value) => {
     expect(ok(draftBulletsSchema, [value])).toBe(false);
+  });
+
+  describe('a person’s directory id and school year', () => {
+    const parses = (over: Record<string, unknown>) =>
+      ok(draftBulletsSchema, [people({ people: [person(over)] })]);
+
+    it.each([
+      ['a dev directory id', { graphId: '0d000000-0000-4000-8000-000000000001' }],
+      ['a Graph user id', { graphId: '1b9f3a52-3c1e-4c9b-9d1a-6f4f1c2a7e10' }],
+      ['a Graph test id', { graphId: '00000000-0000-0000-0000-000000000001' }],
+      ['the school year schoolYear() writes', { affiliationYear: schoolYear(calDate(2026, 9, 1)) }],
+      ['a school year that ended', { affiliationYear: '2020/2021' }],
+    ])('accepts %s', (_name, over) => {
+      expect(parses(over)).toBe(true);
+    });
+
+    it.each([
+      ['an id that is no guid', { graphId: 'abc' }],
+      ['an id of 36 letters', { graphId: 'x'.repeat(36) }],
+      ['a school year that is text', { affiliationYear: 'abc' }],
+      ['a school year with a dash', { affiliationYear: '2026-2027' }],
+      ['a school year of two years', { affiliationYear: '2026/2028' }],
+      ['a school year backwards', { affiliationYear: '2027/2026' }],
+      ['a school year with spaces', { affiliationYear: ' 2026/2027' }],
+    ])('refuses %s', (_name, over) => {
+      expect(parses(over)).toBe(false);
+    });
   });
 
   it('refuses two bullets with the same key', () => {

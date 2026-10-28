@@ -24,7 +24,7 @@ export const issuesWindowInput = z.strictObject({});
 export const issuesWindowOutput = z.object({
   /** The first Monday whose deadline is still ahead. */
   submitMonday: z.iso.date(),
-  /** The rows from this week's Monday to 26 weeks on, earliest first; a Monday without a row has none. */
+  /** The rows from this week's Monday to the last of the 26 Mondays from `submitMonday`, earliest first; a Monday without a row has none. */
   issues: z.array(
     z.object({
       monday: z.iso.date(),

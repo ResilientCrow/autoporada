@@ -6,8 +6,9 @@ import { readWindow } from './calendar';
 
 /**
  * The meeting calendar as of now: the first Monday still open for
- * submissions and the rows of the next 26 weeks, current week first. A Monday
- * without a row is untouched (open, deadline computed) and is not listed.
+ * submissions and the rows from the current week up to the last of the 26
+ * Mondays from it. A Monday without a row is untouched (open, deadline
+ * computed) and is not listed.
  * The Přehled strip, the standing line and the lists read it; it writes nothing.
  */
 export const issueWindow = defineUseCase({

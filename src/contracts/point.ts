@@ -40,15 +40,21 @@ const { person: PERSON } = POINT_LIMITS;
 
 const salutationSchema = z.enum(['pan', 'pani', 'slecna']) satisfies z.ZodType<Salutation>;
 
+/** „2026/2027“, as `schoolYear()` writes it: a year and the one after it. */
+const schoolYearSchema = capped(POINT_LIMITS.affiliationYear)
+  .regex(/^\d{4}\/\d{4}$/)
+  .refine((year) => Number(year.slice(5)) === Number(year.slice(0, 4)) + 1);
+
 export const draftPersonSchema = z.strictObject({
-  graphId: capped(POINT_LIMITS.graphId).optional(),
+  // The directory's id: a GUID, as Graph and the dev directory give it (`directoryHit`).
+  graphId: z.guid().max(POINT_LIMITS.graphId).optional(),
   salutation: salutationSchema.nullable(),
   titlesBefore: capped(PERSON.title).optional(),
   givenName: capped(PERSON.name),
   familyName: capped(PERSON.name),
   titlesAfter: capped(PERSON.title).optional(),
   affiliation: capped(PERSON.affiliation).optional(),
-  affiliationYear: capped(POINT_LIMITS.affiliationYear).optional(),
+  affiliationYear: schoolYearSchema.optional(),
 }) satisfies z.ZodType<DraftPerson>;
 
 const bulletBase = { key: bulletKeySchema, label: capped(POINT_LIMITS.bulletLabel) };
