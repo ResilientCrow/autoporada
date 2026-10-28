@@ -35,6 +35,7 @@ const render = (standing: object | null, today = calDate(2027, 8, 29)) =>
           campus: null,
           place: null,
         },
+        read: { content: {} as never, schoolYear: '2026/2027', timeline: [] },
         editor: {
           version: 3,
           content: {} as never,

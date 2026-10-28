@@ -438,6 +438,7 @@ describe('PointScreen', () => {
       campus: null,
       place: 'jen ve výpisu',
     },
+    read: { content: CONTENT, schoolYear: '2026/2027', timeline: [] },
   };
   const screen = (point: Parameters<typeof PointScreen>[0]['point']) =>
     renderToStaticMarkup(

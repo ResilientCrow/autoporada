@@ -1,5 +1,5 @@
 import type { Campus } from '@/domain/cs';
-import type { Params, PointKind, ProblemCode, Warning } from '@/domain/report';
+import type { Params, PointContent, PointKind, ProblemCode, Warning } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 
 const word = (params: Params, key: string): string => String(params[key]);
@@ -37,6 +37,22 @@ const WARNING: Readonly<Record<Warning['code'], (params: Params) => string>> = {
   // Not a problem: a speaker picked through „Jiná osoba…“ never was a participant.
   'speaker-not-participant': (p) => `Mluvčí ${word(p, 'name')} není mezi účastníky.`,
 };
+
+/** The fields a reviewer's edit can name, lower case: they follow „Upraveno kontrolou:“. Keys are the point content's, every one but the flag `openingEdited` (the type check holds them to it). */
+const EDITED_FIELD = {
+  title: 'název',
+  eventDate: 'datum začátku',
+  endDate: 'datum konce',
+  timeFrom: 'čas od',
+  timeTo: 'čas do',
+  campus: 'areál',
+  place: 'místo',
+  opening: 'úvodní věta',
+  body: 'další odstavce',
+  bullets: 'řádky',
+  statements: 'vyjádření',
+} as const satisfies Record<Exclude<keyof PointContent, 'openingEdited'>, string>;
+const EDITED_FIELDS: ReadonlyMap<string, string> = new Map(Object.entries(EDITED_FIELD));
 
 /** „Body“: starting a point and the header and values of one point. */
 export const points = {
@@ -155,6 +171,8 @@ export const points = {
     add: 'Přidat vyjádření',
     full: (limit: number) => `Bod může mít nejvýše ${limit}\u00A0vyjádření.`,
   },
+  /** The read view's content, composed as the document prints it. */
+  read: { label: 'Znění bodu' },
   /** The live preview of the point (design section 8). */
   preview: {
     label: 'Náhled bodu',
@@ -194,6 +212,25 @@ export const points = {
       confirm: 'Rozumím, že bod nepůjde do porady.',
       unconfirmed: 'Potvrďte prosím, že bod nepůjde do porady.',
     },
+  },
+  /** What happened to a point, newest first. Names no one. */
+  timeline: {
+    label: 'Průběh',
+    /** `day` and `time` are written out, „14.\u00A03.“ and „16.02“. */
+    submit: (day: string, time: string) => `Odesláno ke kontrole ${day} v\u00A0${time}`,
+    returned: (note: string | null) =>
+      note === null ? 'Vráceno k\u00A0úpravě' : `Vráceno k\u00A0úpravě: ${note}`,
+    edit: (fields: readonly string[]) =>
+      fields.length === 0 ? 'Upraveno kontrolou' : `Upraveno kontrolou: ${fields.join(', ')}`,
+    approve: 'Schváleno',
+    reject: (note: string | null) => (note === null ? 'Zamítnuto' : `Zamítnuto: ${note}`),
+    retract: 'Staženo mezi rozpracované',
+    withdraw: 'Bod byl zrušen',
+    publish: 'Zařazeno do porady',
+    unpublish: 'Vyřazeno z\u00A0porady',
+    original: 'Původní znění',
+    /** The label of one field in a review edit, or null for a name this page does not know. */
+    field: (name: string): string | null => EDITED_FIELDS.get(name) ?? null,
   },
   /** Below the wide layout the form and the preview take turns. */
   layout: {

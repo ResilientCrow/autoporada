@@ -11,9 +11,11 @@ import type { PointContentWire } from './fields';
 import { PointEditor, type PointStatusAction, type SavePointAction } from './PointEditor';
 import { PointFacts, type PointFactsView } from './PointFacts';
 import { PointHeader } from './PointHeader';
+import { PointReadContent } from './PointReadContent';
 import { PointTransitions } from './PointTransitions';
 import { placementYear, standingOf, type StandingInput } from './standing';
 import { StandingLine } from './StandingLine';
+import { Timeline, type TimelineEntry } from './Timeline';
 import type { RetractPointAction, WithdrawPointAction } from './transition-call';
 import type { SubmitPointAction } from './use-submit';
 
@@ -31,6 +33,15 @@ export interface PointScreenModel {
   readonly title: string;
   readonly typeName: string | null;
   readonly facts: PointFactsView;
+  /** What the read view prints below the facts: the content as the document sets it, and the point's history. */
+  readonly read: {
+    /** Null where the editor shows: it holds the content. */
+    readonly content: PointContentWire | null;
+    /** The school year the paper's {skolniRok} is. */
+    readonly schoolYear: string;
+    /** Newest first. */
+    readonly timeline: readonly TimelineEntry[];
+  };
   readonly editor: PointEditorModel | null;
 }
 
@@ -49,7 +60,7 @@ interface PointEditorModel {
 /**
  * A point's page below the shell: its header, then the report editor for the author of a
  * draft or returned report, or the read view for everyone else, every other state and
- * every other kind.
+ * every other kind; the point's history is below either.
  */
 export function PointScreen({
   point,
@@ -83,6 +94,13 @@ export function PointScreen({
           {/* The editor shows it with its submit button. */}
           {point.standing === null ? null : <StandingLine standing={point.standing} />}
           <PointFacts facts={point.facts} />
+          {point.read.content === null ? null : (
+            <PointReadContent
+              kind={point.kind}
+              content={point.read.content}
+              schoolYear={point.read.schoolYear}
+            />
+          )}
           <PointTransitions id={point.id} version={point.version} moves={moves} />
         </>
       ) : (
@@ -106,6 +124,7 @@ export function PointScreen({
           pointStatus={pointStatus}
         />
       )}
+      <Timeline entries={point.read.timeline} />
     </div>
   );
 }

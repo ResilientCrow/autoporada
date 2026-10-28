@@ -5,6 +5,10 @@ import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
+import { composePointPreview } from '@/document';
+import { PaperBlocks } from '@/document/render-html';
+
+import { pointContentOf } from './fields';
 import { PointScreen, type PointScreenModel } from './PointScreen';
 
 vi.mock('next/navigation', () => ({
@@ -64,6 +68,7 @@ const POINT: PointScreenModel = {
     campus: null,
     place: null,
   },
+  read: { content: null, schoolYear: '2026/2027', timeline: [] },
   editor: EDITOR,
 };
 
@@ -131,5 +136,137 @@ describe('the read view', () => {
 
   it('shows no standing line for a point that is already in', () => {
     expect(screen({ ...READ, state: 'approved', moves: [] })).not.toContain('Zařadíme');
+  });
+});
+
+describe('the content of the read view', () => {
+  const CONTENT = {
+    ...EDITOR.content,
+    title: 'Seminář',
+    eventDate: '2027-02-10',
+    opening: 'Ve středu proběhl seminář.',
+    openingEdited: true,
+    body: {
+      type: 'doc' as const,
+      content: [
+        {
+          type: 'paragraph' as const,
+          attrs: { indent: 0 },
+          content: [{ type: 'text' as const, text: 'Další odstavec.' }],
+        },
+      ],
+    },
+  };
+  const SUBMITTED = {
+    editor: null,
+    standing: null,
+    moves: [],
+    state: 'submitted' as const,
+    read: { content: CONTENT, schoolYear: '2026/2027', timeline: [] },
+  };
+
+  it('prints the opening and the paragraphs of a report', () => {
+    const html = screen(SUBMITTED);
+    expect(html).toContain('Ve středu proběhl seminář.');
+    expect(html).toContain('Další odstavec.');
+  });
+
+  it('is the markup of the editor’s preview of the same content, to the character', () => {
+    const { blocks } = composePointPreview(pointContentOf(CONTENT), { schoolYear: '2026/2027' });
+    expect(screen(SUBMITTED)).toContain(renderToStaticMarkup(<PaperBlocks blocks={blocks} />));
+  });
+
+  it('sets the paper in the school year the page gives', () => {
+    const paragraph = (text: string) => ({
+      type: 'paragraph' as const,
+      attrs: { indent: 0 },
+      content: [{ type: 'text' as const, text }],
+    });
+    const content = {
+      ...CONTENT,
+      body: { type: 'doc' as const, content: [paragraph('Rok {skolniRok}.')] },
+    };
+    const html = screen({
+      ...SUBMITTED,
+      read: { ...SUBMITTED.read, content, schoolYear: '2031/2032' },
+    });
+    expect(html).toContain('Rok 2031/2032.');
+  });
+
+  it('comes after the facts and before the buttons and the timeline', () => {
+    const entry = {
+      event: 'approve' as const,
+      note: null,
+      editedFields: null,
+      createdAt: '2027-02-01T09:00:00.000Z',
+    };
+    const html = screen({
+      ...SUBMITTED,
+      moves: ['retract', 'withdraw'],
+      read: { ...SUBMITTED.read, timeline: [entry] },
+    });
+    const at = (text: string) => html.indexOf(text);
+    expect(at('Datum začátku')).toBeLessThan(at('Ve středu proběhl'));
+    expect(at('Ve středu proběhl')).toBeLessThan(at(points.transitions.retract.button));
+    expect(at(points.transitions.retract.button)).toBeLessThan(at('Schváleno'));
+  });
+
+  it('is not the editor’s preview: no label, no empty-state text', () => {
+    const html = screen(SUBMITTED);
+    expect(html).not.toContain(points.preview.label);
+    expect(html).not.toContain(points.preview.empty);
+  });
+
+  it('prints nothing for a report the preview cannot compose', () => {
+    const html = screen({
+      ...SUBMITTED,
+      read: { ...SUBMITTED.read, content: { ...CONTENT, title: '', eventDate: null } },
+    });
+    expect(html).not.toContain(points.read.label);
+    expect(html).not.toContain(points.preview.empty);
+  });
+
+  it.each(['finance', 'pokyn'] as const)(
+    'prints no paper for a %s, which has no layout yet',
+    (kind) => {
+      const html = screen({ ...SUBMITTED, kind, typeName: null });
+      expect(html).not.toContain('Ve středu proběhl');
+      expect(html).not.toContain(points.read.label);
+    },
+  );
+});
+
+describe('the timeline of the screen', () => {
+  const ENTRIES = [
+    {
+      event: 'return' as const,
+      note: 'Doplňte název.',
+      editedFields: null,
+      createdAt: '2027-02-02T09:00:00.000Z',
+    },
+    {
+      event: 'submit' as const,
+      note: null,
+      editedFields: null,
+      createdAt: '2027-02-01T09:00:00.000Z',
+    },
+  ];
+  const read = { ...POINT.read, timeline: ENTRIES };
+
+  it('is below the read view', () => {
+    const html = screen({ editor: null, standing: null, state: 'submitted', read });
+    expect(html).toContain(`Vráceno k${NB}úpravě: Doplňte název.`);
+    expect(html).toContain(`Odesláno ke kontrole 1.${NB}2. v${NB}10.00`);
+  });
+
+  it('is below the editor of a returned point, where the author reads the reviewer’s note', () => {
+    const html = screen({ state: 'returned', read });
+    expect(html.indexOf(`Vráceno k${NB}úpravě: Doplňte název.`)).toBeGreaterThan(
+      html.indexOf(points.submit.button),
+    );
+  });
+
+  it('is not there for a point with no history', () => {
+    expect(screen({ editor: null, standing: null })).not.toContain('Průběh');
   });
 });

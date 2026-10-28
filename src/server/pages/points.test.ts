@@ -168,6 +168,7 @@ describe('pointPage', () => {
         rule: DEFAULT_DEADLINE,
       },
       moves: ['withdraw'],
+      read: { content: null, schoolYear: '2026/2027', timeline: [] },
       editor: {
         version: 3,
         content: LOADED.content,
@@ -190,6 +191,7 @@ describe('pointPage', () => {
         'id',
         'kind',
         'moves',
+        'read',
         'standing',
         'state',
         'title',
@@ -336,6 +338,74 @@ describe('pointPage', () => {
       loadedAs(changes);
       await pointPage(ID);
       expect(askedFor()).toEqual(['points.get']);
+    });
+  });
+
+  describe('the read view part', () => {
+    const loadedAs = (changes: object) => serve({ ok: true, value: { ...LOADED, ...changes } });
+    const EVENTS = [
+      {
+        event: 'return',
+        fromState: 'submitted',
+        toState: 'returned',
+        note: 'Doplňte název.',
+        editedFields: null,
+        createdAt: '2026-10-05T09:00:00.000Z',
+      },
+      {
+        event: 'submit',
+        fromState: 'draft',
+        toState: 'submitted',
+        note: null,
+        editedFields: null,
+        createdAt: '2026-10-04T09:00:00.000Z',
+      },
+    ];
+
+    it('carries the content as the use case sent it, for a point the viewer cannot edit', async () => {
+      loadedAs({ state: 'submitted', editable: false, isAuthor: false });
+      const page = await pointPage(ID);
+      expect(page?.editor).toBeNull();
+      expect(page?.read.content).toEqual(LOADED.content);
+    });
+
+    it('leaves the content to the editor where it shows, and sends it only once', async () => {
+      loadedAs({});
+      const page = await pointPage(ID);
+      expect(page?.editor?.content).toEqual(LOADED.content);
+      expect(page?.read.content).toBeNull();
+    });
+
+    it('keeps the content for a point whose editor does not show', async () => {
+      loadedAs({ kind: 'pokyn' });
+      expect((await pointPage(ID))?.read.content).toEqual(LOADED.content);
+      loadedAs({ state: 'submitted', editable: false });
+      expect((await pointPage(ID))?.read.content).toEqual(LOADED.content);
+    });
+
+    it('carries the timeline in the order sent, with only what the page writes', async () => {
+      loadedAs({ timeline: EVENTS });
+      expect((await pointPage(ID))?.read.timeline).toEqual([
+        {
+          event: 'return',
+          note: 'Doplňte název.',
+          editedFields: null,
+          createdAt: EVENTS[0]!.createdAt,
+        },
+        { event: 'submit', note: null, editedFields: null, createdAt: EVENTS[1]!.createdAt },
+      ]);
+    });
+
+    it('takes the school year from the Monday the point was first submitted for', async () => {
+      loadedAs({ state: 'submitted', editable: false, earliestMonday: '2026-08-31' });
+      expect((await pointPage(ID))?.read.schoolYear).toBe('2025/2026');
+      loadedAs({ state: 'submitted', editable: false, earliestMonday: '2026-09-07' });
+      expect((await pointPage(ID))?.read.schoolYear).toBe('2026/2027');
+    });
+
+    it('takes the school year of today in Prague for a point never submitted', async () => {
+      loadedAs({ earliestMonday: null });
+      expect((await pointPage(ID))?.read.schoolYear).toBe('2026/2027');
     });
   });
 

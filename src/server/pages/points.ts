@@ -73,6 +73,24 @@ interface StandingModel {
 }
 
 /**
+ * What the read view prints below the facts: the content for the preview's composition, the school
+ * year the paper counts from (the Monday the point was first submitted for, else today's) and the
+ * timeline, newest first, naming no one.
+ */
+interface PointReadModel {
+  /** Null where the editor shows (an editable report): it holds the content. */
+  readonly content: Loaded['content'] | null;
+  readonly schoolYear: string;
+  readonly timeline: readonly {
+    readonly event: Loaded['timeline'][number]['event'];
+    readonly note: string | null;
+    readonly editedFields: readonly string[] | null;
+    /** ISO instant. */
+    readonly createdAt: string;
+  }[];
+}
+
+/**
  * What a point's header and read view show, dates and times written out, and what
  * the editor needs, only while it is shown (the author, a draft or returned point).
  */
@@ -98,6 +116,8 @@ export interface PointPageModel {
     readonly campus: Campus | null;
     readonly place: string | null;
   };
+  /** The read view's content and timeline: what the editor does not show. */
+  readonly read: PointReadModel;
   /** Null unless the viewer is the author and the point can still be edited. */
   readonly editor: PointEditorModel | null;
 }
@@ -106,7 +126,7 @@ const dateText = (iso: string | null) => (iso === null ? null : formatLongDate(p
 const timeText = (iso: string | null) => (iso === null ? null : formatTime(parseWallTime(iso)));
 
 function shaped(
-  { id, kind, state, type, content, version, editable }: Loaded,
+  { id, kind, state, type, content, version, editable, earliestMonday, timeline }: Loaded,
   extra: {
     readonly recents: readonly RecentPerson[];
     readonly today: CalDate;
@@ -131,6 +151,17 @@ function shaped(
       timeTo: timeText(content.timeTo),
       campus: content.campus,
       place: content.place?.trim() || null,
+    },
+    read: {
+      // The editor carries the content when it shows: the page does not send it twice.
+      content: editable && kind === 'report' ? null : content,
+      schoolYear: schoolYear(earliestMonday === null ? today : parseIsoDate(earliestMonday)),
+      timeline: timeline.map(({ event, note, editedFields, createdAt }) => ({
+        event,
+        note,
+        editedFields,
+        createdAt,
+      })),
     },
     editor: editable
       ? {
