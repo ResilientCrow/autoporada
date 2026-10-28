@@ -100,12 +100,20 @@ describe('issues.window', () => {
       // Monday is 16 November and the window ends 25 weeks later, 27 weeks from this week's Monday.
       world.clock.set(new Date('2026-11-08T18:00:00Z'));
       const user = await world.seed.user({ role: 'submitter' });
+      // The end of the first read: `between` is inclusive, so the tail must start a week past it.
+      const end = await seedIssue(weeks(CURRENT, 26));
       const last = await seedIssue(weeks(CURRENT, 27), { status: 'skipped' });
       await seedIssue(weeks(CURRENT, 28), { status: 'skipped' });
       const result = await read(user);
       expect(result).toMatchObject({ ok: true, value: { submitMonday: '2026-11-16' } });
       if (!result.ok) throw new Error('window refused');
       expect(result.value.issues).toEqual([
+        {
+          monday: toIsoDate(weeks(CURRENT, 26)),
+          deadlineAt: end.deadlineAt.toISOString(),
+          status: 'open',
+          version: 1,
+        },
         {
           monday: toIsoDate(weeks(CURRENT, 27)),
           deadlineAt: last.deadlineAt.toISOString(),

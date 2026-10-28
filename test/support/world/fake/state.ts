@@ -79,20 +79,23 @@ export const emptyState = (): FakeState => ({
 /**
  * Deletes a user as `DELETE FROM users` would: requests, sessions, sign-ins
  * and ledger rows cascade; a request they decided
- * (access_requests_decided_by_users_id_fk), a point
- * they wrote (points_author_id_users_id_fk) or a point event they caused
- * (point_events_actor_id_users_id_fk) refuses it.
+ * (access_requests_decided_by_users_id_fk), a point event they caused
+ * (point_events_actor_id_users_id_fk) or a point they wrote
+ * (points_author_id_users_id_fk) refuses it. The checks run in this order
+ * because PostgreSQL fires the foreign keys by trigger name, which follows
+ * the order drizzle/0015 adds them in: the event's first, so an author who
+ * holds both is refused by the event's.
  */
 export function eraseFakeUser(state: FakeState, id: string): void {
   const requests = [...state.accessRequests.values()];
   if (requests.some((r) => r.decidedBy === id)) {
     throw refusedBy('access_requests_decided_by_users_id_fk');
   }
-  if ([...state.points.values()].some((p) => p.authorId === id)) {
-    throw refusedBy('points_author_id_users_id_fk');
-  }
   if ([...state.pointEvents.values()].some((e) => e.actorId === id)) {
     throw refusedBy('point_events_actor_id_users_id_fk');
+  }
+  if ([...state.points.values()].some((p) => p.authorId === id)) {
+    throw refusedBy('points_author_id_users_id_fk');
   }
   for (const r of requests) if (r.userId === id) state.accessRequests.delete(r.id);
   for (const [key, s] of state.sessions) if (s.userId === id) state.sessions.delete(key);

@@ -335,6 +335,21 @@ describe('PointEventRepo (port contract)', () => {
     expect(await world.tx(cli, (tx) => tx.users.get(reviewer.id), 'read')).toEqual(reviewer);
     expect(await list(cli, point.id)).toEqual([event]);
   });
+
+  it('refuses erasing an author who holds both foreign keys: the point and their submit event', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const point = await makePoint(author, false);
+    const [event] = await append(world.as(author), { ...SUBMIT, pointId: point.id });
+    // The author wrote the point (points_author_id_users_id_fk) and caused its submit event
+    // (point_events_actor_id_users_id_fk); both refuse the delete. PostgreSQL fires the checks in
+    // the order of their trigger names (RI_ConstraintTrigger_a_<oid>), and drizzle/0015 adds the
+    // event's key first, so that name is the one reported (five of five runs, a database per run).
+    expect(await failure(world.erase.user(author.id))).toMatchObject(
+      erasureRefusedBy(world.kind, 'point_events_actor_id_users_id_fk'),
+    );
+    expect(await world.tx(cli, (tx) => tx.users.get(author.id), 'read')).toEqual(author);
+    expect(await list(cli, point.id)).toEqual([event]);
+  });
 });
 
 describe('PointEventRepo mailFacts (what the decision mails read again, ADR 0020)', () => {

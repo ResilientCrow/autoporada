@@ -284,6 +284,25 @@ describe('points.decide', () => {
       },
     );
 
+    it.each([
+      ['a submitter', 'submitter', 'approve', 'point.approved', undefined],
+      ['a submitter', 'submitter', 'return', 'point.returned', NOTE],
+      ['a reviewer', 'reviewer', 'approve', 'point.approved', undefined],
+      ['a reviewer', 'reviewer', 'return', 'point.returned', NOTE],
+    ] as const)(
+      'mails the author when the headmaster decides on the point of %s: %s %s',
+      async (...row) => {
+        const [, role, event, template, text] = row;
+        const author = await user(role);
+        const id = await handedIn(author);
+        const headmaster = await user('headmaster');
+        const input = { id, event, ...(text !== undefined && { note: text }) };
+        expect((await decide(headmaster, input)).ok).toBe(true);
+        const [appended] = (await snapshot(id)).events;
+        expect(await world.inspect.jobs()).toEqual([mailFor(template, author, appended!.id)]);
+      },
+    );
+
     it('queues one mail per decision, so a second return is mailed again', async () => {
       const author = await user();
       const id = await handedIn(author);
