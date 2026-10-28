@@ -8,6 +8,7 @@ import { nav } from './nav';
 import { people } from './people';
 import { points } from './points';
 import { privacy } from './privacy';
+import { review } from './review';
 import { shell } from './shell';
 import { signIn } from './sign-in';
 import { status } from './status';
@@ -30,6 +31,7 @@ export const cs = {
   gallery,
   issues,
   points,
+  review,
   autosave,
   people,
   privacy,

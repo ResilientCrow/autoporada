@@ -34,7 +34,12 @@ describe('navFor', () => {
   });
 
   it('shows the users page to a headmaster only', () => {
-    expect(navFor(actor('headmaster')).map((i) => i.href)).toEqual(['/', '/body', '/uzivatele']);
+    expect(navFor(actor('headmaster')).map((i) => i.href)).toEqual([
+      '/',
+      '/body',
+      '/kontrola',
+      '/uzivatele',
+    ]);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/uzivatele');
     expect(navFor(actor('reviewer')).map((i) => i.href)).not.toContain('/uzivatele');
     expect(navFor(actor('pending')).map((i) => i.href)).not.toContain('/uzivatele');
@@ -58,13 +63,29 @@ describe('navFor', () => {
     expect(navFor(who).map((i) => i.href)).not.toContain('/body');
   });
 
+  it.each([
+    ['reviewer', actor('reviewer')],
+    ['headmaster', actor('headmaster')],
+  ])('shows „Kontrola“ to a %s', (_name, who) => {
+    expect(navFor(who).find((i) => i.href === '/kontrola')?.label).toBe('Kontrola');
+  });
+
+  it.each([
+    ['a submitter', actor('submitter')],
+    ['a student submitter', actor('submitter', { isStudent: true })],
+    ['a pending user', actor('pending')],
+    ['a blocked reviewer', actor('reviewer', { status: 'blocked' })],
+  ])('hides „Kontrola“ from %s', (_name, who) => {
+    expect(navFor(who).map((i) => i.href)).not.toContain('/kontrola');
+  });
+
   it('lists „Moje body“ right after the Přehled', () => {
     expect(NAV.slice(0, 2).map((i) => i.href)).toEqual(['/', '/body']);
   });
 
   it('uses the real routes by default', () => {
     expect(navFor(actor('pending'))).toEqual(
-      NAV.filter((i) => i.href !== '/uzivatele' && i.href !== '/body'),
+      NAV.filter((i) => !['/uzivatele', '/body', '/kontrola'].includes(i.href)),
     );
   });
 });

@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { listMyPoints } from '@/application/use-cases';
+import { listMyPoints, queuePoints } from '@/application/use-cases';
 import type { issuesWindowOutput } from '@/contracts';
 import { formatNumericDate } from '@/domain/cs';
 import { can } from '@/domain/policy';
@@ -46,6 +46,8 @@ type HomePageModel =
       readonly strip: readonly MeetingDay[] | null;
       /** Null for whoever may not start a point, and where the list is refused. */
       readonly mine: MineModel | null;
+      /** „Ke kontrole: {n}“, the points waiting for a decision; null for whoever may not review, and where the queue is refused. */
+      readonly queue: number | null;
     }
   | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
 
@@ -92,20 +94,40 @@ async function pointCounts(viewer: UserPrincipal): Promise<PointCounts | null> {
   );
 }
 
+/** How many submitted points wait for a decision; the approved ones are decided. Null where the queue is refused. */
+async function waitingCount(viewer: UserPrincipal): Promise<number | null> {
+  const queue = orNotFound(
+    'points.queue',
+    await runRegistered(getContainer(), queuePoints, {
+      principal: viewer,
+      requestId: await requestId(),
+      input: {},
+    }),
+  );
+  return (
+    queue && queue.mondays.flatMap(({ kinds }) => kinds).reduce((n, k) => n + k.points.length, 0)
+  );
+}
+
 /**
  * The home page's model, or null for a visitor or a refusal. Whoever may start a point costs the
  * window read (the standing line, and for the one who may skip a meeting the strip, from the same
  * read) and the list of their points; neither refusal takes the page away from them but the
- * strip's, which the headmaster's page cannot do without.
+ * strip's, which the headmaster's page cannot do without. A reviewer also costs the queue, for its count.
  */
 export async function homePage(): Promise<HomePageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
   if (viewer.actor.role !== 'pending') {
     if (!can(viewer.actor, { action: 'point.create' })) {
-      return { kind: 'member', strip: null, mine: null };
+      return { kind: 'member', strip: null, mine: null, queue: null };
     }
-    const [window, counts] = await Promise.all([readWindow(viewer), pointCounts(viewer)]);
+    const mayReview = can(viewer.actor, { action: 'review.queue' });
+    const [window, counts, queue] = await Promise.all([
+      readWindow(viewer),
+      pointCounts(viewer),
+      mayReview ? waitingCount(viewer) : null,
+    ]);
     const mayStrip = can(viewer.actor, { action: 'issue.generate' });
     if (mayStrip && window === null) return null;
     const now = getContainer().app.clock.now();
@@ -113,6 +135,7 @@ export async function homePage(): Promise<HomePageModel | null> {
       kind: 'member',
       strip: mayStrip && window !== null ? meetingStrip(window) : null,
       mine: counts && { counts, standing: window && standingFrom(window, now) },
+      queue,
     };
   }
   const standing = await myStanding(viewer);

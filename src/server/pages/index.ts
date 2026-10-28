@@ -12,6 +12,7 @@ import { first, type SearchParams } from './params';
 export { accessPage } from './access';
 export { homePage } from './home';
 export { myPointsPage, newPointPage, pointPage } from './points';
+export { queuePage, reviewPointPage } from './review';
 export { userPage } from './user';
 export { usersPage } from './users';
 export { getViewer, optionalSignedIn, requireSignedIn } from './viewer';

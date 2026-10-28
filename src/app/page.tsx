@@ -6,6 +6,7 @@ import { homePage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
 import { MeetingStrip, Overview } from '@/ui/features/overview';
 import { MyPointsCard, StandingLine } from '@/ui/features/points';
+import { QueueCard } from '@/ui/features/review';
 import { Shell } from '@/ui/shell';
 
 export const metadata: Metadata = { title: pageTitle(cs.home.title) };
@@ -23,6 +24,7 @@ export default async function HomePage() {
           {model.mine.standing !== null && <StandingLine standing={model.mine.standing} />}
         </MyPointsCard>
       )}
+      {model.kind === 'member' && model.queue !== null && <QueueCard count={model.queue} />}
       {model.kind === 'member' && model.strip !== null && (
         <MeetingStrip days={model.strip} setSkipped={setSkipped} />
       )}

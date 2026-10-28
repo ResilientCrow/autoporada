@@ -35,11 +35,13 @@ async function stripOfHome() {
 }
 const noPoints = { ok: true, value: { points: [], next: null } };
 const summary = (state: string) => ({ id: `p-${state}`, state, title: 'x' });
-/** Answers the use cases the page asks for: the meeting calendar and the author's list. */
-const serve = (answers: { window?: unknown; list?: unknown }) =>
-  runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
-    useCase.name === 'issues.window' ? answers.window : (answers.list ?? noPoints),
-  );
+const emptyQueue = { ok: true, value: { mondays: [], approved: [], more: false } };
+/** Answers the use cases the page asks for: the meeting calendar, the author's list and the review queue. */
+const serve = (answers: { window?: unknown; list?: unknown; queue?: unknown }) =>
+  runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
+    if (useCase.name === 'points.queue') return answers.queue ?? emptyQueue;
+    return useCase.name === 'issues.window' ? answers.window : (answers.list ?? noPoints);
+  });
 const askedFor = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
 const standing = (value: unknown) =>
   runRegistered.mockResolvedValue({ ok: true, value: { standing: value } });
@@ -231,7 +233,7 @@ describe('homePage', () => {
       async (code) => {
         as('submitter');
         serve({ window: WINDOW, list: { ok: false, error: { code } } });
-        expect(await homePage()).toEqual({ kind: 'member', strip: null, mine: null });
+        expect(await homePage()).toEqual({ kind: 'member', strip: null, mine: null, queue: null });
       },
     );
 
@@ -247,6 +249,74 @@ describe('homePage', () => {
       as('pending');
       standing({ kind: 'open', previous: null });
       expect(await homePage()).toEqual({ kind: 'pending', standing: 'open' });
+    });
+  });
+
+  describe('the „Ke kontrole“ card', () => {
+    const WINDOW = { ok: true, value: { submitMonday: '2026-11-09', issues: [] } };
+    const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `p${i}` }));
+    const QUEUE = {
+      ok: true,
+      value: {
+        mondays: [
+          {
+            monday: '2026-11-09',
+            kinds: [
+              { kind: 'report', points: rows(2) },
+              { kind: 'pokyn', points: rows(1) },
+            ],
+          },
+          { monday: '2026-11-16', kinds: [{ kind: 'finance', points: rows(1) }] },
+        ],
+        approved: rows(5),
+        more: false,
+      },
+    };
+    const queueOf = async () => {
+      const model = await homePage();
+      if (model?.kind !== 'member') throw new Error('not a member');
+      return model.queue;
+    };
+
+    it.each(['reviewer', 'headmaster'])(
+      'counts for a %s the points waiting for a decision, not the approved ones',
+      async (role) => {
+        as(role);
+        serve({ window: WINDOW, queue: QUEUE });
+        expect(await queueOf()).toBe(4);
+        const call = runRegistered.mock.calls.find(
+          (c) => (c[1] as { name: string }).name === 'points.queue',
+        ) as [unknown, unknown, { input: unknown }];
+        expect(call[2].input).toEqual({});
+      },
+    );
+
+    it('counts zero for an empty queue', async () => {
+      as('reviewer');
+      serve({ window: WINDOW });
+      expect(await queueOf()).toBe(0);
+    });
+
+    it('is not there for a submitter, and the queue is not asked for', async () => {
+      as('submitter');
+      serve({ window: WINDOW, queue: QUEUE });
+      expect(await queueOf()).toBeNull();
+      expect(askedFor()).not.toContain('points.queue');
+    });
+
+    it.each(['forbidden', 'not-found'])(
+      'is not there when the queue is refused (%s), and the page still answers',
+      async (code) => {
+        as('reviewer');
+        serve({ window: WINDOW, queue: { ok: false, error: { code } } });
+        expect(await homePage()).toMatchObject({ kind: 'member', queue: null, mine: {} });
+      },
+    );
+
+    it('fails loudly on any other failure of the queue', async () => {
+      as('reviewer');
+      serve({ window: WINDOW, queue: { ok: false, error: { code: 'unavailable' } } });
+      await expect(homePage()).rejects.toThrow('points.queue: unavailable');
     });
   });
 

@@ -7,6 +7,7 @@ export { gallery } from './gallery';
 export { issues } from './issues';
 export { people } from './people';
 export { points } from './points';
+export { review } from './review';
 export { status } from './status';
 export { users } from './users';
 export type { Block, PrivacyCopy, Review, Rich, SummaryItem } from './privacy-types';

@@ -3,35 +3,23 @@ import type { z } from 'zod';
 import type { UserPrincipal } from '@/application/ports';
 import { pointPlacement } from '@/application/core';
 import { getPoint, listMyPoints, listPointTypes, recentPeopleOf } from '@/application/use-cases';
-import {
-  toKnownIssues,
-  type getPointOutput,
-  type listMyPointsOutput,
-  type listPointTypesOutput,
-} from '@/contracts';
-import { formatLongDate, formatTime, schoolYear, type Campus, type TitleGender } from '@/domain/cs';
+import { toKnownIssues, type listMyPointsOutput, type listPointTypesOutput } from '@/contracts';
+import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
-import type { BulletSpec, PointKind } from '@/domain/report';
+import type { BulletSpec } from '@/domain/report';
 import type { Actor } from '@/domain/actor';
 import { can } from '@/domain/policy';
 import { authorEditsPoint, type AuthorMove, type PointState } from '@/domain/review';
-import {
-  instantToWallClock,
-  parseIsoDate,
-  parseWallTime,
-  toIsoDate,
-  type CalDate,
-} from '@/domain/time';
+import { instantToWallClock, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
 import { orNotFound } from './not-found';
 import { first, type SearchParams } from './params';
+import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
 import { readWindow, standingOf, type MeetingWindow, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
-
-type Loaded = z.output<typeof getPointOutput>;
 
 /** What /body/novy offers: the types a new point can start on. */
 export interface NewPointPageModel {
@@ -63,7 +51,7 @@ export async function newPointPage(): Promise<NewPointPageModel | null> {
  */
 interface PointEditorModel {
   readonly version: number;
-  readonly content: Loaded['content'];
+  readonly content: LoadedPoint['content'];
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
   readonly today: CalDate;
@@ -73,60 +61,21 @@ interface PointEditorModel {
 }
 
 /**
- * What the read view prints below the facts: the content for the preview's composition, the school
- * year the paper counts from (the Monday the point was first submitted for, else today's) and the
- * timeline, newest first, naming no one.
- */
-interface PointReadModel {
-  /** Null where the editor shows (an editable report): it holds the content. */
-  readonly content: Loaded['content'] | null;
-  readonly schoolYear: string;
-  readonly timeline: readonly {
-    readonly event: Loaded['timeline'][number]['event'];
-    readonly note: string | null;
-    readonly editedFields: readonly string[] | null;
-    /** ISO instant. */
-    readonly createdAt: string;
-  }[];
-}
-
-/**
  * What a point's header and read view show, dates and times written out, and what
  * the editor needs, only while it is shown (the author, a draft or returned point).
+ * The read view's content is null where the editor shows (an editable report): it holds the content.
  */
-export interface PointPageModel {
-  readonly id: string;
-  readonly kind: PointKind;
-  readonly state: PointState;
-  /** Empty while the author has not named the point. */
-  readonly title: string;
-  /** A report's type; null for finance and pokyn. */
-  readonly typeName: string | null;
-  /** The version the page shows, for the move forms. */
-  readonly version: number;
+export interface PointPageModel extends PointViewModel<LoadedPoint['content'] | null> {
   /** Only for the author of a draft or returned point: where it will go and when that closes; null if no porada is open. */
   readonly standing: StandingModel | null;
   /** The buttons the author may press from this state (`availableEvents` for them); none for anyone else. */
   readonly moves: readonly AuthorMove[];
-  readonly facts: {
-    readonly eventDate: string | null;
-    readonly endDate: string | null;
-    readonly timeFrom: string | null;
-    readonly timeTo: string | null;
-    readonly campus: Campus | null;
-    readonly place: string | null;
-  };
-  /** The read view's content and timeline: what the editor does not show. */
-  readonly read: PointReadModel;
   /** Null unless the viewer is the author and the point can still be edited. */
   readonly editor: PointEditorModel | null;
 }
 
-const dateText = (iso: string | null) => (iso === null ? null : formatLongDate(parseIsoDate(iso)));
-const timeText = (iso: string | null) => (iso === null ? null : formatTime(parseWallTime(iso)));
-
 function shaped(
-  { id, kind, state, type, content, version, editable, earliestMonday, timeline }: Loaded,
+  loaded: LoadedPoint,
   extra: {
     readonly recents: readonly RecentPerson[];
     readonly today: CalDate;
@@ -135,34 +84,14 @@ function shaped(
   },
 ): PointPageModel {
   const { recents, today, standing, moves } = extra;
+  const { kind, type, content, version, editable } = loaded;
+  const view = pointView(loaded, today);
   return {
-    id,
-    kind,
-    state,
-    version,
+    ...view,
     standing,
     moves,
-    title: content.title,
-    typeName: type?.name ?? null,
-    facts: {
-      eventDate: dateText(content.eventDate),
-      endDate: dateText(content.endDate),
-      timeFrom: timeText(content.timeFrom),
-      timeTo: timeText(content.timeTo),
-      campus: content.campus,
-      place: content.place?.trim() || null,
-    },
-    read: {
-      // The editor carries the content when it shows: the page does not send it twice.
-      content: editable && kind === 'report' ? null : content,
-      schoolYear: schoolYear(earliestMonday === null ? today : parseIsoDate(earliestMonday)),
-      timeline: timeline.map(({ event, note, editedFields, createdAt }) => ({
-        event,
-        note,
-        editedFields,
-        createdAt,
-      })),
-    },
+    // The editor carries the content when it shows: the page does not send it twice.
+    read: { ...view.read, content: editable && kind === 'report' ? null : content },
     editor: editable
       ? {
           version,
@@ -194,7 +123,7 @@ async function recentsOf(viewer: UserPrincipal): Promise<readonly RecentPerson[]
 const AUTHOR_MOVES: readonly AuthorMove[] = ['retract', 'withdraw'];
 
 /** What the author may press from this state, as the policy allows; nothing for anyone else. */
-function movesOf(actor: Actor, { state, isAuthor }: Loaded): readonly AuthorMove[] {
+function movesOf(actor: Actor, { state, isAuthor }: LoadedPoint): readonly AuthorMove[] {
   if (!isAuthor) return [];
   const point = { state, isAuthor };
   return AUTHOR_MOVES.filter((event) => can(actor, { action: 'point.transition', point, event }));
