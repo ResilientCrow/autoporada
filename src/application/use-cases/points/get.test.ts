@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
 import { newDraft } from '@/domain/report';
+import { calDate, wallTime } from '@/domain/time';
 
 import {
   BULLETS,
@@ -168,7 +169,7 @@ describe('points.get', () => {
     });
   });
 
-  it('gives the timeline newest first, naming no one and leaving out previous values', async () => {
+  it('gives the timeline newest first, naming no one, with a review edit’s previous values as the editor reads them', async () => {
     const author = await user();
     const id = await submitted(author);
     const at = (minutes: number) => new Date(START.getTime() + minutes * 60_000).toISOString();
@@ -185,8 +186,12 @@ describe('points.get', () => {
         event: 'edit',
         fromState: 'submitted',
         toState: 'submitted',
-        editedFields: ['title'],
-        before: { title: 'Nákup projektoru' },
+        editedFields: ['title', 'eventDate', 'timeFrom'],
+        before: {
+          title: 'Nákup projektoru',
+          eventDate: calDate(2027, 1, 14),
+          timeFrom: wallTime(8, 5),
+        },
       });
       await tx.audit.record({ action: 'point.edited', target: { type: 'point', id } });
     });
@@ -209,12 +214,17 @@ describe('points.get', () => {
       toState: to,
       note: null,
       editedFields: null,
+      before: null,
       createdAt: at(minutes),
     });
     const got = await read(author, id);
     expect(got.ok && got.value.timeline).toEqual([
       { ...event('return', 'submitted', 'returned', 4), note: 'Doplňte cenu.' },
-      { ...event('edit', 'submitted', 'submitted', 3), editedFields: ['title'] },
+      {
+        ...event('edit', 'submitted', 'submitted', 3),
+        editedFields: ['title', 'eventDate', 'timeFrom'],
+        before: { title: 'Nákup projektoru', eventDate: '2027-01-14', timeFrom: '08:05' },
+      },
       event('submit', 'draft', 'submitted', 2),
       event('retract', 'submitted', 'draft', 1),
       event('submit', 'draft', 'submitted', 0),

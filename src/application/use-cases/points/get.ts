@@ -1,5 +1,5 @@
 import { defineUseCase, ok } from '@/application/core';
-import { contentWire, getPointInput, getPointOutput } from '@/contracts';
+import { contentWire, fieldValuesWire, getPointInput, getPointOutput } from '@/contracts';
 import { toIsoDate } from '@/domain/time';
 
 import { pointReadAccess, pointStanding } from './access';
@@ -8,8 +8,8 @@ import { pointReadAccess, pointStanding } from './access';
  * One point for /body/[id] (design section 6): the editor's content and the
  * spec of its type, or the read view with the timeline. Only the author and
  * readers whose scope holds the point reach it; anyone else gets not-found.
- * The timeline names no one; a review edit's previous values („Původní
- * znění“) join it with the review edit (design row 40).
+ * The timeline names no one; a review edit carries the values it replaced
+ * („Původní znění“, D13), in the shape the editor reads.
  */
 export const getPoint = defineUseCase({
   name: 'points.get',
@@ -42,6 +42,7 @@ export const getPoint = defineUseCase({
         toState: event.toState,
         note: event.note,
         editedFields: event.editedFields && [...event.editedFields],
+        before: event.before && fieldValuesWire(event.before),
         createdAt: event.createdAt.toISOString(),
       })),
     });

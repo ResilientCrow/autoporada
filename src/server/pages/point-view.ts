@@ -23,6 +23,8 @@ interface PointReadModel<C> {
     readonly editedFields: readonly string[] | null;
     /** ISO instant. */
     readonly createdAt: string;
+    /** A review edit's previous values, as `points.get` sends them; null for any other event. */
+    readonly before: LoadedPoint['timeline'][number]['before'];
   }[];
 }
 
@@ -77,11 +79,12 @@ export function pointView(
     read: {
       content,
       schoolYear: schoolYear(earliestMonday === null ? today : parseIsoDate(earliestMonday)),
-      timeline: timeline.map(({ event, note, editedFields, createdAt }) => ({
+      timeline: timeline.map(({ event, note, editedFields, createdAt, before }) => ({
         event,
         note,
         editedFields,
         createdAt,
+        before,
       })),
     },
   };

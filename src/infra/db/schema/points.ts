@@ -16,7 +16,7 @@ import {
 
 import type { PointEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
-import type { DraftBullet, DraftStatement } from '@/domain/report';
+import type { DraftBullet, DraftStatement, PointFieldValues } from '@/domain/report';
 import type { RichDoc } from '@/domain/richtext';
 
 import { at, createdAt, id } from './columns';
@@ -149,8 +149,8 @@ export const pointEvents = pgTable(
     note: text(),
     /** A reviewer's edit: the names of the fields it changed. */
     editedFields: text().array(),
-    /** A reviewer's edit: the previous values of those fields (D13); row 40 narrows the type. */
-    before: jsonb().$type<Readonly<Record<string, unknown>>>(),
+    /** A reviewer's edit: the previous values of those fields (D13), as the content holds them. */
+    before: jsonb().$type<Partial<PointFieldValues>>(),
     createdAt: createdAt(),
   },
   (t) => [

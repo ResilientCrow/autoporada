@@ -82,19 +82,27 @@ describe('Timeline', () => {
     const edit = entry({
       event: 'edit',
       editedFields: ['title'],
-      before: [{ label: 'Název', text: 'Exkurze' }],
+      before: { title: 'Exkurze <b>do muzea</b>', eventDate: '2027-01-14' },
     });
 
     it('is a details with the previous values as text, when the edit carries them', () => {
       const html = render([edit]);
       expect(html).toMatch(/<details[^>]*><summary[^>]*>Původní znění<\/summary>/);
-      expect(html).toContain('Název');
-      expect(html).toContain('Exkurze');
+      expect(html).toContain('<dt class="font-bold">Název</dt>');
+      expect(html).toContain('<dt class="font-bold">Datum začátku</dt>');
+      expect(html).toContain('14. ledna 2027');
+    });
+
+    it('prints what people wrote as text, never as markup', () => {
+      const html = render([edit]);
+      expect(html).toContain('Exkurze &lt;b&gt;do muzea&lt;/b&gt;');
+      expect(html).not.toContain('<b>');
     });
 
     it('is not drawn for an edit without them, nor for any other event', () => {
       expect(render([entry({ event: 'edit', editedFields: ['title'] })])).not.toContain('<details');
-      expect(render([entry({ event: 'submit' })])).not.toContain('<details');
+      expect(render([entry({ event: 'edit', before: {} })])).not.toContain('<details');
+      expect(render([entry({ event: 'submit', before: null })])).not.toContain('<details');
     });
   });
 

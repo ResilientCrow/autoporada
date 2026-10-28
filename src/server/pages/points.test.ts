@@ -348,11 +348,21 @@ describe('pointPage', () => {
     const loadedAs = (changes: object) => serve({ ok: true, value: { ...LOADED, ...changes } });
     const EVENTS = [
       {
+        event: 'edit',
+        fromState: 'returned',
+        toState: 'returned',
+        note: null,
+        editedFields: ['title', 'eventDate'],
+        before: { title: 'Exkurze', eventDate: '2027-01-14' },
+        createdAt: '2026-10-06T09:00:00.000Z',
+      },
+      {
         event: 'return',
         fromState: 'submitted',
         toState: 'returned',
         note: 'Doplňte název.',
         editedFields: null,
+        before: null,
         createdAt: '2026-10-05T09:00:00.000Z',
       },
       {
@@ -361,6 +371,7 @@ describe('pointPage', () => {
         toState: 'submitted',
         note: null,
         editedFields: null,
+        before: null,
         createdAt: '2026-10-04T09:00:00.000Z',
       },
     ];
@@ -390,12 +401,26 @@ describe('pointPage', () => {
       loadedAs({ timeline: EVENTS });
       expect((await pointPage(ID))?.read.timeline).toEqual([
         {
+          event: 'edit',
+          note: null,
+          editedFields: ['title', 'eventDate'],
+          createdAt: EVENTS[0]!.createdAt,
+          before: { title: 'Exkurze', eventDate: '2027-01-14' },
+        },
+        {
           event: 'return',
           note: 'Doplňte název.',
           editedFields: null,
-          createdAt: EVENTS[0]!.createdAt,
+          createdAt: EVENTS[1]!.createdAt,
+          before: null,
         },
-        { event: 'submit', note: null, editedFields: null, createdAt: EVENTS[1]!.createdAt },
+        {
+          event: 'submit',
+          note: null,
+          editedFields: null,
+          createdAt: EVENTS[2]!.createdAt,
+          before: null,
+        },
       ]);
     });
 

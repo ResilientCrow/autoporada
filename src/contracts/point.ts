@@ -9,6 +9,7 @@ import {
   type DraftPerson,
   type DraftStatement,
   type PointContent,
+  type PointFieldValues,
 } from '@/domain/report';
 import { POINT_MACHINE, REVIEW_DECISIONS } from '@/domain/review';
 import {
@@ -246,6 +247,13 @@ const paragraphWire = ({ attrs, content }: RichParagraph) => ({
   ...(content && { content: content.map(textWire) }),
 });
 
+const bodyWire = (body: PointContent['body']) => ({
+  type: 'doc' as const,
+  content: body.content.map(paragraphWire),
+});
+const bulletsWire = (bullets: PointContent['bullets']) =>
+  bullets.map((b) => (b.kind === 'people' ? { ...b, people: [...b.people] } : b));
+
 /** The stored content in the wire shape of `pointContentWire`. */
 export const contentWire = (content: PointContent): z.input<typeof pointContentWire> => ({
   ...content,
@@ -253,10 +261,36 @@ export const contentWire = (content: PointContent): z.input<typeof pointContentW
   endDate: dateText(content.endDate),
   timeFrom: timeText(content.timeFrom),
   timeTo: timeText(content.timeTo),
-  body: { type: 'doc', content: content.body.content.map(paragraphWire) },
-  bullets: content.bullets.map((b) => (b.kind === 'people' ? { ...b, people: [...b.people] } : b)),
+  body: bodyWire(content.body),
+  bullets: bulletsWire(content.bullets),
   statements: [...content.statements],
 });
+
+/** Some of a content's fields in the wire shape (a review edit's „Původní znění“): no flag, any field may be missing. */
+export const pointFieldsWire = pointContentWire.omit({ openingEdited: true }).partial();
+
+/** Stored field values, as a review edit keeps them, in the wire shape of `pointFieldsWire`. */
+export function fieldValuesWire({
+  eventDate,
+  endDate,
+  timeFrom,
+  timeTo,
+  body,
+  bullets,
+  statements,
+  ...text
+}: Partial<PointFieldValues>): z.input<typeof pointFieldsWire> {
+  return {
+    ...text,
+    ...(eventDate !== undefined && { eventDate: dateText(eventDate) }),
+    ...(endDate !== undefined && { endDate: dateText(endDate) }),
+    ...(timeFrom !== undefined && { timeFrom: timeText(timeFrom) }),
+    ...(timeTo !== undefined && { timeTo: timeText(timeTo) }),
+    ...(body !== undefined && { body: bodyWire(body) }),
+    ...(bullets !== undefined && { bullets: bulletsWire(bullets) }),
+    ...(statements !== undefined && { statements: [...statements] }),
+  };
+}
 
 /** A write to a point names the point and the version the page showed. */
 const pointWrite = { id: z.uuid(), expectedVersion: z.number().int().positive() };
@@ -266,6 +300,17 @@ const pointVersion = z.object({ version: z.number().int().positive() });
 /** The author's autosave: the whole content against the version the editor holds. */
 export const savePointInput = z.strictObject({ ...pointWrite, content: pointContentSchema });
 export const savePointOutput = pointVersion;
+
+/**
+ * „Uložit úpravy“ of a reviewer (design section 10): the whole content against the version the
+ * page showed, checked as the author's save checks it. `changed` is false when the content equals
+ * what is stored: nothing was written and the version stays.
+ */
+export const reviewEditPointInput = z.strictObject({ ...pointWrite, content: pointContentSchema });
+export const reviewEditPointOutput = z.object({
+  version: z.number().int().positive(),
+  changed: z.boolean(),
+});
 
 /** „Odeslat ke kontrole“: the content the editor holds, saved and handed in at once. */
 export const submitPointInput = z.strictObject({ ...pointWrite, content: pointContentSchema });

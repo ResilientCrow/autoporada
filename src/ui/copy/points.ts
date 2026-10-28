@@ -255,6 +255,8 @@ export const points = {
     publish: 'Zařazeno do porady',
     unpublish: 'Vyřazeno z\u00A0porady',
     original: 'Původní znění',
+    /** A previous value that was empty. */
+    empty: '(nevyplněno)',
     /** The label of one field in a review edit, or null for a name this page does not know. */
     field: (name: string): string | null => EDITED_FIELDS.get(name) ?? null,
   },

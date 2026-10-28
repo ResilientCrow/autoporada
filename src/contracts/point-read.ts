@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { TitleGender } from '@/domain/cs';
 import type { PointEvent, PointState } from '@/domain/review';
 
-import { pointContentWire, pointKindSchema } from './point';
+import { pointContentWire, pointFieldsWire, pointKindSchema } from './point';
 import { defaultBulletsSchema } from './point-type';
 
 /** Every `PointState` once: the compiler refuses a missing or an unknown one. */
@@ -55,8 +55,8 @@ export const pointStatusOutput = z.object(standing);
 
 /**
  * What /body/[id] shows, the editor and the read view alike. The timeline is
- * newest first and names no one; a review edit's previous values join it
- * with the review edit (design row 40).
+ * newest first and names no one; a review edit carries the values it replaced
+ * (D13), which only those who see the point read.
  */
 export const getPointInput = pointRef;
 export const getPointOutput = z.object({
@@ -84,6 +84,8 @@ export const getPointOutput = z.object({
       toState: pointStateSchema,
       note: z.string().nullable(),
       editedFields: z.array(z.string()).nullable(),
+      /** A review edit's „Původní znění“: the values of exactly the fields it changed. */
+      before: pointFieldsWire.nullable(),
       createdAt: instant,
     }),
   ),

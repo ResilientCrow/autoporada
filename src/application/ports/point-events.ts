@@ -1,3 +1,4 @@
+import type { PointFieldValues } from '@/domain/report';
 import type { PointEvent, PointState } from '@/domain/review';
 
 /** What happened to a point: a transition of POINT_MACHINE, or a reviewer's edit. */
@@ -14,7 +15,7 @@ export interface NewPointEvent {
   /** A reviewer's edit: the names of the fields it changed. */
   readonly editedFields?: readonly string[];
   /** A reviewer's edit: the previous values of those fields; only on `edit`. */
-  readonly before?: Readonly<Record<string, unknown>>;
+  readonly before?: Partial<PointFieldValues>;
 }
 
 export interface PointEventRecord {
@@ -27,7 +28,8 @@ export interface PointEventRecord {
   readonly toState: PointState;
   readonly note: string | null;
   readonly editedFields: readonly string[] | null;
-  readonly before: Readonly<Record<string, unknown>> | null;
+  /** A reviewer's edit: the values it replaced (D13), as stored. */
+  readonly before: Partial<PointFieldValues> | null;
   readonly createdAt: Date;
 }
 

@@ -26,3 +26,4 @@ export {
   type Readiness,
   type Warning,
 } from './readiness';
+export { diffPointFields, pointFieldValues, type PointField, type PointFieldValues } from './diff';

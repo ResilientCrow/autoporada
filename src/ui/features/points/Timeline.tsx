@@ -3,11 +3,7 @@ import type { PointEvent } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
 import { points } from '@/ui/copy';
 
-/** A previous value of a field a review edit changed, as plain text. */
-interface OriginalValue {
-  readonly label: string;
-  readonly text: string;
-}
+import { originalValues, type EditBefore } from './original-values';
 
 /** One event of a point, as `points.get` sends it; it names no one. */
 export interface TimelineEntry {
@@ -16,8 +12,8 @@ export interface TimelineEntry {
   readonly editedFields: readonly string[] | null;
   /** ISO instant. */
   readonly createdAt: string;
-  /** „Původní znění“ of a review edit; the review edit (design row 40) fills it, until then it is never set. */
-  readonly before?: readonly OriginalValue[];
+  /** „Původní znění“ of a review edit: the values of the fields it changed; null for any other event. */
+  readonly before?: EditBefore;
 }
 
 /** The entry as one line (design section 9); only the submit carries the time. */
@@ -62,24 +58,27 @@ export function Timeline({ entries }: { readonly entries: readonly TimelineEntry
     <section className="space-y-2">
       <h2 className="text-xl">{points.timeline.label}</h2>
       <ol className="space-y-2">
-        {entries.map((entry) => (
-          <li key={`${entry.createdAt}-${entry.event}`}>
-            <span className="whitespace-pre-line">{lineOf(entry)}</span>
-            {entry.before === undefined || entry.before.length === 0 ? null : (
-              <details>
-                <summary>{points.timeline.original}</summary>
-                <dl>
-                  {entry.before.map(({ label, text }) => (
-                    <div key={label}>
-                      <dt className="font-bold">{label}</dt>
-                      <dd className="whitespace-pre-line">{text}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
-            )}
-          </li>
-        ))}
+        {entries.map((entry) => {
+          const before = originalValues(entry.before);
+          return (
+            <li key={`${entry.createdAt}-${entry.event}`}>
+              <span className="whitespace-pre-line">{lineOf(entry)}</span>
+              {before.length === 0 ? null : (
+                <details>
+                  <summary>{points.timeline.original}</summary>
+                  <dl>
+                    {before.map(({ label, text }) => (
+                      <div key={label}>
+                        <dt className="font-bold">{label}</dt>
+                        <dd className="whitespace-pre-line">{text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </details>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </section>
   );
