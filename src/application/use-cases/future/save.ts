@@ -1,35 +1,47 @@
 import { defineUseCase, fail, ok } from '@/application/core';
 import { saveFutureInput, saveFutureOutput } from '@/contracts';
+import { can } from '@/domain/policy';
 import { futureEditNeedsReview } from '@/domain/review';
 
-import { futureWriteAccess } from './access';
+import { futureView, futureWriteAccess } from './access';
 import { hasIssues, kindIssues, sameContent, submitIssues } from './checks';
 import { move } from './events';
 
+const notEditable = fail({ code: 'rule', rule: 'future-not-editable' });
+
 /**
  * The author's autosave (design section 12, ADR 0017): the whole content
- * against the version the editor holds, unaudited under `author-autosave`.
- * An author's change to an approved item is not an autosave: it fires
- * `revise`, the item goes back to review, and the move is audited, so it is
- * checked as a submit is. A save that changes nothing writes nothing.
+ * against the version the editor holds, unaudited under `author-autosave`,
+ * for a draft or a returned item. An approved akce never autosaves: its
+ * „Uložit změny“ sends `intent: 'revise'`, and that one save, when it changes
+ * something, fires `revise`: the item goes back to review and the move is
+ * audited, so it is checked as a submit is. Any other state, or a revise on
+ * an item that is not approved, is the rule `future-not-editable`, as
+ * `points.save` answers. A save that changes nothing writes nothing.
  */
 export const saveFuture = defineUseCase({
   name: 'future.save',
   mode: 'write',
   input: saveFutureInput,
   output: saveFutureOutput,
-  access: futureWriteAccess((item) => ({
-    action: 'future.edit',
-    item: { authorId: item.authorId, state: item.state, kind: item.kind },
-  })),
-  async execute({ tx, actor, now }, { content }, item) {
+  access: futureWriteAccess((item) => ({ action: 'future.view', item: futureView(item) })),
+  async execute({ tx, actor, now }, { content, intent }, item) {
     // The policy also lets a reviewer edit what waits for review; that is the
-    // audited review edit, never this save.
+    // audited review edit, never this save. The scoped load already gave a
+    // pending or inactive account not-found.
     if (item.authorId !== actor.id) return fail({ code: 'forbidden' });
+    const asAuthor = { isAuthor: true, state: item.state, kind: item.kind };
+    if (!can(actor, { action: 'future.edit', item: asAuthor })) return notEditable;
+    const revises = futureEditNeedsReview(item.state, {
+      kind: 'user',
+      role: actor.role,
+      isAuthor: true,
+    });
+    if (revises !== (intent === 'revise')) return notEditable;
     const shape = kindIssues(item.kind, content);
     if (hasIssues(shape)) return fail({ code: 'invalid-input', fields: shape });
 
-    if (futureEditNeedsReview(item.state, { kind: 'user', role: actor.role, isAuthor: true })) {
+    if (revises) {
       if (sameContent(item.content, content))
         return ok({ version: item.version, state: item.state });
       const fields = submitIssues(item.kind, content);

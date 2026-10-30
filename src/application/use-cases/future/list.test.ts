@@ -26,7 +26,8 @@ const EMPTY_CONTENT: FutureContent = {
 const { start, moveTo } = futureFixtures(world);
 
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
-const list = (by: UserRecord) => world.run(listFuture, world.as(by), {});
+const list = (by: UserRecord, before?: string) =>
+  world.run(listFuture, world.as(by), before === undefined ? {} : { before });
 
 async function item(
   author: UserRecord,
@@ -98,9 +99,9 @@ describe('future.list', () => {
     expect(JSON.stringify(result)).not.toContain(staffer.salutation);
   });
 
-  it('answers one page and says there is more when the next page has an item', async () => {
-    const author = await user();
-    const make = (count: number) =>
+  describe('paging', () => {
+    /** `count` empty jednání of the author's, all written at the clock's one instant. */
+    const make = (author: UserRecord, count: number) =>
       world.tx(world.as(author), async (tx) => {
         for (let i = 0; i < count; i++) {
           const { item: made } = await tx.futureItems.create({
@@ -114,16 +115,47 @@ describe('future.list', () => {
           });
         }
       });
-    await make(FUTURE_LIST_PAGE);
-    expect(await list(author)).toMatchObject({ ok: true, value: { more: false } });
-    await make(1);
-    const result = await list(author);
-    expect(result.ok && result.value.items).toHaveLength(FUTURE_LIST_PAGE);
-    expect(result.ok && result.value.more).toBe(true);
+
+    it('names no next page for exactly one full page', async () => {
+      const author = await user();
+      await make(author, FUTURE_LIST_PAGE);
+      const result = await list(author);
+      expect(result.ok && result.value.items).toHaveLength(FUTURE_LIST_PAGE);
+      expect(result.ok && result.value.next).toBeNull();
+    });
+
+    it('names where the next page starts, and the next page holds the rest once', async () => {
+      const author = await user();
+      await make(author, FUTURE_LIST_PAGE + 1);
+      const first = await list(author);
+      if (!first.ok || first.value.next === null) throw new Error('no next page');
+      expect(first.value.items).toHaveLength(FUTURE_LIST_PAGE);
+
+      const second = await list(author, first.value.next);
+      if (!second.ok) throw new Error('second page');
+      expect(second.value.items).toHaveLength(1);
+      expect(second.value.next).toBeNull();
+      const ids = [...first.value.items, ...second.value.items].map((row) => row.id);
+      expect(new Set(ids).size).toBe(FUTURE_LIST_PAGE + 1);
+      // One instant for every row: the order falls to the ids, highest first.
+      expect(ids).toEqual([...ids].sort().reverse());
+    });
+
+    it.each([
+      ['empty', '', 'invalid'],
+      ['without an id', '1792396800000', 'invalid'],
+      ['with a bad id', '1792396800000.not-a-uuid', 'invalid'],
+      ['too long', `1792396800000.${randomUUID()}${'0'.repeat(40)}`, 'too-long'],
+    ])('refuses a cursor %s on `before`', async (_case, before, code) => {
+      expect(await list(await user(), before)).toEqual({
+        ok: false,
+        error: { code: 'invalid-input', fields: { before: code } },
+      });
+    });
   });
 
   it('is empty for a user with nothing to see', async () => {
-    expect(await list(await user())).toEqual({ ok: true, value: { items: [], more: false } });
+    expect(await list(await user())).toEqual({ ok: true, value: { items: [], next: null } });
   });
 
   it.each([

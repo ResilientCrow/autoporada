@@ -36,6 +36,9 @@ export interface FutureItemRecord {
   readonly updatedAt: Date;
 }
 
+/** Where a page of the list ended: its last row's change and id. */
+export type FutureCursor = Pick<FutureItemRecord, 'updatedAt' | 'id'>;
+
 /** What `create` writes; the author is the transaction's user. */
 export interface NewFutureItem {
   /** The draft's id in the author's browser: a retried create finds the row it made. */
@@ -84,6 +87,9 @@ export interface FutureItemRepo {
    * against FUTURE_MACHINE.
    */
   update(id: string, expectedVersion: number, patch: FutureItemPatch): Promise<FutureItemRecord>;
-  /** The items in scope, last changed first, ties to the higher id, at most `limit`. */
-  list(limit: number): Promise<readonly FutureItemRecord[]>;
+  /**
+   * The items in scope, last changed first, ties to the higher id, at most `limit`; with `before`,
+   * those after that row in this order. `updated_at` keeps milliseconds, as a cursor carries them.
+   */
+  list(limit: number, before?: FutureCursor): Promise<readonly FutureItemRecord[]>;
 }

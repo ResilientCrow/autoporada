@@ -1,4 +1,4 @@
-import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -8,6 +8,7 @@ import {
   ScopeViolation,
   StaleVersion,
   type FutureContent,
+  type FutureCursor,
   type FutureItemRecord,
   type FutureItemRepo,
   type TxContext,
@@ -112,6 +113,14 @@ export const visibleFutureHistory = (ctx: TxContext): SQL | undefined =>
 const writableFutureItems = (ctx: TxContext): SQL | undefined =>
   scopeWhere(futureWriteScopeOf(ctx.principal), ITEM_SCOPE);
 
+/** The rows after `before` in the list's order: an older change, or the same instant and a lower id. */
+const after = (before: FutureCursor | undefined): SQL | undefined =>
+  before &&
+  or(
+    lt(futureItems.updatedAt, before.updatedAt),
+    and(eq(futureItems.updatedAt, before.updatedAt), lt(futureItems.id, before.id)),
+  );
+
 /** Future items over the transaction's connection, read through the principal's scope. */
 export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItemRepo {
   const { principal, now } = ctx;
@@ -177,11 +186,11 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
       if (!row) throw new StaleVersion();
       return toRecord(row);
     },
-    async list(limit) {
+    async list(limit, before) {
       const rows = await db
         .select(ITEM_ROW)
         .from(futureItems)
-        .where(visibleFutureItems(ctx))
+        .where(and(visibleFutureItems(ctx), after(before)))
         .orderBy(desc(futureItems.updatedAt), desc(futureItems.id))
         .limit(limit);
       return rows.map(toRecord);

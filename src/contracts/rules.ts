@@ -10,6 +10,7 @@ export const RULE_CODES = [
   'request-blocked',
   'draft-cap',
   'point-not-editable',
+  'future-not-editable',
   'type-name-taken',
   'type-locked',
   'bullet-kind-fixed',

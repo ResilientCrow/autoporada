@@ -2,10 +2,11 @@ import { z } from 'zod';
 
 import type { FutureKind } from '@/domain/calendar';
 import type { Campus, ResponsibleVerb } from '@/domain/cs';
-import { POINT_LIMITS, type Responsible } from '@/domain/report';
+import { displayName, POINT_LIMITS, type Responsible } from '@/domain/report';
 import type { FutureEvent, FutureState, ReportState } from '@/domain/review';
 import { compareDates, toIsoDate, toIsoTime, type CalDate, type WallTime } from '@/domain/time';
 
+import { CURSOR_MAX, cursorSchema } from './cursor';
 import { campusSchema, draftPersonSchema, isoDate, wallTime } from './point';
 
 /** Every `FutureKind` once: the compiler refuses a missing or an unknown one. */
@@ -142,6 +143,41 @@ export const futureContentToWire = (
   },
 });
 
+/**
+ * What a reader who is not the author sees of an item: the list row's content. Who is responsible
+ * is a name each; no salutation, affiliation or directory id (design section 12, privacy review).
+ */
+const futureView = z.strictObject({
+  title: z.string(),
+  startDate: z.iso.date().nullable(),
+  endDate: z.iso.date().nullable(),
+  timeFrom: z.iso.time({ precision: -1 }).nullable(),
+  timeTo: z.iso.time({ precision: -1 }).nullable(),
+  campus: campusSchema.nullable(),
+  place: z.string().nullable(),
+  expectsReport: z.boolean(),
+  responsible: z
+    .strictObject({
+      verb: z.enum(VERBS),
+      behalfOf: z.string().nullable(),
+      names: z.array(z.string()),
+    })
+    .nullable(),
+});
+
+/** The stored content as `futureView`: the wire conversion, with the people reduced to names. */
+export function futureContentToView(content: FutureContentValue): z.input<typeof futureView> {
+  const { responsible, ...rest } = futureContentToWire(content);
+  return {
+    ...rest,
+    responsible: responsible && {
+      verb: responsible.verb,
+      behalfOf: responsible.behalfOf ?? null,
+      names: responsible.people.map(displayName),
+    },
+  };
+}
+
 /** „Nový bod do přehledu“: `clientRef` is the draft's id in the browser, so a retry returns the same one. */
 export const createFutureInput = z.strictObject({ clientRef: z.uuid(), kind: futureKindSchema });
 export const createFutureOutput = z.object({ id: z.uuid() });
@@ -151,10 +187,15 @@ const futureWrite = { id: z.uuid(), expectedVersion: z.number().int().positive()
 const version = z.number().int().positive();
 
 /**
- * The author's autosave: the whole content against the version the editor holds. The state comes
- * back too, because a change to an approved akce sends it back to review.
+ * The author's autosave: the whole content against the version the editor holds. An approved akce
+ * is never autosaved: its „Uložit změny“ sends `intent: 'revise'`, and that one save hands the
+ * change in for review. The state comes back too, because the revise moves it.
  */
-export const saveFutureInput = z.strictObject({ ...futureWrite, content: futureContentSchema });
+export const saveFutureInput = z.strictObject({
+  ...futureWrite,
+  content: futureContentSchema,
+  intent: z.literal('revise').optional(),
+});
 export const saveFutureOutput = z.object({ version, state: futureStateSchema });
 
 /** „Odeslat ke kontrole“: the content the editor holds, saved and handed in at once. */
@@ -182,7 +223,9 @@ export const getFutureOutput = z.object({
   submittedAt: instant.nullable(),
   reportState: reportStateSchema,
   reportPointId: z.uuid().nullable(),
-  content: futureContentWire,
+  /** For the author only, who edits it; everyone else gets `view`. */
+  content: futureContentWire.nullable(),
+  view: futureView,
   /** For the author and reviewers only; naming no one. */
   timeline: z.array(
     z.object({
@@ -199,33 +242,20 @@ export const getFutureOutput = z.object({
 /** The items a page lists: one page, the newest changes first. */
 export const FUTURE_LIST_PAGE = 200;
 
-export const listFutureInput = z.strictObject({});
+/** „Akce“: what the reader may see, a page at a time. */
+export const listFutureInput = z.strictObject({ before: cursorSchema.optional() });
 export const listFutureOutput = z.object({
-  items: z.array(
-    z.object({
-      id: z.uuid(),
-      kind: futureKindSchema,
-      state: futureStateSchema,
-      isAuthor: z.boolean(),
-      title: z.string(),
-      startDate: z.iso.date().nullable(),
-      endDate: z.iso.date().nullable(),
-      timeFrom: z.iso.time({ precision: -1 }).nullable(),
-      timeTo: z.iso.time({ precision: -1 }).nullable(),
-      campus: campusSchema.nullable(),
-      place: z.string().nullable(),
-      expectsReport: z.boolean(),
-      /** Names only: the list shows no salutation and no affiliation. */
-      responsible: z
-        .object({
-          verb: z.enum(VERBS),
-          behalfOf: z.string().nullable(),
-          names: z.array(z.string()),
-        })
-        .nullable(),
-      updatedAt: instant,
-    }),
-  ),
-  /** There are older items than this page holds. */
-  more: z.boolean(),
+  items: z
+    .array(
+      futureView.extend({
+        id: z.uuid(),
+        kind: futureKindSchema,
+        state: futureStateSchema,
+        isAuthor: z.boolean(),
+        updatedAt: instant,
+      }),
+    )
+    .max(FUTURE_LIST_PAGE),
+  /** Where the older items start: set only when there are older items than this page holds. */
+  next: z.string().max(CURSOR_MAX).nullable(),
 });

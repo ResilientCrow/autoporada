@@ -60,6 +60,10 @@ describe('future.get', () => {
         reportState: 'none',
         reportPointId: null,
         content: readyAkce(),
+        view: {
+          ...readyAkce({ responsible: undefined }),
+          responsible: { verb: 'zajišťuje', behalfOf: '2.A', names: ['Jan Novák'] },
+        },
         timeline: [
           {
             event: 'return',
@@ -126,20 +130,73 @@ describe('future.get', () => {
     expect(await open(colleague, id)).toEqual({ ok: false, error: { code: 'not-found' } });
   });
 
-  it('shows everyone an approved akce with who is responsible, but not its history', async () => {
-    const author = await user();
-    const id = await item(author, 'approved');
-    await returnedWithNote(id);
-    const student = await world.seed.user({ role: 'submitter', isStudent: true });
-    const result = await open(student, id);
-    expect(result).toMatchObject({
-      ok: true,
-      value: {
-        isAuthor: false,
-        editable: false,
-        timeline: [],
-        content: { responsible: { verb: 'zajišťuje', people: [{ familyName: 'Novák' }] } },
+  describe('an approved akce read by someone else', () => {
+    const person = {
+      graphId: '11111111-1111-4111-8111-111111111111',
+      salutation: 'pan',
+      titlesBefore: 'Mgr.',
+      givenName: 'Jan',
+      familyName: 'Novák',
+      affiliation: 'kabinet fyziky',
+      affiliationYear: '2026/2027',
+    };
+    const readers = [
+      ['a colleague', { role: 'submitter' }],
+      ['a student', { role: 'submitter', isStudent: true }],
+    ] as const;
+
+    /** An approved akce whose responsible person has everything the directory gave. */
+    async function approvedWithPerson(): Promise<{ id: string; author: UserRecord }> {
+      const author = await user();
+      const id = await start(author, 'akce');
+      const content = readyAkce({
+        responsible: { verb: 'vede', behalfOf: '2.A', people: [person] },
+      });
+      await world.run(saveFuture, world.as(author), { id, expectedVersion: 1, content });
+      await moveTo(author, id, 'approved');
+      await returnedWithNote(id);
+      return { id, author };
+    }
+
+    it.each(readers)(
+      'gives %s the names of who is responsible, and not its history',
+      async (_who, seed) => {
+        const { id } = await approvedWithPerson();
+        const reader = await world.seed.user(seed);
+        const result = await open(reader, id);
+        expect(result).toMatchObject({
+          ok: true,
+          value: {
+            isAuthor: false,
+            editable: false,
+            timeline: [],
+            content: null,
+            view: {
+              title: 'Výlet do Prahy',
+              startDate: '2026-11-10',
+              responsible: { verb: 'vede', behalfOf: '2.A', names: ['Mgr. Jan Novák'] },
+            },
+          },
+        });
       },
+    );
+
+    it.each(readers)('hands %s no directory id, affiliation or salutation', async (_who, seed) => {
+      const { id } = await approvedWithPerson();
+      const reader = await world.seed.user(seed);
+      const json = JSON.stringify(await open(reader, id));
+      for (const secret of [person.graphId, person.affiliation, person.affiliationYear, '"pan"']) {
+        expect(json).not.toContain(secret);
+      }
+    });
+
+    it('still gives the author the full content, the directory id included', async () => {
+      const { id, author } = await approvedWithPerson();
+      const result = await open(author, id);
+      expect(result).toMatchObject({
+        ok: true,
+        value: { content: { responsible: { people: [person] } } },
+      });
     });
   });
 

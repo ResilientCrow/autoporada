@@ -1,12 +1,6 @@
-import type { ResourceAccess } from '@/application/core';
+import { readAccess, writeAccess } from '@/application/core';
 import type { FutureItemRecord } from '@/application/ports';
 import type { Check } from '@/domain/policy';
-
-/** What every write to an item names: the item and the version the page showed. */
-interface FutureWrite {
-  readonly id: string;
-  readonly expectedVersion: number;
-}
 
 /**
  * The access of a write to an item (ADR 0011): the item under its row lock
@@ -15,19 +9,14 @@ interface FutureWrite {
  * stale page is a conflict whatever the state; then the use case's own check on
  * the locked row, which still names the author: a second line behind the scope.
  */
-export function futureWriteAccess<I extends FutureWrite>(
+export const futureWriteAccess = <
+  I extends { readonly id: string; readonly expectedVersion: number },
+>(
   check: (item: FutureItemRecord, input: I) => Check,
-): ResourceAccess<I, FutureItemRecord> {
-  return {
-    kind: 'resource',
-    load: (tx, input) => tx.futureItems.loadForWrite(input.id),
-    expectedVersion: (input) => input.expectedVersion,
-    check,
-  };
-}
+) => writeAccess<I, FutureItemRecord>((tx, id) => tx.futureItems.loadForWrite(id), check);
 
 /** An item as `future.view` sees it: `submittedAt` is set at each submit and cleared by a retract. */
-const futureView = (item: FutureItemRecord) => ({
+export const futureView = (item: FutureItemRecord) => ({
   authorId: item.authorId,
   state: item.state,
   kind: item.kind,
@@ -38,14 +27,11 @@ const futureView = (item: FutureItemRecord) => ({
  * The access of a read of one item: the scoped repository without the row lock,
  * so an item outside the reader's scope is not-found.
  */
-export function futureReadAccess<I extends { readonly id: string }>(): ResourceAccess<
-  I,
-  FutureItemRecord
-> {
-  return {
-    kind: 'resource',
-    load: (tx, { id }) => tx.futureItems.get(id),
-    expectedVersion: 'unversioned',
-    check: (item) => ({ action: 'future.view', item: futureView(item) }),
-  };
-}
+export const futureReadAccess = <I extends { readonly id: string }>() =>
+  readAccess<I, FutureItemRecord>(
+    (tx, id) => tx.futureItems.get(id),
+    (item): Check => ({
+      action: 'future.view',
+      item: futureView(item),
+    }),
+  );

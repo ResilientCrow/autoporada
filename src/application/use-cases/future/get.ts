@@ -1,5 +1,10 @@
 import { defineUseCase, ok } from '@/application/core';
-import { futureContentToWire, getFutureInput, getFutureOutput } from '@/contracts';
+import {
+  futureContentToView,
+  futureContentToWire,
+  getFutureInput,
+  getFutureOutput,
+} from '@/contracts';
 import { can } from '@/domain/policy';
 
 import { futureReadAccess } from './access';
@@ -9,7 +14,8 @@ import { futureReadAccess } from './access';
  * it stands. Only the author and readers whose scope holds the item reach it;
  * anyone else gets not-found. The history, with a reviewer's notes, is for
  * the author and reviewers: a colleague who sees an approved akce does not
- * see it. It names no one.
+ * see it. It names no one. Only the author gets the content as they wrote
+ * it; a reader gets the names-only `view` the list shows.
  */
 export const getFuture = defineUseCase({
   name: 'future.get',
@@ -37,7 +43,9 @@ export const getFuture = defineUseCase({
       submittedAt: item.submittedAt?.toISOString() ?? null,
       reportState: item.reportState,
       reportPointId: item.reportPointId,
-      content: futureContentToWire(item.content),
+      // The editor needs the whole content, so only its author gets it; anyone else the names.
+      content: isAuthor ? futureContentToWire(item.content) : null,
+      view: futureContentToView(item.content),
       timeline: events.map((event) => ({
         event: event.event,
         fromState: event.fromState,

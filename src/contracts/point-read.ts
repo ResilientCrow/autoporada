@@ -4,6 +4,7 @@ import { TITLE_GENDERS } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import type { PointEvent, PointState } from '@/domain/review';
 
+import { CURSOR_MAX, cursorSchema } from './cursor';
 import { pointContentWire, pointFieldsWire, pointKindSchema } from './point';
 import { defaultBulletsSchema } from './point-type';
 
@@ -87,32 +88,8 @@ export const getPointOutput = z.object({
 /** The most rows of „Moje body“ on one page; „Starší body“ asks for the next. */
 export const MY_POINTS_PAGE = 200;
 
-/** Where a page ended, as `{ms}.{id}`: text a query parameter carries as it is. */
-const CURSOR = /^(\d{1,15})\.([0-9a-f-]{36})$/;
-const CURSOR_MAX = 52;
-
-export const pointCursorText = ({
-  updatedAt,
-  id,
-}: {
-  readonly updatedAt: Date;
-  readonly id: string;
-}) => `${updatedAt.getTime()}.${id}`;
-
-const pointCursorSchema = z
-  .string()
-  .max(CURSOR_MAX)
-  .transform((text, ctx) => {
-    const [, ms, id] = CURSOR.exec(text) ?? [];
-    if (ms === undefined || id === undefined || !z.uuid().safeParse(id).success) {
-      ctx.addIssue({ code: 'custom', message: 'invalid' });
-      return z.NEVER;
-    }
-    return { updatedAt: new Date(Number(ms)), id };
-  });
-
 /** „Moje body“: the author's own points, a page at a time. */
-export const listMyPointsInput = z.strictObject({ before: pointCursorSchema.optional() });
+export const listMyPointsInput = z.strictObject({ before: cursorSchema.optional() });
 /** `next` is null on the last page: set only when an older point exists. */
 export const listMyPointsOutput = z.object({
   points: z

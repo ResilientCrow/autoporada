@@ -98,6 +98,11 @@ describe('future.submit', () => {
         { 'content.timeTo': 'invalid' },
       ],
       [
+        'an end time after the start when the end date is the start date',
+        { endDate: '2026-11-10', timeFrom: '14:00', timeTo: '13:00' },
+        { 'content.timeTo': 'invalid' },
+      ],
+      [
         'people when it names who is responsible',
         { responsible: { verb: 'vede', people: [] } },
         { 'content.responsible.people': 'required' },
@@ -173,6 +178,23 @@ describe('future.submit', () => {
         const id = await start(author, 'akce');
         await moveTo(author, id, state);
         await refuses(id, () => submit(author, id, readyAkce(), 2), forbidden);
+      },
+    );
+
+    it.each([
+      ['a reviewer', { role: 'reviewer' }],
+      ['the headmaster', { role: 'headmaster' }],
+      ['a colleague', { role: 'submitter' }],
+    ] as const)(
+      'does not let %s hand in a colleague’s returned item, and writes nothing',
+      async (_who, seed) => {
+        const author = await user();
+        const id = await start(author, 'akce');
+        await moveTo(author, id, 'returned');
+        const other = await world.seed.user(seed);
+        await refuses(id, () => submit(other, id, readyAkce(), 2), { code: 'not-found' });
+        // The author still can: it is the state, not the item, that was fine.
+        expect(await submit(author, id, readyAkce(), 2)).toMatchObject({ ok: true });
       },
     );
 

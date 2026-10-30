@@ -247,6 +247,25 @@ describe('FutureItemRepo (port contract)', () => {
     expect(await read(as, (tx) => tx.futureItems.list(2))).toHaveLength(2);
   });
 
+  it('continues after a cursor: the rows after that one in the list order, none twice', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const as = world.as(author);
+    const first = await create(as);
+    world.clock.advance(60_000);
+    const [second, third] = [await create(as), await create(as)];
+    world.clock.advance(60_000);
+    const fourth = await create(as);
+    const order = await read(as, (tx) => tx.futureItems.list(10));
+    expect(order[0]!.id).toBe(fourth.item.id);
+    const rest = order.slice(1).map((i) => i.id);
+    expect(new Set(rest)).toEqual(new Set([first.item.id, second.item.id, third.item.id]));
+    for (let at = 0; at < order.length; at++) {
+      const after = await read(as, (tx) => tx.futureItems.list(10, order[at]));
+      expect(after.map((i) => i.id)).toEqual(order.slice(at + 1).map((i) => i.id));
+    }
+    expect(await read(as, (tx) => tx.futureItems.list(1, order[1]))).toHaveLength(1);
+  });
+
   it('keeps a user who wrote an item: erasing them is refused', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author));

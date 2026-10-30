@@ -41,7 +41,7 @@ const ACTIONS = {
   retract: 'future.retracted',
   revise: 'future.revised',
 } as const;
-export type AuthorMove = keyof typeof ACTIONS;
+type FutureMove = keyof typeof ACTIONS;
 
 /**
  * The access check of a move: the policy folds the item's state and author
@@ -49,7 +49,7 @@ export type AuthorMove = keyof typeof ACTIONS;
  * version and a user who may not make the move are both `forbidden`.
  */
 export const moveCheck =
-  (event: AuthorMove) =>
+  (event: FutureMove) =>
   (item: FutureItemRecord): Check => ({
     action: 'future.transition',
     item: { authorId: item.authorId, state: item.state, kind: item.kind },
@@ -64,7 +64,7 @@ export const moveCheck =
 export async function move(
   tx: Tx,
   item: FutureItemRecord,
-  event: AuthorMove,
+  event: FutureMove,
   patch: Omit<FutureItemPatch, 'state'> = {},
 ): Promise<FutureItemRecord> {
   const { to } = FUTURE_MACHINE[event];

@@ -10,6 +10,7 @@ export {
 export { fromTransition } from './failure';
 export { MAX_FIELDS } from './field-issues';
 export { DEADLINE_RULE } from './issue-rule';
+export { readAccess, writeAccess } from './resource-access';
 export {
   fail,
   ok,

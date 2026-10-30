@@ -1,11 +1,6 @@
 import { defineUseCase, ok } from '@/application/core';
 import type { PointSummary } from '@/application/ports';
-import {
-  listMyPointsInput,
-  listMyPointsOutput,
-  MY_POINTS_PAGE,
-  pointCursorText,
-} from '@/contracts';
+import { cursorText, listMyPointsInput, listMyPointsOutput, MY_POINTS_PAGE } from '@/contracts';
 import { toIsoDate, type CalDate } from '@/domain/time';
 
 const dateText = (date: CalDate | null) => date && toIsoDate(date);
@@ -43,6 +38,6 @@ export const listMyPoints = defineUseCase({
     const read = await tx.points.listMine(MY_POINTS_PAGE + 1, before);
     const rows = read.slice(0, MY_POINTS_PAGE);
     const last = read.length > MY_POINTS_PAGE ? rows.at(-1) : undefined;
-    return ok({ points: rows.map(summaryWire), next: last ? pointCursorText(last) : null });
+    return ok({ points: rows.map(summaryWire), next: last ? cursorText(last) : null });
   },
 });

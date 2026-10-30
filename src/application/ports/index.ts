@@ -32,6 +32,7 @@ export type {
 export type {
   FutureContent,
   FutureItemPatch,
+  FutureCursor,
   FutureItemRecord,
   FutureItemRepo,
   NewFutureItem,

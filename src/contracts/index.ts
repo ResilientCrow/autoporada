@@ -49,10 +49,12 @@ export {
   type DirectoryHit,
   type DirectoryNotice,
 } from './directory';
+export { cursorText } from './cursor';
 export {
   createFutureInput,
   createFutureOutput,
   FUTURE_LIST_PAGE,
+  futureContentToView,
   futureContentToWire,
   getFutureInput,
   getFutureOutput,
@@ -101,7 +103,6 @@ export {
   listMyPointsInput,
   listMyPointsOutput,
   MY_POINTS_PAGE,
-  pointCursorText,
   pointStatusInput,
   pointStatusOutput,
   QUEUE_LIMIT,

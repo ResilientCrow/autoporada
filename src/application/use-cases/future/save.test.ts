@@ -8,6 +8,7 @@ import {
   futureWire,
   readyAkce,
   readyJednani,
+  staffer,
 } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
 import { saveFuture } from './index';
@@ -18,6 +19,11 @@ const { start, moveTo, get, snapshot } = futureFixtures(world);
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
 const save = (by: UserRecord, id: string, content: unknown, expectedVersion = 1) =>
   world.run(saveFuture, world.as(by), { id, expectedVersion, content });
+
+/** The „Uložit změny“ of an approved akce: the one save that hands the change in. */
+const revise = (by: UserRecord, id: string, content: unknown, expectedVersion = 3) =>
+  world.run(saveFuture, world.as(by), { id, expectedVersion, content, intent: 'revise' });
+const notEditable = { code: 'rule', rule: 'future-not-editable' };
 
 async function refuses(id: string, run: () => Promise<unknown>, error: unknown) {
   const before = await snapshot(id);
@@ -113,7 +119,7 @@ describe('future.save', () => {
         const author = await user();
         const id = await start(author, 'akce');
         await moveTo(author, id, state);
-        await refuses(id, () => save(author, id, readyAkce(), 2), { code: 'forbidden' });
+        await refuses(id, () => save(author, id, readyAkce(), 2), notEditable);
       },
     );
 
@@ -161,12 +167,24 @@ describe('future.save', () => {
   });
 
   describe('an approved akce', () => {
-    it('goes back to review when its author changes it, and says so in the history', async () => {
+    it('never autosaves: a plain save is refused, and writes nothing', async () => {
+      const author = await user();
+      const id = await approved(author);
+      await refuses(id, () => save(author, id, readyAkce({ title: 'Výlet do B' }), 3), notEditable);
+      expect(await get(author, id)).toMatchObject({ state: 'approved', version: 3 });
+    });
+
+    it('refuses a plain save even when it changes nothing', async () => {
+      const author = await user();
+      const id = await approved(author);
+      await refuses(id, () => save(author, id, readyAkce(), 3), notEditable);
+    });
+
+    it('goes back to review on the explicit revise, and says so in the history', async () => {
       const author = await user();
       const id = await approved(author);
       world.clock.advance(60_000);
-      const edited = readyAkce({ title: 'Výlet do Brna' });
-      expect(await save(author, id, edited, 3)).toEqual({
+      expect(await revise(author, id, readyAkce({ title: 'Výlet do Brna' }))).toEqual({
         ok: true,
         value: { version: 4, state: 'submitted' },
       });
@@ -201,11 +219,29 @@ describe('future.save', () => {
       });
     });
 
-    it('stays approved when the save changes nothing, and writes nothing', async () => {
+    it('fires revise once: the next save of the same editor is a rule, never a second move', async () => {
+      const author = await user();
+      const id = await approved(author);
+      expect(await revise(author, id, readyAkce({ title: 'Výlet do B' }))).toMatchObject({
+        ok: true,
+      });
+      const after = await snapshot(id);
+      expect(await save(author, id, readyAkce({ title: 'Výlet do Brna' }), 4)).toEqual({
+        ok: false,
+        error: notEditable,
+      });
+      expect(await revise(author, id, readyAkce({ title: 'Výlet do Brna' }), 4)).toEqual({
+        ok: false,
+        error: notEditable,
+      });
+      expect(await snapshot(id)).toEqual(after);
+    });
+
+    it('stays approved when the revise changes nothing, and writes nothing', async () => {
       const author = await user();
       const id = await approved(author);
       const before = await snapshot(id);
-      expect(await save(author, id, readyAkce(), 3)).toEqual({
+      expect(await revise(author, id, readyAkce())).toEqual({
         ok: true,
         value: { version: 3, state: 'approved' },
       });
@@ -215,7 +251,7 @@ describe('future.save', () => {
     it('refuses a change that would hand in an unfinished item, and stays approved', async () => {
       const author = await user();
       const id = await approved(author);
-      await refuses(id, () => save(author, id, readyAkce({ title: '' }), 3), {
+      await refuses(id, () => revise(author, id, readyAkce({ title: '' })), {
         code: 'invalid-input',
         fields: { 'content.title': 'required' },
       });
@@ -225,10 +261,47 @@ describe('future.save', () => {
     it('asks for the start date of a change to an approved akce', async () => {
       const author = await user();
       const id = await approved(author);
-      await refuses(id, () => save(author, id, readyAkce({ startDate: null, endDate: null }), 3), {
+      await refuses(id, () => revise(author, id, readyAkce({ startDate: null, endDate: null })), {
         code: 'invalid-input',
         fields: { 'content.startDate': 'required' },
       });
     });
+
+    it('asks for a salutation of each responsible person in the change', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const responsible = {
+        verb: 'vede',
+        behalfOf: '2.A',
+        people: [{ ...staffer, salutation: null }],
+      };
+      await refuses(id, () => revise(author, id, readyAkce({ responsible })), {
+        code: 'invalid-input',
+        fields: { 'content.responsible.people.0.salutation': 'required' },
+      });
+    });
+
+    it('asks for an end time after the start on a day that is both the first and the last', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const sameDay = readyAkce({ endDate: '2026-11-10', timeFrom: '14:00', timeTo: '13:00' });
+      await refuses(id, () => revise(author, id, sameDay), {
+        code: 'invalid-input',
+        fields: { 'content.timeTo': 'invalid' },
+      });
+    });
+  });
+
+  describe('the revise intent', () => {
+    it.each(['draft', 'returned'] as const)(
+      'is refused on a %s item, which only autosaves',
+      async (state) => {
+        const author = await user();
+        const id = await start(author, 'akce');
+        if (state !== 'draft') await moveTo(author, id, state);
+        const version = state === 'draft' ? 1 : 2;
+        await refuses(id, () => revise(author, id, readyAkce(), version), notEditable);
+      },
+    );
   });
 });

@@ -6,6 +6,7 @@ import {
   ScopeViolation,
   StaleVersion,
   type FutureContent,
+  type FutureCursor,
   type FutureItemRecord,
   type FutureItemRepo,
   type Principal,
@@ -15,7 +16,7 @@ import { parseResponsible } from '@/contracts';
 import { admits, type Scope } from '@/domain/policy';
 import { toIsoDate } from '@/domain/time';
 
-import { codePoints, newestFirst } from './events';
+import { codePoints } from './events';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
 
@@ -67,6 +68,10 @@ function stored(content: FutureContent): FutureContent {
   if (!responsible) throw new DatabaseFailure('db.parse.future_items');
   return structuredClone({ ...content, responsible: responsible.value });
 }
+
+/** `list`'s order: last changed first, ties to the higher id (uuid text compares as PostgreSQL's uuids). */
+const newer = (a: FutureCursor, b: FutureCursor) =>
+  b.updatedAt.getTime() - a.updatedAt.getTime() || (a.id < b.id ? 1 : -1);
 
 /** The future item repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemRepo {
@@ -135,13 +140,11 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         updatedAt: now,
       });
     },
-    async list(limit) {
+    async list(limit, before) {
       guard(tx, false);
       return [...futureItems.values()]
-        .filter(visible)
-        .sort((a, b) =>
-          newestFirst({ createdAt: a.updatedAt, id: a.id }, { createdAt: b.updatedAt, id: b.id }),
-        )
+        .filter((item) => visible(item) && (!before || newer(item, before) > 0))
+        .sort(newer)
         .slice(0, limit)
         .map(record);
     },
