@@ -1,0 +1,109 @@
+import { describe, expect, it } from 'vitest';
+
+import { POINT_LIMITS } from '@/domain/report';
+import { calDate, wallTime } from '@/domain/time';
+
+import {
+  createFutureInput,
+  futureContentToWire,
+  saveFutureInput,
+  type FutureContentValue,
+} from './future';
+
+const id = '00000000-0000-4000-8000-000000000001';
+const wire = (over: Record<string, unknown> = {}) => ({
+  title: 'Výlet do Prahy',
+  startDate: '2026-11-10',
+  endDate: null,
+  timeFrom: null,
+  timeTo: null,
+  campus: null,
+  place: null,
+  responsible: null,
+  expectsReport: false,
+  ...over,
+});
+const save = (over: Record<string, unknown> = {}) =>
+  saveFutureInput.safeParse({ id, expectedVersion: 1, content: wire(over) });
+const person = { salutation: 'pan', givenName: 'Jan', familyName: 'Novák' };
+
+/** The field paths a refused parse names, so a test pins which field was refused. */
+const refusedPaths = (result: ReturnType<typeof save>) =>
+  result.success ? [] : result.error.issues.map((issue) => issue.path.join('.'));
+
+describe('createFutureInput', () => {
+  it('takes a client ref and a kind, nothing else', () => {
+    const input = { clientRef: id, kind: 'akce' };
+    expect(createFutureInput.safeParse(input).success).toBe(true);
+    expect(createFutureInput.safeParse({ ...input, kind: 'report' }).success).toBe(false);
+    expect(createFutureInput.safeParse({ ...input, title: 'x' }).success).toBe(false);
+  });
+});
+
+describe('saveFutureInput', () => {
+  it('reads dates and times from ISO text into domain values', () => {
+    const result = save({ endDate: '2026-11-11', timeFrom: '08:00', timeTo: '14:30' });
+    expect(result.success && result.data.content).toMatchObject({
+      startDate: calDate(2026, 11, 10),
+      endDate: calDate(2026, 11, 11),
+      timeFrom: wallTime(8, 0),
+      timeTo: wallTime(14, 30),
+    });
+  });
+
+  it('refuses text that is no date or time, as an issue on that field', () => {
+    expect(refusedPaths(save({ startDate: '2026-13-40' }))).toEqual(['content.startDate']);
+    expect(refusedPaths(save({ timeFrom: '25:99' }))).toEqual(['content.timeFrom']);
+  });
+
+  it('refuses an end date before the start or with no start (future_items_dates)', () => {
+    expect(refusedPaths(save({ endDate: '2026-11-09' }))).toEqual(['content.endDate']);
+    expect(refusedPaths(save({ startDate: null, endDate: '2026-11-09' }))).toEqual([
+      'content.endDate',
+    ]);
+    expect(save({ endDate: '2026-11-10' }).success).toBe(true);
+  });
+
+  it('bounds the title, the place and the responsible people', () => {
+    expect(save({ title: 'x'.repeat(POINT_LIMITS.title) }).success).toBe(true);
+    expect(refusedPaths(save({ title: 'x'.repeat(POINT_LIMITS.title + 1) }))).toEqual([
+      'content.title',
+    ]);
+    expect(refusedPaths(save({ place: 'x'.repeat(POINT_LIMITS.place + 1) }))).toEqual([
+      'content.place',
+    ]);
+    const crowd = Array.from({ length: POINT_LIMITS.responsiblePeople + 1 }, () => person);
+    expect(refusedPaths(save({ responsible: { verb: 'vede', people: crowd } }))).toEqual([
+      'content.responsible.people',
+    ]);
+  });
+
+  it('takes the responsible people in the verbs the sentence knows, and no stray keys', () => {
+    expect(
+      save({ responsible: { verb: 'koordinuje', behalfOf: '2.A', people: [person] } }).success,
+    ).toBe(true);
+    expect(save({ responsible: { verb: 'řídí', people: [person] } }).success).toBe(false);
+    expect(save({ responsible: { verb: 'vede', people: [person], extra: 1 } }).success).toBe(false);
+    expect(save({ campus: 'jinde-nekde' }).success).toBe(false);
+    expect(save({ extra: 1 }).success).toBe(false);
+  });
+});
+
+describe('futureContentToWire', () => {
+  it('writes dates and times as the ISO text the save takes back', () => {
+    const content: FutureContentValue = {
+      title: 'Výlet',
+      startDate: calDate(2026, 11, 10),
+      endDate: null,
+      timeFrom: wallTime(8, 0),
+      timeTo: null,
+      campus: 'radlice',
+      place: 'v muzeu',
+      responsible: { verb: 'vede', people: [{ ...person, salutation: 'pan' }] },
+      expectsReport: true,
+    };
+    const out = futureContentToWire(content);
+    expect(out).toMatchObject({ startDate: '2026-11-10', endDate: null, timeFrom: '08:00' });
+    expect(saveFutureInput.safeParse({ id, expectedVersion: 1, content: out }).success).toBe(true);
+  });
+});

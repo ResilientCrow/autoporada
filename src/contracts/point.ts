@@ -151,8 +151,8 @@ const parsedText = <T>(max: number, parse: (text: string) => T) =>
         return z.NEVER;
       }
     });
-const isoDate = parsedText(10, parseIsoDate).nullable();
-const wallTime = parsedText(5, parseWallTime).nullable();
+export const isoDate = parsedText(10, parseIsoDate).nullable();
+export const wallTime = parsedText(5, parseWallTime).nullable();
 
 /** Every `Campus` once: the compiler refuses a missing or an unknown one. */
 const CAMPUSES: Readonly<Record<Campus, Campus>> = {
@@ -161,7 +161,7 @@ const CAMPUSES: Readonly<Record<Campus, Campus>> = {
   'na-vidouli': 'na-vidouli',
   jinde: 'jinde',
 };
-const campusSchema = z.enum(CAMPUSES) satisfies z.ZodType<Campus>;
+export const campusSchema = z.enum(CAMPUSES) satisfies z.ZodType<Campus>;
 
 const richTextSchema = z.strictObject({
   type: z.literal('text'),

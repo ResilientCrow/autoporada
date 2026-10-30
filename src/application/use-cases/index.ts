@@ -10,6 +10,14 @@ import {
   signOut,
   takeSignIn,
 } from './auth';
+import {
+  createFuture,
+  getFuture,
+  listFuture,
+  retractFuture,
+  saveFuture,
+  submitFuture,
+} from './future';
 import { issueWindow, setSkipped } from './issues';
 import { recentPeopleOf, searchGate } from './people';
 import {
@@ -39,6 +47,14 @@ export {
   signOut,
   takeSignIn,
 } from './auth';
+export {
+  createFuture,
+  getFuture,
+  listFuture,
+  retractFuture,
+  saveFuture,
+  submitFuture,
+} from './future';
 export { issueWindow, setSkipped } from './issues';
 export { recentPeopleOf, searchGate } from './people';
 export {
@@ -68,12 +84,15 @@ export const USE_CASES: readonly AnyUseCase[] = [
   cancelAccess,
   changeUserAccess,
   completeSignIn,
+  createFuture,
   createPoint,
   decideAccess,
   decidePoint,
+  getFuture,
   getPoint,
   getUser,
   issueWindow,
+  listFuture,
   listMyPoints,
   listPointTypes,
   listUsers,
@@ -86,13 +105,16 @@ export const USE_CASES: readonly AnyUseCase[] = [
   recordRejection,
   requestAccess,
   resolveSession,
+  retractFuture,
   retractPoint,
   reviewEditPoint,
+  saveFuture,
   savePoint,
   savePointType,
   searchGate,
   setSkipped,
   signOut,
+  submitFuture,
   submitPoint,
   takeSignIn,
   withdrawPoint,
