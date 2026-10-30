@@ -28,7 +28,7 @@ const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-
 /** Rules axe reports as "incomplete" (not failed) on gradients, pseudo-content and glyphs. */
 const MUST_COMPLETE = new Set(['color-contrast', 'target-size', 'label-content-name-mismatch']);
 
-interface Fixtures {
+export interface Fixtures {
   /** The violations seen on the app's own origin; the test fails at teardown if any remain. */
   cspViolations: CspViolation[];
   /** Waits until Next has hydrated the page: its inline bootstrap and its chunks both ran. */
@@ -288,6 +288,36 @@ export const withDates = (text: (a: string, b: string) => string) =>
 /** A labelled control by its copy; an optional one has „ (nepovinné)“ after its label. */
 export const field = (within: Page | Locator, label: string) =>
   within.getByLabel(new RegExp(`^${literal(label)}(\\s\\(nepovinné\\))?$`));
+
+/**
+ * The autosave's numbers. They are the machine's (`DEBOUNCE_MS` and `RETRY_STEPS`, in seconds, in
+ * src/ui/form/autosave/machine.ts, which no index exports): a test that moves Playwright's clock
+ * needs them, and a change there must change them here.
+ */
+export const DEBOUNCE_MS = 1_500;
+export const LADDER_MS = [5_000, 15_000, 60_000] as const;
+
+/**
+ * Stops the page's clock where it is (`page.clock.install()` came before the load), so no
+ * debounce and no retry fires until a test moves it: only a flush can save what is typed.
+ */
+export const freezeClock = (page: Page) => page.clock.pauseAt(new Date(Date.now() + 1_000));
+
+/** The status line after a save: „Uloženo v 14.05“. */
+export const SAVED = /^Uloženo v/;
+
+/** The banners (`role="alert"`) of a page, not Next's empty route announcer, which has the same role. */
+export const banners = (page: Page) =>
+  page.locator('[role="alert"]:not(#__next-route-announcer__)');
+
+/** Counts the server actions (autosaves and other calls) a page sends from now on, by the header that marks one. */
+export function countActions(page: Page): { readonly count: () => number } {
+  let n = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.headers()['next-action'] !== undefined) n += 1;
+  });
+  return { count: () => n };
+}
 
 /** The value of this context's session cookie: what the sessions table stores a digest of. */
 export async function sessionToken(context: BrowserContext): Promise<string> {

@@ -84,6 +84,14 @@ const PERSONAS: readonly Persona[] = [
   { subject: 'vraceny-m', role: 'submitter' },
   { subject: 'kontrolor-d', role: 'reviewer' },
   { subject: 'kontrolor-m', role: 'reviewer' },
+  // autosave.spec.ts and editor.spec.ts: one author per project, whose points each test makes and clears by id.
+  { subject: 'ukladani-d', role: 'submitter' },
+  { subject: 'ukladani-m', role: 'submitter' },
+  // m8-screens.spec.ts: the author of the listed states and the reviewer of the queue.
+  { subject: 'ukazky-d', role: 'submitter' },
+  { subject: 'ukazky-m', role: 'submitter' },
+  { subject: 'prohlizi-d', role: 'reviewer' },
+  { subject: 'prohlizi-m', role: 'reviewer' },
 ];
 
 interface Mapping {

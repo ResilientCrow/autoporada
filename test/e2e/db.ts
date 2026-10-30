@@ -82,41 +82,166 @@ const STATEMENTS = [
   },
 ];
 
+/** The states a point row holds. */
+type StoredState =
+  'draft' | 'submitted' | 'returned' | 'approved' | 'rejected' | 'withdrawn' | 'published';
+
+/** What a point is seeded as: a state, or `resubmitted`, a submitted point that was returned once and handed in again. */
+export type SeedState = StoredState | 'resubmitted';
+
+/** The events that lead there, as the machine would have written them (decisions have no actor in the seed). */
+const HISTORY: Readonly<
+  Record<SeedState, readonly (readonly [event: string, from: StoredState, to: StoredState])[]>
+> = {
+  draft: [],
+  submitted: [['submit', 'draft', 'submitted']],
+  returned: [
+    ['submit', 'draft', 'submitted'],
+    ['return', 'submitted', 'returned'],
+  ],
+  approved: [
+    ['submit', 'draft', 'submitted'],
+    ['approve', 'submitted', 'approved'],
+  ],
+  rejected: [
+    ['submit', 'draft', 'submitted'],
+    ['reject', 'submitted', 'rejected'],
+  ],
+  resubmitted: [
+    ['submit', 'draft', 'submitted'],
+    ['return', 'submitted', 'returned'],
+    ['submit', 'returned', 'submitted'],
+  ],
+  withdrawn: [['withdraw', 'draft', 'withdrawn']],
+  published: [
+    ['submit', 'draft', 'submitted'],
+    ['approve', 'submitted', 'approved'],
+    ['publish', 'approved', 'published'],
+  ],
+};
+
+/** The default note of a return or a rejection. */
+export const SEED_NOTE = 'Doplňte prosím vyjádření.';
+
 /**
  * A complete „Seminář“ of `email` (nothing left to fill in, so it can be handed in again) in the
- * state a journey starts from: `draft`, or `submitted` as if handed in a moment ago, with its
- * „submit“ event. It is not exactly what the UI makes: a submitted seed sets `earliest_monday`
- * without the issue row the UI's first submit ensures. Returns its id.
+ * state a journey starts from, with the events that lead there (a return or rejection carries
+ * `note`). It is not exactly what the UI makes: a point that was ever handed in has
+ * `earliest_monday` set (the Monday of the week two weeks from now, so it is the placement of every
+ * such point) without the issue row the UI's first submit ensures, and decisions have no actor.
+ * Returns its id.
  */
 export async function seedPoint(
   email: string,
   title: string,
-  state: 'draft' | 'submitted',
+  state: SeedState,
+  { note = SEED_NOTE, typeName = 'Seminář' }: { note?: string; typeName?: string } = {},
 ): Promise<string> {
   return withClient(async (client) => {
-    const submitted = state === 'submitted';
-    const { rows } = await client.query<{ id: string }>(
-      `WITH made AS (
-         INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
-                             bullets, statements, earliest_monday, submitted_at)
-         SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = 'Seminář'),
-                $3::point_state, $2, current_date + 30, 'Proběhl seminář.',
-                '{"type":"doc","content":[]}'::jsonb, $4::jsonb, $5::jsonb,
-                CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END,
-                CASE WHEN $6 THEN now() END
-           FROM users u WHERE u.email = $1
-         RETURNING id, author_id
-       ), event AS (
-         INSERT INTO point_events (point_id, actor_id, event, from_state, to_state)
-         SELECT id, author_id, 'submit', 'draft', 'submitted' FROM made WHERE $6
-       )
-       SELECT id FROM made`,
-      [email, title, state, JSON.stringify(PEOPLE_BULLETS), JSON.stringify(STATEMENTS), submitted],
+    const stored = HISTORY[state].at(-1)?.[2] ?? 'draft';
+    const handedIn = HISTORY[state].some(([event]) => event === 'submit');
+    const { rows } = await client.query<{ id: string; author_id: string }>(
+      `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
+                           bullets, statements, earliest_monday, submitted_at)
+       SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = $7),
+              $3::point_state, $2, current_date + 30, 'Proběhl seminář.',
+              '{"type":"doc","content":[]}'::jsonb, $4::jsonb, $5::jsonb,
+              CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END,
+              CASE WHEN $6 THEN now() END
+         FROM users u WHERE u.email = $1
+       RETURNING id, author_id`,
+      [
+        email,
+        title,
+        stored,
+        JSON.stringify(PEOPLE_BULLETS),
+        JSON.stringify(STATEMENTS),
+        handedIn,
+        typeName,
+      ],
     );
-    const id = rows[0]?.id;
-    if (!id) throw new Error(`no user with the e-mail of this journey: ${email}`);
-    return id;
+    const made = rows[0];
+    if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);
+    const events = HISTORY[state];
+    for (const [i, [event, from, to]] of events.entries()) {
+      const byAuthor = event === 'submit' || event === 'withdraw';
+      await client.query(
+        `INSERT INTO point_events (point_id, actor_id, event, from_state, to_state, note, created_at)
+         VALUES ($1, $2, $3, $4::point_state, $5::point_state, $6, now() - $7::int * interval '1 minute')`,
+        [
+          made.id,
+          byAuthor ? made.author_id : null,
+          event,
+          from,
+          to,
+          event === 'return' || event === 'reject' ? note : null,
+          events.length - i,
+        ],
+      );
+    }
+    return made.id;
   });
+}
+
+/** What the table holds of one point, for a test that checks what was stored. */
+export async function readPoint(id: string): Promise<{
+  version: number;
+  state: string;
+  title: string;
+  opening: string;
+  statements: { quote: string }[];
+  bullets: {
+    key: string;
+    label: string;
+    kind: string;
+    text?: string;
+    people?: { familyName: string }[];
+  }[];
+  eventDate: string | null;
+}> {
+  return withClient(async (client) => {
+    const { rows } = await client.query(
+      'SELECT version, state, title, opening, statements, bullets, to_char(event_date, \'YYYY-MM-DD\') AS "eventDate" FROM points WHERE id = $1',
+      [id],
+    );
+    if (!rows[0]) throw new Error(`no point ${id}`);
+    return rows[0];
+  });
+}
+
+/** The Monday a seeded point was first fit for (`earliest_monday`), as ISO. */
+export async function earliestMondayOf(id: string): Promise<string> {
+  return withClient(async (client) => {
+    const { rows } = await client.query<{ day: string }>(
+      "SELECT to_char(earliest_monday, 'YYYY-MM-DD') AS day FROM points WHERE id = $1",
+      [id],
+    );
+    if (!rows[0]?.day) throw new Error(`point ${id} was never handed in`);
+    return rows[0].day;
+  });
+}
+
+/** Withdraws a point behind the page's back, as a second tab would (the version rises with it). */
+export async function withdrawBehindBack(id: string): Promise<void> {
+  await withClient((client) =>
+    client.query("UPDATE points SET state = 'withdrawn', version = version + 1 WHERE id = $1", [
+      id,
+    ]),
+  );
+}
+
+/** Retitles a point behind the page's back, as another tab or a colleague would (the version rises with it). */
+export async function retitleBehindBack(id: string, title: string): Promise<void> {
+  await withClient((client) =>
+    client.query('UPDATE points SET title = $2, version = version + 1 WHERE id = $1', [id, title]),
+  );
+}
+
+/** Deletes these points (and their events): a test that shares its author with others clears only its own. */
+export async function forgetPoints(ids: readonly string[]): Promise<void> {
+  await withClient((client) =>
+    client.query('DELETE FROM points WHERE id = ANY($1::uuid[])', [ids]),
+  );
 }
 
 /** Deletes every point of this author (and, by cascade, their events), so a journey leaves nothing in the shared queue. */
@@ -138,4 +263,33 @@ export async function pointIdsOf(email: string): Promise<string[]> {
     );
     return rows.map((row) => row.id);
   });
+}
+
+/** `count` bare drafts of this author (a title only), made in one statement: enough to need a second page of „Moje body“. */
+export async function seedDrafts(email: string, count: number): Promise<void> {
+  await withClient(async (client) => {
+    const { rowCount } = await client.query(
+      `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, body, updated_at)
+       SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = 'Seminář'),
+              'draft', 'Rozpracovaný bod ' || n, '{"type":"doc","content":[]}'::jsonb,
+              date_trunc('milliseconds', now()) - n * interval '1 second'
+         FROM users u, generate_series(1, $2::int) AS n WHERE u.email = $1`,
+      [email, count],
+    );
+    if (rowCount !== count) throw new Error(`no user with the e-mail of this journey: ${email}`);
+  });
+}
+
+/**
+ * Opens this Monday's meeting again, behind the page's back: what a test that skipped it does
+ * after it. The row's version must rise by one (migration 0012), as it does for the app.
+ */
+export async function reopenMeeting(monday: string): Promise<void> {
+  await withClient((client) =>
+    client.query(
+      `UPDATE issues SET status = 'open', version = version + 1, updated_at = now()
+        WHERE monday = $1 AND status = 'skipped'`,
+      [monday],
+    ),
+  );
 }
