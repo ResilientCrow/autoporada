@@ -7,6 +7,7 @@ import { instantToWallClock } from '@/domain/time';
 
 import { ensureIssue, readWindow } from '../issues';
 import { pointWriteAccess } from './access';
+import { akceTarget, answeredAkce, writeReport } from './answered-akce';
 import { move, moveCheck } from './append-event';
 import { kindIssues, readinessIssues, typeSpec } from './checks';
 
@@ -36,7 +37,8 @@ async function firstSubmit(tx: Tx, point: PointRecord, now: Date): Promise<First
  * „Odeslat ke kontrole“ (design sections 8 and 9): the content the editor
  * holds is checked as a save checks it, then for readiness, and stored
  * without the empty optional bullets as the point moves to submitted. A
- * refusal writes nothing; readiness warnings never refuse.
+ * refusal writes nothing; readiness warnings never refuse. A report that
+ * answers an akce marks the akce's report as written (design section 12).
  */
 export const submitPoint = defineUseCase({
   name: 'points.submit',
@@ -54,11 +56,14 @@ export const submitPoint = defineUseCase({
       return fail({ code: 'invalid-input', fields: readinessIssues(problems) });
     }
 
-    const { patch, related } = await firstSubmit(tx, point, now);
+    const akce = await answeredAkce(tx, point);
+    const { patch, related = [] } = await firstSubmit(tx, point, now);
+    const named = akce ? [...related, akceTarget(akce)] : related;
     const { after } = await move(tx, point, 'submit', {
       patch: { ...patch, content: submittedContent(content, spec), submittedAt: now },
-      ...(related && { related }),
+      ...(named.length > 0 && { related: named }),
     });
+    if (akce) await writeReport(tx, akce);
     return ok({ version: after.version });
   },
 });

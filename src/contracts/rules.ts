@@ -11,6 +11,7 @@ export const RULE_CODES = [
   'draft-cap',
   'point-not-editable',
   'future-not-editable',
+  'report-not-due',
   'type-name-taken',
   'type-locked',
   'bullet-kind-fixed',

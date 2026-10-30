@@ -40,7 +40,7 @@ export function createPointWrites(
   const { principal, now } = ctx;
 
   return {
-    async create({ clientRef, kind, typeId, content }) {
+    async create({ clientRef, kind, typeId, content, futureItemId }) {
       if (principal.kind !== 'user') throw new ScopeViolation();
       const authorId = principal.actor.id;
       // Under READ COMMITTED a concurrent retry waits on points_author_client_ref_key,
@@ -52,6 +52,7 @@ export function createPointWrites(
           authorId,
           clientRef,
           typeId,
+          ...(futureItemId !== undefined && { futureItemId }),
           ...contentColumns(content),
           createdAt: now,
           updatedAt: now,

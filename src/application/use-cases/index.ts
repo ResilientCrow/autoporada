@@ -13,12 +13,14 @@ import {
 import {
   cancelFuture,
   createFuture,
+  declineFutureReport,
   decideFuture,
   getFuture,
   listFuture,
   queueFuture,
   retractFuture,
   saveFuture,
+  startFutureReport,
   submitFuture,
 } from './future';
 import { issueWindow, setSkipped } from './issues';
@@ -53,12 +55,14 @@ export {
 export {
   cancelFuture,
   createFuture,
+  declineFutureReport,
   decideFuture,
   getFuture,
   listFuture,
   queueFuture,
   retractFuture,
   saveFuture,
+  startFutureReport,
   submitFuture,
 } from './future';
 export { issueWindow, setSkipped } from './issues';
@@ -95,6 +99,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   createPoint,
   decideAccess,
   decideFuture,
+  declineFutureReport,
   decidePoint,
   getFuture,
   getPoint,
@@ -123,6 +128,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   searchGate,
   setSkipped,
   signOut,
+  startFutureReport,
   submitFuture,
   submitPoint,
   takeSignIn,

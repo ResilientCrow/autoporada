@@ -6,6 +6,7 @@ import {
   canEditPoint,
   FUTURE_MACHINE,
   POINT_MACHINE,
+  REPORT_MACHINE,
   type FutureEvent,
   type FutureState,
   type PointEvent,
@@ -41,6 +42,8 @@ export type Check =
   | { readonly action: 'future.view'; readonly item: FutureView }
   | { readonly action: 'future.edit'; readonly item: FutureRef }
   | { readonly action: 'future.transition'; readonly item: FutureRef; readonly event: FutureEvent }
+  /** „Napsat zprávu“ and „Zprávu psát nebudu“ on an akce: the author's, once it is approved. */
+  | { readonly action: 'future.report'; readonly item: FutureRef }
   | { readonly action: 'review.queue' }
   | { readonly action: 'issue.preview' }
   /** Přítomni/Hosté, POKYNY, ohlasy, Příloha 2 */
@@ -63,6 +66,9 @@ function reviewActor(actor: Actor, owner: Owner): ReviewActor {
   const isAuthor = 'isAuthor' in owner ? owner.isAuthor : owner.authorId === actor.id;
   return { kind: 'user', role: actor.role, isAuthor };
 }
+
+/** Writing the report is the author's; declining it too (a reviewer's decline is not offered). */
+const canReport = (a: ReviewActor) => REPORT_MACHINE.write.allowed(a);
 
 const has = (actor: Actor, minimum: Role) => atLeast(actor.role, minimum);
 /** Drafts stay with their author: reviewers see only what was handed in (SSU-5). */
@@ -123,6 +129,8 @@ export function can(subject: Actor, check: Check): boolean {
         check.item.state,
         reviewActor(actor, check.item),
       ).includes(check.event);
+    case 'future.report':
+      return check.item.state === 'approved' && canReport(reviewActor(actor, check.item));
     case 'review.queue':
     case 'issue.preview':
       return has(actor, 'reviewer');

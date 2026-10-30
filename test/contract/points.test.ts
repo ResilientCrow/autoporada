@@ -136,6 +136,7 @@ describe('PointRepo (port contract)', () => {
       typeId,
       state: 'draft',
       content: FULL,
+      futureItemId: null,
       earliestMonday: null,
       submittedAt: null,
       version: 1,
@@ -146,6 +147,38 @@ describe('PointRepo (port contract)', () => {
     expect(again).toEqual({ point: first.point, inserted: false });
     expect(theirs.inserted).toBe(true);
     expect(theirs.point.id).not.toBe(first.point.id);
+  });
+
+  it('links a report to the akce it answers and reads the link back', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const akce = await world.tx(world.as(author), async (tx) => {
+      const { item } = await tx.futureItems.create({
+        clientRef: nextRef(),
+        kind: 'akce',
+        content: {
+          title: 'Výlet',
+          startDate: calDate(2026, 11, 10),
+          endDate: null,
+          timeFrom: null,
+          timeTo: null,
+          campus: null,
+          place: null,
+          responsible: null,
+          expectsReport: true,
+        },
+      });
+      await tx.audit.record({
+        action: 'future.save',
+        target: { type: 'future_item', id: item.id },
+      });
+      return item;
+    });
+    const { point } = await create(world.as(author), { futureItemId: akce.id });
+    expect(point.futureItemId).toBe(akce.id);
+    expect(await read(world.as(author), (tx) => tx.points.get(point.id))).toEqual(point);
+    // The link is fixed at the create: a later save keeps it.
+    const saved = await update(world.as(author), point, { content: FULL });
+    expect(saved.futureItemId).toBe(akce.id);
   });
 
   it('reads back finance and pokyn points, which have no type', async () => {

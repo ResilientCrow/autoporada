@@ -70,6 +70,12 @@ export {
   type FutureContentValue,
 } from './future';
 export {
+  declineFutureReportInput,
+  declineFutureReportOutput,
+  startFutureReportInput,
+  startFutureReportOutput,
+} from './future-report';
+export {
   cancelFutureInput,
   cancelFutureOutput,
   decideFutureInput,

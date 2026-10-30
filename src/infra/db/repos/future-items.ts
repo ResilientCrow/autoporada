@@ -197,12 +197,14 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
       const [row] = await byId(id, reviewableFutureItems(ctx)).for('update');
       return row ? toRecord(row) : null;
     },
-    async update(id, expectedVersion, { content, state, submittedAt }) {
+    async update(id, expectedVersion, { content, state, submittedAt, reportState, reportPointId }) {
       return versioned(id, expectedVersion, writableFutureItems(ctx), {
         // Named one by one: a wider object passed as a patch cannot touch other columns.
         ...(content && contentColumns(content)),
         ...(state !== undefined && { state }),
         ...(submittedAt !== undefined && { submittedAt }),
+        ...(reportState !== undefined && { reportState }),
+        ...(reportPointId !== undefined && { reportPointId }),
       });
     },
     async decide(id, expectedVersion, state) {

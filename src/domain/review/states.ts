@@ -1,4 +1,5 @@
 import { atLeast, type Role } from '@/domain/actor';
+import { compareDates, type CalDate } from '@/domain/time';
 
 import type { Machine } from './machine';
 
@@ -130,6 +131,28 @@ export const REPORT_MACHINE: Machine<ReportState, ReportEvent, ReviewActor> = {
   /** „Zpráva nebude“ */
   decline: { from: ['none', 'prompted'], to: 'declined', allowed: (a) => author(a) || reviewer(a) },
 };
+
+/** What decides whether an akce is waiting for its report. */
+interface ReportFacts {
+  readonly state: FutureState;
+  readonly expectsReport: boolean;
+  readonly reportState: ReportState;
+  /** The end date, or the start date of a one-day akce. */
+  readonly lastDay: CalDate;
+}
+
+/**
+ * True when the author is owed a report: an approved akce that expects one, whose report is neither
+ * written nor declined, from the day after its last day on (`today` is the Prague day).
+ */
+export function reportDue(akce: ReportFacts, today: CalDate): boolean {
+  return (
+    akce.state === 'approved' &&
+    akce.expectsReport &&
+    REPORT_MACHINE.write.from.includes(akce.reportState) &&
+    compareDates(akce.lastDay, today) < 0
+  );
+}
 
 // ── Issues ─────────────────────────────────────────────────────────────────
 

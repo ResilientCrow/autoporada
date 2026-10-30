@@ -58,6 +58,9 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
   if (row.typeId !== null && !state.pointTypes.has(row.typeId)) {
     throw refusedBy('points_type_id_point_types_id_fk');
   }
+  if (row.futureItemId !== null && !state.futureItems.has(row.futureItemId)) {
+    throw refusedBy('points_future_item_id_future_items_id_fk');
+  }
 }
 
 /** Whether the principal's read scope admits the point: the fake of `visiblePoints`. */
@@ -113,7 +116,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   };
 
   return {
-    async create({ clientRef, kind, typeId, content }) {
+    async create({ clientRef, kind, typeId, content, futureItemId }) {
       guard(tx, true);
       if (principal.kind !== 'user') throw new ScopeViolation();
       const authorId = principal.actor.id;
@@ -128,6 +131,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         authorId,
         clientRef,
         typeId,
+        futureItemId: futureItemId ?? null,
         state: 'draft',
         content: checked,
         earliestMonday: null,

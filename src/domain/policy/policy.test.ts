@@ -30,6 +30,7 @@ type Simple = Exclude<
   | 'future.view'
   | 'future.edit'
   | 'future.transition'
+  | 'future.report'
 >;
 
 /** Who may do each resource-free action: the expected permission matrix. */
@@ -332,6 +333,38 @@ describe('future items', () => {
   });
 });
 
+describe('future.report', () => {
+  const submitter = actor('submitter');
+  const report = (actorOf: Actor, authorId: string, state: FutureState) =>
+    can(actorOf, {
+      action: 'future.report',
+      item: { authorId, kind: 'akce', state },
+    });
+
+  it('is the author’s alone, on an approved akce', () => {
+    const states: readonly FutureState[] = [
+      'draft',
+      'submitted',
+      'returned',
+      'approved',
+      'rejected',
+      'withdrawn',
+      'cancelled',
+    ];
+    for (const state of states) {
+      expect(report(submitter, submitter.id, state)).toBe(state === 'approved');
+    }
+    for (const role of ROLES) {
+      expect(report(actor(role), 'someone-else', 'approved')).toBe(false);
+    }
+  });
+
+  it('is refused to a deactivated author', () => {
+    const other = actor('submitter', { status: 'deactivated' });
+    expect(report(other, other.id, 'approved')).toBe(false);
+  });
+});
+
 describe('owner given as isAuthor', () => {
   const POINT_STATES: readonly PointState[] = [
     'draft',
@@ -393,7 +426,13 @@ describe('owner given as isAuthor', () => {
           ),
         ];
       });
-      return [...points, ...futures];
+      const reports = FUTURE_STATES.map((state) =>
+        entry(`future.report ${who} ${state}`, {
+          action: 'future.report',
+          item: { ...owner(isAuthor), state, kind: 'akce' as const },
+        }),
+      );
+      return [...points, ...futures, ...reports];
     });
   }
 

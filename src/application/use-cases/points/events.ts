@@ -14,6 +14,7 @@ const POINT: AuditShape<PointRecord> = {
   typeId: 'value',
   state: 'value',
   content: 'omit',
+  futureItemId: 'omit',
   earliestMonday: (monday) => monday && toIsoDate(monday),
   submittedAt: 'value',
   version: 'omit',

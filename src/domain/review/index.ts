@@ -25,6 +25,7 @@ export {
   ISSUE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,
+  reportDue,
   REVIEW_DECISIONS,
   type AccessEvent,
   type AccessState,

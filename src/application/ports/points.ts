@@ -12,6 +12,8 @@ export interface PointRecord {
   readonly typeId: string | null;
   readonly state: PointState;
   readonly content: PointContent;
+  /** The akce a report answers; null for every other point. Fixed at the create. */
+  readonly futureItemId: string | null;
   /** Set once, at the first submit. */
   readonly earliestMonday: CalDate | null;
   /** Set at every submit, cleared by a retract: the point is handed in, or was until a decision. */
@@ -27,6 +29,8 @@ export interface NewPoint {
   readonly kind: PointKind;
   readonly typeId: string | null;
   readonly content: PointContent;
+  /** The akce the report answers. */
+  readonly futureItemId?: string;
 }
 
 /** What `beginCreate` reports, under the lock. */

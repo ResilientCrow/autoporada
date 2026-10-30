@@ -63,6 +63,10 @@ export interface FutureItemPatch {
   readonly state?: FutureState;
   /** Null takes the hand-in back (a retract). */
   readonly submittedAt?: Date | null;
+  /** Where the report stands; `future_items_report_needs_expect` refuses one on an item that expects none. */
+  readonly reportState?: ReportState;
+  /** The draft report started for the akce. */
+  readonly reportPointId?: string;
 }
 
 /**

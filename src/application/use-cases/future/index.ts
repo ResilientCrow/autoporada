@@ -7,3 +7,4 @@ export { submitFuture } from './submit';
 export { cancelFuture } from './cancel';
 export { decideFuture } from './decide';
 export { queueFuture } from './queue';
+export { declineFutureReport, startFutureReport } from './start-report';

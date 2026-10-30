@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ROLES, type Role } from '@/domain/actor';
+import { calDate } from '@/domain/time';
 
 import {
   ACCESS_MACHINE,
@@ -14,6 +15,7 @@ import {
   ISSUE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,
+  reportDue,
   transition,
   type PointState,
   type ReviewActor,
@@ -246,5 +248,34 @@ describe('access requests', () => {
       ok: true,
       to: 'blocked',
     });
+  });
+});
+
+describe('reportDue', () => {
+  const akce = { state: 'approved', expectsReport: true, reportState: 'none' } as const;
+  const lastDay = calDate(2026, 11, 11);
+
+  it('is due the day after the last day, not on it or before', () => {
+    expect(reportDue({ ...akce, lastDay }, calDate(2026, 11, 10))).toBe(false);
+    expect(reportDue({ ...akce, lastDay }, calDate(2026, 11, 11))).toBe(false);
+    expect(reportDue({ ...akce, lastDay }, calDate(2026, 11, 12))).toBe(true);
+    expect(reportDue({ ...akce, lastDay }, calDate(2027, 3, 1))).toBe(true);
+  });
+
+  it('stays due while the author was prompted', () => {
+    expect(reportDue({ ...akce, reportState: 'prompted', lastDay }, calDate(2026, 11, 12))).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    ['written', { reportState: 'written' }],
+    ['declined', { reportState: 'declined' }],
+    ['not expected', { expectsReport: false }],
+    ['draft', { state: 'draft' }],
+    ['submitted', { state: 'submitted' }],
+    ['cancelled', { state: 'cancelled' }],
+  ] as const)('is not due when %s', (_name, over) => {
+    expect(reportDue({ ...akce, ...over, lastDay }, calDate(2026, 12, 1))).toBe(false);
   });
 });

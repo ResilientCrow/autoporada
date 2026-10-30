@@ -23,7 +23,6 @@ import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './
 /**
  * What migrations 0019 and 0020 refuse, in PostgreSQL's order: the CHECKs by name, then the
  * foreign key. future_items_campus cannot be hit through the typed port, and nor can
- * future_items_report_needs_expect, whose report state no port method writes yet, or
  * future_items_responsible, which the contract's parse (db.parse.future_items) refuses first.
  */
 function refuse(state: FakeState, row: FakeFutureItem): void {
@@ -34,6 +33,9 @@ function refuse(state: FakeState, row: FakeFutureItem): void {
   if (c.expectsReport && row.kind !== 'akce') throw refusedBy('future_items_expects_akce');
   if (codePoints(c.title) > 200 || codePoints(c.place ?? '') > 120) {
     throw refusedBy('future_items_lengths');
+  }
+  if (row.reportState !== 'none' && !c.expectsReport) {
+    throw refusedBy('future_items_report_needs_expect');
   }
   const complete = c.title !== '' && c.startDate !== null && row.submittedAt !== null;
   if (['submitted', 'approved', 'cancelled'].includes(row.state) && !complete) {
@@ -128,7 +130,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, true);
       return find(id, reviewable);
     },
-    async update(id, expectedVersion, { content, state, submittedAt }) {
+    async update(id, expectedVersion, { content, state, submittedAt, reportState, reportPointId }) {
       guard(tx, true);
       const values = content && stored(content);
       const before = futureItems.get(id);
@@ -140,6 +142,8 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         content: values ?? before.content,
         state: state ?? before.state,
         submittedAt: submittedAt === undefined ? before.submittedAt : submittedAt,
+        reportState: reportState ?? before.reportState,
+        reportPointId: reportPointId ?? before.reportPointId,
         version: before.version + 1,
         updatedAt: now,
       });

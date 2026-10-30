@@ -164,6 +164,20 @@ describe('FutureItemRepo (port contract)', () => {
     expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(retracted);
   });
 
+  it('writes the report state and leaves the rest of the item alone', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const { item } = await create(world.as(author), { content: FULL });
+    world.clock.advance(60_000);
+    const declined = await update(world.as(author), item, { reportState: 'declined' });
+    expect(declined).toEqual({
+      ...item,
+      reportState: 'declined',
+      version: 2,
+      updatedAt: world.clock.now(),
+    });
+    expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(declined);
+  });
+
   it('clears an optional field when the content says null', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author), { content: FULL });
@@ -293,6 +307,18 @@ describe('FutureItemRepo (port contract)', () => {
       const refused = create(world.as(author), { content, ...over });
       expect(await failure(refused)).toEqual(new DatabaseFailure(`db.constraint.${constraint}`));
       expect(await read(cli, (tx) => tx.futureItems.list(10))).toEqual([]);
+    });
+
+    it('future_items_report_needs_expect: a report state on an item that expects none', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const { item } = await create(world.as(author), {
+        content: { ...FULL, expectsReport: false },
+      });
+      const refused = update(world.as(author), item, { reportState: 'written' });
+      expect(await failure(refused)).toEqual(
+        new DatabaseFailure('db.constraint.future_items_report_needs_expect'),
+      );
+      expect(await read(cli, (tx) => tx.futureItems.get(item.id))).toEqual(item);
     });
 
     it('accepts the lengths at their caps', async () => {
