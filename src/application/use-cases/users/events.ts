@@ -13,6 +13,7 @@ export const USER_ACCESS: AuditShape<UserRecord> = {
   role: 'value',
   isStudent: 'value',
   status: 'value',
+  remindDeadline: 'omit',
   version: 'omit',
   createdAt: 'omit',
   updatedAt: 'omit',

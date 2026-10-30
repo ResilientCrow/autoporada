@@ -9,6 +9,7 @@ export { issues } from './issues';
 export { people } from './people';
 export { pointTypes } from './pointTypes';
 export { points } from './points';
+export { profile } from './profile';
 export { review } from './review';
 export { status } from './status';
 export { users } from './users';

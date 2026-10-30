@@ -10,7 +10,12 @@ describe('profile.me', () => {
     const user = await world.seed.user({ displayName: 'Jana Nováková' });
     expect(await world.run(me, world.as(user), {})).toEqual({
       ok: true,
-      value: { displayName: 'Jana Nováková', role: 'pending', isStudent: false },
+      value: {
+        displayName: 'Jana Nováková',
+        role: 'pending',
+        isStudent: false,
+        remindDeadline: true,
+      },
     });
   });
 });

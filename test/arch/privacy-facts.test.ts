@@ -219,6 +219,7 @@ const REVIEWED_COLUMNS = {
     'role',
     'isStudent',
     'status',
+    'remindDeadline',
     'version',
     'createdAt',
     'updatedAt',

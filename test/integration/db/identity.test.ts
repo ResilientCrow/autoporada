@@ -187,3 +187,19 @@ describe('ending sessions on access changes', () => {
     );
   });
 });
+
+describe('users.remind_deadline', () => {
+  it('is on for everyone until they switch it off, and never null', async () => {
+    const id = await insertUser();
+    const [row] = await database.db
+      .select({ on: users.remindDeadline })
+      .from(users)
+      .where(eq(users.id, id));
+    expect(row?.on).toBe(true);
+    const clear = database.db
+      .update(users)
+      .set({ remindDeadline: null as never })
+      .where(eq(users.id, id));
+    expect(await pgErrorOf(clear)).toMatchObject({ code: '23502' });
+  });
+});

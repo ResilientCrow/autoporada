@@ -11,6 +11,11 @@ export const me = defineUseCase({
   async execute({ tx, actor }) {
     const user = await tx.users.get(actor.id);
     if (!user) return fail({ code: 'not-found' });
-    return ok({ displayName: user.displayName, role: user.role, isStudent: user.isStudent });
+    return ok({
+      displayName: user.displayName,
+      role: user.role,
+      isStudent: user.isStudent,
+      remindDeadline: user.remindDeadline,
+    });
   },
 });

@@ -9,6 +9,7 @@ import { nav } from './nav';
 import { people } from './people';
 import { pointTypes } from './pointTypes';
 import { points } from './points';
+import { profile } from './profile';
 import { privacy } from './privacy';
 import { review } from './review';
 import { shell } from './shell';
@@ -33,6 +34,7 @@ export const cs = {
   gallery,
   issues,
   points,
+  profile,
   future,
   pointTypes,
   review,

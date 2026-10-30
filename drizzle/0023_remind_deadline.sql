@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "remind_deadline" boolean DEFAULT true NOT NULL;

@@ -36,7 +36,7 @@ export const processingSections = [
           {
             term: 'Lidé, kteří se přihlásí',
             value:
-              'jméno, e-mail, identifikátor účtu Microsoft, pracovní zařazení a\u00A0oddělení, role v\u00A0Autoporadě, zda jde o\u00A0studenta a\u00A0stav účtu',
+              'jméno, e-mail, identifikátor účtu Microsoft, pracovní zařazení a\u00A0oddělení, role v\u00A0Autoporadě, zda jde o\u00A0studenta, stav účtu a\u00A0zda chcete e-mailovou připomínku uzávěrky',
           },
           {
             term: 'Žádosti o\u00A0přístup',

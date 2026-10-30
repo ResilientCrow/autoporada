@@ -39,7 +39,7 @@ import {
   withdrawPoint,
 } from './points';
 import { listPointTypes, savePointType } from './point-types';
-import { me } from './profile';
+import { me, setReminders } from './profile';
 import { changeUserAccess, getUser, listUsers } from './users';
 
 export { cancelAccess, decideAccess, myAccess, pendingAccess, requestAccess } from './access';
@@ -81,7 +81,7 @@ export {
   withdrawPoint,
 } from './points';
 export { listPointTypes, savePointType } from './point-types';
-export { me } from './profile';
+export { me, setReminders } from './profile';
 export { changeUserAccess, getUser, listUsers } from './users';
 
 /**
@@ -126,6 +126,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   savePoint,
   savePointType,
   searchGate,
+  setReminders,
   setSkipped,
   signOut,
   startFutureReport,

@@ -35,6 +35,7 @@ const user = (role: Role, status: UserStatus = 'active', id = 'user'): UserRecor
   role,
   isStudent: false,
   status,
+  remindDeadline: true,
   version: 1,
   createdAt: AT,
   updatedAt: AT,
