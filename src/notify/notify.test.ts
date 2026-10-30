@@ -25,6 +25,7 @@ const VIEWS = {
   'point.returned': {},
   'point.approved': {},
   'point.rejected': {},
+  'report.prompt': {},
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -79,6 +80,12 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: 'Autoporada: bod nebyl přijat',
     text: letter(
       `váš bod pro poradu vedení nebyl přijat. Důvod najdete v${NB}aplikaci:\n\n${POINTS}`,
+    ),
+  },
+  'report.prompt': {
+    subject: `Autoporada: napište zprávu z${NB}akce`,
+    text: letter(
+      `akce, kterou jste zapsali do přehledu, proběhla. Zprávu do porady můžete napsat v${NB}aplikaci:\n\n${POINTS}`,
     ),
   },
 };

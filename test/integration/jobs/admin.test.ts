@@ -53,7 +53,13 @@ describe('the jobs admin (as the owner, the way the CLI connects)', () => {
       expect(byQueue['mail.send']).toEqual({ completed: 1, failed: 1 });
       expect(byQueue['dead']).toEqual({ created: 1 });
       expect(byQueue['mail.prune']).toEqual({});
-      expect(counts.map((c) => c.queue).sort()).toEqual(['dead', 'mail.prune', 'mail.send']);
+      expect(byQueue['future.report-prompt']).toEqual({});
+      expect(counts.map((c) => c.queue).sort()).toEqual([
+        'dead',
+        'future.report-prompt',
+        'mail.prune',
+        'mail.send',
+      ]);
       expect(await admin((a) => Promise.resolve(a.deadQueue))).toBe('dead');
     },
     SLOW,

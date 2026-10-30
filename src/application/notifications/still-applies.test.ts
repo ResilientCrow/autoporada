@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { AccessRequestRecord, PointEventName, UserRecord } from '@/application/ports';
 import type { Role, UserStatus } from '@/domain/actor';
-import { ACCESS_STATES, type AccessState, type PointState } from '@/domain/review';
+import {
+  ACCESS_STATES,
+  type AccessState,
+  type FutureState,
+  type PointState,
+  type ReportState,
+} from '@/domain/review';
 
 import { stillApplies } from './index';
 
@@ -201,6 +207,44 @@ describe('stillApplies', () => {
     });
   });
 
+  describe('report.prompt about an akce', () => {
+    const item = (state: FutureState, reportState: ReportState, authorId = 'user') => ({
+      id: 'item',
+      authorId,
+      state,
+      reportState,
+    });
+
+    it('applies while the akce is approved and no report was written or declined', () => {
+      expect(stillApplies('report.prompt', item('approved', 'none'), MEMBER)).toBe(true);
+    });
+
+    it.each(['written', 'declined'] as const)('drops once the report is %s', (reportState) => {
+      expect(stillApplies('report.prompt', item('approved', reportState), MEMBER)).toBe(false);
+    });
+
+    it.each(['draft', 'submitted', 'returned', 'rejected', 'withdrawn', 'cancelled'] as const)(
+      'drops once the akce is %s',
+      (state) => {
+        expect(stillApplies('report.prompt', item(state, 'none'), MEMBER)).toBe(false);
+      },
+    );
+
+    it('goes only to the author, while they can sign in', () => {
+      expect(
+        stillApplies(
+          'report.prompt',
+          item('approved', 'none'),
+          user('submitter', 'active', 'other'),
+        ),
+      ).toBe(false);
+      expect(
+        stillApplies('report.prompt', item('approved', 'none'), user('submitter', 'deactivated')),
+      ).toBe(false);
+      expect(stillApplies('report.prompt', item('approved', 'none'), user('pending'))).toBe(false);
+    });
+  });
+
   it.each([
     ['access.approved', MEMBER],
     ['access.rejected', PENDING],
@@ -210,6 +254,7 @@ describe('stillApplies', () => {
     ['point.returned', MEMBER],
     ['point.approved', MEMBER],
     ['point.rejected', MEMBER],
+    ['report.prompt', MEMBER],
   ] as const)(
     'never sends %s about a missing subject (a purged request, a deleted point)',
     (template, recipient) => {

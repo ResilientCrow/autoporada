@@ -27,6 +27,13 @@ export const CRON: readonly CronEntry[] = [
     data: {},
     catchUp: 'once',
   },
+  {
+    job: 'future.report-prompt',
+    key: 'daily',
+    schedule: { daily: { hour: 8, minute: 0 } },
+    data: {},
+    catchUp: 'once',
+  },
 ];
 
 /** The cron string is derived, never typed: `10 5 * * *`, `*\/15 * * * *`. */

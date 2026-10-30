@@ -47,6 +47,12 @@ const APPLIES: {
   'point.returned': pointDecided('return', ['returned']),
   'point.approved': pointDecided('approve', ['approved', 'published']),
   'point.rejected': pointDecided('reject', ['rejected']),
+  /** The author is asked while the akce stands approved and its report is neither written nor declined. */
+  'report.prompt': (item, recipient) =>
+    item.state === 'approved' &&
+    item.reportState === 'none' &&
+    item.authorId === recipient.id &&
+    member(recipient),
 };
 
 /** A missing subject (a decided request purged on 1 September, a deleted point) never applies. */

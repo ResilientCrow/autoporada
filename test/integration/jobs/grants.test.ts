@@ -334,14 +334,35 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
   });
 });
 
-describe('the decision mails’ column grants (ADR 0020: the worker reads no text people wrote)', () => {
+describe('the mails’ column grants (ADR 0020: the worker reads no text people wrote)', () => {
   const GRANTED: Readonly<Record<string, readonly string[]>> = {
     points: ['author_id', 'id', 'state'],
     point_events: ['event', 'id', 'point_id', 'to_state'],
+    future_items: [
+      'author_id',
+      'end_date',
+      'expects_report',
+      'id',
+      'report_state',
+      'start_date',
+      'state',
+    ],
   };
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
     point_events: ['note', 'before', 'edited_fields'],
+    future_items: [
+      'title',
+      'responsible',
+      'place',
+      'client_ref',
+      'kind',
+      'campus',
+      'time_from',
+      'time_to',
+      'report_point_id',
+      'submitted_at',
+    ],
   };
 
   /** Whether autoporada_worker holds `privilege` on each named column of `table`. */

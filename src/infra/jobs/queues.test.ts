@@ -50,6 +50,23 @@ describe('QUEUES', () => {
     });
   });
 
+  it('retries future.report-prompt 3 times from 5 min up to an hour, well inside its 2 days', () => {
+    expect(spec('future.report-prompt')).toEqual({
+      name: 'future.report-prompt',
+      policy: 'standard',
+      options: {
+        retryLimit: 3,
+        retryDelay: 300,
+        retryBackoff: true,
+        retryDelayMax: 3600,
+        expireInSeconds: 600,
+        retentionSeconds: 2 * DAY,
+        deleteAfterSeconds: 2 * DAY,
+        deadLetter: 'dead',
+      },
+    });
+  });
+
   it('creates the dead-letter queue before any queue that names it', () => {
     const names = QUEUES.map((queue) => queue.name);
     for (const queue of QUEUES) {

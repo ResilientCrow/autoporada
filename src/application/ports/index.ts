@@ -35,8 +35,10 @@ export type {
   FutureCursor,
   FutureItemRecord,
   FutureItemRepo,
+  FutureMailFacts,
   NewFutureItem,
   QueuedFuture,
+  ReportPromptItem,
 } from './future-items';
 export type {
   AuthorizationRequest,

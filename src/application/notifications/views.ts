@@ -20,6 +20,7 @@ const VIEWS: {
   'point.returned': none,
   'point.approved': none,
   'point.rejected': none,
+  'report.prompt': none,
 };
 
 /** The template's variables, read from its subject. */

@@ -1,5 +1,6 @@
 import type {
   AccessRequestRecord,
+  FutureMailFacts,
   PointEventMailFacts,
   PointMailFacts,
   Tx,
@@ -24,10 +25,15 @@ export interface MailSubjects {
   readonly 'point.returned': PointDecision;
   readonly 'point.approved': PointDecision;
   readonly 'point.rejected': PointDecision;
+  /** The akce the author is asked to write a report for. */
+  readonly 'report.prompt': FutureMailFacts;
 }
 
 /** The repositories a subject is read from. */
-export type SubjectReaders = Pick<Tx, 'accessRequests' | 'users' | 'points' | 'pointEvents'>;
+export type SubjectReaders = Pick<
+  Tx,
+  'accessRequests' | 'users' | 'points' | 'pointEvents' | 'futureItems'
+>;
 
 const request = (tx: SubjectReaders, id: string) => tx.accessRequests.get(id);
 const user = (tx: SubjectReaders, id: string) => tx.users.get(id);
@@ -50,6 +56,8 @@ const SUBJECTS: {
   'point.returned': decision,
   'point.approved': decision,
   'point.rejected': decision,
+  /** By the worker's granted columns only. */
+  'report.prompt': (tx, id) => tx.futureItems.mailFacts(id),
 };
 
 /** Reads the subject a `mail.send` job names, by the loader of its template. */

@@ -40,6 +40,14 @@ describe('viewOf', () => {
     expect(viewOf('access.blocked', request(DECIDED))).toEqual({});
     expect(viewOf('access.granted', USER)).toEqual({});
     expect(viewOf('mail.check', USER)).toEqual({});
+    expect(
+      viewOf('report.prompt', {
+        id: 'item',
+        authorId: 'user',
+        state: 'approved',
+        reportState: 'none',
+      }),
+    ).toEqual({});
     const decision = {
       event: { id: 'event', pointId: 'point', event: 'return', toState: 'returned' },
       point: { id: 'point', authorId: 'user', state: 'returned' },

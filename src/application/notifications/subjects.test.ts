@@ -4,12 +4,14 @@ import { system } from '@/application/ports';
 import { decidePoint } from '@/application/use-cases';
 import { TEMPLATE_NAMES, type TemplateName } from '@/notify';
 
+import { futureFixtures } from '../../../test/support/future';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { loadSubject } from './index';
 
 const world = setupWorld();
 const { start, moveTo, snapshot } = pointFixtures(world);
+const { start: futureStart, moveTo: futureMoveTo } = futureFixtures(world);
 const MISSING = '00000000-0000-7000-8000-00000000dead';
 
 /** Reads as the worker does, in one transaction. */
@@ -66,6 +68,18 @@ describe('loadSubject', () => {
     }
     // The subject is the event, never the point it belongs to.
     expect(await load('point.rejected', id)).toBeNull();
+  });
+
+  it('reads the author and the standing of the akce for the report prompt', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const id = await futureStart(author);
+    await futureMoveTo(author, id, 'approved');
+    expect(await load('report.prompt', id)).toEqual({
+      id,
+      authorId: author.id,
+      state: 'approved',
+      reportState: 'none',
+    });
   });
 
   it.each(TEMPLATE_NAMES)('gives null for a missing subject of %s', async (template) => {

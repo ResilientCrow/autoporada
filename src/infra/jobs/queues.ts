@@ -63,6 +63,20 @@ export const QUEUE_SPECS = {
       deadLetter: DEAD_QUEUE,
     },
   },
+  // Sent by the cron registry daily; it enqueues the prompt mails and reconciles to today.
+  'future.report-prompt': {
+    policy: 'standard',
+    options: {
+      retryLimit: 3,
+      retryDelay: 300,
+      retryBackoff: true,
+      retryDelayMax: 3600,
+      expireInSeconds: 600,
+      retentionSeconds: 2 * DAY,
+      deleteAfterSeconds: 2 * DAY,
+      deadLetter: DEAD_QUEUE,
+    },
+  },
 } satisfies Record<QueueName, QueueSettings>;
 
 /**

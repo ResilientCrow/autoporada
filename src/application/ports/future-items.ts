@@ -46,6 +46,20 @@ export interface QueuedFuture {
   readonly revised: boolean;
 }
 
+/**
+ * What the report prompt reads of an akce at send time and in its daily run (migration 0022's
+ * columns): who wrote it and where it stands, never what is in it.
+ */
+export type FutureMailFacts = Pick<FutureItemRecord, 'id' | 'authorId' | 'state' | 'reportState'>;
+
+/** An akce that may be owed a report prompt: its author and the Prague day it ended. */
+export interface ReportPromptItem {
+  readonly id: string;
+  readonly authorId: string;
+  /** The end date, or the start date of a one-day akce. */
+  readonly lastDay: CalDate;
+}
+
 /** Where a page of the list ended: its last row's change and id. */
 export type FutureCursor = Pick<FutureItemRecord, 'updatedAt' | 'id'>;
 
@@ -124,4 +138,15 @@ export interface FutureItemRepo {
    * those after that row in this order. `updated_at` keeps milliseconds, as a cursor carries them.
    */
   list(limit: number, before?: FutureCursor): Promise<readonly FutureItemRecord[]>;
+  /**
+   * The daily run's read: the approved akce that expect a report and whose `report_state` is still
+   * `none`, whose last day (the end date, or else the start date) falls from `from` to `to`, both
+   * included, ordered by id. Only the columns migration 0022 grants the worker. ScopeViolation for a user.
+   */
+  reportPromptDue(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly ReportPromptItem[]>;
+  /** The worker's read at send time: null for an unknown item. ScopeViolation for a user. */
+  mailFacts(id: string): Promise<FutureMailFacts | null>;
 }

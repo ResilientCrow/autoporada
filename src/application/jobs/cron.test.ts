@@ -23,10 +23,20 @@ describe('cron registry', () => {
     expect(cronExpression(schedule)).toBe(cron);
   });
 
-  it('ships mail.prune daily at 05:10 Prague time, catching up once', () => {
-    expect(CRON).toEqual([entry()]);
+  it('ships mail.prune daily at 05:10 and the report prompt daily at 08:00 Prague time, each catching up once', () => {
+    expect(CRON).toEqual([
+      entry(),
+      {
+        job: 'future.report-prompt',
+        key: 'daily',
+        schedule: { daily: { hour: 8, minute: 0 } },
+        data: {},
+        catchUp: 'once',
+      },
+    ]);
     expect(SCHEDULES).toEqual([
       { job: 'mail.prune', key: 'daily', cron: '10 5 * * *', data: {}, missed: 'once' },
+      { job: 'future.report-prompt', key: 'daily', cron: '0 8 * * *', data: {}, missed: 'once' },
     ]);
   });
 

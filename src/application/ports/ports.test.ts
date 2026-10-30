@@ -28,8 +28,8 @@ describe('ports', () => {
   });
 
   it('lists the job names the worker knows', () => {
-    expect(JOB_NAMES).toEqual(['mail.send', 'mail.prune']);
-    expectTypeOf<JobName>().toEqualTypeOf<'mail.send' | 'mail.prune'>();
+    expect(JOB_NAMES).toEqual(['mail.send', 'mail.prune', 'future.report-prompt']);
+    expectTypeOf<JobName>().toEqualTypeOf<'mail.send' | 'mail.prune' | 'future.report-prompt'>();
   });
 
   it('type job payloads by job name, and require a dedupe key', () => {

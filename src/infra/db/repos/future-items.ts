@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableName, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableName, gte, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -16,6 +16,7 @@ import {
 import { parseResponsible } from '@/contracts';
 import type { Responsible } from '@/domain/report';
 import type { FutureState } from '@/domain/review';
+import { parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
 import { futureEvents, futureItems } from '../schema';
@@ -230,6 +231,42 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
         .orderBy(desc(futureItems.updatedAt), desc(futureItems.id))
         .limit(limit);
       return rows.map(toRecord);
+    },
+    async reportPromptDue({ from, to }) {
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migration 0022 grants the worker, and no other.
+      const lastDay = sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`;
+      const rows = await db
+        .select({
+          id: futureItems.id,
+          authorId: futureItems.authorId,
+          lastDay: sql<string>`${lastDay}::text`,
+        })
+        .from(futureItems)
+        .where(
+          and(
+            eq(futureItems.state, 'approved'),
+            eq(futureItems.expectsReport, true),
+            eq(futureItems.reportState, 'none'),
+            gte(lastDay, toIsoDate(from)),
+            lte(lastDay, toIsoDate(to)),
+          ),
+        )
+        .orderBy(asc(futureItems.id));
+      return rows.map((row) => ({ ...row, lastDay: parseIsoDate(row.lastDay) }));
+    },
+    async mailFacts(id) {
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const [row] = await db
+        .select({
+          id: futureItems.id,
+          authorId: futureItems.authorId,
+          state: futureItems.state,
+          reportState: futureItems.reportState,
+        })
+        .from(futureItems)
+        .where(eq(futureItems.id, id));
+      return row ?? null;
     },
   };
 }

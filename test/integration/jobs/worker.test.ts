@@ -57,7 +57,11 @@ async function workerFor(
   const boss = jobs.boss();
   const worker = await startWorker({
     boss,
-    handlers: { 'mail.send': handler, 'mail.prune': () => Promise.resolve(purged) },
+    handlers: {
+      'mail.send': handler,
+      'mail.prune': () => Promise.resolve(purged),
+      'future.report-prompt': () => Promise.resolve(purged),
+    },
     schedules: [PRUNE],
     deps,
     log: jobs.log,
@@ -212,6 +216,7 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
         handlers: {
           'mail.send': () => Promise.resolve({ kind: 'done', code: 'sent' }),
           'mail.prune': () => Promise.resolve(purged),
+          'future.report-prompt': () => Promise.resolve(purged),
         },
         schedules: [PRUNE],
         deps,
@@ -232,6 +237,7 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
     const handlers = (send: JobHandler<'mail.send'>) => ({
       'mail.send': send,
       'mail.prune': () => Promise.resolve(purged),
+      'future.report-prompt': () => Promise.resolve(purged),
     });
     const deps = () =>
       ({

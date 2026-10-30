@@ -6,6 +6,7 @@ export {
   type AccessHistoryItem,
   type RequestStanding,
 } from './access';
+export { reportPromptStage, reportPromptWindow } from './report-prompt';
 export {
   availableEvents,
   transition,

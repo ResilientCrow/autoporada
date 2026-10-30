@@ -3,6 +3,7 @@ import type { DecisionEvent } from '@/domain/review';
 import type { TemplateName } from '@/notify';
 
 import { pointMailParts, type PointMailIds } from './point-mails';
+import { reportPromptParts, type ReportPromptIds } from './report-prompt';
 
 /** Which mail each access decision sends the requester (plan §9); the requester's cancel sends none. */
 export const DECISION_MAIL = {
@@ -28,6 +29,7 @@ interface MailIds {
   readonly 'point.returned': PointMailIds;
   readonly 'point.approved': PointMailIds;
   readonly 'point.rejected': PointMailIds;
+  readonly 'report.prompt': ReportPromptIds;
 }
 
 interface MailParts {
@@ -64,6 +66,7 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   'point.returned': pointMailParts,
   'point.approved': pointMailParts,
   'point.rejected': pointMailParts,
+  'report.prompt': reportPromptParts,
 };
 
 interface MailJob {

@@ -54,6 +54,16 @@ describe('mail jobs', () => {
     expect(blocked.dedupeKey).not.toBe(rejected.dedupeKey);
   });
 
+  it('keys a report prompt by the akce and its stage, so each stage is mailed once', () => {
+    const first = mailJob('report.prompt', { authorId: USER, itemId: REQUEST, stage: 1 });
+    const second = mailJob('report.prompt', { authorId: USER, itemId: REQUEST, stage: 2 });
+    expect(first).toEqual({
+      data: { template: 'report.prompt', recipientId: USER, subjectId: REQUEST },
+      dedupeKey: `report.prompt:${REQUEST}:1`,
+    });
+    expect(second.dedupeKey).toBe(`report.prompt:${REQUEST}:2`);
+  });
+
   it('builds payloads of ids only and keys that start with their template, for every template', () => {
     const jobs = [
       mailJob('access.approved', { recipientId: USER, requestId: REQUEST }),
@@ -64,6 +74,7 @@ describe('mail jobs', () => {
       mailJob('point.returned', { authorId: USER, eventId: REQUEST }),
       mailJob('point.approved', { authorId: USER, eventId: REQUEST }),
       mailJob('point.rejected', { authorId: USER, eventId: REQUEST }),
+      mailJob('report.prompt', { authorId: USER, itemId: REQUEST, stage: 1 }),
     ];
     expect(jobs.map((job) => job.data.template)).toEqual(TEMPLATE_NAMES);
     for (const { data, dedupeKey } of jobs) {

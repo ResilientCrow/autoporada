@@ -14,7 +14,7 @@ import {
 } from '@/application/ports';
 import { parseResponsible } from '@/contracts';
 import { admits, type Scope } from '@/domain/policy';
-import { toIsoDate } from '@/domain/time';
+import { compareDates, toIsoDate } from '@/domain/time';
 
 import { codePoints, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
@@ -179,6 +179,31 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         .sort(newer)
         .slice(0, limit)
         .map(record);
+    },
+    async reportPromptDue({ from, to }) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      return [...futureItems.values()]
+        .flatMap((item) => {
+          const lastDay = item.content.endDate ?? item.content.startDate;
+          const due =
+            item.state === 'approved' &&
+            item.content.expectsReport &&
+            item.reportState === 'none' &&
+            lastDay !== null &&
+            compareDates(lastDay, from) >= 0 &&
+            compareDates(lastDay, to) <= 0;
+          return due ? [{ id: item.id, authorId: item.authorId, lastDay }] : [];
+        })
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
+    },
+    async mailFacts(id) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const item = futureItems.get(id);
+      return item
+        ? { id: item.id, authorId: item.authorId, state: item.state, reportState: item.reportState }
+        : null;
     },
   };
 }

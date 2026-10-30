@@ -745,6 +745,109 @@ describe('FutureItemRepo queue', () => {
   });
 });
 
+describe('FutureItemRepo report prompts (what the worker reads, migration 0022)', () => {
+  /** As the worker reads at run time: autoporada_worker in the pg world, with its column grants only. */
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:future.report-prompt'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const WINDOW = { from: calDate(2026, 11, 1), to: calDate(2026, 11, 20) };
+
+  /** An approved akce of `author`, its content over FULL, then more patches. */
+  const akce = async (
+    author: UserRecord,
+    content: Partial<FutureContent>,
+    ...more: FutureItemPatch[]
+  ) => {
+    const as = world.as(author);
+    const { item } = await create(as, { content: { ...FULL, ...content } });
+    let current = await update(as, item, {
+      ...SUBMIT,
+      content: { ...FULL, ...content },
+      state: 'approved',
+    });
+    for (const patch of more) current = await update(as, current, patch);
+    return current;
+  };
+  const ids = (rows: readonly { id: string }[]) => rows.map((row) => row.id).sort();
+
+  it('lists the approved akce that expect a report and have none, with their last day', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const ended = await akce(author, {
+      startDate: calDate(2026, 11, 5),
+      endDate: calDate(2026, 11, 7),
+    });
+    const oneDay = await akce(author, { startDate: calDate(2026, 11, 9), endDate: null });
+    const rows = await asWorker((tx) => tx.futureItems.reportPromptDue(WINDOW));
+    expect(rows).toHaveLength(2);
+    expect(rows.find((row) => row.id === ended.id)).toEqual({
+      id: ended.id,
+      authorId: author.id,
+      lastDay: calDate(2026, 11, 7),
+    });
+    expect(rows.find((row) => row.id === oneDay.id)?.lastDay).toEqual(calDate(2026, 11, 9));
+  });
+
+  it('keeps the window’s both ends and leaves out a last day outside it', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const day = (d: number) => ({ startDate: calDate(2026, 11, d), endDate: null });
+    const first = await akce(author, day(1));
+    const last = await akce(author, day(20));
+    await akce(author, { startDate: calDate(2026, 10, 31), endDate: null });
+    await akce(author, day(21));
+    // still running: its last day, not its start, is what counts
+    await akce(author, { startDate: calDate(2026, 11, 18), endDate: calDate(2026, 11, 22) });
+    const rows = await asWorker((tx) => tx.futureItems.reportPromptDue(WINDOW));
+    expect(ids(rows)).toEqual(ids([first, last]));
+  });
+
+  it('leaves out what is not an approved akce that expects a report with none written', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const day = { startDate: calDate(2026, 11, 5), endDate: null };
+    const wanted = await akce(author, day);
+    await akce(author, { ...day, expectsReport: false });
+    await akce(author, day, { state: 'cancelled' });
+    await akce(author, day, { reportState: 'written' });
+    await akce(author, day, { reportState: 'declined' });
+    const { item } = await create(world.as(author), { content: { ...FULL, ...day } });
+    await update(world.as(author), item, { ...SUBMIT, content: { ...FULL, ...day } });
+    expect(ids(await asWorker((tx) => tx.futureItems.reportPromptDue(WINDOW)))).toEqual([
+      wanted.id,
+    ]);
+  });
+
+  it('refuses a user: only the system reads the prompts', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const refused = read(world.as(author), (tx) => tx.futureItems.reportPromptDue(WINDOW));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+
+  it('reads the author and the standing of an akce, and nothing it holds', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const item = await akce(author, {});
+    expect(await asWorker((tx) => tx.futureItems.mailFacts(item.id))).toEqual({
+      id: item.id,
+      authorId: author.id,
+      state: 'approved',
+      reportState: 'none',
+    });
+    await update(world.as(author), item, { reportState: 'declined' });
+    expect(await asWorker((tx) => tx.futureItems.mailFacts(item.id))).toMatchObject({
+      reportState: 'declined',
+    });
+  });
+
+  it('gives null for an unknown item and refuses a user', async () => {
+    expect(await asWorker((tx) => tx.futureItems.mailFacts(UNKNOWN_ID))).toBeNull();
+    const author = await world.seed.user({ role: 'submitter' });
+    const { item } = await create(world.as(author));
+    const refused = read(world.as(author), (tx) => tx.futureItems.mailFacts(item.id));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('future item audit coverage in the fake world', () => {
   it('names every created or updated item as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

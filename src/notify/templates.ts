@@ -19,6 +19,7 @@ export const TEMPLATE_NAMES = [
   'point.returned',
   'point.approved',
   'point.rejected',
+  'report.prompt',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -33,6 +34,7 @@ export interface TemplateViews {
   'point.returned': Record<string, never>;
   'point.approved': Record<string, never>;
   'point.rejected': Record<string, never>;
+  'report.prompt': Record<string, never>;
 }
 
 interface RenderedMail {
@@ -105,6 +107,16 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: bod nebyl přijat',
     body: {
       paragraphs: ['váš bod pro poradu vedení nebyl přijat. Důvod najdete v\u00A0aplikaci:'],
+      link: '/body',
+    },
+  }),
+  // The akce is not named: its title is in the app, where /body lists what is waiting for a report.
+  'report.prompt': () => ({
+    subject: 'Autoporada: napište zprávu z\u00A0akce',
+    body: {
+      paragraphs: [
+        'akce, kterou jste zapsali do přehledu, proběhla. Zprávu do porady můžete napsat v\u00A0aplikaci:',
+      ],
       link: '/body',
     },
   }),
