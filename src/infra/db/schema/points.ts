@@ -19,7 +19,7 @@ import type { Campus } from '@/domain/cs';
 import type { DraftBullet, DraftStatement, PointFieldValues } from '@/domain/report';
 import type { RichDoc } from '@/domain/richtext';
 
-import { at, createdAt, id } from './columns';
+import { at, atMs, createdAt, id } from './columns';
 import { users } from './identity';
 import { pointTypes } from './point-types';
 
@@ -94,7 +94,7 @@ export const points = pgTable(
     futureItemId: uuid(),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
-    updatedAt: at().notNull().defaultNow(),
+    updatedAt: atMs().notNull().defaultNow(),
   },
   (t) => [
     unique('points_author_client_ref_key').on(t.authorId, t.clientRef),

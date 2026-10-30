@@ -127,6 +127,13 @@
       "when": 1793188056520,
       "tag": "0017_point_mail_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793383571442,
+      "tag": "0018_points_updated_at_ms",
+      "breakpoints": true
     }
   ]
 }

@@ -17,4 +17,10 @@ export const id = () =>
 /** An instant: timestamptz, read as a Date. */
 export const at = () => timestamp({ withTimezone: true });
 
+/**
+ * An instant a cursor pages by: a JS Date holds milliseconds, so the column keeps no more, or a row
+ * with extra microseconds slips past a `{ms}.{id}` cursor taken from its page's last row.
+ */
+export const atMs = () => timestamp({ withTimezone: true, precision: 3 });
+
 export const createdAt = () => at().notNull().defaultNow();
