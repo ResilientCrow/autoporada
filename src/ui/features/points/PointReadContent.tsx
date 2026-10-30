@@ -9,8 +9,8 @@ import { pointContentOf, type PointContentWire } from './fields';
 /**
  * The point as the document prints it, for the read view: the opening, the paragraphs, the bullets and
  * the statements, composed the way the editor's preview composes them, so the two never disagree.
- * Only a report has this layout until proposals get theirs (M8b); nothing for a point the preview
- * cannot compose (no title or start date).
+ * A finance or pokyn proposal is its title and text; nothing for a point the preview cannot compose
+ * (no title, and for a report no start date).
  */
 export function PointReadContent({
   kind,
@@ -21,8 +21,7 @@ export function PointReadContent({
   readonly content: PointContentWire;
   readonly schoolYear: string;
 }) {
-  if (kind !== 'report') return null;
-  const { blocks } = composePointPreview(pointContentOf(content), { schoolYear });
+  const { blocks } = composePointPreview(pointContentOf(content), { schoolYear, kind });
   if (blocks.length === 0) return null;
   return (
     <section aria-labelledby="bod-zneni" className="space-y-2">

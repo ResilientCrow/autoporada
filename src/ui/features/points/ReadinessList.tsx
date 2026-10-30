@@ -6,7 +6,7 @@ import type { BulletSpec, PointKind } from '@/domain/report';
 import { points } from '@/ui/copy';
 import { revealAndFocus } from '@/ui/form';
 
-import { editorSpec } from './editor-form';
+import { pointFormSpec } from './editor-form';
 import type { PointContentWire } from './fields';
 import { readinessItems, readinessOf, type ReadinessItem } from './readiness';
 
@@ -59,7 +59,7 @@ export function ReadinessList({
     () =>
       readinessItems(
         readinessOf(kind, deferred, spec, schoolYear),
-        editorSpec(deferred.bullets, spec, deferred.statements.length),
+        pointFormSpec(kind, deferred.bullets, spec, deferred.statements.length),
       ),
     [kind, deferred, spec, schoolYear],
   );

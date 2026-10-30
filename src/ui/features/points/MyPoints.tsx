@@ -75,6 +75,10 @@ export function MyPoints({
         <Link href="/body/novy" prefetch={false} className={buttonStyles('primary')}>
           {points.title.new}
         </Link>
+        {/* A finance or pokyn proposal: the second way to start a point (design section 11). */}{' '}
+        <Link href="/navrhy/novy" prefetch={false} className={buttonStyles('secondary')}>
+          {points.proposal.title}
+        </Link>
       </p>
       {groupMyPoints(rows).map((group) => (
         <Group key={group.group} {...group} />

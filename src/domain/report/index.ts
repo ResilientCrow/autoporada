@@ -1,10 +1,12 @@
-export type {
-  BulletSpec,
-  DraftBullet,
-  DraftPerson,
-  DraftStatement,
-  PointContent,
-  PointKind,
+export {
+  PROPOSAL_KINDS,
+  type BulletSpec,
+  type DraftBullet,
+  type DraftPerson,
+  type DraftStatement,
+  type PointContent,
+  type PointKind,
+  type ProposalKind,
 } from './content';
 export { draftBullet, newDraft } from './draft';
 export {

@@ -49,7 +49,7 @@ export function PointReview({
         typeName={point.typeName}
         focusId={REVIEW_HEADING_ID}
       />
-      <PointFacts facts={point.facts} />
+      {point.kind === 'report' ? <PointFacts facts={point.facts} /> : null}
       {host(
         <PointReadContent
           kind={point.kind}

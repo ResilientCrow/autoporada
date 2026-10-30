@@ -5,5 +5,6 @@ export { PointFacts } from './PointFacts';
 export { PointHeader } from './PointHeader';
 export { PointReview } from './PointReview';
 export { PointScreen } from './PointScreen';
+export { ProposalChooser } from './ProposalChooser';
 export { StandingLine } from './StandingLine';
 export { TypeChooser } from './TypeChooser';

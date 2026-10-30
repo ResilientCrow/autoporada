@@ -6,7 +6,7 @@ import { toKnownIssues, type listMyPointsOutput, type listPointTypesOutput } fro
 import { pointMonday } from '@/domain/calendar';
 import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
-import type { BulletSpec } from '@/domain/report';
+import { PROPOSAL_KINDS, type BulletSpec, type ProposalKind } from '@/domain/report';
 import type { Actor } from '@/domain/actor';
 import { can } from '@/domain/policy';
 import { authorEditsPoint, type AuthorMove, type PointState } from '@/domain/review';
@@ -42,8 +42,21 @@ export async function newPointPage(): Promise<NewPointPageModel | null> {
   return listed && { types: listed.types };
 }
 
+/** What /navrhy/novy offers: the kinds of proposal a new point can start as. */
+export interface NewProposalPageModel {
+  readonly kinds: readonly ProposalKind[];
+}
+
+/** The kinds to choose from, or null for a visitor or a viewer who may not start a point (404). */
+export async function newProposalPage(): Promise<NewProposalPageModel | null> {
+  const viewer = await getViewer();
+  // `point.create` is the gate `points.create` itself applies to every kind.
+  if (!viewer || !can(viewer.actor, { action: 'point.create' })) return null;
+  return { kinds: PROPOSAL_KINDS };
+}
+
 /**
- * What the report editor starts from: the version it was loaded at (its key and the
+ * What the editor starts from: the version it was loaded at (its key and the
  * first `expectedVersion`), the content as the save takes it back, the bullets its type
  * offers (which may be removed), its title gender (the opening sentence agrees with it),
  * the Prague day the picker counts the school year from and that school year (the one submit checks the classes
@@ -64,7 +77,7 @@ interface PointEditorModel {
 /**
  * What a point's header and read view show, dates and times written out, and what
  * the editor needs, only while it is shown (the author, a draft or returned point).
- * The read view's content is null where the editor shows (an editable report): it holds the content.
+ * The read view's content is null where the editor shows (the author's draft or returned point of any kind): it holds the content.
  */
 export interface PointPageModel extends PointViewModel<LoadedPoint['content'] | null> {
   /** Only for the author of a draft or returned point: where it will go and when that closes; null if no porada is open. */
@@ -85,14 +98,14 @@ function shaped(
   },
 ): PointPageModel {
   const { recents, today, standing, moves } = extra;
-  const { kind, type, content, version, editable } = loaded;
+  const { type, content, version, editable } = loaded;
   const view = pointView(loaded, today);
   return {
     ...view,
     standing,
     moves,
     // The editor carries the content when it shows: the page does not send it twice.
-    read: { ...view.read, content: editable && kind === 'report' ? null : content },
+    read: { ...view.read, content: editable ? null : content },
     editor: editable
       ? {
           version,

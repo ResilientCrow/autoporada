@@ -110,6 +110,7 @@ function page(phase: Phase, readOnly: boolean, sending = false): string {
   return renderToStaticMarkup(
     <PointEditor
       id="0b0c1d2e-3f40-4152-8364-758697a8b9ca"
+      kind="report"
       typeLabel="Exkurze"
       version={3}
       content={CONTENT}

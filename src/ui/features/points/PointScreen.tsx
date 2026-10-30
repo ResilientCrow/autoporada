@@ -57,10 +57,16 @@ interface PointEditorModel {
   readonly directory: Directory;
 }
 
+function typeLabelOf(point: PointScreenModel): string {
+  if (point.kind === 'report') return point.typeName ?? points.kind.report;
+  return points.proposal.kind[point.kind];
+}
+
 /**
- * A point's page below the shell: its header, then the report editor for the author of a
- * draft or returned report, or the read view for everyone else, every other state and
- * every other kind; the point's history is below either.
+ * A point's page below the shell: its header, then the editor for the author of a draft or
+ * returned point (a report's fields, or a proposal's title and text), or the read view for
+ * everyone else and every other state; the point's history is below either. A proposal has no
+ * facts to show, only its title and text.
  */
 export function PointScreen({
   point,
@@ -77,8 +83,7 @@ export function PointScreen({
   readonly retractPoint: RetractPointAction;
   readonly withdrawPoint: WithdrawPointAction;
 }) {
-  // Proposals get their own fields with M8b; until then only a report is edited here.
-  const editor = point.kind === 'report' ? point.editor : null;
+  const editor = point.editor;
   const moves = { events: point.moves, retractPoint, withdrawPoint };
   const standing = point.standing && standingOf(point.standing);
   return (
@@ -93,7 +98,7 @@ export function PointScreen({
         <>
           {/* The editor shows it with its submit button. */}
           {point.standing === null ? null : <StandingLine standing={point.standing} />}
-          <PointFacts facts={point.facts} />
+          {point.kind === 'report' ? <PointFacts facts={point.facts} /> : null}
           {point.read.content === null ? null : (
             <PointReadContent
               kind={point.kind}
@@ -107,7 +112,8 @@ export function PointScreen({
         <PointEditor
           key={editorKey({ id: point.id, version: editor.version })}
           id={point.id}
-          typeLabel={point.typeName ?? points.kind[point.kind]}
+          kind={point.kind}
+          typeLabel={typeLabelOf(point)}
           version={editor.version}
           content={editor.content}
           spec={editor.spec}

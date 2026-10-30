@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { calDate } from '@/domain/time';
 
-import { myPointsPage, newPointPage, pointPage } from './index';
+import { myPointsPage, newPointPage, newProposalPage, pointPage } from './index';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
 const runRegistered = vi.hoisted(() => vi.fn());
@@ -67,6 +67,38 @@ describe('newPointPage', () => {
   it('fails loudly on any other failure', async () => {
     runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
     await expect(newPointPage()).rejects.toThrow('pointTypes.list: unavailable');
+  });
+});
+
+describe('newProposalPage', () => {
+  it('is null for a visitor, without asking anything', async () => {
+    resolvePrincipal.mockResolvedValue(null);
+    expect(await newProposalPage()).toBeNull();
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it.each(['submitter', 'reviewer', 'headmaster'] as const)(
+    'offers finance and pokyn, in that order, to a %s',
+    async (role) => {
+      resolvePrincipal.mockResolvedValue({
+        kind: 'user',
+        actor: { id: 'u1', role, status: 'active', isStudent: false },
+      });
+      expect(await newProposalPage()).toEqual({ kinds: ['finance', 'pokyn'] });
+      // The kinds are the page's own: no use case is asked.
+      expect(runRegistered).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['a viewer who may not start a point', { role: 'pending', status: 'active' }],
+    ['an inactive account', { role: 'submitter', status: 'inactive' }],
+  ] as const)('is null for %s', async (_name, who) => {
+    resolvePrincipal.mockResolvedValue({
+      kind: 'user',
+      actor: { id: 'u1', isStudent: false, ...who },
+    });
+    expect(await newProposalPage()).toBeNull();
   });
 });
 
@@ -391,11 +423,26 @@ describe('pointPage', () => {
     });
 
     it('keeps the content for a point whose editor does not show', async () => {
-      loadedAs({ kind: 'pokyn' });
-      expect((await pointPage(ID))?.read.content).toEqual(LOADED.content);
       loadedAs({ state: 'submitted', editable: false });
       expect((await pointPage(ID))?.read.content).toEqual(LOADED.content);
+      loadedAs({ kind: 'pokyn', type: null, state: 'submitted', editable: false });
+      expect((await pointPage(ID))?.read.content).toEqual(LOADED.content);
     });
+
+    it.each(['finance', 'pokyn'] as const)(
+      'gives the editor of a draft %s the content, with no bullets of a type, and sends it once',
+      async (kind) => {
+        loadedAs({ kind, type: null });
+        const page = await pointPage(ID);
+        expect(page?.editor).toMatchObject({
+          version: 3,
+          content: LOADED.content,
+          spec: [],
+          titleGender: null,
+        });
+        expect(page?.read.content).toBeNull();
+      },
+    );
 
     it('carries the timeline in the order sent, with only what the page writes', async () => {
       loadedAs({ timeline: EVENTS });

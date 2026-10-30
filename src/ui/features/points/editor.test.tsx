@@ -65,6 +65,7 @@ const editorPage = (
   renderToStaticMarkup(
     <PointEditor
       id={ID}
+      kind="report"
       typeLabel={typeLabel}
       version={3}
       content={content}
@@ -467,21 +468,6 @@ describe('PointScreen', () => {
     expect(html).toContain('14. ledna 2027');
     expect(html).toContain(POINT.facts.place);
   });
-
-  it.each(['finance', 'pokyn'] as const)(
-    'keeps the read view for an editable %s until it has its own fields',
-    (kind) => {
-      const html = screen({
-        ...POINT,
-        kind,
-        typeName: null,
-        editor: { ...EDITOR, version: 1 },
-      });
-      expect(html).toContain('<h1');
-      expect(html).not.toContain('<form');
-      expect(html).toContain(POINT.facts.place);
-    },
-  );
 
   it('names a report without a type by its kind', () => {
     const html = screen({

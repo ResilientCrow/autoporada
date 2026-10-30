@@ -231,15 +231,6 @@ describe('the content of the read view', () => {
     expect(html).not.toContain(points.read.label);
     expect(html).not.toContain(points.preview.empty);
   });
-
-  it.each(['finance', 'pokyn'] as const)(
-    'prints no paper for a %s, which has no layout yet',
-    (kind) => {
-      const html = screen({ ...SUBMITTED, kind, typeName: null });
-      expect(html).not.toContain('Ve středu proběhl');
-      expect(html).not.toContain(points.read.label);
-    },
-  );
 });
 
 describe('the timeline of the screen', () => {

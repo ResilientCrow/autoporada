@@ -1,5 +1,12 @@
 import { countWord, type Campus, type PluralForms } from '@/domain/cs';
-import type { Params, PointContent, PointKind, ProblemCode, Warning } from '@/domain/report';
+import type {
+  Params,
+  PointContent,
+  PointKind,
+  ProblemCode,
+  ProposalKind,
+  Warning,
+} from '@/domain/report';
 import type { PointState } from '@/domain/review';
 
 const word = (params: Params, key: string): string => String(params[key]);
@@ -77,6 +84,17 @@ export const points = {
     start: 'Začít',
     required: 'Vyberte typ bodu.',
     invalid: 'Tento typ už není v\u00A0nabídce. Vyberte jiný.',
+  },
+  /** Finance and pokyn proposals (design section 11): a title and a text, started on /navrhy/novy. */
+  proposal: {
+    title: 'Nový návrh',
+    legend: 'Druh návrhu',
+    /** What each proposal is called where a report's type would be. */
+    kind: {
+      finance: 'Návrh do hospodaření',
+      pokyn: 'Pokyn pro zaměstnance',
+    } as const satisfies Record<ProposalKind, string>,
+    text: 'Text návrhu',
   },
   untitled: 'Bez názvu',
   kind: {
@@ -189,6 +207,7 @@ export const points = {
   preview: {
     label: 'Náhled bodu',
     empty: 'Náhled se zobrazí, až vyplníte název a\u00A0datum začátku.',
+    emptyProposal: 'Náhled se zobrazí, až vyplníte název.',
     /** Colon form, so no noun has to agree with the count. */
     omittedPeople: (n: number) =>
       `Osoby bez oslovení nebo příjmení se v\u00A0náhledu nezobrazí: ${n}.`,

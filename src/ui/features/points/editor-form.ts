@@ -1,4 +1,4 @@
-import type { BulletSpec } from '@/domain/report';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import { points } from '@/ui/copy';
 import type { FormSpec, FormState } from '@/ui/form';
 
@@ -87,6 +87,24 @@ export function editorSpec(
     body: { label: points.editor.body },
     ...Object.assign({}, ...Array.from({ length: statements }, (_, i) => statementFields(i))),
   };
+}
+
+/** A proposal's fields: its title and its text, both asked for at the submit (readiness). */
+export function proposalSpec(): FormSpec {
+  return {
+    title: { label: points.editor.title, required: true },
+    body: { label: points.proposal.text, required: true },
+  };
+}
+
+/** The editor's fields for a point of this kind: a report's (`editorSpec`) or a proposal's. */
+export function pointFormSpec(
+  kind: PointKind,
+  bullets: readonly Bullet<unknown>[],
+  spec: readonly BulletSpec[],
+  statements = 0,
+): FormSpec {
+  return kind === 'report' ? editorSpec(bullets, spec, statements) : proposalSpec();
 }
 
 /**

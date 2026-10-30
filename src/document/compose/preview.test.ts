@@ -560,3 +560,79 @@ describe('composePointPreview', () => {
     expect(omitted).toEqual({ ...NONE, people: 1, peopleBullets: 1 });
   });
 });
+
+describe('composePointPreview for a proposal', () => {
+  const opts = { schoolYear: '2026/2027' };
+  /** A proposal names no date, bullets or statements: only its title and its text. */
+  const proposal = (over: Partial<PointContent> = {}): PointContent =>
+    content({
+      eventDate: null,
+      opening: '',
+      body: richDocFromText('Navrhujeme zakoupit nové lavice.'),
+      ...over,
+    });
+
+  it.each(['finance', 'pokyn'] as const)('numbers a %s as point 1, its text beneath', (kind) => {
+    const { blocks, omitted } = composePointPreview(proposal(), { ...opts, kind });
+    expect(blocks[0]).toMatchObject({ kind: 'point', number: 1, text: 'Seminář Matika Česku' });
+    expect(blocks.map(textOf).filter(Boolean)).toEqual([
+      'Seminář Matika Česku',
+      'Navrhujeme zakoupit nové lavice.',
+    ]);
+    expect(omitted).toEqual(NONE);
+  });
+
+  it('prints the paragraphs of the text, each as its own block', () => {
+    const { blocks } = composePointPreview(
+      proposal({ body: richDocFromText('První odstavec.\nDruhý odstavec.') }),
+      { ...opts, kind: 'finance' },
+    );
+    expect(blocks.map(textOf).filter(Boolean)).toEqual([
+      'Seminář Matika Česku',
+      'První odstavec.',
+      'Druhý odstavec.',
+    ]);
+  });
+
+  it('fills the school year token, like the printed document', () => {
+    const { blocks } = composePointPreview(
+      proposal({ body: richDocFromText('Ve školním roce {skolniRok}.') }),
+      { schoolYear: '2027/2028', kind: 'pokyn' },
+    );
+    expect(blocks.map(textOf).join('\n')).toContain('Ve školním roce 2027/2028.');
+  });
+
+  it('shows a title without a text as a heading alone, and nothing without a title', () => {
+    const bare = composePointPreview(proposal({ body: richDocFromText('') }), {
+      ...opts,
+      kind: 'finance',
+    });
+    expect(bare.blocks.map(textOf).filter(Boolean)).toEqual(['Seminář Matika Česku']);
+    expect(
+      composePointPreview(proposal({ title: '  ' }), { ...opts, kind: 'finance' }).blocks,
+    ).toEqual([]);
+  });
+
+  it('puts the heading on one line, as the document does', () => {
+    const { blocks } = composePointPreview(proposal({ title: 'Nové\tlavice\npro třídy' }), {
+      ...opts,
+      kind: 'finance',
+    });
+    expect(blocks[0]).toMatchObject({ kind: 'point', text: 'Nové lavice pro třídy' });
+  });
+
+  it('ends the point with the one empty line the printed points have', () => {
+    const { blocks } = composePointPreview(proposal(), { ...opts, kind: 'finance' });
+    expect(blocks.map((b) => b.kind)).toEqual(['point', 'body', 'spacer']);
+  });
+
+  it('keeps a report with a date exactly as before when no kind is given', () => {
+    expect(composePointPreview(content(), opts)).toEqual(
+      composePointPreview(content(), { ...opts, kind: 'report' }),
+    );
+  });
+
+  it('shows nothing for a report without a start date, whatever else it holds', () => {
+    expect(composePointPreview(proposal(), { ...opts, kind: 'report' }).blocks).toEqual([]);
+  });
+});

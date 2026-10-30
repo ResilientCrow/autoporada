@@ -39,7 +39,7 @@ const person = (salutation: 'pan' | 'pani' | null, familyName: string) => ({
 });
 
 const preview = (content: PointContentWire = CONTENT) =>
-  renderToStaticMarkup(<Preview content={content} schoolYear="2026/2027" />);
+  renderToStaticMarkup(<Preview kind="report" content={content} schoolYear="2026/2027" />);
 
 describe('Preview', () => {
   it('is a section named „Náhled bodu“ holding the point as the document prints it', () => {

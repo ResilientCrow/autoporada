@@ -5,6 +5,10 @@ import type { CalDate, WallTime } from '@/domain/time';
 /** What a point is about: a report on an event, a finance proposal or a directive. */
 export type PointKind = 'report' | 'finance' | 'pokyn';
 
+/** A finance or pokyn proposal: a point of either kind has a title and a text, and no type. */
+export type ProposalKind = Exclude<PointKind, 'report'>;
+export const PROPOSAL_KINDS: readonly ProposalKind[] = ['finance', 'pokyn'];
+
 /** A person as the author typed or picked them; the salutation is chosen by hand. */
 export interface DraftPerson {
   /** Entra object id from a directory hit; dedupe only, grants nothing. */

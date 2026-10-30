@@ -4,11 +4,11 @@ import { useRef, useState, type RefObject } from 'react';
 import type { z } from 'zod';
 
 import type { ServerAction, submitPointInput, submitPointOutput } from '@/contracts';
-import type { BulletSpec } from '@/domain/report';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import type { SaveAnswer } from '@/ui/form';
 
 import { saveAnswer } from './answers';
-import { editorSpec } from './editor-form';
+import { pointFormSpec } from './editor-form';
 import { readinessItems, readinessOf } from './readiness';
 import type { Edit } from './report-patch';
 import { runPress, NOTHING_SHOWN, withOutcome } from './submit-press';
@@ -26,6 +26,7 @@ export type SubmitPointAction = ServerAction<
  */
 export function useSubmit({
   id,
+  kind,
   spec,
   schoolYear,
   latest,
@@ -33,6 +34,7 @@ export function useSubmit({
   afterLanded,
 }: {
   readonly id: string;
+  readonly kind: PointKind;
   readonly spec: readonly BulletSpec[];
   readonly schoolYear: string;
   /** The editor's latest edit, for a press that follows a change before the page renders again. */
@@ -54,10 +56,10 @@ export function useSubmit({
 
   const press = () => {
     const { content, bullets } = latest.current;
-    const form = editorSpec(bullets, spec, content.statements.length);
+    const form = pointFormSpec(kind, bullets, spec, content.statements.length);
     return runPress({
       sending: busy.current,
-      problems: readinessItems(readinessOf('report', content, spec, schoolYear), form).problems,
+      problems: readinessItems(readinessOf(kind, content, spec, schoolYear), form).problems,
       show,
       setSending,
       send: () =>

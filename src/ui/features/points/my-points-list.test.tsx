@@ -102,6 +102,13 @@ describe('MyPoints', () => {
       expect(html).not.toContain('<h2');
     });
 
+    it('offers „Nový návrh“ beside it, to /navrhy/novy, with or without points', () => {
+      for (const html of [render([]), render(ALL), render([], null, false)]) {
+        expect(html).toMatch(/<a[^>]*href="\/navrhy\/novy"[^>]*>Nový návrh<\/a>/);
+        expect(html.indexOf('href="/body/novy"')).toBeLessThan(html.indexOf('href="/navrhy/novy"'));
+      }
+    });
+
     it('does not claim the author has none on a later page, such as a cursor past the end', () => {
       const html = render([], null, false);
       expect(html).not.toContain('Zatím tu nemáte');

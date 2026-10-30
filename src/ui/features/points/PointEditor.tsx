@@ -14,16 +14,17 @@ import type {
 } from '@/contracts';
 import type { TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
-import type { BulletSpec } from '@/domain/report';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
 import { AutosaveStatus, Form, useAutosave, type Directory } from '@/ui/form';
 
 import { saveAnswer, statusAnswer } from './answers';
-import { EDITOR_FORM_ID, EDITOR_FORM_STATE, editorSpec } from './editor-form';
+import { EDITOR_FORM_ID, EDITOR_FORM_STATE, pointFormSpec } from './editor-form';
 import type { PointContentWire } from './fields';
 import { LayoutToggle } from './LayoutToggle';
 import { PointTransitions } from './PointTransitions';
+import { ProposalFields } from './ProposalFields';
 import { ReportForm } from './ReportForm';
 import { SubmitPanel } from './SubmitPanel';
 import { readOnlyWhile } from './submit-press';
@@ -46,7 +47,7 @@ export type PointStatusAction = ServerAction<
 const Preview = dynamic(() => import('./Preview').then((loaded) => loaded.Preview));
 
 /**
- * The author's editor of a report (design sections 6 and 8, ADR 0017): the fields are
+ * The author's editor of a point (design sections 6, 8 and 11, ADR 0017): the fields are
  * `useReportEdit`'s and `ReportForm`'s, and every change goes to the autosave hook, which
  * saves it after a pause, on leaving a field and when the page is left. The page keys the
  * editor by `editorKey`, so „Načíst aktuální stav“ starts it again from the server's values.
@@ -56,6 +57,7 @@ const Preview = dynamic(() => import('./Preview').then((loaded) => loaded.Previe
  */
 export function PointEditor({
   id,
+  kind,
   typeLabel,
   version,
   content: initial,
@@ -73,6 +75,8 @@ export function PointEditor({
   pointStatus,
 }: {
   readonly id: string;
+  /** A report gets all of `ReportForm`; a finance or pokyn proposal only its title and text. */
+  readonly kind: PointKind;
   /** The type's name, or the kind's for a point without a type. */
   readonly typeLabel: string;
   readonly version: number;
@@ -141,6 +145,7 @@ export function PointEditor({
   // on its way.
   const submit = useSubmit({
     id,
+    kind,
     spec,
     schoolYear: readinessSchoolYear,
     latest: report.latest,
@@ -159,7 +164,7 @@ export function PointEditor({
     <div className="bar-room">
       <Form
         id={EDITOR_FORM_ID}
-        spec={editorSpec(bullets, spec, content.statements.length)}
+        spec={pointFormSpec(kind, bullets, spec, content.statements.length)}
         state={state}
       >
         <AutosaveStatus {...autosave.status} />
@@ -167,16 +172,20 @@ export function PointEditor({
           <dt className="font-bold">{points.editor.type}</dt>
           <dd>{typeLabel}</dd>
         </dl>
-        <ReportForm
-          edit={report}
-          readOnly={readOnly}
-          today={today}
-          recents={recents}
-          directory={directory}
-          onBlur={autosave.onBlur}
-        />
+        {kind === 'report' ? (
+          <ReportForm
+            edit={report}
+            readOnly={readOnly}
+            today={today}
+            recents={recents}
+            directory={directory}
+            onBlur={autosave.onBlur}
+          />
+        ) : (
+          <ProposalFields edit={report} readOnly={readOnly} onBlur={autosave.onBlur} />
+        )}
         <SubmitPanel
-          kind="report"
+          kind={kind}
           content={content}
           spec={spec}
           schoolYear={readinessSchoolYear}
@@ -201,7 +210,7 @@ export function PointEditor({
   return (
     <LayoutToggle
       form={form}
-      preview={<Preview content={content} schoolYear={previewSchoolYear} />}
+      preview={<Preview kind={kind} content={content} schoolYear={previewSchoolYear} />}
     />
   );
 }
