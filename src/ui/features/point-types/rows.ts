@@ -48,3 +48,28 @@ export function addRow(state: RowsState): RowsState {
 export function removeRow(state: RowsState, uid: number): RowsState {
   return { ...state, rows: state.rows.filter((row) => row.uid !== uid) };
 }
+
+/** Where focus goes after a change of the rows: a row's control, or the add button. */
+export type RowFocus = { readonly row: number; readonly control: 'label' | 'remove' } | 'add';
+
+/** After an add: the label of the new row, the last one. */
+export function focusAfterAdd(before: RowsState): RowFocus {
+  return { row: before.rows.length, control: 'label' };
+}
+
+/**
+ * After a removal: the remove button of the row that took the place of the removed one (the
+ * one before it when it was the last), or the add button when none is left; `null` for a row
+ * that is not there, so focus stays where it is. A removed button is gone, and focus with it.
+ */
+export function focusAfterRemove(before: RowsState, uid: number): RowFocus | null {
+  const at = before.rows.findIndex((row) => row.uid === uid);
+  if (at < 0) return null;
+  const left = before.rows.length - 1;
+  return left === 0 ? 'add' : { row: Math.min(at, left - 1), control: 'remove' };
+}
+
+/** A row's kind, as the select of a row not saved yet sets it. */
+export function setKind(state: RowsState, uid: number, kind: BulletRow['kind']): RowsState {
+  return { ...state, rows: state.rows.map((row) => (row.uid === uid ? { ...row, kind } : row)) };
+}

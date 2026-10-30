@@ -12,5 +12,6 @@ export const RULE_CODES = [
   'point-not-editable',
   'type-name-taken',
   'type-locked',
+  'bullet-kind-fixed',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];

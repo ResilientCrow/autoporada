@@ -163,7 +163,55 @@ describe('pointTypes.save', () => {
         action: 'point_type.changed',
         targetId: type.id,
         data: {
-          diff: { name: { from: 'Beseda', to: 'Workshop' }, active: { from: true, to: false } },
+          diff: { active: { from: true, to: false }, position: { from: 1, to: 3 } },
+          meta: { fields: ['name', 'defaultBullets', 'active', 'position'] },
+        },
+      });
+    });
+
+    it.each([
+      ['name', { name: 'Workshop' }],
+      ['title gender', { titleGender: 'n' }],
+      ['bullets', { defaultBullets: [ORGANISERS, RESULTS, GUESTS] }],
+      ['bullet label', { defaultBullets: [ORGANISERS, { ...RESULTS, label: 'Výsledky soutěže' }] }],
+      ['active', { active: false }],
+      ['position', { position: 7 }],
+    ])('saves a change of the %s alone', async (_field, change) => {
+      const head = await headmaster();
+      const type = await created(head);
+      expect(await save(head, edit(type, change))).toEqual({
+        ok: true,
+        value: { id: type.id, version: 2, changed: true },
+      });
+      expect((await snapshot()).types[0]).toMatchObject({ ...change, version: 2 });
+    });
+
+    it('audits which fields changed and the bullet keys, never the name or the labels', async () => {
+      const head = await headmaster();
+      const type = await created(head, { name: 'Tajný název' });
+      const renamed = { ...RESULTS, label: 'Tajný štítek' };
+      await save(
+        head,
+        edit(type, { name: 'Jiný tajný název', defaultBullets: [ORGANISERS, renamed, GUESTS] }),
+      );
+      const { audit } = await snapshot();
+      expect(audit.at(-1)).toMatchObject({
+        data: { meta: { fields: ['name', 'defaultBullets'], bullets: ['results', 'guests'] } },
+      });
+      for (const event of audit) {
+        expect(JSON.stringify(event)).not.toMatch(/tajn|výsledky|hosté|organizátoři|umístění/i);
+      }
+    });
+
+    it('audits a created type by its fields and bullet keys', async () => {
+      const head = await headmaster();
+      await created(head);
+      expect((await snapshot()).audit.at(-1)).toMatchObject({
+        data: {
+          meta: {
+            fields: ['name', 'titleGender', 'defaultBullets', 'active', 'position'],
+            bullets: ['organisers', 'results'],
+          },
         },
       });
     });
@@ -202,6 +250,37 @@ describe('pointTypes.save', () => {
       await refuses(() => save(head, edit(type, { position: 3 })), { code: 'conflict' });
       await refuses(() => save(head, edit(type, { id: '00000000-0000-7000-8000-999999999999' })), {
         code: 'not-found',
+      });
+    });
+  });
+
+  describe('a saved bullet', () => {
+    it('keeps its kind: a changed kind is refused and nothing is written', async () => {
+      const head = await headmaster();
+      const type = await created(head);
+      const asPeople = { ...RESULTS, kind: 'people' };
+      await refuses(() => save(head, edit(type, { defaultBullets: [ORGANISERS, asPeople] })), {
+        code: 'rule',
+        rule: 'bullet-kind-fixed',
+      });
+    });
+
+    it('can change everything but its kind, and a new bullet may have any kind', async () => {
+      const head = await headmaster();
+      const type = await created(head);
+      const relabelled = { ...RESULTS, label: 'Umístění', required: true };
+      const added = { key: 'poznamka', label: 'Poznámka', kind: 'people', required: false };
+      expect(
+        await save(head, edit(type, { defaultBullets: [ORGANISERS, relabelled, added] })),
+      ).toMatchObject({ ok: true, value: { changed: true } });
+    });
+
+    it('may be removed and a bullet of another kind added under a new key', async () => {
+      const head = await headmaster();
+      const type = await created(head);
+      const other = { key: 'vysledky--p', label: 'Výsledky', kind: 'people', required: false };
+      expect(await save(head, edit(type, { defaultBullets: [ORGANISERS, other] }))).toMatchObject({
+        ok: true,
       });
     });
   });
@@ -250,6 +329,26 @@ describe('pointTypes.save', () => {
         code: 'invalid-input',
         fields: { defaultBullets: 'too-long' },
       });
+    });
+
+    it('refuses the organisers role on a text bullet', async () => {
+      const head = await headmaster();
+      const onText = { ...RESULTS, role: 'organisers' };
+      await refuses(() => save(head, { ...NEW_TYPE, defaultBullets: [onText] }), {
+        code: 'invalid-input',
+        fields: { defaultBullets: 'invalid' },
+      });
+    });
+
+    it('trims a bullet label and refuses one of spaces', async () => {
+      const head = await headmaster();
+      const type = await created(head, { defaultBullets: [{ ...GUESTS, label: '  Hosté  ' }] });
+      expect(type.defaultBullets[0]?.label).toBe('Hosté');
+      await refuses(
+        () =>
+          save(head, { ...NEW_TYPE, name: 'Jiná', defaultBullets: [{ ...GUESTS, label: '   ' }] }),
+        { code: 'invalid-input', fields: { 'defaultBullets.0.label': 'required' } },
+      );
     });
 
     it('needs a name within its cap', async () => {

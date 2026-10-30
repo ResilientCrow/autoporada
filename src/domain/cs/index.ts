@@ -62,5 +62,6 @@ export {
   type Campus,
   type OpeningInput,
   type ResponsibleVerb,
+  TITLE_GENDERS,
   type TitleGender,
 } from './sentence/opening';

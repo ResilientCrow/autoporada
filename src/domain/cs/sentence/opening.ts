@@ -10,7 +10,9 @@ import { renderPeople, type Person } from '../people/list';
  * proběhlo … které / proběhly … které / proběhla … která (neuter plural,
  * „Školní kola olympiády“).
  */
-export type TitleGender = 'm' | 'f' | 'n' | 'pl' | 'npl';
+/** Every title gender, once: the type, the contracts and the admin form all follow this list. */
+export const TITLE_GENDERS = ['m', 'f', 'n', 'pl', 'npl'] as const;
+export type TitleGender = (typeof TITLE_GENDERS)[number];
 
 export type Campus = 'smichov' | 'radlice' | 'na-vidouli' | 'jinde';
 

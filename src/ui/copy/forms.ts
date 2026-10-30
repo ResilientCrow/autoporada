@@ -38,7 +38,8 @@ export const rules = {
   'draft-cap': `Rozpracovaných bodů můžete mít nejvýše ${DRAFT_CAP}. Dokončete nebo zrušte některé z\u00A0nich.`,
   'point-not-editable': 'Bod už nelze upravovat, protože se změnil jeho stav.',
   'type-name-taken': 'Typ bodu s\u00A0tímto názvem už existuje.',
-  'type-locked': 'Typ „Jiné“ nelze vypnout.',
+  'type-locked': 'Tento typ nelze vypnout.',
+  'bullet-kind-fixed': 'Druh uložené odrážky nelze změnit. Odeberte ji a\u00A0přidejte novou.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {

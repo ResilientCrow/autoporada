@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { TitleGender } from '@/domain/cs';
+import { TITLE_GENDERS } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import type { PointEvent, PointState } from '@/domain/review';
 
@@ -30,14 +30,6 @@ const POINT_EVENTS: Readonly<Record<PointEvent | 'edit', PointEvent | 'edit'>> =
   publish: 'publish',
   unpublish: 'unpublish',
   edit: 'edit',
-};
-
-const TITLE_GENDERS: Readonly<Record<TitleGender, TitleGender>> = {
-  m: 'm',
-  f: 'f',
-  n: 'n',
-  pl: 'pl',
-  npl: 'npl',
 };
 
 const instant = z.iso.datetime();

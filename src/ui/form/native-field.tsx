@@ -19,7 +19,14 @@ export function useNativeField(
     label,
     description,
     issue,
-  }: { readonly label?: string; readonly description?: string; readonly issue?: string },
+    optionalMark = true,
+  }: {
+    readonly label?: string;
+    readonly description?: string;
+    readonly issue?: string;
+    /** False: no „(nepovinné)“ after the label of a box that is optional by nature. */
+    readonly optionalMark?: boolean;
+  },
 ) {
   const { formId, spec, issues } = useFormContext();
   const field = spec[name];
@@ -37,7 +44,7 @@ export function useNativeField(
   ].join(' ');
   return {
     id,
-    label: required ? text : `${text} ${form.optional}`,
+    label: required || !optionalMark ? text : `${text} ${form.optional}`,
     required,
     invalid,
     describedBy: describedBy === '' ? undefined : describedBy,

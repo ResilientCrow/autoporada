@@ -220,6 +220,16 @@ describe('SelectField and CheckboxField', () => {
       expect(html).not.toContain(`Druh ${cs.form.optional}`);
     });
 
+    it('leaves out the optional marker for a box that is optional by nature', () => {
+      const out = renderToStaticMarkup(
+        <Form id="c" spec={controlSpec} state={idle(null)}>
+          <CheckboxField name="agree" optionalMark={false} />
+        </Form>,
+      );
+      expect(out).toContain('Souhlas');
+      expect(out).not.toContain(cs.form.optional);
+    });
+
     it('selects the default value and has no placeholder option', () => {
       expect(html).toContain('<option value="b" selected="">Beta</option>');
       expect(html.match(/<option /g)).toHaveLength(2);

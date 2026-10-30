@@ -1,8 +1,8 @@
-import { defineUseCase, diffRecords, fail, ok } from '@/application/core';
-import type { PointTypeRecord, PointTypeValues } from '@/application/ports';
+import { defineUseCase, fail, ok } from '@/application/core';
+import type { PointTypeValues } from '@/application/ports';
 import { savePointTypeInput, savePointTypeOutput } from '@/contracts';
 
-import { pointTypeEvent, POINT_TYPE_AUDIT } from './events';
+import { changedFields, pointTypeEvent } from './events';
 
 /**
  * The headmaster makes a point type or changes one: its name, title gender,
@@ -10,8 +10,9 @@ import { pointTypeEvent, POINT_TYPE_AUDIT } from './events';
  * place in the list. The form sends the whole type; a save that changes
  * nothing writes nothing. „Jiné“ (locked) is never switched off. The name is
  * checked here and again by the database at commit (rule `type-name-taken`),
- * so two headmasters racing on one name get the same answer. Drafts already
- * started keep the bullets they copied.
+ * so two headmasters racing on one name get the same answer. A saved bullet
+ * keeps its kind (rule `bullet-kind-fixed`): points started from the type hold
+ * a bullet under its key, and read the type's live spec by that key.
  */
 export const savePointType = defineUseCase({
   name: 'pointTypes.save',
@@ -28,6 +29,10 @@ export const savePointType = defineUseCase({
     if (types.some((t) => t.id !== current?.id && t.name === input.name)) {
       return fail({ code: 'rule', rule: 'type-name-taken' });
     }
+    const kinds = new Map(current?.defaultBullets.map((b) => [b.key, b.kind]));
+    if (input.defaultBullets.some((b) => (kinds.get(b.key) ?? b.kind) !== b.kind)) {
+      return fail({ code: 'rule', rule: 'bullet-kind-fixed' });
+    }
 
     const last = Math.max(0, ...types.map((t) => t.position));
     const values: PointTypeValues = {
@@ -37,7 +42,7 @@ export const savePointType = defineUseCase({
       active: input.active,
       position: input.position ?? current?.position ?? last + 1,
     };
-    if (current && !hasChanged(current, values)) {
+    if (current && changedFields(current, values).length === 0) {
       return ok({ id: current.id, version: current.version, changed: false });
     }
     const after = current
@@ -49,8 +54,3 @@ export const savePointType = defineUseCase({
     return ok({ id: after.id, version: after.version, changed: true });
   },
 });
-
-/** Whether `values` differ from the stored type in anything the audit log shows. */
-function hasChanged(current: PointTypeRecord, values: PointTypeValues): boolean {
-  return Object.keys(diffRecords(POINT_TYPE_AUDIT, current, { ...current, ...values })).length > 0;
-}

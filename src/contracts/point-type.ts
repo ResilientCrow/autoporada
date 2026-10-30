@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { TitleGender } from '@/domain/cs';
+import { TITLE_GENDERS } from '@/domain/cs';
 import { POINT_LIMITS, type BulletSpec } from '@/domain/report';
 
 /** A bullet's key: a stable slug that a draft's bullet copies from its type. */
@@ -16,7 +16,7 @@ export const uniqueKeys = (bullets: readonly { readonly key: string }[]) =>
 /** A bullet a point type offers. */
 const bulletSpecSchema = z.strictObject({
   key: bulletKeySchema,
-  label: z.string().min(1).max(POINT_LIMITS.bulletLabel),
+  label: z.string().trim().min(1).max(POINT_LIMITS.bulletLabel),
   kind: z.enum(['people', 'text']),
   required: z.boolean(),
   role: z.literal('organisers').optional(),
@@ -27,8 +27,6 @@ export const defaultBulletsSchema = z
   .array(bulletSpecSchema)
   .max(POINT_LIMITS.bullets)
   .refine(uniqueKeys, { message: 'duplicate-key' });
-
-const TITLE_GENDERS = ['m', 'f', 'n', 'pl', 'npl'] as const satisfies readonly TitleGender[];
 
 /**
  * The type lists. The chooser sends nothing; the headmaster's admin sends `includeInactive` and
@@ -56,9 +54,10 @@ export const listPointTypesOutput = z.object({
   ),
 });
 
-/** At most one bullet names the organisers of the opening sentence. */
-const atMostOneOrganisers = (bullets: readonly BulletSpec[]) =>
-  bullets.filter((b) => b.role === 'organisers').length <= 1;
+/** At most one bullet names the organisers of the opening sentence, and it lists people. */
+const organisersRule = (bullets: readonly BulletSpec[]) =>
+  bullets.filter((b) => b.role === 'organisers').length <= 1 &&
+  bullets.every((b) => b.role === undefined || b.kind === 'people');
 
 /**
  * „Uložit“ of the type admin: the whole desired type. Without `id` a new type is made (after the
@@ -70,7 +69,7 @@ export const savePointTypeInput = z
     expectedVersion: z.number().int().positive().optional(),
     name: z.string().trim().min(1).max(POINT_LIMITS.typeName),
     titleGender: z.enum(TITLE_GENDERS).nullable(),
-    defaultBullets: defaultBulletsSchema.refine(atMostOneOrganisers, { message: 'organisers' }),
+    defaultBullets: defaultBulletsSchema.refine(organisersRule, { message: 'organisers' }),
     active: z.boolean(),
     position: z.number().int().min(1).max(999).optional(),
   })

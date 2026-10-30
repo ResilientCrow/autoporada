@@ -15,6 +15,28 @@ import { describe, expect, it } from 'vitest';
  */
 const FORBIDDEN = new Set(['title', 'note', 'text', 'quote', 'name', 'body', 'before']);
 
+/**
+ * The same rule for a diff: in an `AuditShape` (the rule per field of a record) a field that
+ * holds text a person wrote must be `'omit'`; the event may say that it changed (in meta), never
+ * what it says. The scan reads the object literal given to a const typed `AuditShape<…>`.
+ */
+const TEXT_FIELDS = new Set([
+  'title',
+  'note',
+  'text',
+  'quote',
+  'name',
+  'body',
+  'reason',
+  'content',
+  'label',
+  'displayName',
+  'email',
+  'jobTitle',
+  'department',
+  'defaultBullets',
+]);
+
 const ROOT = join(__dirname, '..', '..');
 const APPLICATION = join(ROOT, 'src', 'application');
 
@@ -116,6 +138,37 @@ function forbiddenMetaKeys(files: readonly Source[]): string[] {
   return problems;
 }
 
+/** The text fields of every `AuditShape` literal in `files` whose rule is not `'omit'`. */
+function shapeTextFields(files: readonly Source[]): string[] {
+  const problems: string[] = [];
+  for (const source of files.map(parse)) {
+    visit(source, (node) => {
+      if (
+        !ts.isVariableDeclaration(node) ||
+        !node.type ||
+        !ts.isTypeReferenceNode(node.type) ||
+        node.type.typeName.getText(source) !== 'AuditShape' ||
+        !node.initializer ||
+        !ts.isObjectLiteralExpression(node.initializer)
+      ) {
+        return;
+      }
+      for (const property of node.initializer.properties) {
+        const name = property.name?.getText(source).replace(/^['"]|['"]$/g, '');
+        const omitted =
+          ts.isPropertyAssignment(property) &&
+          ts.isStringLiteral(property.initializer) &&
+          property.initializer.text === 'omit';
+        if (name !== undefined && TEXT_FIELDS.has(name) && !omitted) {
+          const { line } = source.getLineAndCharacterOfPosition(property.getStart(source));
+          problems.push(`${source.fileName}:${line + 1}: audit shape field ${name}`);
+        }
+      }
+    });
+  }
+  return problems;
+}
+
 function applicationSources(dir: string): Source[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
@@ -130,6 +183,39 @@ describe('audit meta in src/application', () => {
     const sources = applicationSources(APPLICATION);
     expect(sources.length).toBeGreaterThan(50);
     expect(forbiddenMetaKeys(sources)).toEqual([]);
+  });
+});
+
+describe('audit shapes in src/application', () => {
+  it('show no text a person wrote', () => {
+    expect(shapeTextFields(applicationSources(APPLICATION))).toEqual([]);
+  });
+});
+
+describe('the audit shape scan itself', () => {
+  const file = (text: string) => [{ file: 'x.ts', text }];
+
+  it('passes a shape that omits its text fields and shows the rest', () => {
+    const text = `const S: AuditShape<R> = { id: 'omit', name: 'omit', 'label': 'omit', role: 'value' };`;
+    expect(shapeTextFields(file(text))).toEqual([]);
+  });
+
+  it("reports a text field shown as its value or through a function (a point type's name and bullets)", () => {
+    const text = [
+      'export const S: AuditShape<R> = {',
+      "  name: 'value',",
+      '  defaultBullets: (bullets) => bullets.map((b) => ({ ...b })),',
+      "  active: 'value',",
+      '};',
+    ].join('\n');
+    expect(shapeTextFields(file(text))).toEqual([
+      'x.ts:2: audit shape field name',
+      'x.ts:3: audit shape field defaultBullets',
+    ]);
+  });
+
+  it('ignores an object that is not typed as a shape', () => {
+    expect(shapeTextFields(file(`const S = { name: 'value' };`))).toEqual([]);
   });
 });
 

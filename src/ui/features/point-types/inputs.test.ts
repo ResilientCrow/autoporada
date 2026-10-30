@@ -17,22 +17,32 @@ const NEW = { locked: false } as const;
 
 describe('bulletKeyFor', () => {
   it.each([
-    ['Hosté', [], 'hoste'],
-    ['  Třídní kolo – 2. stupeň  ', [], 'tridni-kolo-2-stupen'],
-    ['2024', [], 'bod-2024'],
-    ['???', [], 'bod'],
-    ['Hosté', ['hoste'], 'hoste-2'],
-    ['Hosté', ['hoste', 'hoste-2'], 'hoste-3'],
-  ])('writes %j (taken %j) as %s', (label, taken, expected) => {
-    expect(bulletKeyFor(label, new Set(taken))).toBe(expected);
+    ['Hosté', 'people', [], 'hoste--p'],
+    ['Hosté', 'text', [], 'hoste--t'],
+    ['  Třídní kolo – 2. stupeň  ', 'text', [], 'tridni-kolo-2-stupen--t'],
+    ['2024', 'text', [], 'bod-2024--t'],
+    ['???', 'people', [], 'bod--p'],
+    ['Hosté', 'people', ['hoste--p'], 'hoste-2--p'],
+    ['Hosté', 'people', ['hoste--p', 'hoste-2--p'], 'hoste-3--p'],
+    ['Hosté', 'people', ['hoste--t'], 'hoste--p'],
+  ] as const)('writes %j (%s, taken %j) as %s', (label, kind, taken, expected) => {
+    expect(bulletKeyFor(label, kind, new Set(taken))).toBe(expected);
   });
 
-  it('stays within the key limit, suffix included, and never ends in a hyphen', () => {
+  it('puts the kind in the key, so a bullet removed and added again as another kind never reuses it', () => {
+    expect(bulletKeyFor('Výsledky', 'text', new Set())).not.toBe(
+      bulletKeyFor('Výsledky', 'people', new Set()),
+    );
+    // Not even a label that spells the other kind's suffix: a slug never holds a double hyphen.
+    expect(bulletKeyFor('Hosté - p', 'text', new Set())).toBe('hoste-p--t');
+  });
+
+  it('stays within the key limit, suffixes included, and never ends in a hyphen before them', () => {
     const label = `${'a'.repeat(POINT_LIMITS.bulletKey - 1)} b`;
-    const first = bulletKeyFor(label, new Set());
-    const second = bulletKeyFor(label, new Set([first]));
-    expect(first).toHaveLength(POINT_LIMITS.bulletKey - 1);
-    expect(second).toMatch(/^a+-2$/);
+    const first = bulletKeyFor(label, 'people', new Set());
+    const second = bulletKeyFor(label, 'people', new Set([first]));
+    expect(first).toHaveLength(POINT_LIMITS.bulletKey);
+    expect(second).toMatch(/^a+-2--p$/);
     expect(second.length).toBeLessThanOrEqual(POINT_LIMITS.bulletKey);
   });
 });
@@ -89,7 +99,7 @@ describe('typeInput', () => {
     );
     expect(input.defaultBullets).toEqual([
       { key: 'hoste', label: 'Hosté', kind: 'people', required: true, role: 'organisers' },
-      { key: 'hoste-2', label: 'Hosté', kind: 'text', required: false },
+      { key: 'hoste--t', label: 'Hosté', kind: 'text', required: false },
     ]);
   });
 
@@ -106,7 +116,7 @@ describe('typeInput', () => {
       }),
     );
     expect(input.defaultBullets).toEqual([
-      { key: 'poznamka', label: 'Poznámka', kind: 'text', required: false },
+      { key: 'poznamka--t', label: 'Poznámka', kind: 'text', required: false },
     ]);
   });
 

@@ -12,13 +12,16 @@ export function CheckboxField({
   label,
   description,
   defaultChecked = false,
+  optionalMark = true,
 }: {
   readonly name: string;
   readonly label?: string;
   readonly description?: string;
   readonly defaultChecked?: boolean;
+  /** False for a box that is optional by nature (a switch, a flag): its label gets no „(nepovinné)“. */
+  readonly optionalMark?: boolean;
 }) {
-  const field = useNativeField(name, { label, description });
+  const field = useNativeField(name, { label, description, optionalMark });
 
   return (
     <div className="flex flex-col gap-1">
