@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-
 import type { ReviewDecision } from '@/domain/review';
 import { future } from '@/ui/copy';
-import { LiveStatus, NoScriptNotice } from '@/ui/form';
+import { NoScriptNotice } from '@/ui/form';
 
 import { FutureCancel } from './FutureCancel';
 import { FutureDecision } from './FutureDecision';
+import { useFutureHost } from './FutureHost';
 import {
   barChoices,
   type CancelFutureAction,
@@ -17,10 +16,10 @@ import {
 
 /**
  * The reviewer's side of /akce/[id] (design section 12): the decision bar and, for whoever may
- * call an approved akce off, „Zrušit akci“. It outlives the version, so its one status region is
- * mounted before a decision is said into it, while the bar and the cancel are keyed by the
- * version and start afresh after the refresh. Without JavaScript neither can send, and the page
- * says so once.
+ * call an approved item off, „Zrušit“. The status region and the focus belong to the `FutureHost`
+ * above the views, which outlives both the version and this bar; the bar and the cancel are keyed
+ * by the version and start afresh after the refresh. Without JavaScript neither can send, and the
+ * page says so once.
  */
 export function FutureReview({
   id,
@@ -35,8 +34,7 @@ export function FutureReview({
   readonly decideFuture: DecideFutureAction;
   readonly cancelFuture: CancelFutureAction;
 }) {
-  const [said, setSaid] = useState({ message: '', count: 0 });
-  const say = (message: string) => setSaid((s) => ({ message, count: s.count + 1 }));
+  const { say } = useFutureHost();
   return (
     <>
       <FutureDecision
@@ -56,7 +54,6 @@ export function FutureReview({
           onCancelled={() => say(future.review.cancel.said)}
         />
       ) : null}
-      <LiveStatus message={said.message} count={said.count} />
       {barChoices(bar).any || bar.canCancel ? <NoScriptNotice /> : null}
     </>
   );

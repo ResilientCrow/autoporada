@@ -4,7 +4,9 @@ import { future, points } from '@/ui/copy';
 import { SlantLabel } from '@/ui/kit';
 import { Chip, FUTURE_LOOK } from '@/ui/status';
 
-/** The heading of an item's page: its title, what it is, and where it stands. */
+import { FUTURE_HEADING_ID } from './review-calls';
+
+/** The heading of an item's page: its title (where the host sends focus), what it is, and where it stands. */
 export function FutureHeader({
   kind,
   state,
@@ -17,7 +19,9 @@ export function FutureHeader({
 }) {
   return (
     <header className="space-y-2">
-      <SlantLabel level={1}>{title === '' ? points.untitled : title}</SlantLabel>
+      <SlantLabel level={1} focusId={FUTURE_HEADING_ID}>
+        {title === '' ? points.untitled : title}
+      </SlantLabel>
       <p className="flex flex-wrap items-center gap-2">
         <span>{future.kind[kind]}</span>
         <Chip look={FUTURE_LOOK[state]} />

@@ -7,8 +7,9 @@ import { cs } from '@/ui/copy';
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import type { FutureContentWire } from './edit';
+import { FutureHost } from './FutureHost';
 import { FutureScreen, type FutureScreenItem } from './FutureScreen';
-import type { FutureReviewModel } from './review-calls';
+import { FUTURE_HEADING_ID, type FutureReviewModel } from './review-calls';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => undefined, replace: () => undefined }),
@@ -267,5 +268,47 @@ describe('the reviewer’s side', () => {
     expect(html).toContain(future.state.cancelled);
     expect(buttons(html)).toEqual([]);
     expect(html).not.toContain('<form');
+  });
+});
+
+describe('the host above the views (ADR 0013 items 1 and 7)', () => {
+  const read = (over: Partial<FutureScreenItem> = {}) => render({ editor: null, ...over });
+  const heading = new RegExp(
+    `<h1 [^>]*id="${FUTURE_HEADING_ID}"[^>]*tabindex="-1"|<h1 [^>]*tabindex="-1"[^>]*id="${FUTURE_HEADING_ID}"`,
+  );
+
+  it('makes the title a place focus can be sent to, in the read view and in the editor', () => {
+    expect(read()).toMatch(heading);
+    expect(render()).toMatch(heading);
+    expect(render({ state: 'approved' })).toMatch(heading);
+  });
+
+  it('ends every view with the host’s status region, with or without a bar', () => {
+    const states = [
+      read({ review: null }),
+      render({ review: null }),
+      read({
+        state: 'submitted',
+        review: { decisions: ['approve'], othersApprove: false, canCancel: false },
+      }),
+      render({
+        state: 'approved',
+        review: { decisions: [], othersApprove: false, canCancel: true },
+      }),
+    ];
+    for (const html of states) expect(html).toMatch(/<div role="status"><\/div><\/div>$/);
+  });
+
+  it('is the same element at the same place whichever view shows, so a message outlives the switch', () => {
+    const tops = [
+      FutureScreen({ item: item({ editor: null }), actions: ACTIONS }),
+      FutureScreen({ item: item(), actions: ACTIONS }),
+      FutureScreen({ item: item({ state: 'approved' }), actions: ACTIONS }),
+      FutureScreen({ item: item({ review: null }), actions: ACTIONS }),
+    ];
+    for (const top of tops) {
+      expect(top.type).toBe(FutureHost);
+      expect(top.key).toBeNull();
+    }
   });
 });

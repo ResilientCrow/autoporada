@@ -8,6 +8,7 @@ import type { FutureActions } from './actions';
 import type { FutureContentWire } from './edit';
 import { FutureEditor } from './FutureEditor';
 import { FutureHeader } from './FutureHeader';
+import { FutureHost } from './FutureHost';
 import { FutureRead, type FutureReadItem } from './FutureRead';
 import { FutureRetract } from './FutureRetract';
 import { FutureReview } from './FutureReview';
@@ -42,8 +43,10 @@ export interface FutureScreenItem extends FutureReadItem {
  * An item's page below the shell: the editor for the author of a draft or returned item
  * (autosaved) or of an approved akce (one „Uložit změny“), and the read view for everyone else
  * and every other state, with „Stáhnout“ for the author of a submitted item. The reviewer's
- * decision bar and the cancel of an approved akce follow either view. The editor is keyed by id
- * and version, so „Načíst aktuální stav“ starts it again from the server's values.
+ * decision bar and the cancel of an approved item follow either view. The editor is keyed by id
+ * and version, so „Načíst aktuální stav“ starts it again from the server's values. Both views
+ * sit in one `FutureHost`, which keeps the status region and sends focus to the title after a
+ * decision, so neither is lost when the state flips the view.
  */
 export function FutureScreen({
   item,
@@ -65,12 +68,14 @@ export function FutureScreen({
     );
   if (editor === null) {
     return (
-      <FutureRead item={item}>
-        {item.canRetract ? (
-          <FutureRetract id={id} version={item.version} retractFuture={actions.retractFuture} />
-        ) : null}
-        {reviewing}
-      </FutureRead>
+      <FutureHost>
+        <FutureRead item={item}>
+          {item.canRetract ? (
+            <FutureRetract id={id} version={item.version} retractFuture={actions.retractFuture} />
+          ) : null}
+          {reviewing}
+        </FutureRead>
+      </FutureHost>
     );
   }
   const shared = {
@@ -84,29 +89,35 @@ export function FutureScreen({
     window,
   };
   return (
-    <div className="space-y-4">
-      <FutureHeader kind={kind} state={state} title={view.title} />
-      {returnNote === null ? null : (
-        <section className="space-y-1">
-          <h2 className="font-semibold">{future.returnNote}</h2>
-          <p className="whitespace-pre-line">{returnNote}</p>
-        </section>
-      )}
-      {state === 'approved' ? (
-        <FutureRevise key={`${id}:${editor.version}`} {...shared} saveFuture={actions.saveFuture} />
-      ) : (
-        <FutureEditor
-          key={`${id}:${editor.version}`}
-          {...shared}
-          saveFuture={actions.saveFuture}
-          submitFuture={actions.submitFuture}
-          getFuture={actions.getFuture}
-        />
-      )}
-      {reviewing}
-      <p>
-        <ArrowLink href="/akce">{future.back}</ArrowLink>
-      </p>
-    </div>
+    <FutureHost>
+      <div className="space-y-4">
+        <FutureHeader kind={kind} state={state} title={view.title} />
+        {returnNote === null ? null : (
+          <section className="space-y-1">
+            <h2 className="font-semibold">{future.returnNote}</h2>
+            <p className="whitespace-pre-line">{returnNote}</p>
+          </section>
+        )}
+        {state === 'approved' ? (
+          <FutureRevise
+            key={`${id}:${editor.version}`}
+            {...shared}
+            saveFuture={actions.saveFuture}
+          />
+        ) : (
+          <FutureEditor
+            key={`${id}:${editor.version}`}
+            {...shared}
+            saveFuture={actions.saveFuture}
+            submitFuture={actions.submitFuture}
+            getFuture={actions.getFuture}
+          />
+        )}
+        {reviewing}
+        <p>
+          <ArrowLink href="/akce">{future.back}</ArrowLink>
+        </p>
+      </div>
+    </FutureHost>
   );
 }

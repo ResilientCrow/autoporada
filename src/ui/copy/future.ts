@@ -97,11 +97,13 @@ export const future = {
       return: 'Položka byla vrácena autorovi k\u00A0úpravě.',
       reject: 'Položka byla zamítnuta.',
     } as const satisfies Record<ReviewDecision, string>,
+    /** Worded for an akce and a jednání alike. */
     cancel: {
-      button: 'Zrušit akci',
-      confirm: 'Rozumím, že akce zmizí z\u00A0přehledu.',
-      unconfirmed: 'Potvrďte prosím, že akce zmizí z\u00A0přehledu.',
-      said: 'Akce byla zrušena.',
+      heading: 'Zrušení položky',
+      button: 'Zrušit položku',
+      confirm: 'Rozumím, že položka zmizí z\u00A0přehledu.',
+      unconfirmed: 'Potvrďte prosím, že položka zmizí z\u00A0přehledu.',
+      said: 'Položka byla zrušena.',
     },
   },
   /** Where the item lands in the overview of the next porady (design section 12). */

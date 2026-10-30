@@ -55,8 +55,11 @@ export const decideFuture = defineAction(decideFutureUseCase, {
   refresh: 'page',
 });
 
-/** „Zrušit akci“ of an approved akce, by its author or a reviewer; the page refreshes as „Zrušeno“. */
+/**
+ * „Zrušit položku“ of an approved item, by its author or a reviewer; the page refreshes as
+ * „Zrušeno“. It counts under the submission limit, like the points' withdraw an author makes.
+ */
 export const cancelFuture = defineAction(cancelFutureUseCase, {
-  rateLimit: 'admin',
+  rateLimit: 'submission',
   refresh: 'page',
 });

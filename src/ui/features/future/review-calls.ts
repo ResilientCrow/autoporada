@@ -25,7 +25,7 @@ export interface FutureReviewModel {
   readonly decisions: readonly ReviewDecision[];
   /** The viewer's own item: another reviewer or the headmaster approves it. */
   readonly othersApprove: boolean;
-  /** „Zrušit akci“ is offered. */
+  /** „Zrušit položku“ is offered. */
   readonly canCancel: boolean;
 }
 
@@ -67,7 +67,7 @@ export function decideInput(id: string, version: number, data: FormData) {
   return { ...write, event };
 }
 
-/** „Zrušit akci“: the box as ticked; an empty one is for the server to refuse, writing nothing. */
+/** „Zrušit položku“: the box as ticked; an empty one is for the server to refuse, writing nothing. */
 export const cancelInput = (id: string, version: number, data: FormData) => ({
   id,
   expectedVersion: version,
@@ -84,3 +84,6 @@ export function barChoices({ decisions, othersApprove }: FutureReviewModel) {
     any: decisions.length > 0 || othersApprove,
   };
 }
+
+/** The id of the item's title, where the host sends focus once a decision or a cancel went through. */
+export const FUTURE_HEADING_ID = 'akce-nadpis';

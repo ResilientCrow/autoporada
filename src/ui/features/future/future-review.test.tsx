@@ -9,6 +9,7 @@ import { CheckboxField, Form, refusalAsGone, type FormState, type Problem } from
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import { FutureCancel } from './FutureCancel';
+import { FutureHost } from './FutureHost';
 import { FutureNote } from './FutureNote';
 import { FutureReview } from './FutureReview';
 import {
@@ -41,13 +42,15 @@ const model = (over: Partial<FutureReviewModel> = {}): FutureReviewModel => ({
 });
 const render = (over: Partial<FutureReviewModel> = {}) =>
   renderToStaticMarkup(
-    <FutureReview
-      id={ID}
-      version={4}
-      bar={model(over)}
-      decideFuture={never}
-      cancelFuture={never}
-    />,
+    <FutureHost>
+      <FutureReview
+        id={ID}
+        version={4}
+        bar={model(over)}
+        decideFuture={never}
+        cancelFuture={never}
+      />
+    </FutureHost>,
   );
 const buttons = (html: string) =>
   [...html.matchAll(/<button\b[^>]*>(.*?)<\/button>/g)].map((m) => m[1]);
@@ -98,8 +101,25 @@ describe('FutureReview: the decision bar', () => {
     expect(all).toContain(cs.form.noscript);
   });
 
-  it('keeps only its empty status region when nothing may be decided or cancelled', () => {
-    expect(render({ decisions: [] })).toBe('<div role="status"></div>');
+  it('keeps only the host’s empty status region when nothing may be decided or cancelled', () => {
+    const html = render({ decisions: [] });
+    expect(html.match(/role="status"/g)).toHaveLength(1);
+    expect(html).not.toContain('<form');
+    expect(html).not.toContain('<noscript>');
+  });
+
+  it('needs the host above it, which owns the status region and the focus', () => {
+    const lone = () =>
+      renderToStaticMarkup(
+        <FutureReview
+          id={ID}
+          version={4}
+          bar={model()}
+          decideFuture={never}
+          cancelFuture={never}
+        />,
+      );
+    expect(lone).toThrow();
   });
 
   it('is clean for the Content-Security-Policy', () => {
@@ -108,6 +128,22 @@ describe('FutureReview: the decision bar', () => {
 });
 
 describe('FutureReview: the cancel', () => {
+  it('stands in a section of its own with a heading, apart from the decisions', () => {
+    const html = render({ canCancel: true });
+    const section = /<section aria-labelledby="([^"]+)"([^>]*)>(.*?)<\/section>/s.exec(html);
+    expect(section).not.toBeNull();
+    const [, labelledBy, attrs, inside] = section ?? [];
+    expect(attrs).toContain('border-t-2');
+    expect(inside).toContain(`id="${labelledBy}"`);
+    expect(inside).toMatch(new RegExp(`<h2[^>]*>${bar.cancel.heading}</h2>`));
+    expect(inside).toContain(`id="${CANCEL_FORM_ID}"`);
+    expect(inside).not.toContain(decision.approve);
+  });
+
+  it('is worded so it fits an akce and a jednání alike', () => {
+    for (const text of Object.values(bar.cancel)) expect(text).not.toMatch(/akc/i);
+  });
+
   it('follows the bar as a form of its own, for whoever may cancel', () => {
     const html = render({ canCancel: true });
     expect(html.indexOf(`id="${CANCEL_FORM_ID}"`)).toBeGreaterThan(html.indexOf(decision.label));
@@ -221,7 +257,7 @@ describe('FutureCancel', () => {
     <FutureCancel id={ID} version={4} cancelFuture={never} onCancelled={() => undefined} />,
   );
 
-  it('is a box that must be ticked, then „Zrušit akci“', () => {
+  it('is a box that must be ticked, then „Zrušit položku“', () => {
     expect(html).toMatch(/<input [^>]*type="checkbox"[^>]*name="confirmed"/);
     expect(html).toContain(bar.cancel.confirm);
     expect(buttons(html)).toEqual([bar.cancel.button]);

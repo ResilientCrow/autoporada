@@ -5,11 +5,14 @@ import { CheckboxField, Form, refusalAsGone, SubmitButton, useActionForm } from 
 
 import { CANCEL_FORM_ID, CANCEL_SPEC, cancelInput, type CancelFutureAction } from './review-calls';
 
+const HEADING_ID = `${CANCEL_FORM_ID}-nadpis`;
+
 /**
- * „Zrušit akci“ (design section 12): an approved akce called off by its author or a reviewer, with
- * the box that must be ticked. It sends the version the page showed; the action moves the state
- * and refreshes the page, which then shows the akce as „Zrušeno“. A form of its own, so it never
- * nests in the editor's.
+ * „Zrušit položku“ (design section 12): an approved item called off by its author or a reviewer,
+ * with the box that must be ticked, in a section of its own apart from the decisions (ADR 0013
+ * item 10). It sends the version the page showed; the action moves the state and refreshes the
+ * page, which then shows the item as „Zrušeno“. A form of its own, so it never nests in the
+ * editor's.
  */
 export function FutureCancel({
   id,
@@ -29,11 +32,16 @@ export function FutureCancel({
     onSuccess: onCancelled,
   });
   return (
-    <Form id={CANCEL_FORM_ID} spec={CANCEL_SPEC} state={refusalAsGone(state)}>
-      <CheckboxField name="confirmed" optionalMark={false} />
-      <div>
-        <SubmitButton variant="secondary">{future.review.cancel.button}</SubmitButton>
-      </div>
-    </Form>
+    <section aria-labelledby={HEADING_ID} className="space-y-3 border-t-2 border-ink pt-4">
+      <h2 id={HEADING_ID} className="font-semibold">
+        {future.review.cancel.heading}
+      </h2>
+      <Form id={CANCEL_FORM_ID} spec={CANCEL_SPEC} state={refusalAsGone(state)}>
+        <CheckboxField name="confirmed" optionalMark={false} />
+        <div>
+          <SubmitButton variant="secondary">{future.review.cancel.button}</SubmitButton>
+        </div>
+      </Form>
+    </section>
   );
 }
