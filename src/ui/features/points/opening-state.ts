@@ -1,8 +1,9 @@
 import { openingSentence, type TitleGender } from '@/domain/cs';
 import { openingInput, type BulletSpec, type PointContent } from '@/domain/report';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
+import { readText } from '@/ui/form';
 
-import { readText, type PointContentWire } from './fields';
+import type { PointContentWire } from './fields';
 import type { Edit } from './report-patch';
 
 /** What the sentence needs besides the content: the type's title gender and its bullets (which name the organisers). */

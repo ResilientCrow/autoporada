@@ -1,7 +1,16 @@
-export { AutosaveStatus, useAutosave, type SaveAnswer, type StatusAnswer } from './autosave';
+export {
+  AutosaveStatus,
+  saveAnswerOf,
+  statusAnswerOf,
+  useAutosave,
+  type SaveAnswer,
+  type StatusAnswer,
+} from './autosave';
 export type { FormState } from './context';
 export { Form } from './Form';
 export { CheckboxField } from './CheckboxField';
+export { DateField } from './DateField';
+export { pickedTime, readText, typedDate } from './dates';
 export { ErrorSummary } from './ErrorSummary';
 export { FormProblem } from './FormProblem';
 export { LiveStatus } from './LiveStatus';

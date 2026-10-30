@@ -10,7 +10,7 @@ import { NONCE_HEADER } from '../http';
 import { first, type SearchParams } from './params';
 
 export { accessPage } from './access';
-export { futureListPage, futurePage } from './future';
+export { futureListPage, futurePage, newFuturePage } from './future';
 export { homePage } from './home';
 export { pointTypesPage } from './point-types';
 export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points';

@@ -13,6 +13,8 @@ export function CheckboxField({
   description,
   defaultChecked = false,
   optionalMark = true,
+  disabled = false,
+  onChange,
 }: {
   readonly name: string;
   readonly label?: string;
@@ -20,6 +22,10 @@ export function CheckboxField({
   readonly defaultChecked?: boolean;
   /** False for a box that is optional by nature (a switch, a flag): its label gets no „(nepovinné)“. */
   readonly optionalMark?: boolean;
+  /** Shown but not changeable (an autosaving editor waiting on its banner). */
+  readonly disabled?: boolean;
+  /** Called with the new state; the box stays uncontrolled. */
+  readonly onChange?: (checked: boolean) => void;
 }) {
   const field = useNativeField(name, { label, description, optionalMark });
 
@@ -31,6 +37,8 @@ export function CheckboxField({
           type="checkbox"
           name={name}
           defaultChecked={defaultChecked}
+          disabled={disabled}
+          onChange={onChange === undefined ? undefined : (e) => onChange(e.target.checked)}
           aria-required={field.required ? true : undefined}
           aria-invalid={field.invalid ? true : undefined}
           aria-describedby={field.describedBy}

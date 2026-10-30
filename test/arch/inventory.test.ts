@@ -70,11 +70,11 @@ describe('inventory of entry points', () => {
         if (info?.kind === 'action' && info.refresh === 'none') skipping.push(info.useCase.name);
       }
     }
-    // M8b adds the future pair: each change updates ADR 0017 item 1.
+    // ADR 0017 item 1 names all four; each change updates the ADR and this list together.
     expect(
       skipping.sort(),
       'The actions with refresh: none changed: update ADR 0017 item 1 and this list together.',
-    ).toEqual(['points.create', 'points.save']);
+    ).toEqual(['future.create', 'future.save', 'points.create', 'points.save']);
   });
 
   it('gives the editor’s save and its conflict check the autosave limit, per user', async () => {
@@ -87,7 +87,13 @@ describe('inventory of entry points', () => {
         }
       }
     }
-    expect(Object.keys(limited).sort()).toEqual(['points.save', 'points.status']);
+    // An akce's conflict check is a read of the item (`future.get`): it has no status use case of its own.
+    expect(Object.keys(limited).sort()).toEqual([
+      'future.get',
+      'future.save',
+      'points.save',
+      'points.status',
+    ]);
     expect(LIMITS.autosave).toEqual({ max: 120, windowMs: 60_000, key: 'user' });
   });
 
@@ -106,6 +112,24 @@ describe('inventory of entry points', () => {
       'points.submit': ['submission', 'page'],
       'points.retract': ['submission', 'page'],
       'points.withdraw': ['submission', 'page'],
+    });
+  });
+
+  it('lets the akce submit and retract refresh the page, and the create and the save count as the points’ do', async () => {
+    const found: Record<string, unknown> = {};
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'action' && info.useCase.name.startsWith('future.'))
+          found[info.useCase.name] = [info.rateLimit, info.refresh];
+      }
+    }
+    expect(found).toEqual({
+      'future.create': ['submission', 'none'],
+      'future.save': ['autosave', 'none'],
+      'future.get': ['autosave', 'page'],
+      'future.submit': ['submission', 'page'],
+      'future.retract': ['submission', 'page'],
     });
   });
 

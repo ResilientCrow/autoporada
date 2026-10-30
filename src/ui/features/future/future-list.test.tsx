@@ -25,8 +25,13 @@ const row = (over: Partial<FutureRow> = {}): FutureRow => ({
   ...over,
 });
 
-const render = (rows: readonly FutureRow[], next: string | null = null, first = true) =>
-  renderToStaticMarkup(<FutureList rows={rows} next={next} first={first} />);
+const render = (
+  rows: readonly FutureRow[],
+  next: string | null = null,
+  first = true,
+  canCreate = true,
+) =>
+  renderToStaticMarkup(<FutureList rows={rows} next={next} first={first} canCreate={canCreate} />);
 
 const itemsOf = (html: string) => html.match(/<li[ >].*?<\/li>/gs) ?? [];
 
@@ -86,5 +91,15 @@ describe('FutureList', () => {
   it('links „Starší akce“ to the cursor, escaped', () => {
     expect(render([row()], 'a b/c')).toContain(`href="/akce?pred=a%20b%2Fc"`);
     expect(render([row()])).not.toContain(future.older);
+  });
+
+  it('links to „Nová akce“ for a reader who may start one, and not for one who may not', () => {
+    const html = render([row()]);
+    expect(html).toMatch(new RegExp(`<a [^>]*href="/akce/novy"[^>]*>${future.new}</a>`));
+    expect(render([row()], null, true, false)).not.toContain('/akce/novy');
+  });
+
+  it('offers the link on an empty list too', () => {
+    expect(render([])).toContain('/akce/novy');
   });
 });

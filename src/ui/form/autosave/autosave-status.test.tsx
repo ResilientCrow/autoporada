@@ -77,6 +77,21 @@ describe('the banners', () => {
     expect(buttons(html)).toEqual(['Načíst aktuální stav']);
   });
 
+  it('locked: says the editor’s own sentence when it brings one', () => {
+    const html = renderToStaticMarkup(
+      <AutosaveStatus
+        phase="locked"
+        savedAt={null}
+        lockedText="Položku už nelze upravovat."
+        onRetry={noop}
+        onKeepMine={noop}
+        onReload={noop}
+      />,
+    );
+    expect(html).toContain('Položku už nelze upravovat.');
+    expect(html).not.toContain('Bod už nelze');
+  });
+
   it('gone: the not-found sentence, not the state sentence, and "Načíst aktuální stav" only', () => {
     const html = render('gone');
     expect(alerts(html)).toHaveLength(1);

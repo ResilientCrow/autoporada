@@ -1,5 +1,7 @@
 import { stripKeys, type KeyedBullet } from './bullet-chips';
-import { campusOf, pickedTime, typedDate, type PointContentWire } from './fields';
+import { pickedTime, typedDate } from '@/ui/form';
+
+import { campusOf, type PointContentWire } from './fields';
 
 export type Patch = Partial<PointContentWire>;
 

@@ -43,12 +43,15 @@ function Banner({ text, children }: { readonly text: string; readonly children: 
 export function AutosaveStatus({
   phase,
   savedAt,
+  lockedText = autosave.locked.text,
   onRetry,
   onKeepMine,
   onReload,
 }: {
   readonly phase: Phase;
   readonly savedAt: WallTime | null;
+  /** What the locked banner says when the editor is not a point's (its own „už nelze upravovat“). */
+  readonly lockedText?: string;
   readonly onRetry: () => void;
   readonly onKeepMine: () => void;
   readonly onReload: () => void;
@@ -74,7 +77,7 @@ export function AutosaveStatus({
         </Banner>
       ) : null}
       {phase === 'locked' ? (
-        <Banner text={autosave.locked.text}>
+        <Banner text={lockedText}>
           <Button variant="primary" onPress={onReload}>
             {autosave.locked.reload}
           </Button>

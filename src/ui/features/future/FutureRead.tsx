@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react';
+
 import type { FutureKind } from '@/domain/calendar';
 import type { FutureState } from '@/domain/review';
 import { future, points } from '@/ui/copy';
-import { ArrowLink, SlantLabel } from '@/ui/kit';
-import { Chip, FUTURE_LOOK } from '@/ui/status';
+import { ArrowLink } from '@/ui/kit';
 
+import { FutureHeader } from './FutureHeader';
 import { responsibleText, whenText, type FutureView } from './facts';
 import { PlacementStrip } from './PlacementStrip';
 import type { StripWindow } from './placement';
@@ -37,18 +39,19 @@ function factRows(kind: FutureKind, view: FutureView): readonly (readonly [strin
  * the facts that are set, and for its author where it lands in the next porady. It shows names
  * only, whoever reads it.
  */
-export function FutureRead({ item }: { readonly item: FutureReadItem }) {
+export function FutureRead({
+  item,
+  children,
+}: {
+  readonly item: FutureReadItem;
+  /** What follows the facts and the strip, before the way back (the author's moves). */
+  readonly children?: ReactNode;
+}) {
   const { kind, state, view, window } = item;
   const rows = factRows(kind, view);
   return (
     <div className="space-y-4">
-      <header className="space-y-2">
-        <SlantLabel level={1}>{view.title === '' ? points.untitled : view.title}</SlantLabel>
-        <p className="flex flex-wrap items-center gap-2">
-          <span>{future.kind[kind]}</span>
-          <Chip look={FUTURE_LOOK[state]} />
-        </p>
-      </header>
+      <FutureHeader kind={kind} state={state} title={view.title} />
       {rows.length === 0 ? (
         <p>{points.facts.none}</p>
       ) : (
@@ -67,6 +70,7 @@ export function FutureRead({ item }: { readonly item: FutureReadItem }) {
           window={window}
         />
       )}
+      {children}
       <p>
         <ArrowLink href="/akce">{future.back}</ArrowLink>
       </p>

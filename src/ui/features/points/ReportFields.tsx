@@ -1,14 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-
 import { POINT_LIMITS } from '@/domain/report';
 import { points } from '@/ui/copy';
-import { RadioGroupField, TextField } from '@/ui/form';
+import { DateField, RadioGroupField, TextField } from '@/ui/form';
 
-import { DateEcho } from './DateEcho';
-import { EDITOR_FORM_ID } from './editor-form';
-import { bodyFromText, CAMPUSES, dateEcho, type PointContentWire } from './fields';
+import { bodyFromText, CAMPUSES, type PointContentWire } from './fields';
 import { patchFor, type Patch, type PatchName } from './report-patch';
 
 type Issues = Readonly<Record<string, string>>;
@@ -28,45 +24,6 @@ interface FieldProps {
 const BODY_CHARS = Math.floor(POINT_LIMITS.bodyBytes / 4);
 
 const CAMPUS_OPTIONS = CAMPUSES.map((campus) => ({ value: campus, label: points.campus[campus] }));
-
-/**
- * A date control keeps what was typed, whether or not the server would take it yet: a
- * year typed at the keyboard passes through values such as `0020-01-14`, and a controlled
- * control that went back to the old date would undo every digit. The echo follows what is
- * shown; the content follows `onChange`.
- */
-function DateField({
-  name,
-  initial,
-  onChange,
-  issue,
-  readOnly,
-  onBlur,
-}: FieldProps & {
-  readonly name: 'eventDate' | 'endDate';
-  readonly initial: string | null;
-  readonly onChange: (value: string) => void;
-  readonly issue: string | undefined;
-}) {
-  const [shown, setShown] = useState(initial ?? '');
-  const echoId = `${EDITOR_FORM_ID}-${name}-echo`;
-  return (
-    <TextField
-      name={name}
-      type="date"
-      value={shown}
-      onChange={(value) => {
-        setShown(value);
-        onChange(value);
-      }}
-      onBlur={onBlur}
-      readOnly={readOnly}
-      issue={issue}
-      describedBy={dateEcho(shown) === null ? undefined : echoId}
-      after={<DateEcho id={echoId} value={shown} />}
-    />
-  );
-}
 
 /**
  * Typ aside, the report's first fields (design section 6, fields 2 to 6): title, the

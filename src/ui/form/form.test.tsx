@@ -240,6 +240,16 @@ describe('SelectField and CheckboxField', () => {
       expect(renderControls(null, false, true)).toMatch(/<input [^>]*checked=""/);
     });
 
+    it('is disabled while an editor waits on its banner', () => {
+      const out = renderToStaticMarkup(
+        <Form id="c" spec={controlSpec} state={idle(null)}>
+          <CheckboxField name="agree" disabled />
+        </Form>,
+      );
+      expect(out).toMatch(/<input [^>]*disabled=""/);
+      expect(html).not.toMatch(/<input [^>]*disabled/);
+    });
+
     it('takes an explicit checkbox label and falls back to the first option', () => {
       const out = renderToStaticMarkup(
         <Form id="c" spec={controlSpec} state={idle(null)}>

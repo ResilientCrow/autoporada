@@ -19,7 +19,12 @@ export default async function FutureListPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/akce">
-      <FutureList rows={model.rows} next={model.next} first={model.first} />
+      <FutureList
+        rows={model.rows}
+        next={model.next}
+        first={model.first}
+        canCreate={model.canCreate}
+      />
     </Shell>
   );
 }

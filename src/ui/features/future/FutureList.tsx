@@ -3,7 +3,7 @@ import type { z } from 'zod';
 
 import type { listFutureOutput } from '@/contracts';
 import { future, points } from '@/ui/copy';
-import { ArrowLink, SlantLabel } from '@/ui/kit';
+import { ArrowLink, buttonStyles, SlantLabel } from '@/ui/kit';
 import { Chip, FUTURE_LOOK } from '@/ui/status';
 
 import { campusAndPlace, responsibleText, whenText } from './facts';
@@ -35,21 +35,31 @@ function Row({ row }: { readonly row: FutureRow }) {
 /**
  * „Akce“ (design section 12): what the reader may see, last changed first. Their own items show
  * their state; the rest are approved ones. `next` is where „Starší akce“ continues, a plain link
- * back to this page.
+ * back to this page. „Nová akce“ is for readers who may start one.
  */
 export function FutureList({
   rows,
   next,
   first,
+  canCreate,
 }: {
   readonly rows: readonly FutureRow[];
   readonly next: string | null;
   /** False on a page after a cursor, where no rows do not mean no items. */
   readonly first: boolean;
+  /** The reader may start a new item. */
+  readonly canCreate: boolean;
 }) {
   return (
     <div className="space-y-4">
       <SlantLabel level={1}>{future.title}</SlantLabel>
+      {canCreate ? (
+        <p>
+          <Link href="/akce/novy" prefetch={false} className={buttonStyles('primary')}>
+            {future.new}
+          </Link>
+        </p>
+      ) : null}
       {first && rows.length === 0 ? <p>{future.empty}</p> : null}
       <ul className="space-y-3">
         {rows.map((row) => (
