@@ -178,7 +178,10 @@ describe('the content of the read view', () => {
   });
 
   it('is the markup of the editor’s preview of the same content, to the character', () => {
-    const { blocks } = composePointPreview(pointContentOf(CONTENT), { schoolYear: '2026/2027' });
+    const { blocks } = composePointPreview(pointContentOf(CONTENT), {
+      schoolYear: '2026/2027',
+      kind: 'report',
+    });
     expect(screen(SUBMITTED)).toContain(renderToStaticMarkup(<PaperBlocks blocks={blocks} />));
   });
 

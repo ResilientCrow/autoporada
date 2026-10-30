@@ -84,7 +84,7 @@ describe('ProposalChooser', () => {
     const names = [...html.matchAll(/type="radio"[^>]*\/?><span>([^<]*)<\/span>/g)].map(
       (m) => m[1],
     );
-    expect(names).toEqual(['Návrh do hospodaření', 'Pokyn pro zaměstnance']);
+    expect(names).toEqual(['Hospodaření', 'Pokyn']);
   });
 
   it('checks the first kind, so a press always names one', () => {
@@ -165,7 +165,7 @@ describe('PointEditor for a proposal', () => {
       <PointEditor
         kind={kind}
         id={ID}
-        typeLabel={points.proposal.kind[kind]}
+        typeLabel={points.kind[kind]}
         version={3}
         content={content}
         spec={[]}
@@ -189,7 +189,7 @@ describe('PointEditor for a proposal', () => {
 
   it.each(['finance', 'pokyn'] as const)('shows the %s by its kind, not as a control', (kind) => {
     expect(form(kind)).toMatch(
-      new RegExp(`<dt[^>]*>${points.editor.type}</dt><dd[^>]*>${points.proposal.kind[kind]}</dd>`),
+      new RegExp(`<dt[^>]*>${points.editor.type}</dt><dd[^>]*>${points.kind[kind]}</dd>`),
     );
   });
 
@@ -308,9 +308,7 @@ describe('PointScreen for a proposal', () => {
       expect(html).toMatch(/<form [^>]*id="bod"/);
       expect(controlOf(html, points.proposal.text)).toMatch(/^<textarea/);
       expect(html).toMatch(
-        new RegExp(
-          `<dt[^>]*>${points.editor.type}</dt><dd[^>]*>${points.proposal.kind[kind]}</dd>`,
-        ),
+        new RegExp(`<dt[^>]*>${points.editor.type}</dt><dd[^>]*>${points.kind[kind]}</dd>`),
       );
       expect(html).not.toContain(points.facts.eventDate);
     },

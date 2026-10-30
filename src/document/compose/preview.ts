@@ -17,9 +17,9 @@ const NOTHING_OMITTED: Omitted = { people: 0, peopleBullets: 0, textBullets: 0, 
  */
 export function composePointPreview(
   content: PointContent,
-  opts: { schoolYear: string; kind?: PointKind; groupOrder?: readonly Salutation[] },
+  opts: { schoolYear: string; kind: PointKind; groupOrder?: readonly Salutation[] },
 ): { blocks: Block[]; omitted: Omitted } {
-  if (opts.kind !== undefined && opts.kind !== 'report') {
+  if (opts.kind !== 'report') {
     const title = singleLine(content.title);
     const blocks =
       title === ''

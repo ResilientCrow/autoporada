@@ -41,6 +41,49 @@ const person = (salutation: 'pan' | 'pani' | null, familyName: string) => ({
 const preview = (content: PointContentWire = CONTENT) =>
   renderToStaticMarkup(<Preview kind="report" content={content} schoolYear="2026/2027" />);
 
+/** A finance or pokyn proposal: a title and a text, never a date or bullets. */
+const PROPOSAL: PointContentWire = {
+  ...CONTENT,
+  title: 'Nové lavice do tříd',
+  eventDate: null,
+  opening: '',
+  openingEdited: false,
+  body: { type: 'doc', content: [para('Navrhujeme zakoupit lavice.')] },
+};
+const proposalPreview = (kind: 'finance' | 'pokyn', content: PointContentWire = PROPOSAL) =>
+  renderToStaticMarkup(<Preview kind={kind} content={content} schoolYear="2026/2027" />);
+
+describe('Preview of a proposal', () => {
+  it.each(['finance', 'pokyn'] as const)(
+    'prints a %s proposal as point 1 with its title and text, and no notice',
+    (kind) => {
+      const html = proposalPreview(kind);
+      expect(html).toContain('Nové lavice do tříd');
+      expect(html).toContain('Navrhujeme zakoupit lavice.');
+      expect(html).not.toContain(points.preview.empty);
+      expect(html).not.toContain(points.preview.emptyProposal);
+      expect(html).not.toContain('se v\u00a0náhledu nezobrazí');
+      expect(html).toMatch(/<span[^>]*>1\)\.<\/span>Nové lavice do tříd/);
+    },
+  );
+
+  it.each(['finance', 'pokyn'] as const)(
+    'asks for the title of an untitled %s proposal, not for a start date',
+    (kind) => {
+      const html = proposalPreview(kind, { ...PROPOSAL, title: ' ' });
+      expect(html).toContain(points.preview.emptyProposal);
+      expect(html).not.toContain(points.preview.empty);
+      expect(html).not.toContain('Navrhujeme zakoupit lavice.');
+    },
+  );
+
+  it('still asks a report without a date for the title and the date', () => {
+    const html = preview({ ...CONTENT, eventDate: null });
+    expect(html).toContain(points.preview.empty);
+    expect(html).not.toContain(points.preview.emptyProposal);
+  });
+});
+
 describe('Preview', () => {
   it('is a section named „Náhled bodu“ holding the point as the document prints it', () => {
     const html = preview();

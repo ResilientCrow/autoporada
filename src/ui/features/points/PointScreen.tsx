@@ -58,8 +58,7 @@ interface PointEditorModel {
 }
 
 function typeLabelOf(point: PointScreenModel): string {
-  if (point.kind === 'report') return point.typeName ?? points.kind.report;
-  return points.proposal.kind[point.kind];
+  return point.typeName ?? points.kind[point.kind];
 }
 
 /**

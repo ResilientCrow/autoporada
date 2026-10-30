@@ -1,12 +1,5 @@
 import { countWord, type Campus, type PluralForms } from '@/domain/cs';
-import type {
-  Params,
-  PointContent,
-  PointKind,
-  ProblemCode,
-  ProposalKind,
-  Warning,
-} from '@/domain/report';
+import type { Params, PointContent, PointKind, ProblemCode, Warning } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 
 const word = (params: Params, key: string): string => String(params[key]);
@@ -89,11 +82,6 @@ export const points = {
   proposal: {
     title: 'Nový návrh',
     legend: 'Druh návrhu',
-    /** What each proposal is called where a report's type would be. */
-    kind: {
-      finance: 'Návrh do hospodaření',
-      pokyn: 'Pokyn pro zaměstnance',
-    } as const satisfies Record<ProposalKind, string>,
     text: 'Text návrhu',
   },
   untitled: 'Bez názvu',

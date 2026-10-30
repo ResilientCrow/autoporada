@@ -87,7 +87,10 @@ describe('PointReview', () => {
   });
 
   it('prints the content as the author’s read view does, to the character', () => {
-    const { blocks } = composePointPreview(pointContentOf(CONTENT), { schoolYear: '2026/2027' });
+    const { blocks } = composePointPreview(pointContentOf(CONTENT), {
+      schoolYear: '2026/2027',
+      kind: 'report',
+    });
     expect(html).toContain(renderToStaticMarkup(<PaperBlocks blocks={blocks} />));
   });
 

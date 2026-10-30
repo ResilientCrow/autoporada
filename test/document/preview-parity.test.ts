@@ -110,6 +110,7 @@ describe('preview parity with the document', () => {
 
     const preview = composePointPreview(f.content, {
       schoolYear: SCHOOL_YEAR,
+      kind: 'report',
       ...(f.groupOrder && { groupOrder: f.groupOrder }),
     });
 

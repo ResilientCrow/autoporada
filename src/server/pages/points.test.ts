@@ -439,8 +439,11 @@ describe('pointPage', () => {
           content: LOADED.content,
           spec: [],
           titleGender: null,
+          recents: [],
         });
         expect(page?.read.content).toBeNull();
+        // A proposal names no people: the author's recent people are not read for it.
+        expect(askedFor()).not.toContain('people.recent');
       },
     );
 

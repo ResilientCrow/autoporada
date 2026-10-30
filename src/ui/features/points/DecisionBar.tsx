@@ -46,7 +46,7 @@ export function DecisionBar({
   readonly decidePoint: DecidePointAction;
   /** The point's read view, which the open editor replaces. */
   readonly read?: ReactNode;
-  /** Only when the viewer may edit a report: what the editor starts from. */
+  /** Only when the viewer may edit the point: what the editor starts from. */
   readonly edit?: ReviewEditorModel | null;
   readonly reviewEditPoint?: ReviewEditAction;
 }) {

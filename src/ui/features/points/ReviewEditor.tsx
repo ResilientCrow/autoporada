@@ -5,21 +5,24 @@ import { useEffect, useState } from 'react';
 
 import type { TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
-import type { BulletSpec } from '@/domain/report';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
 import { review } from '@/ui/copy';
 import { Form, type Directory, type Problem } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
-import { EDITOR_FORM_ID, EDITOR_FORM_STATE, editorSpec } from './editor-form';
+import { EDITOR_FORM_ID, EDITOR_FORM_STATE, pointFormSpec } from './editor-form';
 import type { PointContentWire } from './fields';
+import { ProposalFields } from './ProposalFields';
 import { ReportForm } from './ReportForm';
 import { reviewEditOutcome, type ReviewEditAction } from './review-edit';
 import { useReportEdit } from './use-report-edit';
 
-/** What the page gives the reviewer's editor (server/pages/review.ts), only when they may edit a report. */
+/** What the page gives the reviewer's editor (server/pages/review.ts), only when they may edit the point. */
 export interface ReviewEditorModel {
   readonly content: PointContentWire;
+  /** A report gets all of `ReportForm`; a finance or pokyn proposal only its title and text. */
+  readonly kind: PointKind;
   /** The type's bullets: which must stay, and which may be taken out. */
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
@@ -36,7 +39,7 @@ export type ReviewEditorClose = 'saved' | 'unchanged' | 'cancelled';
 const noBlur = () => undefined;
 
 /**
- * A reviewer's edit of a report (design section 10, D13) at one version of the point: the author's
+ * A reviewer's edit of a point (design section 10, D13) at one version of the point: the author's
  * fields, saved only by „Uložit úpravy“, which sends the whole content against the version the page
  * showed; „Zrušit úpravy“ drops the edits. A saved edit refreshes the page (the history then names
  * the fields and keeps their old values) and closes the editor, as does an edit with nothing to
@@ -111,17 +114,21 @@ export function ReviewEditor({
     <section aria-label={review.edit.label} className="space-y-4">
       <Form
         id={EDITOR_FORM_ID}
-        spec={editorSpec(bullets, edit.spec, content.statements.length)}
+        spec={pointFormSpec(edit.kind, bullets, edit.spec, content.statements.length)}
         state={state}
       >
-        <ReportForm
-          edit={report}
-          readOnly={sending}
-          today={edit.today}
-          recents={edit.recents}
-          directory={edit.directory}
-          onBlur={noBlur}
-        />
+        {edit.kind === 'report' ? (
+          <ReportForm
+            edit={report}
+            readOnly={sending}
+            today={edit.today}
+            recents={edit.recents}
+            directory={edit.directory}
+            onBlur={noBlur}
+          />
+        ) : (
+          <ProposalFields edit={report} readOnly={sending} onBlur={noBlur} />
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <Button isPending={sending} onPress={() => void save()}>
             {review.edit.save}

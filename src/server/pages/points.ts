@@ -132,7 +132,7 @@ function movesOf(actor: Actor, { state, isAuthor }: LoadedPoint): readonly Autho
 
 /**
  * One point's page, or null for a visitor or a refusal, a malformed id and an unknown or
- * foreign point included (404). The recent people are read only when the editor shows, and the
+ * foreign point included (404). The recent people are read only when a report's editor shows, and the
  * meeting calendar only for the author of a draft or returned point.
  */
 export async function pointPage(id: string): Promise<PointPageModel | null> {
@@ -151,7 +151,7 @@ export async function pointPage(id: string): Promise<PointPageModel | null> {
   const today = instantToWallClock(now).date;
   // Independent reads, each only where its part of the page shows.
   const [recents, standing] = await Promise.all([
-    loaded.editable ? recentsOf(viewer) : [],
+    loaded.editable && loaded.kind === 'report' ? recentsOf(viewer) : [],
     loaded.isAuthor && authorEditsPoint(loaded.state) ? standingOf(viewer, now) : null,
   ]);
   const moves = movesOf(viewer.actor, loaded);

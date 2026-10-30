@@ -43,11 +43,26 @@ const EDIT: ReviewEditorModel = {
     ],
     statements: [],
   },
+  kind: 'report',
   spec: SPEC,
   titleGender: 'f',
   today: calDate(2026, 10, 27),
   recents: [],
   directory: 'off',
+};
+const PROPOSAL: ReviewEditorModel = {
+  ...EDIT,
+  kind: 'pokyn',
+  content: {
+    ...EDIT.content,
+    title: 'Nové lavice do tříd',
+    eventDate: null,
+    opening: '',
+    openingEdited: false,
+    bullets: [],
+  },
+  spec: [],
+  titleGender: null,
 };
 const ALL: DecisionBarModel = { decisions: ['approve', 'return', 'reject'], othersApprove: false };
 const READ = 'READ VIEW';
@@ -104,6 +119,35 @@ describe('the review page’s host', () => {
     expect(host({ decisions: [], othersApprove: false }, null)).toBe(
       `<p>${READ}</p><div role="status"></div>`,
     );
+  });
+});
+
+describe('ReviewEditor of a proposal', () => {
+  const html = renderToStaticMarkup(
+    <ReviewEditor
+      id={ID}
+      version={4}
+      edit={PROPOSAL}
+      reviewEditPoint={never}
+      onClosed={() => {}}
+    />,
+  );
+
+  it('holds „Název“ and „Text návrhu“, and none of the report’s fields', () => {
+    expect(html).toMatch(/<input id="bod-title"[^>]*value="Nové lavice do tříd"/);
+    expect(html).toContain(cs.points.proposal.text);
+    expect(html).not.toContain('bod-eventDate');
+    expect(html).not.toContain('bod-campus');
+    expect(html).not.toContain('bod-opening');
+    expect(html).not.toContain('Organizátoři');
+  });
+
+  it('still ends with „Uložit úpravy“ and „Zrušit úpravy“', () => {
+    expect(buttons(html).slice(-2)).toEqual([copy.save, copy.cancel]);
+  });
+
+  it('is clean for the Content-Security-Policy', () => {
+    expect(cspMarkupProblems(html)).toEqual([]);
   });
 });
 

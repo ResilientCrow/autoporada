@@ -216,6 +216,7 @@ describe('reviewPointPage', () => {
       expect(await editOf('reviewer')).toEqual({
         content: LOADED.content,
         spec: TYPE.defaultBullets,
+        kind: 'report',
         titleGender: 'f',
         today: { year: 2026, month: 10, day: 27 },
         recents: RECENTS,
@@ -241,9 +242,26 @@ describe('reviewPointPage', () => {
     });
 
     it.each([
+      ['finance', 'reviewer'],
+      ['pokyn', 'headmaster'],
+    ] as const)(
+      'gives a %s point’s editor to the reviewer who may edit it, with no bullets and no gender, and without reading the recent people',
+      async (kind, role) => {
+        expect(await editOf(role, { kind, type: null })).toEqual({
+          content: LOADED.content,
+          kind,
+          spec: [],
+          titleGender: null,
+          today: { year: 2026, month: 10, day: 27 },
+          recents: [],
+          directory: 'off',
+        });
+        expect(asked()).toEqual([['points.get', { id: ID }]]);
+      },
+    );
+
+    it.each([
       ['the author', 'reviewer', { isAuthor: true }],
-      ['a finance point', 'reviewer', { kind: 'finance' }],
-      ['a pokyn', 'headmaster', { kind: 'pokyn' }],
       ['a returned point', 'headmaster', { state: 'returned' }],
     ])('is null for %s, without reading the recent people', async (_name, role, over) => {
       expect(await editOf(role, over)).toBeNull();

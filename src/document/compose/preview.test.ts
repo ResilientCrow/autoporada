@@ -500,7 +500,7 @@ describe('reportFromContent', () => {
 });
 
 describe('composePointPreview', () => {
-  const opts = { schoolYear: '2026/2027' };
+  const opts = { schoolYear: '2026/2027', kind: 'report' as const };
 
   it('numbers the one point 1', () => {
     const { blocks } = composePointPreview(content(), opts);
@@ -529,7 +529,7 @@ describe('composePointPreview', () => {
   it('fills the school year token', () => {
     const { blocks } = composePointPreview(
       content({ body: richDocFromText('Ve školním roce {skolniRok}.') }),
-      { schoolYear: '2027/2028' },
+      { schoolYear: '2027/2028', kind: 'report' },
     );
     expect(blocks.map(textOf).join('\n')).toContain('Ve školním roce 2027/2028.');
   });
@@ -624,12 +624,6 @@ describe('composePointPreview for a proposal', () => {
   it('ends the point with the one empty line the printed points have', () => {
     const { blocks } = composePointPreview(proposal(), { ...opts, kind: 'finance' });
     expect(blocks.map((b) => b.kind)).toEqual(['point', 'body', 'spacer']);
-  });
-
-  it('keeps a report with a date exactly as before when no kind is given', () => {
-    expect(composePointPreview(content(), opts)).toEqual(
-      composePointPreview(content(), { ...opts, kind: 'report' }),
-    );
   });
 
   it('shows nothing for a report without a start date, whatever else it holds', () => {
