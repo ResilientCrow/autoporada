@@ -2,7 +2,8 @@
  * An in-process Microsoft Graph for the mail transport, next to the TestIdp:
  * one router serves both, so production code runs unchanged against the real
  * URLs. It checks what Graph checks of a sendMail call (the token, the RBAC
- * scope, the body), and refuses everything the Graph transport never sends.
+ * scope, the body), and refuses everything the Graph transport never sends. The people search
+ * (`GET /users`) lives in fake-graph-users.ts.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -17,15 +18,19 @@ import { GRAPH_AUDIENCE, TEST_TENANT } from '../oidc/test-idp-api';
 import {
   GRAPH_ORIGIN,
   type Answer,
+  type GraphUser,
+  type SearchMode,
   type FakeGraph,
   type GraphFetch,
   type GraphRequest,
   type SentMail,
 } from './fake-graph-api';
+import { searchUsers } from './fake-graph-users';
 
-export { GRAPH_BASE } from './fake-graph-api';
+export { GRAPH_BASE, GRAPH_USERS } from './fake-graph-api';
 
 const ENTRA_ORIGIN = 'https://login.microsoftonline.com';
+const USERS_PATH = '/v1.0/users';
 const SEND_MAIL = /^\/v1\.0\/users\/([^/]+)\/sendMail$/;
 const ERROR_CODES: Readonly<Record<number, string>> = {
   400: 'ErrorInvalidRequest',
@@ -92,6 +97,9 @@ export function createFakeGraph(options: {
   readonly idp: TestIdp;
   readonly mailbox: string;
   readonly clock?: Clock;
+  /** What `GET /users` searches; none by default. */
+  readonly users?: readonly GraphUser[];
+  readonly search?: SearchMode;
 }): FakeGraph {
   const { idp, mailbox } = options;
   const clock = options.clock ?? systemClock;
@@ -103,12 +111,37 @@ export function createFakeGraph(options: {
     calls: 0,
     callsInsideTransaction: 0,
     unscopedGrant: false,
+    searches: [],
     rejected: [],
   };
-  const refuse = (status: number, reason: string) => {
+  const refuse = (status: number, reason: string, code?: string) => {
     seen.rejected.push(reason);
-    return answer(status);
+    return answer(status, {}, code ? { error: { code, message: 'fake' } } : undefined);
   };
+
+  /**
+   * The next scripted step for a call that passed the checks. No step, or a 202, is the normal
+   * answer: `accept` records it, and the response is the 202 of sendMail or the 200 of a search.
+   */
+  function play(
+    init: GraphRequest,
+    accept: () => void,
+    body?: object,
+  ): Response | Promise<Response> {
+    const step = steps.shift();
+    if (step === 'hang') return never(init.signal);
+    if (step === 'drop') {
+      accept();
+      const reset = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+      throw new TypeError('fetch failed', { cause: reset });
+    }
+    const scripted = typeof step === 'number' ? { status: step } : (step ?? { status: 202 });
+    if (scripted.status === 202) accept();
+    const { retryAfter } = scripted;
+    const headers: Record<string, string> = retryAfter ? { 'retry-after': retryAfter } : {};
+    if (scripted.status === 202 && body) return answer(200, headers, body);
+    return answer(scripted.status, headers, scripted.body);
+  }
 
   /** Graph's token checks: issued by the IdP for Graph, this tenant, unexpired. */
   function tokenProblem(authorization: string | null): string | Record<string, unknown> {
@@ -178,24 +211,30 @@ export function createFakeGraph(options: {
       ),
     };
 
-    const step = steps.shift() ?? 202;
-    if (step === 'hang') return never(init.signal);
-    if (step === 'drop') {
-      sent.push(mail);
-      const reset = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
-      throw new TypeError('fetch failed', { cause: reset });
-    }
-    const scripted = typeof step === 'number' ? { status: step } : step;
-    if (scripted.status === 202) sent.push(mail);
-    const { retryAfter } = scripted;
-    return answer(scripted.status, retryAfter ? { 'retry-after': retryAfter } : {}, scripted.body);
+    return play(init, () => sent.push(mail));
   }
+
+  const search = (url: URL, init: GraphRequest) =>
+    searchUsers(
+      {
+        users: options.users ?? [],
+        mode: options.search ?? 'readbasic-ok',
+        searches: seen.searches,
+        refuse,
+        tokenProblem,
+        play: (request, body) => play(request, () => undefined, body),
+      },
+      url,
+      init,
+    );
 
   const fetch: GraphFetch = async (url, init) => {
     const parsed = new URL(url);
     // openid-client's own requests: the init it built is a CustomFetchOptions.
     if (parsed.origin === ENTRA_ORIGIN) return idp.fetch(url, init as CustomFetchOptions);
-    if (parsed.origin === GRAPH_ORIGIN) return sendMail(parsed, init);
+    if (parsed.origin === GRAPH_ORIGIN) {
+      return parsed.pathname === USERS_PATH ? search(parsed, init) : sendMail(parsed, init);
+    }
     throw new TypeError('fetch failed');
   };
 

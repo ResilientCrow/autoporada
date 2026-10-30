@@ -78,6 +78,7 @@ describe('the Graph transport', () => {
       calls: 1,
       callsInsideTransaction: 0,
       unscopedGrant: false,
+      searches: [],
       rejected: [],
     });
   });
