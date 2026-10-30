@@ -6,7 +6,7 @@ import type { MailSubjects } from './subjects';
 
 const none = () => ({});
 
-/** What each template says about its subject; pure. The only variable in any mail so far is the day a rejected requester may ask again. */
+/** What each template says about its subject; pure. The variables are one day: when a rejected requester may ask again, or the meeting a reminder is for. */
 const VIEWS: {
   readonly [T in TemplateName]: (subject: MailSubjects[T]) => TemplateViews[T];
 } = {
@@ -21,6 +21,8 @@ const VIEWS: {
   'point.approved': none,
   'point.rejected': none,
   'report.prompt': none,
+  'reminder.soft': ({ monday }) => ({ meetingDate: monday }),
+  'reminder.hard': ({ monday }) => ({ meetingDate: monday }),
 };
 
 /** The template's variables, read from its subject. */

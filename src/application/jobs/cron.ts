@@ -34,6 +34,14 @@ export const CRON: readonly CronEntry[] = [
     data: {},
     catchUp: 'once',
   },
+  // A missed tick is not caught up: the next one finds the slot still open, or it has passed.
+  {
+    job: 'reminders.deadline',
+    key: 'quarter',
+    schedule: { everyMinutes: 15 },
+    data: {},
+    catchUp: 'skip',
+  },
 ];
 
 /** The cron string is derived, never typed: `10 5 * * *`, `*\/15 * * * *`. */

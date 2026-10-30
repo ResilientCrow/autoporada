@@ -136,4 +136,18 @@ export interface PointRepo {
    * point. ScopeViolation for a user.
    */
   mailFacts(id: string): Promise<PointMailFacts | null>;
+  /**
+   * The authors the hard reminder is for, each once, ordered by id: those with a draft changed
+   * since `draftsSince` and those with a returned point whose first Monday is not after `monday`.
+   * Only the columns migration 0024 grants the worker. ScopeViolation for a user.
+   */
+  reminderAuthors(window: {
+    readonly draftsSince: Date;
+    readonly monday: CalDate;
+  }): Promise<readonly string[]>;
+  /**
+   * The authors with a point handed in since `since` (`submitted_at`, which a retract clears),
+   * each once, ordered by id. ScopeViolation for a user.
+   */
+  submitterIds(since: Date): Promise<readonly string[]>;
 }

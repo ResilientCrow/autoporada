@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { system } from '@/application/ports';
 import { decidePoint } from '@/application/use-cases';
+import { calDate } from '@/domain/time';
 import { TEMPLATE_NAMES, type TemplateName } from '@/notify';
 
 import { futureFixtures } from '../../../test/support/future';
@@ -79,6 +80,34 @@ describe('loadSubject', () => {
       authorId: author.id,
       state: 'approved',
       reportState: 'none',
+    });
+  });
+
+  describe('the reminders, read at the time the mail goes', () => {
+    const MONDAY = calDate(2026, 10, 26);
+    const SOFT = new Date('2026-10-23T11:00:00Z');
+    const HARD = new Date('2026-10-25T11:00:00Z');
+
+    it('gives the Monday while the soft slot is open, and nothing before or after', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      world.clock.set(new Date(SOFT.getTime() - 1));
+      expect(await load('reminder.soft', user.id)).toBeNull();
+      world.clock.set(SOFT);
+      expect(await load('reminder.soft', user.id)).toEqual({ monday: MONDAY, hasWork: false });
+      world.clock.set(new Date(SOFT.getTime() + 6 * 3_600_000));
+      expect(await load('reminder.soft', user.id)).toBeNull();
+    });
+
+    it('tells the hard one whether the recipient still has a draft for the Monday', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const idle = await world.seed.user({ role: 'submitter' });
+      world.clock.set(new Date('2026-10-20T08:00:00Z'));
+      await start(author);
+      world.clock.set(HARD);
+      expect(await load('reminder.hard', author.id)).toEqual({ monday: MONDAY, hasWork: true });
+      expect(await load('reminder.hard', idle.id)).toEqual({ monday: MONDAY, hasWork: false });
+      world.clock.set(new Date('2026-10-25T17:00:00Z'));
+      expect(await load('reminder.hard', author.id)).toBeNull();
     });
   });
 

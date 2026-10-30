@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -11,7 +11,7 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { parsePointJsonb, parsePointPeople, type PointJsonb } from '@/contracts';
-import { parseIsoDate } from '@/domain/time';
+import { parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
 import { pointEvents, points, pointTypes } from '../schema';
@@ -178,7 +178,17 @@ const queueRows = (db: TxDatabase, ctx: TxContext, limit: number) =>
 export function createPointReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'get' | 'loadForWrite' | 'listMine' | 'queue' | 'ownRecent' | 'mailFacts'> {
+): Pick<
+  PointRepo,
+  | 'get'
+  | 'loadForWrite'
+  | 'listMine'
+  | 'queue'
+  | 'ownRecent'
+  | 'mailFacts'
+  | 'reminderAuthors'
+  | 'submitterIds'
+> {
   const byId = (id: string) =>
     db
       .select(POINT_ROW)
@@ -235,6 +245,30 @@ export function createPointReads(
         .from(points)
         .where(eq(points.id, id));
       return row ?? null;
+    },
+    async reminderAuthors({ draftsSince, monday }) {
+      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migration 0024 grants the worker, and no other.
+      const rows = await db
+        .selectDistinct({ authorId: points.authorId })
+        .from(points)
+        .where(
+          or(
+            and(eq(points.state, 'draft'), gte(points.updatedAt, draftsSince)),
+            and(eq(points.state, 'returned'), lte(points.earliestMonday, toIsoDate(monday))),
+          ),
+        )
+        .orderBy(asc(points.authorId));
+      return rows.map((row) => row.authorId);
+    },
+    async submitterIds(since) {
+      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
+      const rows = await db
+        .selectDistinct({ authorId: points.authorId })
+        .from(points)
+        .where(gte(points.submittedAt, since))
+        .orderBy(asc(points.authorId));
+      return rows.map((row) => row.authorId);
     },
   };
 }

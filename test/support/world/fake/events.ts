@@ -6,3 +6,6 @@ export const newestFirst = (
   a: { readonly createdAt: Date; readonly id: string },
   b: { readonly createdAt: Date; readonly id: string },
 ) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1);
+
+/** The ids once each, in the order PostgreSQL's `ORDER BY` gives uuids. */
+export const distinctSorted = (ids: readonly string[]) => [...new Set(ids)].sort();

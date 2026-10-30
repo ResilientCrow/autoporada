@@ -3,6 +3,7 @@ import type { DecisionEvent } from '@/domain/review';
 import type { TemplateName } from '@/notify';
 
 import { pointMailParts, type PointMailIds } from './point-mails';
+import { reminderParts, type ReminderIds } from './reminders';
 import { reportPromptParts, type ReportPromptIds } from './report-prompt';
 
 /** Which mail each access decision sends the requester (plan §9); the requester's cancel sends none. */
@@ -30,6 +31,8 @@ interface MailIds {
   readonly 'point.approved': PointMailIds;
   readonly 'point.rejected': PointMailIds;
   readonly 'report.prompt': ReportPromptIds;
+  readonly 'reminder.soft': ReminderIds;
+  readonly 'reminder.hard': ReminderIds;
 }
 
 interface MailParts {
@@ -67,6 +70,8 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   'point.approved': pointMailParts,
   'point.rejected': pointMailParts,
   'report.prompt': reportPromptParts,
+  'reminder.soft': reminderParts,
+  'reminder.hard': reminderParts,
 };
 
 interface MailJob {

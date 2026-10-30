@@ -10,6 +10,8 @@ import {
   type ReportState,
 } from '@/domain/review';
 
+import { calDate } from '@/domain/time';
+
 import { stillApplies } from './index';
 
 const AT = new Date('2026-09-01T10:00:00Z');
@@ -246,6 +248,36 @@ describe('stillApplies', () => {
     });
   });
 
+  describe('the deadline reminders', () => {
+    const MONDAY = calDate(2026, 10, 26);
+    const facts = (hasWork: boolean) => ({ monday: MONDAY, hasWork });
+
+    it('sends the soft one to staff who still want it', () => {
+      expect(stillApplies('reminder.soft', facts(false), MEMBER)).toBe(true);
+      expect(
+        stillApplies('reminder.soft', facts(false), { ...MEMBER, remindDeadline: false }),
+      ).toBe(false);
+      expect(stillApplies('reminder.soft', facts(false), { ...MEMBER, isStudent: true })).toBe(
+        false,
+      );
+      expect(stillApplies('reminder.soft', facts(false), user('submitter', 'blocked'))).toBe(false);
+      expect(stillApplies('reminder.soft', facts(false), user('pending'))).toBe(false);
+    });
+
+    it('sends the hard one only to someone who still has a draft or returned point, switch or no switch', () => {
+      expect(stillApplies('reminder.hard', facts(true), MEMBER)).toBe(true);
+      expect(stillApplies('reminder.hard', facts(false), MEMBER)).toBe(false);
+      expect(stillApplies('reminder.hard', facts(true), { ...MEMBER, remindDeadline: false })).toBe(
+        true,
+      );
+      expect(stillApplies('reminder.hard', facts(true), { ...MEMBER, isStudent: true })).toBe(true);
+      expect(stillApplies('reminder.hard', facts(true), user('submitter', 'deactivated'))).toBe(
+        false,
+      );
+      expect(stillApplies('reminder.hard', facts(true), user('pending'))).toBe(false);
+    });
+  });
+
   it.each([
     ['access.approved', MEMBER],
     ['access.rejected', PENDING],
@@ -256,6 +288,8 @@ describe('stillApplies', () => {
     ['point.approved', MEMBER],
     ['point.rejected', MEMBER],
     ['report.prompt', MEMBER],
+    ['reminder.soft', MEMBER],
+    ['reminder.hard', MEMBER],
   ] as const)(
     'never sends %s about a missing subject (a purged request, a deleted point)',
     (template, recipient) => {

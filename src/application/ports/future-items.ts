@@ -149,4 +149,6 @@ export interface FutureItemRepo {
   }): Promise<readonly ReportPromptItem[]>;
   /** The worker's read at send time: null for an unknown item. ScopeViolation for a user. */
   mailFacts(id: string): Promise<FutureMailFacts | null>;
+  /** The authors with an akce or jednání handed in since `since`, each once, ordered by id. ScopeViolation for a user. */
+  submitterIds(since: Date): Promise<readonly string[]>;
 }

@@ -16,6 +16,15 @@ export {
   type IssuePhase,
 } from './issue-calendar';
 export {
+  activeSince,
+  REMINDER_DRAFT_DAYS,
+  REMINDER_STAGGER_MS,
+  reminderDue,
+  reminderSlot,
+  reminderStagger,
+  type ReminderKind,
+} from './reminders';
+export {
   placementMonday,
   PLACEMENT_WEEKS,
   pointMonday,

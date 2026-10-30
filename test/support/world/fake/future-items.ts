@@ -16,7 +16,7 @@ import { parseResponsible } from '@/contracts';
 import { admits, type Scope } from '@/domain/policy';
 import { compareDates, toIsoDate } from '@/domain/time';
 
-import { codePoints, newestFirst } from './events';
+import { codePoints, distinctSorted, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
 
@@ -204,6 +204,14 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       return item
         ? { id: item.id, authorId: item.authorId, state: item.state, reportState: item.reportState }
         : null;
+    },
+    async submitterIds(since) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const handedIn = [...futureItems.values()].filter(
+        (item) => item.submittedAt && item.submittedAt >= since,
+      );
+      return distinctSorted(handedIn.map((item) => item.authorId));
     },
   };
 }

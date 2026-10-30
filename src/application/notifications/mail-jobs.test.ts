@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { calDate } from '@/domain/time';
 import { TEMPLATE_NAMES } from '@/notify';
 
 import { DECISION_MAIL, mailJob } from './index';
@@ -64,6 +65,20 @@ describe('mail jobs', () => {
     expect(second.dedupeKey).toBe(`report.prompt:${REQUEST}:2`);
   });
 
+  it('keys a reminder by kind, Monday and person, so each person is mailed once per kind and week', () => {
+    const monday = calDate(2026, 10, 26);
+    const soft = mailJob('reminder.soft', { userId: USER, monday });
+    expect(soft).toEqual({
+      data: { template: 'reminder.soft', recipientId: USER, subjectId: USER },
+      dedupeKey: `reminder.soft:2026-10-26:${USER}`,
+    });
+    const hard = mailJob('reminder.hard', { userId: USER, monday });
+    expect(hard.dedupeKey).toBe(`reminder.hard:2026-10-26:${USER}`);
+    expect(
+      mailJob('reminder.soft', { userId: USER, monday: calDate(2026, 11, 2) }).dedupeKey,
+    ).not.toBe(soft.dedupeKey);
+  });
+
   it('builds payloads of ids only and keys that start with their template, for every template', () => {
     const jobs = [
       mailJob('access.approved', { recipientId: USER, requestId: REQUEST }),
@@ -75,6 +90,8 @@ describe('mail jobs', () => {
       mailJob('point.approved', { authorId: USER, eventId: REQUEST }),
       mailJob('point.rejected', { authorId: USER, eventId: REQUEST }),
       mailJob('report.prompt', { authorId: USER, itemId: REQUEST, stage: 1 }),
+      mailJob('reminder.soft', { userId: USER, monday: calDate(2026, 10, 26) }),
+      mailJob('reminder.hard', { userId: USER, monday: calDate(2026, 10, 26) }),
     ];
     expect(jobs.map((job) => job.data.template)).toEqual(TEMPLATE_NAMES);
     for (const { data, dedupeKey } of jobs) {

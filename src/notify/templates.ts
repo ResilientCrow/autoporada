@@ -20,6 +20,8 @@ export const TEMPLATE_NAMES = [
   'point.approved',
   'point.rejected',
   'report.prompt',
+  'reminder.soft',
+  'reminder.hard',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -35,6 +37,9 @@ export interface TemplateViews {
   'point.approved': Record<string, never>;
   'point.rejected': Record<string, never>;
   'report.prompt': Record<string, never>;
+  /** The meeting the deadline is for. */
+  'reminder.soft': { readonly meetingDate: CalDate };
+  'reminder.hard': { readonly meetingDate: CalDate };
 }
 
 interface RenderedMail {
@@ -116,6 +121,26 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     body: {
       paragraphs: [
         'akce, kterou jste zapsali do přehledu, proběhla. Zprávu do porady můžete napsat v\u00A0aplikaci:',
+      ],
+      link: '/body',
+    },
+  }),
+  // The soft one can be switched off in the profile (D8); the hard one cannot, as it is about the reader's own work.
+  'reminder.soft': ({ meetingDate }) => ({
+    subject: 'Autoporada: uzávěrka porady se blíží',
+    body: {
+      paragraphs: [
+        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} je za dva dny.`,
+      ],
+      link: '/body',
+      after: ['Připomínky můžete vypnout v\u00A0profilu.'],
+    },
+  }),
+  'reminder.hard': ({ meetingDate }) => ({
+    subject: 'Autoporada: dnes je uzávěrka porady',
+    body: {
+      paragraphs: [
+        `máte rozpracovaný nebo vrácený bod pro poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dnes.`,
       ],
       link: '/body',
     },

@@ -24,6 +24,11 @@ export interface IssueRepo {
   /** The rows of the Mondays from `from` to `to`, both included, earliest first. */
   between(from: CalDate, to: CalDate): Promise<readonly IssueRecord[]>;
   /**
+   * The deadline facts of the Mondays from `from` to `to`, both included, earliest first: only
+   * the columns migration 0024 grants the worker, which reads no more of an issue.
+   */
+  deadlines(from: CalDate, to: CalDate): Promise<readonly KnownIssue[]>;
+  /**
    * Version-checked (StaleVersion, also for an unknown id); the version rises
    * by one. ScopeViolation for a user who may not `issue.generate`. The
    * caller checks the move against ISSUE_MACHINE.

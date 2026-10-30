@@ -67,6 +67,29 @@ describe('QUEUES', () => {
     });
   });
 
+  it('retries reminders.deadline twice within ten minutes, since the next tick comes after 15', () => {
+    expect(spec('reminders.deadline')).toEqual({
+      name: 'reminders.deadline',
+      policy: 'standard',
+      options: {
+        retryLimit: 2,
+        retryDelay: 60,
+        retryBackoff: true,
+        retryDelayMax: 600,
+        expireInSeconds: 300,
+        retentionSeconds: 2 * DAY,
+        deleteAfterSeconds: 2 * DAY,
+        deadLetter: 'dead',
+      },
+    });
+    const { retryLimit, retryDelay, retryDelayMax } = spec('reminders.deadline').options;
+    let total = 0;
+    for (let retry = 0; retry < retryLimit!; retry++) {
+      total += shortestWait(retry, retryDelay!, retryDelayMax!);
+    }
+    expect(total).toBeLessThan(15 * 60);
+  });
+
   it('creates the dead-letter queue before any queue that names it', () => {
     const names = QUEUES.map((queue) => queue.name);
     for (const queue of QUEUES) {

@@ -268,5 +268,14 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
         .where(eq(futureItems.id, id));
       return row ?? null;
     },
+    async submitterIds(since) {
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const rows = await db
+        .selectDistinct({ authorId: futureItems.authorId })
+        .from(futureItems)
+        .where(gte(futureItems.submittedAt, since))
+        .orderBy(asc(futureItems.authorId));
+      return rows.map((row) => row.authorId);
+    },
   };
 }

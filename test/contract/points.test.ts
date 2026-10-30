@@ -781,6 +781,87 @@ describe('PointRepo mailFacts (what the decision mails read again, ADR 0020)', (
   });
 });
 
+describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
+  /** As the worker reads at run time: autoporada_worker in the pg world, with its column grants only. */
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const MONDAY = calDate(2026, 11, 2);
+  const SINCE = new Date('2026-10-05T00:00:00Z');
+  const waiting = () =>
+    asWorker((tx) => tx.points.reminderAuthors({ draftsSince: SINCE, monday: MONDAY }));
+
+  /** A point of `author` that stands in `state` with the given first Monday. */
+  async function pointIn(author: UserRecord, state: PointPatch['state'], earliest = MONDAY) {
+    const { point } = await create(world.as(author), { content: FULL });
+    if (state === 'draft') return point;
+    return update(world.as(author), point, { ...SUBMIT, state, earliestMonday: earliest });
+  }
+
+  it('lists each author of a recent draft or of a returned point that can still go to the Monday, once', async () => {
+    const [drafter, returned, both] = [
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+    ];
+    await pointIn(drafter, 'draft');
+    await pointIn(returned, 'returned', calDate(2026, 10, 26));
+    await pointIn(both, 'draft');
+    await pointIn(both, 'draft');
+    await pointIn(both, 'returned', MONDAY);
+    expect(await waiting()).toEqual([drafter.id, returned.id, both.id].sort());
+  });
+
+  it('leaves out stale drafts, returned points for a later Monday and every other state', async () => {
+    const [stale, later, submitted, approved] = [
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+    ];
+    world.clock.set(new Date('2026-10-04T10:00:00Z'));
+    await pointIn(stale, 'draft');
+    world.clock.set(new Date('2026-10-20T10:00:00Z'));
+    await pointIn(later, 'returned', calDate(2026, 11, 9));
+    await pointIn(submitted, 'submitted');
+    await pointIn(approved, 'approved');
+    expect(await waiting()).toEqual([]);
+  });
+
+  it('lists the authors who handed in something since a day, once, and not those who retracted', async () => {
+    const [recent, old, retracted, none] = [
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+    ];
+    const handIn = async (author: UserRecord, at: string) => {
+      const point = await pointIn(author, 'draft');
+      return update(world.as(author), point, { ...SUBMIT, submittedAt: new Date(at) });
+    };
+    await handIn(recent, '2026-10-06T08:00:00Z');
+    await handIn(recent, '2026-10-07T08:00:00Z');
+    await handIn(old, '2026-10-04T23:59:59Z');
+    const gone = await handIn(retracted, '2026-10-08T08:00:00Z');
+    await update(world.as(retracted), gone, { state: 'draft', submittedAt: null });
+    await pointIn(none, 'draft');
+    expect(await asWorker((tx) => tx.points.submitterIds(SINCE))).toEqual([recent.id]);
+  });
+
+  it('refuses a user: only the system reads them', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const refused = read(world.as(author), (tx) => tx.points.submitterIds(SINCE));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+    const other = read(world.as(author), (tx) =>
+      tx.points.reminderAuthors({ draftsSince: SINCE, monday: MONDAY }),
+    );
+    expect(await failure(other)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('point audit coverage in the fake world', () => {
   it('names every created or updated point as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

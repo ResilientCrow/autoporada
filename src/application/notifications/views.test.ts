@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AccessRequestRecord, UserRecord } from '@/application/ports';
-import { instantToWallClock } from '@/domain/time';
+import { calDate, instantToWallClock } from '@/domain/time';
 import { cooldownEnd } from '@/domain/review';
 
 import { viewOf } from './index';
@@ -33,6 +33,13 @@ describe('viewOf', () => {
     expect(viewOf('access.rejected', request(null))).toEqual({
       retryFrom: instantToWallClock(cooldownEnd(CREATED)).date,
     });
+  });
+
+  it('tells a reminder the meeting it is about', () => {
+    const monday = calDate(2026, 10, 26);
+    for (const template of ['reminder.soft', 'reminder.hard'] as const) {
+      expect(viewOf(template, { monday, hasWork: true })).toEqual({ meetingDate: monday });
+    }
   });
 
   it('gives every other template no variables', () => {

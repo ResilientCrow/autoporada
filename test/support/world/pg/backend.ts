@@ -88,8 +88,9 @@ export async function jobRows(database: TestDatabase): Promise<readonly JobRow[]
     data: r.data,
     options: {
       dedupeKey: r.singleton_key,
-      // pg-boss fills start_after with the creation time when none was given
-      ...(r.start_after.getTime() > r.created_on.getTime() && { startAfter: r.start_after }),
+      // pg-boss fills start_after with the creation time when none was given; a start the
+      // clock of a test put in the past still differs from it
+      ...(r.start_after.getTime() !== r.created_on.getTime() && { startAfter: r.start_after }),
     },
   }));
 }

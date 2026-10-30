@@ -47,6 +47,7 @@ describe('runMigrations', () => {
       'future.report-prompt',
       'mail.prune',
       'mail.send',
+      'reminders.deadline',
     ]);
   });
 

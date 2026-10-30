@@ -61,6 +61,7 @@ async function workerFor(
       'mail.send': handler,
       'mail.prune': () => Promise.resolve(purged),
       'future.report-prompt': () => Promise.resolve(purged),
+      'reminders.deadline': () => Promise.resolve(purged),
     },
     schedules: [PRUNE],
     deps,
@@ -217,6 +218,7 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
           'mail.send': () => Promise.resolve({ kind: 'done', code: 'sent' }),
           'mail.prune': () => Promise.resolve(purged),
           'future.report-prompt': () => Promise.resolve(purged),
+          'reminders.deadline': () => Promise.resolve(purged),
         },
         schedules: [PRUNE],
         deps,
@@ -238,6 +240,7 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
       'mail.send': send,
       'mail.prune': () => Promise.resolve(purged),
       'future.report-prompt': () => Promise.resolve(purged),
+      'reminders.deadline': () => Promise.resolve(purged),
     });
     const deps = () =>
       ({

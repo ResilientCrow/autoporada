@@ -14,6 +14,7 @@ const GREETING = 'Dobrý den,';
 const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovídejte na ni prosím.';
 
 const RETRY_FROM = calDate(2026, 10, 31);
+const MEETING = calDate(2026, 10, 26);
 
 /** The views each template needs; a new template name is a compile error until it has one. */
 const VIEWS = {
@@ -26,6 +27,8 @@ const VIEWS = {
   'point.approved': {},
   'point.rejected': {},
   'report.prompt': {},
+  'reminder.soft': { meetingDate: MEETING },
+  'reminder.hard': { meetingDate: MEETING },
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -86,6 +89,18 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: `Autoporada: napište zprávu z${NB}akce`,
     text: letter(
       `akce, kterou jste zapsali do přehledu, proběhla. Zprávu do porady můžete napsat v${NB}aplikaci:\n\n${POINTS}`,
+    ),
+  },
+  'reminder.soft': {
+    subject: 'Autoporada: uzávěrka porady se blíží',
+    text: letter(
+      `uzávěrka porady z${NB}26.${NB}října 2026 je za dva dny.\n\n${POINTS}\n\nPřipomínky můžete vypnout v${NB}profilu.`,
+    ),
+  },
+  'reminder.hard': {
+    subject: 'Autoporada: dnes je uzávěrka porady',
+    text: letter(
+      `máte rozpracovaný nebo vrácený bod pro poradu z${NB}26.${NB}října 2026. Uzávěrka je dnes.\n\n${POINTS}`,
     ),
   },
 };
@@ -153,13 +168,10 @@ describe('renderMail', () => {
         fc.integer({ min: 1, max: 12 }),
         fc.integer({ min: 1, max: 28 }),
         (origin, year, month, day) => {
-          const view = { retryFrom: calDate(year, month, day) };
+          const date = calDate(year, month, day);
           for (const name of TEMPLATE_NAMES) {
-            const { subject } = renderMail(
-              name,
-              name === 'access.rejected' ? view : ({} as never),
-              origin,
-            );
+            const view = name.startsWith('reminder.') ? { meetingDate: date } : { retryFrom: date };
+            const { subject } = renderMail(name, view as never, origin);
             expect(subject).not.toMatch(/[\r\n]/);
           }
         },

@@ -4,9 +4,9 @@ import type { TemplateName } from '@/notify';
 
 import type { MailSubjects, PointDecision } from './subjects';
 
-type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status'>;
+import { isMember as member, wantsSoftReminder } from './reminders';
 
-const member = (user: UserFacts) => user.role !== 'pending' && user.status === 'active';
+type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'isStudent' | 'remindDeadline'>;
 
 const decided =
   (state: AccessState, recipientFits: (user: UserFacts) => boolean) =>
@@ -53,6 +53,10 @@ const APPLIES: {
     item.reportState === 'none' &&
     item.authorId === recipient.id &&
     member(recipient),
+  /** Staff who still want it, while the soft slot is open for the Monday (the loader says so). */
+  'reminder.soft': (_subject, recipient) => wantsSoftReminder(recipient),
+  /** Whoever still has a draft or returned point for the Monday, a student too. */
+  'reminder.hard': ({ hasWork }, recipient) => hasWork && member(recipient),
 };
 
 /** A missing subject (a decided request purged on 1 September, a deleted point) never applies. */

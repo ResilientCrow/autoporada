@@ -848,6 +848,43 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
   });
 });
 
+describe('FutureItemRepo submitterIds (what the reminders read, migration 0024)', () => {
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const SINCE = new Date('2026-10-05T00:00:00Z');
+
+  it('lists the authors who handed in an akce since a day, once, and not those who did not', async () => {
+    const [recent, old, draft] = [
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter' }),
+    ];
+    const handIn = async (author: UserRecord, at: string) => {
+      const { item } = await create(world.as(author), { content: FULL });
+      await update(world.as(author), item, {
+        ...SUBMIT,
+        content: FULL,
+        submittedAt: new Date(at),
+      });
+    };
+    await handIn(recent, '2026-10-06T08:00:00Z');
+    await handIn(recent, '2026-10-07T08:00:00Z');
+    await handIn(old, '2026-10-04T23:59:59Z');
+    await create(world.as(draft), { content: FULL });
+    expect(await asWorker((tx) => tx.futureItems.submitterIds(SINCE))).toEqual([recent.id]);
+  });
+
+  it('refuses a user', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const refused = read(world.as(author), (tx) => tx.futureItems.submitterIds(SINCE));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('future item audit coverage in the fake world', () => {
   it('names every created or updated item as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

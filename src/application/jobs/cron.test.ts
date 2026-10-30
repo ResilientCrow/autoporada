@@ -23,7 +23,7 @@ describe('cron registry', () => {
     expect(cronExpression(schedule)).toBe(cron);
   });
 
-  it('ships mail.prune daily at 05:10 and the report prompt daily at 08:00 Prague time, each catching up once', () => {
+  it('ships mail.prune daily at 05:10, the report prompt daily at 08:00 Prague time and the deadline reminders every 15 minutes, only the daily ones catching up', () => {
     expect(CRON).toEqual([
       entry(),
       {
@@ -33,10 +33,18 @@ describe('cron registry', () => {
         data: {},
         catchUp: 'once',
       },
+      {
+        job: 'reminders.deadline',
+        key: 'quarter',
+        schedule: { everyMinutes: 15 },
+        data: {},
+        catchUp: 'skip',
+      },
     ]);
     expect(SCHEDULES).toEqual([
       { job: 'mail.prune', key: 'daily', cron: '10 5 * * *', data: {}, missed: 'once' },
       { job: 'future.report-prompt', key: 'daily', cron: '0 8 * * *', data: {}, missed: 'once' },
+      { job: 'reminders.deadline', key: 'quarter', cron: '*/15 * * * *', data: {}, missed: 'skip' },
     ]);
   });
 

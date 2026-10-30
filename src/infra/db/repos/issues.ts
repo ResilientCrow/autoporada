@@ -66,6 +66,15 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
         .orderBy(asc(issues.monday));
       return rows.map(toRecord);
     },
+    async deadlines(from, to) {
+      // The columns migration 0024 grants the worker, and no other.
+      const rows = await db
+        .select({ monday: issues.monday, deadlineAt: issues.deadlineAt, status: issues.status })
+        .from(issues)
+        .where(between(issues.monday, toIsoDate(from), toIsoDate(to)))
+        .orderBy(asc(issues.monday));
+      return rows.map((row) => ({ ...row, monday: parseIsoDate(row.monday) }));
+    },
     async setStatus(id, expectedVersion, status) {
       // Privileged writes re-check the policy, whatever the use case declared (ADR 0011).
       if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {

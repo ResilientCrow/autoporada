@@ -116,6 +116,7 @@ describe('installJobs', () => {
         'future.report-prompt',
         'mail.prune',
         'mail.send',
+        'reminders.deadline',
       ]);
       for (const { name: queueName, policy, options } of QUEUES) {
         expect(queues.find((queue) => queue.name === queueName)).toMatchObject({

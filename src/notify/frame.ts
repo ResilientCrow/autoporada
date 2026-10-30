@@ -12,9 +12,11 @@ export interface Body {
   readonly paragraphs: readonly string[];
   /** Ends the body with a link to this page on the app origin (ADR 0020): sign-in, the author's points or the review queue. */
   readonly link?: '/prihlaseni' | '/body' | '/kontrola';
+  /** Paragraphs that follow the link, before the footer. */
+  readonly after?: readonly string[];
 }
 
 export function frame(origin: string, body: Body): string {
   const link = body.link ? [`${origin}${body.link}`] : [];
-  return [GREETING, ...body.paragraphs, ...link, FOOTER].join('\n\n') + '\n';
+  return [GREETING, ...body.paragraphs, ...link, ...(body.after ?? []), FOOTER].join('\n\n') + '\n';
 }

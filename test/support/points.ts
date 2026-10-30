@@ -96,9 +96,15 @@ export function pointFixtures(world: World) {
 
   /**
    * Moves the author's point to `state` past the use cases, as a review would
-   * leave it, filling what a handed-in point must hold (`points_submitted_complete`).
+   * leave it, filling what a handed-in point must hold (`points_submitted_complete`). A point
+   * with no first Monday yet gets `earliest`.
    */
-  async function moveTo(author: UserRecord, id: string, state: PointState): Promise<void> {
+  async function moveTo(
+    author: UserRecord,
+    id: string,
+    state: PointState,
+    earliest = FIRST_MONDAY,
+  ): Promise<void> {
     await world.tx(world.as(author), async (tx) => {
       const point = (await tx.points.loadForWrite(id))!;
       const { content } = point;
@@ -111,7 +117,7 @@ export function pointFixtures(world: World) {
         },
         state,
         ...(point.submittedAt === null && { submittedAt: world.clock.now() }),
-        ...(point.earliestMonday === null && { earliestMonday: FIRST_MONDAY }),
+        ...(point.earliestMonday === null && { earliestMonday: earliest }),
       });
       await tx.audit.record({ action: `point.${state}`, target: { type: 'point', id } });
     });

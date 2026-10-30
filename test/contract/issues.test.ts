@@ -102,6 +102,22 @@ describe('IssueRepo (port contract)', () => {
     ).toEqual([]);
   });
 
+  it('gives the worker the deadline facts of a window of Mondays, and no other column (migration 0024)', async () => {
+    const first = await ensure(issueOf(calDate(2026, 11, 2)));
+    const second = await ensure(issueOf(calDate(2026, 11, 9)));
+    await ensure(issueOf(calDate(2026, 11, 16)));
+    await setStatus(second.issue, 'skipped');
+    const asWorker = world.workerDb.transaction(
+      { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      (tx) => tx.issues.deadlines(calDate(2026, 11, 2), calDate(2026, 11, 9)),
+    );
+    expect(await asWorker).toEqual([
+      { monday: calDate(2026, 11, 2), deadlineAt: first.issue.deadlineAt, status: 'open' },
+      { monday: calDate(2026, 11, 9), deadlineAt: second.issue.deadlineAt, status: 'skipped' },
+    ]);
+  });
+
   it('changes the status against the expected version and raises it by one', async () => {
     const { issue } = await ensure(issueOf(MONDAY));
     const skipped = await setStatus(issue, 'skipped');

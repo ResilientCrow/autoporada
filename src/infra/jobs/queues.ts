@@ -77,6 +77,20 @@ export const QUEUE_SPECS = {
       deadLetter: DEAD_QUEUE,
     },
   },
+  // Sent by the cron registry every 15 minutes; it enqueues the reminder mails while a slot is open.
+  'reminders.deadline': {
+    policy: 'standard',
+    options: {
+      retryLimit: 2,
+      retryDelay: 60,
+      retryBackoff: true,
+      retryDelayMax: 600,
+      expireInSeconds: 300,
+      retentionSeconds: 2 * DAY,
+      deleteAfterSeconds: 2 * DAY,
+      deadLetter: DEAD_QUEUE,
+    },
+  },
 } satisfies Record<QueueName, QueueSettings>;
 
 /**

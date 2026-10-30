@@ -12,8 +12,9 @@ import {
 import { parsePointJsonb } from '@/contracts';
 import { admits } from '@/domain/policy';
 import type { PointContent } from '@/domain/report';
-import { isoWeekday, toIsoDate } from '@/domain/time';
+import { compareDates, isoWeekday, toIsoDate } from '@/domain/time';
 
+import { distinctSorted } from './events';
 import { guard, refusedBy } from './guards';
 import { newId, type FakePoint, type FakeState, type FakeTxState } from './state';
 
@@ -245,6 +246,24 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       if (principal.kind !== 'system') throw new ScopeViolation();
       const point = points.get(id);
       return point ? { id: point.id, authorId: point.authorId, state: point.state } : null;
+    },
+    async reminderAuthors({ draftsSince, monday }) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const waiting = [...points.values()].filter(
+        (p) =>
+          (p.state === 'draft' && p.updatedAt >= draftsSince) ||
+          (p.state === 'returned' &&
+            p.earliestMonday !== null &&
+            compareDates(p.earliestMonday, monday) <= 0),
+      );
+      return distinctSorted(waiting.map((p) => p.authorId));
+    },
+    async submitterIds(since) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const handedIn = [...points.values()].filter((p) => p.submittedAt && p.submittedAt >= since);
+      return distinctSorted(handedIn.map((p) => p.authorId));
     },
   };
 }

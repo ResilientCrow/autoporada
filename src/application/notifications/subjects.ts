@@ -8,6 +8,8 @@ import type {
 } from '@/application/ports';
 import type { TemplateName } from '@/notify';
 
+import { loadReminder, type ReminderFacts } from './reminders';
+
 /** A decision on a point: the event the mail reports, and the point as it stands now. */
 export interface PointDecision {
   readonly event: PointEventMailFacts;
@@ -27,12 +29,15 @@ export interface MailSubjects {
   readonly 'point.rejected': PointDecision;
   /** The akce the author is asked to write a report for. */
   readonly 'report.prompt': FutureMailFacts;
+  /** Both reminders: the recipient is the subject, and what is due is read from the issues. */
+  readonly 'reminder.soft': ReminderFacts;
+  readonly 'reminder.hard': ReminderFacts;
 }
 
 /** The repositories a subject is read from. */
 export type SubjectReaders = Pick<
   Tx,
-  'accessRequests' | 'users' | 'points' | 'pointEvents' | 'futureItems'
+  'ctx' | 'accessRequests' | 'users' | 'points' | 'pointEvents' | 'futureItems' | 'issues'
 >;
 
 const request = (tx: SubjectReaders, id: string) => tx.accessRequests.get(id);
@@ -58,6 +63,8 @@ const SUBJECTS: {
   'point.rejected': decision,
   /** By the worker's granted columns only. */
   'report.prompt': (tx, id) => tx.futureItems.mailFacts(id),
+  'reminder.soft': (tx, id) => loadReminder(tx, 'soft', id),
+  'reminder.hard': (tx, id) => loadReminder(tx, 'hard', id),
 };
 
 /** Reads the subject a `mail.send` job names, by the loader of its template. */

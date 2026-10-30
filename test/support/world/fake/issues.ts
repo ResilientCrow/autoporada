@@ -36,6 +36,13 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
         .filter((i) => compareDates(i.monday, from) >= 0 && compareDates(i.monday, to) <= 0)
         .sort((a, b) => compareDates(a.monday, b.monday));
     },
+    async deadlines(from, to) {
+      guard(tx, false);
+      return [...issues.values()]
+        .filter((i) => compareDates(i.monday, from) >= 0 && compareDates(i.monday, to) <= 0)
+        .sort((a, b) => compareDates(a.monday, b.monday))
+        .map(({ monday, deadlineAt, status }) => ({ monday, deadlineAt, status }));
+    },
     async setStatus(id, expectedVersion, status) {
       guard(tx, true);
       if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
