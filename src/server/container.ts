@@ -8,7 +8,12 @@ import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
 import { createDirectory } from '@/infra/directory';
 import { createProducer } from '@/infra/jobs';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
-import { createIdentityProvider, describeCredential, loadClientCredential } from '@/infra/oidc';
+import {
+  createAppTokenSource,
+  createIdentityProvider,
+  describeCredential,
+  loadClientCredential,
+} from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
 
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
@@ -59,6 +64,9 @@ interface Shared {
   readonly limiter: RateLimiter;
 }
 
+/** The Graph token's scope: the application permissions granted to the registration. */
+const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
+
 const SHARED = Symbol.for('autoporada.web.shared');
 
 function shared(config: Config, log: Logger): Shared {
@@ -92,10 +100,28 @@ function buildWeb(config: Config): WebContainer {
     clock: systemClock,
   };
   const { oidc } = config;
-  // A bad dev file stops the boot, like a bad credential below.
-  const directory = createDirectory(config.directory, (path) => readFileSync(path, 'utf8'));
   // Loading the credential checks the key against the certificate: a bad pair stops the boot.
   const credential = loadClientCredential(oidc.credential);
+  // A bad dev file stops the boot, like a bad credential above. `graph` searches with the app's own
+  // token, from the registration the web signs in with; row 48 moves the web to a registration of
+  // its own (D12 (a)) and opens the network path, so until then production stays DIRECTORY=off.
+  const directory = createDirectory(config.directory, {
+    readFile: (path) => readFileSync(path, 'utf8'),
+    graphBaseUrl: config.graphBaseUrl,
+    graphTokens: () =>
+      createAppTokenSource({
+        provider: {
+          issuer: oidc.issuer,
+          clientId: oidc.clientId,
+          appOrigin: config.appOrigin,
+          credential,
+          domainHint: oidc.domainHint,
+          production: config.environment === 'production',
+        },
+        scope: GRAPH_SCOPE,
+        clock: systemClock,
+      }),
+  });
   const auth: AuthDeps = {
     idp: createIdentityProvider({
       issuer: oidc.issuer,

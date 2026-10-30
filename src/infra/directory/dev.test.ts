@@ -32,8 +32,16 @@ const fileOf = (content: unknown) => (path: string) => {
   if (path !== filePath) throw new Error(`unexpected read of ${path}`);
   return typeof content === 'string' ? content : JSON.stringify(content);
 };
+/** The dev and off adapters take no Graph: building a token source would fail the test. */
+const deps = (readFile: (path: string) => string) => ({
+  readFile,
+  graphBaseUrl: 'https://graph.microsoft.com/v1.0',
+  graphTokens: (): never => {
+    throw new Error('the dev and off directories build no token source');
+  },
+});
 const dev = (people: unknown = PEOPLE) =>
-  createDirectory({ kind: 'dev', path: filePath }, fileOf(people));
+  createDirectory({ kind: 'dev', path: filePath }, deps(fileOf(people)));
 const live = () => new AbortController().signal;
 
 async function found(query: string, people: unknown = PEOPLE): Promise<string[]> {
@@ -114,10 +122,13 @@ describe('the dev directory: search', () => {
 
   it('reads the file once, when it is created', async () => {
     let reads = 0;
-    const directory = createDirectory({ kind: 'dev', path: filePath }, (path) => {
-      reads += 1;
-      return fileOf(PEOPLE)(path);
-    });
+    const directory = createDirectory(
+      { kind: 'dev', path: filePath },
+      deps((path) => {
+        reads += 1;
+        return fileOf(PEOPLE)(path);
+      }),
+    );
     await directory.search('novakova', live());
     await directory.search('svoboda', live());
     expect(reads).toBe(1);
@@ -171,7 +182,7 @@ describe('the dev directory: the file', () => {
     };
     let error: unknown;
     try {
-      createDirectory({ kind: 'dev', path: filePath }, unreadable);
+      createDirectory({ kind: 'dev', path: filePath }, deps(unreadable));
     } catch (caught) {
       error = caught;
     }
@@ -182,9 +193,12 @@ describe('the dev directory: the file', () => {
 
 describe('the off directory', () => {
   it('answers directory.off to every search, and reads no file', async () => {
-    const directory = createDirectory({ kind: 'off' }, () => {
-      throw new Error('off reads nothing');
-    });
+    const directory = createDirectory(
+      { kind: 'off' },
+      deps(() => {
+        throw new Error('off reads nothing');
+      }),
+    );
     expect(await directory.search('novakova', live())).toEqual({
       ok: false,
       code: 'directory.off',
@@ -199,7 +213,7 @@ describe('docker/dev/directory.json', () => {
   const SCHOOL_TENANT = '00000000-0000-0000-0000-000000000001';
 
   it('loads, and holds every mock IdP persona of the school under the same name', async () => {
-    const directory = createDirectory({ kind: 'dev', path: file }, read);
+    const directory = createDirectory({ kind: 'dev', path: file }, deps(read));
     const idp = JSON.parse(read('docker/dev/mock-oauth2.json')) as {
       tokenCallbacks: {
         requestMappings: { claims: { name: string; oid: string; tid: string } }[];
@@ -225,7 +239,7 @@ describe('docker/dev/directory.json', () => {
   });
 
   it('exercises folding, a two-word family name and a shared family name', async () => {
-    const directory = createDirectory({ kind: 'dev', path: file }, read);
+    const directory = createDirectory({ kind: 'dev', path: file }, deps(read));
     const families = async (query: string) => {
       const result = await directory.search(query, live());
       return result.ok ? result.value.map((p) => `${p.givenName} ${p.familyName}`) : [];
@@ -236,7 +250,7 @@ describe('docker/dev/directory.json', () => {
   });
 
   it('does not offer the persona of another tenant', async () => {
-    const directory = createDirectory({ kind: 'dev', path: file }, read);
+    const directory = createDirectory({ kind: 'dev', path: file }, deps(read));
     expect(await directory.search('odjinud', live())).toEqual({ ok: true, value: [] });
   });
 });

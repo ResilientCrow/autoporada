@@ -367,6 +367,25 @@ describe('loadConfig: the people directory', () => {
     expect(loadConfig(env, noFiles).directory).toEqual({ kind: 'dev', path: DEV_FILE });
   });
 
+  it('accepts graph in development and in production, with no other setting', () => {
+    const env = { ...DEV_ENV, DIRECTORY: 'graph' };
+    expect(loadConfig(env, noFiles).directory).toEqual({ kind: 'graph' });
+    expect(loadConfig({ ...PROD_ENV, DIRECTORY: 'graph' }, prodFiles).directory).toEqual({
+      kind: 'graph',
+    });
+  });
+
+  it('refuses the dev path with graph, in development and in production', () => {
+    const stray = { DIRECTORY: 'graph', DIRECTORY_DEV_PATH: DEV_FILE };
+    expect(problemsOf(() => loadConfig({ ...DEV_ENV, ...stray }, noFiles))).toEqual([
+      'DIRECTORY_DEV_PATH: is only for DIRECTORY=dev',
+    ]);
+    expect(problemsOf(() => loadConfig({ ...PROD_ENV, ...stray }, prodFiles))).toEqual([
+      'DIRECTORY_DEV_PATH: is only for DIRECTORY=dev',
+      'DIRECTORY_DEV_PATH: is not allowed in production',
+    ]);
+  });
+
   it('needs the path for dev', () => {
     const problems = problemsOf(() => loadConfig({ ...DEV_ENV, DIRECTORY: 'dev' }, noFiles));
     expect(problems).toEqual(['DIRECTORY_DEV_PATH: is required when DIRECTORY=dev']);

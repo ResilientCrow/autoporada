@@ -61,8 +61,8 @@ const shape = z.object({
     .string()
     .regex(/^smtp:\/\//, 'must be an smtp:// URL')
     .optional(),
-  /** People search: `dev` reads a JSON file, `off` answers that search is off (production until S2). */
-  DIRECTORY: z.enum(['dev', 'off']).default('off'),
+  /** People search: `graph` asks Microsoft Graph, `dev` reads a JSON file, `off` says search is off. */
+  DIRECTORY: z.enum(['dev', 'off', 'graph']).default('off'),
   /** Not `*_FILE`: readEnv would read that as the Docker-secret form of a DIRECTORY_DEV. */
   DIRECTORY_DEV_PATH: z.string().startsWith('/', 'must be an absolute path').optional(),
   GOTENBERG_URL: httpUrl,

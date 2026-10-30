@@ -76,6 +76,30 @@ describe('web container', () => {
     expect(container.requestIdFrom('not valid!')).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  it('builds the Graph people search only when the configuration asks for it', async () => {
+    const searched = async (directory: string) => {
+      for (const [name, value] of Object.entries({ ...ENV, DIRECTORY: directory })) {
+        vi.stubEnv(name, value);
+      }
+      const { getContainer } = await import('./container');
+      const container = getContainer();
+      const answer = await container.directory.search('ab', new AbortController().signal);
+      vi.resetModules();
+      for (const key of ['autoporada.web.shared', 'autoporada.config']) {
+        delete (globalThis as Record<symbol, unknown>)[Symbol.for(key)];
+      }
+      return { answer, mode: container.directoryMode, report: container.bootReport(new Date()) };
+    };
+    const off = await searched('off');
+    expect(off.answer).toEqual({ ok: false, code: 'directory.off' });
+    expect(off.mode).toBe('off');
+    // The Graph adapter answers a short query itself, with no call and no token.
+    const graph = await searched('graph');
+    expect(graph.answer).toEqual({ ok: true, value: [] });
+    expect(graph.mode).toBe('on');
+    expect(graph.report.facts).toMatchObject({ directory: 'graph' });
+  });
+
   it('opens no connection for jobs until startProducer() is called', async () => {
     for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
     const { getContainer } = await import('./container');

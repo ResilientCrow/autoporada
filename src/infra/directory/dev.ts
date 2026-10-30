@@ -2,24 +2,19 @@ import { z } from 'zod';
 
 import type { DirectoryPerson, DirectoryPort, DirectoryResult } from '@/application/ports';
 import { directoryHit } from '@/contracts';
-import { foldForSearch, matchesWordPrefixes, searchWords } from '@/domain/cs';
+import { foldForSearch, searchWords } from '@/domain/cs';
 import { DIRECTORY_LIMITS } from '@/domain/report';
 import { ConfigError } from '@/infra/config';
 
 import { MAX_DEV_PEOPLE } from './limits';
+import { matchesQuery } from './words';
 
 export type ReadFile = (path: string) => string;
 
 /** The file holds what a search may answer, so the route's hit contract checks it. */
 const people = z.array(directoryHit).max(MAX_DEV_PEOPLE);
 
-/** A person with the words a query is matched against, folded once. */
-interface Entry {
-  readonly person: DirectoryPerson;
-  readonly words: readonly string[];
-}
-
-function load(path: string, readFile: ReadFile): Entry[] {
+function load(path: string, readFile: ReadFile): DirectoryPerson[] {
   // Dev and test only: a bad file stops the boot, with the key and no content (ADR 0015).
   const refuse = (why: string): never => {
     throw new ConfigError([`DIRECTORY_DEV_PATH: ${why}`]);
@@ -38,14 +33,7 @@ function load(path: string, readFile: ReadFile): Entry[] {
   }
   const parsed = people.safeParse(json);
   if (!parsed.success) return refuse(`is not a list of at most ${MAX_DEV_PEOPLE} people`);
-  return parsed.data.map((p) => ({
-    person: p,
-    words: [
-      ...searchWords(p.givenName),
-      ...searchWords(p.familyName),
-      ...searchWords(p.displayName),
-    ],
-  }));
+  return parsed.data;
 }
 
 /**
@@ -64,9 +52,8 @@ export function createDevDirectory(path: string, readFile: ReadFile): DirectoryP
         const wanted = searchWords(folded);
         if (wanted.length === 0) return Promise.resolve({ ok: true, value: [] });
         const value = entries
-          .filter((entry) => matchesWordPrefixes(wanted, entry.words))
-          .slice(0, DIRECTORY_LIMITS.hits)
-          .map((entry) => entry.person);
+          .filter((person) => matchesQuery(wanted, person))
+          .slice(0, DIRECTORY_LIMITS.hits);
         return Promise.resolve({ ok: true, value });
       } catch {
         return Promise.resolve({ ok: false, code: 'directory.unavailable' });

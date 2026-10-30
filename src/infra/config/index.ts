@@ -31,13 +31,23 @@ export interface Config {
   readonly mail:
     | { readonly transport: 'graph'; readonly from: string }
     | { readonly transport: 'smtp'; readonly from: string; readonly smtpUrl: string };
-  /** Where people search gets its answers; graph joins in M8b. */
-  readonly directory: { readonly kind: 'off' } | { readonly kind: 'dev'; readonly path: string };
+  /** Where people search gets its answers. */
+  readonly directory:
+    | { readonly kind: 'off' }
+    | { readonly kind: 'graph' }
+    | { readonly kind: 'dev'; readonly path: string };
   readonly gotenbergUrl: string;
   readonly serverActionsKey: string | undefined;
   readonly bootstrapHeadmasterOid: string | undefined;
   readonly logLevel: LogLevel;
   readonly worker: { readonly pollSeconds: number };
+}
+
+function directoryOf(c: { DIRECTORY: 'off' | 'dev' | 'graph'; DIRECTORY_DEV_PATH?: string }) {
+  const { DIRECTORY: kind, DIRECTORY_DEV_PATH: path } = c;
+  // The schema has refused a dev without its path.
+  if (kind === 'dev' && path) return { kind, path } as const;
+  return kind === 'graph' ? ({ kind } as const) : ({ kind: 'off' } as const);
 }
 
 /** Validates the environment. Error messages name keys, never values. */
@@ -75,10 +85,7 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
       c.MAIL_TRANSPORT === 'smtp'
         ? { transport: 'smtp', from: c.MAIL_FROM, smtpUrl: c.SMTP_URL ?? '' }
         : { transport: 'graph', from: c.MAIL_FROM },
-    directory:
-      c.DIRECTORY === 'dev' && c.DIRECTORY_DEV_PATH
-        ? { kind: 'dev', path: c.DIRECTORY_DEV_PATH }
-        : { kind: 'off' },
+    directory: directoryOf(c),
     gotenbergUrl: c.GOTENBERG_URL.replace(/\/$/, ''),
     serverActionsKey: c.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
     bootstrapHeadmasterOid: c.BOOTSTRAP_HEADMASTER_OID?.toLowerCase(),
