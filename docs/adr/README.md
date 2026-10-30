@@ -8,7 +8,7 @@ record that supersedes it.
 |---|---|---|
 | [0001](0001-stack.md) | TypeScript full stack: Next.js 16, PostgreSQL 18, Drizzle | Accepted |
 | [0002](0002-authentication.md) | Entra ID OIDC via openid-client, own DB sessions | Accepted |
-| [0003](0003-single-entra-app.md) | One Entra app; Mail.Send scoped by Exchange RBAC | Accepted |
+| [0003](0003-single-entra-app.md) | One Entra app; Mail.Send scoped by Exchange RBAC | Accepted; "One registration" superseded in part by 0021 |
 | [0004](0004-module-boundaries.md) | Layered modules with enforced dependency rules | Accepted; the layer table extended in part by 0023 |
 | [0005](0005-document-engine.md) | Snapshot → DocumentModel → DOCX / HTML | Accepted |
 | [0006](0006-background-jobs.md) | pg-boss worker with transactional enqueue | Accepted; partly superseded by 0015 |
@@ -26,6 +26,7 @@ record that supersedes it.
 | [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026 |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
 | [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted |
+| [0021](0021-web-access-to-graph.md) | Web access to Graph: a registration of its own, the `ap-edge` bridge | Accepted |
 | [0022](0022-database-errors-by-constraint-name.md) | Database errors by constraint name | Accepted |
 | [0023](0023-zod-jitless-in-the-browser.md) | Zod runs jitless in the browser | Accepted |
 | [0024](0024-autosave-announcements-and-flush-answers.md) | Autosave: one announcement, flush answers while the page lives | Accepted |

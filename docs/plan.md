@@ -35,7 +35,7 @@ This plan comes from six interview rounds and a 9-agent design workflow:
 
 | Area | Decision |
 |---|---|
-| Login | Microsoft 365 SSO only, with a **single** single-tenant Entra app registered by school IT and authenticated by a certificate (`private_key_jwt`). The app is reachable from the internet on its own subdomain (e.g. `autoporada.ssps.cz`), with Let's Encrypt HTTPS. |
+| Login | Microsoft 365 SSO only, with a single-tenant Entra app registered by school IT and authenticated by a certificate (`private_key_jwt`). From M8b the web has its own registration (sign-in and directory search) and the mail registration is the worker's (ADR 0021, amending the "single" app of ADR 0003). The app is reachable from the internet on its own subdomain (e.g. `autoporada.ssps.cz`), with Let's Encrypt HTTPS. |
 | Access | Anyone in the tenant can sign in. Only allow-listed users can submit; everyone else gets "Požádat o přístup", and the headmaster approves the request and sets the student/staff flag. |
 | Roles | `pending` → `submitter` → `reviewer` (approve, edit, return, reject points) → `headmaster` (everything else, plus generating the document). Students can only ever be `submitter`. |
 | What submitters may add | Report points (PROVOZ), future items (jednání / akce), HOSPODAŘENÍ items, other POKYNY points. Ohlasy (media and partners) are headmaster-only. |
@@ -221,22 +221,22 @@ An inventory test fails the build if any action or route handler is not wrapped.
 - Author autosaves are not logged.
 
 **Secrets**
-- Docker secrets: DB passwords, the Entra certificate key and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.
+- Docker secrets: DB passwords, the Entra certificate keys (the web's own, and the mail registration's held by the worker and cli only) and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`.
 - `.env` is validated by Zod in `instrumentation.ts` at boot; a bad value stops the server.
 - `APP_ENV` (development / test / production) switches on production hardening. It is separate from `NODE_ENV`, which `next start` always sets to production, and is required whenever `NODE_ENV=production`.
 - A Server Actions key given as a Docker secret is copied into `process.env` at boot, because Next.js reads it only from there.
 - Four DB roles: `migrator`, `app`, `jobs` and `backup` (ADR 0010, 0015). The login roles are `autoporada_web` (in `app`) and `autoporada_worker` (in `jobs` only). The web can read the queue list, insert jobs and read back their ids; only the worker reads the mail ledger.
 - An alert fires 45 days before the certificate expires.
 
-**Graph least privilege**
-- Delegated: `openid profile email User.Read`, with no `offline_access` and no stored user tokens.
-- Application: `User.ReadBasic.All` (admin consent) for people search: `$search` with `ConsistencyLevel: eventual`, at least 3 characters, a minimal `$select`, results not cached.
-- `Mail.Send` only through the Exchange RBAC management scope on `autoporada@ssps.cz`.
+**Graph least privilege** (two registrations from M8b, ADR 0021)
+- Web registration, delegated: `openid profile email User.Read`, with no `offline_access` and no stored user tokens.
+- Web registration, application: `User.ReadBasic.All` (admin consent) for people search: `$search` with `ConsistencyLevel: eventual`, at least 3 characters, a minimal `$select`, results not cached. If the tenant answers 403 to `$search`, the fallback `User.Read.All` needs a new ADR and an updated privacy review first.
+- Mail registration: no API permissions. `Mail.Send` only through the Exchange RBAC management scope on `autoporada@ssps.cz`; the web holds none of its credential.
 
 **Containers**
 - Non-root, `read_only`, `cap_drop: ALL`, `no-new-privileges`, pinned digests.
 - Internal networks: Gotenberg and Postgres are never exposed.
-- The worker is built from its own distroless target and sits on `data` and `egress`, never on `edge`. `egress` allows any host (bridge name `ap-egress`); the school firewall narrows it to `login.microsoftonline.com` and `graph.microsoft.com`. There is exactly one worker replica.
+- The worker is built from its own distroless target and sits on `data` and `egress`, never on `edge`. `egress` allows any host (bridge name `ap-egress`); the school firewall narrows it to `login.microsoftonline.com` and `graph.microsoft.com`. The `edge` network (Caddy and the web) has the bridge name `ap-edge`; the firewall allows the Microsoft hosts for the web and the ACME host for Caddy from it (ADR 0021). There is exactly one worker replica.
 - A `cli` maintenance container gives IT a shell for debugging.
 
 **Logs.** pino redacts cookies, tokens, `code` and request bodies. PG errors are logged as code only, actors as UUIDs, and the error page shows a `reqId`.
@@ -706,11 +706,11 @@ Every e2e test fails on a CSP violation, and axe runs on every screen in both Pl
 
 ## 13. School IT checklist (sent at M0.2)
 
-1. Register a single-tenant web app with redirect URI `https://autoporada.ssps.cz/auth/callback` and a certificate credential.
-2. Add the ID-token optional claims `acct`, `auth_time`, `email` and `upn` (with *externally authenticated* turned on).
-3. Grant admin consent for application `User.ReadBasic.All`.
+1. Register a single-tenant web app (`Autoporada`) with redirect URI `https://autoporada.ssps.cz/auth/callback` and a certificate credential. Register a second single-tenant app (`Autoporada mail`) with no redirect URI, no API permissions and its own certificate (ADR 0021).
+2. Add the ID-token optional claims `acct`, `auth_time`, `email` and `upn` (with *externally authenticated* turned on) to the web app.
+3. Grant admin consent for application `User.ReadBasic.All` on the web app only.
 4. Create the shared mailbox `autoporada@ssps.cz`.
-5. Run `New-ServicePrincipal`, `New-ManagementScope` and `New-ManagementRoleAssignment -Role "Application Mail.Send"`. Do **not** grant Mail.Send in Entra.
+5. For the mail app, run `New-ServicePrincipal`, `New-ManagementScope` and `New-ManagementRoleAssignment -Role "Application Mail.Send"`. Do **not** grant Mail.Send in Entra.
 6. Create the DNS record `autoporada.ssps.cz` and open TCP 80 and 443 to the server.
 7. Provide an off-site backup target.
 8. Name an IT contact for alerts and patching.

@@ -103,8 +103,10 @@ function buildWeb(config: Config): WebContainer {
   // Loading the credential checks the key against the certificate: a bad pair stops the boot.
   const credential = loadClientCredential(oidc.credential);
   // A bad dev file stops the boot, like a bad credential above. `graph` searches with the app's own
-  // token, from the registration the web signs in with; row 48 moves the web to a registration of
-  // its own (D12 (a)) and opens the network path, so until then production stays DIRECTORY=off.
+  // token, from the registration the web signs in with: in production that is the web's own
+  // registration, which holds `User.ReadBasic.All` and never the mail scope (ADR 0021; the compose
+  // file gives the web service its client id and certificate). Production stays DIRECTORY=off until
+  // the tenant's smoke test.
   const directory = createDirectory(config.directory, {
     readFile: (path) => readFileSync(path, 'utf8'),
     graphBaseUrl: config.graphBaseUrl,

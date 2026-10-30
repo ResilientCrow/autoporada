@@ -11,8 +11,11 @@
 // name in deploy/secrets, a secret nobody listed reaches nobody, and no other way carries
 // the secrets or the cluster files into a container (a bind mount of deploy/secrets, of
 // anything inside it or of anything above it, a symlinked bind source, env_file, configs,
-// volumes_from, a volume other than pgdata, pgdata outside postgres). The egress network
-// keeps a fixed bridge name so a host firewall rule can target it (docs/ENTRA-SETUP.md §4).
+// volumes_from, a volume other than pgdata, pgdata outside postgres). The web signs in and
+// searches the directory with a registration of its own (ADR 0021): it holds the web_entra_*
+// pair and a client id other than the worker's, and never the mail registration's entra_*
+// pair. The egress and edge networks keep fixed bridge names so a host firewall rule can
+// target them (docs/ENTRA-SETUP.md §4).
 import { execFileSync } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
@@ -23,6 +26,8 @@ const PLACEHOLDERS = {
   ACME_EMAIL: 'it@example.org',
   TENANT_ID: '00000000-0000-4000-8000-000000000001',
   CLIENT_ID: 'check',
+  WEB_CLIENT_ID: 'check-web',
+  WEB_CERT_THUMBPRINT: '1'.repeat(40),
   CERT_THUMBPRINT: '0'.repeat(40),
 };
 const ONE_SHOT = new Set(['migrate', 'cli']);
@@ -38,12 +43,17 @@ const SECRET_HOLDERS = {
   worker_database_url: ['worker'],
   web_database_url: ['web'],
   server_actions_key: ['web'],
-  entra_key: ['web', 'worker', 'cli'],
-  entra_cert: ['web', 'worker', 'cli'],
+  entra_key: ['worker', 'cli'],
+  entra_cert: ['worker', 'cli'],
+  web_entra_key: ['web'],
+  web_entra_cert: ['web'],
 };
+const WEB_SECRETS = ['web_database_url', 'server_actions_key', 'web_entra_key', 'web_entra_cert'];
 const WORKER_SECRETS = ['worker_database_url', 'entra_key', 'entra_cert'];
 /** The host-side handle of the egress network, for a DOCKER-USER or nftables rule. */
 const EGRESS_BRIDGE = 'ap-egress';
+/** The same for the edge network: Caddy's ACME calls and the web's calls to Entra and Graph. */
+const EDGE_BRIDGE = 'ap-edge';
 /** Docker must wait this much longer than the worker's stop timeout before it kills it. */
 const GRACE_MARGIN_SECONDS = 10;
 /** The one stop timeout (src/infra/worker/limits.ts), read from the source: this script cannot import TS. */
@@ -204,11 +214,41 @@ if (!worker) {
   }
 }
 
-const bridge = config.networks?.egress?.driver_opts?.['com.docker.network.bridge.name'];
-if (bridge !== EGRESS_BRIDGE) {
-  problems.push(
-    `network egress: needs the bridge name ${EGRESS_BRIDGE} (driver_opts), has ${bridge}`,
-  );
+const web = config.services.web;
+if (!web) {
+  problems.push('web: the service is missing');
+} else {
+  const problem = (message) => problems.push(`web: ${message}`);
+  const held = secretsOf(web).sort();
+  if (held.join() !== [...WEB_SECRETS].sort().join()) {
+    problem(`must hold exactly ${WEB_SECRETS.join(', ')} (holds ${held.join(', ')})`);
+  }
+  // Its own registration (ADR 0021): another client id and the web pair, so a compromised web
+  // holds no credential of the mail registration.
+  const env = (service) => service?.environment ?? {};
+  for (const other of ['worker', 'cli']) {
+    if (env(web).OIDC_CLIENT_ID === env(config.services[other]).OIDC_CLIENT_ID) {
+      problem(`must sign in with a registration of its own, not the client id of ${other}`);
+    }
+  }
+  if (env(web).OIDC_CLIENT_KEY_FILE !== '/run/secrets/web_entra_key') {
+    problem('OIDC_CLIENT_KEY_FILE must be /run/secrets/web_entra_key');
+  }
+  if (env(web).OIDC_CLIENT_CERT_FILE !== '/run/secrets/web_entra_cert') {
+    problem('OIDC_CLIENT_CERT_FILE must be /run/secrets/web_entra_cert');
+  }
+}
+
+for (const [network, expected] of [
+  ['egress', EGRESS_BRIDGE],
+  ['edge', EDGE_BRIDGE],
+]) {
+  const bridge = config.networks?.[network]?.driver_opts?.['com.docker.network.bridge.name'];
+  if (bridge !== expected) {
+    problems.push(
+      `network ${network}: needs the bridge name ${expected} (driver_opts), has ${bridge}`,
+    );
+  }
 }
 
 const postgres = Object.keys(config.services.postgres?.networks ?? {});

@@ -45,12 +45,12 @@ url autoporada_web pg_web_password >secrets/web_database_url
 url autoporada_worker pg_worker_password >secrets/worker_database_url
 
 missing=''
-for file in entra_key entra_cert; do
+for file in entra_key entra_cert web_entra_key web_entra_cert; do
   [ -s "secrets/$file" ] || missing="$missing $file"
 done
 
 chown "$PG_UID:$PG_UID" secrets/pg_*
-for file in owner_database_url web_database_url worker_database_url server_actions_key entra_key entra_cert; do
+for file in owner_database_url web_database_url worker_database_url server_actions_key entra_key entra_cert web_entra_key web_entra_cert; do
   [ ! -e "secrets/$file" ] || chown "$APP_UID:$APP_UID" "secrets/$file"
 done
 chmod 0400 secrets/*
@@ -64,8 +64,9 @@ fi
 chmod 0644 .env
 if [ -n "$missing" ]; then
   echo "install.sh: missing Entra certificate files:$missing"
-  echo '  Create them as in docs/ENTRA-SETUP.md §6, save them as secrets/entra_key'
-  echo '  and secrets/entra_cert, then run ./install.sh again.'
+  echo '  Create the two pairs as in docs/ENTRA-SETUP.md §6 and save them as secrets/entra_key,'
+  echo '  secrets/entra_cert (the mail registration) and secrets/web_entra_key,'
+  echo '  secrets/web_entra_cert (the web registration), then run ./install.sh again.'
   exit 2
 fi
 echo 'install.sh: ready. The database passwords take effect on the first start'

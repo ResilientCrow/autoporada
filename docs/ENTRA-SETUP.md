@@ -15,13 +15,20 @@ uploaded to Entra.
 | The app will | The app will not |
 |---|---|
 | Sign users in (OpenID Connect) and read their basic profile | Store passwords or Microsoft access tokens |
-| Search the directory by name (display name, given name, surname, mail) | Read mail, files, calendars, Teams or groups |
-| Send reminder e-mails **as `autoporada@ssps.cz` only** | Send mail as any other mailbox |
+| Search the directory by name (display name, given name, surname, mail), from the web's own registration | Read mail, files, calendars, Teams or groups |
+| Send reminder e-mails **as `autoporada@ssps.cz` only**, from the mail registration the web never holds | Send mail as any other mailbox, or from the web |
 | Accept members of the ssps.cz tenant | Accept guest (B2B) accounts or other tenants |
 
-## 1. App registration
+## 1. App registrations
 
-Go to Entra admin center → **App registrations** → **New registration**:
+Two registrations (ADR 0021). The **web registration** signs users in and
+searches the directory; the web container holds its certificate. The **mail
+registration** (step 5) sends the e-mail; only the worker and the maintenance
+container hold its certificate. A compromised web server therefore cannot send
+mail.
+
+Go to Entra admin center → **App registrations** → **New registration** for
+the web registration:
 
 | Field | Value |
 |---|---|
@@ -54,9 +61,28 @@ After creating it:
 
    Then click **Grant admin consent for ssps.cz**.
 
-   **Do not add `Mail.Send` here.** Mail permission is granted in Exchange
-   (§3), limited to one mailbox. A Mail.Send grant in Entra would apply to
-   every mailbox in the tenant.
+   **Do not add `Mail.Send` here, or to any registration in Entra.** Mail
+   permission is granted in Exchange (§3), limited to one mailbox. A Mail.Send
+   grant in Entra would apply to every mailbox in the tenant.
+
+   `User.ReadBasic.All` is the smallest permission that lists users. Whether
+   Graph answers `$search` under it is checked in the smoke test
+   (`deploy/SMOKE-TEST.md`); if it answers 403, the app will ask for
+   `User.Read.All` instead, after a new decision record and an updated
+   privacy review. Please do not grant `User.Read.All` unasked.
+5. **The mail registration.** A second **New registration**:
+
+   | Field | Value |
+   |---|---|
+   | Name | `Autoporada mail` |
+   | Supported account types | **Accounts in this organizational directory only** (single tenant) |
+   | Redirect URI | **None** |
+
+   - Upload its own public certificate (§6), and do **not** create a client
+     secret.
+   - Add **no API permissions** at all: no delegated ones, no application
+     ones, no `Mail.Send`. Its only power is the Exchange role assignment of
+     §3.
 
 ## 2. Enterprise application
 
@@ -66,8 +92,8 @@ Go to Entra admin center → **Enterprise applications** → `Autoporada`:
   - *Assignment required?* **No.** Anyone in the tenant may sign in; the app
     has its own allow-list with access requests.
   - *Visible to users?* Optional.
-- **Note the Object ID of the enterprise application** (the service
-  principal). It differs from the app registration's object ID, and §3 needs
+- **Note the Object ID of the mail registration's enterprise application**
+  (`Autoporada mail`, the service principal). It differs from the app registration's object ID, and §3 needs
   it.
 - **Recommended:** a Conditional Access policy that requires MFA for this
   app, if MFA is not already required tenant-wide.
@@ -85,10 +111,10 @@ New-Mailbox -Shared -Name "Autoporada" -DisplayName "Autoporada" `
   -PrimarySmtpAddress autoporada@ssps.cz
 
 # 3.2 Register the app's service principal in Exchange
-#     AppId    = Application (client) ID from the app registration
-#     ObjectId = Object ID of the ENTERPRISE APPLICATION (not the registration)
+#     AppId    = Application (client) ID of the MAIL registration (`Autoporada mail`)
+#     ObjectId = Object ID of its ENTERPRISE APPLICATION (not the registration)
 New-ServicePrincipal -AppId <AppId> -ObjectId <EnterpriseAppObjectId> `
-  -DisplayName "Autoporada"
+  -DisplayName "Autoporada mail"
 
 # 3.3 A scope that matches exactly one mailbox
 New-ManagementScope -Name "Autoporada mailbox" `
@@ -140,8 +166,15 @@ an Exchange retention policy on it.
     `graph.microsoft.com`. Where the firewall can limit a service, please
     allow only those two from the server for it. The worker's network has
     the fixed bridge name `ap-egress` (`deploy/compose.yaml`): match it in a
-    host firewall rule (the `DOCKER-USER` chain or nftables). Two stacks
-    cannot share one host with this name;
+    host firewall rule (the `DOCKER-USER` chain or nftables);
+  - the web (sign-in and directory search) needs `login.microsoftonline.com`
+    and `graph.microsoft.com`, and Caddy needs `acme-v02.api.letsencrypt.org`.
+    Both are on the `edge` network, whose fixed bridge name is `ap-edge`:
+    allow those three hosts from it and nothing else. The two containers
+    share this bridge, so a rule per service needs their container addresses,
+    which the stack does not fix; the three-host rule on `ap-edge` is what
+    the stack supports. Two stacks cannot share one host with either bridge
+    name;
   - during installs and updates, which build the images on the server:
     `github.com` (the source), `registry.npmjs.org` (packages), and the
     container registries `registry-1.docker.io`, `auth.docker.io`,
@@ -164,48 +197,61 @@ an Exchange retention policy on it.
   rsync over SSH, an SMB share on the school NAS, or S3-compatible storage.
   Backups are encrypted before they leave the server.
 
-## 6. Certificate (done on the server)
+## 6. Certificates (done on the server)
+
+One pair for each registration, made with the same command:
 
 ```sh
 openssl req -x509 -newkey rsa:3072 -sha256 -days 730 -nodes \
   -keyout autoporada-entra.key -out autoporada-entra.crt \
   -subj "/CN=autoporada.ssps.cz"
 chmod 600 autoporada-entra.key
+openssl req -x509 -newkey rsa:3072 -sha256 -days 730 -nodes \
+  -keyout autoporada-mail.key -out autoporada-mail.crt \
+  -subj "/CN=autoporada-mail.ssps.cz"
+chmod 600 autoporada-mail.key
 ```
 
-- Upload `autoporada-entra.crt` in step 1.2.
-- The key **and** the certificate become Docker secrets on the server: save
-  them as `/opt/autoporada/deploy/secrets/entra_key` and `…/entra_cert`, then
-  run `sudo ./install.sh` there, which sets their owner and mode. The key
-  never leaves the server.
+- Upload `autoporada-entra.crt` to the web registration (step 1.2) and
+  `autoporada-mail.crt` to the mail registration (step 1.5).
+- The keys **and** the certificates become Docker secrets on the server, in
+  `/opt/autoporada/deploy/secrets/`: the web pair as `web_entra_key` and
+  `web_entra_cert`, the mail pair as `entra_key` and `entra_cert`. Then run
+  `sudo ./install.sh` there, which sets their owner and mode. The keys never
+  leave the server, and the web container never sees the mail pair.
 - The app checks at start-up that the key belongs to the certificate, that
   the key has at least 2048 bits, and that the SHA-1 thumbprint matches the
-  one the portal shows. The deploy stack requires that thumbprint
-  (`CERT_THUMBPRINT` in `deploy/.env`).
+  one the portal shows. The deploy stack requires both thumbprints
+  (`WEB_CERT_THUMBPRINT` for the web pair and `CERT_THUMBPRINT` for the mail
+  pair, in `deploy/.env`).
 - The app signs its client assertion with PS256 and names the certificate by
   its SHA-256 (`x5t#S256`), as Microsoft documents for certificate
   credentials.
 - The app warns the IT contact 45 days before the certificate expires.
-- **Renewal**, before the old certificate expires:
+- **Renewal**, before the old certificate expires, for each pair:
   1. make a new pair with the command above and upload the new certificate
-     (step 1.2), keeping the old one in Entra for now;
-  2. replace `deploy/secrets/entra_key` and `entra_cert`, set
+     to its registration (step 1.2 or 1.5), keeping the old one in Entra for
+     now;
+  2. replace the pair's secret files (`web_entra_key` and `web_entra_cert`,
+     or `entra_key` and `entra_cert`), set `WEB_CERT_THUMBPRINT` or
      `CERT_THUMBPRINT` in `deploy/.env` to the new thumbprint from the
      portal, run `sudo ./install.sh` and `docker compose up -d`;
-  3. check with `docker compose run --rm cli auth:probe`, then remove the
-     old certificate in Entra.
+  3. check with `docker compose run --rm cli auth:probe` (the mail pair) or
+     by signing in (the web pair), then remove the old certificate in Entra.
 
-  A thumbprint left at the old value stops web at start-up: the boot
-  check refuses the mismatch.
+  A thumbprint left at the old value stops that service at start-up: the
+  boot check refuses the mismatch.
 
 ## 7. Values to hand over to the deployer
 
 | Value | Where it comes from |
 |---|---|
 | Directory (tenant) ID | App registration → Overview |
-| Application (client) ID | App registration → Overview |
-| Certificate thumbprint (SHA-1) | App registration → Certificates & secrets. The app compares it with the certificate at start-up. |
-| Enterprise application object ID | Enterprise applications → Autoporada |
+| Web registration: Application (client) ID | `Autoporada` → Overview. It becomes `WEB_CLIENT_ID`. |
+| Web registration: certificate thumbprint (SHA-1) | `Autoporada` → Certificates & secrets. It becomes `WEB_CERT_THUMBPRINT`; the app compares it with the certificate at start-up. |
+| Mail registration: Application (client) ID | `Autoporada mail` → Overview. It becomes `CLIENT_ID`. |
+| Mail registration: certificate thumbprint (SHA-1) | `Autoporada mail` → Certificates & secrets. It becomes `CERT_THUMBPRINT`. |
+| Mail registration: enterprise application object ID | Enterprise applications → Autoporada mail |
 | Shared mailbox | `autoporada@ssps.cz` |
 | Headmaster's user object ID | Entra → Users → the headmaster → Object ID. It becomes the first administrator. |
 | IT contact e-mail | §5 |
@@ -214,6 +260,6 @@ chmod 600 autoporada-entra.key
 ## 8. Staging / development (optional)
 
 Developers use a local mock identity provider and need no tenant access. For a
-staging server, create a **second** registration, `Autoporada (staging)`,
-with its own redirect URI and certificate and **no** Exchange role
-assignment.
+staging server, create a **separate** pair of registrations, `Autoporada (staging)` and
+`Autoporada mail (staging)`, with their own certificates, the redirect URI
+on the first and **no** Exchange role assignment on the production mailbox.

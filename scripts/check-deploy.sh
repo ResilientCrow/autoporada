@@ -36,8 +36,12 @@ cp -R "$root/deploy" "$work/deploy"
 mkdir "$work/deploy/secrets"
 openssl req -x509 -newkey rsa:3072 -sha256 -days 1 -nodes -subj '/CN=autoporada-check' \
   -keyout "$work/deploy/secrets/entra_key" -out "$work/deploy/secrets/entra_cert" 2>/dev/null
-thumbprint=$(openssl x509 -in "$work/deploy/secrets/entra_cert" -noout -fingerprint -sha1 |
-  sed 's/.*=//; s/://g')
+# The web signs in with a registration of its own (ADR 0021): a second pair.
+openssl req -x509 -newkey rsa:3072 -sha256 -days 1 -nodes -subj '/CN=autoporada-check-web' \
+  -keyout "$work/deploy/secrets/web_entra_key" -out "$work/deploy/secrets/web_entra_cert" 2>/dev/null
+thumbprint_of() { openssl x509 -in "$1" -noout -fingerprint -sha1 | sed 's/.*=//; s/://g'; }
+thumbprint=$(thumbprint_of "$work/deploy/secrets/entra_cert")
+web_thumbprint=$(thumbprint_of "$work/deploy/secrets/web_entra_cert")
 tenant=00000000-0000-4000-8000-000000000001
 
 as_root './install.sh' || fail 'install.sh failed'
@@ -50,6 +54,8 @@ ACME_EMAIL=it@example.org
 TENANT_ID=$tenant
 CLIENT_ID=autoporada-check
 CERT_THUMBPRINT=$thumbprint
+WEB_CLIENT_ID=autoporada-check-web
+WEB_CERT_THUMBPRINT=$web_thumbprint
 ENV
 as_root 'cp /work/env .env' || fail 'could not fill in .env'
 installed=$(as_root './install.sh') || fail 'install.sh is not idempotent'
@@ -197,6 +203,18 @@ worker_rights=$(sql "SELECT concat_ws(' ',
 [ "$(docker network inspect "${project}_egress" -f '{{index .Options "com.docker.network.bridge.name"}}')" = ap-egress ] ||
   fail 'the egress network has no bridge name ap-egress'
 [ -d /sys/class/net/ap-egress ] || fail 'the host has no bridge interface ap-egress'
+[ "$(docker network inspect "${project}_edge" -f '{{index .Options "com.docker.network.bridge.name"}}')" = ap-edge ] ||
+  fail 'the edge network has no bridge name ap-edge'
+[ -d /sys/class/net/ap-edge ] || fail 'the host has no bridge interface ap-edge'
+
+# The web holds the web registration's pair and none of the mail registration's: the key files in
+# its container are the web pair, the worker's are the mail pair (ADR 0021).
+web_fp=$(compose exec -T web /nodejs/bin/node -e "const c=require('crypto'),f=require('fs');console.log(new c.X509Certificate(f.readFileSync('/run/secrets/web_entra_cert')).fingerprint.replace(/:/g,''))") ||
+  fail 'could not read the web certificate in the web container'
+[ "$web_fp" = "$web_thumbprint" ] || fail "the web container holds another certificate: $web_fp"
+if compose exec -T web /nodejs/bin/node -e "require('fs').accessSync('/run/secrets/entra_key')" 2>/dev/null; then
+  fail 'the web container holds the mail registration key'
+fi
 
 # The upgrade SQL for a volume made before M7 (deploy/postgres/upgrade): this volume already has the
 # roles, so both runs take the "exists" path. They must succeed, leave the worker a member of the

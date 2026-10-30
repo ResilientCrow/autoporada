@@ -19,27 +19,33 @@ docker compose exec postgres psql -U pgadmin -d autoporada
 
 ## Before the first start
 
-1. **Entra is ready** (ENTRA-SETUP §1–2).
-   - [ ] The redirect URI is exactly `https://autoporada.ssps.cz/auth/callback`.
-   - [ ] The certificate is uploaded, and the registration has no client secret.
+1. **Entra is ready** (ENTRA-SETUP §1–2). There are two registrations (ADR 0021).
+   - [ ] The web registration has the redirect URI exactly
+         `https://autoporada.ssps.cz/auth/callback`; the mail registration has none.
+   - [ ] Each registration has its own certificate uploaded and no client secret.
    - [ ] The optional claims `acct`, `auth_time`, `email` and `upn` are
-         configured, `upn` with *externally authenticated*.
-   - [ ] Admin consent is granted.
+         configured on the web registration, `upn` with *externally authenticated*.
+   - [ ] Admin consent is granted for `User.ReadBasic.All` on the web
+         registration; the mail registration has no API permissions.
 2. **The server is ready** (ENTRA-SETUP §4–6).
    - [ ] DNS points at it, and TCP 80 and 443 are open from the internet.
-   - [ ] It reaches `login.microsoftonline.com` and Let's Encrypt.
+   - [ ] It reaches `login.microsoftonline.com` and Let's Encrypt, and the web
+         reaches `graph.microsoft.com` (from `ap-edge`, ENTRA-SETUP §4).
    - [ ] `timedatectl` shows the clock NTP-synchronized.
-   - [ ] The repository is cloned to `/opt/autoporada`, and the key and
-         certificate are `deploy/secrets/entra_key` and `deploy/secrets/entra_cert`.
+   - [ ] The repository is cloned to `/opt/autoporada`. The web registration's
+         key and certificate are `deploy/secrets/web_entra_key` and `web_entra_cert`;
+         the mail registration's are `entra_key` and `entra_cert`.
    - [ ] `sudo ./install.sh` ends with „ready“, and `.env` is filled in with
          `HSTS_MAX_AGE=86400` and `BOOTSTRAP_HEADMASTER_OID` set.
    - [ ] `docker compose build` succeeds.
-3. **Entra accepts the certificate.** `docker compose run --rm cli auth:probe` shows:
+3. **Entra accepts the mail certificate.** `docker compose run --rm cli auth:probe`
+   probes the mail registration (the web's is proved by step 6 and step 29) and shows:
    - [ ] the issuer `https://login.microsoftonline.com/<tenant>/v2.0`;
    - [ ] a SHA-1 thumbprint equal to the one in the Entra portal;
    - [ ] more than 45 days left on the certificate;
    - [ ] „Entra accepted the credential“;
-   - [ ] `User.ReadBasic.All` among the roles, and no `Mail.Send` warning.
+   - [ ] no roles and no `Mail.Send` warning (the mail registration has no API
+         permissions; its mailbox right lives in Exchange).
 
 ## First start
 
@@ -182,7 +188,7 @@ the headmaster (step 25).
           lists `id`, `author_id` and `state` for `points`, and `id`,
           `point_id`, `event` and `to_state` for `point_events`, and nothing else.
 27. **People are added by hand.** `DIRECTORY` stays `off` in `.env` (the only
-    production mode until the Graph adapter of M8b).
+    production mode until step 29 has run).
     - [ ] In the point editor the people search says „Hledání v adresáři
           školy zatím není zapnuté“, and „Přidat ručně“ and „Vložit seznam“ work.
 28. **Native date and time pickers.** On a real Android phone and an iPhone,
@@ -192,9 +198,28 @@ the headmaster (step 25).
           the picked day.
     - [ ] After a reload the dates and times are the ones picked.
 
+29. **The directory search** (S2 and S9). The web has its own registration with
+    `User.ReadBasic.All` (ENTRA-SETUP §1.4). In `.env` set `DIRECTORY=graph`, run
+    `docker compose up -d`, and sign in as an author.
+    - [ ] The web reaches `graph.microsoft.com` over `ap-edge`; `docker compose logs web`
+          shows no `directory.unavailable` or `directory.timeout`.
+    - [ ] In the point editor a search for three letters of a colleague's surname
+          lists them by name; guests and rooms are absent.
+    - [ ] If `$search` answers 403 (`directory.denied`) under `User.ReadBasic.All`,
+          set `DIRECTORY=off` again: the fallback `User.Read.All` needs a new ADR
+          and an updated privacy review (`docs/gdpr/privacy-review.md`) before
+          IT is asked for it (ADR 0021 item 5).
+    - [ ] Record what Graph really answers (S2, S9): the status of `$search`
+          with `ConsistencyLevel: eventual`, and whether `$count=true` is accepted.
+    - [ ] `docker compose logs web | grep -E '@ssps.cz|displayName'` finds nothing
+          (the log carries codes, never the query or a name).
+    - [ ] The mail registration cannot search: the web's token is the web
+          registration's (`docker compose exec web /nodejs/bin/node -e "console.log(require('fs').readdirSync('/run/secrets'))"`
+          lists `web_entra_key` and `web_entra_cert`, and no `entra_key`).
+
 ## At go-live
 
-29. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
+30. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
     - [ ] Record how many sign-ins per minute the school's NAT address sees;
           the `auth` limit allows 600 per address.
 

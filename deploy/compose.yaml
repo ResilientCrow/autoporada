@@ -22,6 +22,8 @@ x-app-env: &app-env
   APP_ORIGIN: https://${APP_HOST:?set APP_HOST in .env}
   OIDC_ISSUER: https://login.microsoftonline.com/${TENANT_ID:?set TENANT_ID in .env}/v2.0
   OIDC_TENANT_ID: ${TENANT_ID:?set TENANT_ID in .env}
+  # The mail registration, the worker's and the cli's (docs/ENTRA-SETUP.md §1). The web overrides
+  # the client id, the thumbprint and the key files with its own registration (ADR 0021).
   OIDC_CLIENT_ID: ${CLIENT_ID:?set CLIENT_ID in .env}
   # From the Entra portal; the boot checks it against secrets/entra_cert.
   OIDC_CLIENT_CERT_THUMBPRINT: ${CERT_THUMBPRINT:?set CERT_THUMBPRINT in .env}
@@ -73,12 +75,19 @@ services:
     init: true
     environment:
       <<: *app-env
+      # Its own registration (ADR 0021): the sign-in and the directory search, never the mail scope.
+      OIDC_CLIENT_ID: ${WEB_CLIENT_ID:?set WEB_CLIENT_ID in .env}
+      OIDC_CLIENT_CERT_THUMBPRINT: ${WEB_CERT_THUMBPRINT:?set WEB_CERT_THUMBPRINT in .env}
+      OIDC_CLIENT_KEY_FILE: /run/secrets/web_entra_key
+      OIDC_CLIENT_CERT_FILE: /run/secrets/web_entra_cert
       DATABASE_URL_FILE: /run/secrets/web_database_url
       NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_FILE: /run/secrets/server_actions_key
       BOOTSTRAP_HEADMASTER_OID: ${BOOTSTRAP_HEADMASTER_OID:-}
-    secrets: [web_database_url, server_actions_key, entra_key, entra_cert]
+      # `off` until the smoke test shows the tenant answers the search (SMOKE-TEST step 29).
+      DIRECTORY: ${DIRECTORY:-off}
+    secrets: [web_database_url, server_actions_key, web_entra_key, web_entra_cert]
     tmpfs: ['/tmp:size=64m', '/app/.next/cache']
-    # edge: Caddy, and the way out to login.microsoftonline.com.
+    # edge: Caddy, and the way out to login.microsoftonline.com and graph.microsoft.com.
     networks: [edge, data]
     healthcheck:
       test:
@@ -171,7 +180,12 @@ services:
       retries: 20
 
 networks:
-  edge: {}
+  # Caddy's way in and out (ACME) and the web's way out to Entra and Graph. The fixed bridge name is
+  # the handle for a host firewall rule, like egress below (docs/ENTRA-SETUP.md §4); check-compose
+  # asserts it.
+  edge:
+    driver_opts:
+      com.docker.network.bridge.name: ap-edge
   # No way out: only web, worker, migrate and cli reach the database.
   data: { internal: true }
   # egress: any host; the school firewall restricts it (docs/ENTRA-SETUP.md §4). Caddy is not on
@@ -195,6 +209,9 @@ secrets:
   web_database_url: { file: ./secrets/web_database_url }
   worker_database_url: { file: ./secrets/worker_database_url }
   server_actions_key: { file: ./secrets/server_actions_key }
-  # The Entra certificate pair of docs/ENTRA-SETUP.md §6.
+  # The certificate pairs of docs/ENTRA-SETUP.md §6: the mail registration's (worker and cli) and
+  # the web's own (ADR 0021). No service holds both.
   entra_key: { file: ./secrets/entra_key }
   entra_cert: { file: ./secrets/entra_cert }
+  web_entra_key: { file: ./secrets/web_entra_key }
+  web_entra_cert: { file: ./secrets/web_entra_cert }
