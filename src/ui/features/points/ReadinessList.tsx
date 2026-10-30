@@ -27,7 +27,8 @@ function Items({ items }: { readonly items: readonly ReadinessItem[] }) {
           {id === null ? (
             text
           ) : (
-            <a href={`#${id}`} onClick={(event) => goTo(event, id)}>
+            // A block of its own, so the target is the 24 px that WCAG 2.2 asks for.
+            <a className="inline-block py-1" href={`#${id}`} onClick={(event) => goTo(event, id)}>
               {text}
             </a>
           )}

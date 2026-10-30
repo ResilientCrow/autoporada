@@ -60,7 +60,7 @@ const list = (content: PointContentWire) =>
 describe('ReadinessList', () => {
   it('links each problem to its field by the editor’s field id, in the form’s order', () => {
     const html = list(EMPTY);
-    const links = [...html.matchAll(/<a href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [
+    const links = [...html.matchAll(/<a [^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map((m) => [
       m[1],
       m[2],
     ]);
@@ -70,6 +70,12 @@ describe('ReadinessList', () => {
     ]);
     // „Přidejte alespoň jedno vyjádření.“ names no control: plain text.
     expect(html).toContain('<li>Přidejte alespoň jedno vyjádření.</li>');
+  });
+
+  it('makes each link a block tall enough for the WCAG 2.2 target size', () => {
+    const anchors = list(EMPTY).match(/<a [^>]*>/g) ?? [];
+    expect(anchors).toHaveLength(2);
+    for (const anchor of anchors) expect(anchor).toContain('class="inline-block py-1"');
   });
 
   it('says so when nothing is missing, and shows no list', () => {
