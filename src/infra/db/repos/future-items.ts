@@ -1,8 +1,8 @@
-import { and, desc, eq, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableName, lt, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   DatabaseFailure,
-  futureHistoryScopeOf,
+  futureReviewScopeOf,
   futureWriteScopeOf,
   scopeOf,
   ScopeViolation,
@@ -15,9 +15,10 @@ import {
 } from '@/application/ports';
 import { parseResponsible } from '@/contracts';
 import type { Responsible } from '@/domain/report';
+import type { FutureState } from '@/domain/review';
 
 import { scopeWhere } from '../scope-sql';
-import { futureItems } from '../schema';
+import { futureEvents, futureItems } from '../schema';
 import type { TxDatabase } from './database';
 import { dateOrNull, isoDate, isoTime, timeOrNull } from './wall-columns';
 
@@ -106,12 +107,24 @@ const visibleFutureItems = (ctx: TxContext): SQL | undefined =>
   scopeWhere(scopeOf(ctx.principal, 'futureItem'), ITEM_SCOPE);
 
 /** The rows whose history the principal may read; an approved akce's is not a colleague's. */
-export const visibleFutureHistory = (ctx: TxContext): SQL | undefined =>
-  scopeWhere(futureHistoryScopeOf(ctx.principal), ITEM_SCOPE);
+export const reviewableFutureItems = (ctx: TxContext): SQL | undefined =>
+  scopeWhere(futureReviewScopeOf(ctx.principal), ITEM_SCOPE);
 
 /** The rows the principal may lock and change: the author's own (futureWriteScopeOf). */
 const writableFutureItems = (ctx: TxContext): SQL | undefined =>
   scopeWhere(futureWriteScopeOf(ctx.principal), ITEM_SCOPE);
+
+/**
+ * True when the item's newest event is `revise`: its author changed it once it was approved, and
+ * it has not been decided or handed in again since. Events list newest first, ties to the higher id.
+ * The item's id is named with its table: a select from one table leaves column names bare, and a
+ * bare `id` here would be the event's.
+ */
+const revised = sql<boolean>`coalesce((
+  select ${futureEvents.event} from ${futureEvents}
+  where ${futureEvents.futureItemId} = ${sql.identifier(getTableName(futureItems))}.${sql.identifier('id')}
+  order by ${futureEvents.createdAt} desc, ${futureEvents.id} desc limit 1
+) = 'revise', false)`;
 
 /** The rows after `before` in the list's order: an older change, or the same instant and a lower id. */
 const after = (before: FutureCursor | undefined): SQL | undefined =>
@@ -129,6 +142,22 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
       .select(ITEM_ROW)
       .from(futureItems)
       .where(and(eq(futureItems.id, id), where));
+
+  /** One versioned update of a row in `scope`: the version rises by one; StaleVersion when no row matches. */
+  const versioned = async (
+    id: string,
+    expectedVersion: number,
+    scope: SQL | undefined,
+    set: Partial<typeof futureItems.$inferInsert> & { state?: FutureState },
+  ) => {
+    const [row] = await db
+      .update(futureItems)
+      .set({ ...set, version: sql`${futureItems.version} + 1`, updatedAt: now })
+      .where(and(eq(futureItems.id, id), eq(futureItems.version, expectedVersion), scope))
+      .returning(ITEM_ROW);
+    if (!row) throw new StaleVersion();
+    return toRecord(row);
+  };
 
   return {
     async create({ clientRef, kind, content }) {
@@ -164,27 +193,32 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
       const [row] = await byId(id, writableFutureItems(ctx)).for('update');
       return row ? toRecord(row) : null;
     },
+    async loadForDecision(id) {
+      const [row] = await byId(id, reviewableFutureItems(ctx)).for('update');
+      return row ? toRecord(row) : null;
+    },
     async update(id, expectedVersion, { content, state, submittedAt }) {
-      const [row] = await db
-        .update(futureItems)
-        .set({
-          // Named one by one: a wider object passed as a patch cannot touch other columns.
-          ...(content && contentColumns(content)),
-          ...(state !== undefined && { state }),
-          ...(submittedAt !== undefined && { submittedAt }),
-          version: sql`${futureItems.version} + 1`,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(futureItems.id, id),
-            eq(futureItems.version, expectedVersion),
-            writableFutureItems(ctx),
-          ),
-        )
-        .returning(ITEM_ROW);
-      if (!row) throw new StaleVersion();
-      return toRecord(row);
+      return versioned(id, expectedVersion, writableFutureItems(ctx), {
+        // Named one by one: a wider object passed as a patch cannot touch other columns.
+        ...(content && contentColumns(content)),
+        ...(state !== undefined && { state }),
+        ...(submittedAt !== undefined && { submittedAt }),
+      });
+    },
+    async decide(id, expectedVersion, state) {
+      return versioned(id, expectedVersion, reviewableFutureItems(ctx), { state });
+    },
+    async queue(limit) {
+      const rows = await db
+        .select({ ...ITEM_ROW, revised })
+        .from(futureItems)
+        .where(and(visibleFutureItems(ctx), eq(futureItems.state, 'submitted')))
+        .orderBy(asc(futureItems.submittedAt), asc(futureItems.id))
+        .limit(limit);
+      return rows.map(({ revised: wasRevised, ...row }) => ({
+        item: toRecord(row),
+        revised: wasRevised,
+      }));
     },
     async list(limit, before) {
       const rows = await db

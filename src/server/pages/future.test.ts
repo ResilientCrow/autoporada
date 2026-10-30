@@ -42,6 +42,7 @@ const loaded = (over: object = {}) => ({
   editable: true,
   content: content(),
   view: view(),
+  timeline: [],
   ...over,
 });
 const WINDOW = {
@@ -149,6 +150,7 @@ describe('futurePage', () => {
       isAuthor: true,
       editable: true,
       canRetract: false,
+      returnNote: null,
       editor: {
         version: 3,
         content: content(),
@@ -234,6 +236,43 @@ describe('futurePage: the editor', () => {
       recents: { ok: false, error: { code: 'forbidden' } },
     });
     expect((await futurePage(ID))?.editor?.recents).toEqual([]);
+  });
+});
+
+describe('futurePage: the return note', () => {
+  const event = (name: string, note: string | null) => ({
+    event: name,
+    fromState: 'submitted',
+    toState: 'returned',
+    note,
+    editedFields: null,
+    createdAt: '2026-11-05T09:00:00.000Z',
+  });
+
+  it('carries the latest return note of a returned item, for the editor to show', async () => {
+    // Newest first, as `future.get` lists the timeline.
+    const timeline = [
+      event('submit', null),
+      event('return', 'Doplňte prosím vyjádření.'),
+      event('return', 'Starší poznámka.'),
+    ];
+    serve({ get: { ok: true, value: loaded({ state: 'returned', timeline }) } });
+    expect((await futurePage(ID))?.returnNote).toBe('Doplňte prosím vyjádření.');
+  });
+
+  it.each(['draft', 'submitted', 'approved'] as const)(
+    'leaves an older return out once the item is %s again',
+    async (state) => {
+      serve({
+        get: { ok: true, value: loaded({ state, timeline: [event('return', 'Starší.')] }) },
+      });
+      expect((await futurePage(ID))?.returnNote).toBeNull();
+    },
+  );
+
+  it('is null where no return event is left to read', async () => {
+    serve({ get: { ok: true, value: loaded({ state: 'returned' }) } });
+    expect((await futurePage(ID))?.returnNote).toBeNull();
   });
 });
 

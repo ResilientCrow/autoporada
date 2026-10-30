@@ -36,6 +36,16 @@ export interface FutureItemRecord {
   readonly updatedAt: Date;
 }
 
+/**
+ * A row of the review queue (design section 12): a submitted item as its author handed it in.
+ * `revised` is true when the item came back to review by its author's change to it once it was
+ * approved (its newest event is `revise`): the queue marks it „Změna schválené akce“.
+ */
+export interface QueuedFuture {
+  readonly item: FutureItemRecord;
+  readonly revised: boolean;
+}
+
 /** Where a page of the list ended: its last row's change and id. */
 export type FutureCursor = Pick<FutureItemRecord, 'updatedAt' | 'id'>;
 
@@ -61,7 +71,9 @@ export interface FutureItemPatch {
  * reviewers): an item outside it is not found, never an error. `loadForWrite` and
  * `update` use a narrower write scope, the author's own items (`futureWriteScopeOf`):
  * a colleague who reads an approved akce cannot lock or move it, and nor can a reviewer
- * move what they read; the reviewers' decisions get their own path in row 55. The
+ * move what they read. The decisions have a path of their own, `loadForDecision` and `decide`,
+ * within the review scope (`futureReviewScopeOf`): the author's own items and, for reviewers,
+ * the handed-in ones; it moves the state and nothing else. The
  * `responsible` jsonb goes through the contracts schema before a write and after a read;
  * a value it refuses fails as `db.parse.future_items`. The CHECKs of migration 0019
  * refuse a malformed row by its constraint name.
@@ -87,6 +99,22 @@ export interface FutureItemRepo {
    * against FUTURE_MACHINE.
    */
   update(id: string, expectedVersion: number, patch: FutureItemPatch): Promise<FutureItemRecord>;
+  /**
+   * As `loadForWrite` but within the review scope: the author's own items, and for reviewers the
+   * handed-in ones (null for any other); holds the same row lock.
+   */
+  loadForDecision(id: string): Promise<FutureItemRecord | null>;
+  /**
+   * A decision: moves the item to `state` and nothing else (its content and hand-in time stay),
+   * version-checked, within the review scope. StaleVersion when the version moved or the item is
+   * unknown or outside it. The caller checks the move against FUTURE_MACHINE.
+   */
+  decide(id: string, expectedVersion: number, state: FutureState): Promise<FutureItemRecord>;
+  /**
+   * The review queue: the `submitted` items in the read scope, the oldest hand-in first, ties
+   * to the lower id, at most `limit`.
+   */
+  queue(limit: number): Promise<readonly QueuedFuture[]>;
   /**
    * The items in scope, last changed first, ties to the higher id, at most `limit`; with `before`,
    * those after that row in this order. `updated_at` keeps milliseconds, as a cursor carries them.

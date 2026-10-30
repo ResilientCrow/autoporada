@@ -26,6 +26,8 @@ export interface FutureScreenItem extends FutureReadItem {
   readonly id: string;
   /** The version the page shows: what „Stáhnout“ sends. */
   readonly version: number;
+  /** What the reviewer wrote on returning the item, for its author; null otherwise. */
+  readonly returnNote: string | null;
   /** The author may take a submitted item back. */
   readonly canRetract: boolean;
   /** Null where the read view shows. */
@@ -45,7 +47,7 @@ export function FutureScreen({
   readonly item: FutureScreenItem;
   readonly actions: FutureActions;
 }) {
-  const { id, kind, state, view, window, editor } = item;
+  const { id, kind, state, view, window, editor, returnNote } = item;
   if (editor === null) {
     return (
       <FutureRead item={item}>
@@ -68,6 +70,12 @@ export function FutureScreen({
   return (
     <div className="space-y-4">
       <FutureHeader kind={kind} state={state} title={view.title} />
+      {returnNote === null ? null : (
+        <section className="space-y-1">
+          <h2 className="font-semibold">{future.returnNote}</h2>
+          <p className="whitespace-pre-line">{returnNote}</p>
+        </section>
+      )}
       {state === 'approved' ? (
         <FutureRevise key={`${id}:${editor.version}`} {...shared} saveFuture={actions.saveFuture} />
       ) : (

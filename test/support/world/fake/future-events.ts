@@ -7,7 +7,7 @@ import {
 } from '@/application/ports';
 
 import { codePoints, newestFirst } from './events';
-import { futureHistoryReadable } from './future-items';
+import { futureReviewable } from './future-items';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeState, type FakeTxState } from './state';
 
@@ -33,7 +33,7 @@ function refuse(state: FakeState, row: FutureEventRecord): void {
 /** The future event repository over the fake state: append-only, scoped through the item's history scope. */
 export function fakeFutureEventRepo(tx: FakeTxState, ctx: TxContext): FutureEventRepo {
   const { principal, now } = ctx;
-  const readable = futureHistoryReadable(principal);
+  const readable = futureReviewable(principal);
   const unscoped = principal.kind === 'system';
   const inScope = (futureItemId: string) => {
     const item = tx.draft.futureItems.get(futureItemId);

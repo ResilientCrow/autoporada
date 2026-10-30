@@ -485,8 +485,8 @@ describe('FutureItemRepo scope', () => {
 
   /**
    * The write scope is the author's alone (the system aside): what a colleague or a reviewer
-   * reads is not theirs to lock or move. Row 55 gives the reviewers a path of their own for
-   * the decisions; until then the use cases' author checks have a second line behind them.
+   * reads is not theirs to lock or move through `loadForWrite` and `update`. The reviewers'
+   * decisions have a path of their own (`loadForDecision`, `decide`, below).
    */
   it('lets only the author lock and update an item, whoever may read it', async () => {
     const author = await world.seed.user({ role: 'submitter' });
@@ -513,6 +513,209 @@ describe('FutureItemRepo scope', () => {
     expect(moved.version).toBe(approvedAkce.version + 1);
     const cancelled = await update(cli, moved, { state: 'cancelled' });
     expect(cancelled.version).toBe(moved.version + 1);
+  });
+});
+
+describe('FutureItemRepo decision path', () => {
+  const handedIn = (author: UserRecord, over: Partial<NewFutureItem> = {}) => {
+    const as = world.as(author);
+    return create(as, over).then(({ item }) => update(as, item, SUBMIT));
+  };
+  const lock = (by: Principal, id: string) =>
+    world.tx(by, (tx) => tx.futureItems.loadForDecision(id));
+  const decide = (
+    by: Principal,
+    item: FutureItemRecord,
+    state: FutureItemRecord['state'],
+    version = item.version,
+  ) => audited(by, (tx) => tx.futureItems.decide(item.id, version, state));
+
+  it('lets a reviewer or the headmaster lock a handed-in item and move its state, nothing else', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    for (const role of ['reviewer', 'headmaster'] as const) {
+      const item = await handedIn(author);
+      const by = world.as(await world.seed.user({ role }));
+      expect(await lock(by, item.id), role).toEqual(item);
+      world.clock.advance(60_000);
+      const approved = await decide(by, item, 'approved');
+      expect(approved, role).toEqual({
+        ...item,
+        state: 'approved',
+        version: item.version + 1,
+        updatedAt: world.clock.now(),
+      });
+      expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id)), role).toEqual(
+        approved,
+      );
+    }
+  });
+
+  it('keeps the hand-in time when an item is returned, so reviewers still see it', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const item = await handedIn(author);
+    const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+    const returned = await decide(reviewer, item, 'returned');
+    expect(returned.submittedAt).toEqual(item.submittedAt);
+    expect(await lock(reviewer, item.id)).toEqual(returned);
+  });
+
+  it('does not find a draft, a retracted item or a colleague’s item outside the reviewer’s scope', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const draft = (await create(world.as(author))).item;
+    const retracted = await update(world.as(author), await handedIn(author), {
+      state: 'draft',
+      submittedAt: null,
+    });
+    for (const role of ['reviewer', 'headmaster'] as const) {
+      const by = world.as(await world.seed.user({ role }));
+      for (const item of [draft, retracted]) {
+        expect(await lock(by, item.id), role).toBeNull();
+        expect(await failure(decide(by, item, 'approved')), role).toBeInstanceOf(StaleVersion);
+      }
+    }
+  });
+
+  it('gives a teacher or a student only their own items, an approved akce of a colleague included', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const approved = await update(world.as(author), await handedIn(author), { state: 'approved' });
+    for (const seed of [{ role: 'submitter' }, { role: 'submitter', isStudent: true }] as const) {
+      const reader = world.as(await world.seed.user(seed));
+      expect(await lock(reader, approved.id)).toBeNull();
+      expect(await failure(decide(reader, approved, 'cancelled'))).toBeInstanceOf(StaleVersion);
+    }
+    const own = await lock(world.as(author), approved.id);
+    expect(own).toEqual(approved);
+    const cancelled = await decide(world.as(author), approved, 'cancelled');
+    expect(cancelled.state).toBe('cancelled');
+  });
+
+  it('refuses a stale version and an unknown item with StaleVersion, writing nothing', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const item = await handedIn(author);
+    const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+    expect(await failure(decide(reviewer, item, 'approved', item.version + 1))).toBeInstanceOf(
+      StaleVersion,
+    );
+    expect(await failure(decide(reviewer, { ...item, id: UNKNOWN_ID }, 'approved'))).toBeInstanceOf(
+      StaleVersion,
+    );
+    expect(await read(cli, (tx) => tx.futureItems.get(item.id))).toEqual(item);
+  });
+
+  it('refuses the second of two decisions made on the version the first one moved', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const item = await handedIn(author);
+    const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+    const second = world.as(await world.seed.user({ role: 'headmaster' }));
+    const first = await audited(reviewer, async (tx) => {
+      const locked = await tx.futureItems.loadForDecision(item.id);
+      return tx.futureItems.decide(item.id, locked!.version, 'returned');
+    });
+    const late = await failure(decide(second, item, 'approved'));
+    expect(late).toBeInstanceOf(StaleVersion);
+    expect(await read(cli, (tx) => tx.futureItems.get(item.id))).toEqual(first);
+  });
+
+  it('refuses loadForDecision in a read transaction', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const item = await handedIn(author);
+    const refused = await failure(
+      read(world.as(author), (tx) => tx.futureItems.loadForDecision(item.id)),
+    );
+    expect(refused).toEqual(new DatabaseFailure('25006'));
+  });
+});
+
+describe('FutureItemRepo queue', () => {
+  const submitAt = async (author: UserRecord, at: string, over: Partial<NewFutureItem> = {}) => {
+    const as = world.as(author);
+    const { item } = await create(as, { content: FULL, ...over });
+    return update(as, item, { ...SUBMIT, submittedAt: new Date(at) });
+  };
+
+  it('lists the submitted items in scope, the oldest hand-in first, with the revised mark', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const late = await submitAt(author, '2026-10-20T09:00:00Z');
+    const early = await submitAt(author, '2026-10-19T09:00:00Z');
+    const approved = await update(
+      world.as(author),
+      await submitAt(author, '2026-10-18T09:00:00Z'),
+      {
+        state: 'approved',
+      },
+    );
+    await create(world.as(author));
+    const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+    // The approved akce is revised: back to submitted, its newest event `revise`.
+    world.clock.advance(60_000);
+    const revised = await world.tx(world.as(author), async (tx) => {
+      const back = await tx.futureItems.update(approved.id, approved.version, {
+        state: 'submitted',
+        submittedAt: new Date('2026-10-21T09:00:00Z'),
+      });
+      await tx.futureEvents.append({
+        futureItemId: approved.id,
+        event: 'revise',
+        fromState: 'approved',
+        toState: 'submitted',
+      });
+      await tx.audit.record({
+        action: 'future.revised',
+        target: { type: 'future_item', id: approved.id },
+      });
+      return back;
+    });
+    const queued = await read(reviewer, (tx) => tx.futureItems.queue(10));
+    expect(queued.map((q) => [q.item.id, q.revised])).toEqual([
+      [early.id, false],
+      [late.id, false],
+      [revised.id, true],
+    ]);
+    expect(queued[0]?.item).toEqual(early);
+    expect(await read(reviewer, (tx) => tx.futureItems.queue(2))).toHaveLength(2);
+  });
+
+  it('is not revised again once a later submit followed the revise', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const item = await submitAt(author, '2026-10-19T09:00:00Z');
+    const as = world.as(author);
+    await world.tx(as, async (tx) => {
+      await tx.futureEvents.append({
+        futureItemId: item.id,
+        event: 'revise',
+        fromState: 'approved',
+        toState: 'submitted',
+      });
+      await tx.audit.record({
+        action: 'future.revised',
+        target: { type: 'future_item', id: item.id },
+      });
+    });
+    world.clock.advance(60_000);
+    await world.tx(as, async (tx) => {
+      await tx.futureEvents.append({
+        futureItemId: item.id,
+        event: 'submit',
+        fromState: 'returned',
+        toState: 'submitted',
+      });
+      await tx.audit.record({
+        action: 'future.submitted',
+        target: { type: 'future_item', id: item.id },
+      });
+    });
+    const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+    const [row] = await read(reviewer, (tx) => tx.futureItems.queue(10));
+    expect(row?.revised).toBe(false);
+  });
+
+  it('shows a teacher only their own submitted items, never a colleague’s', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const teacher = await world.seed.user({ role: 'submitter' });
+    await submitAt(author, '2026-10-19T09:00:00Z');
+    const mine = await submitAt(teacher, '2026-10-19T10:00:00Z');
+    const queued = await read(world.as(teacher), (tx) => tx.futureItems.queue(10));
+    expect(queued.map((q) => q.item.id)).toEqual([mine.id]);
   });
 });
 

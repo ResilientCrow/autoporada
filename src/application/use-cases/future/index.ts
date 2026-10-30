@@ -4,3 +4,6 @@ export { listFuture } from './list';
 export { retractFuture } from './retract';
 export { saveFuture } from './save';
 export { submitFuture } from './submit';
+export { cancelFuture } from './cancel';
+export { decideFuture } from './decide';
+export { queueFuture } from './queue';

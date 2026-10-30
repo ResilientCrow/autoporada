@@ -5,7 +5,7 @@ import type { FutureEventRepo, TxContext } from '@/application/ports';
 import { futureEvents, futureItems } from '../schema';
 import type { TxDatabase } from './database';
 import { eventActor, newestFirst, requireVisible } from './events';
-import { visibleFutureHistory } from './future-items';
+import { reviewableFutureItems } from './future-items';
 
 const EVENT_ROW = {
   id: futureEvents.id,
@@ -26,7 +26,7 @@ const EVENT_ROW = {
  */
 export function createFutureEventRepo(db: TxDatabase, ctx: TxContext): FutureEventRepo {
   const actorId = eventActor(ctx);
-  const parent = { table: futureItems, key: futureItems.id, visible: visibleFutureHistory(ctx) };
+  const parent = { table: futureItems, key: futureItems.id, visible: reviewableFutureItems(ctx) };
 
   return {
     async append({ futureItemId, event, fromState, toState, note, editedFields }) {

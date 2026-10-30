@@ -42,20 +42,19 @@ const ownOf = (scope: Scope): Scope =>
     : scope;
 
 /**
- * Who may read a future item's history, with the reviewers' notes in it: its author, and the
- * reviewers where they may see the item. The read scope also shows a colleague every approved
- * akce, and that widens the item, not its review trail.
+ * Who may read a future item's review trail, with the reviewers' notes in it, and decide on it:
+ * its author, and the reviewers where they may see the item. The read scope also shows a
+ * colleague every approved akce, and that widens the item, not its review trail nor its fate.
  */
-export function futureHistoryScopeOf(principal: Principal): Scope {
+export function futureReviewScopeOf(principal: Principal): Scope {
   const scope = scopeOf(principal, 'futureItem');
   return scope.kind === 'own-or-approved-akce' ? ownOf(scope) : scope;
 }
 
 /**
- * Who may lock and change a future item: its author, and the system. Whatever else a user
- * may read is not theirs to write. The reviewers' decisions (approve, return, reject, a
- * reviewer's edit) get a scope of their own, `own-or-submitted`, on the path that adds them
- * (design row 55); this one stays the author's.
+ * Who may lock and change a future item's content or hand it in: its author, and the system.
+ * Whatever else a user may read is not theirs to write. The reviewers' decisions (approve,
+ * return, reject, cancel) go through the review scope instead, and move the state only.
  */
 export function futureWriteScopeOf(principal: Principal): Scope {
   return ownOf(scopeOf(principal, 'futureItem'));

@@ -36,6 +36,7 @@ export type {
   FutureItemRecord,
   FutureItemRepo,
   NewFutureItem,
+  QueuedFuture,
 } from './future-items';
 export type {
   AuthorizationRequest,
@@ -91,7 +92,7 @@ export type {
   QueuedPoint,
 } from './points';
 export {
-  futureHistoryScopeOf,
+  futureReviewScopeOf,
   futureWriteScopeOf,
   scopeOf,
   system,

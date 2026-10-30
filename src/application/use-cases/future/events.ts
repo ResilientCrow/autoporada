@@ -35,13 +35,19 @@ export function futureEvent(
   };
 }
 
-/** The moves of FUTURE_MACHINE the author makes here, and what the audit log calls each. */
+/** The moves of FUTURE_MACHINE a user makes, and what the audit log calls each. */
 const ACTIONS = {
   submit: 'future.submitted',
   retract: 'future.retracted',
   revise: 'future.revised',
+  approve: 'future.approved',
+  return: 'future.returned',
+  reject: 'future.rejected',
+  cancel: 'future.cancelled',
 } as const;
 type FutureMove = keyof typeof ACTIONS;
+/** The moves a reviewer, or the author of an approved akce (cancel), makes on the decision path. */
+export type DecisionMove = Extract<FutureMove, 'approve' | 'return' | 'reject' | 'cancel'>;
 
 /**
  * The access check of a move: the policy folds the item's state and author
@@ -56,6 +62,24 @@ export const moveCheck =
     event,
   });
 
+/** The history event and the audit event of a move: the states, and the note in the history only. */
+async function record(
+  tx: Tx,
+  item: FutureItemRecord,
+  after: FutureItemRecord,
+  event: FutureMove,
+  note?: string,
+): Promise<void> {
+  await tx.futureEvents.append({
+    futureItemId: item.id,
+    event,
+    fromState: item.state,
+    toState: after.state,
+    ...(note !== undefined && { note }),
+  });
+  await tx.audit.record(futureEvent(ACTIONS[event], item, after));
+}
+
 /**
  * Moves the locked item along `event`: the state and `patch` in one
  * versioned update, the history event, and the audit event with the states
@@ -64,17 +88,29 @@ export const moveCheck =
 export async function move(
   tx: Tx,
   item: FutureItemRecord,
-  event: FutureMove,
+  event: Extract<FutureMove, 'submit' | 'retract' | 'revise'>,
   patch: Omit<FutureItemPatch, 'state'> = {},
 ): Promise<FutureItemRecord> {
-  const { to } = FUTURE_MACHINE[event];
-  const after = await tx.futureItems.update(item.id, item.version, { ...patch, state: to });
-  await tx.futureEvents.append({
-    futureItemId: item.id,
-    event,
-    fromState: item.state,
-    toState: to,
+  const after = await tx.futureItems.update(item.id, item.version, {
+    ...patch,
+    state: FUTURE_MACHINE[event].to,
   });
-  await tx.audit.record(futureEvent(ACTIONS[event], item, after));
+  await record(tx, item, after, event);
+  return after;
+}
+
+/**
+ * A decision, or a cancel, on the item loaded for the decision path: only the
+ * state moves, through `decide`, which the review scope allows; what the author
+ * wrote stays. A reviewer's note goes into the history event, never the audit.
+ */
+export async function decideMove(
+  tx: Tx,
+  item: FutureItemRecord,
+  event: DecisionMove,
+  note?: string,
+): Promise<FutureItemRecord> {
+  const after = await tx.futureItems.decide(item.id, item.version, FUTURE_MACHINE[event].to);
+  await record(tx, item, after, event, note);
   return after;
 }

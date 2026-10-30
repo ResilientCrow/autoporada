@@ -1,6 +1,6 @@
 import {
   DatabaseFailure,
-  futureHistoryScopeOf,
+  futureReviewScopeOf,
   futureWriteScopeOf,
   scopeOf,
   ScopeViolation,
@@ -16,7 +16,7 @@ import { parseResponsible } from '@/contracts';
 import { admits, type Scope } from '@/domain/policy';
 import { toIsoDate } from '@/domain/time';
 
-import { codePoints } from './events';
+import { codePoints, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
 
@@ -53,9 +53,8 @@ const admitted = (scope: Scope) => (item: FakeFutureItem) =>
 /** Whether the principal's read scope admits the item: the fake of `visibleFutureItems`. */
 const futureReadable = (principal: Principal) => admitted(scopeOf(principal, 'futureItem'));
 
-/** Whether the principal may read the item's history: the fake of `visibleFutureHistory`. */
-export const futureHistoryReadable = (principal: Principal) =>
-  admitted(futureHistoryScopeOf(principal));
+/** Whether the principal may read the item's history: the fake of `reviewableFutureItems`. */
+export const futureReviewable = (principal: Principal) => admitted(futureReviewScopeOf(principal));
 
 const record = ({ clientRef: _ref, ...item }: FakeFutureItem): FutureItemRecord => item;
 
@@ -79,6 +78,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
   const { futureItems } = tx.draft;
   const visible = futureReadable(principal);
   const writable = admitted(futureWriteScopeOf(principal));
+  const reviewable = futureReviewable(principal);
   const find = (id: string, mayUse: (item: FakeFutureItem) => boolean) => {
     const item = futureItems.get(id);
     return item && mayUse(item) ? record(item) : null;
@@ -124,6 +124,10 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, true);
       return find(id, writable);
     },
+    async loadForDecision(id) {
+      guard(tx, true);
+      return find(id, reviewable);
+    },
     async update(id, expectedVersion, { content, state, submittedAt }) {
       guard(tx, true);
       const values = content && stored(content);
@@ -139,6 +143,30 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         version: before.version + 1,
         updatedAt: now,
       });
+    },
+    async decide(id, expectedVersion, state) {
+      guard(tx, true);
+      const before = futureItems.get(id);
+      if (!before || !reviewable(before) || before.version !== expectedVersion) {
+        throw new StaleVersion();
+      }
+      return save({ ...before, state, version: before.version + 1, updatedAt: now });
+    },
+    async queue(limit) {
+      guard(tx, false);
+      const events = [...tx.draft.futureEvents.values()].sort(newestFirst);
+      return [...futureItems.values()]
+        .filter((item) => item.state === 'submitted' && visible(item))
+        .sort(
+          (a, b) =>
+            (a.submittedAt?.getTime() ?? 0) - (b.submittedAt?.getTime() ?? 0) ||
+            (a.id < b.id ? -1 : 1),
+        )
+        .slice(0, limit)
+        .map((item) => ({
+          item: record(item),
+          revised: events.find((e) => e.futureItemId === item.id)?.event === 'revise',
+        }));
     },
     async list(limit, before) {
       guard(tx, false);

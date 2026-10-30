@@ -31,7 +31,7 @@ export interface FutureEventRecord {
 /**
  * The history of future items, append-only (nothing updates or deletes an event; deleting
  * an item deletes its events). It is scoped by the history scope of the transaction's
- * principal over `future_items` (`futureHistoryScopeOf`): the author's own items, and for
+ * principal over `future_items` (`futureReviewScopeOf`): the author's own items, and for
  * reviewers the submitted ones. Unlike the item's read scope it does not admit a colleague
  * to an approved akce: the reviewers' notes in its history are not theirs to read or add to.
  */

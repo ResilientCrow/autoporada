@@ -26,6 +26,8 @@ export const future = {
     withdrawn: 'Staženo',
     cancelled: 'Zrušeno',
   } as const satisfies Record<FutureState, string>,
+  /** The label above the reviewer's note on a returned item, for its author. */
+  returnNote: 'Poznámka z\u00A0kontroly',
   /** The link on the list, the page heading and the tab title of /akce/novy. */
   new: 'Nová akce',
   empty: 'Zatím tu nejsou žádné akce.',

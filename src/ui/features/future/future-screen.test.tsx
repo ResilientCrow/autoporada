@@ -49,6 +49,7 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
   state: 'draft',
   version: 3,
   canRetract: false,
+  returnNote: null,
   view: {
     title: 'Lyžařský kurz',
     startDate: '2026-11-10',
@@ -120,6 +121,21 @@ describe('the editor of a draft', () => {
   it('shows the strip from the dates being edited when a calendar came', () => {
     const strip = render({ window: { submitMonday: '2026-11-09', issues: [] } });
     expect(strip).toContain(future.strip.title);
+  });
+});
+
+describe('the return note', () => {
+  it('stands above the editor of a returned item, with its label', () => {
+    const html = render({ state: 'returned', returnNote: 'Doplňte <b>vyjádření</b>.' });
+    expect(html).toContain(future.returnNote);
+    expect(html).toContain('Doplňte &lt;b&gt;vyjádření&lt;/b&gt;.');
+    expect(html.indexOf(future.returnNote)).toBeLessThan(html.indexOf('<form'));
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('is left out where there is none', () => {
+    expect(render({ state: 'returned' })).not.toContain(future.returnNote);
+    expect(render()).not.toContain(future.returnNote);
   });
 });
 

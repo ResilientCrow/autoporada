@@ -95,6 +95,8 @@ export interface FuturePageModel {
   readonly view: z.output<typeof getFutureOutput>['view'];
   /** The author may take a submitted item back („Stáhnout“). */
   readonly canRetract: boolean;
+  /** What the reviewer wrote when they returned the item: only while it stands returned, else null. */
+  readonly returnNote: string | null;
   /** Only for the author of a draft, returned or approved item: what the editor opens with. */
   readonly editor: FutureEditorModel | null;
   /** Only for the author of an item that is still going somewhere, with a start date; else null. */
@@ -118,7 +120,7 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
     }),
   );
   if (loaded === null) return null;
-  const { kind, state, version, isAuthor, editable, view, content } = loaded;
+  const { kind, state, version, isAuthor, editable, view, content, timeline } = loaded;
   const strip = isAuthor && view.startDate !== null && GOING.includes(state);
   const shows = editable && content !== null;
   // Independent reads, each only where its part of the page shows.
@@ -141,6 +143,9 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
         item: { isAuthor, state, kind },
         event: 'retract',
       }),
+    // The timeline is newest first: the latest return is the one the author answers.
+    returnNote:
+      state === 'returned' ? (timeline.find((e) => e.event === 'return')?.note ?? null) : null,
     editor: shows
       ? {
           version,

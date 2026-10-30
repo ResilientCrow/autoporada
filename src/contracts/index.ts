@@ -70,6 +70,14 @@ export {
   type FutureContentValue,
 } from './future';
 export {
+  cancelFutureInput,
+  cancelFutureOutput,
+  decideFutureInput,
+  decideFutureOutput,
+  queueFutureInput,
+  queueFutureOutput,
+} from './future-review';
+export {
   issuesWindowInput,
   issuesWindowOutput,
   setSkippedInput,

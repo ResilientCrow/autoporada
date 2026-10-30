@@ -35,7 +35,7 @@ const item = (state: FutureState): FutureItemRecord => ({
 
 // The write scope already hides a colleague's item from every other user; this is the second
 // line behind it, and only this test sees it: a check that stopped naming the author would
-// let a reviewer or the headmaster make the author's move once the scope is widened (row 55).
+// let a reviewer or the headmaster make the author's move on the decision path (row 55).
 describe('moveCheck', () => {
   it.each([
     ['submit', 'returned'],
@@ -53,5 +53,43 @@ describe('moveCheck', () => {
   it('refuses the author a move the state does not offer', () => {
     expect(can(actor(AUTHOR, 'submitter'), moveCheck('submit')(item('approved')))).toBe(false);
     expect(can(actor(AUTHOR, 'submitter'), moveCheck('retract')(item('returned')))).toBe(false);
+  });
+});
+
+const COLLEAGUE = '00000000-0000-4000-8000-0000000000c1';
+
+describe('moveCheck of the decision path', () => {
+  it('lets the headmaster, and a reviewer who is not the author, approve a submitted item', () => {
+    const check = moveCheck('approve')(item('submitted'));
+    expect(can(actor(COLLEAGUE, 'headmaster'), check)).toBe(true);
+    expect(can(actor(COLLEAGUE, 'reviewer'), check)).toBe(true);
+    expect(can(actor(AUTHOR, 'headmaster'), check)).toBe(true);
+    expect(can(actor(AUTHOR, 'reviewer'), check)).toBe(false);
+    expect(can(actor(COLLEAGUE, 'submitter'), check)).toBe(false);
+    expect(can(actor(AUTHOR, 'submitter'), check)).toBe(false);
+  });
+
+  it.each(['return', 'reject'] as const)(
+    'lets a reviewer, author or not, %s a handed-in item',
+    (event) => {
+      for (const state of ['submitted', 'approved'] as const) {
+        const check = moveCheck(event)(item(state));
+        expect(can(actor(COLLEAGUE, 'reviewer'), check)).toBe(true);
+        expect(can(actor(AUTHOR, 'reviewer'), check)).toBe(true);
+        expect(can(actor(AUTHOR, 'submitter'), check)).toBe(false);
+        expect(can(actor(COLLEAGUE, 'submitter'), check)).toBe(false);
+      }
+      expect(can(actor(COLLEAGUE, 'reviewer'), moveCheck(event)(item('draft')))).toBe(false);
+    },
+  );
+
+  it('lets the author and reviewers cancel an approved akce, and no one else', () => {
+    const check = moveCheck('cancel')(item('approved'));
+    expect(can(actor(AUTHOR, 'submitter'), check)).toBe(true);
+    expect(can(actor(COLLEAGUE, 'reviewer'), check)).toBe(true);
+    expect(can(actor(COLLEAGUE, 'submitter'), check)).toBe(false);
+    for (const state of ['draft', 'submitted', 'returned', 'cancelled'] as const) {
+      expect(can(actor(AUTHOR, 'headmaster'), moveCheck('cancel')(item(state)))).toBe(false);
+    }
   });
 });

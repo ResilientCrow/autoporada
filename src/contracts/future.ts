@@ -11,7 +11,7 @@ import { campusSchema, draftPersonSchema, isoDate, wallTime } from './point';
 
 /** Every `FutureKind` once: the compiler refuses a missing or an unknown one. */
 const FUTURE_KINDS: Readonly<Record<FutureKind, FutureKind>> = { jednani: 'jednani', akce: 'akce' };
-const futureKindSchema = z.enum(FUTURE_KINDS);
+export const futureKindSchema = z.enum(FUTURE_KINDS);
 
 /** Every `FutureState` once. */
 const FUTURE_STATES: Readonly<Record<FutureState, FutureState>> = {
@@ -147,7 +147,7 @@ export const futureContentToWire = (
  * What a reader who is not the author sees of an item: the list row's content. Who is responsible
  * is a name each; no salutation, affiliation or directory id (design section 12, privacy review).
  */
-const futureView = z.strictObject({
+export const futureView = z.strictObject({
   title: z.string(),
   startDate: z.iso.date().nullable(),
   endDate: z.iso.date().nullable(),
@@ -183,8 +183,8 @@ export const createFutureInput = z.strictObject({ clientRef: z.uuid(), kind: fut
 export const createFutureOutput = z.object({ id: z.uuid() });
 
 /** A write to an item names the item and the version the page showed. */
-const futureWrite = { id: z.uuid(), expectedVersion: z.number().int().positive() };
-const version = z.number().int().positive();
+export const futureWrite = { id: z.uuid(), expectedVersion: z.number().int().positive() };
+export const version = z.number().int().positive();
 
 /**
  * The author's autosave: the whole content against the version the editor holds. An approved akce
