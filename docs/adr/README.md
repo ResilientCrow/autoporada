@@ -32,3 +32,4 @@ record that supersedes it.
 | [0024](0024-autosave-announcements-and-flush-answers.md) | Autosave: one announcement, flush answers while the page lives | Accepted |
 | [0025](0025-review-moves-to-the-next-point.md) | Review moves to the next point from the client | Accepted |
 | [0026](0026-retract-clears-the-hand-in.md) | A retract clears the hand-in | Accepted |
+| [0027](0027-start-report-goes-to-its-draft.md) | „Napsat zprávu“ goes to its draft from the client | Accepted |

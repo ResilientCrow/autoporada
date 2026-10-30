@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 import { future } from '@/ui/copy';
-import { LiveStatus, useFocusOnRise } from '@/ui/form';
+import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
 import { Card } from '@/ui/kit';
 
 import type { DeclineFutureReportAction, StartFutureReportAction } from './actions';
@@ -37,6 +37,7 @@ export function ReportDueCard({
   if (items.length === 0 && said.count === 0) return status;
   return (
     <Card title={future.report.title} headingRef={heading}>
+      {items.length > 0 && <NoScriptNotice />}
       {items.length === 0 ? null : (
         <ul className="space-y-4">
           {items.map((item) => (

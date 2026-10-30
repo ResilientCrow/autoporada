@@ -9,6 +9,7 @@ import { MyPoints } from './MyPoints';
 import type { MyPointRow } from './my-points';
 
 const NB = '\u00a0';
+const SLOT = 'Nahoře';
 const row = (id: string, state: PointState, over: Partial<MyPointRow> = {}): MyPointRow => ({
   id,
   state,
@@ -42,6 +43,16 @@ describe('MyPoints', () => {
     ].map(at);
     expect(order.every((n) => n > 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('puts the slot after the page title and before the groups', () => {
+    const html = renderToStaticMarkup(
+      <MyPoints rows={ALL} next={null} first top={<h2>{SLOT}</h2>} />,
+    );
+    const at = (text: string) => html.indexOf(text);
+    expect(at('Moje body')).toBeGreaterThan(0);
+    expect(at(SLOT)).toBeGreaterThan(at('Moje body'));
+    expect(at(SLOT)).toBeLessThan(at('Rozpracované'));
   });
 
   it('gives every group a heading, the closed one inside the summary of the only details', () => {

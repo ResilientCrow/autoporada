@@ -34,13 +34,15 @@ const START_SPEC: FormSpec = {
     messages: { required: future.report.typeRequired, invalid: future.report.typeInvalid },
   },
 };
+/** With one type there is nothing to choose, so an issue with it has no control to link to. */
+const START_ONLY_TYPE_SPEC: FormSpec = {};
 /** „Zprávu psát nebudu“ asks for nothing: any refusal shows as the form's problem. */
 const DECLINE_SPEC: FormSpec = {};
 
 /**
  * One akce of the card: its title (a link to it) and days, then „Napsat zprávu“ with the choice
  * of the type when there is one to make, and „Zprávu psát nebudu“, each a form of its own so
- * neither nests in the other. A press of either is announced by the akce it is for. Starting goes
+ * neither nests in the other; one in flight disables the other button. A press of either is announced by the akce it is for. Starting goes
  * to the draft; declining tells the card, whose page refresh then drops this row.
  */
 export function ReportDueRow({
@@ -79,7 +81,11 @@ export function ReportDueRow({
       </p>
       {when === null ? null : <p>{when}</p>}
       {types.length === 0 ? null : (
-        <Form id={`akce-zprava-${item.id}`} spec={START_SPEC} state={start}>
+        <Form
+          id={`akce-zprava-${item.id}`}
+          spec={types.length > 1 ? START_SPEC : START_ONLY_TYPE_SPEC}
+          state={refusalAsGone(start)}
+        >
           {types.length > 1 && (
             <RadioGroupField
               name="typeId"
@@ -87,13 +93,19 @@ export function ReportDueRow({
             />
           )}
           <div>
-            <SubmitButton describedBy={titleId}>{future.report.start}</SubmitButton>
+            <SubmitButton describedBy={titleId} isDisabled={decline.submitting !== null}>
+              {future.report.start}
+            </SubmitButton>
           </div>
         </Form>
       )}
       <Form id={`akce-zprava-nebude-${item.id}`} spec={DECLINE_SPEC} state={refusalAsGone(decline)}>
         <div>
-          <SubmitButton variant="secondary" describedBy={titleId}>
+          <SubmitButton
+            variant="secondary"
+            describedBy={titleId}
+            isDisabled={start.submitting !== null}
+          >
             {future.report.decline}
           </SubmitButton>
         </div>

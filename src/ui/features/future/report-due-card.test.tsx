@@ -99,6 +99,11 @@ describe('ReportDueCard', () => {
     expect(first!.match(new RegExp(`aria-describedby="${titleId}"`, 'g'))).toHaveLength(2);
   });
 
+  it('says once that the buttons need JavaScript, and not on an empty card', () => {
+    expect(render().match(/<noscript/g)).toHaveLength(1);
+    expect(render([])).not.toContain('<noscript');
+  });
+
   it('keeps only its status region when nothing is waiting, so a decision can still be said', () => {
     const html = render([]);
     expect(html).toContain('role="status"');

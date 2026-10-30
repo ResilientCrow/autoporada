@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 
 import { formatDayMonth } from '@/domain/cs';
 import { parseIsoDate } from '@/domain/time';
@@ -55,21 +56,25 @@ function Group({ group, rows, collapsed }: MyPointsGroup) {
 
 /**
  * „Moje body“ (design section 9): the author's points by where they stand, last changed first
- * within a group. `next` is where „Starší body“ continues, a plain link back to this page.
+ * within a group. `top` is a slot under the title. `next` is where „Starší body“ continues, a plain link back to this page.
  */
 export function MyPoints({
   rows,
   next,
   first,
+  top,
 }: {
   readonly rows: readonly MyPointRow[];
   readonly next: string | null;
   /** False on a page after a cursor, where no rows do not mean no points. */
   readonly first: boolean;
+  /** What the page puts right under the title (the akce waiting for a report), composed by the app. */
+  readonly top?: ReactNode;
 }) {
   return (
     <div className="space-y-4">
       <SlantLabel level={1}>{points.mine.title}</SlantLabel>
+      {top}
       {first && rows.length === 0 ? <p>{points.mine.empty}</p> : null}
       <p>
         <Link href="/body/novy" prefetch={false} className={buttonStyles('primary')}>

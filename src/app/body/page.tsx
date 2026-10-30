@@ -21,15 +21,21 @@ export default async function MyPointsPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/body">
-      {model.reportDue !== null && (
-        <ReportDueCard
-          items={model.reportDue.items}
-          types={model.reportDue.types}
-          startFutureReport={startFutureReport}
-          declineFutureReport={declineFutureReport}
-        />
-      )}
-      <MyPoints rows={model.rows} next={model.next} first={model.first} />
+      <MyPoints
+        rows={model.rows}
+        next={model.next}
+        first={model.first}
+        top={
+          model.reportDue !== null && (
+            <ReportDueCard
+              items={model.reportDue.items}
+              types={model.reportDue.types}
+              startFutureReport={startFutureReport}
+              declineFutureReport={declineFutureReport}
+            />
+          )
+        }
+      />
     </Shell>
   );
 }
