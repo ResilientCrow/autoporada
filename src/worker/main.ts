@@ -9,14 +9,18 @@ import { databaseOn, openPool } from '@/infra/db';
 import { createBoss, createProducer, errorCode, PGBOSS_SCHEMA_VERSION } from '@/infra/jobs';
 import { createLogger } from '@/infra/log';
 import { createMailPort } from '@/infra/mail';
-import { createAppTokenSource, describeCredential, loadClientCredential } from '@/infra/oidc';
+import {
+  createAppTokenSource,
+  describeCredential,
+  GRAPH_SCOPE,
+  loadClientCredential,
+} from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
 import { createProcessEnd, startHealth, startWorker, type RunningWorker } from '@/infra/worker';
 
 import app from '../../package.json' with { type: 'json' };
 
 const APPLICATION_NAME = 'autoporada-worker';
-const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
 
 /** A bad setting is named by key, never by value; anything else by its class and code (a message can quote a URL). */
 function logFailed(error: unknown): void {

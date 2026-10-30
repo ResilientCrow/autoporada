@@ -85,8 +85,18 @@ async function search(
   // Phase 2 outside any transaction: a slow directory holds no connection.
   const found = await deps.directory.search(q, request.signal);
   if (found.ok) return Response.json(directorySearchResponse.parse({ hits: found.value }));
-  // The code only: the query is the reader's own text (ADR 0015).
-  deps.log.warn({ name: NAME, reqId: ctx.requestId, code: found.code }, 'directory failed');
+  // The client went away (the next keystroke): nobody reads an answer, and it is no failure.
+  if (request.signal.aborted) return status(204);
+  // The code and its fixed detail only: the query is the reader's own text (ADR 0015).
+  deps.log.warn(
+    {
+      name: NAME,
+      reqId: ctx.requestId,
+      code: found.code,
+      ...(found.detail && { detail: found.detail }),
+    },
+    'directory failed',
+  );
   return Response.json(directorySearchResponse.parse({ hits: [], notice: NOTICES[found.code] }));
 }
 

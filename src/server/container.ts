@@ -12,6 +12,7 @@ import {
   createAppTokenSource,
   createIdentityProvider,
   describeCredential,
+  GRAPH_SCOPE,
   loadClientCredential,
 } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
@@ -63,9 +64,6 @@ interface Shared {
   readonly producer: ReturnType<typeof createProducer>;
   readonly limiter: RateLimiter;
 }
-
-/** The Graph token's scope: the application permissions granted to the registration. */
-const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
 
 const SHARED = Symbol.for('autoporada.web.shared');
 

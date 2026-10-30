@@ -55,7 +55,20 @@ const TOKEN_FAILURE: Readonly<Record<IdpFailure, DirectoryCode>> = {
   unavailable: 'directory.unavailable',
 };
 
-const failed = (code: DirectoryCode): DirectoryResult<never> => ({ ok: false, code });
+const failed = (code: DirectoryCode, detail?: string): DirectoryResult<never> =>
+  detail === undefined ? { ok: false, code } : { ok: false, code, detail };
+
+/** The status class for the log; 429 and the like are 4xx, a 2xx or 3xx that is not 200 is `other`. */
+function statusClass(status: number): string {
+  if (status >= 400 && status < 500) return 'http-4xx';
+  return status >= 500 && status < 600 ? 'http-5xx' : 'http-other';
+}
+
+/** `token:` and the parts AppTokenError allow-lists: the stage and one of AADSTS, OAuth error or code. */
+function tokenDetail(error: AppTokenError): string {
+  const { stage, aadsts, error: oauth, code } = error.detail;
+  return ['token', stage, aadsts ?? oauth ?? code].filter(Boolean).join(':');
+}
 
 /** What `$search` takes: NFC, one space between words, no character of its grammar, at most QUERY_MAX. */
 function clean(query: string): string {
@@ -89,7 +102,7 @@ function people(value: z.infer<typeof answer>['value'], wanted: readonly string[
 
 /**
  * The school people search through Microsoft Graph `GET /users?$search`, with the app's own token.
- * Nothing throws and nothing is logged here (the route logs the code): a 429 is `throttled`, a
+ * Nothing throws and nothing is logged here (the route logs the code and the fixed `detail`): a 429 is `throttled`, a
  * 401 that survives one fresh token or a 403 is `denied`, the caller's abort or the timeout is
  * `timeout`, everything else `unavailable`. The body of a failed answer is closed, never read.
  */
@@ -120,12 +133,13 @@ export function createGraphDirectory(options: {
       await response.body?.cancel();
       if (status === 401) tokens.invalidate();
       if (status === 401 && !refreshed) return call(url, wanted, signal, true);
-      if (status === 429) return failed('directory.throttled');
-      if (status === 401 || status === 403) return failed('directory.denied');
-      return failed('directory.unavailable');
+      const detail = statusClass(status);
+      if (status === 429) return failed('directory.throttled', detail);
+      if (status === 401 || status === 403) return failed('directory.denied', detail);
+      return failed('directory.unavailable', detail);
     }
     const parsed = answer.safeParse(await response.json());
-    if (!parsed.success) return failed('directory.unavailable');
+    if (!parsed.success) return failed('directory.unavailable', 'body');
     return { ok: true, value: people(parsed.data.value, wanted) };
   }
 
@@ -148,8 +162,11 @@ export function createGraphDirectory(options: {
         return await call(`${options.baseUrl}/users?${params}`, wanted, combined, false);
       } catch (error) {
         if (combined.aborted) return failed('directory.timeout');
-        if (error instanceof AppTokenError) return failed(TOKEN_FAILURE[error.failure]);
-        return failed('directory.unavailable');
+        if (error instanceof AppTokenError) {
+          return failed(TOKEN_FAILURE[error.failure], tokenDetail(error));
+        }
+        // A body that is no JSON is a SyntaxError; anything else came from fetch.
+        return failed('directory.unavailable', error instanceof SyntaxError ? 'body' : 'network');
       }
     },
   };

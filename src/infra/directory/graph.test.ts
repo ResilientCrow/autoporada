@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { DirectoryResult, IdpFailure } from '@/application/ports';
+import type { DirectoryResult, IdpDetail, IdpFailure } from '@/application/ports';
 import { DIRECTORY_LIMITS } from '@/domain/report';
 import { AppTokenError, createAppTokenSource, type AppTokenSource } from '@/infra/oidc';
 import { inTransactionScope } from '@/infra/system';
@@ -42,6 +42,7 @@ async function setup(
     readonly search?: SearchMode;
     readonly timeoutMs?: number;
     readonly baseUrl?: string;
+    readonly entraDelayMs?: number;
   } = {},
 ) {
   const idp = await createTestIdp();
@@ -63,7 +64,12 @@ async function setup(
       ...{ issuer: TEST_ISSUER, clientId: TEST_CLIENT, appOrigin: 'https://autoporada.ssps.cz' },
       ...{ credential: { kind: 'secret', secret: TEST_SECRET }, domainHint: null },
       production: true,
-      fetch: graph.fetch,
+      fetch: async (url, init) => {
+        // A slow Entra: an abort in the meantime ends the call, as fetch does.
+        if (options.entraDelayMs) await new Promise((r) => setTimeout(r, options.entraDelayMs));
+        init.signal?.throwIfAborted();
+        return graph.fetch(url, init);
+      },
     },
     scope: 'https://graph.microsoft.com/.default',
     clock,
@@ -186,7 +192,11 @@ describe('the Graph directory: the answer', () => {
     const bodies = [{}, { value: 'x' }, { value: [{ id: 5 }] }, { value: [{}] }, { value: null }];
     graph.script(...bodies.map((body): Answer => ({ status: 200, body })));
     for (let i = 0; i < bodies.length; i++) {
-      expect(codeOf(await directory.search('Nováková', live()))).toBe('directory.unavailable');
+      expect(await directory.search('Nováková', live())).toEqual({
+        ok: false,
+        code: 'directory.unavailable',
+        detail: 'body',
+      });
     }
   });
 
@@ -197,6 +207,7 @@ describe('the Graph directory: the answer', () => {
     expect(await directory.search('Nováková', live())).toEqual({
       ok: false,
       code: 'directory.unavailable',
+      detail: 'body',
     });
   });
 
@@ -257,21 +268,31 @@ describe('the Graph directory: the query', () => {
 });
 
 describe('the Graph directory: codes', () => {
-  it.each<[string, Answer, string]>([
-    ['429', 429, 'directory.throttled'],
-    ['429 with Retry-After', { status: 429, retryAfter: '7' }, 'directory.throttled'],
-    ['403', 403, 'directory.denied'],
-    ['400', 400, 'directory.unavailable'],
-    ['500', 500, 'directory.unavailable'],
-    ['503', 503, 'directory.unavailable'],
-    ['504', 504, 'directory.unavailable'],
-    ['a status Graph never sends', { status: 418 }, 'directory.unavailable'],
-    ['a 204', { status: 204 }, 'directory.unavailable'],
-  ])('maps %s to %s and calls once', async (_, scripted, code) => {
+  it.each<[string, Answer, string, string]>([
+    ['429', 429, 'directory.throttled', 'http-4xx'],
+    ['429 with Retry-After', { status: 429, retryAfter: '7' }, 'directory.throttled', 'http-4xx'],
+    ['403', 403, 'directory.denied', 'http-4xx'],
+    ['400', 400, 'directory.unavailable', 'http-4xx'],
+    ['500', 500, 'directory.unavailable', 'http-5xx'],
+    ['503', 503, 'directory.unavailable', 'http-5xx'],
+    ['504', 504, 'directory.unavailable', 'http-5xx'],
+    ['a status Graph never sends', { status: 418 }, 'directory.unavailable', 'http-4xx'],
+  ])('maps %s to its code and detail, and calls once', async (_, scripted, code, detail) => {
     const { graph, requests, directory } = await setup();
     graph.script(scripted);
-    expect(await directory.search('Nováková', live())).toEqual({ ok: false, code });
+    expect(await directory.search('Nováková', live())).toEqual({ ok: false, code, detail });
     expect(requests.filter((r) => r.url.startsWith(`${GRAPH_BASE}/users?`))).toHaveLength(1);
+  });
+
+  it('is unavailable for an answer that is neither 200 nor an error, whatever the fake can send', async () => {
+    const tokens: AppTokenSource = { token: () => Promise.resolve('t'), invalidate: () => {} };
+    const fetch = () => Promise.resolve(new Response(null, { status: 304 }));
+    const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
+    expect(await directory.search('Nováková', live())).toEqual({
+      ok: false,
+      code: 'directory.unavailable',
+      detail: 'http-other',
+    });
   });
 
   it('is denied when the token only reads basic and Graph wants User.Read.All', async () => {
@@ -279,6 +300,7 @@ describe('the Graph directory: codes', () => {
     expect(await directory.search('Nováková', live())).toEqual({
       ok: false,
       code: 'directory.denied',
+      detail: 'http-4xx',
     });
     expect(graph.seen.rejected).toEqual(['search.role']);
   });
@@ -286,7 +308,11 @@ describe('the Graph directory: codes', () => {
   it('is unavailable when the connection resets', async () => {
     const { graph, directory } = await setup();
     graph.acceptThenDrop();
-    expect(codeOf(await directory.search('Nováková', live()))).toBe('directory.unavailable');
+    expect(await directory.search('Nováková', live())).toEqual({
+      ok: false,
+      code: 'directory.unavailable',
+      detail: 'network',
+    });
   });
 
   it('is unavailable when fetch fails in a way nobody expected', async () => {
@@ -296,6 +322,7 @@ describe('the Graph directory: codes', () => {
     expect(await directory.search('Nováková', live())).toEqual({
       ok: false,
       code: 'directory.unavailable',
+      detail: 'network',
     });
   });
 
@@ -306,6 +333,7 @@ describe('the Graph directory: codes', () => {
     expect(await directory.search('Nováková', live())).toEqual({
       ok: false,
       code: 'directory.unavailable',
+      detail: 'http-4xx',
     });
     expect(requests.at(-1)?.url).toMatch(/^https:\/\/graph\.microsoft\.com\/v2\.0\/users\?/);
     expect(graph.seen.rejected).toEqual(['route']);
@@ -333,7 +361,7 @@ describe('the Graph directory: codes', () => {
     };
     const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
     const result = await directory.search('Nováková', live());
-    expect(result).toEqual({ ok: false, code: 'directory.unavailable' });
+    expect(result).toEqual({ ok: false, code: 'directory.unavailable', detail: 'http-5xx' });
     expect(JSON.stringify(result)).not.toContain('jana');
     expect(closed).toBe(true);
     expect(read).toBe(false);
@@ -355,6 +383,7 @@ describe('the Graph directory: the token', () => {
     expect(await directory.search('Nováková', live())).toEqual({
       ok: false,
       code: 'directory.denied',
+      detail: 'http-4xx',
     });
     expect(idp.seen.tokenRequests).toHaveLength(2);
     expect(graph.seen.rejected).toEqual([]);
@@ -366,9 +395,11 @@ describe('the Graph directory: the token', () => {
       status: 401,
       body: { error: 'invalid_client', error_description: 'AADSTS7000215: x' },
     });
+    // The AADSTS code tells a bad certificate from a missing consent; the description stays unread.
     expect(await directory.search('Nováková', live())).toEqual({
       ok: false,
       code: 'directory.denied',
+      detail: 'token:token:AADSTS7000215',
     });
     expect(requests.filter((r) => r.url.includes('/users'))).toEqual([]);
   });
@@ -376,7 +407,29 @@ describe('the Graph directory: the token', () => {
   it('is unavailable when Entra cannot be reached', async () => {
     const { idp, directory } = await setup();
     idp.failToken('network');
-    expect(codeOf(await directory.search('Nováková', live()))).toBe('directory.unavailable');
+    const result = await directory.search('Nováková', live());
+    expect(result).toMatchObject({ ok: false, code: 'directory.unavailable' });
+    expect(result).toHaveProperty('detail', expect.stringMatching(/^token:(discovery|token)/));
+  });
+
+  it.each<[IdpDetail, string]>([
+    [{ stage: 'discovery' }, 'token:discovery'],
+    [{ stage: 'discovery', code: 'ENDPOINT_ORIGIN' }, 'token:discovery:ENDPOINT_ORIGIN'],
+    [{ stage: 'token', error: 'invalid_client' }, 'token:token:invalid_client'],
+    [{ stage: 'token', error: 'invalid_client', aadsts: 'AADSTS70011' }, 'token:token:AADSTS70011'],
+    [{ stage: 'token', code: 'OAUTH_TIMEOUT', status: 400 }, 'token:token:OAUTH_TIMEOUT'],
+  ])('names a token failure by its allow-listed parts: %j', async (detail, expected) => {
+    const tokens: AppTokenSource = {
+      token: () => Promise.reject(new AppTokenError('unavailable', detail)),
+      invalidate: () => {},
+    };
+    const fetch = () => Promise.reject(new Error('Graph must not be called'));
+    const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
+    expect(await directory.search('Nováková', live())).toEqual({
+      ok: false,
+      code: 'directory.unavailable',
+      detail: expected,
+    });
   });
 
   it.each<[IdpFailure, string]>([
@@ -391,7 +444,7 @@ describe('the Graph directory: the token', () => {
     };
     const fetch = () => Promise.reject(new Error('Graph must not be called'));
     const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
-    expect(await directory.search('Nováková', live())).toEqual({ ok: false, code });
+    expect(await directory.search('Nováková', live())).toMatchObject({ ok: false, code });
   });
 });
 
@@ -433,6 +486,29 @@ describe('the Graph directory: time', () => {
     });
     expect(requests).toEqual([]);
     expect(graph.seen.searches).toEqual([]);
+  });
+
+  it('keeps a search whose neighbour aborted: the token request is nobody’s budget', async () => {
+    const { directory } = await setup({ entraDelayMs: 50 });
+    const first = new AbortController();
+    const leader = directory.search('Nováková', first.signal);
+    const neighbour = directory.search('Novák', live());
+    setTimeout(() => first.abort(), 10);
+    expect(await leader).toEqual({ ok: false, code: 'directory.timeout' });
+    expect(codeOf(await neighbour)).toBe('ok');
+    // The next typist is not locked out for 30 s either.
+    expect(codeOf(await directory.search('Černá', live()))).toBe('ok');
+  });
+
+  it('does not lock the search for 30 s when a cold token is slower than the timeout', async () => {
+    const { directory } = await setup({ entraDelayMs: 120, timeoutMs: 40 });
+    expect(await directory.search('Nováková', live())).toEqual({
+      ok: false,
+      code: 'directory.timeout',
+    });
+    // The token request went on and landed after the search gave up.
+    await new Promise((r) => setTimeout(r, 400));
+    expect(codeOf(await directory.search('Nováková', live()))).toBe('ok');
   });
 
   it('refuses to search inside a database transaction, before any request', async () => {

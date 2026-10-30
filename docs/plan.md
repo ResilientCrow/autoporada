@@ -651,6 +651,8 @@ Deferred or open after M8a:
 7. Playwright end-to-end: five journeys
 8. RUNBOOK (install, update with a backup before migrations, restore, PG upgrade, minimum host 2 vCPU / 6 GB RAM / 40 GB)
 
+Note: there are two Entra registrations and two certificate pairs (ADR 0021). `ops.check` runs in the worker, which holds only the mail pair, so its certificate-expiry check must cover the web's certificate too: the web reports its own expiry, or the public `web_entra_cert` (not secret) is also given to the worker.
+
 Note: before go-live the privacy notice is approved: `approved: true`, the effective date set, no review flags left (`docs/gdpr/privacy-review.md`).
 
 ## 11. Verification

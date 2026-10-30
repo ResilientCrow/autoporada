@@ -3,11 +3,10 @@ import * as client from 'openid-client';
 import type { IdpDetail, IdpFailure } from '@/application/ports';
 
 import { assertOutsideTransaction } from '../system';
+import { GRAPH_SCOPE } from './app-token';
 import { describeCredential, type CredentialFacts } from './credential';
 import { discover, type ProviderOptions } from './discovery';
 import { mapFailure } from './failure';
-
-const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
 
 export interface ProbeReport {
   readonly issuer: string;

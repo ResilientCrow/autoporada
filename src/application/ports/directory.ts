@@ -13,8 +13,14 @@ export type DirectoryCode =
   | 'directory.denied'
   | 'directory.timeout';
 
+/**
+ * A failure carries its code and, for the log only, a `detail`: a fixed word (`http-4xx`,
+ * `http-5xx`, `network`, `body`) or `token:` and the allow-listed parts of the token failure
+ * (stage, AADSTS code). Never text the provider or the reader wrote (ADR 0015, 0016).
+ */
 export type DirectoryResult<T> =
-  { readonly ok: true; readonly value: T } | { readonly ok: false; readonly code: DirectoryCode };
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly code: DirectoryCode; readonly detail?: string };
 
 /**
  * People search. It never throws: an adapter catches its own failures and answers a code (ADR 0015),

@@ -27,9 +27,14 @@ const never = () => new AbortController().signal;
 async function setup(provider: Partial<ProviderOptions> = {}) {
   const idp = await createTestIdp();
   const clock = new FixedClock();
-  const flags = { hangDiscovery: false, discoveries: 0 };
-  const fetch: CustomFetch = (url, init) => {
-    if (!url.endsWith('/.well-known/openid-configuration')) return idp.fetch(url, init);
+  const flags = { hangDiscovery: false, discoveries: 0, tokenDelayMs: 0 };
+  const fetch: CustomFetch = async (url, init) => {
+    if (!url.endsWith('/.well-known/openid-configuration')) {
+      // A slow Entra: the answer comes late, and an abort in the meantime ends the call as fetch does.
+      if (flags.tokenDelayMs > 0) await new Promise((r) => setTimeout(r, flags.tokenDelayMs));
+      init.signal?.throwIfAborted();
+      return idp.fetch(url, init);
+    }
     flags.discoveries++;
     if (url.startsWith(UNREAL)) {
       const description = `AADSTS90002: Tenant '${UNREAL}' not found. Ask jana.novakova@ssps.cz.`;
@@ -169,19 +174,20 @@ describe('the app-only token for Graph', () => {
     expect(`${error.message} ${JSON.stringify(error)}`).not.toMatch(/jana|Application/);
   });
 
-  it('stops discovery when the caller’s budget runs out', async () => {
+  it('stops waiting for discovery when the caller’s budget runs out', async () => {
     const { flags, source } = await setup();
     flags.hangDiscovery = true;
     const budget = new AbortController();
     const pending = failure(source.token(budget.signal));
     budget.abort();
+    // The caller leaves the request; it is not the request that was aborted, so no stage is known.
     expect(await pending).toMatchObject({
       failure: 'unavailable',
-      detail: { stage: 'discovery', code: 'OAUTH_ABORT' },
+      detail: { code: 'OAUTH_ABORT' },
     });
   });
 
-  it('stops the token request when the caller’s budget runs out, keeping its own timeout', async () => {
+  it('stops waiting for the token request when the caller’s budget runs out, and keeps its own timeout', async () => {
     const { idp, source } = await setup();
     await source.token(never());
     source.invalidate();
@@ -199,8 +205,32 @@ describe('the app-only token for Graph', () => {
     });
   });
 
+  it('keeps the request going for the callers waiting when the one who started it gives up', async () => {
+    const { idp, flags, source } = await setup();
+    flags.tokenDelayMs = 50;
+    const first = new AbortController();
+    const leader = failure(source.token(first.signal));
+    const joiner = source.token(never());
+    setTimeout(() => first.abort(), 10);
+    expect(await leader).toMatchObject({ detail: { stage: 'token', code: 'OAUTH_ABORT' } });
+    const token = await joiner;
+    expect(await source.token(never())).toBe(token);
+    expect(idp.seen.tokenRequests).toHaveLength(1);
+  });
+
+  it('does not back off for 30 s after the only caller gave up, and the request still lands', async () => {
+    const { idp, flags, source } = await setup();
+    flags.tokenDelayMs = 50;
+    const only = new AbortController();
+    const pending = failure(source.token(only.signal));
+    setTimeout(() => only.abort(), 10);
+    expect(await pending).toMatchObject({ detail: { code: 'OAUTH_ABORT' } });
+    await expect(source.token(never())).resolves.toEqual(expect.any(String));
+    expect(idp.seen.tokenRequests).toHaveLength(1);
+  });
+
   it('lets a caller whose budget runs out leave another caller’s request', async () => {
-    const { idp, source } = await setup();
+    const { idp, source } = await setup({ timeoutSeconds: 0.05 });
     idp.failToken('timeout');
     const first = new AbortController();
     const leader = failure(source.token(first.signal));
@@ -210,6 +240,10 @@ describe('the app-only token for Graph', () => {
     expect(await joiner).toMatchObject({ failure: 'unavailable', detail: { code: 'OAUTH_ABORT' } });
     first.abort();
     await leader;
+    // Both left; the one request goes on to its own timeout, and a third caller shares it.
+    expect(await failure(source.token(never()))).toMatchObject({
+      detail: { code: 'OAUTH_TIMEOUT' },
+    });
     expect(idp.seen.tokenRequests).toHaveLength(1);
   });
 

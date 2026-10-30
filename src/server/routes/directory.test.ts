@@ -162,6 +162,42 @@ describe('POST /api/adresar/hledat', () => {
     },
   );
 
+  it('logs the fixed detail beside the code, so a 400 is told from a refused credential', async () => {
+    const { post, lines } = setup(await as(), {
+      ok: false,
+      code: 'directory.denied',
+      detail: 'token:token:AADSTS7000215',
+    });
+    await post();
+    expect(lines.filter((l) => l.level === 'warn').map((l) => l.fields)).toEqual([
+      {
+        name: 'directory.search',
+        reqId: 'req-1',
+        code: 'directory.denied',
+        detail: 'token:token:AADSTS7000215',
+      },
+    ]);
+  });
+
+  it('logs nothing and answers an empty body when the client has gone', async () => {
+    const controller = new AbortController();
+    const { post, search, lines } = setup(await as());
+    search.mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve({ ok: false, code: 'directory.timeout' });
+    });
+    const response = await post({ signal: controller.signal });
+    expect(await response.text()).toBe('');
+    expect(lines.filter((l) => l.level === 'warn')).toEqual([]);
+  });
+
+  it('still logs a timeout of the search itself while the client waits', async () => {
+    const { post, lines } = setup(await as(), { ok: false, code: 'directory.timeout' });
+    const response = await post({ signal: new AbortController().signal });
+    expect(await response.json()).toEqual({ hits: [], notice: 'timeout' });
+    expect(lines.filter((l) => l.level === 'warn')).toHaveLength(1);
+  });
+
   it('fails with 500 when the directory answers more than a search may', async () => {
     const many = Array.from({ length: 11 }, () => hit);
     const { post } = setup(await as(), { ok: true, value: many });

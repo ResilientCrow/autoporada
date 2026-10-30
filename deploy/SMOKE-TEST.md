@@ -201,16 +201,26 @@ the headmaster (step 25).
 29. **The directory search** (S2 and S9). The web has its own registration with
     `User.ReadBasic.All` (ENTRA-SETUP §1.4). In `.env` set `DIRECTORY=graph`, run
     `docker compose up -d`, and sign in as an author.
-    - [ ] The web reaches `graph.microsoft.com` over `ap-edge`; `docker compose logs web`
-          shows no `directory.unavailable` or `directory.timeout`.
+    - [ ] The web reaches `graph.microsoft.com` over `ap-edge`. While you type,
+          `docker compose logs web` shows no `directory failed` line with `code=directory.unavailable`
+          or `code=directory.timeout` (a keystroke that supersedes a search is not logged).
+          A line that does appear carries a `detail`: `http-4xx` or `http-5xx` (Graph's status
+          class), `network`, `body` (an answer that is not a name list), or `token:` with the stage
+          and the AADSTS code. Note it down: it tells a wrong `$search` grammar (`http-4xx` with
+          `unavailable`) from a refused consent (`denied`).
     - [ ] In the point editor a search for three letters of a colleague's surname
           lists them by name; guests and rooms are absent.
     - [ ] If `$search` answers 403 (`directory.denied`) under `User.ReadBasic.All`,
           set `DIRECTORY=off` again: the fallback `User.Read.All` needs a new ADR
           and an updated privacy review (`docs/gdpr/privacy-review.md`) before
           IT is asked for it (ADR 0021 item 5).
-    - [ ] Record what Graph really answers (S2, S9): the status of `$search`
+    - [ ] Record what Graph really answers (S2): the status of `$search`
           with `ConsistencyLevel: eventual`, and whether `$count=true` is accepted.
+    - [ ] Record whether Graph folds diacritics (S9): search `novak` (none) and
+          `Novák` for a colleague with that surname. If both list the colleague, note
+          "folds". If only `Novák` does, note "does not fold": the adapter sends the
+          query as typed and filters with its own folding, so `novak` would find nobody;
+          raise it for the picker copy or the design before go-live.
     - [ ] `docker compose logs web | grep -E '@ssps.cz|displayName'` finds nothing
           (the log carries codes, never the query or a name).
     - [ ] The mail registration cannot search: the web's token is the web

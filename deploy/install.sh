@@ -49,6 +49,24 @@ for file in entra_key entra_cert web_entra_key web_entra_cert; do
   [ -s "secrets/$file" ] || missing="$missing $file"
 done
 
+# The web must not hold a credential of the mail registration (ADR 0021): Entra would accept
+# one certificate on both registrations, so identical pairs or client ids are refused.
+same_pair=''
+if [ -z "$missing" ]; then
+  cmp -s secrets/entra_cert secrets/web_entra_cert && same_pair="$same_pair entra_cert=web_entra_cert"
+  cmp -s secrets/entra_key secrets/web_entra_key && same_pair="$same_pair entra_key=web_entra_key"
+fi
+env_value() { sed -n "s/^$1=//p" .env 2>/dev/null | tail -n 1; }
+client_id=$(env_value CLIENT_ID)
+if [ -n "$client_id" ] && [ "$client_id" = "$(env_value WEB_CLIENT_ID)" ]; then
+  same_pair="$same_pair CLIENT_ID=WEB_CLIENT_ID"
+fi
+if [ -n "$same_pair" ]; then
+  echo "install.sh: the web and the mail registration must differ, but these are identical:$same_pair" >&2
+  echo '  Create a separate certificate pair and app registration for each (docs/ENTRA-SETUP.md §1, §6).' >&2
+  exit 3
+fi
+
 chown "$PG_UID:$PG_UID" secrets/pg_*
 for file in owner_database_url web_database_url worker_database_url server_actions_key entra_key entra_cert web_entra_key web_entra_cert; do
   [ ! -e "secrets/$file" ] || chown "$APP_UID:$APP_UID" "secrets/$file"

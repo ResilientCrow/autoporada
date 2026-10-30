@@ -10,7 +10,7 @@ import { mapFailure } from './failure';
 const EARLY_REFRESH_MS = 300_000;
 /** After a failure callers get that failure for this long: a bad certificate cannot hammer Entra. */
 const FAILURE_BACKOFF_MS = 30_000;
-/** Each request's own bound, below the caller's budget (openid-client takes no signal). */
+/** Each request's own bound; no caller's budget reaches the shared request (see `joined`). */
 const REQUEST_TIMEOUT_SECONDS = 10;
 
 /** Why no token: allow-listed codes only (AADSTS digits, OAuth error names), never a description. */
@@ -24,8 +24,11 @@ export class AppTokenError extends Error {
   }
 }
 
+/** The Graph token's scope: the application permissions granted to the registration. */
+export const GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
+
 export interface AppTokenSource {
-  /** A Graph access token; rejects with AppTokenError. `signal` bounds discovery and the token request. */
+  /** A Graph access token; rejects with AppTokenError. `signal` bounds this caller's wait, never the shared request. */
   token(signal: AbortSignal): Promise<string>;
   /** Forgets the token, after Graph answered 401. */
   invalidate(): void;
@@ -40,7 +43,11 @@ function tokenError(error: unknown, stage: IdpDetail['stage']): AppTokenError {
   return new AppTokenError(mapped.failure, mapped.detail);
 }
 
-/** Waits for another caller's request, but no longer than this caller's own budget. */
+/**
+ * Waits for the request in flight, but no longer than this caller's own budget. The request
+ * belongs to nobody: a caller that gives up (a superseded search, a timeout) leaves it running for
+ * the others, and its token still lands in the cache.
+ */
 function joined(flight: Promise<string>, signal: AbortSignal): Promise<string> {
   const aborted = () => new AppTokenError('unavailable', { stage: 'token', code: 'OAUTH_ABORT' });
   if (signal.aborted) return Promise.reject(aborted());
@@ -55,27 +62,22 @@ function joined(flight: Promise<string>, signal: AbortSignal): Promise<string> {
  * The app's own token for Graph (client credentials grant with the same
  * credential and client assertion as sign-in, ADR 0016). Discovery is
  * memoised here and tried again after a failure; one request at a time, its
- * token cached until five minutes before expiry. Each call's budget reaches
- * both requests through the customFetch, combined with their own timeout.
+ * token cached until five minutes before expiry. The request has its own
+ * timeout and no caller's budget, so one caller's abort fails nobody else and
+ * starts no backoff; a caller's budget only bounds its own wait.
  */
 export function createAppTokenSource(options: {
   readonly provider: ProviderOptions;
-  readonly scope: 'https://graph.microsoft.com/.default';
+  readonly scope: typeof GRAPH_SCOPE;
   readonly clock: Clock;
 }): AppTokenSource {
   const { clock, scope } = options;
   // openid-client's own default; its FetchBody is typed wider than BodyInit, never sent wider.
   const base: client.CustomFetch =
     options.provider.fetch ?? ((url, init) => fetch(url, init as RequestInit));
-  /** The budget of the request in flight; there is at most one. */
-  let budget: AbortSignal | undefined;
-  const budgetFetch: client.CustomFetch = (url, init) => {
-    const signals = [init.signal, budget].filter((s): s is AbortSignal => s !== undefined);
-    return base(url, { ...init, signal: AbortSignal.any(signals) });
-  };
   const provider: ProviderOptions = {
     ...options.provider,
-    fetch: budgetFetch,
+    fetch: base,
     timeoutSeconds: Math.min(
       options.provider.timeoutSeconds ?? REQUEST_TIMEOUT_SECONDS,
       REQUEST_TIMEOUT_SECONDS,
@@ -119,7 +121,6 @@ export function createAppTokenSource(options: {
       if (cached && now < cached.until) return cached.token;
       if (failed && now < failed.until) throw failed.error;
       if (flight) return joined(flight, signal);
-      budget = signal;
       flight = request()
         .catch((error: unknown) => {
           if (error instanceof AppTokenError) {
@@ -129,9 +130,8 @@ export function createAppTokenSource(options: {
         })
         .finally(() => {
           flight = undefined;
-          budget = undefined;
         });
-      return flight;
+      return joined(flight, signal);
     },
     invalidate() {
       cached = undefined;
