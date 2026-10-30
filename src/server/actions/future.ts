@@ -1,7 +1,9 @@
 'use server';
 
 import {
+  cancelFuture as cancelFutureUseCase,
   createFuture as createFutureUseCase,
+  decideFuture as decideFutureUseCase,
   getFuture as getFutureUseCase,
   retractFuture as retractFutureUseCase,
   saveFuture as saveFutureUseCase,
@@ -43,3 +45,18 @@ export const submitFuture = defineAction(submitFutureUseCase, { rateLimit: 'subm
 
 /** „Stáhnout“: a submitted item back to the drafts. It moves the state, so it refreshes the page. */
 export const retractFuture = defineAction(retractFutureUseCase, { rateLimit: 'submission' });
+
+/**
+ * The decision bar on /akce/[id]: approve, return or reject. It moves the state, so it refreshes
+ * the page, which shows the new state and the bar of what may be decided next.
+ */
+export const decideFuture = defineAction(decideFutureUseCase, {
+  rateLimit: 'admin',
+  refresh: 'page',
+});
+
+/** „Zrušit akci“ of an approved akce, by its author or a reviewer; the page refreshes as „Zrušeno“. */
+export const cancelFuture = defineAction(cancelFutureUseCase, {
+  rateLimit: 'admin',
+  refresh: 'page',
+});

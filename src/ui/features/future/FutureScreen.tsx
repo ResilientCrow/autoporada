@@ -10,7 +10,9 @@ import { FutureEditor } from './FutureEditor';
 import { FutureHeader } from './FutureHeader';
 import { FutureRead, type FutureReadItem } from './FutureRead';
 import { FutureRetract } from './FutureRetract';
+import { FutureReview } from './FutureReview';
 import { FutureRevise } from './FutureRevise';
+import type { FutureReviewModel } from './review-calls';
 
 /** What the editor starts from, for the author of an item that can still be changed. */
 interface FutureEditorStart {
@@ -30,6 +32,8 @@ export interface FutureScreenItem extends FutureReadItem {
   readonly returnNote: string | null;
   /** The author may take a submitted item back. */
   readonly canRetract: boolean;
+  /** The reviewer's decisions and the cancel the viewer may make; null when there are none. */
+  readonly review: FutureReviewModel | null;
   /** Null where the read view shows. */
   readonly editor: FutureEditorStart | null;
 }
@@ -37,8 +41,9 @@ export interface FutureScreenItem extends FutureReadItem {
 /**
  * An item's page below the shell: the editor for the author of a draft or returned item
  * (autosaved) or of an approved akce (one „Uložit změny“), and the read view for everyone else
- * and every other state, with „Stáhnout“ for the author of a submitted item. The editor is keyed
- * by id and version, so „Načíst aktuální stav“ starts it again from the server's values.
+ * and every other state, with „Stáhnout“ for the author of a submitted item. The reviewer's
+ * decision bar and the cancel of an approved akce follow either view. The editor is keyed by id
+ * and version, so „Načíst aktuální stav“ starts it again from the server's values.
  */
 export function FutureScreen({
   item,
@@ -47,13 +52,24 @@ export function FutureScreen({
   readonly item: FutureScreenItem;
   readonly actions: FutureActions;
 }) {
-  const { id, kind, state, view, window, editor, returnNote } = item;
+  const { id, kind, state, view, window, editor, returnNote, review } = item;
+  const reviewing =
+    review === null ? null : (
+      <FutureReview
+        id={id}
+        version={item.version}
+        bar={review}
+        decideFuture={actions.decideFuture}
+        cancelFuture={actions.cancelFuture}
+      />
+    );
   if (editor === null) {
     return (
       <FutureRead item={item}>
         {item.canRetract ? (
           <FutureRetract id={id} version={item.version} retractFuture={actions.retractFuture} />
         ) : null}
+        {reviewing}
       </FutureRead>
     );
   }
@@ -87,6 +103,7 @@ export function FutureScreen({
           getFuture={actions.getFuture}
         />
       )}
+      {reviewing}
       <p>
         <ArrowLink href="/akce">{future.back}</ArrowLink>
       </p>

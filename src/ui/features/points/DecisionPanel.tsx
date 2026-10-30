@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { ReviewDecision } from '@/domain/review';
 import { review } from '@/ui/copy';
-import { choiceOf, fieldId, Form, useActionForm } from '@/ui/form';
+import { choiceOf, fieldId, Form, refusalAsGone, useActionForm } from '@/ui/form';
 
 import {
   afterDecision,
@@ -16,7 +16,6 @@ import {
   DECISION_FORM_ID,
   DECISION_SPEC,
   PRESSES,
-  shownState,
   type DecidePointAction,
   type DecisionBarModel,
   type Noted,
@@ -94,7 +93,7 @@ export function DecisionPanel({
   const isDisabled = state.submitting !== null;
   return (
     <section aria-label={review.decision.label} className={barClass(noted)}>
-      <Form id={DECISION_FORM_ID} spec={DECISION_SPEC} state={shownState(state)}>
+      <Form id={DECISION_FORM_ID} spec={DECISION_SPEC} state={refusalAsGone(state)}>
         {noted === null ? (
           <DecisionChoices
             choices={choices}

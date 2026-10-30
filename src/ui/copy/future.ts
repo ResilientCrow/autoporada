@@ -1,6 +1,6 @@
 import type { FutureKind } from '@/domain/calendar';
 import type { ResponsibleVerb } from '@/domain/cs';
-import type { FutureState } from '@/domain/review';
+import type { FutureState, ReviewDecision } from '@/domain/review';
 
 import { rules } from './forms';
 
@@ -79,6 +79,30 @@ export const future = {
     endWithoutStart: 'Vyplňte také datum začátku.',
     timeTo: 'Čas do musí být později než čas od.',
     tooMany: 'Je tu příliš mnoho vyučujících.',
+  },
+  /** The reviewer's bar and the cancel on an item's page (design section 12). */
+  review: {
+    /** A reviewer's own handed-in item, in place of „Schválit“. */
+    ownItem: 'Vlastní položku schvaluje jiný kontrolor nebo ředitel.',
+    /** Each press adds its sentence to the note. */
+    phrases: [
+      'Doplňte prosím termín a\u00A0místo.',
+      'Zkontrolujte prosím jména vyučujících.',
+      'Zkraťte prosím název.',
+      'Položka patří jinam.',
+    ],
+    /** Said once a decision went through. */
+    said: {
+      approve: 'Položka byla schválena.',
+      return: 'Položka byla vrácena autorovi k\u00A0úpravě.',
+      reject: 'Položka byla zamítnuta.',
+    } as const satisfies Record<ReviewDecision, string>,
+    cancel: {
+      button: 'Zrušit akci',
+      confirm: 'Rozumím, že akce zmizí z\u00A0přehledu.',
+      unconfirmed: 'Potvrďte prosím, že akce zmizí z\u00A0přehledu.',
+      said: 'Akce byla zrušena.',
+    },
   },
   /** Where the item lands in the overview of the next porady (design section 12). */
   strip: {

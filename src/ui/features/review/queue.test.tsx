@@ -45,6 +45,30 @@ const FULL = {
     { ...row(D, { title: 'Bez porady' }), monday: null },
   ],
   more: false,
+  future: { items: [], more: false },
+};
+
+const akce = (id: string, over: Record<string, unknown> = {}) => ({
+  id,
+  kind: 'akce' as const,
+  title: 'Lyžařský kurz',
+  startDate: '2026-11-10',
+  endDate: '2026-11-12',
+  /** 23.30 UTC is already the 21st in Prague. */
+  submittedAt: '2026-10-20T23:30:00.000Z',
+  revised: false,
+  ...over,
+});
+const WITH_AKCE = {
+  ...FULL,
+  future: {
+    items: [
+      akce(A),
+      akce(B, { kind: 'jednani', title: 'Porada metodiků', endDate: null, revised: false }),
+      akce(C, { title: '', startDate: null, endDate: null, revised: true }),
+    ],
+    more: false,
+  },
 };
 
 const text = (html: string) => html.replace(/<[^>]+>/g, '');
@@ -107,9 +131,7 @@ describe('Queue', () => {
   });
 
   it('says nothing waits when the queue is empty', () => {
-    const empty = renderToStaticMarkup(
-      <Queue queue={{ mondays: [], approved: [], more: false }} />,
-    );
+    const empty = renderToStaticMarkup(<Queue queue={{ ...FULL, mondays: [], approved: [] }} />);
     expect(text(empty)).toContain(review.empty);
     expect(headings(empty, 2)).toEqual([]);
     expect(text(html)).not.toContain(review.empty);
@@ -142,6 +164,78 @@ describe('QueueCard', () => {
     expect(html).toContain(`>${review.card.title}</h2>`);
     expect(html).toMatch(/<a[^>]*href="\/kontrola"[^>]*>/);
     expect(text(html)).toContain(review.card.waiting(3));
+  });
+
+  it('is clean for the Content-Security-Policy', () => {
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+});
+
+describe('Queue: the akce and jednání section', () => {
+  const html = renderToStaticMarkup(<Queue queue={WITH_AKCE} />);
+
+  it('heads the section „Akce a jednání“, after the points’ Mondays and before the approved ones', () => {
+    expect(headings(html, 2)).toEqual([
+      `Porada 26.${NB}10.`,
+      review.unplaced,
+      review.future.title,
+      review.approved,
+    ]);
+  });
+
+  it('links every item to its page under /akce, an untitled one by „Bez názvu“', () => {
+    const links = [...html.matchAll(/<a[^>]*href="(\/akce\/[^"]*)"[^>]*>(.*?)<\/a>/gs)].map((m) => [
+      m[1],
+      text(m[2] ?? ''),
+    ]);
+    expect(links).toEqual([
+      [`/akce/${A}`, 'Lyžařský kurz'],
+      [`/akce/${B}`, 'Porada metodiků'],
+      [`/akce/${C}`, points.untitled],
+    ]);
+  });
+
+  it('writes the kind, the days and the Prague day of the hand-in', () => {
+    const body = text(html);
+    expect(body).toContain(cs.future.kind.akce);
+    expect(body).toContain(cs.future.kind.jednani);
+    expect(body).toContain('10.–12. 11. 2026');
+    expect(body).toContain(review.submitted(`21.${NB}10.`));
+  });
+
+  it('marks an approved akce its author changed, and only that one', () => {
+    expect(text(html).split(review.future.revised)).toHaveLength(2);
+  });
+
+  it('is left out when no item waits', () => {
+    const none = renderToStaticMarkup(<Queue queue={FULL} />);
+    expect(headings(none, 2)).not.toContain(review.future.title);
+  });
+
+  it('does not say nothing waits while only akce wait', () => {
+    const only = renderToStaticMarkup(
+      <Queue queue={{ ...WITH_AKCE, mondays: [], approved: [] }} />,
+    );
+    expect(text(only)).not.toContain(review.empty);
+    expect(headings(only, 2)).toEqual([review.future.title]);
+  });
+
+  it('says nothing waits only when neither points nor akce do', () => {
+    const empty = renderToStaticMarkup(
+      <Queue
+        queue={{ mondays: [], approved: [], more: false, future: { items: [], more: false } }}
+      />,
+    );
+    expect(text(empty)).toContain(review.empty);
+  });
+
+  it('says the section is cut short only when more items wait than it shows', () => {
+    const capped = review.future.capped(QUEUE_LIMIT);
+    expect(text(html)).not.toContain(capped);
+    const more = renderToStaticMarkup(
+      <Queue queue={{ ...WITH_AKCE, future: { ...WITH_AKCE.future, more: true } }} />,
+    );
+    expect(text(more)).toContain(capped);
   });
 
   it('is clean for the Content-Security-Policy', () => {

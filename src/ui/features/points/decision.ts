@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { decidePointInput, decidePointOutput, ServerAction } from '@/contracts';
 import type { ReviewDecision } from '@/domain/review';
 import { review } from '@/ui/copy';
-import { choiceOf, textOf, type FormSpec, type FormState } from '@/ui/form';
+import { choiceOf, textOf, type FormSpec } from '@/ui/form';
 
 export type DecidePointAction = ServerAction<
   z.input<typeof decidePointInput>,
@@ -75,23 +75,4 @@ export const barClass = (noted: Noted | null): string =>
 export function afterDecision(press: Press, next: string | null): string | null {
   if (press !== 'approve-next') return null;
   return next === null ? '/kontrola' : `/kontrola/${next}`;
-}
-
-/** A quick phrase added to the note: alone in an empty note, after a space otherwise. */
-export function withPhrase(note: string, phrase: string): string {
-  const kept = note.trimEnd();
-  return kept.trim() === '' ? phrase : `${kept} ${phrase}`;
-}
-
-/** The note's length as the server counts it: trimmed, in UTF-16 units (POINT_LIMITS). */
-export const noteLength = (note: string): number => note.trim().length;
-
-/**
- * The answer as the form shows it. A refusal means the point moved out of the viewer's reach (a
- * role changed, the point went elsewhere), so it reads as the point being gone, with the reload
- * the not-found problem offers; a conflict keeps its own text and reload.
- */
-export function shownState(state: FormState): FormState {
-  if (state.problem?.code !== 'forbidden') return state;
-  return { ...state, problem: { code: 'not-found' } };
 }

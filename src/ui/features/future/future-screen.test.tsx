@@ -8,17 +8,27 @@ import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import type { FutureContentWire } from './edit';
 import { FutureScreen, type FutureScreenItem } from './FutureScreen';
+import type { FutureReviewModel } from './review-calls';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => undefined, replace: () => undefined }),
   usePathname: () => '/akce/x',
   useSearchParams: () => new URLSearchParams(),
 }));
+// Hydrated, so the submit buttons render as the page shows them.
+vi.mock('@/ui/form/use-hydrated', () => ({ useHydrated: () => true }));
 
-const { future, points, autosave } = cs;
+const { future, points, autosave, review } = cs;
 const ID = '0b0c1d2e-3f40-4152-8364-758697a8b9ca';
 const never = () => Promise.reject(new Error('not called while rendering'));
-const ACTIONS = { saveFuture: never, submitFuture: never, getFuture: never, retractFuture: never };
+const ACTIONS = {
+  saveFuture: never,
+  submitFuture: never,
+  getFuture: never,
+  retractFuture: never,
+  decideFuture: never,
+  cancelFuture: never,
+};
 
 const content = (over: Partial<FutureContentWire> = {}): FutureContentWire => ({
   title: 'Lyžařský kurz',
@@ -50,6 +60,7 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
   version: 3,
   canRetract: false,
   returnNote: null,
+  review: null,
   view: {
     title: 'Lyžařský kurz',
     startDate: '2026-11-10',
@@ -195,5 +206,66 @@ describe('the read view', () => {
 describe('copy', () => {
   it('keeps the shared labels of a point', () => {
     expect(render()).toContain(points.facts.eventDate);
+  });
+});
+
+describe('the reviewer’s side', () => {
+  const all: FutureReviewModel = {
+    decisions: ['approve', 'return', 'reject'],
+    othersApprove: false,
+    canCancel: false,
+  };
+  const cancelOnly: FutureReviewModel = { decisions: [], othersApprove: false, canCancel: true };
+
+  it('puts the decision bar under the read view of a handed-in item, before the way back', () => {
+    const html = render({ state: 'submitted', editor: null, review: { ...all } });
+    expect(buttons(html)).toEqual([
+      review.decision.approve,
+      review.decision.return,
+      review.decision.reject,
+    ]);
+    expect(html.indexOf(review.decision.label)).toBeLessThan(html.indexOf('href="/akce"'));
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('offers a reviewer the return, the reject and the cancel on an approved akce', () => {
+    const html = render({
+      state: 'approved',
+      editor: null,
+      review: { decisions: ['return', 'reject'], othersApprove: false, canCancel: true },
+    });
+    expect(buttons(html)).toEqual([
+      review.decision.return,
+      review.decision.reject,
+      future.review.cancel.button,
+    ]);
+  });
+
+  it('puts the cancel after the revise editor of the author of an approved akce', () => {
+    const html = render({ state: 'approved', review: { ...cancelOnly } });
+    expect(html.indexOf(future.editor.revise)).toBeGreaterThan(-1);
+    expect(html.indexOf(future.review.cancel.button)).toBeGreaterThan(
+      html.indexOf(future.editor.revise),
+    );
+    expect(html).not.toContain(review.decision.label);
+    expect(html).toContain(future.review.cancel.confirm);
+  });
+
+  it('shows no bar and no cancel where the server sent none', () => {
+    for (const html of [render(), render({ state: 'approved', editor: null })]) {
+      expect(html).not.toContain(review.decision.label);
+      expect(html).not.toContain(future.review.cancel.button);
+    }
+  });
+
+  it('marks a cancelled akce „Zrušeno“ and offers a reviewer nothing to press', () => {
+    const html = render({
+      state: 'cancelled',
+      editor: null,
+      review: { decisions: [], othersApprove: false, canCancel: false },
+    });
+    expect(html).toContain(future.state.cancelled);
+    expect(buttons(html)).toEqual([]);
+    expect(html).not.toContain('<form');
   });
 });

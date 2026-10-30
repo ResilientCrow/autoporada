@@ -25,6 +25,14 @@ export const review = {
   empty: 'Ve frontě už nic nečeká.',
   /** More points wait than the queue lists; `n` is its limit. */
   capped: (n: number) => `Zobrazeno je jen ${n}\u00a0nejstarších bodů.`,
+  /** The akce and jednání section of the queue (design section 12). */
+  future: {
+    title: 'Akce a\u00A0jednání',
+    /** An approved akce its author changed: it waits for a new decision. */
+    revised: 'Změna schválené akce',
+    /** More items wait than the section lists; `n` is its limit. */
+    capped: (n: number) => `Zobrazeno je jen ${n}\u00A0nejstarších položek.`,
+  },
   /** The decision bar under a point (design section 10). */
   decision: {
     label: 'Rozhodnutí kontroly',

@@ -56,23 +56,58 @@ describe('queuePage', () => {
     expect(runRegistered).not.toHaveBeenCalled();
   });
 
-  it('gives the queue as the use case sent it, asked for as the viewer with no input', async () => {
+  const FUTURE = {
+    items: [
+      {
+        id: ID,
+        kind: 'akce',
+        title: 'Lyžák',
+        startDate: '2026-11-10',
+        endDate: null,
+        submittedAt: '2026-10-20T08:00:00.000Z',
+        revised: true,
+      },
+    ],
+    more: false,
+  };
+  /** Answers each use case the queue page asks for by its own result. */
+  const serve = (answers: { points?: unknown; future?: unknown }) =>
+    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
+      useCase.name === 'future.queue' ? answers.future : answers.points,
+    );
+
+  it('gives the points queue with the akce section, both asked for as the viewer with no input', async () => {
     as('reviewer');
-    runRegistered.mockResolvedValue({ ok: true, value: QUEUE });
-    expect(await queuePage()).toEqual(QUEUE);
-    expect(asked()).toEqual([['points.queue', {}]]);
+    serve({ points: { ok: true, value: QUEUE }, future: { ok: true, value: FUTURE } });
+    expect(await queuePage()).toEqual({ ...QUEUE, future: FUTURE });
+    expect(asked().sort()).toEqual([
+      ['future.queue', {}],
+      ['points.queue', {}],
+    ]);
   });
 
-  it('is null when the use case refuses the viewer', async () => {
+  it.each([
+    ['points', { points: { ok: false, error: { code: 'forbidden' } } }],
+    ['akce', { future: { ok: false, error: { code: 'forbidden' } } }],
+  ] as const)('is null when the use case of the %s refuses the viewer', async (_name, refused) => {
     as('submitter');
-    runRegistered.mockResolvedValue({ ok: false, error: { code: 'forbidden' } });
+    serve({
+      points: { ok: true, value: QUEUE },
+      future: { ok: true, value: FUTURE },
+      ...refused,
+    });
     expect(await queuePage()).toBeNull();
   });
 
   it('fails loudly on any other failure', async () => {
     as('reviewer');
-    runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
+    serve({ points: { ok: false, error: { code: 'unavailable' } } });
     await expect(queuePage()).rejects.toThrow('points.queue: unavailable');
+    serve({
+      points: { ok: true, value: QUEUE },
+      future: { ok: false, error: { code: 'unavailable' } },
+    });
+    await expect(queuePage()).rejects.toThrow('future.queue: unavailable');
   });
 });
 

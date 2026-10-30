@@ -150,6 +150,7 @@ describe('futurePage', () => {
       isAuthor: true,
       editable: true,
       canRetract: false,
+      review: null,
       returnNote: null,
       editor: {
         version: 3,
@@ -298,6 +299,83 @@ describe('futurePage: the retract', () => {
     serve({ get: { ok: true, value: loaded({ state, isAuthor, editable: false }) } });
     expect((await futurePage(ID))?.canRetract).toBe(state === 'submitted' && isAuthor);
   });
+});
+
+describe('futurePage: the review bar', () => {
+  const as = (role: string) =>
+    resolvePrincipal.mockResolvedValue({
+      kind: 'user',
+      actor: { id: 'u1', role, status: 'active', isStudent: false },
+    });
+  const bar = async (state: string, isAuthor: boolean, kind = 'akce') => {
+    serve({ get: { ok: true, value: loaded({ state, isAuthor, kind, editable: false }) } });
+    return (await futurePage(ID))?.review;
+  };
+
+  it('offers a reviewer all three decisions on a handed-in item that is not theirs', async () => {
+    as('reviewer');
+    expect(await bar('submitted', false)).toEqual({
+      decisions: ['approve', 'return', 'reject'],
+      othersApprove: false,
+      canCancel: false,
+    });
+  });
+
+  it('takes „Schválit“ from a reviewer’s own item and says someone else approves it', async () => {
+    as('reviewer');
+    expect(await bar('submitted', true)).toEqual({
+      decisions: ['return', 'reject'],
+      othersApprove: true,
+      canCancel: false,
+    });
+  });
+
+  it('lets the headmaster approve their own item', async () => {
+    as('headmaster');
+    expect((await bar('submitted', true))?.decisions).toEqual(['approve', 'return', 'reject']);
+  });
+
+  it('offers a reviewer the return, the reject and the cancel of an approved akce', async () => {
+    as('reviewer');
+    expect(await bar('approved', false)).toEqual({
+      decisions: ['return', 'reject'],
+      othersApprove: false,
+      canCancel: true,
+    });
+  });
+
+  it('offers the author of an approved akce the cancel and no decision', async () => {
+    as('submitter');
+    expect(await bar('approved', true)).toEqual({
+      decisions: [],
+      othersApprove: false,
+      canCancel: true,
+    });
+  });
+
+  it('offers nothing to a reader who is neither the author nor a reviewer', async () => {
+    as('submitter');
+    expect(await bar('approved', false)).toBeNull();
+    expect(await bar('submitted', false)).toBeNull();
+  });
+
+  it('offers the author of a draft nothing', async () => {
+    as('submitter');
+    expect(await bar('draft', true)).toBeNull();
+  });
+
+  // The bar stays for a reviewer, so what they just decided can still be said into it.
+  it.each(['draft', 'returned', 'rejected', 'withdrawn', 'cancelled'] as const)(
+    'keeps an empty bar for a reviewer on a %s item',
+    async (state) => {
+      as('reviewer');
+      expect(await bar(state, false)).toEqual({
+        decisions: [],
+        othersApprove: false,
+        canCancel: false,
+      });
+    },
+  );
 });
 
 describe('newFuturePage', () => {

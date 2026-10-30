@@ -8,6 +8,8 @@ import { instantToWallClock, parseIsoDate } from '@/domain/time';
 import { points, review } from '@/ui/copy';
 import { SlantLabel } from '@/ui/kit';
 
+import { QueueFuture, type QueueFutureModel } from './QueueFuture';
+
 /** A handed-in point as the queue lists it; dates are ISO, the page writes them out. */
 interface QueueRow {
   readonly id: string;
@@ -29,6 +31,8 @@ interface QueueModel {
   readonly approved: readonly (QueueRow & { readonly monday: string | null })[];
   /** More points wait than the queue lists. */
   readonly more: boolean;
+  /** The handed-in akce and jednání, which have a section of their own. */
+  readonly future: QueueFutureModel;
 }
 
 const dayMonth = (iso: string) => formatDayMonth(parseIsoDate(iso));
@@ -73,17 +77,19 @@ function Monday({ monday, kinds }: QueueModel['mondays'][number]) {
 
 /**
  * „Kontrola“ (design section 10): the handed-in points by the porada they go to, then by kind,
- * the oldest hand-in first; the approved ones still waiting for a porada apart, below.
+ * the oldest hand-in first; the handed-in akce and jednání in a section of their own (design
+ * section 12); the approved points still waiting for a porada apart, below.
  */
 export function Queue({ queue }: { readonly queue: QueueModel }) {
   return (
     <div className="space-y-4">
       <SlantLabel level={1}>{review.title}</SlantLabel>
       {queue.more ? <p>{review.capped(QUEUE_LIMIT)}</p> : null}
-      {queue.mondays.length === 0 ? <p>{review.empty}</p> : null}
+      {queue.mondays.length === 0 && queue.future.items.length === 0 ? <p>{review.empty}</p> : null}
       {queue.mondays.map((group) => (
         <Monday key={String(group.monday)} {...group} />
       ))}
+      <QueueFuture future={queue.future} />
       {queue.approved.length === 0 ? null : (
         <section className="space-y-3">
           <h2 className="text-xl">{review.approved}</h2>

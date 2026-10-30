@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { FieldIssues } from '@/contracts';
 import { cs } from '@/ui/copy';
-import { Form, type FormState, type Problem } from '@/ui/form';
+import { Form, refusalAsGone, type FormState, type Problem } from '@/ui/form';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
@@ -13,7 +13,6 @@ import {
   barClass,
   DECISION_FORM_ID,
   DECISION_SPEC,
-  shownState,
   type DecisionBarModel,
 } from './decision';
 import { DecisionChoices } from './DecisionChoices';
@@ -117,7 +116,7 @@ const state = (over: Partial<FormState> = {}): FormState => ({
 });
 const inForm = (children: ReactNode, form: FormState = state()) =>
   renderToStaticMarkup(
-    <Form id={DECISION_FORM_ID} spec={DECISION_SPEC} state={shownState(form)}>
+    <Form id={DECISION_FORM_ID} spec={DECISION_SPEC} state={refusalAsGone(form)}>
       {children}
     </Form>,
   );

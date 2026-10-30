@@ -115,7 +115,7 @@ describe('inventory of entry points', () => {
     });
   });
 
-  it('lets the akce submit and retract refresh the page, and the create and the save count as the points’ do', async () => {
+  it('lets the akce submit, retract, decision and cancel refresh the page, and the create and the save count as the points’ do', async () => {
     const found: Record<string, unknown> = {};
     for (const file of ACTION_MODULES) {
       for (const value of Object.values(await exportsOf(file))) {
@@ -130,6 +130,8 @@ describe('inventory of entry points', () => {
       'future.get': ['autosave', 'page'],
       'future.submit': ['submission', 'page'],
       'future.retract': ['submission', 'page'],
+      'future.decide': ['admin', 'page'],
+      'future.cancel': ['admin', 'page'],
     });
   });
 

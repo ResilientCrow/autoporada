@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
-import { getPoint, queuePoints } from '@/application/use-cases';
-import type { queuePointsOutput } from '@/contracts';
+import { getPoint, queueFuture, queuePoints } from '@/application/use-cases';
+import type { queueFutureOutput, queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
 import type { TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
@@ -18,8 +18,13 @@ import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
 import { recentsOf } from './recents';
 import { getViewer, requestId } from './viewer';
 
-/** „Kontrola“: the queue as `points.queue` answers; the page writes the dates out. */
-export type QueuePageModel = z.output<typeof queuePointsOutput>;
+/**
+ * „Kontrola“: the queue as `points.queue` answers, with the handed-in akce and jednání as
+ * `future.queue` answers; the page writes the dates out.
+ */
+export type QueuePageModel = z.output<typeof queuePointsOutput> & {
+  readonly future: z.output<typeof queueFutureOutput>;
+};
 
 /** What the decision bar may offer this viewer, worked out here so the page only renders it. */
 interface ReviewBarModel {
@@ -62,14 +67,15 @@ export interface ReviewPointPageModel extends PointViewModel {
 export async function queuePage(): Promise<QueuePageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
-  return orNotFound(
-    'points.queue',
-    await runRegistered(getContainer(), queuePoints, {
-      principal: viewer,
-      requestId: await requestId(),
-      input: {},
-    }),
-  );
+  const ask = { principal: viewer, requestId: await requestId(), input: {} };
+  // Independent reads behind the same gate: one refusal is the other's.
+  const [points, future] = await Promise.all([
+    runRegistered(getContainer(), queuePoints, ask),
+    runRegistered(getContainer(), queueFuture, ask),
+  ]);
+  const queue = orNotFound('points.queue', points);
+  const akce = orNotFound('future.queue', future);
+  return queue && akce && { ...queue, future: akce };
 }
 
 /** The bar's choices for this actor; `points.get` names no author, only whether it is the viewer. */

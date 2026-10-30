@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { FormState } from '@/ui/form';
-
-import {
-  afterDecision,
-  barChoices,
-  barClass,
-  decidedEvent,
-  decideInput,
-  noteLength,
-  shownState,
-  withPhrase,
-} from './decision';
+import { afterDecision, barChoices, barClass, decidedEvent, decideInput } from './decision';
 
 const ID = '0b0c1d2e-3f40-4152-8364-758697a8b9ca';
 const NEXT = '1b0c1d2e-3f40-4152-8364-758697a8b9cb';
@@ -124,45 +113,6 @@ describe('where the bar sits', () => {
   it('keeps the submit bar’s marker and look either way', () => {
     for (const noted of [null, 'return'] as const) {
       expect(barClass(noted)).toMatch(/^submit-bar border-t-2 border-ink bg-light py-3/);
-    }
-  });
-});
-
-describe('the note', () => {
-  it('takes a quick phrase as it is, or after what is written', () => {
-    expect(withPhrase('', 'Zkraťte prosím text.')).toBe('Zkraťte prosím text.');
-    expect(withPhrase(' \n', 'Zkraťte prosím text.')).toBe('Zkraťte prosím text.');
-    expect(withPhrase('Díky. ', 'Zkraťte prosím text.')).toBe('Díky. Zkraťte prosím text.');
-  });
-
-  it('counts what the server will count: the trimmed text in UTF-16 units', () => {
-    expect(noteLength('  ab  ')).toBe(2);
-    expect(noteLength('😀')).toBe(2);
-  });
-});
-
-describe('what the form shows of an answer', () => {
-  const state = (problem: FormState['problem']): FormState => ({
-    issues: null,
-    problem,
-    attempt: 1,
-    submitting: null,
-    onSubmit: () => undefined,
-  });
-
-  it('reads a refusal as the point being gone, with its reload', () => {
-    expect(shownState(state({ code: 'forbidden' })).problem).toEqual({ code: 'not-found' });
-  });
-
-  it('keeps every other answer as it came', () => {
-    for (const problem of [
-      { code: 'conflict' },
-      { code: 'not-found' },
-      { code: 'busy' },
-      { code: 'network' },
-      null,
-    ] as const) {
-      expect(shownState(state(problem)).problem).toEqual(problem);
     }
   });
 });

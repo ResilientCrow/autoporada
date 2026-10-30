@@ -11,6 +11,7 @@ import { instantToWallClock, type CalDate } from '@/domain/time';
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
+import { futureBarOf, type FutureBarModel } from './future-bar';
 import { orNotFound } from './not-found';
 import { first, type SearchParams } from './params';
 import { recentsOf } from './recents';
@@ -95,6 +96,8 @@ export interface FuturePageModel {
   readonly view: z.output<typeof getFutureOutput>['view'];
   /** The author may take a submitted item back („Stáhnout“). */
   readonly canRetract: boolean;
+  /** The reviewer's decisions and the cancel the viewer may make; null when there are none. */
+  readonly review: FutureBarModel | null;
   /** What the reviewer wrote when they returned the item: only while it stands returned, else null. */
   readonly returnNote: string | null;
   /** Only for the author of a draft, returned or approved item: what the editor opens with. */
@@ -144,6 +147,7 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
         item: { isAuthor, state, kind },
         event: 'retract',
       }),
+    review: futureBarOf(viewer.actor, { isAuthor, state, kind }),
     // The timeline is newest first: the latest return is the one the author answers.
     returnNote:
       state === 'returned' ? (timeline.find((e) => e.event === 'return')?.note ?? null) : null,
