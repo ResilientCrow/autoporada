@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import type { TitleGender } from '@/domain/cs';
 import { POINT_LIMITS, type BulletSpec } from '@/domain/report';
 
 /** A bullet's key: a stable slug that a draft's bullet copies from its type. */
@@ -27,9 +28,61 @@ export const defaultBulletsSchema = z
   .max(POINT_LIMITS.bullets)
   .refine(uniqueKeys, { message: 'duplicate-key' });
 
-/** The chooser's list: no input yet (the headmaster's `includeInactive` comes with the type admin). */
-export const listPointTypesInput = z.strictObject({});
+const TITLE_GENDERS = ['m', 'f', 'n', 'pl', 'npl'] as const satisfies readonly TitleGender[];
+
+/**
+ * The type lists. The chooser sends nothing; the headmaster's admin sends `includeInactive` and
+ * gets every type with what the form edits (the gate differs: `point.create` or `pointTypes.manage`).
+ */
+export const listPointTypesInput = z.strictObject({ includeInactive: z.boolean().optional() });
 export const listPointTypesOutput = z.object({
-  /** The active types in `position` order. */
-  types: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  /** In `position` order; the active ones only, unless `includeInactive`. */
+  types: z.array(
+    z.object({
+      id: z.uuid(),
+      name: z.string(),
+      /** Only for `includeInactive`. */
+      detail: z
+        .object({
+          titleGender: z.enum(TITLE_GENDERS).nullable(),
+          defaultBullets: defaultBulletsSchema,
+          active: z.boolean(),
+          locked: z.boolean(),
+          position: z.number().int(),
+          version: z.number().int().positive(),
+        })
+        .optional(),
+    }),
+  ),
+});
+
+/** At most one bullet names the organisers of the opening sentence. */
+const atMostOneOrganisers = (bullets: readonly BulletSpec[]) =>
+  bullets.filter((b) => b.role === 'organisers').length <= 1;
+
+/**
+ * „Uložit“ of the type admin: the whole desired type. Without `id` a new type is made (after the
+ * last one unless `position` says otherwise); with it `expectedVersion` is the version the form saw.
+ */
+export const savePointTypeInput = z
+  .strictObject({
+    id: z.uuid().optional(),
+    expectedVersion: z.number().int().positive().optional(),
+    name: z.string().trim().min(1).max(POINT_LIMITS.typeName),
+    titleGender: z.enum(TITLE_GENDERS).nullable(),
+    defaultBullets: defaultBulletsSchema.refine(atMostOneOrganisers, { message: 'organisers' }),
+    active: z.boolean(),
+    position: z.number().int().min(1).max(999).optional(),
+  })
+  .superRefine((input, ctx) => {
+    const missing = input.id === undefined ? 'id' : 'expectedVersion';
+    if ((input.id === undefined) !== (input.expectedVersion === undefined)) {
+      ctx.addIssue({ code: 'custom', path: [missing], params: { code: 'required' } });
+    }
+  });
+export const savePointTypeOutput = z.object({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+  /** False when the type already had these values: nothing was written. */
+  changed: z.boolean(),
 });

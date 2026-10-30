@@ -61,11 +61,81 @@ describe('pointTypes.list', () => {
     });
   });
 
-  it('refuses any input', async () => {
+  it('refuses a key it does not know', async () => {
     const author = await world.seed.user({ role: 'submitter' });
-    expect(await list(author, { includeInactive: true })).toMatchObject({
+    expect(await list(author, { everything: true })).toMatchObject({
       ok: false,
       error: { code: 'invalid-input' },
+    });
+  });
+
+  describe('with the retired types (includeInactive)', () => {
+    const BULLET = { key: 'guests', label: 'Hosté', kind: 'people', required: false } as const;
+
+    it('gives the headmaster every type in position order, with what the admin edits', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const off = await world.seed.pointType({
+        name: 'Soutěž',
+        position: 2,
+        active: false,
+        titleGender: 'f',
+        defaultBullets: [BULLET],
+      });
+      const other = await world.seed.pointType({
+        name: 'Jiné',
+        position: 1,
+        locked: true,
+      });
+      expect(await list(head, { includeInactive: true })).toEqual({
+        ok: true,
+        value: {
+          types: [
+            {
+              id: other.id,
+              name: 'Jiné',
+              detail: {
+                titleGender: null,
+                defaultBullets: [],
+                active: true,
+                locked: true,
+                position: 1,
+                version: 1,
+              },
+            },
+            {
+              id: off.id,
+              name: 'Soutěž',
+              detail: {
+                titleGender: 'f',
+                defaultBullets: [BULLET],
+                active: false,
+                locked: false,
+                position: 2,
+                version: 1,
+              },
+            },
+          ],
+        },
+      });
+    });
+
+    it.each(['submitter', 'reviewer'] as const)('refuses a %s', async (role) => {
+      await world.seed.pointType({ name: 'Seminář', position: 1 });
+      const user = await world.seed.user({ role });
+      expect(await list(user, { includeInactive: true })).toEqual({
+        ok: false,
+        error: { code: 'forbidden' },
+      });
+    });
+
+    it('answers the headmaster with includeInactive false like anyone', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const kept = await world.seed.pointType({ name: 'Seminář', position: 1 });
+      await world.seed.pointType({ name: 'Soutěž', position: 2, active: false });
+      expect(await list(head, { includeInactive: false })).toEqual({
+        ok: true,
+        value: { types: [{ id: kept.id, name: 'Seminář' }] },
+      });
     });
   });
 

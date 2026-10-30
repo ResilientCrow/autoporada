@@ -8,6 +8,7 @@ export const KNOWN_CONSTRAINTS = [
   'users_active_headmaster',
   'users_student_role',
   'access_requests_one_pending',
+  'point_types_name_key',
 ] as const;
 export type KnownConstraint = (typeof KNOWN_CONSTRAINTS)[number];
 

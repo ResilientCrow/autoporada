@@ -2,7 +2,8 @@
 export type Json =
   string | number | boolean | null | readonly Json[] | { readonly [key: string]: Json };
 
-export type AuditTargetType = 'user' | 'session' | 'access_request' | 'issue' | 'point';
+export type AuditTargetType =
+  'user' | 'session' | 'access_request' | 'issue' | 'point' | 'point_type';
 
 export interface AuditTarget {
   readonly type: AuditTargetType;

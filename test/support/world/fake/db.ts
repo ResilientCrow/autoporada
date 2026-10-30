@@ -57,7 +57,7 @@ export function createFakeDb(): FakeDb {
       signIns: fakeSignInRepo(tx, ctx),
       sessions: fakeSessionRepo(tx, ctx),
       issues: fakeIssueRepo(tx, ctx),
-      pointTypes: fakePointTypeRepo(tx),
+      pointTypes: fakePointTypeRepo(tx, ctx),
       points: fakePointRepo(tx, ctx),
       pointEvents: fakePointEventRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),

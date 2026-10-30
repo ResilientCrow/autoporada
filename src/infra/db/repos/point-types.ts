@@ -1,7 +1,15 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 
-import { DatabaseFailure, type PointTypeRecord, type PointTypeRepo } from '@/application/ports';
+import {
+  DatabaseFailure,
+  ScopeViolation,
+  StaleVersion,
+  type PointTypeRecord,
+  type PointTypeRepo,
+  type TxContext,
+} from '@/application/ports';
 import { defaultBulletsSchema } from '@/contracts';
+import { can } from '@/domain/policy';
 
 import { pointTypes } from '../schema';
 import type { TxDatabase } from './database';
@@ -28,7 +36,14 @@ function toRecord(row: PointTypeRow): PointTypeRecord {
   return { ...row, defaultBullets: bullets.data };
 }
 
-export function createPointTypeRepo(db: TxDatabase): PointTypeRepo {
+export function createPointTypeRepo(db: TxDatabase, ctx: TxContext): PointTypeRepo {
+  const { principal } = ctx;
+  /** Privileged writes re-check the policy, whatever the use case declared (ADR 0011). */
+  const mayManage = () => {
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'pointTypes.manage' })) {
+      throw new ScopeViolation();
+    }
+  };
   return {
     async list() {
       const rows = await db
@@ -40,6 +55,35 @@ export function createPointTypeRepo(db: TxDatabase): PointTypeRepo {
     async get(id) {
       const [row] = await db.select(TYPE_ROW).from(pointTypes).where(eq(pointTypes.id, id));
       return row ? toRecord(row) : null;
+    },
+    async create(values) {
+      mayManage();
+      const [row] = await db
+        .insert(pointTypes)
+        .values({
+          ...values,
+          defaultBullets: [...values.defaultBullets],
+          createdAt: ctx.now,
+          updatedAt: ctx.now,
+        })
+        .returning(TYPE_ROW);
+      if (!row) throw new Error('pointTypes.create: the insert returned no row');
+      return toRecord(row);
+    },
+    async update(id, expectedVersion, values) {
+      mayManage();
+      const [row] = await db
+        .update(pointTypes)
+        .set({
+          ...values,
+          defaultBullets: [...values.defaultBullets],
+          updatedAt: ctx.now,
+          version: sql`${pointTypes.version} + 1`,
+        })
+        .where(and(eq(pointTypes.id, id), eq(pointTypes.version, expectedVersion)))
+        .returning(TYPE_ROW);
+      if (!row) throw new StaleVersion();
+      return toRecord(row);
     },
   };
 }

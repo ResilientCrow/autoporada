@@ -1,7 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
-import { system, type PointTypeRecord, type Tx } from '@/application/ports';
+import {
+  ConstraintViolation,
+  DatabaseFailure,
+  ScopeViolation,
+  StaleVersion,
+  system,
+  type PointTypeRecord,
+  type PointTypeValues,
+  type Principal,
+  type Tx,
+} from '@/application/ports';
 
+import { UnauditedWrite } from '../support/world/fake/oracle';
 import { setupWorld } from '../support/world';
 
 const world = setupWorld();
@@ -82,5 +93,130 @@ describe('PointTypeRepo (port contract)', () => {
       const types = await world.tx(world.as(user), (tx) => tx.pointTypes.list(), 'read');
       expect(types, role).toEqual([seeded]);
     }
+  });
+});
+
+const VALUES: PointTypeValues = {
+  name: 'Beseda',
+  titleGender: 'f',
+  defaultBullets: [ORGANISERS, RESULTS],
+  active: true,
+  position: 7,
+};
+
+/** Writes as `by` and names the row in an audit event, as a use case would. */
+const write = (work: (tx: Tx) => Promise<PointTypeRecord>, by: Principal = cli) =>
+  world.tx(by, async (tx) => {
+    const type = await work(tx);
+    await tx.audit.record({
+      action: 'point_type.changed',
+      target: { type: 'point_type', id: type.id },
+    });
+    return type;
+  });
+const create = (values = VALUES, by: Principal = cli) =>
+  write((tx) => tx.pointTypes.create(values), by);
+const update = (
+  type: PointTypeRecord,
+  values: PointTypeValues,
+  version = type.version,
+  by: Principal = cli,
+) => write((tx) => tx.pointTypes.update(type.id, version, values), by);
+
+describe('PointTypeRepo writes (port contract)', () => {
+  it('creates an unlocked type at version 1, which the list and get then show', async () => {
+    const created = await create();
+    expect(created).toEqual({ id: created.id, ...VALUES, locked: false, version: 1 });
+    expect(await read((tx) => tx.pointTypes.get(created.id))).toEqual(created);
+    expect(await read((tx) => tx.pointTypes.list())).toEqual([created]);
+  });
+
+  it('refuses a second type with the same name, by the constraint name', async () => {
+    await create();
+    const failure = await create({ ...VALUES, position: 8 }).catch((error: unknown) => error);
+    expect(failure).toEqual(new ConstraintViolation('point_types_name_key'));
+    expect(await read((tx) => tx.pointTypes.list())).toHaveLength(1);
+  });
+
+  it('changes every value against the expected version and raises it by one', async () => {
+    const created = await create();
+    const changed = await update(created, {
+      name: 'Workshop',
+      titleGender: null,
+      defaultBullets: [],
+      active: false,
+      position: 2,
+    });
+    expect(changed).toEqual({
+      id: created.id,
+      name: 'Workshop',
+      titleGender: null,
+      defaultBullets: [],
+      active: false,
+      locked: false,
+      position: 2,
+      version: 2,
+    });
+    expect(await read((tx) => tx.pointTypes.get(created.id))).toEqual(changed);
+  });
+
+  it('keeps a type locked whatever the update says', async () => {
+    const other = await world.seed.pointType({ name: 'Jiné', position: 9, locked: true });
+    const changed = await update(other, { ...VALUES, name: 'Ostatní' });
+    expect(changed).toMatchObject({ name: 'Ostatní', locked: true, version: 2 });
+  });
+
+  it('refuses an update on a stale version or an unknown id', async () => {
+    const created = await create();
+    await update(created, { ...VALUES, position: 8 });
+    await expect(update(created, { ...VALUES, position: 9 })).rejects.toBeInstanceOf(StaleVersion);
+    await expect(
+      write((tx) => tx.pointTypes.update('00000000-0000-7000-8000-999999999999', 1, VALUES)),
+    ).rejects.toBeInstanceOf(StaleVersion);
+    expect(await read((tx) => tx.pointTypes.get(created.id))).toMatchObject({ position: 8 });
+  });
+
+  it("refuses a rename onto another type's name, by the constraint name", async () => {
+    await create();
+    const second = await create({ ...VALUES, name: 'Workshop' });
+    const failure = await update(second, VALUES).catch((error: unknown) => error);
+    expect(failure).toEqual(new ConstraintViolation('point_types_name_key'));
+  });
+
+  it('refuses to switch the locked type off, by the constraint name', async () => {
+    const other = await world.seed.pointType({ name: 'Jiné', position: 9, locked: true });
+    const failure = await update(other, { ...VALUES, name: 'Jiné', active: false }).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toEqual(new DatabaseFailure('db.constraint.point_types_locked_active'));
+  });
+
+  it('lets only someone who may manage the types write them', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const head = await world.seed.user({ role: 'headmaster' });
+    const created = await create(VALUES, world.as(head));
+    for (const user of [author, reviewer]) {
+      await expect(create({ ...VALUES, name: 'Jiný' }, world.as(user))).rejects.toBeInstanceOf(
+        ScopeViolation,
+      );
+      await expect(update(created, VALUES, 1, world.as(user))).rejects.toBeInstanceOf(
+        ScopeViolation,
+      );
+    }
+    expect(await read((tx) => tx.pointTypes.list())).toEqual([created]);
+  });
+
+  it('writes nothing in a read transaction', async () => {
+    await expect(read((tx) => tx.pointTypes.create(VALUES))).rejects.toBeInstanceOf(
+      DatabaseFailure,
+    );
+  });
+});
+
+describe.runIf(inject('world') === 'fake')('point type audit coverage in the fake world', () => {
+  it('fails a commit that wrote a type no audit event names', async () => {
+    const unaudited = world.tx(cli, (tx) => tx.pointTypes.create(VALUES));
+    await expect(unaudited).rejects.toBeInstanceOf(UnauditedWrite);
   });
 });

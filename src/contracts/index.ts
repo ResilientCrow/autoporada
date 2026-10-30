@@ -96,6 +96,8 @@ export {
   defaultBulletsSchema,
   listPointTypesInput,
   listPointTypesOutput,
+  savePointTypeInput,
+  savePointTypeOutput,
 } from './point-type';
 export {
   changeUserAccessInput,

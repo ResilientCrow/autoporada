@@ -5,4 +5,5 @@ export const nav = {
   review: 'Kontrola',
   access: 'Žádost o\u00A0přístup',
   users: 'Uživatelé',
+  pointTypes: 'Typy bodů',
 } as const;

@@ -39,10 +39,19 @@ describe('navFor', () => {
       '/body',
       '/kontrola',
       '/uzivatele',
+      '/nastaveni/typy-bodu',
     ]);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/uzivatele');
     expect(navFor(actor('reviewer')).map((i) => i.href)).not.toContain('/uzivatele');
     expect(navFor(actor('pending')).map((i) => i.href)).not.toContain('/uzivatele');
+  });
+
+  it('shows „Typy bodů“ to a headmaster only', () => {
+    const entry = (who: Actor) => navFor(who).find((i) => i.href === '/nastaveni/typy-bodu');
+    expect(entry(actor('headmaster'))?.label).toBe('Typy bodů');
+    for (const who of [actor('reviewer'), actor('submitter'), actor('pending')]) {
+      expect(entry(who)).toBeUndefined();
+    }
   });
 
   it.each([
@@ -85,7 +94,9 @@ describe('navFor', () => {
 
   it('uses the real routes by default', () => {
     expect(navFor(actor('pending'))).toEqual(
-      NAV.filter((i) => !['/uzivatele', '/body', '/kontrola'].includes(i.href)),
+      NAV.filter(
+        (i) => !['/uzivatele', '/body', '/kontrola', '/nastaveni/typy-bodu'].includes(i.href),
+      ),
     );
   });
 });

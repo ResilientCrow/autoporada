@@ -15,10 +15,26 @@ export interface PointTypeRecord {
   readonly version: number;
 }
 
-/** Point types. Rows are not personal data: every principal may read them. */
+/** What an admin sets on a type; `locked` and the version are not theirs to set. */
+export type PointTypeValues = Pick<
+  PointTypeRecord,
+  'name' | 'titleGender' | 'defaultBullets' | 'active' | 'position'
+>;
+
+/** Point types. Rows are not personal data: every principal may read them; only the headmaster writes. */
 export interface PointTypeRepo {
   /** Every type, inactive ones too, in `position` order. */
   list(): Promise<readonly PointTypeRecord[]>;
   /** The type, or null for an unknown id. */
   get(id: string): Promise<PointTypeRecord | null>;
+  /**
+   * A new, unlocked type at version 1. ConstraintViolation(`point_types_name_key`) for a name in
+   * use; ScopeViolation for a user who may not `pointTypes.manage`.
+   */
+  create(values: PointTypeValues): Promise<PointTypeRecord>;
+  /**
+   * Sets the values against the version the admin saw and raises it by one; `locked` stays.
+   * StaleVersion for another version or an unknown id; the same violations as `create`.
+   */
+  update(id: string, expectedVersion: number, values: PointTypeValues): Promise<PointTypeRecord>;
 }

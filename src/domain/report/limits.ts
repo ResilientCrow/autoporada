@@ -27,6 +27,8 @@ export const POINT_LIMITS = {
   quote: 1500,
   note: 2000,
   bulletLabel: 60,
+  /** A point type's name. */
+  typeName: 60,
   bulletKey: 40,
   /** `givenName` and `familyName` share `name`; `titlesBefore` and `titlesAfter` share `title`. */
   person: PERSON_FIELD_MAX,

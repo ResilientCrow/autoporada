@@ -6,6 +6,7 @@ import { gallery } from './gallery';
 import { issues } from './issues';
 import { nav } from './nav';
 import { people } from './people';
+import { pointTypes } from './pointTypes';
 import { points } from './points';
 import { privacy } from './privacy';
 import { review } from './review';
@@ -31,6 +32,7 @@ export const cs = {
   gallery,
   issues,
   points,
+  pointTypes,
   review,
   autosave,
   people,

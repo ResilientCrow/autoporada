@@ -9,5 +9,6 @@ export {
   submitPoint,
   withdrawPoint,
 } from './points';
+export { savePointType } from './point-types';
 export { decidePoint, reviewEditPoint } from './review';
 export { changeUserAccess } from './users';

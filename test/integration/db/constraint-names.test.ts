@@ -68,4 +68,20 @@ describe('constraint names', () => {
     ).catch((error: unknown) => error);
     expect(failure).toMatchObject({ constraint: 'users_active_headmaster' });
   });
+
+  it('reports the unique name of a point type as point_types_name_key', async () => {
+    const values = {
+      name: 'Beseda',
+      titleGender: null,
+      defaultBullets: [],
+      active: true,
+      position: 1,
+    };
+    await run(cli, (tx) => tx.pointTypes.create(values));
+    const failure = await run(cli, (tx) => tx.pointTypes.create(values)).catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(ConstraintViolation);
+    expect(failure).toMatchObject({ constraint: 'point_types_name_key' });
+  });
 });

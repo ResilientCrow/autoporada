@@ -6,6 +6,7 @@ export { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from '
 export { gallery } from './gallery';
 export { issues } from './issues';
 export { people } from './people';
+export { pointTypes } from './pointTypes';
 export { points } from './points';
 export { review } from './review';
 export { status } from './status';

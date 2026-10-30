@@ -10,5 +10,7 @@ export const RULE_CODES = [
   'request-blocked',
   'draft-cap',
   'point-not-editable',
+  'type-name-taken',
+  'type-locked',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];
