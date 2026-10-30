@@ -11,11 +11,12 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { parsePointJsonb, parsePointPeople, type PointJsonb } from '@/contracts';
-import { parseIsoDate, parseWallTime } from '@/domain/time';
+import { parseIsoDate } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
 import { pointEvents, points, pointTypes } from '../schema';
 import type { TxDatabase } from './database';
+import { dateOrNull, timeOrNull } from './wall-columns';
 
 /** The columns a PointRecord is made of; new columns stay out until named here. */
 export const POINT_ROW = {
@@ -53,11 +54,6 @@ export function parseJsonb(value: { [K in keyof PointJsonb]: unknown }): PointJs
   if (!parsed) throw new DatabaseFailure(PARSE_FAILURE);
   return parsed;
 }
-
-const dateOrNull = (iso: string | null) => (iso === null ? null : parseIsoDate(iso));
-/** PostgreSQL gives `time` as HH:MM:SS; points keep minutes. */
-const timeOrNull = (text: string | null) =>
-  text === null ? null : parseWallTime(text.slice(0, 5));
 
 export function toRecord(row: PointRow): PointRecord {
   const { id, kind, authorId, typeId, state, version, updatedAt, submittedAt } = row;

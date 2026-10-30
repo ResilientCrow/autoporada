@@ -7,12 +7,10 @@ import {
   type TxContext,
 } from '@/application/ports';
 
+import { codePoints, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
 import { pointReadable } from './points';
 import { newId, type FakeState, type FakeTxState } from './state';
-
-/** char_length counts code points, as `[...text]` does. */
-const codePoints = (text: string) => [...text].length;
 
 /**
  * What migration 0015 refuses, in PostgreSQL's order: the CHECKs by name, then
@@ -70,12 +68,9 @@ export function fakePointEventRepo(tx: FakeTxState, ctx: TxContext): PointEventR
     async list(pointId) {
       guard(tx, false);
       if (!unscoped && !inScope(pointId)) return [];
-      return (
-        [...tx.draft.pointEvents.values()]
-          .filter((e) => e.pointId === pointId)
-          // Ties go to the higher id, compared as PostgreSQL compares uuids.
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))
-      );
+      return [...tx.draft.pointEvents.values()]
+        .filter((e) => e.pointId === pointId)
+        .sort(newestFirst);
     },
     async mailFacts(id) {
       guard(tx, false);

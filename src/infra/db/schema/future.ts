@@ -14,9 +14,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import type { FutureEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
-import type { DraftPerson } from '@/domain/report';
-import type { FutureEvent, FutureState, ReportState } from '@/domain/review';
+import type { Responsible } from '@/domain/report';
+import type { FutureState, ReportState } from '@/domain/review';
 
 import { at, atMs, createdAt, id } from './columns';
 import { users } from './identity';
@@ -36,13 +37,6 @@ export const futureState = pgEnum('future_state', [
 ]);
 /** The values of `ReportState` (domain/review); `prompted` is never stored (design §2). */
 export const reportState = pgEnum('report_state', ['none', 'prompted', 'written', 'declined']);
-
-/** Who is behind an akce and in which words: „za … koordinuje …“ (the snapshot's `responsible`). */
-export interface Responsible {
-  readonly verb: 'organizuje' | 'koordinuje' | 'zajišťuje' | 'vede';
-  readonly behalfOf?: string;
-  readonly people: readonly DraftPerson[];
-}
 
 const CAMPUSES = ['smichov', 'radlice', 'na-vidouli', 'jinde'] as const satisfies readonly Campus[];
 const campusList = sql.raw(CAMPUSES.map((campus) => `'${campus}'`).join(','));
@@ -121,7 +115,7 @@ export const futureEvents = pgTable(
     /** Null for a system event. */
     actorId: uuid().references(() => users.id),
     /** A transition of FUTURE_MACHINE, or 'edit' for a reviewer's edit. */
-    event: text().$type<FutureEvent | 'edit'>().notNull(),
+    event: text().$type<FutureEventName>().notNull(),
     fromState: futureState().$type<FutureState>().notNull(),
     toState: futureState().$type<FutureState>().notNull(),
     note: text(),

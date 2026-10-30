@@ -1,6 +1,8 @@
 import type { AccessRequestRepo } from './access-requests';
 import type { AuditPort } from './audit';
 import type { Clock } from './clock';
+import type { FutureEventRepo } from './future-events';
+import type { FutureItemRepo } from './future-items';
 import type { IssueRepo } from './issues';
 import type { JobPort } from './jobs';
 import type { MailLedgerPort } from './mail-ledger';
@@ -42,6 +44,8 @@ export interface Tx {
   readonly pointTypes: PointTypeRepo;
   readonly points: PointRepo;
   readonly pointEvents: PointEventRepo;
+  readonly futureItems: FutureItemRepo;
+  readonly futureEvents: FutureEventRepo;
   readonly audit: AuditPort;
   readonly jobs: JobPort;
   /** The worker's delivery state; refuses every principal but jobs and the CLI. */

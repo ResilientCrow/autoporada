@@ -2,6 +2,8 @@ import {
   type AccessRequestRecord,
   type AuditTarget,
   type EnqueueOptions,
+  type FutureEventRecord,
+  type FutureItemRecord,
   type GateRow,
   type IssueRecord,
   type JobCatalog,
@@ -35,6 +37,10 @@ export interface FakeState {
   readonly points: Map<string, FakePoint>;
   /** point_events, by id. */
   readonly pointEvents: Map<string, PointEventRecord>;
+  /** future_items, by id; the client ref is kept next to the record. */
+  readonly futureItems: Map<string, FakeFutureItem>;
+  /** future_events, by id. */
+  readonly futureEvents: Map<string, FutureEventRecord>;
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
   /** mail_gate's one row, as migration 0009 inserts it. */
@@ -44,6 +50,8 @@ export interface FakeState {
 }
 
 export type FakePoint = PointRecord & { readonly clientRef: string };
+
+export type FakeFutureItem = FutureItemRecord & { readonly clientRef: string };
 
 export interface AuditRow {
   readonly actorId: string | null;
@@ -71,6 +79,8 @@ export const emptyState = (): FakeState => ({
   pointTypes: new Map(),
   points: new Map(),
   pointEvents: new Map(),
+  futureItems: new Map(),
+  futureEvents: new Map(),
   mailLedger: new Map(),
   mailGate: { notBefore: null, code: null },
   nextId: 1,
@@ -81,10 +91,12 @@ export const emptyState = (): FakeState => ({
  * and ledger rows cascade; a request they decided
  * (access_requests_decided_by_users_id_fk), a point event they caused
  * (point_events_actor_id_users_id_fk) or a point they wrote
- * (points_author_id_users_id_fk) refuses it. The checks run in this order
- * because PostgreSQL fires the foreign keys by trigger name, which follows
- * the order drizzle/0015 adds them in: the event's first, so an author who
- * holds both is refused by the event's.
+ * (points_author_id_users_id_fk), a future event they caused
+ * (future_events_actor_id_users_id_fk) or a future item they wrote
+ * (future_items_author_id_users_id_fk) refuses it. The checks run in this
+ * order because PostgreSQL fires the foreign keys by trigger name, which
+ * follows the order drizzle/0015 and 0019 add them in: the event's first, so
+ * an author who holds both is refused by the event's.
  */
 export function eraseFakeUser(state: FakeState, id: string): void {
   const requests = [...state.accessRequests.values()];
@@ -96,6 +108,12 @@ export function eraseFakeUser(state: FakeState, id: string): void {
   }
   if ([...state.points.values()].some((p) => p.authorId === id)) {
     throw refusedBy('points_author_id_users_id_fk');
+  }
+  if ([...state.futureEvents.values()].some((e) => e.actorId === id)) {
+    throw refusedBy('future_events_actor_id_users_id_fk');
+  }
+  if ([...state.futureItems.values()].some((i) => i.authorId === id)) {
+    throw refusedBy('future_items_author_id_users_id_fk');
   }
   for (const r of requests) if (r.userId === id) state.accessRequests.delete(r.id);
   for (const [key, s] of state.sessions) if (s.userId === id) state.sessions.delete(key);

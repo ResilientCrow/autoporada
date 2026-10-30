@@ -2,11 +2,12 @@ import { and, count, eq, sql } from 'drizzle-orm';
 
 import { ScopeViolation, StaleVersion, type PointRepo, type TxContext } from '@/application/ports';
 import type { PointContent } from '@/domain/report';
-import { toIsoDate, toIsoTime, type WallTime } from '@/domain/time';
+import { toIsoDate } from '@/domain/time';
 
 import { points } from '../schema';
 import type { TxDatabase } from './database';
 import { parseJsonb, POINT_ROW, toRecord, visiblePoints } from './points-read';
+import { isoDate, isoTime } from './wall-columns';
 
 /**
  * The class key of the per-author create lock ('PNTC'); the author's id,
@@ -15,9 +16,6 @@ import { parseJsonb, POINT_ROW, toRecord, visiblePoints } from './points-read';
  * authors' creates.
  */
 const CREATE_LOCK = 0x504e_5443;
-
-const isoTime = (t: WallTime | null) => (t === null ? null : toIsoTime(t));
-const isoDate = (d: Parameters<typeof toIsoDate>[0] | null) => (d === null ? null : toIsoDate(d));
 
 /** The content as column values; the jsonb is parsed first, so a bad value never reaches a row. */
 function contentColumns(content: PointContent) {

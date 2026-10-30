@@ -24,6 +24,19 @@ export {
   type KnownConstraint,
 } from './errors';
 export type {
+  FutureEventName,
+  FutureEventRecord,
+  FutureEventRepo,
+  NewFutureEvent,
+} from './future-events';
+export type {
+  FutureContent,
+  FutureItemPatch,
+  FutureItemRecord,
+  FutureItemRepo,
+  NewFutureItem,
+} from './future-items';
+export type {
   AuthorizationRequest,
   IdentityProvider,
   IdpDetail,

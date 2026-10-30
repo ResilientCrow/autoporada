@@ -3,6 +3,8 @@ import { inTransactionScope } from '@/infra/system';
 
 import { fakeAccessRequestRepo } from './access-requests';
 import { fakeAudit, fakeJobs } from './effects';
+import { fakeFutureEventRepo } from './future-events';
+import { fakeFutureItemRepo } from './future-items';
 import { fakeIssueRepo } from './issues';
 import { fakeMailLedger } from './mail-ledger';
 import { checkAuditCoverage } from './oracle';
@@ -60,6 +62,8 @@ export function createFakeDb(): FakeDb {
       pointTypes: fakePointTypeRepo(tx, ctx),
       points: fakePointRepo(tx, ctx),
       pointEvents: fakePointEventRepo(tx, ctx),
+      futureItems: fakeFutureItemRepo(tx, ctx),
+      futureEvents: fakeFutureEventRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),
       jobs: fakeJobs(tx),
       mailLedger: fakeMailLedger(tx, ctx),
