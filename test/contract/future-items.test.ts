@@ -316,6 +316,54 @@ describe('FutureItemRepo (port contract)', () => {
   });
 });
 
+describe('FutureItemRepo responsible', () => {
+  /** Content the contract refuses, as a caller that skipped Zod could hand it over. */
+  const REFUSED: [string, unknown][] = [
+    ['an unknown verb', { verb: 'řídí', people: [] }],
+    ['a stray key', { verb: 'vede', people: [], note: 'x' }],
+    [
+      'a person without a family name',
+      { verb: 'vede', people: [{ salutation: null, givenName: 'Eva' }] },
+    ],
+  ];
+  const withResponsible = (responsible: unknown) =>
+    ({ ...FULL, responsible }) as unknown as FutureContent;
+
+  it.each(REFUSED)('refuses %s before writing, as db.parse.future_items', async (_name, bad) => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const parse = new DatabaseFailure('db.parse.future_items');
+    expect(await failure(create(world.as(author), { content: withResponsible(bad) }))).toEqual(
+      parse,
+    );
+    const { item } = await create(world.as(author), { content: FULL });
+    const refused = update(world.as(author), item, { content: withResponsible(bad) });
+    expect(await failure(refused)).toEqual(parse);
+    expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(item);
+  });
+
+  it('parses before it looks for the clientRef or the version', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const parse = new DatabaseFailure('db.parse.future_items');
+    const clientRef = nextRef();
+    const { item } = await create(world.as(author), { clientRef });
+    const bad = withResponsible(REFUSED[0]![1]);
+    expect(await failure(create(world.as(author), { clientRef, content: bad }))).toEqual(parse);
+    const stale = update(world.as(author), item, { content: bad }, item.version + 1);
+    expect(await failure(stale)).toEqual(parse);
+  });
+
+  it('keeps what the contract accepts, a null and a bare verb included', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const bare = { verb: 'vede', people: [] } as const;
+    const { item } = await create(world.as(author), { content: { ...FULL, responsible: bare } });
+    expect(item.content.responsible).toEqual(bare);
+    const cleared = await update(world.as(author), item, {
+      content: { ...FULL, responsible: null },
+    });
+    expect(cleared.content.responsible).toBeNull();
+  });
+});
+
 describe('FutureItemRepo scope', () => {
   /** Items of one author in every standing that matters, made through the port. */
   const items = async (author: UserRecord) => {
@@ -339,13 +387,19 @@ describe('FutureItemRepo scope', () => {
   };
   type Standing = keyof Awaited<ReturnType<typeof items>>;
 
-  const seen = async (by: Principal, all: Record<Standing, FutureItemRecord>) => {
+  /** What `by` reads; the author and the system also lock what they read, nobody else does (F3). */
+  const seen = async (
+    by: Principal,
+    all: Record<Standing, FutureItemRecord>,
+    authorId?: string,
+  ) => {
     const visible: string[] = [];
     const listed = await read(by, (tx) => tx.futureItems.list(50));
+    const writes = by.kind === 'system' || by.actor.id === authorId;
     for (const [standing, item] of Object.entries(all)) {
       const got = await read(by, (tx) => tx.futureItems.get(item.id));
       const locked = await world.tx(by, (tx) => tx.futureItems.loadForWrite(item.id));
-      expect(locked, standing).toEqual(got);
+      expect(locked, standing).toEqual(writes ? got : null);
       expect(
         listed.some((i) => i.id === item.id),
         standing,
@@ -361,7 +415,7 @@ describe('FutureItemRepo scope', () => {
   it('shows the author everything and the system everything', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const all = await items(author);
-    expect(await seen(world.as(author), all)).toEqual(Object.keys(all));
+    expect(await seen(world.as(author), all, author.id)).toEqual(Object.keys(all));
     expect(await seen(cli, all)).toEqual(Object.keys(all));
   });
 
@@ -408,6 +462,38 @@ describe('FutureItemRepo scope', () => {
     const reviewer = await world.seed.user({ role: 'reviewer' });
     const refused = update(world.as(reviewer), draft, { state: 'withdrawn' });
     expect(await failure(refused)).toBeInstanceOf(StaleVersion);
+  });
+
+  /**
+   * The write scope is the author's alone (the system aside): what a colleague or a reviewer
+   * reads is not theirs to lock or move. Row 55 gives the reviewers a path of their own for
+   * the decisions; until then the use cases' author checks have a second line behind them.
+   */
+  it('lets only the author lock and update an item, whoever may read it', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const { submitted, approvedAkce } = await items(author);
+    const teacher = await world.seed.user({ role: 'submitter' });
+    const student = await world.seed.user({ role: 'submitter', isStudent: true });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const headmaster = await world.seed.user({ role: 'headmaster' });
+    const readers: [string, UserRecord, FutureItemRecord][] = [
+      ['teacher', teacher, approvedAkce],
+      ['student', student, approvedAkce],
+      ['reviewer', reviewer, submitted],
+      ['headmaster', headmaster, submitted],
+    ];
+    for (const [who, reader, item] of readers) {
+      const by = world.as(reader);
+      expect(await read(by, (tx) => tx.futureItems.get(item.id)), who).toEqual(item);
+      expect(await world.tx(by, (tx) => tx.futureItems.loadForWrite(item.id)), who).toBeNull();
+      const refused = update(by, item, { state: 'withdrawn' });
+      expect(await failure(refused), who).toBeInstanceOf(StaleVersion);
+      expect(await read(cli, (tx) => tx.futureItems.get(item.id)), who).toEqual(item);
+    }
+    const moved = await update(world.as(author), approvedAkce, { state: 'cancelled' });
+    expect(moved.version).toBe(approvedAkce.version + 1);
+    const cancelled = await update(cli, moved, { state: 'cancelled' });
+    expect(cancelled.version).toBe(moved.version + 1);
   });
 });
 

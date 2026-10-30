@@ -1,4 +1,7 @@
 import {
+  DatabaseFailure,
+  futureHistoryScopeOf,
+  futureWriteScopeOf,
   scopeOf,
   ScopeViolation,
   StaleVersion,
@@ -8,7 +11,8 @@ import {
   type Principal,
   type TxContext,
 } from '@/application/ports';
-import { admits } from '@/domain/policy';
+import { parseResponsible } from '@/contracts';
+import { admits, type Scope } from '@/domain/policy';
 import { toIsoDate } from '@/domain/time';
 
 import { codePoints, newestFirst } from './events';
@@ -18,7 +22,8 @@ import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './
 /**
  * What migrations 0019 and 0020 refuse, in PostgreSQL's order: the CHECKs by name, then the
  * foreign key. future_items_campus cannot be hit through the typed port, and nor can
- * future_items_report_needs_expect, whose report state no port method writes yet.
+ * future_items_report_needs_expect, whose report state no port method writes yet, or
+ * future_items_responsible, which the contract's parse (db.parse.future_items) refuses first.
  */
 function refuse(state: FakeState, row: FakeFutureItem): void {
   const { content: c } = row;
@@ -36,30 +41,42 @@ function refuse(state: FakeState, row: FakeFutureItem): void {
   if (!state.users.has(row.authorId)) throw refusedBy('future_items_author_id_users_id_fk');
 }
 
+const admitted = (scope: Scope) => (item: FakeFutureItem) =>
+  admits(scope, {
+    ownerId: item.authorId,
+    kind: item.kind,
+    state: item.state,
+    everSubmitted: item.submittedAt !== null,
+  });
+
 /** Whether the principal's read scope admits the item: the fake of `visibleFutureItems`. */
-export const futureReadable =
-  (principal: Principal) =>
-  (item: FakeFutureItem): boolean =>
-    admits(scopeOf(principal, 'futureItem'), {
-      ownerId: item.authorId,
-      kind: item.kind,
-      state: item.state,
-      everSubmitted: item.submittedAt !== null,
-    });
+const futureReadable = (principal: Principal) => admitted(scopeOf(principal, 'futureItem'));
+
+/** Whether the principal may read the item's history: the fake of `visibleFutureHistory`. */
+export const futureHistoryReadable = (principal: Principal) =>
+  admitted(futureHistoryScopeOf(principal));
 
 const record = ({ clientRef: _ref, ...item }: FakeFutureItem): FutureItemRecord => item;
 
-/** The jsonb keeps a copy, not the caller's object. */
-const stored = (content: FutureContent): FutureContent => structuredClone(content);
+/**
+ * As the repository: `responsible` goes through the contract's one parse before anything else,
+ * and the jsonb keeps a copy, not the caller's object.
+ */
+function stored(content: FutureContent): FutureContent {
+  const responsible = parseResponsible(content.responsible);
+  if (!responsible) throw new DatabaseFailure('db.parse.future_items');
+  return structuredClone({ ...content, responsible: responsible.value });
+}
 
 /** The future item repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemRepo {
   const { principal, now } = ctx;
   const { futureItems } = tx.draft;
   const visible = futureReadable(principal);
-  const find = (id: string) => {
+  const writable = admitted(futureWriteScopeOf(principal));
+  const find = (id: string, mayUse: (item: FakeFutureItem) => boolean) => {
     const item = futureItems.get(id);
-    return item && visible(item) ? record(item) : null;
+    return item && mayUse(item) ? record(item) : null;
   };
   const save = (row: FakeFutureItem) => {
     refuse(tx.draft, row);
@@ -73,6 +90,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, true);
       if (principal.kind !== 'user') throw new ScopeViolation();
       const authorId = principal.actor.id;
+      const values = stored(content);
       const existing = [...futureItems.values()].find(
         (i) => i.authorId === authorId && i.clientRef === clientRef,
       );
@@ -83,7 +101,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         authorId,
         clientRef,
         state: 'draft',
-        content: stored(content),
+        content: values,
         reportState: 'none',
         reportPointId: null,
         submittedAt: null,
@@ -94,22 +112,23 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
     },
     async get(id) {
       guard(tx, false);
-      return find(id);
+      return find(id, visible);
     },
     async loadForWrite(id) {
       // The fake runs one transaction at a time, which stands in for the row lock.
       guard(tx, true);
-      return find(id);
+      return find(id, writable);
     },
     async update(id, expectedVersion, { content, state, submittedAt }) {
       guard(tx, true);
+      const values = content && stored(content);
       const before = futureItems.get(id);
-      if (!before || !visible(before) || before.version !== expectedVersion) {
+      if (!before || !writable(before) || before.version !== expectedVersion) {
         throw new StaleVersion();
       }
       return save({
         ...before,
-        content: content ? stored(content) : before.content,
+        content: values ?? before.content,
         state: state ?? before.state,
         submittedAt: submittedAt === undefined ? before.submittedAt : submittedAt,
         version: before.version + 1,

@@ -190,6 +190,45 @@ describe('FutureEventRepo (port contract)', () => {
     expect(await list(cli, draft.id)).toHaveLength(1);
   });
 
+  it('keeps the history of an approved akce from a colleague: only its author and the reviewers read it', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const item = await makeItem(author, true);
+    await world.tx(cli, async (tx) => {
+      await tx.futureItems.update(item.id, item.version, { state: 'approved' });
+      await tx.audit.record({
+        action: 'future.approved',
+        target: { type: 'future_item', id: item.id },
+      });
+    });
+    const [returned] = await append(world.as(reviewer), {
+      futureItemId: item.id,
+      event: 'return',
+      fromState: 'submitted',
+      toState: 'returned',
+      note: 'Doplňte prosím místo.',
+    });
+    const colleagues = [
+      await world.seed.user({ role: 'submitter' }),
+      await world.seed.user({ role: 'submitter', isStudent: true }),
+    ];
+    for (const colleague of colleagues) {
+      // The item itself is theirs to read ...
+      const seen = await world.tx(world.as(colleague), (tx) => tx.futureItems.get(item.id), 'read');
+      expect(seen?.id).toBe(item.id);
+      // ... its history is not, and nor is it theirs to add to.
+      expect(await list(world.as(colleague), item.id)).toEqual([]);
+      const refused = failure(append(world.as(colleague), { ...SUBMIT, futureItemId: item.id }));
+      expect(await refused).toBeInstanceOf(ScopeViolation);
+    }
+    for (const by of [world.as(author), world.as(reviewer), cli]) {
+      expect(await list(by, item.id)).toEqual([returned]);
+    }
+    expect(await list(world.as(await world.seed.user({ role: 'headmaster' })), item.id)).toEqual([
+      returned,
+    ]);
+  });
+
   it('refuses an append to an item outside the principal’s scope and writes nothing', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const draft = await makeItem(author, false);

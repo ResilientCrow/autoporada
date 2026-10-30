@@ -93,6 +93,12 @@ export const futureItems = pgTable(
       'future_items_lengths',
       sql`char_length(${t.title}) <= 200 AND char_length(coalesce(${t.place}, '')) <= 120`,
     ),
+    // Under Zod and the repository's parse: an object, and as large as a point's content may be.
+    check(
+      'future_items_responsible',
+      sql`${t.responsible} IS NULL
+        OR (jsonb_typeof(${t.responsible}) = 'object' AND octet_length(${t.responsible}::text) <= 262144)`,
+    ),
     check(
       'future_items_submitted_complete',
       sql`${t.state} NOT IN ('submitted','approved','cancelled')

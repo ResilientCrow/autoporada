@@ -124,12 +124,13 @@ describe('future.save', () => {
       await refuses(id, () => save(colleague, id, readyAkce()), { code: 'not-found' });
     });
 
-    it('refuses a reviewer on a waiting item', async () => {
+    // The port's write scope is the author's (F3): what a reader may see is not theirs to lock.
+    it('does not find a waiting item for a reviewer', async () => {
       const author = await user();
       const waiting = await start(author, 'akce');
       await moveTo(author, waiting, 'submitted');
       const reviewer = await user('reviewer');
-      await refuses(waiting, () => save(reviewer, waiting, readyAkce(), 2), { code: 'forbidden' });
+      await refuses(waiting, () => save(reviewer, waiting, readyAkce(), 2), { code: 'not-found' });
     });
 
     it.each([
@@ -137,12 +138,12 @@ describe('future.save', () => {
       ['a student', { role: 'submitter', isStudent: true }],
       ['a reviewer', { role: 'reviewer' }],
       ['the headmaster', { role: 'headmaster' }],
-    ] as const)('refuses %s on an approved akce they can see', async (_who, seed) => {
+    ] as const)('does not find an approved akce for %s', async (_who, seed) => {
       const author = await user();
       const id = await approved(author);
       const other = await world.seed.user(seed);
       await refuses(id, () => save(other, id, readyAkce({ title: 'Cizí' }), 3), {
-        code: 'forbidden',
+        code: 'not-found',
       });
     });
 

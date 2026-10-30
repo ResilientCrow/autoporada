@@ -10,10 +10,10 @@ interface FutureWrite {
 
 /**
  * The access of a write to an item (ADR 0011): the item under its row lock
- * through the scoped repository, so one the user may not see is not-found; then
- * the version, so a stale page is a conflict whatever the state; then the use
- * case's own check on the locked row. The scope also admits a colleague to an
- * approved akce, so every write goes through a check that names the author.
+ * through the write scope (the author's own items), so one that is not theirs,
+ * a colleague's approved akce included, is not-found; then the version, so a
+ * stale page is a conflict whatever the state; then the use case's own check on
+ * the locked row, which still names the author: a second line behind the scope.
  */
 export function futureWriteAccess<I extends FutureWrite>(
   check: (item: FutureItemRecord, input: I) => Check,

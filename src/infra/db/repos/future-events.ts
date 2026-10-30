@@ -5,7 +5,7 @@ import type { FutureEventRepo, TxContext } from '@/application/ports';
 import { futureEvents, futureItems } from '../schema';
 import type { TxDatabase } from './database';
 import { eventActor, newestFirst, requireVisible } from './events';
-import { visibleFutureItems } from './future-items';
+import { visibleFutureHistory } from './future-items';
 
 const EVENT_ROW = {
   id: futureEvents.id,
@@ -19,10 +19,14 @@ const EVENT_ROW = {
   createdAt: futureEvents.createdAt,
 };
 
-/** Future events over the transaction's connection, scoped through the future item (events.ts). */
+/**
+ * Future events over the transaction's connection, scoped through the future item, but by the
+ * history scope, not the item's read scope (F1): a colleague who sees an approved akce does not
+ * see the reviewers' notes on it.
+ */
 export function createFutureEventRepo(db: TxDatabase, ctx: TxContext): FutureEventRepo {
   const actorId = eventActor(ctx);
-  const parent = { table: futureItems, key: futureItems.id, visible: visibleFutureItems(ctx) };
+  const parent = { table: futureItems, key: futureItems.id, visible: visibleFutureHistory(ctx) };
 
   return {
     async append({ futureItemId, event, fromState, toState, note, editedFields }) {

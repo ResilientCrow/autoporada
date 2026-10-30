@@ -90,6 +90,8 @@ export type {
   QueuedPoint,
 } from './points';
 export {
+  futureHistoryScopeOf,
+  futureWriteScopeOf,
   scopeOf,
   system,
   type Principal,

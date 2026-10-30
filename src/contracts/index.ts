@@ -58,6 +58,7 @@ export {
   getFutureOutput,
   listFutureInput,
   listFutureOutput,
+  parseResponsible,
   retractFutureInput,
   retractFutureOutput,
   saveFutureInput,

@@ -188,12 +188,15 @@ describe('future.submit', () => {
       ['a student', { role: 'submitter', isStudent: true }],
       ['a reviewer', { role: 'reviewer' }],
       ['the headmaster', { role: 'headmaster' }],
-    ] as const)('refuses %s on an item they can see', async (_who, seed) => {
-      const author = await user();
-      const id = await start(author, 'akce');
-      await moveTo(author, id, 'approved');
-      const other = await world.seed.user(seed);
-      await refuses(id, () => submit(other, id, readyAkce(), 2), forbidden);
-    });
+    ] as const)(
+      'does not find an approved akce for %s (the write scope is the author’s)',
+      async (_who, seed) => {
+        const author = await user();
+        const id = await start(author, 'akce');
+        await moveTo(author, id, 'approved');
+        const other = await world.seed.user(seed);
+        await refuses(id, () => submit(other, id, readyAkce(), 2), { code: 'not-found' });
+      },
+    );
   });
 });

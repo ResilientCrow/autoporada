@@ -80,11 +80,12 @@ describe('future.retract', () => {
     },
   );
 
-  it('keeps a reviewer’s hands off an item they may see', async () => {
+  // The port's write scope is the author's (F3): what a reader may see is not theirs to lock.
+  it('does not find a submitted item for a reviewer', async () => {
     const author = await user();
     const id = await submitted(author);
     const reviewer = await user('reviewer');
-    await refuses(id, () => retract(reviewer, id), { code: 'forbidden' });
+    await refuses(id, () => retract(reviewer, id), { code: 'not-found' });
   });
 
   it.each([
@@ -97,11 +98,11 @@ describe('future.retract', () => {
     await refuses(id, () => retract(other, id), { code: 'not-found' });
   });
 
-  it('refuses a colleague on an approved akce they can see', async () => {
+  it('does not find an approved akce for a colleague', async () => {
     const author = await user();
     const id = await start(author, 'akce');
     await moveTo(author, id, 'approved');
     const colleague = await user();
-    await refuses(id, () => retract(colleague, id), { code: 'forbidden' });
+    await refuses(id, () => retract(colleague, id), { code: 'not-found' });
   });
 });

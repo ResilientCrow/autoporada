@@ -62,6 +62,17 @@ const responsibleSchema = z.strictObject({
   people: z.array(draftPersonSchema).max(POINT_LIMITS.responsiblePeople),
 }) satisfies z.ZodType<Responsible>;
 
+/**
+ * The one parse of an item's `responsible` jsonb, on read and before write: the value
+ * wrapped, because null is a valid one; undefined when the contract refuses it.
+ */
+export function parseResponsible(
+  value: unknown,
+): { readonly value: Responsible | null } | undefined {
+  const parsed = responsibleSchema.nullable().safeParse(value);
+  return parsed.success ? { value: parsed.data } : undefined;
+}
+
 const capped = (max: number) => z.string().max(max);
 
 /**
