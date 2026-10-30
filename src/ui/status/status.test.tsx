@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { ROLES, USER_STATUSES } from '@/domain/actor';
 import {
   ACCESS_MACHINE,
+  FUTURE_MACHINE,
   ISSUE_MACHINE,
   POINT_MACHINE,
   type AccessState,
+  type FutureState,
   type IssueStatus,
   type PointState,
 } from '@/domain/review';
@@ -16,6 +18,7 @@ import {
   ACCESS_LOOK,
   ACCOUNT_LOOK,
   Chip,
+  FUTURE_LOOK,
   ISSUE_LOOK,
   POINT_LOOK,
   ROLE_LOOK,
@@ -35,6 +38,10 @@ const POINT_STATES: readonly PointState[] = [
   ...new Set(Object.values(POINT_MACHINE).flatMap((t) => [...t.from, t.to])),
 ];
 
+const FUTURE_STATES: readonly FutureState[] = [
+  ...new Set(Object.values(FUTURE_MACHINE).flatMap((t) => [...t.from, t.to])),
+];
+
 describe('status looks', () => {
   it('cover every access state, role and account status, and nothing else', () => {
     expect(Object.keys(ACCESS_LOOK).sort()).toEqual([...ACCESS_STATES].sort());
@@ -48,6 +55,13 @@ describe('status looks', () => {
     expect(Object.values(POINT_LOOK).map((look) => look.label)).toEqual(
       Object.values(cs.points.state),
     );
+  });
+
+  it('cover every state an akce or jednání can reach, labelled from the copy', () => {
+    expect(Object.keys(FUTURE_LOOK).sort()).toEqual([...FUTURE_STATES].sort());
+    for (const [state, look] of Object.entries(FUTURE_LOOK)) {
+      expect(look.label).toBe(cs.future.state[state as FutureState]);
+    }
   });
 
   it('take their labels from the copy', () => {
@@ -88,6 +102,13 @@ describe('status looks', () => {
     ['point rejected', POINT_LOOK.rejected, 'stopped'],
     ['point withdrawn', POINT_LOOK.withdrawn, 'neutral'],
     ['point published', POINT_LOOK.published, 'done'],
+    ['future draft', FUTURE_LOOK.draft, 'neutral'],
+    ['future submitted', FUTURE_LOOK.submitted, 'waiting'],
+    ['future returned', FUTURE_LOOK.returned, 'attention'],
+    ['future approved', FUTURE_LOOK.approved, 'done'],
+    ['future rejected', FUTURE_LOOK.rejected, 'stopped'],
+    ['future withdrawn', FUTURE_LOOK.withdrawn, 'neutral'],
+    ['future cancelled', FUTURE_LOOK.cancelled, 'neutral'],
     ['student', STUDENT_LOOK, 'neutral'],
   ] as const)('%s has the tone %s', (_name, look, tone) => {
     expect(look.tone).toBe(tone);

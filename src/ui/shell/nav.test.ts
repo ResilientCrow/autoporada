@@ -37,6 +37,7 @@ describe('navFor', () => {
     expect(navFor(actor('headmaster')).map((i) => i.href)).toEqual([
       '/',
       '/body',
+      '/akce',
       '/kontrola',
       '/uzivatele',
       '/nastaveni/typy-bodu',
@@ -73,6 +74,24 @@ describe('navFor', () => {
   });
 
   it.each([
+    ['submitter', actor('submitter')],
+    ['student submitter', actor('submitter', { isStudent: true })],
+    ['reviewer', actor('reviewer')],
+    ['headmaster', actor('headmaster')],
+  ])('shows „Akce“ to a %s, after „Moje body“', (_name, who) => {
+    const hrefs = navFor(who).map((i) => i.href);
+    expect(navFor(who).find((i) => i.href === '/akce')?.label).toBe('Akce');
+    expect(hrefs.indexOf('/akce')).toBe(hrefs.indexOf('/body') + 1);
+  });
+
+  it.each([
+    ['a pending user', actor('pending')],
+    ['a blocked submitter', actor('submitter', { status: 'blocked' })],
+  ])('hides „Akce“ from %s', (_name, who) => {
+    expect(navFor(who).map((i) => i.href)).not.toContain('/akce');
+  });
+
+  it.each([
     ['reviewer', actor('reviewer')],
     ['headmaster', actor('headmaster')],
   ])('shows „Kontrola“ to a %s', (_name, who) => {
@@ -95,7 +114,8 @@ describe('navFor', () => {
   it('uses the real routes by default', () => {
     expect(navFor(actor('pending'))).toEqual(
       NAV.filter(
-        (i) => !['/uzivatele', '/body', '/kontrola', '/nastaveni/typy-bodu'].includes(i.href),
+        (i) =>
+          !['/uzivatele', '/body', '/akce', '/kontrola', '/nastaveni/typy-bodu'].includes(i.href),
       ),
     );
   });

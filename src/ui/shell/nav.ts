@@ -13,6 +13,7 @@ export interface NavItem {
 export const NAV: readonly NavItem[] = [
   { href: '/', label: cs.nav.overview, check: null },
   { href: '/body', label: cs.nav.points, check: { action: 'point.create' } },
+  { href: '/akce', label: cs.nav.future, check: { action: 'future.create' } },
   { href: '/kontrola', label: cs.nav.review, check: { action: 'review.queue' } },
   { href: '/pristup', label: cs.nav.access, check: { action: 'access.request' } },
   { href: '/uzivatele', label: cs.nav.users, check: { action: 'users.view' } },
