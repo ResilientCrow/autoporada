@@ -31,8 +31,17 @@ export const retentionSections = [
             },
           },
           {
-            term: 'Koncepty, vrácené, zamítnuté a\u00A0stažené body',
+            term: 'Koncepty, vrácené, zamítnuté a\u00A0zrušené body',
             value: 'smažeme 1.\u00A0září, na\u00A0konci školního roku',
+          },
+          {
+            term: 'Poznámky kontroly a\u00A0původní znění upravených polí',
+            value: 'jako samotný bod, smažou se s\u00A0ním',
+          },
+          {
+            term: 'Dříve použité osoby',
+            value:
+              'nemají vlastní úložiště; Autoporada je bere z\u00A0vašich bodů a\u00A0zmizí s\u00A0nimi',
           },
           {
             term: 'Schválené, zamítnuté a\u00A0zrušené žádosti o\u00A0přístup',

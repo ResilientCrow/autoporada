@@ -22,20 +22,25 @@ Then, when the change warrants it:
 
 ## Layers (enforced by `.dependency-cruiser.cjs`; changing a rule means updating ADR 0004)
 
-`src/`: `domain` (pure, imports only domain) <- `snapshot`, `contracts`, `notify` (zod + domain only) <- `document` (compose, model, render-docx, render-html) <- `application` (core, ports, use-cases, jobs, notifications; no I/O) <- `infra` (implements ports; a leaf). Edges and composition roots: `server` (container.ts binds infra), `app` (thin routes, reach server only via `actions|routes|pages/index.ts`), `ui` (theme, copy, kit, form, shell, status, features; fixed set, ADR 0012), `worker/main.ts`, `cli/main.ts`.
+`src/`: `domain` (pure, imports only domain; `report` and `people` hold points and the people memory) <- `snapshot`, `contracts`, `notify` (zod + domain only) <- `document` (compose, model, render-docx, render-html) <- `application` (core, ports, use-cases, jobs, notifications; no I/O) <- `infra` (implements ports; a leaf). Edges and composition roots: `server` (container.ts binds infra), `app` (thin routes, reach server only via `actions|routes|pages/index.ts`), `ui` (theme, copy, kit, form, shell, status, features; fixed set, ADR 0012), `worker/main.ts`, `cli/main.ts`. `infra/directory` is the school people search (a port with `off` and `dev` adapters).
 
 - Cross-module imports go through `index.ts` only.
 - Only infra imports drizzle, pg, pg-boss, openid-client, jose; only `infra/mail/smtp.ts` imports nodemailer (`nodemailer-only-in-smtp`).
 - `web-never-sends-mail`: server/app never reach infra/mail, infra/worker, application/jobs or nodemailer, even transitively. The web only enqueues.
 - `worker-isolated`: worker never imports server, app or ui.
 - `use-cases-not-into-jobs`: use cases enqueue via application/notifications, never import application/jobs.
+- `src/instrumentation-client.ts` imports only zod (it sets zod jitless before hydration; ADR 0023, `instrumentation-client-is-light`).
 - `docx` only in `document/render-docx`; React Aria only in `ui/kit` and `ui/form`; `.tsx` only in app, ui and `document/render-html`.
 - No circular imports, no orphans, no `test/` imports from `src/`.
 
 ## Conventions
 
 - Two test worlds: Vitest `unit` runs against in-memory fakes (`provide: world=fake`), `integration` runs the same suites against PostgreSQL (`world=pg`, a database per test file). Port contracts live in `test/contract` and run in both worlds; helpers in `test/support/world`.
-- Errors and logs carry codes, never messages, addresses, subjects or provider text (ADR 0015, 0016).
+- Every use case is in `USE_CASES` (`use-cases/index.ts`) and its folder's `index.ts`, with a colocated `.test.ts` (`test/arch/inventory.test.ts`). An export with no consumer fails knip, so land it with its first user.
+- Autosaving editors: `points.create` and `points.save` are the only actions with `refresh: 'none'` (default `'page'`; the inventory pins the set, ADR 0017). `points.save` and `points.status` use the `autosave` rate limit (120 a minute per user); create, submit, retract and withdraw use `submission`, decisions and reviewer edits use `admin`.
+- `DIRECTORY=off` (default) or `dev` (with `DIRECTORY_DEV_PATH`, e.g. `docker/dev/directory.json`) switches the people search; production is `off` until the Graph adapter (M8b). The people memory is the author's own points, with no table of its own.
+- Audit meta and logs never carry text people wrote (`test/arch/audit-meta.test.ts` scans `src/application`). Point bounds live in `domain/report/limits.ts` and feed Zod, the UI counters and the CHECK numbers.
+- Errors and logs carry codes, never messages, addresses, subjects or provider text (ADR 0015, 0016); a database constraint outside `KNOWN_CONSTRAINTS` fails as `db.constraint.<name>` (ADR 0022).
 - Czech UI copy lives in `src/ui/copy`. `lint:chars` forbids raw invisible or look-alike characters in `src`, `test/support`, `scripts`: write NBSP as `\u00a0`.
 - Migrations: edit the Drizzle schema, run `pnpm db:generate`, never edit a committed migration.
 - Commits: one per feature or fix, Conventional Commits, no AI or Co-Authored-By trailers. Run the gate first.

@@ -10,6 +10,7 @@ import {
   MAIL_LEDGER_RETENTION_DAYS,
   isPurgeableAccessRequest,
 } from '@/domain/retention';
+import { DIRECTORY_LIMITS } from '@/domain/report';
 import { ACCESS_COOLDOWN_DAYS, ACCESS_MACHINE } from '@/domain/review';
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS, SIGN_IN_TTL_MS } from '@/domain/identity/session';
 import { sessions, users } from '@/infra/db/schema';
@@ -18,6 +19,7 @@ import { SIGN_IN_COOKIE, sessionCookie, signInCookie } from '@/server/auth/cooki
 import { SESSION_COOKIE } from '@/server/pipeline/request';
 import { privacy } from '@/ui/copy/privacy';
 import { PRIVACY_FACTS as facts } from '@/ui/copy/privacy-facts';
+import type { Rich, Section } from '@/ui/copy/privacy-types';
 
 const ROOT = process.cwd();
 const HOUR = 3_600_000;
@@ -126,6 +128,78 @@ describe('the mail ledger in the notice', () => {
     const row = retentionRow(/^Záznam o\u00A0odeslaných e-mailech$/);
     expect(row?.value).toBe(`${facts.mailLogKeptDays}\u00A0dní`);
     expect(row).toMatchObject({ review: { by: 'dpo' } });
+  });
+});
+
+/** The text of one section, flattened: paragraphs, list items and fact rows, links as their text. */
+function sectionText(id: string): string {
+  const section = privacy.sections.find((candidate) => candidate.id === id);
+  const flat = (rich: Rich): string =>
+    typeof rich === 'string'
+      ? rich
+      : rich.map((part) => (typeof part === 'string' ? part : part.text)).join('');
+  return (section?.blocks ?? [])
+    .flatMap((block) => {
+      if (block.kind === 'p') return [flat(block.text)];
+      if (block.kind === 'list') return block.items.map(flat);
+      return block.rows.flatMap((row) => [row.term, flat(row.value)]);
+    })
+    .join('\n');
+}
+
+/** Every flagged piece of a section, as its note. */
+function notesOf(id: string): string[] {
+  const section: Section | undefined = privacy.sections.find((candidate) => candidate.id === id);
+  return (section?.blocks ?? []).flatMap((block) => [
+    ...(block.review === undefined ? [] : [block.review.note]),
+    ...(block.kind === 'facts'
+      ? block.rows.flatMap((row) => (row.review === undefined ? [] : [row.review.note]))
+      : []),
+  ]);
+}
+
+describe('the school directory in the notice (M8a)', () => {
+  it('states the shortest search and the most hits as the code enforces them', () => {
+    expect(facts.directoryMinQuery).toBe(DIRECTORY_LIMITS.minQuery);
+    expect(facts.directoryHits).toBe(DIRECTORY_LIMITS.hits);
+    const text = sectionText('zdroje');
+    expect(text).toContain(`nejméně ${DIRECTORY_LIMITS.minQuery}\u00A0znaky`);
+    expect(text).toContain(`nejvýše ${DIRECTORY_LIMITS.hits}\u00A0osob`);
+  });
+
+  it('says the search runs only when it is switched on', () => {
+    expect(sectionText('zdroje')).toContain('když je vyhledávání zapnuté');
+  });
+});
+
+describe('points and the people memory in the notice (M8a)', () => {
+  it('says the memory is the author’s own points and has no list of its own', () => {
+    expect(sectionText('udaje')).toContain(
+      'Dříve použité osoby vám Autoporada nabízí jen z\u00A0vašich vlastních bodů.',
+    );
+    expect(retentionRow(/^Dříve použité osoby$/)?.value).toMatch(/^nemají vlastní úložiště;/);
+  });
+
+  it('names who reads a point, a return and a rewrite after a return, for the DPO', () => {
+    const text = sectionText('prijemci');
+    expect(text).toContain('Rozepsaný koncept vidí jen autor.');
+    expect(text).toContain('Když autor odeslání stáhne, je to zase jen jeho koncept.');
+    expect(text).toContain('Vrácený bod vidí kontroloři a\u00A0ředitel dál');
+    expect(text, 'akce reach the notice with M8b').not.toMatch(/akc[eí]/i);
+    expect(notesOf('prijemci')).toContain(
+      'Ověřit, že kontroloři a\u00A0ředitel smějí číst vrácený bod, který autor dál upravuje.',
+    );
+  });
+
+  it('keeps the previous wording of an edited field as long as the point, for the DPO', () => {
+    expect(sectionText('udaje')).toContain('Postup bodu');
+    expect(sectionText('udaje')).toContain('původní znění upravených polí');
+    expect(notesOf('udaje')).toContain(
+      'Ověřit, že původní znění upravených polí smí zůstat u\u00A0bodu.',
+    );
+    expect(retentionRow(/^Poznámky kontroly a\u00A0původní znění upravených polí$/)?.value).toBe(
+      'jako samotný bod, smažou se s\u00A0ním',
+    );
   });
 });
 

@@ -17,6 +17,9 @@ export const PRIVACY_FACTS = {
   deadJobsKeptDays: 90,
   // Mail ledger retention; test/arch/privacy-facts.test.ts ties it to src/domain/retention.
   mailLogKeptDays: 91,
+  // The school directory search; test/arch/privacy-facts.test.ts ties these to DIRECTORY_LIMITS.
+  directoryMinQuery: 3,
+  directoryHits: 10,
   logMegabytes: 10,
   logFiles: 5,
 } as const;

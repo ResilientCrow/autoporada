@@ -31,21 +31,30 @@ in v1 unless the [plan of record](plan.md) changes first.
   - admin-defined point types with labelled bullets;
   - at least one participant list and one vyjádření, both mandatory;
   - a live document preview.
-- People picker that searches the M365 directory and remembers each person's
-  salutation, class and genitive form. Class codes are saved in the school's
-  form ("1. a" becomes "1.A").
+- People picker that searches the M365 directory (when the search is switched
+  on; production starts with it off) and offers the people from the author's
+  own earlier points, with their salutation, class and genitive form. Nothing
+  is shared between authors. A list of people can be pasted. Class codes are
+  saved in the school's form ("1. a" becomes "1.A").
 - Genitive suggestion with a confidence indicator. The submitter can correct it.
 - Future items (jednání / akce). They are placed into points 1 and 2 and the
   last PROVOZ point by date. After the event, the author is asked to write the
   report.
 - Proposals for HOSPODAŘENÍ items and for extra POKYNY points.
-- Autosave, a status timeline and withdrawing a submission.
+- Autosave with conflict detection, a status timeline, „Stáhnout“ (back to a
+  draft) and „Zrušit bod“. A late hand-in goes to the next meeting whose
+  deadline is still ahead, and the editor says which one.
 
 ### Reviewing
 
 - A queue grouped by section. Reviewers approve, edit, return (a note is
   required) or reject. A reviewer cannot approve their own point.
-- E-mail notifications to authors and digests to reviewers.
+- A reviewer sees a colleague's point only after the author handed it in; a
+  draft stays private. A returned point stays visible to reviewers.
+- A reviewer's edit keeps the original wording of the changed fields in the
+  point's timeline („Původní znění“).
+- E-mail notifications to authors (a point returned, approved or rejected; none
+  when the author decided their own point) and digests to reviewers.
 
 ### Weekly issue
 

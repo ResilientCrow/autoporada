@@ -151,9 +151,50 @@ active reviewer or headmaster who is not a student.
 22. **Shutdown.**
     - [ ] `docker compose stop worker` returns within 50 s.
 
+## Points and review (M8a)
+
+These steps wait for the same tenant, mailbox and server as the mail steps.
+School IT has no Entra app, Exchange scope or server yet, so none has run.
+Use three active accounts: an author, a reviewer who is not that author, and
+the headmaster (step 25).
+
+23. **A return mails the author.** The author hands in a point; the reviewer
+    returns it with a note.
+    - [ ] The author gets one mail through Graph within a minute. The subject
+          is „Autoporada: bod byl vrácen k úpravě“.
+    - [ ] The body links to `https://autoporada.ssps.cz/body`, and neither the
+          title of the point nor the note appears in it.
+24. **An approval and a rejection each mail the author.** Approve one point and
+    reject another.
+    - [ ] The subjects are „Autoporada: bod byl schválen“ and
+          „Autoporada: bod nebyl přijat“, each with the `/body` link and no
+          title or note.
+    - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
+25. **A decision on one's own point mails nobody.** The headmaster hands in a
+    point of their own and approves it.
+    - [ ] No mail arrives, and the ledger has no row for it:
+          `psql`: `SELECT template, state, code FROM mail_ledger WHERE template LIKE 'point.%' ORDER BY settled_at DESC NULLS LAST;`
+          lists only the rows of steps 23 and 24, none for this event.
+26. **The worker reads points under its column grants.** Steps 23 and 24 prove
+    it when they end in `sent`; if a mail stays `deferred` or the job is dead
+    with a database code:
+    - [ ] `psql`: `SELECT grantee, column_name FROM information_schema.column_privileges WHERE table_name IN ('points', 'point_events') AND grantee = 'autoporada_jobs' ORDER BY 1, 2;`
+          lists `id`, `author_id` and `state` for `points`, and `id`,
+          `point_id`, `event` and `to_state` for `point_events`, and nothing else.
+27. **People are added by hand.** `DIRECTORY` stays `off` in `.env` (the only
+    production mode until the Graph adapter of M8b).
+    - [ ] In the point editor the people search says „Hledání v adresáři
+          školy zatím není zapnuté“, and „Přidat ručně“ and „Vložit seznam“ work.
+28. **Native date and time pickers.** On a real Android phone and an iPhone,
+    the author opens a report draft and sets both dates and both times with
+    the phone's own pickers.
+    - [ ] Under each date the Czech echo („čtvrtek 14. ledna 2027“) names
+          the picked day.
+    - [ ] After a reload the dates and times are the ones picked.
+
 ## At go-live
 
-23. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
+29. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
     - [ ] Record how many sign-ins per minute the school's NAT address sees;
           the `auth` limit allows 600 per address.
 

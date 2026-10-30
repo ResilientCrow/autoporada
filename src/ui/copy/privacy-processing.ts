@@ -1,3 +1,4 @@
+import { PRIVACY_FACTS as facts } from './privacy-facts';
 import type { Section } from './privacy-types';
 
 /** Why, what, from where, to whom and where to: the middle of the notice. */
@@ -51,6 +52,19 @@ export const processingSections = [
             value:
               'jména, tituly, třídy nebo funkce lidí, včetně nezletilých studentů, a\u00A0jejich vyjádření',
           },
+          {
+            term: 'Postup bodu',
+            value:
+              'kdo bod odeslal, vrátil, schválil nebo zamítl a\u00A0kdy, a\u00A0poznámka, kterou kontrola napíše autorovi',
+          },
+          {
+            term: 'Původní znění',
+            value: 'když kontrola bod upraví, zůstane u\u00A0něj původní znění upravených polí',
+            review: {
+              by: 'dpo',
+              note: 'Ověřit, že původní znění upravených polí smí zůstat u\u00A0bodu.',
+            },
+          },
           { term: 'Porady', value: 'přítomní a\u00A0hosté porady' },
           {
             term: 'Seznamy studentů',
@@ -64,6 +78,10 @@ export const processingSections = [
             review: { by: 'dpo', note: 'Ověřit rozsah technických záznamů.' },
           },
         ],
+      },
+      {
+        kind: 'p',
+        text: 'Dříve použité osoby vám Autoporada nabízí jen z\u00A0vašich vlastních bodů. Tuto nabídku vidíte jen vy a\u00A0Autoporada pro ni nevede žádný zvláštní seznam.',
       },
       {
         kind: 'p',
@@ -88,7 +106,7 @@ export const processingSections = [
         kind: 'list',
         items: [
           'od vás,',
-          'ze školního adresáře Microsoft: vyhledáváme podle jména a\u00A0Autoporada si pamatuje jen osoby, které někdo vybral,',
+          `ze školního adresáře Microsoft, když je vyhledávání zapnuté: posíláme jen hledaný text (nejméně ${facts.directoryMinQuery}\u00A0znaky), ukazujeme nejvýše ${facts.directoryHits}\u00A0osob a\u00A0do bodu se uloží jen jméno vybrané osoby a\u00A0identifikátor jejího účtu,`,
           'od kolegů, kteří píší body,',
           'ze seznamů, které vede vedení školy.',
         ],
@@ -102,10 +120,22 @@ export const processingSections = [
       {
         kind: 'list',
         items: [
-          'Přispěvatelé vidí své body a\u00A0schválené akce.',
-          'Kontroloři a\u00A0ředitel vidí podklady k\u00A0poradě.',
+          'Přispěvatelé vidí své body a\u00A0poznámky kontroly k\u00A0nim.',
+          'Rozepsaný koncept vidí jen autor.',
           'Studenti nikdy nevidí registr ani archiv.',
         ],
+      },
+      {
+        kind: 'p',
+        text: 'Kontroloři a\u00A0ředitel vidí body od chvíle, kdy je autor odešle, a\u00A0podklady k\u00A0poradě. Když autor odeslání stáhne, je to zase jen jeho koncept.',
+      },
+      {
+        kind: 'p',
+        text: 'Vrácený bod vidí kontroloři a\u00A0ředitel dál, i\u00A0když ho autor znovu upravuje a\u00A0průběžně ukládá, a\u00A0vidí ho i\u00A0po zrušení bodu.',
+        review: {
+          by: 'dpo',
+          note: 'Ověřit, že kontroloři a\u00A0ředitel smějí číst vrácený bod, který autor dál upravuje.',
+        },
       },
       {
         kind: 'p',
