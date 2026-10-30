@@ -81,6 +81,42 @@ describe('points.submit for a report that answers an akce', () => {
     expect((await akce.snapshot(itemId)).item).toEqual(before.item);
   });
 
+  it('hands the report in and leaves the akce alone when the akce no longer expects one', async () => {
+    const author = await user();
+    const { itemId, pointId } = await startedReport(author);
+    const { item } = await akce.snapshot(itemId);
+    const revised = await world.run(saveFuture, world.as(author), {
+      id: itemId,
+      expectedVersion: item!.version,
+      content: readyAkce({ expectsReport: false }),
+      intent: 'revise',
+    });
+    expect(revised.ok).toBe(true);
+    const before = await akce.snapshot(itemId);
+
+    expect((await submit(author, pointId)).ok).toBe(true);
+    expect((await akce.snapshot(itemId)).item).toEqual(before.item);
+    expect(before.item).toMatchObject({ reportState: 'none' });
+  });
+
+  it('still marks the report written when the akce went back to review with a report expected', async () => {
+    const author = await user();
+    const { itemId, pointId } = await startedReport(author);
+    const { item } = await akce.snapshot(itemId);
+    const revised = await world.run(saveFuture, world.as(author), {
+      id: itemId,
+      expectedVersion: item!.version,
+      content: readyAkce({ title: 'Výlet do Brna' }),
+      intent: 'revise',
+    });
+    expect(revised.ok).toBe(true);
+    expect((await submit(author, pointId)).ok).toBe(true);
+    expect((await akce.snapshot(itemId)).item).toMatchObject({
+      state: 'submitted',
+      reportState: 'written',
+    });
+  });
+
   it('writes nothing on an akce for a point that answers none', async () => {
     const author = await user();
     const id = await points.start(author);

@@ -7,6 +7,7 @@ import { parseIsoDate } from '@/domain/time';
 import { futureFixtures, readyAkce, staffer } from '../../../../test/support/future';
 import { BULLETS, pointFixtures } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
+import { withdrawPoint } from '../points';
 import { declineFutureReport, saveFuture, startFutureReport } from './index';
 
 const world = setupWorld();
@@ -110,6 +111,65 @@ describe('future.startReport', () => {
     expect(await snapshot(id)).toEqual(before);
   });
 
+  describe('after the report was withdrawn', () => {
+    const withdraw = (by: UserRecord, id: string) =>
+      world.run(withdrawPoint, world.as(by), { id, expectedVersion: 1, confirmed: true });
+    const pointOf = (by: UserRecord, id: string) =>
+      world.tx(world.as(by), (tx) => tx.points.get(id), 'read');
+
+    it('opens a fresh, prefilled draft and relinks the akce to it', async () => {
+      const author = await user();
+      const id = await dueAkce(author);
+      const { id: typeId } = await type();
+      const first = await startReport(author, id, typeId);
+      const firstId = first.ok ? first.value.pointId : '';
+      expect((await withdraw(author, firstId)).ok).toBe(true);
+
+      const second = await startReport(author, id, typeId);
+      const secondId = second.ok ? second.value.pointId : '';
+      expect(secondId).not.toBe('');
+      expect(secondId).not.toBe(firstId);
+      expect(await pointOf(author, secondId)).toMatchObject({
+        state: 'draft',
+        futureItemId: id,
+        content: { title: 'Výlet do Prahy', place: 'v Národním muzeu' },
+      });
+      expect((await pointOf(author, firstId))?.state).toBe('withdrawn');
+      const { item, audit } = await snapshot(id);
+      expect(item).toMatchObject({ reportPointId: secondId, reportState: 'none' });
+      expect(audit.at(-1)).toMatchObject({
+        action: 'future.report-started',
+        data: { diff: { reportPointId: { from: firstId, to: secondId } } },
+      });
+    });
+
+    it('gives the same new draft for a second press and writes nothing more', async () => {
+      const author = await user();
+      const id = await dueAkce(author);
+      const { id: typeId } = await type();
+      const first = await startReport(author, id, typeId);
+      await withdraw(author, first.ok ? first.value.pointId : '');
+      const second = await startReport(author, id, typeId);
+      const before = await snapshot(id);
+      expect(await startReport(author, id, typeId)).toEqual(second);
+      expect(await snapshot(id)).toEqual(before);
+    });
+
+    it('does so again when the new report is withdrawn too', async () => {
+      const author = await user();
+      const id = await dueAkce(author);
+      const { id: typeId } = await type();
+      const ids = new Set<string>();
+      for (let i = 0; i < 3; i++) {
+        const started = await startReport(author, id, typeId);
+        const pointId = started.ok ? started.value.pointId : '';
+        ids.add(pointId);
+        await withdraw(author, pointId);
+      }
+      expect(ids.size).toBe(3);
+    });
+  });
+
   it('keeps a report the author already edited when it is started again', async () => {
     const author = await user();
     const id = await dueAkce(author);
@@ -191,6 +251,18 @@ describe('future.startReport', () => {
     // 11 November 2026, 10:00 in Prague: the last day.
     await refuses(id, () => startReport(author, id, typeId), rule);
     world.clock.advance(DAY);
+    expect((await startReport(author, id, typeId)).ok).toBe(true);
+  });
+
+  it('decides by the Prague day: 23.30 on the last day is too early, 0.30 after it is due', async () => {
+    const author = await user();
+    const id = await dueAkce(author);
+    const { id: typeId } = await type();
+    // 11 November 2026 is the last day: 23:30 in Prague is still 22:30 UTC on the 11th.
+    world.clock.set(new Date('2026-11-11T22:30:00Z'));
+    await refuses(id, () => startReport(author, id, typeId), rule);
+    // 0:30 on the 12th in Prague is 23:30 UTC on the 11th, the same UTC date as above.
+    world.clock.set(new Date('2026-11-11T23:30:00Z'));
     expect((await startReport(author, id, typeId)).ok).toBe(true);
   });
 

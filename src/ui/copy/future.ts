@@ -66,6 +66,8 @@ export const future = {
       } as const satisfies Record<ResponsibleVerb, string>,
     },
     expectsReport: 'Po akci bude následovat zpráva do porady',
+    /** The field message when the box is cleared after the report was written or declined. */
+    expectsReportSettled: 'Zpráva už je vyřízená, proto ji nelze přestat očekávat.',
     submit: 'Odeslat ke kontrole',
     /** An approved akce is not autosaved: one press hands the change in. */
     revise: 'Uložit změny',

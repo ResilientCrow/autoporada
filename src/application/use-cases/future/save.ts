@@ -40,6 +40,11 @@ export const saveFuture = defineUseCase({
     if (revises !== (intent === 'revise')) return notEditable;
     const shape = kindIssues(item.kind, content);
     if (hasIssues(shape)) return fail({ code: 'invalid-input', fields: shape });
+    // A report that was prompted, written or declined settles the akce: it cannot stop expecting one
+    // (`future_items_report_needs_expect`), so the editor says so instead of the database.
+    if (item.reportState !== 'none' && !content.expectsReport) {
+      return fail({ code: 'invalid-input', fields: { 'content.expectsReport': 'invalid' } });
+    }
 
     if (revises) {
       if (sameContent(item.content, content))

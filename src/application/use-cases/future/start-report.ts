@@ -48,9 +48,11 @@ function owed(item: FutureItemRecord, now: Date): boolean {
 }
 
 /**
- * „Napsat zprávu“ (design section 12): the report of the chosen type, prefilled from the akce. The
- * client ref is the akce's id, so a second press gives the same draft and writes nothing more. A
- * new one counts against the author's draft cap like any other.
+ * „Napsat zprávu“ (design section 12): the report of the chosen type, prefilled from the akce. While
+ * the linked report is alive a press gives it back and writes nothing. A withdrawn one does not block
+ * a new report: the client ref of a first report is the akce's id, and of each later one the id of
+ * the report it replaces, so a retry finds the draft it made (the akce then names it) and a new
+ * one never meets an earlier ref. A new one counts against the author's draft cap like any other.
  */
 export const startFutureReport = defineUseCase({
   name: 'future.startReport',
@@ -60,15 +62,17 @@ export const startFutureReport = defineUseCase({
   access: reportAccess(),
   async execute({ tx, now }, { typeId }, item) {
     if (!owed(item, now)) return fail({ code: 'rule', rule: 'report-not-due' });
-    const { existing, drafts } = await tx.points.beginCreate(item.id);
-    if (existing) return ok({ pointId: existing.id });
+    const linked = item.reportPointId === null ? null : await tx.points.get(item.reportPointId);
+    if (linked && linked.state !== 'withdrawn') return ok({ pointId: linked.id });
+    const clientRef = item.reportPointId ?? item.id;
+    const { drafts } = await tx.points.beginCreate(clientRef);
 
     const type = await tx.pointTypes.get(typeId);
     if (!type?.active) return fail({ code: 'invalid-input', fields: { typeId: 'invalid' } });
     if (drafts >= DRAFT_CAP) return fail({ code: 'rule', rule: 'draft-cap' });
 
     const { point } = await tx.points.create({
-      clientRef: item.id,
+      clientRef,
       kind: 'report',
       typeId,
       content: prefilledReport(item.content, type.defaultBullets),

@@ -292,6 +292,38 @@ describe('future.save', () => {
     });
   });
 
+  describe('an akce whose report was written or declined', () => {
+    const settle = (author: UserRecord, id: string, reportState: 'declined' | 'written') =>
+      world.tx(world.as(author), async (tx) => {
+        const item = (await tx.futureItems.loadForWrite(id))!;
+        await tx.futureItems.update(id, item.version, { reportState });
+        await tx.audit.record({ action: 'future.test', target: { type: 'future_item', id } });
+      });
+
+    it.each(['declined', 'written'] as const)(
+      'cannot stop expecting a report once it is %s: a field issue, nothing written',
+      async (state) => {
+        const author = await user();
+        const id = await approved(author);
+        await settle(author, id, state);
+        await refuses(id, () => revise(author, id, readyAkce({ expectsReport: false }), 4), {
+          code: 'invalid-input',
+          fields: { 'content.expectsReport': 'invalid' },
+        });
+      },
+    );
+
+    it('still takes other changes to such an akce', async () => {
+      const author = await user();
+      const id = await approved(author);
+      await settle(author, id, 'declined');
+      expect(await revise(author, id, readyAkce({ title: 'Výlet do Brna' }), 4)).toMatchObject({
+        ok: true,
+        value: { state: 'submitted' },
+      });
+    });
+  });
+
   describe('the revise intent', () => {
     it.each(['draft', 'returned'] as const)(
       'is refused on a %s item, which only autosaves',
