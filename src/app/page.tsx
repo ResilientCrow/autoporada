@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { setSkipped } from '@/server/actions';
+import { declineFutureReport, setSkipped, startFutureReport } from '@/server/actions';
 import { homePage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
+import { ReportDueCard } from '@/ui/features/future';
 import { MeetingStrip, Overview } from '@/ui/features/overview';
 import { MyPointsCard, StandingLine } from '@/ui/features/points';
 import { QueueCard } from '@/ui/features/review';
@@ -23,6 +24,14 @@ export default async function HomePage() {
         <MyPointsCard counts={model.mine.counts}>
           {model.mine.standing !== null && <StandingLine standing={model.mine.standing} />}
         </MyPointsCard>
+      )}
+      {model.kind === 'member' && model.reportDue !== null && (
+        <ReportDueCard
+          items={model.reportDue.items}
+          types={model.reportDue.types}
+          startFutureReport={startFutureReport}
+          declineFutureReport={declineFutureReport}
+        />
       )}
       {model.kind === 'member' && model.queue !== null && <QueueCard count={model.queue} />}
       {model.kind === 'member' && model.strip !== null && (

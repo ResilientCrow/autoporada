@@ -20,6 +20,7 @@ const row = (over: Partial<FutureRow> = {}): FutureRow => ({
   campus: 'smichov',
   place: 'Špindlerův Mlýn',
   expectsReport: false,
+  reportState: 'none',
   responsible: { verb: 'vede', behalfOf: null, names: ['Jana Nováková'] },
   updatedAt: '2026-10-01T10:00:00.000Z',
   ...over,

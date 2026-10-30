@@ -252,6 +252,8 @@ export const listFutureOutput = z.object({
         kind: futureKindSchema,
         state: futureStateSchema,
         isAuthor: z.boolean(),
+        /** Where the report of an akce stands: the home page offers it once it is due. */
+        reportState: reportStateSchema,
         updatedAt: instant,
       }),
     )

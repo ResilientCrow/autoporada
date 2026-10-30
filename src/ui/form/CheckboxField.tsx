@@ -14,6 +14,7 @@ export function CheckboxField({
   defaultChecked = false,
   optionalMark = true,
   disabled = false,
+  issue,
   onChange,
 }: {
   readonly name: string;
@@ -24,10 +25,12 @@ export function CheckboxField({
   readonly optionalMark?: boolean;
   /** Shown but not changeable (an autosaving editor waiting on its banner). */
   readonly disabled?: boolean;
+  /** A message of the page's own (an autosave refused the value); it shows in place of the form's. */
+  readonly issue?: string;
   /** Called with the new state; the box stays uncontrolled. */
   readonly onChange?: (checked: boolean) => void;
 }) {
-  const field = useNativeField(name, { label, description, optionalMark });
+  const field = useNativeField(name, { label, description, optionalMark, issue });
 
   return (
     <div className="flex flex-col gap-1">

@@ -132,7 +132,12 @@ export function futureSpec(kind: FutureKind): FormSpec {
     'responsible.verb': { label: who.verb, required: true },
     'responsible.behalfOf': { label: who.behalfOf },
     'responsible.people': { label: who.people },
-    ...(kind === 'akce' && { expectsReport: { label: future.editor.expectsReport } }),
+    ...(kind === 'akce' && {
+      expectsReport: {
+        label: future.editor.expectsReport,
+        messages: { invalid: future.editor.expectsReportSettled },
+      },
+    }),
   };
 }
 
@@ -175,6 +180,7 @@ export function messagesOf(
         return [name, missing ? future.editor.endWithoutStart : future.editor.endBeforeStart];
       }
       if (name === 'timeTo') return [name, future.editor.timeTo];
+      if (name === 'expectsReport') return [name, future.editor.expectsReportSettled];
       if (name === 'responsible.people' && code === 'too-long')
         return [name, future.editor.tooMany];
       return [name, fieldIssues[code]];

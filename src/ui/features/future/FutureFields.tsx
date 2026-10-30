@@ -92,6 +92,7 @@ export function FutureFields({
           defaultChecked={content.expectsReport}
           optionalMark={false}
           disabled={readOnly}
+          issue={issues['expectsReport']}
           onChange={onExpectsReport}
         />
       ) : null}

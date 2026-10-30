@@ -3,6 +3,8 @@ import type { z } from 'zod';
 import type {
   createFutureInput,
   createFutureOutput,
+  declineFutureReportInput,
+  declineFutureReportOutput,
   getFutureInput,
   getFutureOutput,
   retractFutureInput,
@@ -10,6 +12,8 @@ import type {
   saveFutureInput,
   saveFutureOutput,
   ServerAction,
+  startFutureReportInput,
+  startFutureReportOutput,
   submitFutureInput,
   submitFutureOutput,
 } from '@/contracts';
@@ -31,6 +35,14 @@ export type SubmitFutureAction = ServerAction<
 export type RetractFutureAction = ServerAction<
   z.input<typeof retractFutureInput>,
   z.output<typeof retractFutureOutput>
+>;
+export type StartFutureReportAction = ServerAction<
+  z.input<typeof startFutureReportInput>,
+  z.output<typeof startFutureReportOutput>
+>;
+export type DeclineFutureReportAction = ServerAction<
+  z.input<typeof declineFutureReportInput>,
+  z.output<typeof declineFutureReportOutput>
 >;
 /** What the editor asks after a conflict: the item's version and whether it may still be saved. */
 export type FutureStatusAction = ServerAction<

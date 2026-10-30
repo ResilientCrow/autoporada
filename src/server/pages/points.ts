@@ -19,6 +19,7 @@ import { orNotFound } from './not-found';
 import { first, type SearchParams } from './params';
 import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
 import { recentsOf } from './recents';
+import { reportDueOf, type ReportDueModel } from './report-due';
 import { readWindow, standingOf, type MeetingWindow, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
@@ -176,6 +177,8 @@ export interface MyPointsPageModel {
   readonly next: string | null;
   /** False on a page after a cursor: an empty one there is not an author with no points. */
   readonly first: boolean;
+  /** „Akce čekající na zprávu“ above the list; null for whoever may not start items. */
+  readonly reportDue: ReportDueModel | null;
 }
 
 /**
@@ -216,9 +219,10 @@ export async function myPointsPage(params: SearchParams): Promise<MyPointsPageMo
     }),
   );
   if (listed === null) return null;
-  const window = listed.points.some((point) => point.state === 'approved')
-    ? await readWindow(viewer)
-    : null;
+  const [window, reportDue] = await Promise.all([
+    listed.points.some((point) => point.state === 'approved') ? readWindow(viewer) : null,
+    reportDueOf(viewer),
+  ]);
   const now = getContainer().app.clock.now();
   return {
     rows: listed.points.map((point) => ({
@@ -230,5 +234,6 @@ export async function myPointsPage(params: SearchParams): Promise<MyPointsPageMo
     })),
     next: listed.next,
     first: before === undefined,
+    reportDue,
   };
 }

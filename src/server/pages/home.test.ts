@@ -37,9 +37,21 @@ const noPoints = { ok: true, value: { points: [], next: null } };
 const summary = (state: string) => ({ id: `p-${state}`, state, title: 'x' });
 const emptyQueue = { ok: true, value: { mondays: [], approved: [], more: false } };
 /** Answers the use cases the page asks for: the meeting calendar, the author's list and the review queue. */
-const serve = (answers: { window?: unknown; list?: unknown; queue?: unknown }) =>
+const serve = (answers: {
+  window?: unknown;
+  list?: unknown;
+  queue?: unknown;
+  future?: unknown;
+  types?: unknown;
+}) =>
   runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
     if (useCase.name === 'points.queue') return answers.queue ?? emptyQueue;
+    if (useCase.name === 'future.list') {
+      return answers.future ?? { ok: true, value: { items: [], next: null } };
+    }
+    if (useCase.name === 'pointTypes.list') {
+      return answers.types ?? { ok: true, value: { types: [] } };
+    }
     return useCase.name === 'issues.window' ? answers.window : (answers.list ?? noPoints);
   });
 const askedFor = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
@@ -63,6 +75,39 @@ describe('homePage', () => {
     standing({ kind: 'open', previous: null });
     await homePage();
     expect(askedFor()).toEqual(['access.mine']);
+  });
+
+  describe('the card of akce waiting for a report', () => {
+    const due = {
+      id: 'a',
+      kind: 'akce',
+      state: 'approved',
+      isAuthor: true,
+      title: 'Výlet',
+      startDate: '2026-11-01',
+      endDate: null,
+      timeFrom: null,
+      timeTo: null,
+      expectsReport: true,
+      reportState: 'none',
+    };
+
+    it('lists the akce of an author that wait for it, with the types to choose from', async () => {
+      as('submitter');
+      serve({
+        window: { ok: true, value: { submitMonday: '2026-11-09', issues: [] } },
+        future: { ok: true, value: { items: [due], next: null } },
+        types: { ok: true, value: { types: [{ id: 't1', name: 'Seminář', detail: null }] } },
+      });
+      const model = await homePage();
+      expect(model).toMatchObject({
+        kind: 'member',
+        reportDue: {
+          items: [{ id: 'a', title: 'Výlet' }],
+          types: [{ id: 't1', name: 'Seminář' }],
+        },
+      });
+    });
   });
 
   describe('for the one who may skip a meeting', () => {
@@ -191,7 +236,12 @@ describe('homePage', () => {
       as('submitter');
       serve({ window: WINDOW, list: list([]) });
       await homePage();
-      expect(askedFor().sort()).toEqual(['issues.window', 'points.listMine']);
+      expect(askedFor().sort()).toEqual([
+        'future.list',
+        'issues.window',
+        'pointTypes.list',
+        'points.listMine',
+      ]);
       for (const call of runRegistered.mock.calls) {
         expect((call[2] as { input: unknown }).input).toEqual({});
       }
@@ -233,7 +283,13 @@ describe('homePage', () => {
       async (code) => {
         as('submitter');
         serve({ window: WINDOW, list: { ok: false, error: { code } } });
-        expect(await homePage()).toEqual({ kind: 'member', strip: null, mine: null, queue: null });
+        expect(await homePage()).toEqual({
+          kind: 'member',
+          strip: null,
+          mine: null,
+          queue: null,
+          reportDue: { items: [], types: [] },
+        });
       },
     );
 

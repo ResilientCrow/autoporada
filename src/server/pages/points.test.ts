@@ -630,9 +630,12 @@ describe('myPointsPage', () => {
     next: string | null = null,
     window: unknown = { ok: true, value: { submitMonday: '2026-11-02', issues: [] } },
   ) =>
-    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
-      useCase.name === 'issues.window' ? window : { ok: true, value: { points: rows, next } },
-    );
+    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
+      if (useCase.name === 'issues.window') return window;
+      if (useCase.name === 'future.list') return { ok: true, value: { items: [], next: null } };
+      if (useCase.name === 'pointTypes.list') return { ok: true, value: { types: [] } };
+      return { ok: true, value: { points: rows, next } };
+    });
   const askedFor = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
   const callOf = (name: string) =>
     runRegistered.mock.calls.find((call) => (call[1] as { name: string }).name === name) as
@@ -676,6 +679,42 @@ describe('myPointsPage', () => {
       ],
       next: CURSOR,
       first: true,
+      reportDue: { items: [], types: [] },
+    });
+  });
+
+  it('carries the akce waiting for a report, from the akce list and the point types', async () => {
+    runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
+      if (useCase.name === 'future.list') {
+        return {
+          ok: true,
+          value: {
+            items: [
+              {
+                id: 'a',
+                state: 'approved',
+                isAuthor: true,
+                title: 'Výlet',
+                startDate: '2020-01-01',
+                endDate: null,
+                timeFrom: null,
+                timeTo: null,
+                expectsReport: true,
+                reportState: 'none',
+              },
+            ],
+            next: null,
+          },
+        };
+      }
+      if (useCase.name === 'pointTypes.list') {
+        return { ok: true, value: { types: [{ id: TYPE_ID, name: 'Seminář', detail: null }] } };
+      }
+      return { ok: true, value: { points: [], next: null } };
+    });
+    expect((await myPointsPage({}))?.reportDue).toMatchObject({
+      items: [{ id: 'a', title: 'Výlet' }],
+      types: [{ id: TYPE_ID, name: 'Seminář' }],
     });
   });
 
@@ -687,7 +726,12 @@ describe('myPointsPage', () => {
 
   it('has no rows and no next page for an author with no points', async () => {
     serve([]);
-    expect(await myPointsPage({})).toEqual({ rows: [], next: null, first: true });
+    expect(await myPointsPage({})).toEqual({
+      rows: [],
+      next: null,
+      first: true,
+      reportDue: { items: [], types: [] },
+    });
   });
 
   describe('where an approved point goes', () => {
@@ -736,7 +780,7 @@ describe('myPointsPage', () => {
         summary({ state: 'submitted', earliestMonday: '2026-11-09' }),
       ]);
       expect((await myPointsPage({}))?.rows.map((r) => r.placement)).toEqual([null, null]);
-      expect(askedFor()).toEqual(['points.listMine']);
+      expect(askedFor()).not.toContain('issues.window');
     });
 
     it('is none for an approved point with no Monday on record', async () => {

@@ -2,7 +2,13 @@ import type { z } from 'zod';
 
 import type { ActionResult, saveFutureOutput } from '@/contracts';
 import type { FutureKind } from '@/domain/calendar';
-import { saveAnswerOf, statusAnswerOf, type SaveAnswer, type StatusAnswer } from '@/ui/form';
+import {
+  saveAnswerOf,
+  statusAnswerOf,
+  textOf,
+  type SaveAnswer,
+  type StatusAnswer,
+} from '@/ui/form';
 
 import type { FutureContentWire } from './edit';
 
@@ -33,6 +39,25 @@ export function createInput(
   held.current ??= make();
   return { clientRef: held.current, kind };
 }
+
+/**
+ * „Napsat zprávu“: the type ticked. Where there is one type nothing is asked and that one is
+ * taken; where several are offered and none is ticked, no type is sent and the server refuses it.
+ */
+export function startReportInput(
+  id: string,
+  data: FormData,
+  types: readonly { readonly id: string }[],
+) {
+  const only = types.length === 1 ? types[0] : undefined;
+  return { id, typeId: only?.id ?? textOf(data, 'typeId') };
+}
+
+/** „Zprávu psát nebudu“: the akce alone. */
+export const declineReportInput = (id: string) => ({ id });
+
+/** Where the report started for an akce is written. */
+export const reportHref = (pointId: string) => `/body/${pointId}`;
 
 /** What the revise's press does with the server's answer (`null`: the call itself failed). */
 export interface ReviseEffect {

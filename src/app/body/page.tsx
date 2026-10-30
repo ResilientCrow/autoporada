@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { declineFutureReport, startFutureReport } from '@/server/actions';
 import { myPointsPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, points } from '@/ui/copy';
+import { ReportDueCard } from '@/ui/features/future';
 import { MyPoints } from '@/ui/features/points';
 import { Shell } from '@/ui/shell';
 
@@ -19,6 +21,14 @@ export default async function MyPointsPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/body">
+      {model.reportDue !== null && (
+        <ReportDueCard
+          items={model.reportDue.items}
+          types={model.reportDue.types}
+          startFutureReport={startFutureReport}
+          declineFutureReport={declineFutureReport}
+        />
+      )}
       <MyPoints rows={model.rows} next={model.next} first={model.first} />
     </Shell>
   );

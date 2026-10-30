@@ -8,7 +8,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures, readyAkce, readyJednani, staffer } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { listFuture, saveFuture } from './index';
+import { declineFutureReport, listFuture, saveFuture } from './index';
 
 const world = setupWorld();
 
@@ -164,5 +164,25 @@ describe('future.list', () => {
   ] as const)('refuses a %s user', async (_, seed) => {
     const gone = await world.seed.user(seed);
     expect(await list(gone)).toEqual({ ok: false, error: { code: 'forbidden' } });
+  });
+});
+
+describe('future.list report state', () => {
+  const stateOf = async (by: UserRecord, id: string) => {
+    const result = await list(by);
+    return result.ok ? result.value.items.find((row) => row.id === id)?.reportState : undefined;
+  };
+
+  it('says where the report of an akce stands, to the author and to any reader', async () => {
+    const author = await user();
+    const id = await item(author, 'approved');
+    const reader = await user();
+    expect(await stateOf(author, id)).toBe('none');
+    expect(await stateOf(reader, id)).toBe('none');
+
+    world.clock.advance(30 * 86_400_000);
+    await world.run(declineFutureReport, world.as(author), { id });
+    expect(await stateOf(author, id)).toBe('declined');
+    expect(await stateOf(reader, id)).toBe('declined');
   });
 });

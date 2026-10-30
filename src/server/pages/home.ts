@@ -13,6 +13,7 @@ import { runRegistered } from '../pipeline';
 
 import { myStanding } from './my-access';
 import { orNotFound } from './not-found';
+import { reportDueOf, type ReportDueModel } from './report-due';
 import { readWindow, standingFrom, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
@@ -48,6 +49,8 @@ type HomePageModel =
       readonly mine: MineModel | null;
       /** „Ke kontrole: {n}“, the points waiting for a decision; null for whoever may not review, and where the queue is refused. */
       readonly queue: number | null;
+      /** „Akce čekající na zprávu“; null for whoever may not start items, and where the lists are refused. */
+      readonly reportDue: ReportDueModel | null;
     }
   | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
 
@@ -120,13 +123,14 @@ export async function homePage(): Promise<HomePageModel | null> {
   if (!viewer) return null;
   if (viewer.actor.role !== 'pending') {
     if (!can(viewer.actor, { action: 'point.create' })) {
-      return { kind: 'member', strip: null, mine: null, queue: null };
+      return { kind: 'member', strip: null, mine: null, queue: null, reportDue: null };
     }
     const mayReview = can(viewer.actor, { action: 'review.queue' });
-    const [window, counts, queue] = await Promise.all([
+    const [window, counts, queue, due] = await Promise.all([
       readWindow(viewer),
       pointCounts(viewer),
       mayReview ? waitingCount(viewer) : null,
+      reportDueOf(viewer),
     ]);
     const mayStrip = can(viewer.actor, { action: 'issue.generate' });
     if (mayStrip && window === null) return null;
@@ -136,6 +140,7 @@ export async function homePage(): Promise<HomePageModel | null> {
       strip: mayStrip && window !== null ? meetingStrip(window) : null,
       mine: counts && { counts, standing: window && standingFrom(window, now) },
       queue,
+      reportDue: due,
     };
   }
   const standing = await myStanding(viewer);

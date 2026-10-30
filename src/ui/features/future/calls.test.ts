@@ -4,10 +4,13 @@ import type { ActionError } from '@/contracts';
 
 import {
   createInput,
+  declineReportInput,
   editorStatusOf,
   retractInput,
   reviseEffect,
   reviseInput,
+  startReportInput,
+  reportHref,
   submitAnswer,
   submitInput,
 } from './calls';
@@ -115,5 +118,39 @@ describe('editorStatusOf', () => {
   it('keeps the other answers as the autosave hears them', () => {
     expect(editorStatusOf(fail({ code: 'not-found' }))).toEqual({ kind: 'gone' });
     expect(editorStatusOf(fail({ code: 'busy' }))).toEqual({ kind: 'failed' });
+  });
+});
+
+describe('the report calls', () => {
+  const TYPE_A = '1b0c1d2e-3f40-4152-8364-758697a8b9ca';
+  const TYPE_B = '2b0c1d2e-3f40-4152-8364-758697a8b9ca';
+  const chosen = (typeId?: string) => {
+    const data = new FormData();
+    if (typeId !== undefined) data.set('typeId', typeId);
+    return data;
+  };
+
+  it('starts the report of the type ticked', () => {
+    const types = [{ id: TYPE_A }, { id: TYPE_B }];
+    expect(startReportInput(ID, chosen(TYPE_B), types)).toEqual({ id: ID, typeId: TYPE_B });
+  });
+
+  it('takes the only type when there is no choice to make', () => {
+    expect(startReportInput(ID, chosen(), [{ id: TYPE_A }])).toEqual({ id: ID, typeId: TYPE_A });
+  });
+
+  it('sends no type when several are offered and none is ticked, for the server to refuse', () => {
+    expect(startReportInput(ID, chosen(), [{ id: TYPE_A }, { id: TYPE_B }])).toEqual({
+      id: ID,
+      typeId: '',
+    });
+  });
+
+  it('declines by the akce alone', () => {
+    expect(declineReportInput(ID)).toEqual({ id: ID });
+  });
+
+  it('opens the draft the report was started as', () => {
+    expect(reportHref(TYPE_A)).toBe(`/body/${TYPE_A}`);
   });
 });

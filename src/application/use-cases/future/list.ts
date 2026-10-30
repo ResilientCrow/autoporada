@@ -13,6 +13,7 @@ const rowWire = (item: FutureItemRecord, readerId: string) => ({
   kind: item.kind,
   state: item.state,
   isAuthor: item.authorId === readerId,
+  reportState: item.reportState,
   // The list names who is responsible and shows nothing else about them.
   ...futureContentToView(item.content),
   updatedAt: item.updatedAt.toISOString(),

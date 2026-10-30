@@ -4,9 +4,11 @@ export {
   cancelFuture,
   createFuture,
   decideFuture,
+  declineFutureReport,
   getFuture,
   retractFuture,
   saveFuture,
+  startFutureReport,
   submitFuture,
 } from './future';
 export { setSkipped } from './issues';

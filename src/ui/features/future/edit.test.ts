@@ -123,6 +123,14 @@ describe('futureSpec', () => {
   });
 });
 
+describe('futureSpec', () => {
+  it('words the refusal of an expectsReport that was cleared too late', () => {
+    expect(futureSpec('akce')['expectsReport']?.messages?.invalid).toBe(
+      cs.future.editor.expectsReportSettled,
+    );
+  });
+});
+
 describe('issuesOf', () => {
   it('names the fields the editor has, without the content prefix', () => {
     expect(issuesOf({ 'content.title': 'required', 'content.timeTo': 'invalid' }, 'akce')).toEqual({
@@ -161,6 +169,12 @@ describe('messagesOf', () => {
     expect(messagesOf({ timeTo: 'invalid', title: 'too-long' }, content())).toEqual({
       timeTo: cs.future.editor.timeTo,
       title: cs.fieldIssues['too-long'],
+    });
+  });
+
+  it('says a settled report cannot stop being expected', () => {
+    expect(messagesOf({ expectsReport: 'invalid' }, content())).toEqual({
+      expectsReport: cs.future.editor.expectsReportSettled,
     });
   });
 

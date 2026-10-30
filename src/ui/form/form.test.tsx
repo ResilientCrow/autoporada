@@ -230,6 +230,17 @@ describe('SelectField and CheckboxField', () => {
       expect(out).not.toContain(cs.form.optional);
     });
 
+    it('shows a message of the page’s own under a box and marks it invalid', () => {
+      const out = renderToStaticMarkup(
+        <Form id="c" spec={controlSpec} state={idle(null)}>
+          <CheckboxField name="agree" issue="Už nejde zrušit." />
+        </Form>,
+      );
+      expect(out).toContain('Už nejde zrušit.');
+      expect(out).toMatch(/<input [^>]*aria-invalid="true"/);
+      expect(out).toMatch(/<input [^>]*aria-describedby="c-agree-error"/);
+    });
+
     it('selects the default value and has no placeholder option', () => {
       expect(html).toContain('<option value="b" selected="">Beta</option>');
       expect(html.match(/<option /g)).toHaveLength(2);

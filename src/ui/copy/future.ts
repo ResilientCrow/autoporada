@@ -82,6 +82,18 @@ export const future = {
     timeTo: 'Čas do musí být později než čas od.',
     tooMany: 'Je tu příliš mnoho vyučujících.',
   },
+  /** „Akce čekající na zprávu“: the card on the home page and in „Moje body“ (design section 12). */
+  report: {
+    title: 'Akce čekající na zprávu',
+    start: 'Napsat zprávu',
+    decline: 'Zprávu psát nebudu',
+    /** The legend of the choice of the type the report is written on. */
+    type: 'Druh zprávy',
+    typeRequired: 'Vyberte druh zprávy.',
+    typeInvalid: 'Tento druh nelze použít. Vyberte jiný.',
+    /** Said once an akce was declined; the title is the author's own. */
+    declined: (title: string) => `Zpráva k\u00A0akci „${title}“ se psát nebude.`,
+  },
   /** The reviewer's bar and the cancel on an item's page (design section 12). */
   review: {
     /** A reviewer's own handed-in item, in place of „Schválit“. */

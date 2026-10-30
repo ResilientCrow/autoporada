@@ -4,9 +4,11 @@ import {
   cancelFuture as cancelFutureUseCase,
   createFuture as createFutureUseCase,
   decideFuture as decideFutureUseCase,
+  declineFutureReport as declineFutureReportUseCase,
   getFuture as getFutureUseCase,
   retractFuture as retractFutureUseCase,
   saveFuture as saveFutureUseCase,
+  startFutureReport as startFutureReportUseCase,
   submitFuture as submitFutureUseCase,
 } from '@/application/use-cases';
 
@@ -60,6 +62,22 @@ export const decideFuture = defineAction(decideFutureUseCase, {
  * „Zrušeno“. It counts under the submission limit, like the points' withdraw an author makes.
  */
 export const cancelFuture = defineAction(cancelFutureUseCase, {
+  rateLimit: 'submission',
+  refresh: 'page',
+});
+
+/**
+ * „Napsat zprávu“ on the home page and in „Moje body“: opens the draft report of an akce that has
+ * ended. It counts under the submission limit, like the creation of any point; the client goes to
+ * the draft itself, and the refresh keeps the page it leaves behind current.
+ */
+export const startFutureReport = defineAction(startFutureReportUseCase, {
+  rateLimit: 'submission',
+  refresh: 'page',
+});
+
+/** „Zprávu psát nebudu“: the akce leaves the card, so the page refreshes. */
+export const declineFutureReport = defineAction(declineFutureReportUseCase, {
   rateLimit: 'submission',
   refresh: 'page',
 });
