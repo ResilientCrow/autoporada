@@ -7,17 +7,11 @@ import type { FutureKind } from '@/domain/calendar';
 import type { RecentPerson } from '@/domain/people';
 import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
-import {
-  AutosaveStatus,
-  Form,
-  saveAnswerOf,
-  statusAnswerOf,
-  useAutosave,
-  type Directory,
-} from '@/ui/form';
+import { AutosaveStatus, Form, saveAnswerOf, useAutosave, type Directory } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
 import type { FutureStatusAction, SaveFutureAction, SubmitFutureAction } from './actions';
+import { editorStatusOf, submitAnswer, submitInput } from './calls';
 import { FUTURE_FORM_ID, futureSpec, type FutureContentWire } from './edit';
 import { FutureFields } from './FutureFields';
 import { formStateOf } from './outcome';
@@ -84,7 +78,7 @@ export function FutureEditor({
     },
     [id, saveFuture, afterSave],
   );
-  const status = useCallback(async () => statusAnswerOf(await getFuture({ id })), [id, getFuture]);
+  const status = useCallback(async () => editorStatusOf(await getFuture({ id })), [id, getFuture]);
   const onRefresh = useCallback(() => router.refresh(), [router]);
   const autosave = useAutosave<FutureContentWire>({
     initialVersion: version,
@@ -98,18 +92,17 @@ export function FutureEditor({
   const send = useSend({
     kind,
     banners: true,
+    content: () => latest.current.content,
     call: (settled) =>
       autosave.afterLanded(async (expectedVersion) => {
         let result: Awaited<ReturnType<SubmitFutureAction>> | null;
         try {
-          result = await submitFuture({ id, expectedVersion, content: latest.current.content });
+          result = await submitFuture(submitInput(id, expectedVersion, latest.current.content));
         } catch {
           result = null;
         }
         settled(result);
-        return result === null
-          ? ({ kind: 'failed' } as const)
-          : saveAnswerOf(result, 'future-not-editable');
+        return submitAnswer(result);
       }),
   });
   const readOnly = autosave.readOnly || send.sending;

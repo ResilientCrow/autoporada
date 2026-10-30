@@ -22,8 +22,8 @@ function Row({ row }: { readonly row: FutureRow }) {
           {row.title === '' ? points.untitled : row.title}
         </Link>
         <span>{future.kind[row.kind]}</span>
-        {/* The state is the author's business; everyone else sees approved items only. */}
-        {row.isAuthor ? <Chip look={FUTURE_LOOK[row.state]} /> : null}
+        {/* An approved item of someone else needs no mark; a reviewer's list holds the rest too. */}
+        {row.isAuthor || row.state !== 'approved' ? <Chip look={FUTURE_LOOK[row.state]} /> : null}
       </p>
       {lines.map((line) => (
         <p key={line}>{line}</p>
@@ -34,7 +34,7 @@ function Row({ row }: { readonly row: FutureRow }) {
 
 /**
  * „Akce“ (design section 12): what the reader may see, last changed first. Their own items show
- * their state; the rest are approved ones. `next` is where „Starší akce“ continues, a plain link
+ * their state, and so does any other that is not approved (a reviewer's list holds those). `next` is where „Starší akce“ continues, a plain link
  * back to this page. „Nová akce“ is for readers who may start one.
  */
 export function FutureList({

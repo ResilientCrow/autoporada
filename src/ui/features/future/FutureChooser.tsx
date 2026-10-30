@@ -16,6 +16,7 @@ import {
 import { SlantLabel } from '@/ui/kit';
 
 import type { CreateFutureAction } from './actions';
+import { createInput } from './calls';
 
 const FORM_ID = 'nova-akce';
 const SPEC: FormSpec = {
@@ -42,10 +43,8 @@ export function FutureChooser({
   const clientRef = useRef<string | null>(null);
   const state = useActionForm({
     action: createFuture,
-    toInput: (data) => {
-      clientRef.current ??= crypto.randomUUID();
-      return { clientRef: clientRef.current, kind: choiceOf(data, 'kind', kinds) };
-    },
+    toInput: (data) =>
+      createInput(clientRef, choiceOf(data, 'kind', kinds), () => crypto.randomUUID()),
     onSuccess: ({ id }) => router.replace(`/akce/${id}`),
   });
   return (

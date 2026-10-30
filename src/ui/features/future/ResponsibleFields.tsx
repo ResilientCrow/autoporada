@@ -5,20 +5,19 @@ import { POINT_LIMITS } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
 import {
-  fieldId,
   NativeFieldError,
   PeopleField,
   SelectField,
   TextField,
+  useNativeField,
   type Chip,
   type Directory,
 } from '@/ui/form';
 
-import { FUTURE_FORM_ID, VERBS, verbOf, type ResponsibleDraft } from './edit';
+import { VERBS, verbOf, type ResponsibleDraft } from './edit';
 
 const { responsible: copy } = future.editor;
 const VERB_OPTIONS = VERBS.map((verb) => ({ value: verb, label: copy.verbs[verb] }));
-const PEOPLE_ID = fieldId(FUTURE_FORM_ID, 'responsible.people');
 
 /** What the people field needs from the page. */
 export interface PickerContext {
@@ -30,7 +29,8 @@ export interface PickerContext {
 /**
  * „Kdo to zajišťuje“: a fieldset of the verb („Koordinují“), the group the people act for, and
  * the people themselves. While the editor is held the fieldset is disabled, which takes every
- * control in it out of reach at once. `issues` holds the messages of the last refused save.
+ * control in it out of reach at once. `issues` holds the messages of the last refused autosave; the form's own
+ * issues (a refused submit) show too.
  */
 export function ResponsibleFields({
   value,
@@ -48,19 +48,23 @@ export function ResponsibleFields({
   /** Leaving a text field saves at once. */
   readonly onBlur: () => void;
 }) {
-  const message = issues['responsible.people'];
+  // The autosave's message, else the form's: a refused submit or revise reaches only the form.
+  const people = useNativeField('responsible.people', {
+    description: copy.hint,
+    issue: issues['responsible.people'],
+  });
   return (
     <fieldset
-      id={PEOPLE_ID}
+      id={people.id}
       tabIndex={-1}
       disabled={readOnly}
-      aria-describedby={message === undefined ? undefined : `${PEOPLE_ID}-error`}
+      aria-describedby={people.describedBy}
       className="flex min-w-0 flex-col gap-3 rounded-brand border-2 border-ink p-3"
     >
       <legend className="px-1 font-bold">{copy.legend}</legend>
-      <p>{copy.hint}</p>
-      {message === undefined ? null : (
-        <NativeFieldError id={`${PEOPLE_ID}-error`} message={message} />
+      <p id={people.descriptionId}>{copy.hint}</p>
+      {people.message === null ? null : (
+        <NativeFieldError id={people.errorId} message={people.message} />
       )}
       <SelectField
         name="responsible.verb"

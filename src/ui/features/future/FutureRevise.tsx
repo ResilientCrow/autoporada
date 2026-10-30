@@ -1,15 +1,17 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import type { FutureKind } from '@/domain/calendar';
 import type { RecentPerson } from '@/domain/people';
 import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
-import { Form, saveAnswerOf, type Directory } from '@/ui/form';
+import { Form, LiveStatus, type Directory } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
 import type { SaveFutureAction } from './actions';
+import { reviseEffect, reviseInput } from './calls';
 import { FUTURE_FORM_ID, futureSpec, type FutureContentWire } from './edit';
 import { FutureFields } from './FutureFields';
 import { formStateOf } from './outcome';
@@ -52,26 +54,28 @@ export function FutureRevise({
 }) {
   const router = useRouter();
   const editing = useFutureEdit({ initial, kind, onChange: NO_CHANGE });
+  // The count rises with each press that found nothing to change, so a second one is announced again.
+  const [said, setSaid] = useState({ message: '', count: 0 });
   const send = useSend({
     kind,
     banners: false,
+    content: () => editing.latest.current.content,
     call: async (settled) => {
+      setSaid((previous) => ({ ...previous, message: '' }));
       let result: Awaited<ReturnType<SaveFutureAction>> | null;
       try {
-        result = await saveFuture({
-          id,
-          expectedVersion: version,
-          content: editing.latest.current.content,
-          intent: 'revise',
-        });
+        result = await saveFuture(reviseInput(id, version, editing.latest.current.content));
       } catch {
         result = null;
       }
       settled(result);
-      if (result === null) return { kind: 'failed' };
+      const effect = reviseEffect(result);
       // The save does not refresh (ADR 0017), and the akce has left „Schváleno“: the page must show it.
-      if (result.ok) router.refresh();
-      return saveAnswerOf(result, 'future-not-editable');
+      if (effect.refresh) router.refresh();
+      if (effect.unchanged) {
+        setSaid((previous) => ({ message: future.editor.unchanged, count: previous.count + 1 }));
+      }
+      return effect.answer;
     },
   });
   const { edit } = editing;
@@ -105,6 +109,7 @@ export function FutureRevise({
             {future.editor.revise}
           </Button>
         </div>
+        <LiveStatus message={said.message} count={said.count} />
       </Form>
       {window === null ? null : (
         <PlacementStrip

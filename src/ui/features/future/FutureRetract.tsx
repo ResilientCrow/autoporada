@@ -4,6 +4,7 @@ import { future } from '@/ui/copy';
 import { Form, SubmitButton, useActionForm, type FormSpec } from '@/ui/form';
 
 import type { RetractFutureAction } from './actions';
+import { retractInput } from './calls';
 
 const FORM_ID = 'akce-stahnout';
 const HINT_ID = `${FORM_ID}-napoveda`;
@@ -25,7 +26,7 @@ export function FutureRetract({
 }) {
   const state = useActionForm({
     action: retractFuture,
-    toInput: () => ({ id, expectedVersion: version }),
+    toInput: () => retractInput(id, version),
   });
   return (
     <Form id={FORM_ID} spec={SPEC} state={state}>

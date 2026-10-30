@@ -6,6 +6,7 @@ import type { ActionResult } from '@/contracts';
 import type { FutureKind } from '@/domain/calendar';
 import type { SaveAnswer } from '@/ui/form';
 
+import type { FutureContentWire } from './edit';
 import { NO_OUTCOME, NOTHING_SHOWN, outcomeOf, withOutcome } from './outcome';
 
 /** What a send tells the hook of the server's answer; null when the call itself failed. */
@@ -15,16 +16,19 @@ export type Settled = (result: ActionResult<{ readonly version: number }> | null
  * A press that sends the item in: „Odeslat ke kontrole“ (after the autosave landed) or „Uložit
  * změny“ of an approved akce. It holds what the answer left on the form and whether a send is on
  * its way. A send that went through stays pending until the page refreshes; a banner (null), a
- * failure, a conflict or a refusal ends it. `banners` says whether the autosave's banners own some
+ * failure, a conflict, a refusal or an answer of `null` (the call has nothing more to do) ends it. `banners` says whether the autosave's banners own some
  * answers (the submit); a revise has none and shows everything.
  */
 export function useSend({
   kind,
   banners,
+  content,
   call,
 }: {
   readonly kind: FutureKind;
   readonly banners: boolean;
+  /** The content as it stands, which an answer is read against. */
+  readonly content: () => FutureContentWire;
   /** Makes the call and reports its answer to `settled`. */
   readonly call: (settled: Settled) => Promise<SaveAnswer | null>;
 }) {
@@ -37,7 +41,7 @@ export function useSend({
     setPending(value);
   };
   const settled: Settled = (result) =>
-    setShown((previous) => withOutcome(previous, outcomeOf(result, kind, banners)));
+    setShown((previous) => withOutcome(previous, outcomeOf(result, kind, banners, content())));
 
   const press = async () => {
     if (busy.current) return;

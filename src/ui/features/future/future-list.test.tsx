@@ -64,6 +64,18 @@ describe('FutureList', () => {
     expect(other).toContain('Cizí akce');
   });
 
+  it('marks the state of a colleague’s item that is not approved, as a reviewer sees the list', () => {
+    const html = render([
+      row({ id: 'a', state: 'submitted', title: 'Čeká' }),
+      row({ id: 'b', state: 'cancelled', title: 'Zrušená' }),
+      row({ id: 'c', state: 'approved', title: 'Schválená' }),
+    ]);
+    const [waiting, cancelled, approved] = itemsOf(html);
+    expect(waiting).toContain(future.state.submitted);
+    expect(cancelled).toContain(future.state.cancelled);
+    expect(approved).not.toContain(future.state.approved);
+  });
+
   it('calls an item with no title „Bez názvu“ and leaves out what is not set', () => {
     const [item] = itemsOf(
       render([

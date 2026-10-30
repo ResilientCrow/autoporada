@@ -99,7 +99,7 @@ export interface FuturePageModel {
   readonly returnNote: string | null;
   /** Only for the author of a draft, returned or approved item: what the editor opens with. */
   readonly editor: FutureEditorModel | null;
-  /** Only for the author of an item that is still going somewhere, with a start date; else null. */
+  /** Only for the author of an item that is still going somewhere; else null. */
   readonly window: MeetingWindow | null;
 }
 
@@ -121,7 +121,8 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
   );
   if (loaded === null) return null;
   const { kind, state, version, isAuthor, editable, view, content, timeline } = loaded;
-  const strip = isAuthor && view.startDate !== null && GOING.includes(state);
+  // Whatever the stored date: a new draft has none, and the editor's strip follows the typing.
+  const strip = isAuthor && GOING.includes(state);
   const shows = editable && content !== null;
   // Independent reads, each only where its part of the page shows.
   const [window, recents] = await Promise.all([

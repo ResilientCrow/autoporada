@@ -182,7 +182,7 @@ describe('futurePage', () => {
     },
   );
 
-  it('reads no calendar for a reader who is not the author, or an item with no start date', async () => {
+  it('reads no calendar for a reader who is not the author', async () => {
     serve({
       get: {
         ok: true,
@@ -190,9 +190,17 @@ describe('futurePage', () => {
       },
     });
     expect((await futurePage(ID))?.window).toBeNull();
-    serve({ get: { ok: true, value: loaded({ view: view({ startDate: null }) }) } });
-    expect((await futurePage(ID))?.window).toBeNull();
     expect(asked()).not.toContain('issues.window');
+  });
+
+  it('reads the calendar for a draft with no start date yet, so the strip shows as the date is typed', async () => {
+    serve({
+      get: {
+        ok: true,
+        value: loaded({ content: content({ startDate: null }), view: view({ startDate: null }) }),
+      },
+    });
+    expect((await futurePage(ID))?.window).toEqual(WINDOW);
   });
 
   it('leaves the strip out when the calendar is refused, which is only a convenience', async () => {

@@ -69,6 +69,8 @@ export const future = {
     submit: 'Odeslat ke kontrole',
     /** An approved akce is not autosaved: one press hands the change in. */
     revise: 'Uložit změny',
+    /** The answer to „Uložit změny“ when nothing was changed. */
+    unchanged: 'Nic se nezměnilo.',
     reviseNotice: 'Po úpravě akce zmizí z\u00A0přehledu, dokud ji kontrola znovu neschválí.',
     retract: { button: 'Stáhnout', hint: 'Položka se vrátí mezi rozpracované.' },
     /** The locked banner of this editor. */
