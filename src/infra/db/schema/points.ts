@@ -90,7 +90,7 @@ export const points = pgTable(
     earliestMonday: date({ mode: 'string' }),
     /** Set at every submit, cleared by a retract (ADR 0026). */
     submittedAt: at(),
-    /** The future item a report answers; its foreign key comes in M8b (commit 51). */
+    /** The future item a report answers; its foreign key is in migration 0020 (future.ts cannot be imported here). */
     futureItemId: uuid(),
     version: integer().notNull().default(1),
     createdAt: createdAt(),

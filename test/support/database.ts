@@ -21,6 +21,7 @@ const WORKER_ROLE = 'autoporada_worker';
 const TRUNCATE_GUARDS = [
   ['audit_events', 'audit_events_no_truncate'],
   ['point_events', 'point_events_no_truncate'],
+  ['future_events', 'future_events_no_truncate'],
 ] as const;
 
 async function asAdmin<T>(run: (client: Client) => Promise<T>, database?: string): Promise<T> {

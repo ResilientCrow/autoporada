@@ -65,8 +65,8 @@ describe('database roles (ADR 0010)', () => {
   });
 
   it('grants every table exactly the default privileges, unless listed here', async () => {
-    // The audit log and the point events are append-only: no UPDATE (migrations 0004,
-    // 0016), and the app never deletes an event (their point's cascade runs as the
+    // The audit log and the point and future events are append-only: no UPDATE (migrations
+    // 0004, 0016, 0020), and the app never deletes an event (their item's cascade runs as the
     // owner). Only the worker writes delivery state, so the mail tables have no app
     // grant at all (0009, ADR 0016); the backup keeps its read on them, since backups
     // include the ledger.
@@ -75,6 +75,7 @@ describe('database roles (ADR 0010)', () => {
       mail_gate: null,
       mail_ledger: null,
       point_events: 'INSERT,SELECT',
+      future_events: 'INSERT,SELECT',
     };
     const grants = await database.owner<{ table: string; grantee: string; privileges: string }>(
       `SELECT c.relname AS table, g.grantee,

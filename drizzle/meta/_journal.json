@@ -134,6 +134,20 @@
       "when": 1793383571442,
       "tag": "0018_points_updated_at_ms",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793388779029,
+      "tag": "0019_future_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793388783807,
+      "tag": "0020_future_guards",
+      "breakpoints": true
     }
   ]
 }

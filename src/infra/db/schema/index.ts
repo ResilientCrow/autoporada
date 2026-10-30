@@ -8,3 +8,4 @@ export * from './mail';
 export * from './issues';
 export * from './point-types';
 export * from './points';
+export * from './future';
