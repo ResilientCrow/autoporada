@@ -18,6 +18,12 @@ function leavingLink(event: MouseEvent): HTMLAnchorElement | null {
   return url.pathname === here.pathname && url.search === here.search ? null : target;
 }
 
+/** The browser's own leave dialog; older Safari wants `returnValue` set as well as `preventDefault`. */
+export function askBeforeUnload(event: BeforeUnloadEvent): void {
+  event.preventDefault();
+  event.returnValue = '';
+}
+
 /**
  * While `dirty`, leaving the page asks first (ADR 0031, item 8): the browser's own dialog for a reload
  * or a closed tab (`beforeunload`), and `confirm(richtext.unsaved)` for a click on a same-origin link,
@@ -26,19 +32,16 @@ function leavingLink(event: MouseEvent): HTMLAnchorElement | null {
 export function useDirtyGuard(dirty: boolean): void {
   useEffect(() => {
     if (!dirty) return;
-    const beforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
     const click = (event: MouseEvent) => {
       if (leavingLink(event) === null) return;
       if (window.confirm(richtext.unsaved)) return;
       event.preventDefault();
       event.stopPropagation();
     };
-    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('beforeunload', askBeforeUnload);
     document.addEventListener('click', click, true);
     return () => {
-      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('beforeunload', askBeforeUnload);
       document.removeEventListener('click', click, true);
     };
   }, [dirty]);

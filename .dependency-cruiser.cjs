@@ -290,10 +290,18 @@ module.exports = {
     {
       name: 'tiptap-only-in-rich-text',
       comment:
-        'TipTap and ProseMirror stay in ui/form/rich-text, behind its index and one lazy chunk (ADR 0031, item 9).',
+        'TipTap and ProseMirror stay in the editor chunk: only rich-text/{editor,indent,paste}.ts import them (ADR 0031, items 2 and 9).',
       severity: 'error',
-      from: { pathNot: '^src/ui/form/rich-text/' },
+      from: { pathNot: ['^src/ui/form/rich-text/(editor|indent|paste)\\.ts$', ...TESTS] },
       to: { path: npm('@tiptap/[^/]+', 'prosemirror-[a-z-]+') },
+    },
+    {
+      name: 'editor-chunk-only-lazy',
+      comment:
+        'The editor chunk is reached with import() after hydration, never statically (ADR 0031, item 2).',
+      severity: 'error',
+      from: { pathNot: TESTS },
+      to: { path: '^src/ui/form/rich-text/editor\\.ts$', dependencyTypesNot: ['dynamic-import'] },
     },
     {
       name: 'server-not-into-delivery',

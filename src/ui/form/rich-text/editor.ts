@@ -6,7 +6,13 @@ import { Paragraph } from '@tiptap/extension-paragraph';
 import { Text } from '@tiptap/extension-text';
 import { Placeholder, UndoRedo } from '@tiptap/extensions';
 
-import type { Mark, RichDoc, RichParagraph, RichText } from '@/domain/richtext';
+import {
+  stripForbiddenCharacters,
+  type Mark,
+  type RichDoc,
+  type RichParagraph,
+  type RichText,
+} from '@/domain/richtext';
 
 import { clampIndent, Indentation, shiftIndent } from './indent';
 import { cleanPastedHtml } from './paste';
@@ -38,15 +44,18 @@ function contentOf(doc: RichDoc): JSONContent {
   };
 }
 
+/** What the server keeps of pasted text: no invisible or look-alike characters, no newline inside a paragraph. */
 function textOf(node: JSONContent): RichText | null {
   if (node.type !== 'text' || !node.text) return null;
+  const text = stripForbiddenCharacters(node.text).replace(/\n/g, ' ');
+  if (text === '') return null;
   const types = new Set((node.marks ?? []).map((m) => m.type));
   const marks = MARKS.filter((m) => types.has(m)).map((type) => ({ type }));
-  return { type: 'text', text: node.text, ...(marks.length > 0 && { marks }) };
+  return { type: 'text', text, ...(marks.length > 0 && { marks }) };
 }
 
 /** The editor's JSON in the stored shape (`parseRichDoc` takes it as it is). */
-function docOf(json: JSONContent, max: number): RichDoc {
+export function docOf(json: JSONContent, max: number): RichDoc {
   const content = (json.content ?? []).map((p): RichParagraph => {
     const runs = (p.content ?? []).flatMap((node) => textOf(node) ?? []);
     return {
