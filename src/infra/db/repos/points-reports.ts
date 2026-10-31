@@ -50,10 +50,14 @@ function toReportPoint(row: {
  * The SQL twin of `isLateReport` (domain/calendar/late-report.ts): a report about an event that
  * ends before the meeting day, whose close, the event's end + 2 h capped at 00.00 of the meeting
  * day, is after the deadline. A parity contract test keeps the two in step.
- * TODO(m9-verify): this SQL has not run against PostgreSQL; check the parity test, incl. the DST nights.
  */
 function lateFor(meetingDate: CalDate, deadlineAt: Date) {
-  const end = sql`((${lastDay} + coalesce(${points.timeTo}, time '20:00')) AT TIME ZONE 'Europe/Prague')`;
+  const local = sql`(${lastDay} + coalesce(${points.timeTo}, time '20:00'))`;
+  const later = sql`(${local} AT TIME ZONE 'Europe/Prague')`;
+  // A time in the repeated hour of the autumn night is the earlier, summer-time instant, as in
+  // `wallClockToInstant`; PostgreSQL takes the later one.
+  const end = sql`(CASE WHEN ((${later} - interval '1 hour') AT TIME ZONE 'Europe/Prague') = ${local}
+    THEN ${later} - interval '1 hour' ELSE ${later} END)`;
   const cap = sql`(${toIsoDate(meetingDate)}::date::timestamp AT TIME ZONE 'Europe/Prague')`;
   return sql<boolean>`coalesce(
     ${points.kind} = 'report'
