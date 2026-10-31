@@ -78,6 +78,7 @@ const APPLIES: {
     open && authorId === recipient.id && member(recipient),
   /** The headmaster, while they can sign in; a skipped or closed issue has no subject to begin with. */
   'headmaster.summary': (_subject, recipient) => isHeadmaster(recipient),
+  'headmaster.late-summary': (_subject, recipient) => isHeadmaster(recipient),
 };
 
 /** A missing subject (a decided request purged on 1 September, a deleted point) never applies. */

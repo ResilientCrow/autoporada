@@ -60,12 +60,16 @@ describe('viewOf', () => {
         approved: 5,
         pending: 2,
         returned: 1,
+        lateExpected: 0,
+        lastLateDue: null,
       }),
     ).toEqual({
       meetingDate: monday,
       approved: 5,
       pending: 2,
       returned: 1,
+      lateExpected: 0,
+      lastLateDue: null,
     });
   });
 

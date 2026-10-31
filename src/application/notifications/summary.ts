@@ -3,6 +3,7 @@ import type { Tx, UserRecord } from '@/application/ports';
 import { pointMonday, summaryDue, type IssueRow } from '@/domain/calendar';
 import { instantToWallClock, isSameDate, toIsoDate, type CalDate } from '@/domain/time';
 
+import { lateReportsFor } from './late-summary';
 import { isMember } from './reminders';
 
 /** What the caller knows when it enqueues a summary: the headmaster and the meeting Monday it speaks for. */
@@ -40,6 +41,10 @@ export interface SummaryFacts {
   readonly approved: number;
   readonly pending: number;
   readonly returned: number;
+  /** Late reports (ADR 0035) not handed in yet; zero leaves the line out. */
+  readonly lateExpected: number;
+  /** The last close among the late reports of this porada. */
+  readonly lastLateDue: Date | null;
 }
 
 /**
@@ -47,15 +52,16 @@ export interface SummaryFacts {
  * except that the issue itself counts as open, so a generated issue still counts what it holds.
  */
 async function summaryFacts(
-  tx: Pick<Tx, 'points' | 'issues' | 'settings' | 'ctx'>,
-  monday: CalDate,
-  meetingDate: CalDate,
+  tx: Pick<Tx, 'points' | 'issues' | 'settings' | 'ctx' | 'futureItems'>,
+  issue: IssueRow,
 ): Promise<SummaryFacts> {
+  const { monday, meetingDate } = issue;
   const { now } = tx.ctx;
   // Placement reads no deadline, so the rule `readSlots` also returns is not needed here.
-  const [{ slots: rows }, handedIn] = await Promise.all([
+  const [{ slots: rows }, handedIn, late] = await Promise.all([
     readSlots(tx, now),
     tx.points.handedInFor(monday),
+    lateReportsFor(tx, issue),
   ]);
   const slots = rows.map((slot) =>
     isSameDate(slot.monday, monday) ? { ...slot, status: 'open' as const } : slot,
@@ -72,13 +78,15 @@ async function summaryFacts(
     approved: counts.approved,
     pending: counts.submitted,
     returned: counts.returned,
+    lateExpected: late.expected,
+    lastLateDue: late.lastDue,
   };
 }
 
 /** The summary mail's subject, the same for every headmaster: the issue closing now, with its counts as they stand when the mail goes. */
 export async function loadSummary(
-  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
+  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings' | 'futureItems'>,
 ): Promise<SummaryFacts | null> {
   const issue = await summaryIssue(tx, tx.ctx.now);
-  return issue && summaryFacts(tx, issue.monday, issue.meetingDate);
+  return issue && summaryFacts(tx, issue);
 }

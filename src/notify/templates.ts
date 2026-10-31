@@ -33,6 +33,7 @@ export const TEMPLATE_NAMES = [
   'issue.moved',
   'report.ended',
   'report.last-call',
+  'headmaster.late-summary',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -59,6 +60,15 @@ export interface TemplateViews {
     readonly approved: number;
     readonly pending: number;
     readonly returned: number;
+    /** Late reports not handed in yet, and when the last of them closes. */
+    readonly lateExpected: number;
+    readonly lastLateDue: Date | null;
+  };
+  /** The late reports of a meeting once the last of them has closed. */
+  'headmaster.late-summary': {
+    readonly meetingDate: CalDate;
+    readonly handedIn: number;
+    readonly missing: number;
   };
   /** The porada that was moved and the deadline it now has. */
   'issue.moved': { readonly meetingDate: CalDate; readonly deadlineAt: Date };
@@ -185,11 +195,34 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     };
   },
   // Counts, never titles or names (D3 (a)); the colons keep every noun clear of its number.
-  'headmaster.summary': ({ meetingDate, approved, pending, returned }) => ({
-    subject: 'Autoporada: uzávěrka porady proběhla',
+  'headmaster.summary': ({
+    meetingDate,
+    approved,
+    pending,
+    returned,
+    lateExpected,
+    lastLateDue,
+  }) => {
+    const paragraphs = [
+      `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} proběhla. Schváleno: ${approved}, čeká na kontrolu: ${pending}, vráceno k\u00A0úpravě: ${returned}.`,
+    ];
+    if (lateExpected > 0 && lastLateDue) {
+      const { date, time } = instantToWallClock(lastLateDue);
+      paragraphs.push(
+        `Pozdní zprávy, které ještě chybí: ${lateExpected}. Poslední uzávěrka je ${formatDayMonth(date)} v\u00A0${formatTime(time)}.`,
+      );
+    }
+    return {
+      subject: 'Autoporada: uzávěrka porady proběhla',
+      body: { paragraphs, link: '/kontrola' },
+    };
+  },
+  // Counts only (F2): the titles are in the preflight of the porada.
+  'headmaster.late-summary': ({ meetingDate, handedIn, missing }) => ({
+    subject: `Autoporada: pozdní zprávy k\u00A0poradě ${typographizeText(formatLongDate(meetingDate))}: odevzdáno ${handedIn}, chybí ${missing}`,
     body: {
       paragraphs: [
-        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} proběhla. Schváleno: ${approved}, čeká na kontrolu: ${pending}, vráceno k\u00A0úpravě: ${returned}.`,
+        `poslední uzávěrka pozdních zpráv k\u00A0poradě z\u00A0${typographizeText(formatLongDate(meetingDate))} proběhla. Odevzdáno: ${handedIn}, chybí: ${missing}.`,
       ],
       link: '/kontrola',
     },

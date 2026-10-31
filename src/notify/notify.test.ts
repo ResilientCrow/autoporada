@@ -34,7 +34,15 @@ const VIEWS = {
   'reminder.soft': { meetingDate: MEETING },
   'reminder.hard': { meetingDate: MEETING },
   'reviewer.digest': { submitted: 4, accessRequests: 2 },
-  'headmaster.summary': { meetingDate: MEETING, approved: 5, pending: 2, returned: 1 },
+  'headmaster.summary': {
+    meetingDate: MEETING,
+    approved: 5,
+    pending: 2,
+    returned: 1,
+    lateExpected: 0,
+    lastLateDue: null,
+  },
+  'headmaster.late-summary': { meetingDate: MEETING, handedIn: 3, missing: 1 },
   'issue.moved': { meetingDate: MEETING, deadlineAt: new Date('2026-11-23T19:00:00Z') },
   'report.ended': { meetingDate: MEETING, due: new Date('2026-11-23T19:00:00Z') },
   'report.last-call': { meetingDate: MEETING, due: new Date('2026-11-23T19:00:00Z') },
@@ -126,6 +134,12 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: `Autoporada: porada se přesouvá na 26.${NB}října 2026`,
     text: letter(
       `porada se přesouvá na 26.${NB}října 2026. Uzávěrka je dřív: pondělí 23.${NB}11. v${NB}20.00.\n\n${BODY}`,
+    ),
+  },
+  'headmaster.late-summary': {
+    subject: `Autoporada: pozdní zprávy k${NB}poradě 26.${NB}října 2026: odevzdáno 3, chybí 1`,
+    text: letter(
+      `poslední uzávěrka pozdních zpráv k${NB}poradě z${NB}26.${NB}října 2026 proběhla. Odevzdáno: 3, chybí: 1.\n\n${REVIEW}`,
     ),
   },
   'report.last-call': {

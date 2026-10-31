@@ -15,6 +15,7 @@ import {
   type LastCallFacts,
   type ReportEndedFacts,
 } from './late-reports';
+import { loadLateSummary, type LateSummaryFacts } from './late-summary';
 import { loadMoved, type MovedFacts } from './moved';
 import { loadReminder, type ReminderFacts } from './reminders';
 import { loadSummary, type SummaryFacts } from './summary';
@@ -45,6 +46,8 @@ export interface MailSubjects {
   readonly 'reviewer.digest': DigestFacts;
   /** The issue closing now and where its points stand. */
   readonly 'headmaster.summary': SummaryFacts;
+  /** The porada whose last late report has closed, with the counts. */
+  readonly 'headmaster.late-summary': LateSummaryFacts;
   /** The slot collected now, with its deadline; the recipient is the subject. */
   readonly 'issue.moved': MovedFacts;
   /** The late akce and the close of its report. */
@@ -94,6 +97,7 @@ const SUBJECTS: {
   'reminder.hard': (tx, id) => loadReminder(tx, 'hard', id),
   'reviewer.digest': loadDigest,
   'headmaster.summary': loadSummary,
+  'headmaster.late-summary': loadLateSummary,
   'issue.moved': loadMoved,
   'report.ended': loadReportEnded,
   'report.last-call': loadLastCall,

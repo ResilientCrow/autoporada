@@ -314,6 +314,8 @@ describe('stillApplies', () => {
       approved: 0,
       pending: 0,
       returned: 0,
+      lateExpected: 0,
+      lastLateDue: null,
     };
 
     it('goes to the headmaster while they can sign in, whatever the counts say', () => {

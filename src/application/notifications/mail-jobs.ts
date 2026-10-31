@@ -9,6 +9,7 @@ import {
   type LastCallIds,
   type ReportEndedIds,
 } from './late-reports';
+import { lateSummaryParts } from './late-summary';
 import { movedParts, type MovedIds } from './moved';
 import { pointMailParts, type PointMailIds } from './point-mails';
 import { reminderParts, type ReminderIds } from './reminders';
@@ -44,6 +45,7 @@ interface MailIds {
   readonly 'reminder.hard': ReminderIds;
   readonly 'reviewer.digest': DigestIds;
   readonly 'headmaster.summary': SummaryIds;
+  readonly 'headmaster.late-summary': SummaryIds;
   readonly 'issue.moved': MovedIds;
   readonly 'report.ended': ReportEndedIds;
   readonly 'report.last-call': LastCallIds;
@@ -88,6 +90,7 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   'reminder.hard': reminderParts,
   'reviewer.digest': digestParts,
   'headmaster.summary': summaryParts,
+  'headmaster.late-summary': lateSummaryParts,
   'issue.moved': movedParts,
   'report.ended': reportEndedParts,
   'report.last-call': lastCallParts,

@@ -27,11 +27,18 @@ const VIEWS: {
   'report.ended': ({ due, meetingDate }) => ({ due, meetingDate }),
   'report.last-call': ({ due, meetingDate }) => ({ due, meetingDate }),
   'issue.moved': ({ meetingDate, deadlineAt }) => ({ meetingDate, deadlineAt }),
-  'headmaster.summary': ({ meetingDate, approved, pending, returned }) => ({
+  'headmaster.summary': ({
     meetingDate,
     approved,
     pending,
     returned,
+    lateExpected,
+    lastLateDue,
+  }) => ({ meetingDate, approved, pending, returned, lateExpected, lastLateDue }),
+  'headmaster.late-summary': ({ meetingDate, handedIn, missing }) => ({
+    meetingDate,
+    handedIn,
+    missing,
   }),
 };
 
