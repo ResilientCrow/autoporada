@@ -137,6 +137,8 @@ export { setRemindersInput, setRemindersOutput } from './profile';
 export {
   addEntriesInput,
   addEntriesOutput,
+  moveListInput,
+  moveListOutput,
   previewPasteInput,
   previewPasteOutput,
   readRegistryInput,
@@ -145,6 +147,8 @@ export {
   removeEntryOutput,
   saveEntryInput,
   saveEntryOutput,
+  saveListInput,
+  saveListOutput,
 } from './registry';
 export {
   changeUserAccessInput,

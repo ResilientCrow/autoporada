@@ -107,3 +107,37 @@ export const saveEntryOutput = z.strictObject({
 export const removeEntryInput = z.strictObject({ id: z.uuid() });
 /** `deleted`: the entry was never printed and is gone; else it is kept, marked removed. */
 export const removeEntryOutput = z.strictObject({ deleted: z.boolean() });
+
+/**
+ * Makes a `point4` list (no `id`) or changes one under the version the form read. The title is
+ * what the screen calls the list, the document label what the document does.
+ */
+export const saveListInput = z.strictObject({
+  id: z.uuid().optional(),
+  version: z.int().positive().optional(),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine((text) => !hasForbiddenCharacters(text, { allowTab: false })),
+  docLabel: z
+    .string()
+    .trim()
+    .min(1)
+    .max(300)
+    .refine((text) => !hasForbiddenCharacters(text, { allowTab: false })),
+  active: z.boolean(),
+});
+export const saveListOutput = z.strictObject({
+  id: z.uuid(),
+  version: z.int().positive(),
+  changed: z.boolean(),
+});
+
+/** One step up or down in the order of the lists. */
+export const moveListInput = z.strictObject({
+  id: z.uuid(),
+  direction: z.enum(['up', 'down']),
+});
+export const moveListOutput = z.strictObject({ moved: z.boolean() });
