@@ -15,6 +15,11 @@ export interface OutlineEdit {
   readonly monday: string;
   readonly expectedVersion: number | undefined;
   readonly apply: (outline: Outline) => OutlineResult;
+  /**
+   * True when the outline already holds what the op would make (a retried add). The write then
+   * changes nothing: no version bump, no audit row; the version the client sent must still be current.
+   */
+  readonly alreadyDone?: (outline: Outline) => boolean;
   readonly event: 'outline.added' | 'outline.saved' | 'outline.moved' | 'outline.removed';
   /** Ids and counts of the result; never text (audit-meta test). */
   readonly meta: (
@@ -44,9 +49,18 @@ export async function editOutline(
 
   const { issue } = await ensureIssue(tx, monday, rule);
   if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
-  const touched = await tx.issues.touch(issue.id, edit.expectedVersion ?? UNTOUCHED_VERSION);
-
+  const expected = edit.expectedVersion ?? UNTOUCHED_VERSION;
   const proposals = await tx.points.eligibleFor(monday, issue.meetingDate);
+  if (edit.alreadyDone) {
+    // A look before the version is taken; nothing is written on this path.
+    const peek = await loadEditable(tx, { id: issue.id, monday }, proposals);
+    if (edit.alreadyDone(peek.outline)) {
+      if (issue.version !== expected) return fail({ code: 'conflict' });
+      return ok({ version: issue.version });
+    }
+  }
+  const touched = await tx.issues.touch(issue.id, expected);
+
   const loaded = await loadEditable(tx, { id: issue.id, monday }, proposals);
   const result = edit.apply(loaded.outline);
   if (!result.ok) return fail({ code: 'rule', rule: result.refusal });

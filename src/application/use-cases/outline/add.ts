@@ -1,4 +1,4 @@
-import { defineUseCase, ok } from '@/application/core';
+import { defineUseCase, fail, ok } from '@/application/core';
 import { outlineAddInput, outlineWriteOutput } from '@/contracts';
 import { addItem, SECTIONS } from '@/domain/outline';
 import { emptyRichDoc } from '@/domain/richtext';
@@ -9,7 +9,9 @@ import { editOutline } from './flow';
  * The headmaster adds an item to POKYNY or HOSPODAŘENÍ, at the end of the section: a standing item
  * carries to the next porada, a one-off does not. The form makes the item's id, so an add that
  * was sent twice (a retry) leaves one item. A full section is `outline-full`. The first write
- * of a porada also stores the outline it was derived from.
+ * of a porada also stores the outline it was derived from. A retry (its id is already in the
+ * outline) changes nothing. An id that is a point's id is refused: it would block that point's
+ * placement row later.
  */
 export const addOutlineItem = defineUseCase({
   name: 'outline.add',
@@ -18,20 +20,23 @@ export const addOutlineItem = defineUseCase({
   output: outlineWriteOutput,
   access: { kind: 'gate', check: () => ({ action: 'issue.edit' }) },
   async execute({ tx, now }, input) {
+    if (await tx.points.get(input.lineageId)) {
+      return fail({ code: 'invalid-input', fields: { lineageId: 'invalid' } });
+    }
     const done = await editOutline(
       { tx, now },
       {
         monday: input.monday,
         expectedVersion: input.expectedVersion,
+        alreadyDone: (outline) =>
+          SECTIONS.some((s) => outline[s].some((row) => row.lineageId === input.lineageId)),
         apply: (outline) =>
-          SECTIONS.some((s) => outline[s].some((row) => row.lineageId === input.lineageId))
-            ? { ok: true, outline }
-            : addItem(outline, input.section, {
-                lineageId: input.lineageId,
-                title: input.title,
-                persistence: input.persistence,
-                body: input.body ?? emptyRichDoc(),
-              }),
+          addItem(outline, input.section, {
+            lineageId: input.lineageId,
+            title: input.title,
+            persistence: input.persistence,
+            body: input.body ?? emptyRichDoc(),
+          }),
         event: 'outline.added',
         meta: (_before, after) => ({
           monday: input.monday,

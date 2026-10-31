@@ -170,12 +170,41 @@ describe('outline.add', () => {
       title: 'Jiný název při opakování',
       expectedVersion: first.ok ? first.value.version : 0,
     });
-    expect(again).toEqual({ ok: true, value: { version: 3, lineageId } });
+    // The retry is a no-op: no version bump and no second audit row.
+    expect(again).toEqual({ ok: true, value: { version: 2, lineageId } });
+    expect((await fx.issueOf(WEEK_1))?.version).toBe(2);
+    expect(await fx.auditOf('outline.added')).toHaveLength(1);
     const read = await fx.readAs(head, WEEK_1);
     if (!read.ok) throw new Error('read refused');
     const same = read.value.pokyny.filter((r) => r.lineageId === lineageId);
     expect(same).toEqual([expect.objectContaining({ title: 'Nový pokyn' })]);
   });
+
+  it('refuses a retry that names a stale version, even when the item is already there', async () => {
+    const head = await fx.headmaster();
+    const lineageId = randomUUID();
+    await add(head, { lineageId });
+    expect(await add(head, { lineageId, expectedVersion: 1 })).toEqual({
+      ok: false,
+      error: { code: 'conflict' },
+    });
+  });
+
+  it.each(['start', 'approved'] as const)(
+    'refuses a lineageId that is the id of a point (%s)',
+    async (state) => {
+      const head = await fx.headmaster();
+      const lineageId =
+        state === 'approved' ? await fx.approvedProposal() : await fx.start(head, 'pokyn');
+      const before = await world.inspect.audit();
+      expect(await add(head, { lineageId })).toEqual({
+        ok: false,
+        error: { code: 'invalid-input', fields: { lineageId: 'invalid' } },
+      });
+      expect(await fx.issueOf(WEEK_1)).toBeNull();
+      expect(await world.inspect.audit()).toEqual(before);
+    },
+  );
 
   it('refuses a stale expectedVersion as a conflict and changes nothing', async () => {
     const head = await fx.headmaster();
