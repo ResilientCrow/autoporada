@@ -1,8 +1,9 @@
 import type { UserPrincipal } from '@/application/ports';
 import { listFuture, listPointTypes } from '@/application/use-cases';
+import { eventEnd, lateFacts } from '@/domain/calendar';
 import { can } from '@/domain/policy';
 import { reportDue } from '@/domain/review';
-import { instantToWallClock, parseIsoDate } from '@/domain/time';
+import { parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
@@ -50,15 +51,17 @@ export async function reportDueOf(viewer: UserPrincipal): Promise<ReportDueModel
   const rows = orNotFound('future.list', future);
   const types = orNotFound('pointTypes.list', listed);
   if (rows === null || types === null) return null;
-  const today = instantToWallClock(getContainer().app.clock.now()).date;
+  const now = getContainer().app.clock.now();
   return {
     items: rows.items.flatMap((row) => {
-      const lastDay = row.endDate ?? row.startDate;
-      const owed =
-        row.isAuthor &&
-        lastDay !== null &&
-        reportDue({ ...row, lastDay: parseIsoDate(lastDay) }, today);
       const { id, title, startDate, endDate, timeFrom, timeTo } = row;
+      const facts = lateFacts({
+        eventDate: startDate === null ? null : parseIsoDate(startDate),
+        endDate: endDate === null ? null : parseIsoDate(endDate),
+        timeTo: timeTo === null ? null : parseWallTime(timeTo),
+      });
+      const owed =
+        row.isAuthor && facts !== undefined && reportDue({ ...row, endsAt: eventEnd(facts) }, now);
       return owed ? [{ id, title, startDate, endDate, timeFrom, timeTo }] : [];
     }),
     types: types.types.map(({ id, name }) => ({ id, name })),

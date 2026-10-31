@@ -6,10 +6,10 @@ import {
   startFutureReportInput,
   startFutureReportOutput,
 } from '@/contracts';
+import { eventEnd, lateFacts } from '@/domain/calendar';
 import type { Check } from '@/domain/policy';
 import { DRAFT_CAP } from '@/domain/report';
 import { reportDue } from '@/domain/review';
-import { instantToWallClock } from '@/domain/time';
 
 import { pointEvent } from '../points/events';
 import { futureEvent } from './events';
@@ -34,15 +34,15 @@ const reportAccess = <I extends { readonly id: string }>(): ResourceAccess<
   }),
 });
 
-/** Whether a report is owed for the akce on the Prague day of `now`. */
+/** Whether a report is owed for the akce at `now`: from the end of its last day (ADR 0035). */
 function owed(item: FutureItemRecord, now: Date): boolean {
-  const { startDate, endDate, expectsReport } = item.content;
-  const lastDay = endDate ?? startDate;
+  const { startDate, endDate, timeTo, expectsReport } = item.content;
+  const facts = lateFacts({ eventDate: startDate, endDate, timeTo });
   return (
-    lastDay !== null &&
+    facts !== undefined &&
     reportDue(
-      { state: item.state, expectsReport, reportState: item.reportState, lastDay },
-      instantToWallClock(now).date,
+      { state: item.state, expectsReport, reportState: item.reportState, endsAt: eventEnd(facts) },
+      now,
     )
   );
 }

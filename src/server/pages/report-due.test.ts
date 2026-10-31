@@ -96,7 +96,7 @@ describe('reportDueOf', () => {
     expect(calls.every(([, , call]) => call.principal === who)).toBe(true);
   });
 
-  it('is due from the day after the last day, counting a one-day akce by its start', async () => {
+  it('is due from the end of the last day, counting a one-day akce by its start', async () => {
     serve([
       row('over'),
       row('today', { endDate: '2026-11-12' }),
@@ -105,6 +105,16 @@ describe('reportDueOf', () => {
       row('onedaytoday', { startDate: '2026-11-12', endDate: null }),
     ]);
     expect(await idsOf()).toEqual(['over', 'oneday']);
+  });
+
+  it('is due on the last day once its end time has passed (11.00 in Prague), 20.00 without one', async () => {
+    serve([
+      row('ended', { endDate: '2026-11-12', timeTo: '10:59' }),
+      row('endsnow', { endDate: '2026-11-12', timeTo: '11:00' }),
+      row('later', { endDate: '2026-11-12', timeTo: '11:01' }),
+      row('evening', { endDate: '2026-11-12', timeTo: null }),
+    ]);
+    expect(await idsOf()).toEqual(['ended', 'endsnow']);
   });
 
   it('keeps a prompted akce and drops the ones whose report is written or declined', async () => {

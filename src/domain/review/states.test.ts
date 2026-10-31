@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ROLES, type Role } from '@/domain/actor';
-import { calDate } from '@/domain/time';
+import { calDate, parseWallTime, wallClockToInstant } from '@/domain/time';
 
 import {
   ACCESS_MACHINE,
@@ -254,16 +254,29 @@ describe('access requests', () => {
 describe('reportDue', () => {
   const akce = { state: 'approved', expectsReport: true, reportState: 'none' } as const;
   const lastDay = calDate(2026, 11, 11);
+  const endsAt = (time = '20:00') => wallClockToInstant(lastDay, parseWallTime(time));
+  /** A Prague wall-clock instant, 11 November (CET). */
+  const at = (day: number, time: string) =>
+    wallClockToInstant(calDate(2026, 11, day), parseWallTime(time));
 
-  it('is due the day after the last day, not on it or before', () => {
-    expect(reportDue({ ...akce, lastDay }, calDate(2026, 11, 10))).toBe(false);
-    expect(reportDue({ ...akce, lastDay }, calDate(2026, 11, 11))).toBe(false);
-    expect(reportDue({ ...akce, lastDay }, calDate(2026, 11, 12))).toBe(true);
-    expect(reportDue({ ...akce, lastDay }, calDate(2027, 3, 1))).toBe(true);
+  it('is owed from 20.00 of the last day without an end time, not before', () => {
+    const facts = { ...akce, endsAt: endsAt() };
+    expect(reportDue(facts, at(10, '21:00'))).toBe(false);
+    expect(reportDue(facts, at(11, '19:59'))).toBe(false);
+    expect(reportDue(facts, at(11, '20:00'))).toBe(true);
+    expect(reportDue(facts, at(11, '23:59'))).toBe(true);
+    expect(reportDue(facts, at(12, '8:00'))).toBe(true);
+    expect(reportDue(facts, new Date(at(12, '8:00').getTime() + 100 * 86_400_000))).toBe(true);
+  });
+
+  it('is owed from the end time of the last day when it has one', () => {
+    const facts = { ...akce, endsAt: endsAt('14:30') };
+    expect(reportDue(facts, at(11, '14:29'))).toBe(false);
+    expect(reportDue(facts, at(11, '14:30'))).toBe(true);
   });
 
   it('stays due while the author was prompted', () => {
-    expect(reportDue({ ...akce, reportState: 'prompted', lastDay }, calDate(2026, 11, 12))).toBe(
+    expect(reportDue({ ...akce, reportState: 'prompted', endsAt: endsAt() }, at(12, '8:00'))).toBe(
       true,
     );
   });
@@ -276,6 +289,6 @@ describe('reportDue', () => {
     ['submitted', { state: 'submitted' }],
     ['cancelled', { state: 'cancelled' }],
   ] as const)('is not due when %s', (_name, over) => {
-    expect(reportDue({ ...akce, ...over, lastDay }, calDate(2026, 12, 1))).toBe(false);
+    expect(reportDue({ ...akce, ...over, endsAt: endsAt() }, at(30, '8:00'))).toBe(false);
   });
 });

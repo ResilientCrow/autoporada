@@ -1,6 +1,4 @@
 import { atLeast, type Role } from '@/domain/actor';
-import { compareDates, type CalDate } from '@/domain/time';
-
 import type { Machine } from './machine';
 
 /** Someone acting on a submission: a signed-in user (author or not) or the system itself. */
@@ -137,20 +135,25 @@ interface ReportFacts {
   readonly state: FutureState;
   readonly expectsReport: boolean;
   readonly reportState: ReportState;
-  /** The end date, or the start date of a one-day akce. */
-  readonly lastDay: CalDate;
+  /**
+   * When the akce ends: its last day at its end time, or at 20.00 without one. The caller gets it
+   * from `eventEnd` (domain/calendar), which this module cannot import (calendar reads the issue
+   * status from here), so a report's late close and „owed from“ share one definition.
+   */
+  readonly endsAt: Date;
 }
 
 /**
  * True when the author is owed a report: an approved akce that expects one, whose report is neither
- * written nor declined, from the day after its last day on (`today` is the Prague day).
+ * written nor declined, from the moment the akce ends (ADR 0035) — not from the next day, so a
+ * report on an evening event can be started before its close.
  */
-export function reportDue(akce: ReportFacts, today: CalDate): boolean {
+export function reportDue(akce: ReportFacts, now: Date): boolean {
   return (
     akce.state === 'approved' &&
     akce.expectsReport &&
     REPORT_MACHINE.write.from.includes(akce.reportState) &&
-    compareDates(akce.lastDay, today) < 0
+    akce.endsAt.getTime() <= now.getTime()
   );
 }
 

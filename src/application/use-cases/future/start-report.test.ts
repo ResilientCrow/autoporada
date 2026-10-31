@@ -236,7 +236,7 @@ describe('future.startReport', () => {
     );
   });
 
-  it('refuses while the akce is still running or on its last day', async () => {
+  it('refuses while the akce is still running or has not yet ended on its last day', async () => {
     const author = await user();
     const id = await start(author, 'akce');
     await world.run(saveFuture, world.as(author), {
@@ -254,16 +254,34 @@ describe('future.startReport', () => {
     expect((await startReport(author, id, typeId)).ok).toBe(true);
   });
 
-  it('decides by the Prague day: 23.30 on the last day is too early, 0.30 after it is due', async () => {
+  it('is owed from the akce’s end on its last day, in Prague time', async () => {
     const author = await user();
     const id = await dueAkce(author);
     const { id: typeId } = await type();
-    // 11 November 2026 is the last day: 23:30 in Prague is still 22:30 UTC on the 11th.
-    world.clock.set(new Date('2026-11-11T22:30:00Z'));
+    // The akce ends at 14.30 on 11 November 2026 (CET): 13:30 UTC.
+    world.clock.set(new Date('2026-11-11T13:29:00Z'));
     await refuses(id, () => startReport(author, id, typeId), rule);
-    // 0:30 on the 12th in Prague is 23:30 UTC on the 11th, the same UTC date as above.
-    world.clock.set(new Date('2026-11-11T23:30:00Z'));
+    world.clock.set(new Date('2026-11-11T13:30:00Z'));
     expect((await startReport(author, id, typeId)).ok).toBe(true);
+  });
+
+  it('is owed from 20.00 on the last day when the akce has no end time', async () => {
+    const author = await user();
+    const id = await dueAkce(author, readyAkce({ timeTo: null }));
+    const { id: typeId } = await type();
+    world.clock.set(new Date('2026-11-11T18:59:00Z'));
+    await refuses(id, () => startReport(author, id, typeId), rule);
+    world.clock.set(new Date('2026-11-11T19:00:00Z'));
+    expect((await startReport(author, id, typeId)).ok).toBe(true);
+  });
+
+  it('declines on the same rule: not before the end, allowed from it', async () => {
+    const author = await user();
+    const id = await dueAkce(author);
+    world.clock.set(new Date('2026-11-11T13:29:00Z'));
+    await refuses(id, () => decline(author, id), rule);
+    world.clock.set(new Date('2026-11-11T13:30:00Z'));
+    expect((await decline(author, id)).ok).toBe(true);
   });
 
   it.each([
