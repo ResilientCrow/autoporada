@@ -9,3 +9,15 @@ export {
   type Statement,
   type SystemSlot,
 } from './model';
+export { OUTLINE_LIMITS } from './limits';
+export { mergeProposals, type DroppedProposal, type EligibleProposal, type Merged } from './merge';
+export {
+  addItem,
+  moveItem,
+  removeItem,
+  saveItem,
+  type ItemPatch,
+  type NewItem,
+  type OutlineRefusal,
+  type OutlineResult,
+} from './ops';
