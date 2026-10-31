@@ -34,10 +34,13 @@ export interface LastCallIds {
   readonly monday: CalDate;
 }
 
-/** One mail per report and slot; the subject names the report and which table it is in. */
+/**
+ * One mail per report and slot; the key names the table too, the subject is the report's id alone
+ * (the ledger's subject column is a uuid) and `loadLastCall` finds it in either table.
+ */
 export const lastCallParts = ({ authorId, kind, id, monday }: LastCallIds) => ({
   recipientId: authorId,
-  subjectId: `${kind}:${id}`,
+  subjectId: id,
   key: `${kind}:${id}:${toIsoDate(monday)}`,
 });
 
@@ -152,29 +155,25 @@ export interface LastCallFacts {
 }
 
 /** Read again when the mail goes: null when the report is gone or not late for its slot any more. */
-export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, subjectId: string) {
+export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, id: string) {
   const { now } = tx.ctx;
-  const [kind, id = ''] = subjectId.split(':');
-  const found =
-    kind === 'akce'
-      ? await tx.futureItems.reportEnding(id).then((item) => {
-          const open =
-            item?.state === 'approved' &&
-            item.expectsReport &&
-            (item.reportState === 'none' || item.reportState === 'prompted');
-          return item && { item, open };
-        })
-      : kind === 'point'
-        ? await tx.points.reportPoint(id).then((item) => {
-            return item && { item, open: item.state === 'draft' || item.state === 'returned' };
-          })
-        : null;
+  const item = await tx.futureItems.reportEnding(id);
+  const point = item ? null : await tx.points.reportPoint(id);
+  const found = item
+    ? {
+        facts: item,
+        open:
+          item.state === 'approved' &&
+          item.expectsReport &&
+          (item.reportState === 'none' || item.reportState === 'prompted'),
+      }
+    : point && { facts: point, open: point.state === 'draft' || point.state === 'returned' };
   if (!found) return null;
   const { slots, rule } = await readSlots(tx, now);
-  const close = lateClose(slots, rule, now, found.item);
+  const close = lateClose(slots, rule, now, found.facts);
   if (!close) return null;
   const facts: LastCallFacts = {
-    authorId: found.item.authorId,
+    authorId: found.facts.authorId,
     open: found.open,
     meetingDate: close.slot.meetingDate,
     due: close.due,
