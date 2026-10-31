@@ -10,8 +10,8 @@ const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovíd
 
 export interface Body {
   readonly paragraphs: readonly string[];
-  /** Ends the body with a link to this page on the app origin (ADR 0020): sign-in, the author's points or the review queue. */
-  readonly link?: '/prihlaseni' | '/body' | '/kontrola';
+  /** Ends the body with a link to this page on the app origin (ADR 0020, 0028): sign-in, the author's points, the review queue or the users page. */
+  readonly link?: '/prihlaseni' | '/body' | '/kontrola' | '/uzivatele';
   /** Paragraphs that follow the link, before the footer. */
   readonly after?: readonly string[];
 }

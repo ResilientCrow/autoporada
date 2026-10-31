@@ -165,7 +165,7 @@ if printf '%s\n' "$worker_logs" | grep -q '"level":"\(error\|fatal\)"'; then fai
 if printf '%s\n' "$worker_logs" | grep -q '@'; then fail 'the worker logged an @ (an address?)'; fi
 
 # The schema is the one this image's pg-boss expects (it logs its number), the queues exist, and the
-# cron entry is registered in Prague time.
+# cron entries (one per job and key) are registered in Prague time.
 expected=$(printf '%s\n' "$worker_logs" | grep -o '"pgbossSchema":[0-9]*' | head -1 | cut -d: -f2)
 [ -n "$expected" ] || fail 'worker.ready did not say which pg-boss schema it expects'
 installed=$(sql 'SELECT version FROM pgboss.version') || fail 'could not read pgboss.version'
@@ -173,9 +173,9 @@ installed=$(sql 'SELECT version FROM pgboss.version') || fail 'could not read pg
 queues=$(sql "SELECT string_agg(name, ',' ORDER BY name) FROM pgboss.queue WHERE name <> '__pgboss__send-it'") ||
   fail 'could not read the queues'
 [ "$queues" = 'dead,future.report-prompt,headmaster.summary,mail.prune,mail.send,reminders.deadline,reviewer.digest' ] || fail "unexpected queues: $queues"
-schedule=$(sql "SELECT string_agg(name || ' ' || timezone, ',' ORDER BY name) FROM pgboss.schedule") ||
+schedule=$(sql "SELECT string_agg(name || ':' || key || ' ' || timezone, ',' ORDER BY name, key) FROM pgboss.schedule") ||
   fail 'could not read the schedule'
-[ "$schedule" = 'future.report-prompt Europe/Prague,headmaster.summary Europe/Prague,mail.prune Europe/Prague,reminders.deadline Europe/Prague,reviewer.digest Europe/Prague' ] || fail "unexpected schedule: $schedule"
+[ "$schedule" = 'future.report-prompt:daily Europe/Prague,headmaster.summary:tick Europe/Prague,mail.prune:daily Europe/Prague,reminders.deadline:quarter Europe/Prague,reviewer.digest:afternoon Europe/Prague,reviewer.digest:morning Europe/Prague' ] || fail "unexpected schedule: $schedule"
 
 # The worker's own rights: the queue tables and the mail tables, no schema, no role, no business writes.
 # Nothing on pgboss.bam (the owner's migrate runs its rows as SQL), nor on a queue's table or the

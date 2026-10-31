@@ -157,15 +157,16 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     },
   }),
   // Counts, not titles or names (D3 (a)); a count of zero is left out. The colon keeps every noun clear of the number.
+  // "Položky" are points and akce alike, so the subject is neutral too. Requests alone go to the page that decides them.
   'reviewer.digest': ({ submitted, accessRequests }) => {
     const counts: (readonly [string, number])[] = [];
-    if (submitted > 0) counts.push(['body ke kontrole', submitted]);
+    if (submitted > 0) counts.push(['položky ke kontrole', submitted]);
     if (accessRequests > 0) counts.push(['žádosti o\u00A0přístup', accessRequests]);
     return {
-      subject: 'Autoporada: nové body ke kontrole',
+      subject: 'Autoporada: novinky ke kontrole',
       body: {
         paragraphs: counts.map(([what, n], i) => `${i === 0 ? 'nové' : 'Nové'} ${what}: ${n}.`),
-        link: '/kontrola',
+        link: submitted > 0 ? '/kontrola' : '/uzivatele',
       },
     };
   },

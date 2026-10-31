@@ -11,6 +11,7 @@ const ORIGIN = 'https://autoporada.example';
 const LINK = `${ORIGIN}/prihlaseni`;
 const POINTS = `${ORIGIN}/body`;
 const REVIEW = `${ORIGIN}/kontrola`;
+const USERS = `${ORIGIN}/uzivatele`;
 const GREETING = 'Dobrý den,';
 const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovídejte na ni prosím.';
 
@@ -108,8 +109,8 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     ),
   },
   'reviewer.digest': {
-    subject: 'Autoporada: nové body ke kontrole',
-    text: letter(`nové body ke kontrole: 4.\n\nNové žádosti o${NB}přístup: 2.\n\n${REVIEW}`),
+    subject: 'Autoporada: novinky ke kontrole',
+    text: letter(`nové položky ke kontrole: 4.\n\nNové žádosti o${NB}přístup: 2.\n\n${REVIEW}`),
   },
   'headmaster.summary': {
     subject: 'Autoporada: uzávěrka porady proběhla',
@@ -172,9 +173,17 @@ describe('renderMail', () => {
   it('tells a reviewer only the count that is above zero, and a headmaster both', () => {
     const digest = (submitted: number, accessRequests: number) =>
       renderMail('reviewer.digest', { submitted, accessRequests }, ORIGIN).text;
-    expect(digest(1, 0)).toBe(letter(`nové body ke kontrole: 1.\n\n${REVIEW}`));
-    expect(digest(0, 3)).toBe(letter(`nové žádosti o${NB}přístup: 3.\n\n${REVIEW}`));
-    expect(digest(12, 5)).toContain(`nové body ke kontrole: 12.\n\nNové žádosti o${NB}přístup: 5.`);
+    expect(digest(1, 0)).toBe(letter(`nové položky ke kontrole: 1.\n\n${REVIEW}`));
+    expect(digest(12, 5)).toContain(
+      `nové položky ke kontrole: 12.\n\nNové žádosti o${NB}přístup: 5.\n\n${REVIEW}`,
+    );
+  });
+
+  it('sends a digest of access requests alone to the page that decides them', () => {
+    const digest = (submitted: number, accessRequests: number) =>
+      renderMail('reviewer.digest', { submitted, accessRequests }, ORIGIN);
+    expect(digest(0, 3).text).toBe(letter(`nové žádosti o${NB}přístup: 3.\n\n${USERS}`));
+    expect(digest(0, 3).subject).toBe(digest(2, 0).subject);
   });
 
   it('puts the date a new request is possible into the rejection', () => {

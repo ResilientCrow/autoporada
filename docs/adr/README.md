@@ -33,3 +33,4 @@ record that supersedes it.
 | [0025](0025-review-moves-to-the-next-point.md) | Review moves to the next point from the client | Accepted |
 | [0026](0026-retract-clears-the-hand-in.md) | A retract clears the hand-in | Accepted |
 | [0027](0027-start-report-goes-to-its-draft.md) | „Napsat zprávu“ goes to its draft from the client | Accepted |
+| [0028](0028-digest-of-requests-links-the-users-page.md) | A digest of access requests links the users page | Accepted |

@@ -56,10 +56,12 @@ const reviewer = (over: Parameters<typeof world.seed.user>[0] = {}) =>
   world.seed.user({ role: 'reviewer', email: 'kontrola@ssps.cz', ...over });
 const author = () => world.seed.user({ role: 'submitter' });
 
-/** The author hands in a pokyn at `when`. */
+/** The author hands in a pokyn at `when`; answers its id. */
 async function handIn(by: UserRecord, when: Date) {
   world.clock.set(when);
-  await points.moveTo(by, await points.start(by, 'pokyn'), 'submitted');
+  const id = await points.start(by, 'pokyn');
+  await points.moveTo(by, id, 'submitted');
+  return id;
 }
 const hoursBefore = (instant: Date, hours: number) => new Date(instant.getTime() - hours * HOUR);
 
@@ -259,7 +261,7 @@ describe('the mail that goes out', () => {
     await runAt(MORNING);
     expect(await deliver(head, '07')).toMatchObject({ kind: 'done', code: 'sent' });
     expect(fake.calls.at(-1)?.mail.text).toContain(
-      `nové body ke kontrole: 1.\n\nNové žádosti o\u00a0přístup: 1.\n\n${ORIGIN}/kontrola`,
+      `nové položky ke kontrole: 1.\n\nNové žádosti o\u00a0přístup: 1.\n\n${ORIGIN}/kontrola`,
     );
 
     await handIn(writer, hoursBefore(AFTERNOON, 2));
@@ -267,8 +269,26 @@ describe('the mail that goes out', () => {
     await runAt(AFTERNOON);
     expect(await deliver(head, '15')).toMatchObject({ kind: 'done', code: 'sent' });
     const text = fake.calls.at(-1)?.mail.text ?? '';
-    expect(text).toContain('nové body ke kontrole: 2.');
+    expect(text).toContain('nové položky ke kontrole: 2.');
     expect(text).not.toContain('přístup');
+  });
+
+  it('skips a digest whose items were decided before it went out, and the watermark stays', async () => {
+    const reader = await reviewer();
+    const writer = await author();
+    const id = await handIn(writer, hoursBefore(MORNING, 4));
+    await runAt(MORNING);
+    await points.moveTo(writer, id, 'approved');
+    const sentBefore = fake.calls.length;
+    expect(await deliver(reader, '07')).toEqual({ kind: 'done', code: 'skipped.stale' });
+    expect(fake.calls).toHaveLength(sentBefore);
+    expect(
+      await world.workerDb.transaction(
+        { principal: system('job:test'), now: world.clock.now(), requestId: 'check' },
+        { mode: 'read' },
+        (tx) => tx.mailLedger.lastSent('reviewer.digest', reader.id),
+      ),
+    ).toBeNull();
   });
 
   it('skips a digest to someone who can no longer sign in by the time it goes out', async () => {

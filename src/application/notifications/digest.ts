@@ -38,6 +38,8 @@ export const hasNews = ({ submitted, accessRequests }: DigestFacts) =>
  * What came in since the reviewer's last digest was sent (the ledger is the watermark, a day back
  * for someone never mailed): points and akce waiting for review that others handed in, and for the
  * headmaster the access requests still pending. Counts only, by the columns the worker is granted.
+ * The window has no upper bound: an item handed in between the claim and this count shows in two
+ * digests, a rare double count of milliseconds' width (the claim instant is the next watermark).
  */
 export async function digestFacts(
   tx: Pick<Tx, 'ctx' | 'points' | 'futureItems' | 'accessRequests' | 'mailLedger'>,
