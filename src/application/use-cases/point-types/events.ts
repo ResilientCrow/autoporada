@@ -4,7 +4,8 @@ import type { AuditEvent, PointTypeRecord, PointTypeValues } from '@/application
 /**
  * What the diff of a point type shows: the settings that are not text the headmaster wrote. The
  * name and the bullets are text, so `omit`: the event says that they changed (`changedFields`)
- * and which bullets (by key), never what they say (ADR 0015; `test/arch/audit-meta.test.ts`).
+ * and which bullets (by position, a key being a slug of the label), never what they say (ADR 0015;
+ * `test/arch/audit-meta.test.ts`).
  */
 const POINT_TYPE_AUDIT: AuditShape<PointTypeRecord> = {
   id: 'omit',
@@ -44,14 +45,22 @@ export function changedFields(
   });
 }
 
-/** The keys of the bullets that were added, removed or changed, in the new order first. */
-function changedBulletKeys(before: PointTypeValues | null, after: PointTypeValues): string[] {
+/**
+ * Which bullets changed, by position, never by key (a key is a slug of the label the headmaster
+ * typed): the 1-based positions in the new list of the bullets added or changed, and how many
+ * bullets of the old list are gone.
+ */
+function bulletChanges(
+  before: PointTypeValues | null,
+  after: PointTypeValues,
+): { changed: number[]; removed: number } {
   const was = new Map(bulletsOf(before).map((b) => [b.key, canonical(b)]));
-  const now = new Map(bulletsOf(after).map((b) => [b.key, canonical(b)]));
-  return [
-    ...[...now].filter(([key, bullet]) => was.get(key) !== bullet).map(([key]) => key),
-    ...[...was.keys()].filter((key) => !now.has(key)),
-  ];
+  const now = bulletsOf(after);
+  const kept = new Set(now.map((b) => b.key));
+  return {
+    changed: now.flatMap((b, i) => (was.get(b.key) === canonical(b) ? [] : [i + 1])),
+    removed: [...was.keys()].filter((key) => !kept.has(key)).length,
+  };
 }
 
 /** A point type made or changed by the headmaster (past tense, as every M8 action). */
@@ -66,7 +75,7 @@ export function pointTypeEvent(
     diff: diffRecords(POINT_TYPE_AUDIT, before, after),
     meta: {
       fields: [...changedFields(before, after)],
-      bullets: changedBulletKeys(before, after),
+      bullets: bulletChanges(before, after),
     },
   };
 }

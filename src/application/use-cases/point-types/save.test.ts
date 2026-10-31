@@ -186,7 +186,7 @@ describe('pointTypes.save', () => {
       expect((await snapshot()).types[0]).toMatchObject({ ...change, version: 2 });
     });
 
-    it('audits which fields changed and the bullet keys, never the name or the labels', async () => {
+    it('audits which fields changed and the bullet positions, never the name or the labels', async () => {
       const head = await headmaster();
       const type = await created(head, { name: 'Tajný název' });
       const renamed = { ...RESULTS, label: 'Tajný štítek' };
@@ -196,21 +196,23 @@ describe('pointTypes.save', () => {
       );
       const { audit } = await snapshot();
       expect(audit.at(-1)).toMatchObject({
-        data: { meta: { fields: ['name', 'defaultBullets'], bullets: ['results', 'guests'] } },
+        data: {
+          meta: { fields: ['name', 'defaultBullets'], bullets: { changed: [2, 3], removed: 0 } },
+        },
       });
       for (const event of audit) {
         expect(JSON.stringify(event)).not.toMatch(/tajn|výsledky|hosté|organizátoři|umístění/i);
       }
     });
 
-    it('audits a created type by its fields and bullet keys', async () => {
+    it('audits a created type by its fields and bullet positions', async () => {
       const head = await headmaster();
       await created(head);
       expect((await snapshot()).audit.at(-1)).toMatchObject({
         data: {
           meta: {
             fields: ['name', 'titleGender', 'defaultBullets', 'active', 'position'],
-            bullets: ['organisers', 'results'],
+            bullets: { changed: [1, 2], removed: 0 },
           },
         },
       });
