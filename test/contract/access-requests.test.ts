@@ -6,6 +6,7 @@ import {
   system,
   type AccessRequestRecord,
   type Principal,
+  type Tx,
   type UserRecord,
 } from '@/application/ports';
 
@@ -218,5 +219,51 @@ describe('AccessRequestRepo (port contract)', () => {
     const head = await world.seed.user({ role: 'headmaster' });
     await move(world.as(head), await request(user), 'rejected');
     await expect(request(user)).resolves.toMatchObject({ state: 'pending', version: 1 });
+  });
+});
+
+describe('AccessRequestRepo countPendingSince (what the reviewer digest reads)', () => {
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:reviewer.digest'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const SINCE = new Date('2026-10-19T12:00:00Z');
+  const count = () => asWorker((tx) => tx.accessRequests.countPendingSince(SINCE));
+  /** Files a request for a new pending user at `at`. */
+  const fileAt = async (at: string) => {
+    world.clock.set(new Date(at));
+    const user = await world.seed.user({ role: 'pending' });
+    return { user, filed: await request(user) };
+  };
+
+  it('counts the requests still pending that were filed after the instant, not those before or at it', async () => {
+    await fileAt('2026-10-19T11:59:59Z');
+    await fileAt('2026-10-19T12:00:00Z');
+    await fileAt('2026-10-19T12:00:01Z');
+    await fileAt('2026-10-20T08:00:00Z');
+    expect(await count()).toBe(2);
+  });
+
+  it('leaves out the requests that are decided or cancelled', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const approved = await fileAt('2026-10-19T13:00:00Z');
+    const cancelled = await fileAt('2026-10-19T14:00:00Z');
+    await fileAt('2026-10-19T15:00:00Z');
+    await move(world.as(head), approved.filed, 'approved');
+    await move(world.as(cancelled.user), cancelled.filed, 'cancelled');
+    expect(await count()).toBe(1);
+  });
+
+  it('refuses a user, a headmaster included: the digest job reads it', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const refused = world
+      .tx(world.as(head), (tx) => tx.accessRequests.countPendingSince(SINCE), 'read')
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+    expect(await refused).toBeInstanceOf(ScopeViolation);
   });
 });

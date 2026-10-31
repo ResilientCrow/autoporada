@@ -33,9 +33,10 @@ describe('ports', () => {
       'mail.prune',
       'future.report-prompt',
       'reminders.deadline',
+      'reviewer.digest',
     ]);
     expectTypeOf<JobName>().toEqualTypeOf<
-      'mail.send' | 'mail.prune' | 'future.report-prompt' | 'reminders.deadline'
+      'mail.send' | 'mail.prune' | 'future.report-prompt' | 'reminders.deadline' | 'reviewer.digest'
     >();
   });
 

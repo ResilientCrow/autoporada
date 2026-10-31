@@ -862,6 +862,62 @@ describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
   });
 });
 
+describe('PointRepo countSubmittedSince (what the reviewer digest reads, migration 0024)', () => {
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:reviewer.digest'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const SINCE = new Date('2026-10-19T12:00:00Z');
+  const count = (notBy: string) =>
+    asWorker((tx) => tx.points.countSubmittedSince({ since: SINCE, notBy }));
+
+  /** A point of `author` in `state`, handed in at `at`. */
+  async function handedIn(author: UserRecord, state: PointPatch['state'], at: string) {
+    const { point } = await create(world.as(author), { content: FULL });
+    return update(world.as(author), point, { ...SUBMIT, state, submittedAt: new Date(at) });
+  }
+
+  it('counts the points waiting for review that were handed in after the instant, not those before or at it', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const other = await world.seed.user({ role: 'submitter' });
+    const reader = await world.seed.user({ role: 'reviewer' });
+    await handedIn(author, 'submitted', '2026-10-19T12:00:01Z');
+    await handedIn(author, 'submitted', '2026-10-19T12:00:00Z');
+    await handedIn(other, 'submitted', '2026-10-19T18:00:00Z');
+    await handedIn(other, 'submitted', '2026-10-19T11:59:59Z');
+    expect(await count(reader.id)).toBe(2);
+  });
+
+  it('leaves out the points that are not waiting, whoever decided them', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reader = await world.seed.user({ role: 'reviewer' });
+    for (const state of ['approved', 'returned', 'rejected', 'withdrawn'] as const) {
+      await handedIn(author, state, '2026-10-19T18:00:00Z');
+    }
+    await create(world.as(author), { content: FULL });
+    expect(await count(reader.id)).toBe(0);
+  });
+
+  it('leaves out the reader’s own points: a reviewer is not told about what they handed in', async () => {
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const author = await world.seed.user({ role: 'submitter' });
+    await handedIn(reviewer, 'submitted', '2026-10-19T18:00:00Z');
+    await handedIn(author, 'submitted', '2026-10-19T18:00:00Z');
+    expect(await count(reviewer.id)).toBe(1);
+    expect(await count(author.id)).toBe(1);
+  });
+
+  it('refuses a user: only the system reads them', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const refused = read(world.as(author), (tx) =>
+      tx.points.countSubmittedSince({ since: SINCE, notBy: author.id }),
+    );
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('point audit coverage in the fake world', () => {
   it('names every created or updated point as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

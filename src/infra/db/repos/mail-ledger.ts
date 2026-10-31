@@ -1,4 +1,4 @@
-import { and, count, eq, gt, inArray, min, sql } from 'drizzle-orm';
+import { and, count, eq, gt, inArray, max, min, sql } from 'drizzle-orm';
 
 import {
   ScopeViolation,
@@ -107,6 +107,20 @@ export function createMailLedgerRepo(db: TxDatabase, ctx: TxContext): MailLedger
         .insert(mailLedger)
         .values({ dedupeKey: row.dedupeKey, ...skipped })
         .onConflictDoUpdate({ target: mailLedger.dedupeKey, set: skipped });
+    },
+    async lastSent(template, recipientId) {
+      allowed();
+      const [row] = await db
+        .select({ claimedAt: max(mailLedger.claimedAt) })
+        .from(mailLedger)
+        .where(
+          and(
+            eq(mailLedger.template, template),
+            eq(mailLedger.recipientId, recipientId),
+            eq(mailLedger.state, 'sent'),
+          ),
+        );
+      return row?.claimedAt ?? null;
     },
     async closeGate(until, code) {
       allowed();

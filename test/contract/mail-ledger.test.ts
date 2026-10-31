@@ -292,6 +292,49 @@ describe('MailLedgerPort (port contract)', () => {
     expect(await since(world.clock.now())).toEqual({ count: 0, oldest: null });
   });
 
+  it('names the claim instant of the latest mail of a template that was sent to a person', async () => {
+    const [user, other] = [await world.seed.user(), await world.seed.user()];
+    const at = (key: string, recipient = user.id) => ({
+      ...claimRow(recipient, key),
+      template: 'reviewer.digest' as const,
+    });
+    const sent = async (key: string, recipient = user.id) => {
+      await ledger((l) => l.claim(at(key, recipient)));
+      await ledger((l) => l.settle(key, { state: 'sent', code: 'sent' }));
+    };
+    const lastSent = (recipientId = user.id) =>
+      ledger((l) => l.lastSent('reviewer.digest', recipientId));
+    expect(await lastSent()).toBeNull();
+
+    const first = world.clock.now();
+    await sent('digest:1');
+    world.clock.advance(10 * SECOND);
+    const second = world.clock.now();
+    await sent('digest:2');
+    expect(await lastSent()).toEqual(second);
+
+    // A later mail that was not sent, or is not a digest, or is another person's, does not count.
+    world.clock.advance(10 * SECOND);
+    await ledger((l) => l.claim(at('digest:sending')));
+    await ledger((l) => l.claim(at('digest:deferred')));
+    await ledger((l) => l.settle('digest:deferred', { state: 'deferred', code: 'throttled.429' }));
+    await ledger((l) => l.claim(at('digest:failed')));
+    await ledger((l) => l.settle('digest:failed', { state: 'failed', code: 'rejected.400' }));
+    await ledger((l) =>
+      l.skip({
+        ...skipRow(user.id, 'digest:skipped'),
+        template: 'reviewer.digest',
+        code: 'skipped.stale',
+      }),
+    );
+    await ledger((l) => l.claim(claimRow(user.id, 'access.approved:2')));
+    await ledger((l) => l.settle('access.approved:2', { state: 'sent', code: 'sent' }));
+    await sent('digest:other', other.id);
+    expect(await lastSent()).toEqual(second);
+    expect(await lastSent(other.id)).toEqual(world.clock.now());
+    expect(first.getTime()).toBeLessThan(second.getTime());
+  });
+
   it('serialises gate users: a second lock waits for the first transaction to end', async () => {
     const order: string[] = [];
     let release = () => {};
@@ -330,6 +373,9 @@ describe('MailLedgerPort (port contract)', () => {
     await ledger((l) => l.get('x'), system('cli:jobs'));
     for (const principal of [world.as(user), system('auth.session'), system('test.seed')]) {
       await expect(ledger((l) => l.get('x'), principal)).rejects.toBeInstanceOf(ScopeViolation);
+      await expect(
+        ledger((l) => l.lastSent('reviewer.digest', user.id), principal),
+      ).rejects.toBeInstanceOf(ScopeViolation);
       await expect(ledger((l) => l.gate(), principal)).rejects.toBeInstanceOf(ScopeViolation);
       await expect(ledger((l) => l.claim(claimRow(user.id)), principal)).rejects.toBeInstanceOf(
         ScopeViolation,

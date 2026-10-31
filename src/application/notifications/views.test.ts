@@ -42,6 +42,13 @@ describe('viewOf', () => {
     }
   });
 
+  it('tells a digest the counts it was loaded with', () => {
+    expect(viewOf('reviewer.digest', { submitted: 4, accessRequests: 2 })).toEqual({
+      submitted: 4,
+      accessRequests: 2,
+    });
+  });
+
   it('gives every other template no variables', () => {
     expect(viewOf('access.approved', request(DECIDED))).toEqual({});
     expect(viewOf('access.blocked', request(DECIDED))).toEqual({});

@@ -48,6 +48,7 @@ describe('runMigrations', () => {
       'mail.prune',
       'mail.send',
       'reminders.deadline',
+      'reviewer.digest',
     ]);
   });
 

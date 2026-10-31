@@ -1,4 +1,19 @@
-import { and, asc, desc, eq, gte, inArray, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -188,6 +203,7 @@ export function createPointReads(
   | 'mailFacts'
   | 'reminderAuthors'
   | 'submitterIds'
+  | 'countSubmittedSince'
 > {
   const byId = (id: string) =>
     db
@@ -269,6 +285,21 @@ export function createPointReads(
         .where(gte(points.submittedAt, since))
         .orderBy(asc(points.authorId));
       return rows.map((row) => row.authorId);
+    },
+    async countSubmittedSince({ since, notBy }) {
+      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migrations 0017 and 0024 grant the worker, and no other.
+      const [row] = await db
+        .select({ count: count() })
+        .from(points)
+        .where(
+          and(
+            eq(points.state, 'submitted'),
+            gt(points.submittedAt, since),
+            ne(points.authorId, notBy),
+          ),
+        );
+      return row?.count ?? 0;
     },
   };
 }

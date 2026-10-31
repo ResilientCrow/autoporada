@@ -90,6 +90,23 @@ describe('QUEUES', () => {
     expect(total).toBeLessThan(15 * 60);
   });
 
+  it('retries reviewer.digest twice within ten minutes, long before the next slot', () => {
+    expect(spec('reviewer.digest')).toEqual({
+      name: 'reviewer.digest',
+      policy: 'standard',
+      options: {
+        retryLimit: 2,
+        retryDelay: 60,
+        retryBackoff: true,
+        retryDelayMax: 600,
+        expireInSeconds: 300,
+        retentionSeconds: 2 * DAY,
+        deleteAfterSeconds: 2 * DAY,
+        deadLetter: 'dead',
+      },
+    });
+  });
+
   it('creates the dead-letter queue before any queue that names it', () => {
     const names = QUEUES.map((queue) => queue.name);
     for (const queue of QUEUES) {

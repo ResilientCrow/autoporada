@@ -2,6 +2,7 @@ import type { JobCatalog } from '@/application/ports';
 import type { DecisionEvent } from '@/domain/review';
 import type { TemplateName } from '@/notify';
 
+import { digestParts, type DigestIds } from './digest';
 import { pointMailParts, type PointMailIds } from './point-mails';
 import { reminderParts, type ReminderIds } from './reminders';
 import { reportPromptParts, type ReportPromptIds } from './report-prompt';
@@ -33,6 +34,7 @@ interface MailIds {
   readonly 'report.prompt': ReportPromptIds;
   readonly 'reminder.soft': ReminderIds;
   readonly 'reminder.hard': ReminderIds;
+  readonly 'reviewer.digest': DigestIds;
 }
 
 interface MailParts {
@@ -72,6 +74,7 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   'report.prompt': reportPromptParts,
   'reminder.soft': reminderParts,
   'reminder.hard': reminderParts,
+  'reviewer.digest': digestParts,
 };
 
 interface MailJob {

@@ -21,6 +21,11 @@ export interface AccessRequestRepo {
   /** Oldest first. ScopeViolation without `access.decide`. */
   pending(): Promise<readonly AccessRequestRecord[]>;
   /**
+   * How many requests are still pending that were filed after `since`: what the headmaster's
+   * digest counts. System principals only (ScopeViolation for a user, a headmaster too).
+   */
+  countPendingSince(since: Date): Promise<number>;
+  /**
    * ScopeViolation unless the principal is a user who may `access.request`
    * and `userId` is theirs. `created_at` is the transaction's instant.
    */

@@ -8,6 +8,7 @@ import type {
 } from '@/application/ports';
 import type { TemplateName } from '@/notify';
 
+import { loadDigest, type DigestFacts } from './digest';
 import { loadReminder, type ReminderFacts } from './reminders';
 
 /** A decision on a point: the event the mail reports, and the point as it stands now. */
@@ -32,12 +33,21 @@ export interface MailSubjects {
   /** Both reminders: the recipient is the subject, and what is due is read from the issues. */
   readonly 'reminder.soft': ReminderFacts;
   readonly 'reminder.hard': ReminderFacts;
+  /** The counts that came in for the recipient since their last digest. */
+  readonly 'reviewer.digest': DigestFacts;
 }
 
 /** The repositories a subject is read from. */
 export type SubjectReaders = Pick<
   Tx,
-  'ctx' | 'accessRequests' | 'users' | 'points' | 'pointEvents' | 'futureItems' | 'issues'
+  | 'ctx'
+  | 'accessRequests'
+  | 'users'
+  | 'points'
+  | 'pointEvents'
+  | 'futureItems'
+  | 'issues'
+  | 'mailLedger'
 >;
 
 const request = (tx: SubjectReaders, id: string) => tx.accessRequests.get(id);
@@ -65,6 +75,7 @@ const SUBJECTS: {
   'report.prompt': (tx, id) => tx.futureItems.mailFacts(id),
   'reminder.soft': (tx, id) => loadReminder(tx, 'soft', id),
   'reminder.hard': (tx, id) => loadReminder(tx, 'hard', id),
+  'reviewer.digest': loadDigest,
 };
 
 /** Reads the subject a `mail.send` job names, by the loader of its template. */

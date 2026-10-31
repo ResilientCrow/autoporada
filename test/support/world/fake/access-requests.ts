@@ -55,6 +55,13 @@ export function fakeAccessRequestRepo(tx: FakeTxState, ctx: TxContext): AccessRe
         .filter((r) => r.state === 'pending' && visible(r))
         .sort(byAge);
     },
+    async countPendingSince(since) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      return [...accessRequests.values()].filter(
+        (r) => r.state === 'pending' && r.createdAt > since,
+      ).length;
+    },
     async create(userId, reason) {
       guard(tx, true);
       if (

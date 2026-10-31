@@ -81,6 +81,12 @@ export interface MailLedgerPort {
    * as a send. An earlier claim's job, counts and attempts are kept.
    */
   skip(row: SkipRow): Promise<void>;
+  /**
+   * When the latest mail of `template` that reached `recipientId` (state `sent`) was claimed, or
+   * null if none did: the watermark a digest counts from. A deferred, failed or skipped row does
+   * not count, nor does a mail still being sent.
+   */
+  lastSent(template: TemplateName, recipientId: string): Promise<Date | null>;
   /** Pauses sending until `until`, unless it is already paused longer. */
   closeGate(until: Date, code: OutcomeCode): Promise<void>;
   /** Deletes rows settled, or claimed and never settled, before `cutoff`; returns how many. */

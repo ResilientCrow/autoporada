@@ -1,6 +1,7 @@
 import type { JobHandlers } from '@/application/ports';
 
 import { CRON, toScheduledJobs } from './cron';
+import { reviewerDigest } from './digest';
 import { mailPrune } from './mail-prune';
 import { mailSend } from './mail-send';
 import { deadlineReminders } from './reminders';
@@ -14,6 +15,7 @@ export const JOB_HANDLERS: JobHandlers = {
   'mail.prune': mailPrune,
   'future.report-prompt': reportPrompt,
   'reminders.deadline': deadlineReminders,
+  'reviewer.digest': reviewerDigest,
 };
 
 /** The registry, checked and resolved once at import: an invalid entry stops the worker's boot. */

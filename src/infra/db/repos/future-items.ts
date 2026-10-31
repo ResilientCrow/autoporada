@@ -1,4 +1,19 @@
-import { and, asc, desc, eq, getTableName, gte, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableName,
+  gt,
+  gte,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
 import {
   DatabaseFailure,
@@ -276,6 +291,20 @@ export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItem
         .where(gte(futureItems.submittedAt, since))
         .orderBy(asc(futureItems.authorId));
       return rows.map((row) => row.authorId);
+    },
+    async countSubmittedSince({ since, notBy }) {
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const [row] = await db
+        .select({ count: count() })
+        .from(futureItems)
+        .where(
+          and(
+            eq(futureItems.state, 'submitted'),
+            gt(futureItems.submittedAt, since),
+            ne(futureItems.authorId, notBy),
+          ),
+        );
+      return row?.count ?? 0;
     },
   };
 }

@@ -123,6 +123,16 @@ export function fakeMailLedger(tx: FakeTxState, ctx: TxContext): MailLedgerPort 
         graphRequestId: null,
       });
     },
+    async lastSent(template, recipientId) {
+      enter(false);
+      const claims = [...mailLedger.values()]
+        .filter(
+          (row) =>
+            row.template === template && row.recipientId === recipientId && row.state === 'sent',
+        )
+        .flatMap((row) => (row.claimedAt ? [row.claimedAt] : []));
+      return claims.reduce<Date | null>((a, b) => (a && a >= b ? a : b), null);
+    },
     async closeGate(until, code) {
       enter(true);
       const { notBefore } = tx.draft.mailGate;

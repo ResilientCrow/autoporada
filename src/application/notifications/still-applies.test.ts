@@ -278,6 +278,35 @@ describe('stillApplies', () => {
     });
   });
 
+  describe('the reviewer digest', () => {
+    const counts = (submitted: number, accessRequests = 0) => ({ submitted, accessRequests });
+    const REVIEWER = user('reviewer');
+    const HEADMASTER = user('headmaster');
+
+    it('goes to a reviewer or headmaster while something is new, and to no one for nothing', () => {
+      expect(stillApplies('reviewer.digest', counts(1), REVIEWER)).toBe(true);
+      expect(stillApplies('reviewer.digest', counts(1), HEADMASTER)).toBe(true);
+      expect(stillApplies('reviewer.digest', counts(0), REVIEWER)).toBe(false);
+      expect(stillApplies('reviewer.digest', counts(0), HEADMASTER)).toBe(false);
+    });
+
+    it('lets access requests alone make a headmaster’s digest, never a reviewer’s', () => {
+      expect(stillApplies('reviewer.digest', counts(0, 2), HEADMASTER)).toBe(true);
+      expect(stillApplies('reviewer.digest', counts(0, 2), REVIEWER)).toBe(false);
+    });
+
+    it('goes to no one who cannot review any more', () => {
+      for (const recipient of [
+        user('reviewer', 'blocked'),
+        user('headmaster', 'deactivated'),
+        user('submitter'),
+        user('pending'),
+      ]) {
+        expect(stillApplies('reviewer.digest', counts(3, 3), recipient)).toBe(false);
+      }
+    });
+  });
+
   it.each([
     ['access.approved', MEMBER],
     ['access.rejected', PENDING],
@@ -290,6 +319,7 @@ describe('stillApplies', () => {
     ['report.prompt', MEMBER],
     ['reminder.soft', MEMBER],
     ['reminder.hard', MEMBER],
+    ['reviewer.digest', user('reviewer')],
   ] as const)(
     'never sends %s about a missing subject (a purged request, a deleted point)',
     (template, recipient) => {

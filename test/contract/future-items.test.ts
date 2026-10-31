@@ -885,6 +885,52 @@ describe('FutureItemRepo submitterIds (what the reminders read, migration 0024)'
   });
 });
 
+describe('FutureItemRepo countSubmittedSince (what the reviewer digest reads, migration 0024)', () => {
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:reviewer.digest'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const SINCE = new Date('2026-10-19T12:00:00Z');
+  const count = (notBy: string) =>
+    asWorker((tx) => tx.futureItems.countSubmittedSince({ since: SINCE, notBy }));
+
+  /** An item of `author` in `state`, handed in at `at`. */
+  async function handedIn(author: UserRecord, state: FutureItemPatch['state'], at: string) {
+    const { item } = await create(world.as(author), { content: FULL });
+    await update(world.as(author), item, { ...SUBMIT, state, submittedAt: new Date(at) });
+  }
+
+  it('counts the items waiting for review that were handed in after the instant, except the reader’s own', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    await handedIn(author, 'submitted', '2026-10-19T12:00:01Z');
+    await handedIn(author, 'submitted', '2026-10-19T12:00:00Z');
+    await handedIn(reviewer, 'submitted', '2026-10-19T18:00:00Z');
+    expect(await count(reviewer.id)).toBe(1);
+    expect(await count(author.id)).toBe(1);
+  });
+
+  it('leaves out the items that are not waiting', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    for (const state of ['approved', 'returned', 'rejected'] as const) {
+      await handedIn(author, state, '2026-10-19T18:00:00Z');
+    }
+    await create(world.as(author), { content: FULL });
+    expect(await count(reviewer.id)).toBe(0);
+  });
+
+  it('refuses a user', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const refused = read(world.as(author), (tx) =>
+      tx.futureItems.countSubmittedSince({ since: SINCE, notBy: author.id }),
+    );
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('future item audit coverage in the fake world', () => {
   it('names every created or updated item as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

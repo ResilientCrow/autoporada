@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, sql } from 'drizzle-orm';
 
 import {
   scopeOf,
@@ -62,6 +62,14 @@ export function createAccessRequestRepo(db: TxDatabase, ctx: TxContext): AccessR
         .from(accessRequests)
         .where(and(eq(accessRequests.state, 'pending'), visible()))
         .orderBy(asc(accessRequests.createdAt), asc(accessRequests.id));
+    },
+    async countPendingSince(since) {
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const [row] = await db
+        .select({ count: count() })
+        .from(accessRequests)
+        .where(and(eq(accessRequests.state, 'pending'), gt(accessRequests.createdAt, since)));
+      return row?.count ?? 0;
     },
     async create(userId, reason) {
       if (

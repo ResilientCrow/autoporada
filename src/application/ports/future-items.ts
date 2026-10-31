@@ -151,4 +151,9 @@ export interface FutureItemRepo {
   mailFacts(id: string): Promise<FutureMailFacts | null>;
   /** The authors with an akce or jednání handed in since `since`, each once, ordered by id. ScopeViolation for a user. */
   submitterIds(since: Date): Promise<readonly string[]>;
+  /**
+   * How many items wait for review (`submitted`) that were handed in after `since` by anyone but
+   * `notBy`: what the reviewer digest counts. ScopeViolation for a user.
+   */
+  countSubmittedSince(query: { readonly since: Date; readonly notBy: string }): Promise<number>;
 }

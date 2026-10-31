@@ -42,6 +42,21 @@ export const CRON: readonly CronEntry[] = [
     data: {},
     catchUp: 'skip',
   },
+  // 07.00 and 15.00 name the slots of the ledger key; a missed one is not made up, the next digest counts since the last sent.
+  {
+    job: 'reviewer.digest',
+    key: 'morning',
+    schedule: { daily: { hour: 7, minute: 0 } },
+    data: {},
+    catchUp: 'skip',
+  },
+  {
+    job: 'reviewer.digest',
+    key: 'afternoon',
+    schedule: { daily: { hour: 15, minute: 0 } },
+    data: {},
+    catchUp: 'skip',
+  },
 ];
 
 /** The cron string is derived, never typed: `10 5 * * *`, `*\/15 * * * *`. */

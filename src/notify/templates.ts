@@ -5,7 +5,7 @@ import { frame, type Body } from './frame';
 
 /**
  * Mails are plain text and carry no personal data: the subjects are constants
- * and the only variables are the app origin and one date (ADR 0016, 0020). The sentences that
+ * and the only variables are the app origin, one date and counts (ADR 0016, 0020). The sentences that
  * say what the access screens say are the screens' words
  * (test/arch/notify-copy.test.ts compares them byte for byte). Non-breaking
  * spaces are written as escapes, as in src/ui/copy.
@@ -22,6 +22,7 @@ export const TEMPLATE_NAMES = [
   'report.prompt',
   'reminder.soft',
   'reminder.hard',
+  'reviewer.digest',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -40,6 +41,8 @@ export interface TemplateViews {
   /** The meeting the deadline is for. */
   'reminder.soft': { readonly meetingDate: CalDate };
   'reminder.hard': { readonly meetingDate: CalDate };
+  /** What came in for a reviewer since their last digest; a headmaster's access requests too. One of them is above zero. */
+  'reviewer.digest': { readonly submitted: number; readonly accessRequests: number };
 }
 
 interface RenderedMail {
@@ -145,6 +148,19 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       link: '/body',
     },
   }),
+  // Counts, not titles or names (D3 (a)); a count of zero is left out. The colon keeps every noun clear of the number.
+  'reviewer.digest': ({ submitted, accessRequests }) => {
+    const counts: (readonly [string, number])[] = [];
+    if (submitted > 0) counts.push(['body ke kontrole', submitted]);
+    if (accessRequests > 0) counts.push(['žádosti o\u00A0přístup', accessRequests]);
+    return {
+      subject: 'Autoporada: nové body ke kontrole',
+      body: {
+        paragraphs: counts.map(([what, n], i) => `${i === 0 ? 'nové' : 'Nové'} ${what}: ${n}.`),
+        link: '/kontrola',
+      },
+    };
+  },
 };
 
 /** Renders one mail. `origin` is the validated app origin, without a trailing slash. */

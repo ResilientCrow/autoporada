@@ -1,3 +1,4 @@
+export { digestFacts, hasNews, isReviewer, type DigestFacts } from './digest';
 export { DECISION_MAIL, mailJob } from './mail-jobs';
 export { POINT_MAIL } from './point-mails';
 export {

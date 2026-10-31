@@ -150,4 +150,10 @@ export interface PointRepo {
    * each once, ordered by id. ScopeViolation for a user.
    */
   submitterIds(since: Date): Promise<readonly string[]>;
+  /**
+   * How many points wait for review (`submitted`) that were handed in after `since` by anyone but
+   * `notBy`: what the reviewer digest counts. Only the columns migration 0024 grants the worker.
+   * ScopeViolation for a user.
+   */
+  countSubmittedSince(query: { readonly since: Date; readonly notBy: string }): Promise<number>;
 }

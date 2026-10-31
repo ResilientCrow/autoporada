@@ -213,5 +213,16 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       );
       return distinctSorted(handedIn.map((item) => item.authorId));
     },
+    async countSubmittedSince({ since, notBy }) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      return [...futureItems.values()].filter(
+        (item) =>
+          item.state === 'submitted' &&
+          item.submittedAt &&
+          item.submittedAt > since &&
+          item.authorId !== notBy,
+      ).length;
+    },
   };
 }

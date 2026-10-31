@@ -91,6 +91,20 @@ export const QUEUE_SPECS = {
       deadLetter: DEAD_QUEUE,
     },
   },
+  // Sent by the cron registry at 07.00 and 15.00; it enqueues the digest mails of the slot.
+  'reviewer.digest': {
+    policy: 'standard',
+    options: {
+      retryLimit: 2,
+      retryDelay: 60,
+      retryBackoff: true,
+      retryDelayMax: 600,
+      expireInSeconds: 300,
+      retentionSeconds: 2 * DAY,
+      deleteAfterSeconds: 2 * DAY,
+      deadLetter: DEAD_QUEUE,
+    },
+  },
 } satisfies Record<QueueName, QueueSettings>;
 
 /**

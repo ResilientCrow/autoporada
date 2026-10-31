@@ -10,6 +10,7 @@ const NB = '\u00A0';
 const ORIGIN = 'https://autoporada.example';
 const LINK = `${ORIGIN}/prihlaseni`;
 const POINTS = `${ORIGIN}/body`;
+const REVIEW = `${ORIGIN}/kontrola`;
 const GREETING = 'Dobrý den,';
 const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovídejte na ni prosím.';
 
@@ -29,6 +30,7 @@ const VIEWS = {
   'report.prompt': {},
   'reminder.soft': { meetingDate: MEETING },
   'reminder.hard': { meetingDate: MEETING },
+  'reviewer.digest': { submitted: 4, accessRequests: 2 },
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -103,6 +105,10 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
       `máte rozpracovaný nebo vrácený bod pro poradu z${NB}26.${NB}října 2026. Uzávěrka je dnes.\n\n${POINTS}`,
     ),
   },
+  'reviewer.digest': {
+    subject: 'Autoporada: nové body ke kontrole',
+    text: letter(`nové body ke kontrole: 4.\n\nNové žádosti o${NB}přístup: 2.\n\n${REVIEW}`),
+  },
 };
 
 describe('renderMail', () => {
@@ -155,6 +161,14 @@ describe('renderMail', () => {
     }
   });
 
+  it('tells a reviewer only the count that is above zero, and a headmaster both', () => {
+    const digest = (submitted: number, accessRequests: number) =>
+      renderMail('reviewer.digest', { submitted, accessRequests }, ORIGIN).text;
+    expect(digest(1, 0)).toBe(letter(`nové body ke kontrole: 1.\n\n${REVIEW}`));
+    expect(digest(0, 3)).toBe(letter(`nové žádosti o${NB}přístup: 3.\n\n${REVIEW}`));
+    expect(digest(12, 5)).toContain(`nové body ke kontrole: 12.\n\nNové žádosti o${NB}přístup: 5.`);
+  });
+
   it('puts the date a new request is possible into the rejection', () => {
     const text = renderMail('access.rejected', { retryFrom: calDate(2027, 1, 5) }, ORIGIN).text;
     expect(text).toContain(`podat od 5.${NB}ledna 2027.`);
@@ -170,7 +184,9 @@ describe('renderMail', () => {
         (origin, year, month, day) => {
           const date = calDate(year, month, day);
           for (const name of TEMPLATE_NAMES) {
-            const view = name.startsWith('reminder.') ? { meetingDate: date } : { retryFrom: date };
+            const view = name.startsWith('reminder.')
+              ? { meetingDate: date }
+              : { retryFrom: date, submitted: 3, accessRequests: 1 };
             const { subject } = renderMail(name, view as never, origin);
             expect(subject).not.toMatch(/[\r\n]/);
           }

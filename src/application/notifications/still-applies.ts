@@ -4,6 +4,7 @@ import type { TemplateName } from '@/notify';
 
 import type { MailSubjects, PointDecision } from './subjects';
 
+import { isReviewer } from './digest';
 import { isMember as member, wantsSoftReminder } from './reminders';
 
 type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'isStudent' | 'remindDeadline'>;
@@ -57,6 +58,10 @@ const APPLIES: {
   'reminder.soft': (_subject, recipient) => wantsSoftReminder(recipient),
   /** Whoever still has a draft or returned point for the Monday, a student too. */
   'reminder.hard': ({ hasWork }, recipient) => hasWork && member(recipient),
+  /** A reviewer who can still sign in, while something is new for them; only the headmaster counts access requests. */
+  'reviewer.digest': ({ submitted, accessRequests }, recipient) =>
+    isReviewer(recipient) &&
+    (submitted > 0 || (recipient.role === 'headmaster' && accessRequests > 0)),
 };
 
 /** A missing subject (a decided request purged on 1 September, a deleted point) never applies. */

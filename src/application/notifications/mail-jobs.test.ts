@@ -79,6 +79,22 @@ describe('mail jobs', () => {
     ).not.toBe(soft.dedupeKey);
   });
 
+  it('keys a digest by person, Prague day and slot, so each slot mails a person once', () => {
+    const date = calDate(2026, 10, 26);
+    const morning = mailJob('reviewer.digest', { userId: USER, date, slot: '07' });
+    expect(morning).toEqual({
+      data: { template: 'reviewer.digest', recipientId: USER, subjectId: USER },
+      dedupeKey: `reviewer.digest:${USER}:2026-10-26:07`,
+    });
+    expect(mailJob('reviewer.digest', { userId: USER, date, slot: '15' }).dedupeKey).toBe(
+      `reviewer.digest:${USER}:2026-10-26:15`,
+    );
+    expect(
+      mailJob('reviewer.digest', { userId: USER, date: calDate(2026, 10, 27), slot: '07' })
+        .dedupeKey,
+    ).not.toBe(morning.dedupeKey);
+  });
+
   it('builds payloads of ids only and keys that start with their template, for every template', () => {
     const jobs = [
       mailJob('access.approved', { recipientId: USER, requestId: REQUEST }),
@@ -92,6 +108,7 @@ describe('mail jobs', () => {
       mailJob('report.prompt', { authorId: USER, itemId: REQUEST, stage: 1 }),
       mailJob('reminder.soft', { userId: USER, monday: calDate(2026, 10, 26) }),
       mailJob('reminder.hard', { userId: USER, monday: calDate(2026, 10, 26) }),
+      mailJob('reviewer.digest', { userId: USER, date: calDate(2026, 10, 26), slot: '15' }),
     ];
     expect(jobs.map((job) => job.data.template)).toEqual(TEMPLATE_NAMES);
     for (const { data, dedupeKey } of jobs) {

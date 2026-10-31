@@ -10,6 +10,7 @@ export const JOB_NAMES = [
   'mail.prune',
   'future.report-prompt',
   'reminders.deadline',
+  'reviewer.digest',
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number];
 
@@ -25,6 +26,8 @@ export interface JobCatalog {
   'future.report-prompt': Readonly<Record<string, never>>;
   /** Mails the submitters and authors a deadline reminder when its slot is due; cron sends it, never a use case. */
   'reminders.deadline': Readonly<Record<string, never>>;
+  /** Mails reviewers what came in since their last digest, headmasters the access requests too; cron sends it, never a use case. */
+  'reviewer.digest': Readonly<Record<string, never>>;
 }
 
 export interface EnqueueOptions {

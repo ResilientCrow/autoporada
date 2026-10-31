@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { system } from '@/application/ports';
+import { system, type UserRecord } from '@/application/ports';
 import { decidePoint } from '@/application/use-cases';
 import { calDate } from '@/domain/time';
 import { TEMPLATE_NAMES, type TemplateName } from '@/notify';
@@ -108,6 +108,104 @@ describe('loadSubject', () => {
       expect(await load('reminder.hard', idle.id)).toEqual({ monday: MONDAY, hasWork: false });
       world.clock.set(new Date('2026-10-25T17:00:00Z'));
       expect(await load('reminder.hard', author.id)).toBeNull();
+    });
+  });
+
+  describe('the reviewer digest, counted from the last one sent when the mail goes', () => {
+    const NOW = new Date('2026-10-26T14:00:00Z');
+    const HOUR = 3_600_000;
+    const ago = (hours: number) => new Date(NOW.getTime() - hours * HOUR);
+
+    /** A digest to `recipient` that reached them: claimed at `at`, then settled as sent. */
+    const sentAt = async (recipient: UserRecord, at: Date) => {
+      const key = `reviewer.digest:${recipient.id}:${at.toISOString()}`;
+      await world.workerDb.transaction(
+        { principal: system('job:mail.send'), now: at, requestId: 'seed' },
+        { mode: 'write' },
+        async (tx) => {
+          await tx.mailLedger.claim({
+            dedupeKey: key,
+            template: 'reviewer.digest',
+            recipientId: recipient.id,
+            subjectId: recipient.id,
+            unknownSends: 0,
+            capFrom: 0,
+            jobId: '00000000-0000-7000-8000-00000000b001',
+          });
+          await tx.mailLedger.settle(key, { state: 'sent', code: 'sent' });
+        },
+      );
+    };
+    /** A point and an akce handed in at `at`. */
+    const handIn = async (author: UserRecord, at: Date) => {
+      world.clock.set(at);
+      await moveTo(author, await start(author, 'pokyn'), 'submitted');
+      await futureMoveTo(author, await futureStart(author), 'submitted');
+    };
+
+    it('counts the last 24 hours for a reviewer who was never mailed, points and akce together', async () => {
+      const reviewer = await world.seed.user({ role: 'reviewer' });
+      const author = await world.seed.user({ role: 'submitter' });
+      await handIn(author, ago(25));
+      await handIn(author, ago(5));
+      world.clock.set(NOW);
+      expect(await load('reviewer.digest', reviewer.id)).toEqual({
+        submitted: 2,
+        accessRequests: 0,
+      });
+    });
+
+    it('counts from the last digest that was sent, even when that is days back', async () => {
+      const reviewer = await world.seed.user({ role: 'reviewer' });
+      const author = await world.seed.user({ role: 'submitter' });
+      await handIn(author, ago(80));
+      await sentAt(reviewer, ago(72));
+      await handIn(author, ago(30));
+      await handIn(author, ago(2));
+      world.clock.set(NOW);
+      expect(await load('reviewer.digest', reviewer.id)).toEqual({
+        submitted: 4,
+        accessRequests: 0,
+      });
+      await sentAt(reviewer, ago(1));
+      world.clock.set(NOW);
+      expect(await load('reviewer.digest', reviewer.id)).toEqual({
+        submitted: 0,
+        accessRequests: 0,
+      });
+    });
+
+    it('leaves out what the reviewer handed in themselves and what is no longer waiting', async () => {
+      const reviewer = await world.seed.user({ role: 'reviewer' });
+      const author = await world.seed.user({ role: 'submitter' });
+      await handIn(reviewer, ago(3));
+      world.clock.set(ago(3));
+      await moveTo(author, await start(author, 'pokyn'), 'approved');
+      world.clock.set(NOW);
+      expect(await load('reviewer.digest', reviewer.id)).toEqual({
+        submitted: 0,
+        accessRequests: 0,
+      });
+    });
+
+    it('tells a headmaster the access requests filed since, and a reviewer none', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const reviewer = await world.seed.user({ role: 'reviewer' });
+      for (const [hours, state] of [
+        [30, 'pending'],
+        [4, 'pending'],
+        [3, 'pending'],
+        [2, 'cancelled'],
+      ] as const) {
+        const user = await world.seed.user({ role: 'pending' });
+        await world.seed.accessRequest({ userId: user.id, state, createdAt: ago(hours) });
+      }
+      world.clock.set(NOW);
+      expect(await load('reviewer.digest', head.id)).toEqual({ submitted: 0, accessRequests: 2 });
+      expect(await load('reviewer.digest', reviewer.id)).toEqual({
+        submitted: 0,
+        accessRequests: 0,
+      });
     });
   });
 
