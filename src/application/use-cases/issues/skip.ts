@@ -2,7 +2,7 @@ import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
 import { orderConflicts } from '@/domain/calendar';
-import { compareDates } from '@/domain/time';
+import { compareDates, toIsoDate } from '@/domain/time';
 
 import { mondayOfText, readWindow } from './calendar';
 import { ensureIssue } from './ensure';
@@ -55,7 +55,9 @@ export const setSkipped = defineUseCase({
     if (!step.ok) return fromTransition(step);
 
     const after = await tx.issues.setStatus(issue.id, issue.version, step.to);
-    await tx.audit.record(issueEvent(ACTIONS[input.event], issue, after));
+    await tx.audit.record(
+      issueEvent(ACTIONS[input.event], issue, after, { monday: toIsoDate(monday) }),
+    );
     return ok({ status: after.status, version: after.version });
   },
 });

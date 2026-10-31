@@ -22,7 +22,7 @@ export const setIssueDetails = defineUseCase({
         expectedVersion: input.expectedVersion,
         texts: { present: input.present, guests: input.guests },
         event: 'issue.details_saved',
-        meta: { fields: ['present', 'guests'] },
+        meta: { monday: input.monday, fields: ['present', 'guests'] },
       },
     );
   },

@@ -105,11 +105,17 @@ export const moveIssue = defineUseCase({
       });
       if (!step.ok) return fromTransition(step);
       const after = await tx.issues.setStatus(other.id, other.version, step.to);
-      await tx.audit.record(issueEvent('issue.skipped', other, after, { reason: 'moved' }));
+      await tx.audit.record(
+        issueEvent('issue.skipped', other, after, {
+          monday: toIsoDate(other.monday),
+          reason: 'moved',
+        }),
+      );
     }
     const after = await tx.issues.reschedule(issue.id, issue.version, { meetingDate, deadlineAt });
     await tx.audit.record({
       ...issueEvent('issue.moved', issue, after, {
+        monday: toIsoDate(monday),
         from: toIsoDate(slot.meetingDate),
         to: toIsoDate(meetingDate),
         deadlineMoved,

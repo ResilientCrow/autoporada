@@ -1,6 +1,6 @@
 import { fail, ok, type Outcome } from '@/application/core';
 import type { IssueTexts, Json, Tx } from '@/application/ports';
-import { compareDates, toIsoDate } from '@/domain/time';
+import { compareDates } from '@/domain/time';
 
 import { mondayOfText, readWindow } from './calendar';
 import { ensureIssue } from './ensure';
@@ -15,7 +15,7 @@ export interface TextsEdit {
   readonly texts: Partial<IssueTexts>;
   readonly event: 'issue.details_saved' | 'issue.annex2_saved';
   /** Names and counts only; never the text (audit-meta test). */
-  readonly meta: Readonly<Record<string, Json>>;
+  readonly meta: Readonly<Record<string, Json>> & { readonly monday: string };
 }
 
 /**
@@ -46,7 +46,7 @@ export async function editTexts(
   await tx.audit.record({
     action: edit.event,
     target: { type: 'issue', id: issue.id },
-    meta: { monday: toIsoDate(monday), ...edit.meta },
+    meta: edit.meta,
   });
   return ok({ version: written.version });
 }

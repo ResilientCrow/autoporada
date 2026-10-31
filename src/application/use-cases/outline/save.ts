@@ -30,6 +30,7 @@ export const saveOutlineItem = defineUseCase({
         apply: (outline) => saveItem(outline, input.lineageId, patch),
         event: 'outline.saved',
         meta: () => ({
+          monday: input.monday,
           lineageId: input.lineageId,
           fields: Object.keys(patch),
           ...(input.quotes !== undefined && { quotes: input.quotes.length }),

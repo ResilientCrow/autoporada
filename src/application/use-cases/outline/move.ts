@@ -27,6 +27,7 @@ export const moveOutlineItem = defineUseCase({
             after[s].some((row) => row.lineageId === input.lineageId),
           );
           return {
+            monday: input.monday,
             lineageId: input.lineageId,
             direction: input.direction,
             ...(section && {

@@ -17,7 +17,10 @@ export interface OutlineEdit {
   readonly apply: (outline: Outline) => OutlineResult;
   readonly event: 'outline.added' | 'outline.saved' | 'outline.moved' | 'outline.removed';
   /** Ids and counts of the result; never text (audit-meta test). */
-  readonly meta: (before: Outline, after: Outline) => Readonly<Record<string, Json>>;
+  readonly meta: (
+    before: Outline,
+    after: Outline,
+  ) => Readonly<Record<string, Json>> & { readonly monday: string };
 }
 
 /**
@@ -52,21 +55,27 @@ export async function editOutline(
   const target = { type: 'issue', id: issue.id } as const;
   const { origin } = loaded;
   if (origin.kind !== 'stored') {
+    const day = toIsoDate(monday);
+    const rows = result.outline.pokyny.length + result.outline.hospodareni.length;
     await tx.audit.record({
       action: 'outline.materialized',
       target,
-      meta: {
-        monday: toIsoDate(monday),
-        origin: origin.kind,
-        ...(origin.kind === 'derived' && { from: toIsoDate(origin.from), how: origin.how }),
-        rows: result.outline.pokyny.length + result.outline.hospodareni.length,
-      },
+      meta:
+        origin.kind === 'derived'
+          ? {
+              monday: day,
+              origin: origin.kind,
+              from: toIsoDate(origin.from),
+              how: origin.how,
+              rows,
+            }
+          : { monday: day, origin: origin.kind, rows },
     });
   }
   await tx.audit.record({
     action: edit.event,
     target,
-    meta: { monday: toIsoDate(monday), ...edit.meta(loaded.outline, result.outline) },
+    meta: edit.meta(loaded.outline, result.outline),
   });
   return ok({ version: touched.version });
 }

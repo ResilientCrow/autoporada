@@ -27,6 +27,7 @@ export const removeOutlineItem = defineUseCase({
             before[s].some((row) => row.lineageId === input.lineageId),
           );
           return {
+            monday: input.monday,
             lineageId: input.lineageId,
             ...(section && { section, rows: after[section].length }),
           };

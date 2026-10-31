@@ -34,6 +34,7 @@ export const addOutlineItem = defineUseCase({
               }),
         event: 'outline.added',
         meta: (_before, after) => ({
+          monday: input.monday,
           lineageId: input.lineageId,
           section: input.section,
           persistence: input.persistence,
