@@ -960,14 +960,14 @@ test('the autosave demo saves after the pause and says when', async ({ page, hyd
   await hydrated();
   await note(page).fill('První text');
   await expect(page.getByText(words.unsaved, { exact: true })).toBeVisible();
-  await expect(page.getByText(/^Uloženo v\u00A0\d{1,2}\.\d{2}$/)).toBeVisible();
+  await expect(page.getByText(/^Uloženo v\u00A0\d{1,2}:\d{2}$/)).toBeVisible();
   expect(seen).toEqual([{ content: 'První text', expectedVersion: 1 }]);
   // The next save carries the version the answer brought.
   await note(page).fill('První text a druhý');
   await note(page).blur();
   await expect.poll(() => seen.length).toBe(2);
   expect(seen[1]).toEqual({ content: 'První text a druhý', expectedVersion: 2 });
-  await expect(page.getByText(/^Uloženo v\u00a0\d{1,2}\.\d{2}$/)).toBeVisible();
+  await expect(page.getByText(/^Uloženo v\u00a0\d{1,2}:\d{2}$/)).toBeVisible();
 });
 
 test('a soft navigation away flushes the text that is still waiting', async ({

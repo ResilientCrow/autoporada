@@ -182,7 +182,7 @@ test.describe('J5: the settings', () => {
       // The rule in force: Saturday 20.00 before a Monday porada. Its effect is said only once the
       // choice differs from it.
       const effect = page.getByText(
-        /^Uzávěrka porady .* zůstává sobota 20\.00\. Nové pravidlo platí od porady /,
+        /^Uzávěrka porady .* zůstává sobota 20:00\. Nové pravidlo platí od porady /,
       );
       await expect(page.getByText(settings.deadline.example('sobota', '20:00'))).toBeVisible();
       await expect(effect).toHaveCount(0);
