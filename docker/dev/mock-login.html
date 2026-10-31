@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vývojové přihlášení</title>
     <style>
+      :root {
+        color-scheme: light;
+      }
       body {
+        background: #fff;
+        color: #111;
         font:
           16px/1.5 system-ui,
           sans-serif;
@@ -25,6 +30,10 @@
         display: block;
         margin: 1rem 0;
       }
+      summary {
+        margin: 1.5rem 0 0.5rem;
+        cursor: pointer;
+      }
       small {
         display: block;
         color: #555;
@@ -40,169 +49,175 @@
       <p>Toto není Microsoft. Vyberte, za koho se přihlásíte.</p>
       <form method="post">
         <input type="hidden" name="claims" value="{}" />
-        <label>
-          <input type="checkbox" name="stale" />
-          Přihlášení před hodinou<small>auth_time = před hodinou; ověření to odmítne</small>
-        </label>
-        <button type="submit" name="username" value="ucitel">
-          Učitelka<small>Jana Nováková, člen školy</small>
-        </button>
-        <button type="submit" name="username" value="student">
-          Student<small>Petr Svoboda, člen školy</small>
-        </button>
         <button type="submit" name="username" value="reditel">
-          Ředitel<small>Karel Dvořák, BOOTSTRAP_HEADMASTER_OID</small>
+          Ředitel<small>Karel Dvořák, ředitel: kontrola, porada a dokument</small>
         </button>
-        <button type="submit" name="username" value="host">
-          Host<small>acct = 1, #EXT# v UPN</small>
+        <button type="submit" name="username" value="ucitel">
+          Učitelka<small>Jana Nováková, učitelka: posílá body a akce</small>
         </button>
-        <button type="submit" name="username" value="bez-acct">
-          Bez acct<small>chybí volitelná deklarace acct</small>
-        </button>
-        <button type="submit" name="username" value="cizi-tenant">
-          Cizí tenant<small>jiné tid</small>
-        </button>
-        <fieldset>
-          <legend>Testovací osoby</legend>
-          <button type="submit" name="username" value="ceka">
-            Test – ceka<small>přístupové scénáře e2e</small>
+        <p>
+          <small>Obě konta připraví <code>pnpm dev:seed</code>.</small>
+        </p>
+        <details>
+          <summary>Další testovací osoby (automatické testy)</summary>
+          <label>
+            <input type="checkbox" name="stale" />
+            Přihlášení před hodinou<small>auth_time = před hodinou; ověření to odmítne</small>
+          </label>
+          <button type="submit" name="username" value="student">
+            Student<small>Petr Svoboda, člen školy</small>
           </button>
-          <button type="submit" name="username" value="lhuta">
-            Test – lhuta<small>přístupové scénáře e2e</small>
+          <button type="submit" name="username" value="host">
+            Host<small>acct = 1, #EXT# v UPN</small>
           </button>
-          <button type="submit" name="username" value="po-lhute">
-            Test – po-lhute<small>přístupové scénáře e2e</small>
+          <button type="submit" name="username" value="bez-acct">
+            Bez acct<small>chybí volitelná deklarace acct</small>
           </button>
-          <button type="submit" name="username" value="zrusena">
-            Test – zrusena<small>přístupové scénáře e2e</small>
+          <button type="submit" name="username" value="cizi-tenant">
+            Cizí tenant<small>jiné tid</small>
           </button>
-          <button type="submit" name="username" value="blokovany">
-            Test – blokovany<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="zadatel">
-            Test – zadatel<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="prazdny">
-            Test – prazdny<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="relace">
-            Test – relace<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="schvalit">
-            Test – schvalit<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="zamitnout">
-            Test – zamitnout<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="spor">
-            Test – spor<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="zastupce">
-            Test – zastupce<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="kolega">
-            Test – kolega<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="zablokovat">
-            Test – zablokovat<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="ucet">
-            Test – ucet<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="povysit">
-            Test – povysit<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="typ">
-            Test – typ<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="rozhodnout">
-            Test – rozhodnout<small>přístupové scénáře e2e</small>
-          </button>
-          <button type="submit" name="username" value="autor-d">
-            Test – autor-d<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="autor-m">
-            Test – autor-m<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="vraceny-d">
-            Test – vraceny-d<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="vraceny-m">
-            Test – vraceny-m<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="kontrolor-d">
-            Test – kontrolor-d<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="kontrolor-m">
-            Test – kontrolor-m<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="ukladani-d">
-            Test – ukladani-d<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="ukladani-m">
-            Test – ukladani-m<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="ukazky-d">
-            Test – ukazky-d<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="ukazky-m">
-            Test – ukazky-m<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="prohlizi-d">
-            Test – prohlizi-d<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="prohlizi-m">
-            Test – prohlizi-m<small>body a kontrola e2e</small>
-          </button>
-          <button type="submit" name="username" value="zapis-d">
-            Test – zapis-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="zapis-m">
-            Test – zapis-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="uprav-d">
-            Test – uprav-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="uprav-m">
-            Test – uprav-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="revizor-d">
-            Test – revizor-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="revizor-m">
-            Test – revizor-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="rizeni-d">
-            Test – rizeni-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="rizeni-m">
-            Test – rizeni-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="ctenar-d">
-            Test – ctenar-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="ctenar-m">
-            Test – ctenar-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="navrh-d">
-            Test – navrh-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="navrh-m">
-            Test – navrh-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="obraz-d">
-            Test – obraz-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="obraz-m">
-            Test – obraz-m<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="karta-d">
-            Test – karta-d<small>akce a návrhy e2e</small>
-          </button>
-          <button type="submit" name="username" value="karta-m">
-            Test – karta-m<small>akce a návrhy e2e</small>
-          </button>
-        </fieldset>
+          <fieldset>
+            <legend>Testovací osoby</legend>
+            <button type="submit" name="username" value="ceka">
+              Test – ceka<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="lhuta">
+              Test – lhuta<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="po-lhute">
+              Test – po-lhute<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="zrusena">
+              Test – zrusena<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="blokovany">
+              Test – blokovany<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="zadatel">
+              Test – zadatel<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="prazdny">
+              Test – prazdny<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="relace">
+              Test – relace<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="schvalit">
+              Test – schvalit<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="zamitnout">
+              Test – zamitnout<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="spor">
+              Test – spor<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="zastupce">
+              Test – zastupce<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="kolega">
+              Test – kolega<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="zablokovat">
+              Test – zablokovat<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="ucet">
+              Test – ucet<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="povysit">
+              Test – povysit<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="typ">
+              Test – typ<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="rozhodnout">
+              Test – rozhodnout<small>přístupové scénáře e2e</small>
+            </button>
+            <button type="submit" name="username" value="autor-d">
+              Test – autor-d<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="autor-m">
+              Test – autor-m<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="vraceny-d">
+              Test – vraceny-d<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="vraceny-m">
+              Test – vraceny-m<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="kontrolor-d">
+              Test – kontrolor-d<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="kontrolor-m">
+              Test – kontrolor-m<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="ukladani-d">
+              Test – ukladani-d<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="ukladani-m">
+              Test – ukladani-m<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="ukazky-d">
+              Test – ukazky-d<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="ukazky-m">
+              Test – ukazky-m<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="prohlizi-d">
+              Test – prohlizi-d<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="prohlizi-m">
+              Test – prohlizi-m<small>body a kontrola e2e</small>
+            </button>
+            <button type="submit" name="username" value="zapis-d">
+              Test – zapis-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="zapis-m">
+              Test – zapis-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="uprav-d">
+              Test – uprav-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="uprav-m">
+              Test – uprav-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="revizor-d">
+              Test – revizor-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="revizor-m">
+              Test – revizor-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="rizeni-d">
+              Test – rizeni-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="rizeni-m">
+              Test – rizeni-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="ctenar-d">
+              Test – ctenar-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="ctenar-m">
+              Test – ctenar-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="navrh-d">
+              Test – navrh-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="navrh-m">
+              Test – navrh-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="obraz-d">
+              Test – obraz-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="obraz-m">
+              Test – obraz-m<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="karta-d">
+              Test – karta-d<small>akce a návrhy e2e</small>
+            </button>
+            <button type="submit" name="username" value="karta-m">
+              Test – karta-m<small>akce a návrhy e2e</small>
+            </button>
+          </fieldset>
+        </details>
       </form>
     </main>
     <script>

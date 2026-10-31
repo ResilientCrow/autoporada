@@ -29,13 +29,14 @@
     "dev:services": "docker compose -f compose.dev.yaml up -d --wait",
     "dev:services:down": "docker compose -f compose.dev.yaml down",
     "facts:extract": "node scripts/extract-template-facts.ts",
-    "cli": "tsx --tsconfig tsconfig.json src/cli/main.ts",
+    "cli": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json src/cli/main.ts",
     "dev:worker": "tsx --env-file-if-exists=.env --tsconfig tsconfig.json src/worker/main.ts",
     "test:render": "vitest run --project render",
     "lint:chars": "node scripts/check-characters.mjs",
     "lint:compose": "node scripts/check-compose.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "pnpm cli migrate"
+    "db:migrate": "pnpm cli migrate",
+    "dev:seed": "tsx --env-file-if-exists=.env scripts/dev-seed.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

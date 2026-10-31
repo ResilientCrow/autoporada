@@ -5,7 +5,7 @@ Weekly management-meeting ("Porada vedení školy") app for a Czech school: Czec
 ## Commands (pnpm)
 
 - `pnpm dev:services` starts Postgres, Mailpit, mock IdP, Gotenberg (compose.dev.yaml); `dev:services:down` stops them.
-- `pnpm dev` (web), `pnpm dev:worker` (worker), `pnpm db:migrate` (= `pnpm cli migrate`), `pnpm cli <command>`; `pnpm cli jobs:run <job> [key]` queues one cron job now (an unknown name prints the jobs).
+- `pnpm dev` (web), `pnpm dev:worker` (worker), `pnpm db:migrate` (= `pnpm cli migrate`), `pnpm dev:seed` (dev accounts Ředitel and Učitelka, see README), `pnpm cli <command>` (reads `.env`); `pnpm cli jobs:run <job> [key]` queues one cron job now (an unknown name prints the jobs).
 - `pnpm build`; `pnpm build:node` bundles `dist/worker.mjs` (and the CLI) with esbuild.
 
 ## Gate before calling work done

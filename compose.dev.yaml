@@ -24,9 +24,9 @@ services:
     ports: ['127.0.0.1:1025:1025', '127.0.0.1:8025:8025']
 
   # Stand-in for Microsoft Entra ID. Issuer: http://localhost:8080/ssps
-  # The login page offers fixed personas (docker/dev/mock-oauth2.json): a
-  # teacher, a student, the bootstrap headmaster, a guest, a token without
-  # acct and another tenant.
+  # The login page (docker/dev/mock-login.html) offers the two dev accounts
+  # that `pnpm dev:seed` prepares, a headmaster and a teacher; the e2e personas
+  # (docker/dev/mock-oauth2.json) are folded below them.
   mock-idp:
     image: ghcr.io/navikt/mock-oauth2-server:6.1.1
     environment:

@@ -21,6 +21,7 @@ import {
   freezeClock,
   LADDER_MS,
   SAVED,
+  showAllPersonas,
   test,
   type Fixtures,
 } from './fixtures';
@@ -182,6 +183,7 @@ test.describe('autosave in the point editor', () => {
     const tab = await page.context().newPage();
     await tab.goto('/');
     await tab.getByRole('link', { name: cs.signIn.button }).click();
+    await showAllPersonas(tab);
     await tab.getByRole('button', { name: signInRe(testInfo.project.name) }).click();
     await hydrated(tab);
     await tab.close();

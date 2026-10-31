@@ -14,7 +14,7 @@ import { access, cs, users } from '@/ui/copy';
 
 import { endSession } from './db';
 import { E2E_ENV } from './env';
-import { expect, signInElsewhere, test, withDates } from './fixtures';
+import { expect, showAllPersonas, signInElsewhere, test, withDates } from './fixtures';
 import { mailpit } from './mailpit';
 
 const REASON = 'Jsem třídní učitelka 2.A.';
@@ -124,6 +124,7 @@ test('an expired session keeps the typed reason, and signing in on another tab l
   await link.click();
   const popup = await popupOpened;
   await expect(popup.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
+  await showAllPersonas(popup);
   await popup.getByRole('button', { name: /^Test – relace/ }).click();
   await expect(popup).toHaveURL(/\/pristup$/);
   await popup.close();
@@ -167,6 +168,7 @@ test("approving as a student announces it, ends the applicant's session, and sho
   await applicant.goto('/');
   await expect(applicant).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
   await applicant.getByRole('link', { name: cs.signIn.button }).click();
+  await showAllPersonas(applicant);
   await applicant.getByRole('button', { name: /^Test – schvalit/ }).click();
   await expect(applicant).toHaveURL(/:\d+\/$/);
   const main = applicant.getByRole('main');

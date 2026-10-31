@@ -10,7 +10,7 @@ import type { Page } from '@playwright/test';
 import { cs, stepUpNotice, users } from '@/ui/copy';
 
 import { ageSession } from './db';
-import { expect, openUserDetail, sessionToken, test } from './fixtures';
+import { expect, openUserDetail, sessionToken, showAllPersonas, test } from './fixtures';
 
 const ACTOR = /^Test – zastupce/;
 const COLLEAGUE = 'Karel Kolegů';
@@ -37,6 +37,7 @@ test('a stale sign-in is asked to confirm before the role form shows', async ({
 
   await page.getByRole('link', { name: stepUpNotice.action }).click();
   await expect(page.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
+  await showAllPersonas(page);
   await page.getByRole('button', { name: ACTOR }).click();
   await expect(page).toHaveURL(detail);
   await expect(roleHeading(page)).toBeVisible();
@@ -73,6 +74,7 @@ test('a sign-in that goes stale under an open form asks again in a new tab and k
   await link.click();
   const popup = await opened;
   await expect(popup.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
+  await showAllPersonas(popup);
   await popup.getByRole('button', { name: ACTOR }).click();
   await expect(popup).toHaveURL(/\/uzivatele\/[0-9a-f-]{36}$/);
   await popup.close();
@@ -102,6 +104,7 @@ test('a sign-in that goes stale under an open form asks again in a new tab and k
 async function stepUpAs(page: Page, persona: RegExp, hourAgo: boolean): Promise<void> {
   await page.goto('/auth/step-up?returnTo=%2Fuzivatele');
   await expect(page.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
+  await showAllPersonas(page);
   if (hourAgo) await page.getByLabel('Přihlášení před hodinou').check();
   await page.getByRole('button', { name: persona }).click();
 }

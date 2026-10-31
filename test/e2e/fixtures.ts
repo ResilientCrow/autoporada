@@ -273,6 +273,7 @@ export const test = base.extend<Fixtures>({
       await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
       await page.getByRole('link', { name: cs.signIn.button }).click();
       await expect(page.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
+      await showAllPersonas(page);
       await page.getByRole('button', { name: persona }).click();
     });
   },
@@ -334,6 +335,13 @@ export async function openUserDetail(page: Page, name: string): Promise<void> {
   await expect(page).toHaveURL(/\/uzivatele\/[0-9a-f-]{36}$/);
 }
 
+/** Opens the mock IdP's „Další testovací osoby“: every persona but the two dev accounts is folded there. */
+export async function showAllPersonas(page: Page): Promise<void> {
+  await page.locator('details').evaluate((more: HTMLDetailsElement) => {
+    more.open = true;
+  });
+}
+
 /**
  * Signs `persona` in on a second context from the `newContext` fixture (so the
  * CSP guard covers it) and returns its page; the caller checks where it landed.
@@ -345,6 +353,7 @@ export async function signInElsewhere(
   const other = await (await newContext()).newPage();
   await other.goto('/');
   await other.getByRole('link', { name: cs.signIn.button }).click();
+  await showAllPersonas(other);
   await other.getByRole('button', { name: persona }).click();
   return other;
 }
