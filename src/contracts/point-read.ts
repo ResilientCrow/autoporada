@@ -140,13 +140,17 @@ export const queuePointsOutput = z.object({
   mondays: z.array(
     z.object({
       monday: day.nullable(),
+      /** The day that porada is held (its Monday unless it was moved); the heading prints it. */
+      meetingDate: day.nullable(),
       kinds: z.array(
         z.object({ kind: pointKindSchema, points: z.array(queueRow).max(QUEUE_LIMIT) }),
       ),
     }),
   ),
   /** The approved points not yet in an issue, the oldest submission first, each with its Monday. */
-  approved: z.array(queueRow.extend({ monday: day.nullable() })).max(QUEUE_LIMIT),
+  approved: z
+    .array(queueRow.extend({ monday: day.nullable(), meetingDate: day.nullable() }))
+    .max(QUEUE_LIMIT),
   /** More points wait than the queue lists: past `QUEUE_LIMIT`, the approved, then the newest submitted are left out. */
   more: z.boolean(),
 });

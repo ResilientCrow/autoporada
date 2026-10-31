@@ -14,6 +14,35 @@ export const porada = {
   meeting: (meeting: string) => `Porada se koná ${meeting}`,
   /** `monday` arrives written, „2.\u00a011.“. */
   moved: (monday: string) => `Přesunuto z\u00a0pondělí ${monday}`,
+  /** The Přehled line of a moved porada; `meeting` is „9. 11. 2026“. */
+  heldOn: (meeting: string, closes: { weekday: string; date: string; time: string }) =>
+    `Porada se koná ${meeting}, uzávěrka ${closes.weekday} ${closes.date} v\u00a0${closes.time}.`,
+  move: {
+    title: 'Přesunout poradu',
+    open: 'Přesunout poradu',
+    back: 'Zpět na poradu',
+    /** `meeting` arrives written, „9. 11. 2026“. */
+    current: (meeting: string) => `Porada se teď koná ${meeting}.`,
+    fields: {
+      meetingDate: 'Nové datum porady',
+      deadlineDate: 'Uzávěrka: den',
+      deadlineTime: 'Uzávěrka: čas',
+      confirmed: 'Rozumím, že se tyto porady zruší.',
+      stale: 'Porada se mezitím změnila. Načtěte stránku znovu.',
+      skip: 'Porady v\u00a0cestě se změnily. Zkontrolujte je prosím.',
+    },
+    submit: 'Přesunout poradu',
+    said: (meeting: string) => `Porada je přesunuta na ${meeting}.`,
+    /** `when` arrives written, „sobota 7. 11. v 20.00“. */
+    effectEarlier: (when: string) =>
+      `Uzávěrka bude dřív (${when}). Autorům, kteří ještě neodevzdali, pošleme e-mail.`,
+    effectLater: (when: string) =>
+      `Uzávěrka bude později (${when}). Body odevzdané do té doby půjdou na tuto poradu.`,
+    /** `list` arrives written, „9. 11. 2026, 16. 11. 2026“. */
+    conflicts: (list: string) => `Porady v\u00a0cestě se zruší: ${list}.`,
+    conflictsFixed: 'V\u00a0cestě je porada, která už je vygenerovaná. Zvolte jiné datum.',
+    deadlinePast: 'Uzávěrka podle pravidla už proběhla. Zadejte ji ručně.',
+  },
   deadline: {
     ahead: (weekday: string, date: string, time: string) =>
       `Uzávěrka: ${weekday} ${date} v\u00a0${time}`,

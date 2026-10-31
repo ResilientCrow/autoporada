@@ -13,13 +13,15 @@ import {
 } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus } from '@/domain/review';
-import { compareDates, instantToWallClock, parseIsoDate } from '@/domain/time';
+import { lastSlotMonday } from '@/domain/calendar';
+import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
 import { parseIssueSnapshot } from '@/snapshot';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
 
 import { orNotFound } from './not-found';
+import { readWindow, standingFrom, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
 type Workspace = z.output<typeof issueWorkspaceOutput>;
@@ -100,6 +102,53 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
       version: slot.version,
       nextLabel: slot.next === null ? null : formatNumericDate(parseIsoDate(slot.next)),
       counts: slot.counts,
+    },
+  };
+}
+
+/** /porada/[datum]/presunout: what the move form needs of the slot and the calendar around it. */
+export interface MovePageModel {
+  readonly monday: string;
+  readonly view: {
+    readonly monday: string;
+    readonly version: number | null;
+    readonly meetingDate: string;
+    readonly deadlineAt: string;
+    readonly today: string;
+    readonly last: string;
+    readonly issues: StandingModel['issues'];
+    readonly now: string;
+    readonly rule: StandingModel['rule'];
+  };
+  /** „pondělí 9. listopadu 2026“, for the heading. */
+  readonly meeting: string;
+}
+
+/** The move page of one slot, or null (404) for anyone but the headmaster and for a slot that is not open (unskip it first). */
+export async function poradaMovePage(datum: string): Promise<MovePageModel | null> {
+  const viewer = await getViewer();
+  if (!viewer || !can(viewer.actor, { action: 'issue.generate' })) return null;
+  const [read, window] = await Promise.all([readWorkspace(viewer, datum), readWindow(viewer)]);
+  if (read === null || read.slot === null || window === null) return null;
+  const { slot } = read;
+  if (slot.status !== 'open') return null;
+  const now = getContainer().app.clock.now();
+  const today = instantToWallClock(now).date;
+  const standing = standingFrom(window, now);
+  return {
+    monday: slot.monday,
+    meeting: formatTitleDate(parseIsoDate(slot.meetingDate)),
+    view: {
+      monday: slot.monday,
+      version: slot.version,
+      meetingDate: slot.meetingDate,
+      deadlineAt: slot.deadlineAt,
+      today: toIsoDate(today),
+      // The horizon of the calendar (`issues.move` accepts the same).
+      last: toIsoDate(addDays(lastSlotMonday(today), 13)),
+      issues: standing.issues,
+      now: standing.now,
+      rule: standing.rule,
     },
   };
 }

@@ -26,9 +26,14 @@ interface QueueModel {
   readonly mondays: readonly {
     /** ISO Monday, or null when no Monday of the window takes the points. */
     readonly monday: string | null;
+    /** The day that porada is held; null with `monday`. */
+    readonly meetingDate: string | null;
     readonly kinds: readonly { readonly kind: PointKind; readonly points: readonly QueueRow[] }[];
   }[];
-  readonly approved: readonly (QueueRow & { readonly monday: string | null })[];
+  readonly approved: readonly (QueueRow & {
+    readonly monday: string | null;
+    readonly meetingDate: string | null;
+  })[];
   /** More points wait than the queue lists. */
   readonly more: boolean;
   /** The handed-in akce and jednání, which have a section of their own. */
@@ -55,11 +60,11 @@ function Row({ row, children }: { readonly row: QueueRow; readonly children?: Re
   );
 }
 
-function Monday({ monday, kinds }: QueueModel['mondays'][number]) {
+function Monday({ meetingDate, kinds }: QueueModel['mondays'][number]) {
   return (
     <section className="space-y-3">
       <h2 className="text-xl">
-        {monday === null ? review.unplaced : review.porada(dayMonth(monday))}
+        {meetingDate === null ? review.unplaced : review.porada(dayMonth(meetingDate))}
       </h2>
       {kinds.map(({ kind, points: rows }) => (
         <section key={kind} className="space-y-2">
@@ -97,9 +102,9 @@ export function Queue({ queue }: { readonly queue: QueueModel }) {
             {queue.approved.map((row) => (
               <Row key={row.id} row={row}>
                 <p>
-                  {row.monday === null
+                  {row.meetingDate === null
                     ? review.unplaced
-                    : points.mine.placement(dayMonth(row.monday))}
+                    : points.mine.placement(dayMonth(row.meetingDate))}
                 </p>
               </Row>
             ))}

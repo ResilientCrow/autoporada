@@ -29,6 +29,8 @@ export const reminderParts = ({ userId, monday }: ReminderIds) => ({
 /** The issue a reminder speaks for: the Monday being collected for now, and when it closes. */
 export interface ReminderIssue {
   readonly monday: CalDate;
+  /** The day that porada is held: what the mail names. */
+  readonly meetingDate: CalDate;
   readonly deadlineAt: Date;
 }
 
@@ -43,8 +45,8 @@ export async function reminderIssue(
   now: Date,
 ): Promise<ReminderIssue> {
   const { slots, rule } = await readSlots(tx, now);
-  const { monday, deadlineAt } = handInSlot(now, slots, rule);
-  return { monday, deadlineAt };
+  const { monday, meetingDate, deadlineAt } = handInSlot(now, slots, rule);
+  return { monday, meetingDate, deadlineAt };
 }
 
 /** Authors of a draft changed in the last 28 days or of a returned point that can still go to `monday`. */
@@ -57,6 +59,8 @@ export function waitingAuthors(tx: Pick<Tx, 'points'>, monday: CalDate, now: Dat
 export interface ReminderFacts {
   /** The meeting Monday whose slot is open now. */
   readonly monday: CalDate;
+  /** The day it is held. */
+  readonly meetingDate: CalDate;
   /** The recipient has a draft or returned point for it; read for the hard reminder only. */
   readonly hasWork: boolean;
 }
@@ -77,5 +81,5 @@ export async function loadReminder(
   const issue = await reminderIssue(tx, now);
   if (!reminderDue(kind, issue.deadlineAt, now)) return null;
   const hasWork = kind === 'hard' && (await waitingAuthors(tx, issue.monday, now)).includes(userId);
-  return { monday: issue.monday, hasWork };
+  return { monday: issue.monday, meetingDate: issue.meetingDate, hasWork };
 }

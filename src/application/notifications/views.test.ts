@@ -38,7 +38,9 @@ describe('viewOf', () => {
   it('tells a reminder the meeting it is about', () => {
     const monday = calDate(2026, 10, 26);
     for (const template of ['reminder.soft', 'reminder.hard'] as const) {
-      expect(viewOf(template, { monday, hasWork: true })).toEqual({ meetingDate: monday });
+      expect(viewOf(template, { monday, meetingDate: monday, hasWork: true })).toEqual({
+        meetingDate: monday,
+      });
     }
   });
 
@@ -51,7 +53,15 @@ describe('viewOf', () => {
 
   it('tells a summary the meeting and the counts of its issue', () => {
     const monday = calDate(2026, 10, 26);
-    expect(viewOf('headmaster.summary', { monday, approved: 5, pending: 2, returned: 1 })).toEqual({
+    expect(
+      viewOf('headmaster.summary', {
+        monday,
+        meetingDate: monday,
+        approved: 5,
+        pending: 2,
+        returned: 1,
+      }),
+    ).toEqual({
       meetingDate: monday,
       approved: 5,
       pending: 2,

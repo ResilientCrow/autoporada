@@ -30,6 +30,7 @@ const FULL = {
   mondays: [
     {
       monday: '2026-10-26',
+      meetingDate: '2026-10-26',
       kinds: [
         { kind: 'report' as const, points: [row(A)] },
         {
@@ -38,11 +39,15 @@ const FULL = {
         },
       ],
     },
-    { monday: null, kinds: [{ kind: 'finance' as const, points: [row(C, { kind: 'finance' })] }] },
+    {
+      monday: null,
+      meetingDate: null,
+      kinds: [{ kind: 'finance' as const, points: [row(C, { kind: 'finance' })] }],
+    },
   ],
   approved: [
-    { ...row(C, { title: 'Nákup' }), monday: '2026-11-02' },
-    { ...row(D, { title: 'Bez porady' }), monday: null },
+    { ...row(C, { title: 'Nákup' }), monday: '2026-11-02', meetingDate: '2026-11-02' },
+    { ...row(D, { title: 'Bez porady' }), monday: null, meetingDate: null },
   ],
   more: false,
   future: { items: [], more: false },

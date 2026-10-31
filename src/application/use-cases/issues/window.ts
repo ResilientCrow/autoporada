@@ -1,7 +1,7 @@
 import { defineUseCase, ok } from '@/application/core';
 import { issuesWindowInput, issuesWindowOutput, toDeadlineWire } from '@/contracts';
 import { lastSlotMonday, skipWindow } from '@/domain/calendar';
-import { instantToWallClock, mondayOf, toIsoDate } from '@/domain/time';
+import { compareDates, instantToWallClock, mondayOf, toIsoDate } from '@/domain/time';
 
 import { readWindow } from './calendar';
 
@@ -21,14 +21,18 @@ export const issueWindow = defineUseCase({
   access: { kind: 'gate', check: () => ({ action: 'point.create' }) },
   async execute({ tx, now }) {
     const { slots, first, rule } = await readWindow(tx, now);
-    // The wire carries the version of each row, which the worker-safe calendar does not.
+    // The wire carries the version of each row, which the worker-safe calendar does not: read the
+    // calendar's stored rows again in full. A porada moved past its week starts before this Monday.
     const today = instantToWallClock(now).date;
-    const known = await tx.issues.between(mondayOf(today), lastSlotMonday(today));
+    const stored = slots.filter((slot) => slot.stored).map((slot) => slot.monday);
+    const from = [mondayOf(today), ...stored].reduce((a, b) => (compareDates(a, b) <= 0 ? a : b));
+    const known = await tx.issues.between(from, lastSlotMonday(today));
     return ok({
       submitMonday: toIsoDate(first),
       stripFrom: toIsoDate(skipWindow(now, slots, rule).first),
       issues: known.map((issue) => ({
         monday: toIsoDate(issue.monday),
+        meetingDate: toIsoDate(issue.meetingDate),
         deadlineAt: issue.deadlineAt.toISOString(),
         status: issue.status,
         version: issue.version,

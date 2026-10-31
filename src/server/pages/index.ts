@@ -13,7 +13,7 @@ export { accessPage } from './access';
 export { futureListPage, futurePage, newFuturePage } from './future';
 export { homePage } from './home';
 export { pointTypesPage } from './point-types';
-export { poradaIndexPage, poradaPage, previewPage } from './porada';
+export { poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
 export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points';
 export { newYearPage, registryPage } from './registry';
 export { queuePage, reviewPointPage } from './review';

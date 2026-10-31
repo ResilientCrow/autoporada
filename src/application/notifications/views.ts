@@ -21,10 +21,15 @@ const VIEWS: {
   'point.approved': none,
   'point.rejected': none,
   'report.prompt': none,
-  'reminder.soft': ({ monday }) => ({ meetingDate: monday }),
-  'reminder.hard': ({ monday }) => ({ meetingDate: monday }),
+  'reminder.soft': ({ meetingDate }) => ({ meetingDate }),
+  'reminder.hard': ({ meetingDate }) => ({ meetingDate }),
   'reviewer.digest': (counts) => counts,
-  'headmaster.summary': ({ monday, ...counts }) => ({ meetingDate: monday, ...counts }),
+  'headmaster.summary': ({ meetingDate, approved, pending, returned }) => ({
+    meetingDate,
+    approved,
+    pending,
+    returned,
+  }),
 };
 
 /** The template's variables, read from its subject. */

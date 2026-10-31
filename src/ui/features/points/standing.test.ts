@@ -19,6 +19,7 @@ const { soon } = cs.points.standing;
 /** Mondays of March 2027 (the 15th is one): the Czech clocks are on winter time until the 28th. */
 const issue = (monday: string, deadlineAt: string, status: 'open' | 'skipped' | 'generated') => ({
   monday,
+  meetingDate: monday,
   deadlineAt,
   status,
   version: 1,

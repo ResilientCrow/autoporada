@@ -10,7 +10,7 @@ import type { StripItem, StripWindow } from './placement';
 
 const WINDOW: StripWindow = {
   stripFrom: '2026-11-09',
-  issues: [{ monday: '2026-11-16', status: 'skipped' }],
+  issues: [{ monday: '2026-11-16', meetingDate: '2026-11-16', status: 'skipped' }],
 };
 const ITEM: StripItem = { kind: 'akce', startDate: '2026-11-17', endDate: null };
 const render = (item: StripItem = ITEM) =>

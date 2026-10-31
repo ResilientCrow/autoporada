@@ -14,6 +14,7 @@ import { dateId, formId, skipSpec } from './inputs';
 const day = (monday: string, label: string, over: Partial<MeetingDay> = {}): MeetingDay => ({
   monday,
   label,
+  held: null,
   status: 'open',
   version: null,
   ...over,

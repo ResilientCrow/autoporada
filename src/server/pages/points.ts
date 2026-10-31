@@ -14,7 +14,13 @@ import { PROPOSAL_KINDS, type BulletSpec, type ProposalKind } from '@/domain/rep
 import type { Actor } from '@/domain/actor';
 import { can } from '@/domain/policy';
 import { authorEditsPoint, type AuthorMove, type PointState } from '@/domain/review';
-import { instantToWallClock, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
+import {
+  instantToWallClock,
+  isSameDate,
+  parseIsoDate,
+  toIsoDate,
+  type CalDate,
+} from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
@@ -203,7 +209,9 @@ function placementOf(
   const slots = issueSlots(toIssueRows(window.issues), today, toDeadlineRule(window.rule));
   const point = { earliest: parseIsoDate(earliestMonday), handIn: parseIsoDate(handInMonday) };
   const monday = pointMonday(point, today, slots);
-  return monday && toIsoDate(monday);
+  // The date shown is the porada's meeting date, which differs from its Monday once moved.
+  const slot = monday && slots.find((candidate) => isSameDate(candidate.monday, monday));
+  return slot ? toIsoDate(slot.meetingDate) : null;
 }
 
 /**

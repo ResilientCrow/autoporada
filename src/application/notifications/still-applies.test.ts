@@ -250,7 +250,7 @@ describe('stillApplies', () => {
 
   describe('the deadline reminders', () => {
     const MONDAY = calDate(2026, 10, 26);
-    const facts = (hasWork: boolean) => ({ monday: MONDAY, hasWork });
+    const facts = (hasWork: boolean) => ({ monday: MONDAY, meetingDate: MONDAY, hasWork });
 
     it('sends the soft one to staff who still want it', () => {
       expect(stillApplies('reminder.soft', facts(false), MEMBER)).toBe(true);
@@ -308,7 +308,13 @@ describe('stillApplies', () => {
   });
 
   describe('the headmaster summary', () => {
-    const issue = { monday: calDate(2026, 10, 26), approved: 0, pending: 0, returned: 0 };
+    const issue = {
+      monday: calDate(2026, 10, 26),
+      meetingDate: calDate(2026, 10, 26),
+      approved: 0,
+      pending: 0,
+      returned: 0,
+    };
 
     it('goes to the headmaster while they can sign in, whatever the counts say', () => {
       expect(stillApplies('headmaster.summary', issue, user('headmaster'))).toBe(true);

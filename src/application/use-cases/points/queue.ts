@@ -5,7 +5,7 @@ import type { Actor } from '@/domain/actor';
 import { pointMonday, type IssueSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
 import type { PointKind } from '@/domain/report';
-import { instantToWallClock, toIsoDate } from '@/domain/time';
+import { instantToWallClock, isSameDate, toIsoDate } from '@/domain/time';
 
 import { readWindow } from '../issues';
 
@@ -21,27 +21,39 @@ const rowWire = (row: QueuedPoint) => ({
   returnedBefore: row.returnedBefore,
 });
 
-/** The ISO Monday the point goes to, or null when no Monday of the window takes it. */
-const mondayOf = (row: QueuedPoint, now: Date, slots: readonly IssueSlot[]) => {
+/** The ISO Monday the point goes to and the day that porada is held, or nulls when no Monday of the window takes it. */
+const placeOf = (row: QueuedPoint, now: Date, slots: readonly IssueSlot[]) => {
   const monday = pointMonday(
     { earliest: row.earliestMonday, handIn: row.handInMonday },
     instantToWallClock(now).date,
     slots,
   );
-  return monday && toIsoDate(monday);
+  const slot = monday && slots.find((candidate) => isSameDate(candidate.monday, monday));
+  return {
+    monday: monday && toIsoDate(monday),
+    meetingDate: slot ? toIsoDate(slot.meetingDate) : null,
+  };
 };
 
 /** Null last; ISO dates sort as text. */
 const byMonday = (a: string | null, b: string | null) =>
   a === b ? 0 : a === null ? 1 : b === null ? -1 : a < b ? -1 : 1;
 
+/** A queued point with the porada it goes to. */
+interface Placed {
+  readonly monday: string | null;
+  readonly meetingDate: string | null;
+  readonly row: QueuedPoint;
+}
+
 /** The submitted points by Monday, then by kind; each list keeps the queue's order. */
-function grouped(rows: readonly { readonly monday: string | null; readonly row: QueuedPoint }[]) {
+function grouped(rows: readonly Placed[]) {
   const mondays = [...new Set(rows.map(({ monday }) => monday))].sort(byMonday);
   return mondays.map((monday) => {
     const ofMonday = rows.filter((entry) => entry.monday === monday).map(({ row }) => row);
     return {
       monday,
+      meetingDate: rows.find((entry) => entry.monday === monday)?.meetingDate ?? null,
       kinds: KIND_ORDER.flatMap((kind) => {
         const points = ofMonday.filter((row) => row.kind === kind).map(rowWire);
         return points.length === 0 ? [] : [{ kind, points }];
@@ -62,12 +74,12 @@ async function readQueue(tx: Tx, now: Date, keep: (row: QueuedPoint) => boolean 
   const placed = read
     .slice(0, QUEUE_LIMIT)
     .filter(keep)
-    .map((row) => ({ monday: mondayOf(row, now, slots), row }));
+    .map((row) => ({ ...placeOf(row, now, slots), row }));
   return {
     mondays: grouped(placed.filter(({ row }) => row.state === 'submitted')),
     approved: placed
       .filter(({ row }) => row.state === 'approved')
-      .map(({ monday, row }) => ({ ...rowWire(row), monday })),
+      .map(({ monday, meetingDate, row }) => ({ ...rowWire(row), monday, meetingDate })),
     more: read.length > QUEUE_LIMIT,
   };
 }

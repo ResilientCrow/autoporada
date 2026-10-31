@@ -1,6 +1,6 @@
 import type { IssueStatus } from '@/domain/review';
 import { porada } from '@/ui/copy';
-import { Button, Card, SlantLabel } from '@/ui/kit';
+import { ArrowLink, Button, Card, SlantLabel } from '@/ui/kit';
 import { Chip, ISSUE_LOOK } from '@/ui/status';
 
 import { SkipControl, type SkipAction } from './SkipControl';
@@ -65,6 +65,9 @@ export function Workspace({
             {counts.later > 0 && <li>{porada.counts.later(counts.later)}</li>}
           </ul>
         </Card>
+        {view.status === 'open' && (
+          <ArrowLink href={`/porada/${view.monday}/presunout`}>{porada.move.open}</ArrowLink>
+        )}
         {view.status !== 'generated' && (
           <SkipControl
             action={setSkipped}

@@ -21,9 +21,9 @@ export function PlacementStrip({
     <section className="space-y-2">
       <h2 className="text-xl">{future.strip.title}</h2>
       <ul className="space-y-1">
-        {lines.map(({ monday, slot }) => (
+        {lines.map(({ monday, meeting, slot }) => (
           <li key={monday}>
-            {formatDayMonth(parseIsoDate(monday))}: {future.strip.slot[slot]}
+            {formatDayMonth(parseIsoDate(meeting))}: {future.strip.slot[slot]}
           </li>
         ))}
       </ul>

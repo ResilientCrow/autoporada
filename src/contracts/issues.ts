@@ -54,6 +54,8 @@ export const issuesWindowOutput = z.object({
   issues: z.array(
     z.object({
       monday: z.iso.date(),
+      /** The day the porada is held: the Monday until it is moved (`issues.move`). */
+      meetingDate: z.iso.date(),
       deadlineAt: z.iso.datetime(),
       status: z.enum(['open', 'generated', 'skipped']),
       version: z.number().int().positive(),
@@ -67,16 +69,15 @@ export const issuesWindowOutput = z.object({
 export function toIssueRows(
   rows: readonly {
     readonly monday: string;
+    readonly meetingDate: string;
     readonly deadlineAt: string;
     readonly status: IssueRow['status'];
   }[],
 ): readonly IssueRow[] {
   return rows.map((row) => {
-    const monday = parseIsoDate(row.monday);
-    // The wire carries no meeting date until row 35: every stored row meets on its Monday (ADR 0034).
     return {
-      monday,
-      meetingDate: monday,
+      monday: parseIsoDate(row.monday),
+      meetingDate: parseIsoDate(row.meetingDate),
       deadlineAt: new Date(row.deadlineAt),
       status: row.status,
     };

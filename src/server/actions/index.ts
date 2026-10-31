@@ -11,7 +11,7 @@ export {
   startFutureReport,
   submitFuture,
 } from './future';
-export { setSkipped } from './issues';
+export { moveIssue, setSkipped } from './issues';
 export {
   createPoint,
   pointStatus,

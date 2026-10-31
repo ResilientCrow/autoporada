@@ -35,6 +35,8 @@ export async function summaryIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<I
 /** What a summary mail is about at send time: the meeting and where its points stand. */
 export interface SummaryFacts {
   readonly monday: CalDate;
+  /** The day the porada is held: what the mail names. */
+  readonly meetingDate: CalDate;
   readonly approved: number;
   readonly pending: number;
   readonly returned: number;
@@ -47,6 +49,7 @@ export interface SummaryFacts {
 async function summaryFacts(
   tx: Pick<Tx, 'points' | 'issues' | 'settings' | 'ctx'>,
   monday: CalDate,
+  meetingDate: CalDate,
 ): Promise<SummaryFacts> {
   const { now } = tx.ctx;
   // Placement reads no deadline, so the rule `readSlots` also returns is not needed here.
@@ -65,6 +68,7 @@ async function summaryFacts(
   }
   return {
     monday,
+    meetingDate,
     approved: counts.approved,
     pending: counts.submitted,
     returned: counts.returned,
@@ -76,5 +80,5 @@ export async function loadSummary(
   tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
 ): Promise<SummaryFacts | null> {
   const issue = await summaryIssue(tx, tx.ctx.now);
-  return issue && summaryFacts(tx, issue.monday);
+  return issue && summaryFacts(tx, issue.monday, issue.meetingDate);
 }

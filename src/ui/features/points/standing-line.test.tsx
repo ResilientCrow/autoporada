@@ -49,6 +49,7 @@ describe('StandingLine', () => {
   it('renders nothing when no porada is open', () => {
     const issues = Array.from({ length: 27 }, (_, week) => ({
       monday: new Date(Date.UTC(2027, 2, 15 + 7 * week)).toISOString().slice(0, 10),
+      meetingDate: new Date(Date.UTC(2027, 2, 15 + 7 * week)).toISOString().slice(0, 10),
       deadlineAt: '2027-03-13T19:00:00.000Z',
       status: 'skipped' as const,
       version: 1,

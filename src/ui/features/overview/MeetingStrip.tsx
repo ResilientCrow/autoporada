@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 
 import type { IssueStatus } from '@/domain/review';
-import { issues } from '@/ui/copy';
+import { issues, porada } from '@/ui/copy';
 import { LiveStatus, NoScriptNotice, useFocusOnRise } from '@/ui/form';
 import { Card } from '@/ui/kit';
 import { Chip, ISSUE_LOOK } from '@/ui/status';
@@ -14,8 +14,10 @@ import { SkipForm, type SkipAction } from './SkipForm';
 /** One Monday as the page knows it; `version` is null where it has no row yet. */
 export interface MeetingDay {
   readonly monday: string;
-  /** The date as people read it, „9. 11. 2026“. */
+  /** The meeting date as people read it, „9. 11. 2026“. */
   readonly label: string;
+  /** The deadline of a porada moved off its Monday, written out; null otherwise. */
+  readonly held: { readonly weekday: string; readonly date: string; readonly time: string } | null;
   readonly status: IssueStatus;
   readonly version: number | null;
 }
@@ -52,6 +54,7 @@ export function MeetingStrip({
               </h3>
               <Chip look={ISSUE_LOOK[day.status]} />
             </div>
+            {day.held !== null && <p>{porada.heldOn(day.label, day.held)}</p>}
             {day.status !== 'generated' && (
               <SkipForm
                 key={day.status}

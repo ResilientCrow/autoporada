@@ -3,10 +3,10 @@ import type { z } from 'zod';
 import type { UserPrincipal } from '@/application/ports';
 import { listMyPoints, queuePoints } from '@/application/use-cases';
 import type { issuesWindowOutput } from '@/contracts';
-import { formatNumericDate } from '@/domain/cs';
+import { formatDayMonth, formatNumericDate, formatTime, weekdayName } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus, PointState } from '@/domain/review';
-import { addDays, parseIsoDate, toIsoDate } from '@/domain/time';
+import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
@@ -25,6 +25,8 @@ interface MeetingDay {
   readonly monday: string;
   /** The date as people read it, „9. 11. 2026“. */
   readonly label: string;
+  /** The deadline of a porada moved off its Monday, written out; null for one on its Monday. */
+  readonly held: { readonly weekday: string; readonly date: string; readonly time: string } | null;
   readonly status: IssueStatus;
   readonly version: number | null;
 }
@@ -54,6 +56,12 @@ type HomePageModel =
     }
   | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
 
+/** Where a moved porada is held and when it closes, written out. */
+function held(row: { readonly deadlineAt: string }): NonNullable<MeetingDay['held']> {
+  const { date, time } = instantToWallClock(new Date(row.deadlineAt));
+  return { weekday: weekdayName(date), date: formatDayMonth(date), time: formatTime(time) };
+}
+
 /** The Mondays from the first one whose deadline is ahead on (a skipped one stays, to be undone), each with its row's status and version or the untouched defaults. */
 function meetingStrip(window: z.output<typeof issuesWindowOutput>): readonly MeetingDay[] {
   const rows = new Map(window.issues.map((issue) => [issue.monday, issue]));
@@ -61,9 +69,11 @@ function meetingStrip(window: z.output<typeof issuesWindowOutput>): readonly Mee
   return Array.from({ length: STRIP_DAYS }, (_, week) => {
     const monday = addDays(first, 7 * week);
     const row = rows.get(toIsoDate(monday));
+    const meeting = row ? parseIsoDate(row.meetingDate) : monday;
     return {
       monday: toIsoDate(monday),
-      label: formatNumericDate(monday),
+      label: formatNumericDate(meeting),
+      held: row && compareDates(meeting, monday) !== 0 ? held(row) : null,
       status: row?.status ?? 'open',
       version: row?.version ?? null,
     };

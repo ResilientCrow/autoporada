@@ -7,8 +7,18 @@ import { toIssueRows } from './index';
 describe('toIssueRows', () => {
   it('reads the wire rows as calendar days, instants and statuses, in order', () => {
     const known = toIssueRows([
-      { monday: '2026-10-26', deadlineAt: '2026-10-25T17:00:00.000Z', status: 'open' },
-      { monday: '2026-11-02', deadlineAt: '2026-11-01T17:00:00.000Z', status: 'skipped' },
+      {
+        monday: '2026-10-26',
+        meetingDate: '2026-10-26',
+        deadlineAt: '2026-10-25T17:00:00.000Z',
+        status: 'open',
+      },
+      {
+        monday: '2026-11-02',
+        meetingDate: '2026-11-02',
+        deadlineAt: '2026-11-01T17:00:00.000Z',
+        status: 'skipped',
+      },
     ]);
     expect(known.map((row) => toIsoDate(row.monday))).toEqual(['2026-10-26', '2026-11-02']);
     expect(known.map((row) => row.deadlineAt.toISOString())).toEqual([
@@ -20,7 +30,12 @@ describe('toIssueRows', () => {
 
   it('puts the meeting on the Monday: the wire has no meeting date yet', () => {
     const [row] = toIssueRows([
-      { monday: '2026-10-26', deadlineAt: '2026-10-25T17:00:00.000Z', status: 'open' },
+      {
+        monday: '2026-10-26',
+        meetingDate: '2026-10-26',
+        deadlineAt: '2026-10-25T17:00:00.000Z',
+        status: 'open',
+      },
     ]);
     expect(row && toIsoDate(row.meetingDate)).toBe('2026-10-26');
   });
@@ -29,6 +44,7 @@ describe('toIssueRows', () => {
     const wire = [
       {
         monday: '2026-10-26',
+        meetingDate: '2026-10-26',
         deadlineAt: '2026-10-25T17:00:00.000Z',
         status: 'generated' as const,
         version: 3,

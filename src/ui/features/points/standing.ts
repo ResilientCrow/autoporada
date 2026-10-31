@@ -31,6 +31,7 @@ export interface StandingInput {
   readonly submitMonday: string;
   readonly issues: readonly {
     readonly monday: string;
+    readonly meetingDate: string;
     readonly deadlineAt: string;
     readonly status: 'open' | 'generated' | 'skipped';
   }[];
@@ -44,15 +45,24 @@ export type Standing =
   | {
       readonly kind: 'before';
       readonly placement: CalDate;
+      /** The day that porada is held (its Monday unless it was moved). */
+      readonly meeting: CalDate;
       readonly deadlineAt: Date;
       /** Strictly less than 24 hours to the deadline. */
       readonly urgent: boolean;
     }
-  | { readonly kind: 'closed'; readonly closed: CalDate; readonly placement: CalDate }
+  | {
+      readonly kind: 'closed';
+      /** The meeting date of the porada that closed. */
+      readonly closed: CalDate;
+      readonly placement: CalDate;
+      readonly meeting: CalDate;
+    }
   /** A report on an event that ends after the deadline: its own close, before the porada it goes to. */
   | {
       readonly kind: 'late';
       readonly placement: CalDate;
+      readonly meeting: CalDate;
       readonly closesAt: Date;
       /** Strictly less than 24 hours to the close, as for the plain deadline. */
       readonly urgent: boolean;
@@ -65,7 +75,7 @@ const MIDNIGHT_TEXT = '24.00';
 
 /**
  * The latest porada that is not skipped, whose deadline has passed and whose meeting is today or
- * later. The wire has no meeting date until M9 row 35: the meeting is on the Monday.
+ * later; its meeting date.
  */
 function closedPorada(slots: readonly IssueSlot[], today: CalDate, now: Date): CalDate | null {
   const closed = slots.filter(
@@ -74,15 +84,14 @@ function closedPorada(slots: readonly IssueSlot[], today: CalDate, now: Date): C
       slot.deadlineAt.getTime() <= now.getTime() &&
       compareDates(slot.meetingDate, today) >= 0,
   );
-  return closed.at(-1)?.monday ?? null;
+  return closed.at(-1)?.meetingDate ?? null;
 }
 
 /**
  * The line of a report on an event that ends after the porada's deadline, worked out as the submit
  * does: `handInMonday` over the same slots with the report's facts. Null when the report is not
- * late for the porada it would reach, so the plain line stands. The slots take the meeting on the
- * Monday until the wire carries the meeting date (M9 rows 34 and 35); `reportCloses` reads it for
- * both the last-day check and the 00.00 cap.
+ * late for the porada it would reach, so the plain line stands. `reportCloses` reads the slot's
+ * meeting date for both the last-day check and the 00.00 cap.
  */
 function lateStanding(
   slots: readonly IssueSlot[],
@@ -97,6 +106,7 @@ function lateStanding(
   return {
     kind: 'late',
     placement: monday,
+    meeting: slot.meetingDate,
     closesAt,
     urgent: now.getTime() > closesAt.getTime() - DAY_MS,
   };
@@ -137,12 +147,13 @@ export function standingOf(
   const late = report && lateStanding(slots, instant, rule, report);
   if (late) return late;
   const closed = closedPorada(slots, today, instant);
-  if (closed !== null) return { kind: 'closed', closed, placement };
+  if (closed !== null) return { kind: 'closed', closed, placement, meeting: slot.meetingDate };
 
   const { deadlineAt } = slot;
   return {
     kind: 'before',
     placement,
+    meeting: slot.meetingDate,
     deadlineAt,
     urgent: instant.getTime() > deadlineAt.getTime() - DAY_MS,
   };
@@ -158,7 +169,7 @@ export function standingText(standing: Standing): { text: string; urgent: boolea
       text: points.standing.late(
         formatDayMonth(midnight ? addDays(date, -1) : date),
         midnight ? MIDNIGHT_TEXT : formatTime(time),
-        formatDayMonth(standing.placement),
+        formatDayMonth(standing.meeting),
       ),
       urgent: standing.urgent,
     };
@@ -167,7 +178,7 @@ export function standingText(standing: Standing): { text: string; urgent: boolea
     return {
       text: points.standing.closed(
         formatDayMonth(standing.closed),
-        formatDayMonth(standing.placement),
+        formatDayMonth(standing.meeting),
       ),
       urgent: false,
     };
@@ -175,7 +186,7 @@ export function standingText(standing: Standing): { text: string; urgent: boolea
   const { date, time } = instantToWallClock(standing.deadlineAt);
   return {
     text: points.standing.before(
-      formatDayMonth(standing.placement),
+      formatDayMonth(standing.meeting),
       weekdayName(date),
       formatDayMonth(date),
       formatTime(time),
