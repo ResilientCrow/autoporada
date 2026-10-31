@@ -12,6 +12,7 @@ const LINK = `${ORIGIN}/prihlaseni`;
 const POINTS = `${ORIGIN}/body`;
 const REVIEW = `${ORIGIN}/kontrola`;
 const USERS = `${ORIGIN}/uzivatele`;
+const BODY = `${ORIGIN}/body`;
 const GREETING = 'Dobrý den,';
 const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovídejte na ni prosím.';
 
@@ -34,6 +35,7 @@ const VIEWS = {
   'reminder.hard': { meetingDate: MEETING },
   'reviewer.digest': { submitted: 4, accessRequests: 2 },
   'headmaster.summary': { meetingDate: MEETING, approved: 5, pending: 2, returned: 1 },
+  'issue.moved': { meetingDate: MEETING, deadlineAt: new Date('2026-11-23T19:00:00Z') },
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -116,6 +118,12 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: 'Autoporada: uzávěrka porady proběhla',
     text: letter(
       `uzávěrka porady z${NB}26.${NB}října 2026 proběhla. Schváleno: 5, čeká na kontrolu: 2, vráceno k${NB}úpravě: 1.\n\n${REVIEW}`,
+    ),
+  },
+  'issue.moved': {
+    subject: `Autoporada: porada se přesouvá na 26.${NB}října 2026`,
+    text: letter(
+      `porada se přesouvá na 26.${NB}října 2026. Uzávěrka je dřív: pondělí 23.${NB}11. v${NB}20.00.\n\n${BODY}`,
     ),
   },
 };
@@ -201,7 +209,7 @@ describe('renderMail', () => {
         (origin, year, month, day) => {
           const date = calDate(year, month, day);
           for (const name of TEMPLATE_NAMES) {
-            const view = { ...COUNTS, meetingDate: date, retryFrom: date };
+            const view = { ...COUNTS, meetingDate: date, retryFrom: date, deadlineAt: new Date(0) };
             const { subject } = renderMail(name, view as never, origin);
             expect(subject).not.toMatch(/[\r\n]/);
           }

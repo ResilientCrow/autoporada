@@ -12,6 +12,7 @@ export const JOB_NAMES = [
   'reminders.deadline',
   'reviewer.digest',
   'headmaster.summary',
+  'issues.moved-notice',
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number];
 
@@ -31,6 +32,8 @@ export interface JobCatalog {
   'reviewer.digest': Readonly<Record<string, never>>;
   /** Mails the headmasters how an issue stands once its deadline has passed; cron sends it, never a use case. */
   'headmaster.summary': Readonly<Record<string, never>>;
+  /** Mails the reminders' audience that a porada's deadline came earlier; `issues.move` enqueues it with the slot and the deadline it set. */
+  'issues.moved-notice': { readonly monday: string; readonly deadlineAt: string };
 }
 
 export interface EnqueueOptions {

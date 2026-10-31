@@ -63,6 +63,9 @@ const APPLIES: {
   'reviewer.digest': ({ submitted, accessRequests }, recipient) =>
     isReviewer(recipient) &&
     (submitted > 0 || (recipient.role === 'headmaster' && accessRequests > 0)),
+  /** The reminders' audience still: staff who keep the soft reminder, or whoever waits on the slot. */
+  'issue.moved': ({ hasWork }, recipient) =>
+    member(recipient) && (hasWork || wantsSoftReminder(recipient)),
   /** The headmaster, while they can sign in; a skipped or closed issue has no subject to begin with. */
   'headmaster.summary': (_subject, recipient) => isHeadmaster(recipient),
 };

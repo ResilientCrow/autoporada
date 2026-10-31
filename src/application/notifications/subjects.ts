@@ -9,6 +9,7 @@ import type {
 import type { TemplateName } from '@/notify';
 
 import { loadDigest, type DigestFacts } from './digest';
+import { loadMoved, type MovedFacts } from './moved';
 import { loadReminder, type ReminderFacts } from './reminders';
 import { loadSummary, type SummaryFacts } from './summary';
 
@@ -38,6 +39,8 @@ export interface MailSubjects {
   readonly 'reviewer.digest': DigestFacts;
   /** The issue closing now and where its points stand. */
   readonly 'headmaster.summary': SummaryFacts;
+  /** The slot collected now, with its deadline; the recipient is the subject. */
+  readonly 'issue.moved': MovedFacts;
 }
 
 /** The repositories a subject is read from. */
@@ -81,6 +84,7 @@ const SUBJECTS: {
   'reminder.hard': (tx, id) => loadReminder(tx, 'hard', id),
   'reviewer.digest': loadDigest,
   'headmaster.summary': loadSummary,
+  'issue.moved': loadMoved,
 };
 
 /** Reads the subject a `mail.send` job names, by the loader of its template. */

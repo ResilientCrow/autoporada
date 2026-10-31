@@ -35,6 +35,7 @@ describe('ports', () => {
       'reminders.deadline',
       'reviewer.digest',
       'headmaster.summary',
+      'issues.moved-notice',
     ]);
     expectTypeOf<JobName>().toEqualTypeOf<
       | 'mail.send'
@@ -43,6 +44,7 @@ describe('ports', () => {
       | 'reminders.deadline'
       | 'reviewer.digest'
       | 'headmaster.summary'
+      | 'issues.moved-notice'
     >();
   });
 

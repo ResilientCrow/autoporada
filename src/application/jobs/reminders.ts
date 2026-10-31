@@ -1,40 +1,15 @@
 import { readSettingValue } from '@/application/core';
 import {
-  isMember,
+  activeSubmitters,
+  authorsWaiting,
   mailJob,
   reminderIssue,
-  waitingAuthors,
-  wantsSoftReminder,
 } from '@/application/notifications';
-import { JOB_TX_TIMEOUT_MS, system, type JobHandler, type Tx } from '@/application/ports';
-import {
-  activeSince,
-  reminderDue,
-  reminderSlot,
-  reminderStagger,
-  type ReminderKind,
-} from '@/domain/calendar';
-import { instantToWallClock, type CalDate } from '@/domain/time';
+import { JOB_TX_TIMEOUT_MS, system, type JobHandler } from '@/application/ports';
+import { reminderDue, reminderSlot, reminderStagger, type ReminderKind } from '@/domain/calendar';
 
 const PRINCIPAL = system('job:reminders.deadline');
 const TEMPLATE = { soft: 'reminder.soft', hard: 'reminder.hard' } as const;
-
-/** Staff who handed in a point or an akce this school year (D7 (a)), by granted columns only. */
-async function activeSubmitters(tx: Tx, now: Date): Promise<readonly string[]> {
-  const since = activeSince(instantToWallClock(now).date);
-  const [authors, organisers] = await Promise.all([
-    tx.points.submitterIds(since),
-    tx.futureItems.submitterIds(since),
-  ]);
-  const users = await tx.users.getMany([...new Set([...authors, ...organisers])]);
-  return users.filter(wantsSoftReminder).map((user) => user.id);
-}
-
-/** Everyone with a draft or returned point for the Monday, students too: it is about their own work. */
-async function authorsWaiting(tx: Tx, monday: CalDate, now: Date): Promise<readonly string[]> {
-  const users = await tx.users.getMany(await waitingAuthors(tx, monday, now));
-  return users.filter(isMember).map((user) => user.id);
-}
 
 /**
  * Every 15 minutes: while a reminder's slot is open for the Monday being collected, mails whoever

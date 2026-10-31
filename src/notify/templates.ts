@@ -1,5 +1,11 @@
-import { formatLongDate, typographizeText } from '@/domain/cs';
-import type { CalDate } from '@/domain/time';
+import {
+  formatDayMonth,
+  formatLongDate,
+  formatTime,
+  typographizeText,
+  weekdayName,
+} from '@/domain/cs';
+import { instantToWallClock, type CalDate } from '@/domain/time';
 
 import { frame, type Body } from './frame';
 
@@ -24,6 +30,7 @@ export const TEMPLATE_NAMES = [
   'reminder.hard',
   'reviewer.digest',
   'headmaster.summary',
+  'issue.moved',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -51,6 +58,8 @@ export interface TemplateViews {
     readonly pending: number;
     readonly returned: number;
   };
+  /** The porada that was moved and the deadline it now has. */
+  'issue.moved': { readonly meetingDate: CalDate; readonly deadlineAt: Date };
 }
 
 interface RenderedMail {
@@ -180,6 +189,19 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       link: '/kontrola',
     },
   }),
+  // A date and a time, no names (D21); sent only when the deadline came earlier, so the reader has less time.
+  'issue.moved': ({ meetingDate, deadlineAt }) => {
+    const { date, time } = instantToWallClock(deadlineAt);
+    return {
+      subject: `Autoporada: porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}`,
+      body: {
+        paragraphs: [
+          `porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dřív: ${weekdayName(date)} ${formatDayMonth(date)} v\u00A0${formatTime(time)}.`,
+        ],
+        link: '/body',
+      },
+    };
+  },
 };
 
 /** Renders one mail. `origin` is the validated app origin, without a trailing slash. */

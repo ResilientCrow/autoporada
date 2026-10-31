@@ -1,4 +1,5 @@
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
+import { movedNoticeJob } from '@/application/notifications';
 import { moveIssueInput, moveIssueOutput } from '@/contracts';
 import { lastSlotMonday, orderConflicts } from '@/domain/calendar';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
@@ -115,6 +116,11 @@ export const moveIssue = defineUseCase({
         skipped: skipDays.length,
       }),
     });
+    // Only a deadline that comes earlier and is still ahead costs the submitters time (D21).
+    if (deadlineAt.getTime() < slot.deadlineAt.getTime() && deadlineAt.getTime() > now.getTime()) {
+      const notice = movedNoticeJob(monday, deadlineAt);
+      await tx.jobs.enqueue('issues.moved-notice', notice.data, { dedupeKey: notice.dedupeKey });
+    }
     return ok({ version: after.version, skipped: skipDays.length });
   },
 });

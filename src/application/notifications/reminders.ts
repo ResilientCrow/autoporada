@@ -1,7 +1,13 @@
 import { readSettingValue, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
-import { handInSlot, REMINDER_DRAFT_DAYS, reminderDue, type ReminderKind } from '@/domain/calendar';
-import { toIsoDate, type CalDate } from '@/domain/time';
+import {
+  activeSince,
+  handInSlot,
+  REMINDER_DRAFT_DAYS,
+  reminderDue,
+  type ReminderKind,
+} from '@/domain/calendar';
+import { instantToWallClock, toIsoDate, type CalDate } from '@/domain/time';
 
 type Member = Pick<UserRecord, 'role' | 'status'>;
 
@@ -53,6 +59,30 @@ export async function reminderIssue(
 export function waitingAuthors(tx: Pick<Tx, 'points'>, monday: CalDate, now: Date) {
   const draftsSince = new Date(now.getTime() - REMINDER_DRAFT_DAYS * 86_400_000);
   return tx.points.reminderAuthors({ draftsSince, monday });
+}
+
+/** Staff who handed in a point or an akce this school year (D7 (a)), by granted columns only. */
+export async function activeSubmitters(
+  tx: Pick<Tx, 'points' | 'futureItems' | 'users'>,
+  now: Date,
+): Promise<readonly string[]> {
+  const since = activeSince(instantToWallClock(now).date);
+  const [authors, organisers] = await Promise.all([
+    tx.points.submitterIds(since),
+    tx.futureItems.submitterIds(since),
+  ]);
+  const users = await tx.users.getMany([...new Set([...authors, ...organisers])]);
+  return users.filter(wantsSoftReminder).map((user) => user.id);
+}
+
+/** Everyone with a draft or returned point for the Monday, students too: it is about their own work. */
+export async function authorsWaiting(
+  tx: Pick<Tx, 'points' | 'users'>,
+  monday: CalDate,
+  now: Date,
+): Promise<readonly string[]> {
+  const users = await tx.users.getMany(await waitingAuthors(tx, monday, now));
+  return users.filter(isMember).map((user) => user.id);
 }
 
 /** What a reminder mail is about at send time (see `loadReminder`). */

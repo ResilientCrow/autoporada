@@ -4,6 +4,7 @@ import { CRON, toScheduledJobs } from './cron';
 import { reviewerDigest } from './digest';
 import { mailPrune } from './mail-prune';
 import { mailSend } from './mail-send';
+import { movedNotice } from './moved-notice';
 import { deadlineReminders } from './reminders';
 import { reportPrompt } from './report-prompt';
 import { headmasterSummary } from './summary';
@@ -18,6 +19,7 @@ export const JOB_HANDLERS: JobHandlers = {
   'reminders.deadline': deadlineReminders,
   'reviewer.digest': reviewerDigest,
   'headmaster.summary': headmasterSummary,
+  'issues.moved-notice': movedNotice,
 };
 
 /** The registry, checked and resolved once at import: an invalid entry stops the worker's boot. */
