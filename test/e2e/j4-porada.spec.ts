@@ -19,6 +19,7 @@ import {
   pasteHtml,
   styleLeaks,
   watchMountErrors,
+  GDOCS_PASTE,
   WORD_PASTE,
 } from './editor-keys';
 import { expect, test } from './fixtures';
@@ -146,6 +147,9 @@ test.describe('J4: the headmaster prepares a porada', () => {
         ['0', 'Odstavec s barvou'],
       ]);
       await expect(editor.locator('img, style, script')).toHaveCount(0);
+      // Word's own bold and italic stay; its `mso-bidi-*` styles are not bold or italic.
+      expect(await editor.locator('strong').allTextContents()).toEqual(['Wordový pokyn']);
+      expect(await editor.locator('em').allTextContents()).toEqual(['Vnořená kurzíva']);
       expect(await styleLeaks(page, editor)).toEqual([]);
 
       const preview = page.getByRole('region', { name: porada.outline.editor.previewLabel });
@@ -356,6 +360,12 @@ test.describe('SP-T: the rich-text editor under the nonce CSP', () => {
     await pasteHtml(editor, WORD_PASTE);
     await expect(editor).toContainText('Wordový pokyn');
     await expect(editor.locator('img, style, script')).toHaveCount(0);
+
+    // Google Docs wraps the paste in `<b style="font-weight:normal">`: only its 700 run is bold.
+    await pasteHtml(editor, GDOCS_PASTE);
+    await expect(editor).toContainText('Obyčejný text z Dokumentů');
+    await expect(editor.locator('strong', { hasText: 'Obyčejný text z Dokumentů' })).toHaveCount(0);
+    await expect(editor.locator('strong', { hasText: 'tučně z Dokumentů' })).toHaveCount(1);
 
     // (2) No style attribute in the editor, no <style> without the nonce; (1) no violation.
     expect(await styleLeaks(page, editor)).toEqual([]);

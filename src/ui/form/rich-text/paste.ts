@@ -16,8 +16,18 @@ function defang(html: string): string {
 /** Elements that never reach the editor: styles, scripts, images and the like. */
 const DROPPED = 'style, script, img, picture, svg, meta, link, title, object, iframe, head';
 const MSO_LEVEL = /mso-list:[^;"]*\blevel(\d+)/i;
-const BOLD = /font-weight:\s*(?:bold|[6-9]00)/i;
-const ITALIC = /font-style:\s*italic/i;
+// Anchored to a declaration's start, so Word's `mso-bidi-font-weight` and `mso-bidi-font-style` don't count.
+const BOLD = /(?:^|;)\s*font-weight:\s*(?:bold|[6-9]00)\b/i;
+const ITALIC = /(?:^|;)\s*font-style:\s*italic\b/i;
+const NOT_BOLD = /(?:^|;)\s*font-weight:\s*(?:normal|[1-4]00)\b/i;
+const NOT_ITALIC = /(?:^|;)\s*font-style:\s*normal\b/i;
+
+/** A bold or italic tag whose own style undoes it: Google Docs wraps a whole paste in `<b style="font-weight:normal">`. */
+function undone(element: Element): boolean {
+  const style = element.getAttribute('data-style') ?? '';
+  const bold = element.tagName === 'B' || element.tagName === 'STRONG';
+  return (bold ? NOT_BOLD : NOT_ITALIC).test(style);
+}
 
 function wrapChildren(element: Element, tag: 'strong' | 'em') {
   const wrapper = element.ownerDocument.createElement(tag);
@@ -38,8 +48,8 @@ function listDepth(element: Element): number {
  * Pasted HTML, cleaned before ProseMirror parses it (ADR 0031, item 6). The input is parsed by
  * `DOMParser` into an inert document: nothing runs and no image loads (`defang` runs first, so the
  * CSP sees no style). Styles, scripts, images,
- * comments (Word's `mso` conditionals) and every attribute go; bold and italic given by a style
- * become `<strong>` and `<em>`; Word's `mso-list:… levelN` and the depth of a list become
+ * comments (Word's `mso` conditionals) and every attribute go; a bold or italic tag its own style
+ * undoes is unwrapped, and bold and italic given by a style become `<strong>` and `<em>`; Word's `mso-list:… levelN` and the depth of a list become
  * `data-indent` (at most `maxIndent`). What is left is paragraphs with bold and italic.
  */
 export function cleanPastedHtml(html: string, maxIndent: number): string {
@@ -51,6 +61,9 @@ export function cleanPastedHtml(html: string, maxIndent: number): string {
   for (const element of doc.querySelectorAll(DROPPED)) element.remove();
   // Word's list bullet or number, written as text in a span it marks to be ignored.
   for (const element of doc.querySelectorAll('[data-style*="mso-list:Ignore" i]')) element.remove();
+  for (const element of doc.body.querySelectorAll('b, strong, i, em')) {
+    if (undone(element)) element.replaceWith(...element.childNodes);
+  }
 
   for (const element of doc.body.querySelectorAll('*')) {
     const style = element.getAttribute('data-style') ?? '';

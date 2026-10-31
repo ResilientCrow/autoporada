@@ -9,10 +9,11 @@ import type { Locator, Page } from '@playwright/test';
 
 import { expect } from './fixtures';
 
-export const WORD_PASTE = readFileSync(
-  fileURLToPath(new URL('./fixtures/word-paste.html', import.meta.url)),
-  'utf8',
-);
+const fixture = (name: string): string =>
+  readFileSync(fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url)), 'utf8');
+
+export const WORD_PASTE = fixture('word-paste.html');
+export const GDOCS_PASTE = fixture('gdocs-paste.html');
 
 /** The field's editor once its chunk has mounted: ProseMirror's own contenteditable. */
 export const editorIn = (page: Page, name: RegExp): Locator => page.getByRole('textbox', { name });
