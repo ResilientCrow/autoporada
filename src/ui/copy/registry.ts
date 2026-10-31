@@ -7,9 +7,9 @@ const NEW: PluralForms = { one: 'nový', few: 'noví', many: 'nových' };
 export const registry = {
   title: 'Registr',
   intro:
-    'Seznamy studentů, které se tisknou do zápisu z porady. Jména studentů vidí jen vedení školy a kontroloři.',
+    'Seznamy studentů, které se tisknou do zápisu z\u00a0porady. Jména studentů vidí jen vedení školy a kontroloři.',
   new: 'NOVÉ',
-  newHint: 'Dosud nebyl v žádném vytištěném zápisu.',
+  newHint: 'Dosud nebyl v\u00a0žádném vytištěném zápisu.',
   said: {
     changed: 'Změna je uložena.',
     unchanged: 'Nic se nezměnilo.',
@@ -23,7 +23,7 @@ export const registry = {
     title: 'Seznamy',
     empty: 'Zatím tu není žádný seznam.',
     counts: (active: number, fresh: number) =>
-      `${countWord(active, STUDENT)}, z toho ${countWord(fresh, NEW)}`,
+      `${countWord(active, STUDENT)}, z\u00a0toho ${countWord(fresh, NEW)}`,
     open: 'Otevřít seznam',
     off: 'vypnuto',
     move: {
@@ -32,14 +32,14 @@ export const registry = {
       label: (title: string) => `Pořadí seznamu ${title}`,
     },
     edit: 'Upravit seznam',
-    annex1: 'Příloha 1',
-    fixed: 'Seznam pro Přílohu 1 nelze vypnout.',
+    annex1: 'Příloha\u00a01',
+    fixed: 'Seznam pro Přílohu\u00a01 nelze vypnout.',
     create: { title: 'Nový seznam', save: 'Přidat seznam' },
     fields: {
       title: { label: 'Název', tooLong: 'Název je příliš dlouhý.' },
       docLabel: {
-        label: 'Název v dokumentu',
-        description: 'Tak se seznam jmenuje v zápisu z porady.',
+        label: 'Název v\u00a0dokumentu',
+        description: 'Tak se seznam jmenuje v\u00a0zápisu z\u00a0porady.',
         tooLong: 'Název je příliš dlouhý.',
       },
       active: { label: 'Nabízet seznam' },

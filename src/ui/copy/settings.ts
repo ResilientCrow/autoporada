@@ -10,13 +10,13 @@ export const settings = {
     days: { label: 'Uzávěrka je' },
     time: { label: 'Čas uzávěrky' },
     dayOptions: {
-      1: '1 den před poradou',
-      2: '2 dny před poradou',
-      3: '3 dny před poradou',
-      4: '4 dny před poradou',
+      1: '1\u00a0den před poradou',
+      2: '2\u00a0dny před poradou',
+      3: '3\u00a0dny před poradou',
+      4: '4\u00a0dny před poradou',
     },
-    timeOption: (time: string) => `v ${time}`,
-    example: (day: string, time: string) => `U pondělní porady: ${day} ${time}`,
+    timeOption: (time: string) => `v\u00a0${time}`,
+    example: (day: string, time: string) => `U\u00a0pondělní porady: ${day} ${time}`,
     effect: (keep: string, day: string, time: string, from: string) =>
       `Uzávěrka porady ${keep} zůstává ${day} ${time}. Nové pravidlo platí od porady ${from}. Uzávěrky přesunutých porad se nemění.`,
   },
@@ -24,7 +24,7 @@ export const settings = {
     title: 'Připomínky',
     intro: 'E-maily autorům před uzávěrkou. Vypnutý druh se nepošle nikomu.',
     soft: 'Připomínka dva dny před uzávěrkou',
-    hard: 'Upozornění v den uzávěrky',
+    hard: 'Upozornění v\u00a0den uzávěrky',
   },
   annex1: {
     title: 'Texty přílohy 1',
@@ -32,7 +32,7 @@ export const settings = {
     intro: {
       label: 'Úvodní text',
       description:
-        'Odstavce oddělte prázdným řádkem. Zápis {skolniRok} se v dokumentu nahradí školním rokem.',
+        'Odstavce oddělte prázdným řádkem. Zápis {skolniRok} se v\u00a0dokumentu nahradí školním rokem.',
       tooLong: 'Text je příliš dlouhý.',
     },
   },
