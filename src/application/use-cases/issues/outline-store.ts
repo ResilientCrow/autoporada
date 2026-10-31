@@ -1,5 +1,13 @@
-import type { Tx } from '@/application/ports';
-import { derive, SEED_OUTLINE, type Outline, type OutlineOrigin } from '@/domain/outline';
+import type { PointRecord, Tx } from '@/application/ports';
+import {
+  derive,
+  mergeProposals,
+  SEED_OUTLINE,
+  type EligibleProposal,
+  type Outline,
+  type OutlineOrigin,
+  type OutlineSection,
+} from '@/domain/outline';
 import type { IssueStatus } from '@/domain/review';
 import { isRichDocEmpty, type RichDoc } from '@/domain/richtext';
 import type { CalDate } from '@/domain/time';
@@ -32,6 +40,51 @@ export async function loadOutline(tx: Tx, issue: OutlineIssue): Promise<LoadedOu
   }
   const source = await tx.issueItems.latestSourceBefore(issue.monday);
   return { ...derive(source, SEED_OUTLINE), sourceStatus: source?.status ?? null };
+}
+
+const SECTION_OF = { finance: 'hospodareni', pokyn: 'pokyny' } as const;
+
+/** The approved proposals that may stand in the outline; a report is never one. */
+export function eligibleProposals(points: readonly PointRecord[]): readonly EligibleProposal[] {
+  return points.flatMap((p) =>
+    p.kind === 'report'
+      ? []
+      : [
+          {
+            pointId: p.id,
+            section: SECTION_OF[p.kind],
+            submittedAt: p.submittedAt ?? p.updatedAt,
+          },
+        ],
+  );
+}
+
+/**
+ * The outline an editor works on: `loadOutline` merged with the approved proposals, so a proposal
+ * nobody placed yet is a row that can be moved. A placement whose point went out of the running
+ * is dropped silently; the next write forgets it.
+ * TODO(m9-verify): a write drops a returned proposal's placement before the preview's `proposal-dropped` warning was seen.
+ */
+export async function loadEditable(
+  tx: Tx,
+  issue: OutlineIssue,
+  proposals: readonly PointRecord[],
+): Promise<LoadedOutline> {
+  const loaded = await loadOutline(tx, issue);
+  const merged = mergeProposals(loaded.outline, eligibleProposals(proposals), new Map());
+  return { ...loaded, outline: merged.outline };
+}
+
+/**
+ * Makes `outline` the issue's rows, in order. A proposal nobody placed (a virtual row) is not
+ * written; the caller has taken the issue's version and read the deadline rule first.
+ */
+export async function writeOutline(tx: Tx, issueId: string, outline: Outline): Promise<void> {
+  const stored = (rows: Outline[OutlineSection]) => rows.filter((row) => row.isNew !== true);
+  await tx.issueItems.replace(issueId, {
+    pokyny: stored(outline.pokyny),
+    hospodareni: stored(outline.hospodareni),
+  });
 }
 
 /** Přítomni, Hosté and Příloha 2 as the document prints them (D8, U1). */

@@ -48,6 +48,9 @@ export const rules = {
   'quotes-not-allowed': 'Vyjádření lze přidat jen k\u00A0bodu o\u00A0partnerech.',
   'quotes-full': 'K\u00A0bodu lze přidat nejvýš 20\u00A0vyjádření.',
   'item-missing': 'Tento bod už v\u00A0pokynech není. Načtěte stránku znovu.',
+  'slot-fixed': 'Tento bod vytváří dokument sám. Nelze ho odebrat ani změnit na jednorázový.',
+  'proposal-fixed': 'Text schváleného návrhu upravíte v\u00A0kontrole. Zde ho lze jen přesunout.',
+  'outline-full': 'V\u00A0jedné části může být nejvýš 60\u00A0bodů.',
   'meeting-order':
     'Porady musí následovat v\u00A0pořadí kalendáře a\u00A0jejich uzávěrky také. Tato změna by pořadí porušila.',
   'issue-not-open': 'Tuto poradu už nelze změnit, protože se její stav změnil.',

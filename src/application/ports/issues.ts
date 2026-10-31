@@ -36,6 +36,12 @@ export interface IssueRepo {
    */
   setStatus(id: string, expectedVersion: number, status: IssueStatus): Promise<IssueRecord>;
   /**
+   * Takes the issue's version for an outline write: version-checked, the version rises by one
+   * (StaleVersion, also for an unknown id). ScopeViolation for a user who may not `issue.edit`.
+   * The caller has read the deadline rule first (lock order, row 12b).
+   */
+  touch(id: string, expectedVersion: number): Promise<IssueRecord>;
+  /**
    * Sets the meeting date and the frozen deadline, as `setStatus` sets the status: version-checked,
    * the version rises by one, ScopeViolation for a user who may not `issue.generate`. A new
    * deadline rule refreezes rows nobody was shown with it (ADR 0032); the caller checks the rest.

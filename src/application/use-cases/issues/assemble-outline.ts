@@ -2,7 +2,6 @@ import type { PointRecord, Tx } from '@/application/ports';
 import {
   mergeProposals,
   SECTIONS,
-  type EligibleProposal,
   type Outline,
   type OutlineSection,
 } from '@/domain/outline';
@@ -11,7 +10,12 @@ import { emptyRichDoc, isRichDocEmpty, singleLine } from '@/domain/richtext';
 import type { SnapshotItem } from '@/snapshot';
 
 import type { DroppedRef } from './assemble-types';
-import { loadOutline, type LoadedOutline, type OutlineIssue } from './outline-store';
+import {
+  eligibleProposals,
+  loadOutline,
+  type LoadedOutline,
+  type OutlineIssue,
+} from './outline-store';
 
 type Items = { readonly [S in OutlineSection]: readonly SnapshotItem[] };
 
@@ -22,8 +26,6 @@ export interface AssembledOutline {
   /** Media and partners have nothing in them: the document leaves both out. */
   readonly ohlasyEmpty: boolean;
 }
-
-const SECTION_OF = { finance: 'hospodareni', pokyn: 'pokyny' } as const;
 
 function ohlasyEmpty(outline: Outline): boolean {
   return outline.pokyny.every((row) => {
@@ -45,11 +47,7 @@ export async function assembleOutline(
 ): Promise<AssembledOutline> {
   const loaded = await loadOutline(tx, issue);
   const byId = new Map(proposals.map((p) => [p.id, p]));
-  const eligible: EligibleProposal[] = proposals.flatMap((p) =>
-    p.kind === 'report'
-      ? []
-      : [{ pointId: p.id, section: SECTION_OF[p.kind], submittedAt: p.submittedAt ?? p.updatedAt }],
-  );
+  const eligible = eligibleProposals(proposals);
 
   // Placed points that are no longer eligible: what became of them decides whether it is reported.
   const states = new Map<string, PointState>();

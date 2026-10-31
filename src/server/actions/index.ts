@@ -13,6 +13,12 @@ export {
 } from './future';
 export { moveIssue, setSkipped } from './issues';
 export {
+  addOutlineItem,
+  moveOutlineItem,
+  removeOutlineItem,
+  saveOutlineItem,
+} from './outline';
+export {
   createPoint,
   pointStatus,
   retractPoint,

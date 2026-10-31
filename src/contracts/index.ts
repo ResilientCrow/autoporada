@@ -128,6 +128,15 @@ export {
   queuePointsInput,
   queuePointsOutput,
 } from './point-read';
+export {
+  outlineAddInput,
+  outlineMoveInput,
+  outlineReadInput,
+  outlineReadOutput,
+  outlineRemoveInput,
+  outlineSaveInput,
+  outlineWriteOutput,
+} from './outline';
 export { recentPeopleInput, recentPeopleOutput } from './people';
 export {
   bulletKeySchema,

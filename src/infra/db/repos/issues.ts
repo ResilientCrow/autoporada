@@ -44,9 +44,10 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
     id: string,
     expectedVersion: number,
     set: Partial<Pick<typeof issues.$inferInsert, 'status' | 'meetingDate' | 'deadlineAt'>>,
+    action: 'issue.generate' | 'issue.edit' = 'issue.generate',
   ) => {
     // Privileged writes re-check the policy, whatever the use case declared (ADR 0011).
-    if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+    if (principal.kind === 'user' && !can(principal.actor, { action })) {
       throw new ScopeViolation();
     }
     const [row] = await db
@@ -108,6 +109,7 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
         meetingDate: parseIsoDate(row.meetingDate),
       }));
     },
+    touch: (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
     setStatus: (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
     reschedule: (id, expectedVersion, to) =>
       versioned(id, expectedVersion, {

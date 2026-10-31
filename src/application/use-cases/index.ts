@@ -24,6 +24,13 @@ import {
   submitFuture,
 } from './future';
 import { issuePreview, issueWindow, issueWorkspace, moveIssue, setSkipped } from './issues';
+import {
+  addOutlineItem,
+  moveOutlineItem,
+  readOutline,
+  removeOutlineItem,
+  saveOutlineItem,
+} from './outline';
 import { recentPeopleOf, searchGate } from './people';
 import {
   createPoint,
@@ -77,6 +84,13 @@ export {
   submitFuture,
 } from './future';
 export { issuePreview, issueWindow, issueWorkspace, moveIssue, setSkipped } from './issues';
+export {
+  addOutlineItem,
+  moveOutlineItem,
+  readOutline,
+  removeOutlineItem,
+  saveOutlineItem,
+} from './outline';
 export { recentPeopleOf, searchGate } from './people';
 export {
   createPoint,
@@ -112,6 +126,7 @@ export { changeUserAccess, getUser, listUsers } from './users';
  */
 export const USE_CASES: readonly AnyUseCase[] = [
   addEntries,
+  addOutlineItem,
   beginLogin,
   beginStepUp,
   cancelAccess,
@@ -137,6 +152,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   me,
   moveIssue,
   moveList,
+  moveOutlineItem,
   myAccess,
   newSchoolYear,
   pendingAccess,
@@ -144,11 +160,13 @@ export const USE_CASES: readonly AnyUseCase[] = [
   previewPaste,
   queueFuture,
   queuePoints,
+  readOutline,
   readRegistry,
   readSettings,
   recentPeopleOf,
   recordRejection,
   removeEntry,
+  removeOutlineItem,
   requestAccess,
   resolveSession,
   retractFuture,
@@ -157,6 +175,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   saveEntry,
   saveFuture,
   saveList,
+  saveOutlineItem,
   savePoint,
   savePointType,
   saveSettings,
