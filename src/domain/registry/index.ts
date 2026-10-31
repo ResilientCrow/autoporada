@@ -1,4 +1,3 @@
-export { planCarryOver, type IssueItemLike, type SystemSlot } from './carry-over';
 export { listKeyFor } from './list-key';
 export {
   isClassCode,

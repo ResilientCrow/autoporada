@@ -1,5 +1,4 @@
-/** Slots the document generates itself; they keep their place from issue to issue. */
-export type SystemSlot = 'meetings' | 'events' | 'talent' | 'exemptions' | 'media' | 'partners';
+import type { SystemSlot } from './model';
 
 export interface IssueItemLike<Body> {
   /** Identity of an item across issues, so its history can be followed. */

@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  entriesAsOf,
-  isNewInIssue,
-  planCarryOver,
-  sortForDocument,
-  type IssueItemLike,
-} from './index';
+import { planCarryOver, type IssueItemLike } from '@/domain/outline';
+
+import { entriesAsOf, isNewInIssue, sortForDocument } from './index';
 
 const at = (iso: string) => new Date(iso);
 
