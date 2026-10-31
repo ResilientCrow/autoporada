@@ -11,25 +11,25 @@ import { akceTarget, answeredAkce, writeReport } from './answered-akce';
 import { move, moveCheck } from './append-event';
 import { kindIssues, readinessIssues, typeSpec } from './checks';
 
-interface FirstSubmit {
-  readonly patch: Pick<PointPatch, 'earliestMonday'>;
+interface HandIn {
+  readonly patch: Pick<PointPatch, 'earliestMonday' | 'handInMonday'>;
   readonly related?: readonly AuditTarget[];
 }
 
 /**
- * The Monday a point is first handed in for, set once (`points_earliest_fixed`):
- * the first open slot whose deadline is still ahead, skipped and generated
- * slots stepped over, so a later unskip does not pull the point back to a
- * Monday it never was handed in for (ADR 0029). Its issue is made here if it
- * has no row yet, and is then named in the audit event.
- * A resubmit after a return or a retract keeps the first Monday.
+ * The Monday this hand-in is for: the first open slot whose deadline is still ahead, skipped and
+ * generated slots stepped over, so a later unskip does not pull the point back to a Monday it
+ * never was handed in for (ADR 0029). It is stored as `hand_in_monday` at every submit, so a
+ * resubmit after a return or a retract is placed by its new Monday. The first submit also sets
+ * `earliest_monday` once (`points_earliest_fixed`), which a resubmit keeps, and makes the Monday's
+ * issue if it has no row yet, then named in the audit event.
  */
-async function firstSubmit(tx: Tx, point: PointRecord, now: Date): Promise<FirstSubmit> {
-  if (point.earliestMonday !== null) return { patch: {} };
+async function handIn(tx: Tx, point: PointRecord, now: Date): Promise<HandIn> {
   const { first } = await readWindow(tx, now);
+  if (point.earliestMonday !== null) return { patch: { handInMonday: first } };
   const { issue, inserted } = await ensureIssue(tx, first);
   return {
-    patch: { earliestMonday: first },
+    patch: { earliestMonday: first, handInMonday: first },
     ...(inserted && { related: [{ type: 'issue', id: issue.id }] }),
   };
 }
@@ -58,7 +58,7 @@ export const submitPoint = defineUseCase({
     }
 
     const akce = await answeredAkce(tx, point);
-    const { patch, related = [] } = await firstSubmit(tx, point, now);
+    const { patch, related = [] } = await handIn(tx, point, now);
     const named = akce ? [...related, akceTarget(akce)] : related;
     const { after } = await move(tx, point, 'submit', {
       patch: { ...patch, content: submittedContent(content, spec), submittedAt: now },

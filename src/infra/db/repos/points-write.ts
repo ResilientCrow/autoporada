@@ -84,7 +84,11 @@ export function createPointWrites(
         .where(and(own, eq(points.state, 'draft')));
       return { existing: existing ? toRecord(existing) : null, drafts: drafts?.n ?? 0 };
     },
-    async update(id, expectedVersion, { content, state, earliestMonday, submittedAt }) {
+    async update(
+      id,
+      expectedVersion,
+      { content, state, earliestMonday, submittedAt, handInMonday },
+    ) {
       const [row] = await db
         .update(points)
         .set({
@@ -93,6 +97,9 @@ export function createPointWrites(
           ...(state !== undefined && { state }),
           ...(earliestMonday !== undefined && { earliestMonday: toIsoDate(earliestMonday) }),
           ...(submittedAt !== undefined && { submittedAt }),
+          ...(handInMonday !== undefined && {
+            handInMonday: handInMonday && toIsoDate(handInMonday),
+          }),
           version: sql`${points.version} + 1`,
           updatedAt: now,
         })

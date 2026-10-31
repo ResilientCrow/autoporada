@@ -90,6 +90,8 @@ export const points = pgTable(
     earliestMonday: date({ mode: 'string' }),
     /** Set at every submit, cleared by a retract (ADR 0026). */
     submittedAt: at(),
+    /** The porada's Monday the hand-in was for (ADR 0029): set and cleared with `submitted_at`. */
+    handInMonday: date({ mode: 'string' }),
     /** The future item a report answers; its foreign key is in migration 0020 (future.ts cannot be imported here). */
     futureItemId: uuid(),
     version: integer().notNull().default(1),
@@ -102,6 +104,9 @@ export const points = pgTable(
     index('points_queue_idx')
       .on(t.state, t.earliestMonday)
       .where(sql`${t.state} IN ('submitted','approved')`),
+    index('points_eligible_idx')
+      .on(t.state, t.handInMonday)
+      .where(sql`${t.state} = 'approved'`),
     check('points_kind_type', sql`(${t.kind} = 'report') = (${t.typeId} IS NOT NULL)`),
     check(
       'points_dates',
@@ -112,6 +117,11 @@ export const points = pgTable(
       'points_monday',
       sql`${t.earliestMonday} IS NULL OR extract(isodow from ${t.earliestMonday}) = 1`,
     ),
+    check(
+      'points_hand_in_monday',
+      sql`${t.handInMonday} IS NULL OR extract(isodow from ${t.handInMonday}) = 1`,
+    ),
+    check('points_hand_in_set', sql`(${t.submittedAt} IS NULL) = (${t.handInMonday} IS NULL)`),
     check(
       'points_lengths',
       sql`char_length(${t.title}) <= 200 AND char_length(${t.opening}) <= 1000 AND char_length(coalesce(${t.place}, '')) <= 120`,

@@ -80,6 +80,7 @@ async function moveTo(author: UserRecord, id: string, state: PointState): Promis
       state,
       submittedAt: world.clock.now(),
       earliestMonday: parseIsoDate('2026-10-26'),
+      handInMonday: parseIsoDate('2026-10-26'),
     });
     await tx.audit.record({ action: `point.${state}`, target: { type: 'point', id } });
   });

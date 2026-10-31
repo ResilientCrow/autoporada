@@ -54,6 +54,7 @@ describe('points.submit', () => {
         state: 'submitted',
         version: 3,
         earliestMonday: FIRST_MONDAY,
+        handInMonday: FIRST_MONDAY,
         submittedAt: world.clock.now(),
         content: {
           ...sent,
@@ -86,6 +87,7 @@ describe('points.submit', () => {
             state: { from: 'draft', to: 'submitted' },
             earliestMonday: { from: null, to: '2026-10-26' },
             submittedAt: { from: null, to: world.clock.now().toISOString() },
+            handInMonday: { from: null, to: '2026-10-26' },
           },
           meta: { kind: 'report' },
           related: [{ type: 'issue', id: issue!.id }],
@@ -117,7 +119,7 @@ describe('points.submit', () => {
       const author = await user();
       const id = await start(author, 'pokyn');
       await submit(author, id, readyProposal());
-      expect((await get(author, id))?.earliestMonday).toEqual(monday);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: monday, handInMonday: monday });
     });
 
     it('steps over a skipped Monday: the first Monday is the next open one', async () => {
@@ -133,7 +135,8 @@ describe('points.submit', () => {
       const author = await user();
       const id = await start(author, 'pokyn');
       await submit(author, id, readyProposal());
-      expect((await get(author, id))?.earliestMonday).toEqual(addDays(FIRST_MONDAY, 7));
+      const next = addDays(FIRST_MONDAY, 7);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: next, handInMonday: next });
     });
   });
 
@@ -154,6 +157,7 @@ describe('points.submit', () => {
         expect(point).toMatchObject({
           state: 'submitted',
           earliestMonday: FIRST_MONDAY,
+          handInMonday: calDate(2026, 11, 9),
           submittedAt: world.clock.now(),
           content: { title: 'Znovu' },
         });
@@ -165,6 +169,7 @@ describe('points.submit', () => {
               from: '2026-10-19T08:00:00.000Z',
               to: '2026-11-03T10:00:00.000Z',
             },
+            handInMonday: { from: '2026-10-26', to: '2026-11-09' },
           },
           meta: { kind: 'pokyn' },
         });

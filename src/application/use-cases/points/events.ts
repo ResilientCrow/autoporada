@@ -17,6 +17,7 @@ const POINT: AuditShape<PointRecord> = {
   futureItemId: 'omit',
   earliestMonday: (monday) => monday && toIsoDate(monday),
   submittedAt: 'value',
+  handInMonday: (monday) => monday && toIsoDate(monday),
   version: 'omit',
   updatedAt: 'omit',
 };

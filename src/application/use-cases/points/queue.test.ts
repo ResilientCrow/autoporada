@@ -62,6 +62,7 @@ async function handIn(author: UserRecord, kind: PointKind, over: HandIn = {}): P
       state,
       earliestMonday: monday,
       submittedAt: at,
+      handInMonday: monday,
     });
     await tx.audit.record({ action: `point.${state}`, target: { type: 'point', id } });
     world.clock.advance(60_000);
@@ -85,6 +86,7 @@ const handedIn = (author: UserRecord, count: number) =>
         state: 'submitted',
         earliestMonday: FIRST_MONDAY,
         submittedAt: world.clock.now(),
+        handInMonday: FIRST_MONDAY,
       });
       await tx.audit.record({ action: 'point.submitted', target: { type: 'point', id } });
     }

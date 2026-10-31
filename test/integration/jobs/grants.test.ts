@@ -336,7 +336,10 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
 
 describe('the mails’ column grants (ADR 0020: the worker reads no text people wrote)', () => {
   const GRANTED: Readonly<Record<string, readonly string[]>> = {
-    points: ['author_id', 'earliest_monday', 'id', 'kind', 'state', 'submitted_at', 'updated_at'],
+    points: [
+      ...['author_id', 'earliest_monday', 'hand_in_monday', 'id', 'kind'],
+      ...['state', 'submitted_at', 'updated_at'],
+    ],
     point_events: ['event', 'id', 'point_id', 'to_state'],
     future_items: [
       'author_id',

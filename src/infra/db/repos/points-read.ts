@@ -56,6 +56,7 @@ export const POINT_ROW = {
   futureItemId: points.futureItemId,
   earliestMonday: points.earliestMonday,
   submittedAt: points.submittedAt,
+  handInMonday: points.handInMonday,
   version: points.version,
   updatedAt: points.updatedAt,
 };
@@ -95,6 +96,7 @@ export function toRecord(row: PointRow): PointRecord {
     futureItemId: row.futureItemId,
     earliestMonday: dateOrNull(row.earliestMonday),
     submittedAt,
+    handInMonday: dateOrNull(row.handInMonday),
     version,
     updatedAt,
   };

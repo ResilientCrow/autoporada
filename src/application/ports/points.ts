@@ -18,6 +18,11 @@ export interface PointRecord {
   readonly earliestMonday: CalDate | null;
   /** Set at every submit, cleared by a retract: the point is handed in, or was until a decision. */
   readonly submittedAt: Date | null;
+  /**
+   * The porada's Monday the point was handed in for (ADR 0029): set with `submittedAt` at every
+   * submit, cleared with it by a retract, kept by a return, a decision and a withdrawal.
+   */
+  readonly handInMonday: CalDate | null;
   readonly version: number;
   readonly updatedAt: Date;
 }
@@ -46,6 +51,8 @@ export interface PointPatch {
   readonly earliestMonday?: CalDate;
   /** Null takes the hand-in back (a retract). */
   readonly submittedAt?: Date | null;
+  /** Written with `submittedAt`; null takes it back with the hand-in. */
+  readonly handInMonday?: CalDate | null;
 }
 
 /**

@@ -116,7 +116,10 @@ export function pointFixtures(world: World) {
           opening: content.opening || 'Ve čtvrtek…',
         },
         state,
-        ...(point.submittedAt === null && { submittedAt: world.clock.now() }),
+        ...(point.submittedAt === null && {
+          submittedAt: world.clock.now(),
+          handInMonday: earliest,
+        }),
         ...(point.earliestMonday === null && { earliestMonday: earliest }),
       });
       await tx.audit.record({ action: `point.${state}`, target: { type: 'point', id } });

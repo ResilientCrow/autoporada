@@ -62,6 +62,7 @@ async function makePoint(author: UserRecord, submitted: boolean): Promise<PointR
           state: 'submitted',
           earliestMonday: calDate(2026, 10, 26),
           submittedAt: world.clock.now(),
+          handInMonday: calDate(2026, 10, 26),
         })
       : point;
     await tx.audit.record({ action: 'point.save', target: { type: 'point', id: saved.id } });

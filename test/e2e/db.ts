@@ -142,12 +142,13 @@ export async function seedPoint(
     const handedIn = HISTORY[state].some(([event]) => event === 'submit');
     const { rows } = await client.query<{ id: string; author_id: string }>(
       `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
-                           bullets, statements, earliest_monday, submitted_at)
+                           bullets, statements, earliest_monday, submitted_at, hand_in_monday)
        SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = $7),
               $3::point_state, $2, current_date + 30, 'Proběhl seminář.',
               '{"type":"doc","content":[]}'::jsonb, $4::jsonb, $5::jsonb,
               CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END,
-              CASE WHEN $6 THEN now() END
+              CASE WHEN $6 THEN now() END,
+              CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END
          FROM users u WHERE u.email = $1
        RETURNING id, author_id`,
       [

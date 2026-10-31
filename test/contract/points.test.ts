@@ -76,6 +76,7 @@ const SUBMIT: PointPatch = {
   state: 'submitted',
   earliestMonday: calDate(2026, 10, 26),
   submittedAt: new Date('2026-10-19T09:00:00Z'),
+  handInMonday: calDate(2026, 10, 26),
 };
 
 let refs = 0;
@@ -139,6 +140,7 @@ describe('PointRepo (port contract)', () => {
       futureItemId: null,
       earliestMonday: null,
       submittedAt: null,
+      handInMonday: null,
       version: 1,
       updatedAt: world.clock.now(),
     });
@@ -281,6 +283,27 @@ describe('PointRepo (port contract)', () => {
     });
     const retracted = await update(world.as(author), submitted, { state: 'draft' });
     expect(retracted).toEqual({ ...submitted, state: 'draft', version: 4 });
+    expect(await read(world.as(author), (tx) => tx.points.get(point.id))).toEqual(retracted);
+  });
+
+  it('stores the hand-in Monday with the submission, keeps it through a return and an approval, and clears it with a retract', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const { point } = await create(world.as(author));
+    const submitted = await update(world.as(author), point, SUBMIT);
+    expect(submitted.handInMonday).toEqual(SUBMIT.handInMonday);
+    const returned = await update(world.as(author), submitted, { state: 'returned' });
+    expect(returned.handInMonday).toEqual(SUBMIT.handInMonday);
+    const approved = await update(world.as(author), returned, { state: 'approved' });
+    expect(approved.handInMonday).toEqual(SUBMIT.handInMonday);
+    const later = { ...SUBMIT, handInMonday: calDate(2026, 11, 2), state: 'submitted' } as const;
+    const resubmitted = await update(world.as(author), approved, later);
+    expect(resubmitted.handInMonday).toEqual(calDate(2026, 11, 2));
+    const retracted = await update(world.as(author), resubmitted, {
+      state: 'draft',
+      submittedAt: null,
+      handInMonday: null,
+    });
+    expect(retracted).toMatchObject({ submittedAt: null, handInMonday: null });
     expect(await read(world.as(author), (tx) => tx.points.get(point.id))).toEqual(retracted);
   });
 
@@ -513,6 +536,15 @@ describe('PointRepo (port contract)', () => {
     ['points_monday', {}, [{ ...SUBMIT, earliestMonday: calDate(2026, 10, 27) }]],
     ['points_submitted_complete', {}, [{ ...SUBMIT, content: { ...FULL, opening: '' } }]],
     ['points_earliest_fixed', {}, [SUBMIT, { earliestMonday: calDate(2026, 11, 2) }]],
+    ['points_hand_in_monday', {}, [{ ...SUBMIT, handInMonday: calDate(2026, 10, 27) }]],
+    // PostgreSQL checks by name: points_hand_in_monday comes before points_monday.
+    [
+      'points_hand_in_monday',
+      {},
+      [{ ...SUBMIT, earliestMonday: calDate(2026, 10, 27), handInMonday: calDate(2026, 10, 27) }],
+    ],
+    ['points_hand_in_set', {}, [{ state: 'draft', submittedAt: SUBMIT.submittedAt }]],
+    ['points_hand_in_set', {}, [SUBMIT, { state: 'draft', submittedAt: null }]],
   ])('surfaces %s by its name', async (constraint, created, patches) => {
     const author = await world.seed.user({ role: 'submitter' });
     const write = async () => {
@@ -846,7 +878,11 @@ describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
     await handIn(recent, '2026-10-07T08:00:00Z');
     await handIn(old, '2026-10-04T23:59:59Z');
     const gone = await handIn(retracted, '2026-10-08T08:00:00Z');
-    await update(world.as(retracted), gone, { state: 'draft', submittedAt: null });
+    await update(world.as(retracted), gone, {
+      state: 'draft',
+      submittedAt: null,
+      handInMonday: null,
+    });
     await pointIn(none, 'draft');
     expect(await asWorker((tx) => tx.points.submitterIds(SINCE))).toEqual([recent.id]);
   });

@@ -68,6 +68,7 @@ const SUBMITTED: Row = {
   opening: 'Ve čtvrtek proběhl seminář.',
   earliest_monday: '2026-10-26',
   submitted_at: '2026-10-21T08:00:00Z',
+  hand_in_monday: '2026-10-26',
 };
 
 const insertEvent = (pointId: string, row: Row = {}) =>
@@ -96,6 +97,7 @@ describe('point guards (migrations 0015 and 0016)', () => {
     await insertPoint({
       ...{ kind: 'finance', type_id: null, state: 'approved', title: 'Nákup tabulí' },
       ...{ earliest_monday: '2026-11-02', submitted_at: '2026-10-21T08:00:00Z' },
+      hand_in_monday: '2026-11-02',
     });
   });
 
@@ -127,7 +129,13 @@ describe('point guards (migrations 0015 and 0016)', () => {
     [{ ...SUBMITTED, state: 'approved', opening: '' }, 'points_submitted_complete'],
     [{ ...SUBMITTED, state: 'published', event_date: null }, 'points_submitted_complete'],
     [{ ...SUBMITTED, earliest_monday: null }, 'points_submitted_complete'],
-    [{ ...SUBMITTED, submitted_at: null }, 'points_submitted_complete'],
+    [{ ...SUBMITTED, submitted_at: null, hand_in_monday: null }, 'points_submitted_complete'],
+    [
+      { submitted_at: '2026-10-21T08:00:00Z', hand_in_monday: '2026-10-27' },
+      'points_hand_in_monday',
+    ],
+    [{ submitted_at: '2026-10-21T08:00:00Z' }, 'points_hand_in_set'],
+    [{ hand_in_monday: '2026-10-26' }, 'points_hand_in_set'],
   ])('refuses %o by %s', async (row, constraint) => {
     expect(await pgErrorOf(insertPoint(row))).toMatchObject({ code: CHECK, constraint });
   });

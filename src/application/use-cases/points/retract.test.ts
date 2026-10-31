@@ -53,6 +53,7 @@ describe('points.retract', () => {
       version: 3,
       earliestMonday: FIRST_MONDAY,
       submittedAt: null,
+      handInMonday: null,
       content: { title: 'Nákup projektoru' },
     });
   });
@@ -71,6 +72,7 @@ describe('points.retract', () => {
     expect(await get(author, id)).toMatchObject({
       state: 'submitted',
       earliestMonday: FIRST_MONDAY,
+      handInMonday: FIRST_MONDAY,
       submittedAt: world.clock.now(),
     });
   });
@@ -118,6 +120,7 @@ describe('points.retract', () => {
         diff: {
           state: { from: 'submitted', to: 'draft' },
           submittedAt: { from: world.clock.now().toISOString(), to: null },
+          handInMonday: { from: '2026-10-26', to: null },
         },
         meta: { kind: 'pokyn' },
       },

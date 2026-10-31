@@ -42,6 +42,12 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
   if (c.endDate && (!c.eventDate || toIsoDate(c.endDate) < toIsoDate(c.eventDate))) {
     throw refusedBy('points_dates');
   }
+  if (row.handInMonday && isoWeekday(row.handInMonday) !== 1) {
+    throw refusedBy('points_hand_in_monday');
+  }
+  if ((row.submittedAt === null) !== (row.handInMonday === null)) {
+    throw refusedBy('points_hand_in_set');
+  }
   if ((row.kind === 'report') !== (row.typeId !== null)) throw refusedBy('points_kind_type');
   if (codePoints(c.title) > 200 || codePoints(c.opening) > 1000 || codePoints(c.place) > 120) {
     throw refusedBy('points_lengths');
@@ -137,6 +143,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         content: checked,
         earliestMonday: null,
         submittedAt: null,
+        handInMonday: null,
         version: 1,
         updatedAt: now,
       });
@@ -165,7 +172,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
     },
     async update(id, expectedVersion, patch) {
       guard(tx, true);
-      const { content, state, earliestMonday, submittedAt } = patch;
+      const { content, state, earliestMonday, submittedAt, handInMonday } = patch;
       const checked = content && parsed(content);
       const before = points.get(id);
       if (!before || !visible(before) || before.version !== expectedVersion) {
@@ -177,6 +184,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         state: state ?? before.state,
         earliestMonday: earliestMonday ?? before.earliestMonday,
         submittedAt: submittedAt === undefined ? before.submittedAt : submittedAt,
+        handInMonday: handInMonday === undefined ? before.handInMonday : handInMonday,
         version: before.version + 1,
         updatedAt: now,
       };

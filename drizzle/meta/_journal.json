@@ -183,6 +183,20 @@
       "when": 1793444466800,
       "tag": "0025_issue_calendar_grant",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793445947046,
+      "tag": "0026_points_hand_in_monday",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793445951053,
+      "tag": "0027_hand_in_backfill",
+      "breakpoints": true
     }
   ]
 }
