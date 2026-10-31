@@ -11,7 +11,7 @@ import { ListForm, type ListFormValues } from './ListForm';
 import { MoveForm } from './MoveForm';
 
 /** One list of /registr with its counts of active and never printed students. */
-export interface ListView extends ListFormValues {
+interface ListView extends ListFormValues {
   readonly key: string;
   readonly entries: number;
   readonly fresh: number;

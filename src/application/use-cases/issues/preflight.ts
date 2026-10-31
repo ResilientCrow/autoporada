@@ -2,7 +2,7 @@ import { compareDates } from '@/domain/time';
 
 import type { AssemblyFacts, AssemblyProblem } from './assemble-types';
 
-export type FindingCode =
+type FindingCode =
   | 'issue-not-open'
   | 'snapshot-invalid'
   | 'report-incomplete'

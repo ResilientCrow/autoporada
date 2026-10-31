@@ -1,10 +1,5 @@
 import type { PointRecord, Tx } from '@/application/ports';
-import {
-  mergeProposals,
-  SECTIONS,
-  type Outline,
-  type OutlineSection,
-} from '@/domain/outline';
+import { mergeProposals, SECTIONS, type Outline, type OutlineSection } from '@/domain/outline';
 import type { PointState } from '@/domain/review';
 import { emptyRichDoc, isRichDocEmpty, singleLine } from '@/domain/richtext';
 import type { SnapshotItem } from '@/snapshot';
