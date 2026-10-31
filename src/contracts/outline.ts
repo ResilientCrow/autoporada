@@ -36,9 +36,9 @@ const capped = (max: number) =>
 
 /** „vyjádření pana …“ of the partners slot; the speaker is in the 2nd case. */
 const statement = z.strictObject({
-  speakerGenitive: capped(POINT_LIMITS.speakerGenitive),
+  speakerGenitive: capped(POINT_LIMITS.speakerGenitive).trim().min(1),
   affiliation: capped(POINT_LIMITS.statementAffiliation).optional(),
-  quote: capped(POINT_LIMITS.quote),
+  quote: capped(POINT_LIMITS.quote).trim().min(1),
 });
 
 /**
@@ -100,7 +100,7 @@ export const outlineReadOutput = z.strictObject({
   version: z.int().positive().nullable(),
   origin: z.strictObject({
     kind: z.enum(['stored', 'derived', 'seed']),
-    /** The Monday of the issue a derived outline comes from. */
+    /** The meeting date of the issue a derived outline comes from. */
     from: z.iso.date().nullable(),
   }),
   pokyny: z.array(row),
