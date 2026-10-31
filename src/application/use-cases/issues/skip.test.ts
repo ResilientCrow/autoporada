@@ -151,6 +151,32 @@ describe('issues.setSkipped', () => {
         });
       },
     );
+
+    // ADR 0041: a porada brought back after a later one was generated would come out of order.
+    it('refuses to unskip a porada once a later one is generated, and still skips one', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      const skipped = await seedIssue(SUBMIT, { status: 'skipped' });
+      const open = await seedIssue(weeks(SUBMIT, 1));
+      await seedIssue(weeks(SUBMIT, 2), { status: 'generated' });
+      await refuses(() => act(head, 'unskip', SUBMIT, { expectedVersion: skipped.version }), {
+        code: 'rule',
+        rule: 'later-generated',
+      });
+      expect(
+        (await act(head, 'skip', weeks(SUBMIT, 1), { expectedVersion: open.version })).ok,
+      ).toBe(true);
+    });
+
+    it('unskips a porada after a generated one', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      await seedIssue(CURRENT, { status: 'generated' });
+      const skipped = await seedIssue(SUBMIT, { status: 'skipped' });
+      expect((await act(head, 'unskip', SUBMIT, { expectedVersion: skipped.version })).ok).toBe(
+        true,
+      );
+    });
   });
 
   describe('bounds', () => {

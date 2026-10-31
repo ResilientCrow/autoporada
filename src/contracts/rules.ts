@@ -25,6 +25,7 @@ export const RULE_CODES = [
   'proposal-fixed',
   'outline-full',
   'meeting-order',
+  'later-generated',
   'issue-not-open',
   'issue-blocked',
   'deadline-past',

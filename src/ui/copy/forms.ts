@@ -53,6 +53,8 @@ export const rules = {
   'outline-full': 'V\u00A0jedné části může být nejvýš 60\u00A0bodů.',
   'meeting-order':
     'Porady musí následovat v\u00A0pořadí kalendáře a\u00A0jejich uzávěrky také. Tato změna by pořadí porušila.',
+  'later-generated':
+    'Tuto poradu už nelze obnovit, protože pozdější porada je vygenerovaná. Porady se generují v\u00A0pořadí kalendáře.',
   'issue-not-open': 'Tuto poradu už nelze změnit, protože se její stav změnil.',
   'issue-blocked': 'Dokument zatím nelze vygenerovat. Náhled ukazuje, co je potřeba opravit.',
   'deadline-past': 'Uzávěrka už proběhla. Zvolte pozdější čas.',

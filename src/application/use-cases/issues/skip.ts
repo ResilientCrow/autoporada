@@ -18,7 +18,8 @@ const UNTOUCHED_VERSION = 1;
  * whatever its deadline: after the deadline the approved points move to the next porada, which
  * the form says. A generated slot has no skip or unskip (refused as `issue-not-open`).
  * An unskip that would break the meeting order is refused (`meeting-order`; the wire carries
- * codes only, so the conflicting slots are not named). A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
+ * codes only, so the conflicting slots are not named), and so is one after a later porada was
+ * generated (`later-generated`, ADR 0041). A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
  * is computed on read.
  */
 export const setSkipped = defineUseCase({
@@ -38,6 +39,9 @@ export const setSkipped = defineUseCase({
     if (slot.status === 'generated') return fail({ code: 'rule', rule: 'issue-not-open' });
     // A porada that takes place again must still fit the order of the others (ADR 0034).
     if (input.event === 'unskip' && slot.status === 'skipped') {
+      // Poradas are generated in order (ADR 0040): none comes back behind a generated one.
+      if (slots.some((s) => s.status === 'generated' && compareDates(s.monday, monday) > 0))
+        return fail({ code: 'rule', rule: 'later-generated' });
       const back = { ...slot, status: 'open' as const };
       if (orderConflicts(slots, back).length > 0)
         return fail({ code: 'rule', rule: 'meeting-order' });

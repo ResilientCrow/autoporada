@@ -144,7 +144,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   date by the rule and can be changed in the same form. Porady in the way are
   skipped in the same step or the move is refused, so meeting dates and
   deadlines keep their order. Přehled shows a moved porada; nobody is mailed
-  about a move (switched off, ADR 0037).
+  about a move (switched off, ADR 0037). A skipped porada cannot come back once
+  a later one is generated (ADR 0041).
 - Times: screens and mails write „23:59“ (a colon, no leading zero); the
   document keeps the template's „7.00“.
 

@@ -46,3 +46,4 @@ record that supersedes it.
 | [0038](0038-generation-and-the-archive.md) | Generation and the archive | Accepted; item 4 (the worker's grant on the DOCX) superseded by 0039 |
 | [0039](0039-the-worker-sees-only-the-docx-it-converts.md) | The worker sees only the DOCX it converts | Accepted |
 | [0040](0040-poradas-are-generated-in-order.md) | Poradas are generated in order | Accepted |
+| [0041](0041-no-unskip-behind-a-generated-porada.md) | No unskip behind a generated porada | Accepted |
