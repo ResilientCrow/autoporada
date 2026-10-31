@@ -612,7 +612,7 @@ describe('myPointsPage', () => {
     title: 'Exkurze',
     eventDate: '2026-11-20',
     earliestMonday: null,
-    submittedAt: null,
+    handInMonday: null,
     returnNote: null,
     version: 2,
     updatedAt: '2026-10-20T08:00:00.000Z',
@@ -735,8 +735,17 @@ describe('myPointsPage', () => {
   });
 
   describe('where an approved point goes', () => {
-    const approved = (earliestMonday: string | null, state = 'approved') =>
-      summary({ id: 'p', state, earliestMonday, submittedAt: '2026-10-20T08:00:00.000Z' });
+    const approved = (
+      earliestMonday: string | null,
+      state = 'approved',
+      handInMonday: string | null = '2026-10-26',
+    ) =>
+      summary({
+        id: 'p',
+        state,
+        earliestMonday,
+        handInMonday,
+      });
 
     it('is its own Monday while that porada is open, with no row or an open one', async () => {
       expect((await rowsOf([approved('2026-11-09')]))?.[0]?.placement).toBe('2026-11-09');
@@ -783,12 +792,18 @@ describe('myPointsPage', () => {
       expect(askedFor()).not.toContain('issues.window');
     });
 
+    it('starts from the Monday it was last handed in for when that is later', async () => {
+      expect(
+        (await rowsOf([approved('2026-11-09', 'approved', '2026-11-16')]))?.[0]?.placement,
+      ).toBe('2026-11-16');
+    });
+
     it('is none for an approved point with no Monday on record', async () => {
       expect((await rowsOf([approved(null)]))?.[0]?.placement).toBeNull();
     });
 
-    it('is none for an approved point with no hand-in time on record', async () => {
-      serve([summary({ id: 'p', state: 'approved', earliestMonday: '2026-11-09' })]);
+    it('is none for an approved point with no hand-in Monday on record', async () => {
+      serve([approved('2026-11-09', 'approved', null)]);
       expect((await myPointsPage({}))?.rows[0]?.placement).toBeNull();
     });
 

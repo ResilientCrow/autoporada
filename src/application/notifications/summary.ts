@@ -1,4 +1,4 @@
-import { DEADLINE_RULE, readSlots } from '@/application/core';
+import { readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
 import { pointMonday, summaryDue, type IssueRow } from '@/domain/calendar';
 import { instantToWallClock, isSameDate, toIsoDate, type CalDate } from '@/domain/time';
@@ -54,13 +54,9 @@ async function summaryFacts(
     isSameDate(slot.monday, monday) ? { ...slot, status: 'open' as const } : slot,
   );
   const counts = { submitted: 0, approved: 0, returned: 0 };
-  for (const { state, earliestMonday, submittedAt } of handedIn) {
-    const placed = pointMonday(
-      { earliest: earliestMonday, submittedAt },
-      DEADLINE_RULE,
-      now,
-      slots,
-    );
+  const today = instantToWallClock(now).date;
+  for (const { state, earliestMonday, handInMonday } of handedIn) {
+    const placed = pointMonday({ earliest: earliestMonday, handIn: handInMonday }, today, slots);
     if (placed && isSameDate(placed, monday)) counts[state] += 1;
   }
   return {

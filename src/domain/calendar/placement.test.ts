@@ -172,72 +172,73 @@ describe('pointMonday', () => {
   // The deadline of Monday 2026-10-26 is Sunday 2026-10-25 18:00 Prague (16:00Z).
   const ON_TIME = new Date('2026-10-23T10:00:00Z');
   const LATE = new Date('2026-10-25T20:00:00Z');
+  const today = (now: Date) => instantToWallClock(now).date;
+  const place = (
+    point: { earliest: CalDate; handIn: CalDate },
+    now: Date,
+    slots: readonly IssueSlot[] = slotsAt(now),
+  ) => iso(pointMonday(point, today(now), slots));
 
   it('keeps a point handed in on time under its Monday while reviewers finish after the deadline', () => {
-    const point = { earliest: d('2026-10-26'), submittedAt: ON_TIME };
-    expect(iso(pointMonday(point, RULE, LATE, slotsAt(LATE)))).toBe('2026-10-26');
+    expect(place({ earliest: d('2026-10-26'), handIn: d('2026-10-26') }, LATE)).toBe('2026-10-26');
   });
 
-  it('puts a resubmit after the deadline of its earliest Monday on the next open one', () => {
-    // First handed in for 2026-10-26, retracted or returned, handed in again Sunday 21.00.
-    const point = { earliest: d('2026-10-26'), submittedAt: LATE };
-    expect(iso(pointMonday(point, RULE, LATE, slotsAt(LATE)))).toBe('2026-11-02');
+  it('puts a resubmit after the deadline of its earliest Monday on the Monday it was handed in for', () => {
+    // First handed in for 2026-10-26, retracted or returned, handed in again Sunday 21.00 for 11-02.
+    expect(place({ earliest: d('2026-10-26'), handIn: d('2026-11-02') }, LATE)).toBe('2026-11-02');
   });
 
-  it('puts a resubmit on the meeting day itself on the next open Monday, not on that day', () => {
+  it('puts a resubmit on the meeting day itself on the Monday it was handed in for', () => {
     // Monday 2026-11-09 08:00 Prague: its deadline passed the evening before.
     const monday = new Date('2026-11-09T07:00:00Z');
-    const point = { earliest: d('2026-10-26'), submittedAt: monday };
-    expect(iso(pointMonday(point, RULE, monday, slotsAt(monday)))).toBe('2026-11-16');
+    expect(place({ earliest: d('2026-10-26'), handIn: d('2026-11-16') }, monday)).toBe(
+      '2026-11-16',
+    );
   });
 
   it('goes on past skipped and generated Mondays after a late resubmit', () => {
-    const point = { earliest: d('2026-10-26'), submittedAt: LATE };
     const list = [known('2026-11-02', 'skipped'), known('2026-11-09', 'generated')];
-    expect(iso(pointMonday(point, RULE, LATE, slotsAt(LATE, list)))).toBe('2026-11-16');
+    const point = { earliest: d('2026-10-26'), handIn: d('2026-11-02') };
+    expect(place(point, LATE, slotsAt(LATE, list))).toBe('2026-11-16');
   });
 
-  it('honours a frozen later deadline: the Monday is still open for a resubmit', () => {
+  it('honours a frozen later deadline: the Monday is still open', () => {
     const frozen = [known('2026-10-26', 'open', '2026-10-26T08:00:00Z')];
-    const point = { earliest: d('2026-10-26'), submittedAt: LATE };
-    expect(iso(pointMonday(point, RULE, LATE, slotsAt(LATE, frozen)))).toBe('2026-10-26');
+    const point = { earliest: d('2026-10-26'), handIn: d('2026-10-26') };
+    expect(place(point, LATE, slotsAt(LATE, frozen))).toBe('2026-10-26');
   });
 
   it('moves a point still waiting on once its porada is over, as placementMonday does', () => {
     const tuesday = new Date('2026-10-27T10:00:00Z');
-    const point = { earliest: d('2026-10-26'), submittedAt: ON_TIME };
-    expect(iso(pointMonday(point, RULE, tuesday, slotsAt(tuesday)))).toBe('2026-11-02');
+    const point = { earliest: d('2026-10-26'), handIn: d('2026-10-26') };
+    expect(place(point, tuesday)).toBe('2026-11-02');
   });
 
   it('agrees with the line a point handed in now is promised: the submit Monday, placed', () => {
-    const point = { earliest: d('2026-10-19'), submittedAt: LATE };
     const promised = placementMonday(targetMonday(LATE, RULE), LATE, []);
-    expect(iso(pointMonday(point, RULE, LATE, slotsAt(LATE)))).toBe(iso(promised));
+    const point = { earliest: d('2026-10-19'), handIn: targetMonday(LATE, RULE) };
+    expect(place(point, LATE)).toBe(iso(promised));
   });
 
-  it('steps over a skipped slot at hand-in: the point waits for the slot it was promised', () => {
-    // Sunday 2026-10-18, before 18.00: Monday 2026-10-19 is skipped, so the promise is 2026-10-26.
+  it('steps over a skipped slot: the point waits for the slot after it', () => {
     const now = new Date('2026-10-18T10:00:00Z');
-    const point = { earliest: d('2026-10-19'), submittedAt: now };
-    expect(iso(pointMonday(point, RULE, now, slotsAt(now, [known('2026-10-19', 'skipped')])))).toBe(
-      '2026-10-26',
-    );
+    const point = { earliest: d('2026-10-19'), handIn: d('2026-10-19') };
+    expect(place(point, now, slotsAt(now, [known('2026-10-19', 'skipped')]))).toBe('2026-10-26');
   });
 
   it('places by the meeting date: a slot moved to a day that is over is passed', () => {
     // Slot 2026-10-26 meets on Friday 2026-10-30; on Saturday 2026-10-31 it is over.
     const saturday = new Date('2026-10-31T10:00:00Z');
     const rows = [{ ...known('2026-10-26', 'open'), meetingDate: d('2026-10-30') }];
-    const slots = issueSlots(rows, instantToWallClock(saturday).date, RULE);
-    const point = { earliest: d('2026-10-26'), submittedAt: ON_TIME };
-    expect(iso(pointMonday(point, RULE, saturday, slots))).toBe('2026-11-02');
+    const slotsOf = (now: Date) => issueSlots(rows, today(now), RULE);
+    const point = { earliest: d('2026-10-26'), handIn: d('2026-10-26') };
+    expect(place(point, saturday, slotsOf(saturday))).toBe('2026-11-02');
     const friday = new Date('2026-10-30T10:00:00Z');
-    const slotsFriday = issueSlots(rows, instantToWallClock(friday).date, RULE);
-    expect(iso(pointMonday(point, RULE, friday, slotsFriday))).toBe('2026-10-26');
+    expect(place(point, friday, slotsOf(friday))).toBe('2026-10-26');
   });
 
   it('refuses an earliest day that is not a Monday', () => {
-    const point = { earliest: d('2026-10-20'), submittedAt: ON_TIME };
-    expect(() => pointMonday(point, RULE, ON_TIME, slotsAt(ON_TIME))).toThrow(RangeError);
+    const point = { earliest: d('2026-10-20'), handIn: d('2026-10-26') };
+    expect(() => place(point, ON_TIME)).toThrow(RangeError);
   });
 });

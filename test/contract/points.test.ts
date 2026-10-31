@@ -573,7 +573,7 @@ const summary = (p: PointRecord) => ({
   title: p.content.title,
   eventDate: p.content.eventDate,
   earliestMonday: p.earliestMonday,
-  submittedAt: p.submittedAt,
+  handInMonday: p.handInMonday,
   returnNote: null,
   version: p.version,
   updatedAt: p.updatedAt,
@@ -597,6 +597,7 @@ describe('PointRepo queue (the review queue)', () => {
     typeName,
     earliestMonday: p.earliestMonday,
     submittedAt: p.submittedAt,
+    handInMonday: p.handInMonday,
     returnedBefore,
   });
   const queue = (by: UserRecord, limit = 10) => read(world.as(by), (tx) => tx.points.queue(limit));
@@ -970,6 +971,7 @@ describe('PointRepo handedInFor (what the headmaster summary reads, migration 00
     state: PointPatch['state'],
     earliest = MONDAY,
     at = '2026-10-30T09:00:00Z',
+    handIn = MONDAY,
   ) {
     const { point } = await create(world.as(author), { content: FULL });
     return update(world.as(author), point, {
@@ -977,23 +979,30 @@ describe('PointRepo handedInFor (what the headmaster summary reads, migration 00
       state,
       earliestMonday: earliest,
       submittedAt: new Date(at),
+      handInMonday: handIn,
     });
   }
 
-  it('lists the submitted, approved and returned points with their state, first Monday and hand-in', async () => {
+  it('lists the submitted, approved and returned points with their state, first Monday and hand-in Monday', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     await pointIn(author, 'submitted', MONDAY, '2026-10-30T09:00:00Z');
-    await pointIn(author, 'approved', calDate(2026, 10, 26), '2026-10-22T09:00:00Z');
-    await pointIn(author, 'returned', MONDAY, '2026-10-29T09:00:00Z');
+    await pointIn(
+      author,
+      'approved',
+      calDate(2026, 10, 26),
+      '2026-10-22T09:00:00Z',
+      calDate(2026, 10, 26),
+    );
+    await pointIn(author, 'returned', calDate(2026, 10, 26), '2026-10-29T09:00:00Z', MONDAY);
     const rows = await handedIn();
     expect([...rows].sort((a, b) => a.state.localeCompare(b.state))).toEqual([
       {
         state: 'approved',
         earliestMonday: calDate(2026, 10, 26),
-        submittedAt: new Date('2026-10-22T09:00:00Z'),
+        handInMonday: calDate(2026, 10, 26),
       },
-      { state: 'returned', earliestMonday: MONDAY, submittedAt: new Date('2026-10-29T09:00:00Z') },
-      { state: 'submitted', earliestMonday: MONDAY, submittedAt: new Date('2026-10-30T09:00:00Z') },
+      { state: 'returned', earliestMonday: calDate(2026, 10, 26), handInMonday: MONDAY },
+      { state: 'submitted', earliestMonday: MONDAY, handInMonday: MONDAY },
     ]);
   });
 

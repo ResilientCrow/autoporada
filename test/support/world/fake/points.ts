@@ -203,7 +203,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           title: p.content.title,
           eventDate: p.content.eventDate,
           earliestMonday: p.earliestMonday,
-          submittedAt: p.submittedAt,
+          handInMonday: p.handInMonday,
           returnNote: p.state === 'returned' ? returnNoteOf(tx, p.id) : null,
           version: p.version,
           updatedAt: p.updatedAt,
@@ -222,7 +222,12 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         .map((p) => {
           const { state } = p;
           const queued = state === 'submitted' || state === 'approved';
-          if (!queued || p.earliestMonday === null || p.submittedAt === null) {
+          if (
+            !queued ||
+            p.earliestMonday === null ||
+            p.submittedAt === null ||
+            p.handInMonday === null
+          ) {
             throw new DatabaseFailure('db.parse.points');
           }
           return {
@@ -234,6 +239,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
             typeName: (p.typeId && tx.draft.pointTypes.get(p.typeId)?.name) ?? null,
             earliestMonday: p.earliestMonday,
             submittedAt: p.submittedAt,
+            handInMonday: p.handInMonday,
             returnedBefore: events.some((e) => e.pointId === p.id && e.event === 'return'),
           };
         });
@@ -279,9 +285,9 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       return [...points.values()].flatMap((p) =>
         (p.state === 'submitted' || p.state === 'approved' || p.state === 'returned') &&
         p.earliestMonday !== null &&
-        p.submittedAt !== null &&
+        p.handInMonday !== null &&
         compareDates(p.earliestMonday, monday) <= 0
-          ? [{ state: p.state, earliestMonday: p.earliestMonday, submittedAt: p.submittedAt }]
+          ? [{ state: p.state, earliestMonday: p.earliestMonday, handInMonday: p.handInMonday }]
           : [],
       );
     },

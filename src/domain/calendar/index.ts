@@ -25,6 +25,7 @@ export {
   reminderStagger,
   type ReminderKind,
 } from './reminders';
+export { dueMonday } from './selection';
 export { summaryDue } from './summary';
 export { placementMonday, pointMonday, type KnownIssue } from './placement';
 export {

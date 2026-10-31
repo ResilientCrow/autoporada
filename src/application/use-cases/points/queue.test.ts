@@ -105,7 +105,7 @@ async function returnedAndBack(author: UserRecord, id: string): Promise<void> {
 }
 
 /** An issue row with this status, as the headmaster's skip or the generation leaves it. */
-const issue = (monday: CalDate, status: 'skipped' | 'generated') =>
+const issue = (monday: CalDate, status: 'skipped' | 'generated' | 'open') =>
   world.tx(system('test.seed'), async (tx) => {
     const { issue: row } = await tx.issues.ensure({
       monday,
@@ -275,6 +275,18 @@ describe('points.queue', () => {
       );
       return toIsoDate(monday!);
     }
+
+    it('keeps a resubmitted point on the Monday it was handed in for when the skipped one before it is unskipped (ADR 0029 item 3)', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const id = await submittedOnTime(author);
+      await world.run(retractPoint, world.as(author), { id, expectedVersion: 2 });
+      await issue(FIRST_MONDAY, 'skipped');
+      expect((await resubmit(author, id, 3)).ok).toBe(true);
+      const by = await reviewer();
+      expect((await shape(by)).mondays).toEqual([['2026-11-02', [['pokyn', [id]]]]]);
+      await issue(FIRST_MONDAY, 'open');
+      expect((await shape(by)).mondays).toEqual([['2026-11-02', [['pokyn', [id]]]]]);
+    });
 
     it('places a point retracted and handed in again after the deadline under the next porada', async () => {
       const author = await world.seed.user({ role: 'submitter' });

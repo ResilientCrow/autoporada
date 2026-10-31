@@ -102,7 +102,7 @@ export const listMyPointsOutput = z.object({
         title: z.string(),
         eventDate: day.nullable(),
         earliestMonday: day.nullable(),
-        submittedAt: instant.nullable(),
+        handInMonday: day.nullable(),
         /** The first line of the note the reviewer returned the point with; null unless it is `returned`. */
         returnNote: z.string().max(POINT_LIMITS.note).nullable(),
         version,

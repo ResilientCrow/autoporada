@@ -61,7 +61,7 @@ export interface PointPatch {
  */
 export type PointSummary = Pick<
   PointRecord,
-  'id' | 'kind' | 'typeId' | 'state' | 'earliestMonday' | 'submittedAt' | 'version' | 'updatedAt'
+  'id' | 'kind' | 'typeId' | 'state' | 'earliestMonday' | 'handInMonday' | 'version' | 'updatedAt'
 > &
   Pick<PointContent, 'title' | 'eventDate'> & { readonly returnNote: string | null };
 
@@ -76,6 +76,8 @@ export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
     readonly state: Extract<PointState, 'submitted' | 'approved'>;
     readonly earliestMonday: CalDate;
     readonly submittedAt: Date;
+    /** The Monday it was last handed in for; the queue places it by this and `earliestMonday`. */
+    readonly handInMonday: CalDate;
     /** A report's type; null for finance and pokyn. */
     readonly typeName: string | null;
     /** True once the point was ever returned: „Vráceno dříve“. */
@@ -86,7 +88,7 @@ export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
 interface HandedInPoint {
   readonly state: Extract<PointState, 'submitted' | 'approved' | 'returned'>;
   readonly earliestMonday: CalDate;
-  readonly submittedAt: Date;
+  readonly handInMonday: CalDate;
 }
 
 /** What a decision mail reads again of its point at send time (ADR 0020): who wrote it, where it stands. */
@@ -172,9 +174,9 @@ export interface PointRepo {
   countSubmittedSince(query: { readonly since: Date; readonly notBy: string }): Promise<number>;
   /**
    * The points a meeting's summary counts: those waiting for review, approved or returned whose
-   * first Monday is not after `monday`, with what placement reads of them (`pointMonday`) so the
-   * caller can tell which are the Monday's. Only the columns migrations 0017 and 0024 grant the
-   * worker. ScopeViolation for a user.
+   * first Monday is not after `monday`, with what placement reads of them (`pointMonday`) so the caller
+   * can tell which are the Monday's. Only the columns migrations 0017, 0024 and 0027
+   * (`hand_in_monday`) grant the worker. ScopeViolation for a user.
    */
   handedInFor(monday: CalDate): Promise<readonly HandedInPoint[]>;
 }

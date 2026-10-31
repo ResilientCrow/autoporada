@@ -184,22 +184,23 @@ export interface MyPointsPageModel {
 /**
  * Where an approved point goes: its first Monday, or the next open one once that porada is over or
  * the point was handed in again after its deadline (design section 3, ADR 0018). A handed-in point
- * always has both its first Monday and its hand-in time (`points_submitted_complete`); a row
+ * always has both its first Monday and its hand-in Monday (`points_submitted_complete`, `points_hand_in_set`); a row
  * without either, which the database refuses, shows no date, like a window with no open porada.
  */
 function placementOf(
-  { state, earliestMonday, submittedAt }: z.output<typeof listMyPointsOutput>['points'][number],
+  { state, earliestMonday, handInMonday }: z.output<typeof listMyPointsOutput>['points'][number],
   window: MeetingWindow | null,
   now: Date,
 ): string | null {
-  if (state !== 'approved' || earliestMonday === null || submittedAt === null || window === null) {
+  if (state !== 'approved' || earliestMonday === null || handInMonday === null || window === null) {
     return null;
   }
   // The window carries no meeting date yet: every stored row meets on its Monday (ADR 0034).
   const rows = toKnownIssues(window.issues).map((row) => ({ ...row, meetingDate: row.monday }));
-  const slots = issueSlots(rows, instantToWallClock(now).date, DEADLINE_RULE);
-  const point = { earliest: parseIsoDate(earliestMonday), submittedAt: new Date(submittedAt) };
-  const monday = pointMonday(point, DEADLINE_RULE, now, slots);
+  const today = instantToWallClock(now).date;
+  const slots = issueSlots(rows, today, DEADLINE_RULE);
+  const point = { earliest: parseIsoDate(earliestMonday), handIn: parseIsoDate(handInMonday) };
+  const monday = pointMonday(point, today, slots);
   return monday && toIsoDate(monday);
 }
 

@@ -9,8 +9,9 @@ import {
   type CalDate,
 } from '@/domain/time';
 
-import { assertMonday, type DeadlineRule } from './issue-calendar';
-import { PLACEMENT_WEEKS, placementSlot, submitMonday, type IssueSlot } from './slots';
+import { assertMonday } from './issue-calendar';
+import { dueMonday } from './selection';
+import { PLACEMENT_WEEKS, placementSlot, type IssueSlot } from './slots';
 
 /** An issue that has a row: its Monday, its frozen deadline and its status. */
 export interface KnownIssue {
@@ -62,31 +63,26 @@ function isOpen(status: IssueStatus | undefined): boolean {
   return status === undefined || status === 'open';
 }
 
-/** What `pointMonday` reads of a point: its fixed first Monday and the time of its last hand-in. */
+/** What `pointMonday` reads of a point: its fixed first Monday and the Monday of its last hand-in. */
 interface PlacedPoint {
   /** The Monday it was first handed in for (`earliest_monday`, fixed at that first hand-in). */
   readonly earliest: CalDate;
-  /** When it was last handed in: a resubmit sets it; approving, returning and a reviewer's edit keep it. */
-  readonly submittedAt: Date;
+  /** The Monday it was last handed in for (`hand_in_monday`, set at every submit). */
+  readonly handIn: CalDate;
 }
 
 /**
- * The Monday of the slot a handed-in point is shown under (ADR 0018 item 1: a late submit lands
- * in the next issue whose deadline is still ahead). It starts from the later of the point's first
- * Monday and the slot of its last hand-in (`submitMonday` over the slots, skipped and generated
- * ones stepped over), then takes the first open slot from there whose meeting is today or later
- * (`placementSlot`). The hand-in slot is what a resubmit after a retract or a return needs: its
- * `earliest` is the old first Monday, which may be over. A point handed in on time keeps its slot
- * after the deadline, as its hand-in was ahead of it.
+ * The Monday of the slot a handed-in point is shown under (ADR 0018 item 1, ADR 0029): the first
+ * open slot from its `dueMonday` whose meeting is today or later (`placementSlot`, skipped and
+ * generated slots stepped over). A point handed in on time keeps its slot after the deadline, as
+ * its hand-in Monday was ahead of it; a resubmit starts from the Monday it was handed in for, as
+ * its `earliest` may be over.
  */
 export function pointMonday(
-  { earliest, submittedAt }: PlacedPoint,
-  rule: DeadlineRule,
-  now: Date,
+  { earliest, handIn }: PlacedPoint,
+  today: CalDate,
   slots: readonly IssueSlot[],
 ): CalDate | null {
   assertMonday(earliest);
-  const handedIn = submitMonday(submittedAt, slots, rule);
-  const due = compareDates(earliest, handedIn) >= 0 ? earliest : handedIn;
-  return placementSlot(due, instantToWallClock(now).date, slots)?.monday ?? null;
+  return placementSlot(dueMonday({ earliest, handIn }), today, slots)?.monday ?? null;
 }

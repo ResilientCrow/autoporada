@@ -13,7 +13,7 @@ import {
 import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
 import type { IssueStatus } from '@/domain/review';
-import { calDate, toIsoDate } from '@/domain/time';
+import { addDays, calDate, toIsoDate } from '@/domain/time';
 
 import { createFakeMail } from '../../../test/support/fake-mail';
 import { pointFixtures } from '../../../test/support/points';
@@ -80,11 +80,17 @@ const issueRow = async (status: IssueStatus = 'open', monday = MONDAY) =>
     return issue;
   });
 
-/** A pokyn of the author's left in `state` at `when`, first handed in for `earliest`. */
-async function pointAt(by: UserRecord, state: PointRecord['state'], when: Date, earliest = MONDAY) {
+/** A pokyn of the author's left in `state` at `when`, first handed in for `earliest`, last for `handIn`. */
+async function pointAt(
+  by: UserRecord,
+  state: PointRecord['state'],
+  when: Date,
+  earliest = MONDAY,
+  handIn = earliest,
+) {
   world.clock.set(when);
   const id = await points.start(by, 'pokyn');
-  if (state !== 'draft') await points.moveTo(by, id, state, earliest);
+  if (state !== 'draft') await points.moveTo(by, id, state, earliest, handIn);
   return id;
 }
 const thursday = new Date('2026-10-29T09:00:00Z');
@@ -227,7 +233,7 @@ describe('the mail that goes out', () => {
     await issueRow();
     await pointAt(writer, 'submitted', thursday);
     await pointAt(writer, 'submitted', thursday, calDate(2026, 11, 9));
-    await pointAt(writer, 'submitted', after(2));
+    await pointAt(writer, 'submitted', after(2), MONDAY, addDays(MONDAY, 7));
     await runAt(OPEN);
     expect(await deliver(head)).toMatchObject({ code: 'sent' });
     expect(fake.calls.at(-1)?.mail.text).toContain(textOf(0, 1, 0));

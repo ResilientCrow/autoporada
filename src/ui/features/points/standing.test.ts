@@ -195,11 +195,10 @@ describe('the line and the porada a resubmit lands in', () => {
     // for the 26th, retracted and sent again now, goes where the line says: the 2nd of November.
     const now = new Date('2026-10-25T20:00:00.000Z');
     const standing = standingOf(input(now.toISOString(), '2026-11-02'));
-    const point = { earliest: parseIsoDate('2026-10-26'), submittedAt: now };
+    const point = { earliest: parseIsoDate('2026-10-26'), handIn: parseIsoDate('2026-11-02') };
     const landed = pointMonday(
       point,
-      DEFAULT_DEADLINE,
-      now,
+      parseIsoDate('2026-10-25'),
       issueSlots([], parseIsoDate('2026-10-25'), DEFAULT_DEADLINE),
     );
     expect(landed && toIsoDate(landed)).toBe('2026-11-02');

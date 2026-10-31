@@ -17,7 +17,7 @@ const summaryWire = (row: PointSummary) => ({
   returnNote: firstLine(row.returnNote),
   eventDate: dateText(row.eventDate),
   earliestMonday: dateText(row.earliestMonday),
-  submittedAt: row.submittedAt?.toISOString() ?? null,
+  handInMonday: dateText(row.handInMonday),
   updatedAt: row.updatedAt.toISOString(),
 });
 

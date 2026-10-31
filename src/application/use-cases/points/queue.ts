@@ -1,11 +1,11 @@
-import { DEADLINE_RULE, defineUseCase, ok } from '@/application/core';
+import { defineUseCase, ok } from '@/application/core';
 import type { QueuedPoint, Tx } from '@/application/ports';
 import { QUEUE_LIMIT, queuePointsInput, queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
 import { pointMonday, type IssueSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
 import type { PointKind } from '@/domain/report';
-import { toIsoDate } from '@/domain/time';
+import { instantToWallClock, toIsoDate } from '@/domain/time';
 
 import { readWindow } from '../issues';
 
@@ -24,9 +24,8 @@ const rowWire = (row: QueuedPoint) => ({
 /** The ISO Monday the point goes to, or null when no Monday of the window takes it. */
 const mondayOf = (row: QueuedPoint, now: Date, slots: readonly IssueSlot[]) => {
   const monday = pointMonday(
-    { earliest: row.earliestMonday, submittedAt: row.submittedAt },
-    DEADLINE_RULE,
-    now,
+    { earliest: row.earliestMonday, handIn: row.handInMonday },
+    instantToWallClock(now).date,
     slots,
   );
   return monday && toIsoDate(monday);
