@@ -1,5 +1,5 @@
 import { defineUseCase, ok } from '@/application/core';
-import { issuesWindowInput, issuesWindowOutput } from '@/contracts';
+import { issuesWindowInput, issuesWindowOutput, toDeadlineWire } from '@/contracts';
 import { lastSlotMonday, skipWindow } from '@/domain/calendar';
 import { instantToWallClock, mondayOf, toIsoDate } from '@/domain/time';
 
@@ -33,6 +33,7 @@ export const issueWindow = defineUseCase({
         status: issue.status,
         version: issue.version,
       })),
+      rule: toDeadlineWire(rule),
     });
   },
 });

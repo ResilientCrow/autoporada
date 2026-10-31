@@ -1,12 +1,9 @@
 import { toDeadlineRule } from '@/contracts';
 import type { Tx } from '@/application/ports';
-import { DEFAULT_DEADLINE, issueSlots, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
+import { issueSlots, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
 import { instantToWallClock } from '@/domain/time';
 
 import { readSettingValue } from './settings';
-
-/** The rule the server pages count by until `issues.window` carries the one in force. */
-export const DEADLINE_RULE = DEFAULT_DEADLINE;
 
 /**
  * The deadline rule in force: the stored `deadline` setting, else the default of the registry. A

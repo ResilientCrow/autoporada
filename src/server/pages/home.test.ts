@@ -21,6 +21,8 @@ vi.mock('../container', () => ({
 
 /** The instant the page is made at. */
 const NOW = new Date('2026-11-03T10:00:00.000Z');
+/** The deadline rule `issues.window` carries: the default, as text. */
+const RULE = { dayOffset: -2, time: '20:00' };
 
 const as = (role: string) =>
   resolvePrincipal.mockResolvedValue({
@@ -97,7 +99,7 @@ describe('homePage', () => {
       serve({
         window: {
           ok: true,
-          value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [] },
+          value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
         },
         future: { ok: true, value: { items: [due], next: null } },
         types: { ok: true, value: { types: [{ id: 't1', name: 'Seminář', detail: null }] } },
@@ -121,7 +123,7 @@ describe('homePage', () => {
       version,
     });
     const window = (submitMonday: string, issues: unknown[], stripFrom = submitMonday) =>
-      serve({ window: { ok: true, value: { submitMonday, stripFrom, issues } } });
+      serve({ window: { ok: true, value: { submitMonday, stripFrom, issues, rule: RULE } } });
 
     it('reads the window once and gives four Mondays from the submit Monday', async () => {
       as('headmaster');
@@ -209,7 +211,7 @@ describe('homePage', () => {
   describe('the „Moje body“ card', () => {
     const WINDOW = {
       ok: true,
-      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [] },
+      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
     };
     const mineOf = async () => {
       const model = await homePage();
@@ -329,7 +331,7 @@ describe('homePage', () => {
   describe('the „Ke kontrole“ card', () => {
     const WINDOW = {
       ok: true,
-      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [] },
+      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
     };
     const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `p${i}` }));
     const QUEUE = {

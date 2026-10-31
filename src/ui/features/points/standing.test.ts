@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { toDeadlineRule } from '@/contracts';
 import { DEFAULT_DEADLINE, issueSlots, pointMonday, type LateFacts } from '@/domain/calendar';
 import { addDays, parseIsoDate, parseWallTime, toIsoDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
@@ -42,6 +43,14 @@ describe('the standing line before the deadline', () => {
       text: `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20.00.`,
       urgent: false,
     });
+  });
+
+  it('follows the rule the window carries: 3 days before at 12.00 is the Friday', () => {
+    const stored = toDeadlineRule({ dayOffset: -3, time: '12:00' });
+    const result = textOf({ ...TUESDAY, rule: stored });
+    expect(result?.text).toBe(
+      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: pátek 12.${NB}3. v${NB}12.00.`,
+    );
   });
 
   it('leaves the year out of both dates and uses no plain space inside them', () => {

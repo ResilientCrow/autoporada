@@ -18,7 +18,7 @@ const deadlineTime = z
   .refine((time) => time >= '08:00' && time <= '22:00');
 
 /** `DeadlineRule` on the wire: days from the meeting date (-2 = the Saturday before a Monday) and the time. */
-const deadlineSchema = z.strictObject({
+export const deadlineSchema = z.strictObject({
   dayOffset: z.int().min(-4).max(-1),
   time: deadlineTime,
 });

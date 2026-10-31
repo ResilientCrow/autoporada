@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
-import { calDate } from '@/domain/time';
+import { calDate, parseWallTime } from '@/domain/time';
 
 import { myPointsPage, newPointPage, newProposalPage, pointPage } from './index';
 
@@ -24,6 +24,8 @@ vi.mock('../container', () => ({
 
 /** 23:30 UTC on the 26th is already the 27th in Prague. */
 const NOW = new Date('2026-10-26T23:30:00.000Z');
+/** The deadline rule `issues.window` carries: the default, as text. */
+const RULE = { dayOffset: -2, time: '20:00' };
 const ID = '0b0c1d2e-3f40-4152-8364-758697a8b9ca';
 const TYPE_ID = '5d0c1d2e-3f40-4152-8364-758697a8b9cb';
 
@@ -144,6 +146,7 @@ describe('pointPage', () => {
   };
   const WINDOW = {
     submitMonday: '2026-11-02',
+    rule: RULE,
     issues: [
       {
         monday: '2026-11-02',
@@ -512,6 +515,17 @@ describe('pointPage', () => {
       });
     });
 
+    it('hands over the rule the window carries as the rule the calendar computes with', async () => {
+      serve({ ok: true, value: LOADED }, undefined, {
+        ok: true,
+        value: { ...WINDOW, rule: { dayOffset: -3, time: '12:00' } },
+      });
+      expect((await pointPage(ID))?.standing?.rule).toEqual({
+        dayOffset: -3,
+        time: parseWallTime('12:00'),
+      });
+    });
+
     it('carries the version the page showed, for a point in any state', async () => {
       loadedAs({ version: 8, state: 'submitted', editable: false });
       expect((await pointPage(ID))?.version).toBe(8);
@@ -628,7 +642,7 @@ describe('myPointsPage', () => {
   const serve = (
     rows: unknown[],
     next: string | null = null,
-    window: unknown = { ok: true, value: { submitMonday: '2026-11-02', issues: [] } },
+    window: unknown = { ok: true, value: { submitMonday: '2026-11-02', issues: [], rule: RULE } },
   ) =>
     runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
       if (useCase.name === 'issues.window') return window;
@@ -751,7 +765,7 @@ describe('myPointsPage', () => {
       expect((await rowsOf([approved('2026-11-09')]))?.[0]?.placement).toBe('2026-11-09');
       const open = {
         ok: true,
-        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-09', 'open')] },
+        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-09', 'open')], rule: RULE },
       };
       expect((await rowsOf([approved('2026-11-09')], open))?.[0]?.placement).toBe('2026-11-09');
     });
@@ -762,23 +776,24 @@ describe('myPointsPage', () => {
         value: {
           submitMonday: '2026-11-16',
           issues: [issue('2026-11-09', 'skipped'), issue('2026-11-16', 'generated')],
+          rule: RULE,
         },
       };
       expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBe('2026-11-23');
     });
 
     it('starts from the point’s own Monday, even one before the submit Monday', async () => {
-      const window = { ok: true, value: { submitMonday: '2026-11-16', issues: [] } };
+      const window = { ok: true, value: { submitMonday: '2026-11-16', issues: [], rule: RULE } };
       expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBe('2026-11-09');
     });
 
     it('never names a porada that is over: an earliest Monday before the window moves to the next one', async () => {
       // Now is Tuesday 2026-10-27 in Prague; the window starts at 2026-10-26 and has no row for 2026-10-19.
-      const window = { ok: true, value: { submitMonday: '2026-11-02', issues: [] } };
+      const window = { ok: true, value: { submitMonday: '2026-11-02', issues: [], rule: RULE } };
       expect((await rowsOf([approved('2026-10-19')], window))?.[0]?.placement).toBe('2026-11-02');
       const skipped = {
         ok: true,
-        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-02', 'skipped')] },
+        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-02', 'skipped')], rule: RULE },
       };
       expect((await rowsOf([approved('2026-10-19')], skipped))?.[0]?.placement).toBe('2026-11-09');
     });
@@ -812,7 +827,10 @@ describe('myPointsPage', () => {
         const monday = new Date(Date.UTC(2026, 10, 9 + 7 * week)).toISOString().slice(0, 10);
         return issue(monday, 'skipped');
       });
-      const window = { ok: true, value: { submitMonday: '2026-11-09', issues: closed } };
+      const window = {
+        ok: true,
+        value: { submitMonday: '2026-11-09', issues: closed, rule: RULE },
+      };
       expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBeNull();
     });
 

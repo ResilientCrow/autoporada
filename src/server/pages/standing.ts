@@ -1,9 +1,9 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { DEADLINE_RULE } from '@/application/core';
 import { issueWindow } from '@/application/use-cases';
-import type { issuesWindowOutput } from '@/contracts';
+import { toDeadlineRule, type issuesWindowOutput } from '@/contracts';
+import type { DeadlineRule } from '@/domain/calendar';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
@@ -20,7 +20,7 @@ export interface StandingModel {
   readonly issues: MeetingWindow['issues'];
   /** ISO instant. */
   readonly now: string;
-  readonly rule: typeof DEADLINE_RULE;
+  readonly rule: DeadlineRule;
 }
 
 /** The meeting calendar as the viewer, or null where the use case refuses it (404). */
@@ -35,13 +35,13 @@ export async function readWindow(viewer: UserPrincipal): Promise<MeetingWindow |
   );
 }
 
-/** The window as the standing line takes it, as of `now`. */
+/** The window as the standing line takes it, as of `now`, with the rule the window carries. */
 export function standingFrom(window: MeetingWindow, now: Date): StandingModel {
   return {
     submitMonday: window.submitMonday,
     issues: window.issues,
     now: now.toISOString(),
-    rule: DEADLINE_RULE,
+    rule: toDeadlineRule(window.rule),
   };
 }
 

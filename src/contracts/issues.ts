@@ -3,6 +3,8 @@ import { z } from 'zod';
 import type { IssueRow } from '@/domain/calendar';
 import { parseIsoDate } from '@/domain/time';
 
+import { deadlineSchema } from './settings';
+
 /**
  * „Porada se nekoná“ and its undo. `expectedVersion` is the version of the row
  * the page showed; a Monday without a row has none, which reads as an
@@ -35,6 +37,8 @@ export const issuesWindowOutput = z.object({
       version: z.number().int().positive(),
     }),
   ),
+  /** The deadline rule in force: what a Monday with no row is counted by (`toDeadlineRule` reads it). */
+  rule: deadlineSchema,
 });
 
 /** The rows of `issues.window` as the calendar domain reads them (placement, standing line). */

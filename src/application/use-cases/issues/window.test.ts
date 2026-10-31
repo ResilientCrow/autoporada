@@ -59,7 +59,12 @@ describe('issues.window', () => {
       const user = await world.seed.user({ role: 'submitter' });
       expect(await read(user)).toEqual({
         ok: true,
-        value: { submitMonday: toIsoDate(SUBMIT), stripFrom: toIsoDate(SUBMIT), issues: [] },
+        value: {
+          submitMonday: toIsoDate(SUBMIT),
+          stripFrom: toIsoDate(SUBMIT),
+          issues: [],
+          rule: { dayOffset: -2, time: '20:00' },
+        },
       });
     });
 
@@ -157,6 +162,13 @@ describe('issues.window', () => {
 
   describe('with a stored deadline rule', () => {
     const STORED = { dayOffset: -3, time: '12:00' };
+
+    it('returns the rule in force', async () => {
+      world.clock.set(NOW);
+      await world.seed.setting('deadline', STORED);
+      const user = await world.seed.user({ role: 'submitter' });
+      expect(await read(user)).toMatchObject({ ok: true, value: { rule: STORED } });
+    });
 
     // Friday 6 November 13.00 Prague: past 12.00 of the Friday the stored rule counts, before the
     // default Saturday 20.00.
