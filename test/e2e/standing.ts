@@ -3,7 +3,13 @@
  * the app does it, from its calendar functions and copy. Free of Playwright, so a probe can
  * compare it with the app's own `standingOf` for any instant.
  */
-import { deadline, DEFAULT_DEADLINE, placementMonday, submitMonday } from '@/domain/calendar';
+import {
+  deadline,
+  DEFAULT_DEADLINE,
+  issueSlots,
+  placementMonday,
+  submitMonday,
+} from '@/domain/calendar';
 import { formatDayMonth, formatTime, weekdayName } from '@/domain/cs';
 import { addDays, instantToWallClock } from '@/domain/time';
 import { points } from '@/ui/copy';
@@ -17,7 +23,8 @@ import { points } from '@/ui/copy';
  * both variants; only the sentence about its deadline differs.
  */
 export function standingLines(now: Date): { before: string; closed: string } {
-  const first = submitMonday(now, DEFAULT_DEADLINE, []);
+  const slots = issueSlots([], instantToWallClock(now).date, DEFAULT_DEADLINE);
+  const first = submitMonday(now, slots, DEFAULT_DEADLINE);
   const placement = placementMonday(first, now, []);
   if (placement === null) throw new Error('no porada is open');
   const { date, time } = instantToWallClock(deadline(placement, DEFAULT_DEADLINE));

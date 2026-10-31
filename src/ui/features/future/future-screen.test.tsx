@@ -131,7 +131,7 @@ describe('the editor of a draft', () => {
   });
 
   it('shows the strip from the dates being edited when a calendar came', () => {
-    const strip = render({ window: { submitMonday: '2026-11-09', issues: [] } });
+    const strip = render({ window: { stripFrom: '2026-11-09', issues: [] } });
     expect(strip).toContain(future.strip.title);
   });
 });

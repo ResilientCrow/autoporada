@@ -59,18 +59,18 @@ describe('issues.window', () => {
       const user = await world.seed.user({ role: 'submitter' });
       expect(await read(user)).toEqual({
         ok: true,
-        value: { submitMonday: toIsoDate(SUBMIT), issues: [] },
+        value: { submitMonday: toIsoDate(SUBMIT), stripFrom: toIsoDate(SUBMIT), issues: [] },
       });
     });
 
-    it('lists the rows from this week to 26 weeks on, earliest first, as text', async () => {
+    it('lists the rows from this week to the last slot Monday, earliest first, as text', async () => {
       world.clock.set(NOW);
       const user = await world.seed.user({ role: 'submitter' });
-      const late = await seedIssue(weeks(CURRENT, 26));
+      const late = await seedIssue(weeks(CURRENT, 25));
       const skipped = await seedIssue(weeks(CURRENT, 2), { status: 'skipped' });
       const current = await seedIssue(CURRENT);
       await seedIssue(weeks(CURRENT, -1));
-      await seedIssue(weeks(CURRENT, 27));
+      await seedIssue(weeks(CURRENT, 26));
       const result = await read(user);
       if (!result.ok) throw new Error('window refused');
       expect(result.value.issues).toEqual([
@@ -87,7 +87,7 @@ describe('issues.window', () => {
           version: 2,
         },
         {
-          monday: toIsoDate(weeks(CURRENT, 26)),
+          monday: toIsoDate(weeks(CURRENT, 25)),
           deadlineAt: late.deadlineAt.toISOString(),
           status: 'open',
           version: 1,
@@ -95,27 +95,19 @@ describe('issues.window', () => {
       ]);
     });
 
-    it('reaches the last Monday a skip may name when the submit Monday is two weeks on', async () => {
+    it('ends at the last slot Monday, however far on the submit Monday is', async () => {
       // Sunday 8 November, 19.00 in Prague: the deadline of 9 November has passed, so the submit
-      // Monday is 16 November and the window ends 25 weeks later, 27 weeks from this week's Monday.
+      // Monday is 16 November; the rows still end 25 weeks after this week's Monday.
       world.clock.set(new Date('2026-11-08T18:00:00Z'));
       const user = await world.seed.user({ role: 'submitter' });
-      // The end of the first read: `between` is inclusive, so the tail must start a week past it.
-      const end = await seedIssue(weeks(CURRENT, 26));
-      const last = await seedIssue(weeks(CURRENT, 27), { status: 'skipped' });
-      await seedIssue(weeks(CURRENT, 28), { status: 'skipped' });
+      const last = await seedIssue(weeks(CURRENT, 25), { status: 'skipped' });
+      await seedIssue(weeks(CURRENT, 26), { status: 'skipped' });
       const result = await read(user);
       expect(result).toMatchObject({ ok: true, value: { submitMonday: '2026-11-16' } });
       if (!result.ok) throw new Error('window refused');
       expect(result.value.issues).toEqual([
         {
-          monday: toIsoDate(weeks(CURRENT, 26)),
-          deadlineAt: end.deadlineAt.toISOString(),
-          status: 'open',
-          version: 1,
-        },
-        {
-          monday: toIsoDate(weeks(CURRENT, 27)),
+          monday: toIsoDate(weeks(CURRENT, 25)),
           deadlineAt: last.deadlineAt.toISOString(),
           status: 'skipped',
           version: 2,
@@ -132,11 +124,24 @@ describe('issues.window', () => {
       expect(result).toMatchObject({ ok: true, value: { submitMonday: '2026-11-02' } });
     });
 
-    it('ignores a skipped Monday when naming the submit Monday', async () => {
+    it('steps over a skipped Monday when naming the submit Monday, and keeps it where the strips start', async () => {
       world.clock.set(NOW);
       const user = await world.seed.user({ role: 'submitter' });
       await seedIssue(SUBMIT, { status: 'skipped' });
-      expect(await read(user)).toMatchObject({ ok: true, value: { submitMonday: '2026-11-09' } });
+      expect(await read(user)).toMatchObject({
+        ok: true,
+        value: { submitMonday: '2026-11-16', stripFrom: '2026-11-09' },
+      });
+    });
+
+    it('starts the strips at a generated head Monday too', async () => {
+      world.clock.set(NOW);
+      const user = await world.seed.user({ role: 'submitter' });
+      await seedIssue(SUBMIT, { status: 'generated' });
+      expect(await read(user)).toMatchObject({
+        ok: true,
+        value: { submitMonday: '2026-11-16', stripFrom: '2026-11-09' },
+      });
     });
   });
 

@@ -22,9 +22,11 @@ export const setSkippedOutput = z.object({
 /** The calendar the Přehled, the standing line and the lists read: no input. */
 export const issuesWindowInput = z.strictObject({});
 export const issuesWindowOutput = z.object({
-  /** The first Monday whose deadline is still ahead. */
+  /** The first open Monday whose deadline is still ahead: where a hand-in goes (skipped and generated Mondays are stepped over). */
   submitMonday: z.iso.date(),
-  /** The rows from this week's Monday to the last of the 26 Mondays from `submitMonday`, earliest first; a Monday without a row has none. */
+  /** The first Monday whose deadline is still ahead, whatever its status: where the strips of meetings start, so a skipped one stays in view to be undone. */
+  stripFrom: z.iso.date(),
+  /** The rows from this week's Monday to the last slot Monday (25 weeks on), earliest first; a Monday without a row has none. */
   issues: z.array(
     z.object({
       monday: z.iso.date(),

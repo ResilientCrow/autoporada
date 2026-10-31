@@ -211,18 +211,26 @@ describe('points.queue', () => {
     ]);
   });
 
-  it('lists the points no Monday of the window takes last, after the placed ones', async () => {
+  it('lists the points no slot of the calendar takes last, after the placed ones', async () => {
     const author = await world.seed.user({ role: 'submitter' });
-    const unplaced = await handIn(author, 'pokyn');
-    const after = addDays(FIRST_MONDAY, 7 * PLACEMENT_WEEKS);
-    const placed = await handIn(author, 'pokyn', { monday: after });
-    for (let week = 0; week < PLACEMENT_WEEKS; week++) {
-      await issue(addDays(FIRST_MONDAY, 7 * week), 'skipped');
-    }
+    // Due past the 26 Mondays the calendar reaches, with no row to make a slot of it.
+    const beyond = await handIn(author, 'pokyn', {
+      monday: addDays(FIRST_MONDAY, 7 * (PLACEMENT_WEEKS + 10)),
+    });
+    const placed = await handIn(author, 'pokyn', { monday: addDays(FIRST_MONDAY, 7) });
     expect((await shape(await reviewer())).mondays).toEqual([
-      [toIsoDate(after), [['pokyn', [placed]]]],
-      [null, [['pokyn', [unplaced]]]],
+      [toIsoDate(addDays(FIRST_MONDAY, 7)), [['pokyn', [placed]]]],
+      [null, [['pokyn', [beyond]]]],
     ]);
+  });
+
+  it('places nothing when every slot of the calendar is skipped or generated', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const id = await handIn(author, 'pokyn');
+    for (let week = 0; week < PLACEMENT_WEEKS; week++) {
+      await issue(addDays(FIRST_MONDAY, 7 * week), week % 2 ? 'skipped' : 'generated');
+    }
+    expect((await shape(await reviewer())).mondays).toEqual([[null, [['pokyn', [id]]]]]);
   });
 
   it('keeps a point handed in on time under its Monday past the deadline, while reviewers finish the issue', async () => {

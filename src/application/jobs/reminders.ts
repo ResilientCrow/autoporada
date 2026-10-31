@@ -48,7 +48,6 @@ export const deadlineReminders: JobHandler<'reminders.deadline'> = async ({ db, 
     async (tx) => {
       const { now } = tx.ctx;
       const issue = await reminderIssue(tx, now);
-      if (!issue) return 0;
       let count = 0;
       for (const kind of ['soft', 'hard'] as const satisfies readonly ReminderKind[]) {
         if (!reminderDue(kind, issue.deadlineAt, now)) continue;

@@ -95,7 +95,10 @@ describe('homePage', () => {
     it('lists the akce of an author that wait for it, with the types to choose from', async () => {
       as('submitter');
       serve({
-        window: { ok: true, value: { submitMonday: '2026-11-09', issues: [] } },
+        window: {
+          ok: true,
+          value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [] },
+        },
         future: { ok: true, value: { items: [due], next: null } },
         types: { ok: true, value: { types: [{ id: 't1', name: 'Seminář', detail: null }] } },
       });
@@ -117,8 +120,8 @@ describe('homePage', () => {
       status,
       version,
     });
-    const window = (submitMonday: string, issues: unknown[]) =>
-      serve({ window: { ok: true, value: { submitMonday, issues } } });
+    const window = (submitMonday: string, issues: unknown[], stripFrom = submitMonday) =>
+      serve({ window: { ok: true, value: { submitMonday, stripFrom, issues } } });
 
     it('reads the window once and gives four Mondays from the submit Monday', async () => {
       as('headmaster');
@@ -152,6 +155,18 @@ describe('homePage', () => {
         { monday: '2026-11-09', label: '9. 11. 2026', status: 'open', version: null },
         { monday: '2026-11-16', label: '16. 11. 2026', status: 'skipped', version: 2 },
         { monday: '2026-11-23', label: '23. 11. 2026', status: 'generated', version: 5 },
+        { monday: '2026-11-30', label: '30. 11. 2026', status: 'open', version: null },
+      ]);
+    });
+
+    it('starts the strip at stripFrom, so a skipped head Monday stays in view with its version', async () => {
+      as('headmaster');
+      // 9 November is skipped: a hand-in goes to the 16th, the strip still starts at the 9th.
+      window('2026-11-16', [row('2026-11-09', 'skipped', 3)], '2026-11-09');
+      expect(await stripOfHome()).toEqual([
+        { monday: '2026-11-09', label: '9. 11. 2026', status: 'skipped', version: 3 },
+        { monday: '2026-11-16', label: '16. 11. 2026', status: 'open', version: null },
+        { monday: '2026-11-23', label: '23. 11. 2026', status: 'open', version: null },
         { monday: '2026-11-30', label: '30. 11. 2026', status: 'open', version: null },
       ]);
     });
@@ -192,7 +207,10 @@ describe('homePage', () => {
   });
 
   describe('the „Moje body“ card', () => {
-    const WINDOW = { ok: true, value: { submitMonday: '2026-11-09', issues: [] } };
+    const WINDOW = {
+      ok: true,
+      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [] },
+    };
     const mineOf = async () => {
       const model = await homePage();
       if (model?.kind !== 'member') throw new Error('not a member');
@@ -309,7 +327,10 @@ describe('homePage', () => {
   });
 
   describe('the „Ke kontrole“ card', () => {
-    const WINDOW = { ok: true, value: { submitMonday: '2026-11-09', issues: [] } };
+    const WINDOW = {
+      ok: true,
+      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [] },
+    };
     const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `p${i}` }));
     const QUEUE = {
       ok: true,

@@ -30,7 +30,7 @@ const item = (over: Partial<FutureReadItem> = {}): FutureReadItem => ({
 const render = (over: Partial<FutureReadItem> = {}) =>
   renderToStaticMarkup(<FutureRead item={item(over)} />);
 
-const WINDOW = { submitMonday: '2026-11-09', issues: [] } as const;
+const WINDOW = { stripFrom: '2026-11-09', issues: [] } as const;
 
 describe('FutureRead', () => {
   it('heads the page with the title, the kind and the state, and is clean for the CSP', () => {

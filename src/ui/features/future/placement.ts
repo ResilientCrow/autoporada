@@ -5,7 +5,8 @@ import type { StripSlot } from '@/ui/copy';
 
 /** The meeting calendar as `issues.window` carries it: only what the strip reads. */
 export interface StripWindow {
-  readonly submitMonday: string;
+  /** The first Monday whose deadline is ahead, a skipped one too (`issues.window`'s `stripFrom`). */
+  readonly stripFrom: string;
   readonly issues: readonly { readonly monday: string; readonly status: IssueStatus }[];
 }
 
@@ -25,10 +26,10 @@ export interface StripLine {
 const STRIP_MONDAYS = 4;
 
 /**
- * Where the item lands in the next porady (design section 12): the four Mondays from the submit
- * Monday on, each routed by `routeFutureItem`; a skipped Monday has no porada, and a Monday whose
- * issue is already made is left out, since nothing joins it any more. Nothing before the item has a
- * start date. An end date before the start (which a draft may hold, the save refuses) is ignored.
+ * Where the item lands in the next porady (design section 12): the four Mondays from `stripFrom`
+ * (the first whose deadline is ahead, a skipped one too), each routed by `routeFutureItem`; a
+ * skipped Monday has no porada, and a Monday whose issue is already made is left out, since
+ * nothing joins it any more. Nothing before the item has a start date. An end date before the start (which a draft may hold, the save refuses) is ignored.
  */
 export function placementLines(item: StripItem, window: StripWindow): readonly StripLine[] {
   if (item.startDate === null) return [];
@@ -36,7 +37,7 @@ export function placementLines(item: StripItem, window: StripWindow): readonly S
   const end = item.endDate === null ? undefined : parseIsoDate(item.endDate);
   const dated = { date, ...(end && compareDates(end, date) >= 0 && { endDate: end }) };
   const status = new Map(window.issues.map((issue) => [issue.monday, issue.status]));
-  const first = parseIsoDate(window.submitMonday);
+  const first = parseIsoDate(window.stripFrom);
   return Array.from({ length: STRIP_MONDAYS }, (_, week) => addDays(first, 7 * week))
     .filter((monday) => status.get(toIsoDate(monday)) !== 'generated')
     .map((monday) => ({

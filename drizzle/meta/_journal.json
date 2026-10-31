@@ -176,6 +176,13 @@
       "when": 1793399771453,
       "tag": "0024_reminder_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793444466800,
+      "tag": "0025_issue_calendar_grant",
+      "breakpoints": true
     }
   ]
 }

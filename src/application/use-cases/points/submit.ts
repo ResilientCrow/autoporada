@@ -18,9 +18,10 @@ interface FirstSubmit {
 
 /**
  * The Monday a point is first handed in for, set once (`points_earliest_fixed`):
- * the first one whose deadline is still ahead, skips ignored, since placement
- * moves a point past a skipped Monday on read (design section 3). Its issue
- * is made here if it has no row yet, and is then named in the audit event.
+ * the first open slot whose deadline is still ahead, skipped and generated
+ * slots stepped over, so a later unskip does not pull the point back to a
+ * Monday it never was handed in for (ADR 0029). Its issue is made here if it
+ * has no row yet, and is then named in the audit event.
  * A resubmit after a return or a retract keeps the first Monday.
  */
 async function firstSubmit(tx: Tx, point: PointRecord, now: Date): Promise<FirstSubmit> {

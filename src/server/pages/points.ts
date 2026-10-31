@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { DEADLINE_RULE } from '@/application/core';
 import { getPoint, listMyPoints, listPointTypes } from '@/application/use-cases';
 import { toKnownIssues, type listMyPointsOutput, type listPointTypesOutput } from '@/contracts';
-import { pointMonday } from '@/domain/calendar';
+import { issueSlots, pointMonday } from '@/domain/calendar';
 import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import { PROPOSAL_KINDS, type BulletSpec, type ProposalKind } from '@/domain/report';
@@ -195,9 +195,11 @@ function placementOf(
   if (state !== 'approved' || earliestMonday === null || submittedAt === null || window === null) {
     return null;
   }
-  const known = toKnownIssues(window.issues);
+  // The window carries no meeting date yet: every stored row meets on its Monday (ADR 0034).
+  const rows = toKnownIssues(window.issues).map((row) => ({ ...row, meetingDate: row.monday }));
+  const slots = issueSlots(rows, instantToWallClock(now).date, DEADLINE_RULE);
   const point = { earliest: parseIsoDate(earliestMonday), submittedAt: new Date(submittedAt) };
-  const monday = pointMonday(point, DEADLINE_RULE, now, known);
+  const monday = pointMonday(point, DEADLINE_RULE, now, slots);
   return monday && toIsoDate(monday);
 }
 

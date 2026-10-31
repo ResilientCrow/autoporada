@@ -1,14 +1,7 @@
-import { DEADLINE_RULE } from '@/application/core';
+import { DEADLINE_RULE, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
-import { pointMonday, summaryDue, PLACEMENT_WEEKS, type KnownIssue } from '@/domain/calendar';
-import {
-  addDays,
-  instantToWallClock,
-  isSameDate,
-  mondayOf,
-  toIsoDate,
-  type CalDate,
-} from '@/domain/time';
+import { pointMonday, summaryDue, type IssueRow } from '@/domain/calendar';
+import { instantToWallClock, isSameDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { isMember } from './reminders';
 
@@ -32,11 +25,10 @@ export const isHeadmaster = (user: Pick<UserRecord, 'role' | 'status'>) =>
 /**
  * The issue whose deadline passed five minutes to two hours ago, with the rest of its row: none
  * when no row is in that window or the meeting does not take place (skipped). Only the columns
- * migration 0024 grants the worker.
+ * migration 0025 grants the worker.
  */
-export async function summaryIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<KnownIssue | null> {
-  const from = mondayOf(instantToWallClock(now).date);
-  const rows = await tx.issues.deadlines(from, addDays(from, 14));
+export async function summaryIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<IssueRow | null> {
+  const rows = await tx.issues.calendar(instantToWallClock(now).date);
   return rows.find((row) => summaryDue(row.deadlineAt, now) && row.status !== 'skipped') ?? null;
 }
 
@@ -57,13 +49,9 @@ async function summaryFacts(
   monday: CalDate,
 ): Promise<SummaryFacts> {
   const { now } = tx.ctx;
-  const from = mondayOf(instantToWallClock(now).date);
-  const [rows, handedIn] = await Promise.all([
-    tx.issues.deadlines(from, addDays(from, 7 * PLACEMENT_WEEKS)),
-    tx.points.handedInFor(monday),
-  ]);
-  const known = rows.map((row) =>
-    isSameDate(row.monday, monday) ? { ...row, status: 'open' as const } : row,
+  const [rows, handedIn] = await Promise.all([readSlots(tx, now), tx.points.handedInFor(monday)]);
+  const slots = rows.map((slot) =>
+    isSameDate(slot.monday, monday) ? { ...slot, status: 'open' as const } : slot,
   );
   const counts = { submitted: 0, approved: 0, returned: 0 };
   for (const { state, earliestMonday, submittedAt } of handedIn) {
@@ -71,7 +59,7 @@ async function summaryFacts(
       { earliest: earliestMonday, submittedAt },
       DEADLINE_RULE,
       now,
-      known,
+      slots,
     );
     if (placed && isSameDate(placed, monday)) counts[state] += 1;
   }

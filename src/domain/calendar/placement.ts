@@ -9,7 +9,8 @@ import {
   type CalDate,
 } from '@/domain/time';
 
-import { assertMonday, deadline, type DeadlineRule } from './issue-calendar';
+import { assertMonday, type DeadlineRule } from './issue-calendar';
+import { PLACEMENT_WEEKS, placementSlot, submitMonday, type IssueSlot } from './slots';
 
 /** An issue that has a row: its Monday, its frozen deadline and its status. */
 export interface KnownIssue {
@@ -18,30 +19,8 @@ export interface KnownIssue {
   readonly status: IssueStatus;
 }
 
-/** Placement never looks further ahead than this many Mondays (the `issues.window` size). */
-export const PLACEMENT_WEEKS = 26;
-
 function byMonday(known: readonly KnownIssue[]): ReadonlyMap<string, KnownIssue> {
   return new Map(known.map((issue) => [toIsoDate(issue.monday), issue]));
-}
-
-/**
- * The first Monday, counting from the Monday of the current Prague week, whose
- * deadline is still ahead. That is `targetMonday(now)` unless a known issue
- * has a frozen deadline later than the computed one: a deadline already shown
- * never moves, so such a Monday stays open although `targetMonday` skips it.
- * A known issue's deadline is its frozen row value whatever its status, any
- * other Monday's is computed. Skips and generated issues do not matter here: a
- * point submitted for a skipped Monday is placed later by `placementMonday`.
- * It names the Monday a new submission is for, never where a handed-in point
- * is shown.
- */
-export function submitMonday(now: Date, rule: DeadlineRule, known: readonly KnownIssue[]): CalDate {
-  const rows = byMonday(known);
-  for (let monday = mondayOf(instantToWallClock(now).date); ; monday = addDays(monday, 7)) {
-    const closes = rows.get(toIsoDate(monday))?.deadlineAt ?? deadline(monday, rule);
-    if (now.getTime() < closes.getTime()) return monday;
-  }
 }
 
 /** The first Monday on or after today's Prague date: today itself on a Monday. */
@@ -92,21 +71,22 @@ interface PlacedPoint {
 }
 
 /**
- * The Monday a handed-in point is shown under (ADR 0018 item 1: a late submit lands in the next
- * issue whose deadline is still ahead). It starts from the latest of the point's first Monday,
- * the submit Monday of its last hand-in and today's, then moves past skipped and generated
- * Mondays as `placementMonday` does. The submit Monday of the last hand-in is what a resubmit
- * after a retract or a return needs: its `earliest` is the old first Monday, which may be over.
- * A point handed in on time keeps its Monday after the deadline, as its hand-in was ahead of it.
+ * The Monday of the slot a handed-in point is shown under (ADR 0018 item 1: a late submit lands
+ * in the next issue whose deadline is still ahead). It starts from the later of the point's first
+ * Monday and the slot of its last hand-in (`submitMonday` over the slots, skipped and generated
+ * ones stepped over), then takes the first open slot from there whose meeting is today or later
+ * (`placementSlot`). The hand-in slot is what a resubmit after a retract or a return needs: its
+ * `earliest` is the old first Monday, which may be over. A point handed in on time keeps its slot
+ * after the deadline, as its hand-in was ahead of it.
  */
 export function pointMonday(
   { earliest, submittedAt }: PlacedPoint,
   rule: DeadlineRule,
   now: Date,
-  known: readonly KnownIssue[],
+  slots: readonly IssueSlot[],
 ): CalDate | null {
   assertMonday(earliest);
-  const handedIn = submitMonday(submittedAt, rule, known);
-  const start = compareDates(earliest, handedIn) >= 0 ? earliest : handedIn;
-  return placementMonday(start, now, known);
+  const handedIn = submitMonday(submittedAt, slots, rule);
+  const due = compareDates(earliest, handedIn) >= 0 ? earliest : handedIn;
+  return placementSlot(due, instantToWallClock(now).date, slots)?.monday ?? null;
 }

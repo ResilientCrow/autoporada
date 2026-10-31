@@ -1,5 +1,6 @@
-import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
+import { DEADLINE_RULE, defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
+import { skipWindow } from '@/domain/calendar';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
 import { compareDates, isoWeekday, parseIsoDate, type CalDate } from '@/domain/time';
 
@@ -24,10 +25,10 @@ function mondayOfText(text: string): CalDate | null {
 
 /**
  * „Porada se nekoná“ and its undo, for one Monday. The headmaster may
- * skip any Monday from the submit Monday (the first one whose deadline is
- * still ahead, frozen deadlines counted) up to the last of the 26 Mondays
- * the placement looks at; an earlier Monday is closed to submissions and
- * can no longer be skipped. A missing row is made first (ADR 0018).
+ * skip any Monday from the first one whose deadline is still ahead (frozen
+ * deadlines counted, a skipped one too, so it can be undone) up to the
+ * last slot Monday, the end of the calendar the placement looks at; an
+ * earlier Monday is closed to submissions and can no longer be skipped. A missing row is made first (ADR 0018).
  * Skipping writes no point and sends no mail: placement is computed on read.
  */
 export const setSkipped = defineUseCase({
@@ -41,7 +42,8 @@ export const setSkipped = defineUseCase({
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
-    const { first, last } = await readWindow(tx, now);
+    const { slots } = await readWindow(tx, now);
+    const { first, last } = skipWindow(now, slots, DEADLINE_RULE);
     if (compareDates(monday, first) < 0 || compareDates(monday, last) > 0) {
       return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     }

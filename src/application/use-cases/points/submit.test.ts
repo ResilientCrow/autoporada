@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { system, type UserRecord } from '@/application/ports';
 import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
-import { calDate, parseIsoDate, toIsoDate } from '@/domain/time';
+import { addDays, calDate, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import {
   doc,
@@ -120,7 +120,7 @@ describe('points.submit', () => {
       expect((await get(author, id))?.earliestMonday).toEqual(monday);
     });
 
-    it('may name a skipped Monday: placement moves the point on read', async () => {
+    it('steps over a skipped Monday: the first Monday is the next open one', async () => {
       await world.tx(system('test.seed'), async (tx) => {
         const { issue } = await tx.issues.ensure({
           monday: FIRST_MONDAY,
@@ -133,7 +133,7 @@ describe('points.submit', () => {
       const author = await user();
       const id = await start(author, 'pokyn');
       await submit(author, id, readyProposal());
-      expect((await get(author, id))?.earliestMonday).toEqual(FIRST_MONDAY);
+      expect((await get(author, id))?.earliestMonday).toEqual(addDays(FIRST_MONDAY, 7));
     });
   });
 

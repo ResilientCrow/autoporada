@@ -348,7 +348,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
       'state',
       'submitted_at',
     ],
-    issues: ['deadline_at', 'id', 'monday', 'status'],
+    issues: ['deadline_at', 'id', 'meeting_date', 'monday', 'status'],
   };
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
@@ -364,7 +364,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
       'time_to',
       'report_point_id',
     ],
-    issues: ['meeting_date', 'school_year', 'version', 'created_at', 'updated_at'],
+    issues: ['school_year', 'version', 'created_at', 'updated_at'],
   };
 
   /** Whether autoporada_worker holds `privilege` on each named column of `table`. */

@@ -2,7 +2,7 @@ import { DEADLINE_RULE, defineUseCase, ok } from '@/application/core';
 import type { QueuedPoint, Tx } from '@/application/ports';
 import { QUEUE_LIMIT, queuePointsInput, queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
-import { pointMonday, type KnownIssue } from '@/domain/calendar';
+import { pointMonday, type IssueSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
 import type { PointKind } from '@/domain/report';
 import { toIsoDate } from '@/domain/time';
@@ -22,12 +22,12 @@ const rowWire = (row: QueuedPoint) => ({
 });
 
 /** The ISO Monday the point goes to, or null when no Monday of the window takes it. */
-const mondayOf = (row: QueuedPoint, now: Date, known: readonly KnownIssue[]) => {
+const mondayOf = (row: QueuedPoint, now: Date, slots: readonly IssueSlot[]) => {
   const monday = pointMonday(
     { earliest: row.earliestMonday, submittedAt: row.submittedAt },
     DEADLINE_RULE,
     now,
-    known,
+    slots,
   );
   return monday && toIsoDate(monday);
 };
@@ -59,11 +59,11 @@ function grouped(rows: readonly { readonly monday: string | null; readonly row: 
 async function readQueue(tx: Tx, now: Date, keep: (row: QueuedPoint) => boolean = () => true) {
   // One row past the limit tells whether more wait than the queue lists.
   const read = await tx.points.queue(QUEUE_LIMIT + 1);
-  const { known } = await readWindow(tx, now);
+  const { slots } = await readWindow(tx, now);
   const placed = read
     .slice(0, QUEUE_LIMIT)
     .filter(keep)
-    .map((row) => ({ monday: mondayOf(row, now, known), row }));
+    .map((row) => ({ monday: mondayOf(row, now, slots), row }));
   return {
     mondays: grouped(placed.filter(({ row }) => row.state === 'submitted')),
     approved: placed

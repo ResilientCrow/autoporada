@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { system, type IssueRecord, type UserRecord } from '@/application/ports';
-import { addDays, calDate, toIsoDate, type CalDate } from '@/domain/time';
-import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
+import { deadline, DEFAULT_DEADLINE, lastSlotMonday } from '@/domain/calendar';
+import { addDays, calDate, instantToWallClock, toIsoDate, type CalDate } from '@/domain/time';
 import { schoolYear } from '@/domain/cs';
 import type { IssueStatus } from '@/domain/review';
 
@@ -165,12 +165,13 @@ describe('issues.setSkipped', () => {
       await refuses(() => act(head, 'skip', weeks(CURRENT, -10)), invalidMonday);
     });
 
-    it('takes the submit Monday and the Monday 25 weeks later, and not the 26th', async () => {
+    it('takes the submit Monday and the last slot Monday, and not the week after', async () => {
       world.clock.set(NOW);
       const head = await headmaster();
-      const last = weeks(SUBMIT, 25);
-      expect(toIsoDate(last)).toBe('2027-05-03');
-      await refuses(() => act(head, 'skip', weeks(SUBMIT, 26)), invalidMonday);
+      // The horizon of the calendar: 25 weeks after this week's Monday, not after the submit Monday.
+      const last = weeks(CURRENT, 25);
+      expect(toIsoDate(last)).toBe('2027-04-26');
+      await refuses(() => act(head, 'skip', weeks(last, 1)), invalidMonday);
       expect((await act(head, 'skip', SUBMIT)).ok).toBe(true);
       expect((await act(head, 'skip', last)).ok).toBe(true);
     });
@@ -205,8 +206,9 @@ describe('issues.setSkipped', () => {
       const head = await headmaster();
       await refuses(() => act(head, 'skip', weeks(first, -1)), invalidMonday);
       expect((await act(head, 'skip', first)).ok).toBe(true);
-      expect((await act(head, 'skip', weeks(first, 25))).ok).toBe(true);
-      await refuses(() => act(head, 'skip', weeks(first, 26)), invalidMonday);
+      const last = lastSlotMonday(instantToWallClock(new Date(now)).date);
+      expect((await act(head, 'skip', last)).ok).toBe(true);
+      await refuses(() => act(head, 'skip', weeks(last, 1)), invalidMonday);
     });
 
     it('keeps a Monday whose frozen deadline is later in the window, and moves the end with it', async () => {

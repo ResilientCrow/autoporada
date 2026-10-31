@@ -26,10 +26,14 @@ export {
   type ReminderKind,
 } from './reminders';
 export { summaryDue } from './summary';
+export { placementMonday, pointMonday, type KnownIssue } from './placement';
 export {
-  placementMonday,
+  issueSlots,
+  lastSlotMonday,
   PLACEMENT_WEEKS,
-  pointMonday,
+  placementSlot,
+  skipWindow,
   submitMonday,
-  type KnownIssue,
-} from './placement';
+  type IssueRow,
+  type IssueSlot,
+} from './slots';

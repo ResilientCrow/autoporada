@@ -1,8 +1,13 @@
 import { toKnownIssues } from '@/contracts';
-import { deadline, placementMonday, type DeadlineRule } from '@/domain/calendar';
+import {
+  deadline,
+  issueSlots,
+  placementMonday,
+  type DeadlineRule,
+  type KnownIssue,
+} from '@/domain/calendar';
 import { formatDayMonth, formatTime, schoolYear, weekdayName } from '@/domain/cs';
 import {
-  addDays,
   compareDates,
   instantToWallClock,
   parseIsoDate,
@@ -13,7 +18,7 @@ import { points } from '@/ui/copy';
 
 /** What the line is worked out from: `issues.window` as the wire carries it, now, and the deadline rule. */
 export interface StandingInput {
-  /** The first Monday whose deadline is still ahead (skips ignored). */
+  /** The first open Monday whose deadline is still ahead (skipped and generated ones are stepped over). */
   readonly submitMonday: string;
   readonly issues: readonly {
     readonly monday: string;
@@ -39,11 +44,32 @@ export type Standing =
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * The latest porada that is not skipped, whose deadline has passed and whose meeting is today or
+ * later. The wire has no meeting date until M9 row 35: the meeting is on the Monday.
+ */
+function closedPorada(
+  known: readonly KnownIssue[],
+  today: CalDate,
+  now: Date,
+  rule: DeadlineRule,
+): CalDate | null {
+  const rows = known.map((row) => ({ ...row, meetingDate: row.monday }));
+  const closed = issueSlots(rows, today, rule).filter(
+    (slot) =>
+      slot.status !== 'skipped' &&
+      slot.deadlineAt.getTime() <= now.getTime() &&
+      compareDates(slot.meetingDate, today) >= 0,
+  );
+  return closed.at(-1)?.monday ?? null;
+}
+
+/**
  * The standing of a point that is not in yet (design sections 3 and 6). `placement` is the first
- * Monday from the submit Monday on that is neither skipped nor generated. When the porada of the
- * Monday before the submit Monday has closed and is still ahead (today is that Monday or earlier,
- * i.e. the Sunday evening and the meeting day itself), the line says the deadline has passed; from
- * the day after the porada it names the next deadline. Null when no Monday of the window is open.
+ * Monday from the submit Monday on that is neither skipped nor generated. When the latest porada
+ * that is not skipped has closed and is still ahead (today is its Monday or earlier, i.e. the
+ * Sunday evening and the meeting day itself), the line says the deadline has passed, whether or
+ * not a skipped Monday lies between it and the submit Monday; from the day after the porada it
+ * names the next deadline. Null when no Monday of the window is open.
  */
 export function standingOf({ submitMonday, issues, now, rule }: StandingInput): Standing | null {
   const instant = new Date(now);
@@ -52,12 +78,9 @@ export function standingOf({ submitMonday, issues, now, rule }: StandingInput): 
   const placement = placementMonday(first, instant, known);
   if (placement === null) return null;
 
-  const closed = addDays(first, -7);
-  const closedRow = issues.find((row) => row.monday === toIsoDate(closed));
   const today = instantToWallClock(instant).date;
-  if (compareDates(closed, today) >= 0 && closedRow?.status !== 'skipped') {
-    return { kind: 'closed', closed, placement };
-  }
+  const closed = closedPorada(known, today, instant, rule);
+  if (closed !== null) return { kind: 'closed', closed, placement };
 
   const row = issues.find((candidate) => candidate.monday === toIsoDate(placement));
   const deadlineAt = row === undefined ? deadline(placement, rule) : new Date(row.deadlineAt);

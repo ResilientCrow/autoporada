@@ -47,6 +47,7 @@ const loaded = (over: object = {}) => ({
 });
 const WINDOW = {
   submitMonday: '2026-11-09',
+  stripFrom: '2026-11-09',
   issues: [{ monday: '2026-11-16', deadlineAt: '2026-11-15T17:00:00.000Z', status: 'skipped' }],
 };
 

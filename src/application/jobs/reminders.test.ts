@@ -297,4 +297,21 @@ describe('which Monday, and when nothing is due', () => {
     expect(await runAt(HARD)).toEqual({ kind: 'done', code: 'none' });
     expect(await queued()).toEqual([]);
   });
+
+  it('speaks for the Monday after a skipped one at its own slots, not a week early', async () => {
+    const user = await submitter();
+    await handedIn(user);
+    await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
+    await frozen(MONDAY, deadline(MONDAY, DEFAULT_DEADLINE), 'skipped');
+    const next = (kind: 'soft' | 'hard') => `reminder.${kind}:2026-11-02:${user.id}`;
+    // The skipped Monday's own slots are silent, and so is the time before the next one's.
+    await runAt(SOFT);
+    await runAt(HARD);
+    expect(await queued()).toEqual([]);
+    // 2 November closes on Sunday 1 November, 18.00 Prague: soft Friday 13.00, hard Sunday 12.00.
+    await runAt(new Date('2026-10-30T12:00:00Z'));
+    expect(await keys()).toEqual([next('soft')]);
+    await runAt(new Date('2026-11-01T11:00:00Z'));
+    expect(await keys()).toEqual([next('hard'), next('soft')].sort());
+  });
 });

@@ -102,19 +102,79 @@ describe('IssueRepo (port contract)', () => {
     ).toEqual([]);
   });
 
-  it('gives the worker the deadline facts of a window of Mondays, and no other column (migration 0024)', async () => {
+  it('gives the calendar from this week on, or with a meeting still ahead, as dates and facts', async () => {
+    const TODAY = calDate(2026, 11, 4); // Wednesday
+    for (const monday of [calDate(2026, 10, 26), calDate(2026, 11, 2), calDate(2026, 11, 9)]) {
+      await ensure(issueOf(monday));
+    }
+    const moved = await ensure({
+      ...issueOf(calDate(2026, 11, 16)),
+      meetingDate: calDate(2026, 11, 20),
+    });
+    await setStatus(moved.issue, 'skipped');
+    const rows = await read((tx) => tx.issues.calendar(TODAY));
+    expect(rows).toEqual([
+      {
+        monday: calDate(2026, 11, 2),
+        meetingDate: calDate(2026, 11, 2),
+        deadlineAt: new Date('2026-10-23T10:00:00.123Z'),
+        status: 'open',
+      },
+      {
+        monday: calDate(2026, 11, 9),
+        meetingDate: calDate(2026, 11, 9),
+        deadlineAt: new Date('2026-10-23T10:00:00.123Z'),
+        status: 'open',
+      },
+      {
+        monday: calDate(2026, 11, 16),
+        meetingDate: calDate(2026, 11, 20),
+        deadlineAt: new Date('2026-10-23T10:00:00.123Z'),
+        status: 'skipped',
+      },
+    ]);
+  });
+
+  it('reaches back to the Monday of this week in Prague and no further', async () => {
+    for (const monday of [calDate(2026, 10, 26), calDate(2026, 11, 2)]) {
+      await ensure(issueOf(monday));
+    }
+    const mondays = async (today: CalDate) =>
+      (await read((tx) => tx.issues.calendar(today))).map((row) => row.monday);
+    expect(await mondays(calDate(2026, 11, 2))).toEqual([calDate(2026, 11, 2)]);
+    expect(await mondays(calDate(2026, 11, 3))).toEqual([calDate(2026, 11, 2)]);
+    expect(await mondays(calDate(2026, 11, 1))).toEqual([
+      calDate(2026, 10, 26),
+      calDate(2026, 11, 2),
+    ]);
+  });
+
+  it('gives the worker the calendar facts, and no other column (migration 0025)', async () => {
     const first = await ensure(issueOf(calDate(2026, 11, 2)));
-    const second = await ensure(issueOf(calDate(2026, 11, 9)));
-    await ensure(issueOf(calDate(2026, 11, 16)));
+    const second = await ensure({
+      ...issueOf(calDate(2026, 11, 9)),
+      meetingDate: calDate(2026, 11, 13),
+    });
+    await ensure(issueOf(calDate(2026, 10, 19)));
     await setStatus(second.issue, 'skipped');
     const asWorker = world.workerDb.transaction(
       { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
       { mode: 'read' },
-      (tx) => tx.issues.deadlines(calDate(2026, 11, 2), calDate(2026, 11, 9)),
+      (tx) => tx.issues.calendar(calDate(2026, 11, 2)),
     );
     expect(await asWorker).toEqual([
-      { monday: calDate(2026, 11, 2), deadlineAt: first.issue.deadlineAt, status: 'open' },
-      { monday: calDate(2026, 11, 9), deadlineAt: second.issue.deadlineAt, status: 'skipped' },
+      {
+        monday: calDate(2026, 11, 2),
+        meetingDate: calDate(2026, 11, 2),
+        deadlineAt: first.issue.deadlineAt,
+        status: 'open',
+      },
+      {
+        monday: calDate(2026, 11, 9),
+        meetingDate: calDate(2026, 11, 13),
+        deadlineAt: second.issue.deadlineAt,
+        status: 'skipped',
+      },
     ]);
   });
 

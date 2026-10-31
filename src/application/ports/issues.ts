@@ -1,11 +1,10 @@
-import type { KnownIssue } from '@/domain/calendar';
+import type { IssueRow } from '@/domain/calendar';
 import type { IssueStatus } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
 
-/** An issue row: a meeting Monday with its frozen deadline. */
-export interface IssueRecord extends KnownIssue {
+/** An issue row: a meeting Monday with its meeting date and frozen deadline. */
+export interface IssueRecord extends IssueRow {
   readonly id: string;
-  readonly meetingDate: CalDate;
   readonly schoolYear: string;
   readonly version: number;
 }
@@ -24,10 +23,12 @@ export interface IssueRepo {
   /** The rows of the Mondays from `from` to `to`, both included, earliest first. */
   between(from: CalDate, to: CalDate): Promise<readonly IssueRecord[]>;
   /**
-   * The deadline facts of the Mondays from `from` to `to`, both included, earliest first: only
-   * the columns migration 0024 grants the worker, which reads no more of an issue.
+   * The calendar at `today` (a Prague date): the rows of the Mondays from this week's Monday on
+   * and of any earlier Monday whose meeting is `today` or later (a porada moved past its week),
+   * earliest Monday first. Only the columns the worker is granted (migration 0025), so jobs read
+   * it too.
    */
-  deadlines(from: CalDate, to: CalDate): Promise<readonly KnownIssue[]>;
+  calendar(today: CalDate): Promise<readonly IssueRow[]>;
   /**
    * Version-checked (StaleVersion, also for an unknown id); the version rises
    * by one. ScopeViolation for a user who may not `issue.generate`. The

@@ -54,10 +54,10 @@ type HomePageModel =
     }
   | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
 
-/** The Mondays from the submit Monday on, each with its row's status and version or the untouched defaults. */
+/** The Mondays from the first one whose deadline is ahead on (a skipped one stays, to be undone), each with its row's status and version or the untouched defaults. */
 function meetingStrip(window: z.output<typeof issuesWindowOutput>): readonly MeetingDay[] {
   const rows = new Map(window.issues.map((issue) => [issue.monday, issue]));
-  const first = parseIsoDate(window.submitMonday);
+  const first = parseIsoDate(window.stripFrom);
   return Array.from({ length: STRIP_DAYS }, (_, week) => {
     const monday = addDays(first, 7 * week);
     const row = rows.get(toIsoDate(monday));

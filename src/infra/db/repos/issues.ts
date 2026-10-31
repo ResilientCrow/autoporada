@@ -1,4 +1,4 @@
-import { and, asc, between, eq, sql } from 'drizzle-orm';
+import { and, asc, between, eq, gte, or, sql } from 'drizzle-orm';
 
 import {
   ScopeViolation,
@@ -8,7 +8,7 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { can } from '@/domain/policy';
-import { parseIsoDate, toIsoDate } from '@/domain/time';
+import { mondayOf, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { issues } from '../schema';
 import type { TxDatabase } from './database';
@@ -66,14 +66,28 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
         .orderBy(asc(issues.monday));
       return rows.map(toRecord);
     },
-    async deadlines(from, to) {
-      // The columns migration 0024 grants the worker, and no other.
+    async calendar(today) {
+      // The columns migration 0025 grants the worker, and no other.
       const rows = await db
-        .select({ monday: issues.monday, deadlineAt: issues.deadlineAt, status: issues.status })
+        .select({
+          monday: issues.monday,
+          meetingDate: issues.meetingDate,
+          deadlineAt: issues.deadlineAt,
+          status: issues.status,
+        })
         .from(issues)
-        .where(between(issues.monday, toIsoDate(from), toIsoDate(to)))
+        .where(
+          or(
+            gte(issues.monday, toIsoDate(mondayOf(today))),
+            gte(issues.meetingDate, toIsoDate(today)),
+          ),
+        )
         .orderBy(asc(issues.monday));
-      return rows.map((row) => ({ ...row, monday: parseIsoDate(row.monday) }));
+      return rows.map((row) => ({
+        ...row,
+        monday: parseIsoDate(row.monday),
+        meetingDate: parseIsoDate(row.meetingDate),
+      }));
     },
     async setStatus(id, expectedVersion, status) {
       // Privileged writes re-check the policy, whatever the use case declared (ADR 0011).

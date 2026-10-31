@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { placementLines, type StripItem, type StripWindow } from './placement';
 
 const window = (over: Partial<StripWindow> = {}): StripWindow => ({
-  submitMonday: '2026-11-09',
+  stripFrom: '2026-11-09',
   issues: [],
   ...over,
 });
@@ -65,6 +65,14 @@ describe('placementLines', () => {
   it('says that a skipped Monday has no porada, whatever the item', () => {
     const skipped = window({ issues: [{ monday: '2026-11-16', status: 'skipped' }] });
     expect(slots(item({ startDate: '2026-11-17' }), skipped)[1]).toEqual(['2026-11-16', 'skipped']);
+  });
+
+  it('starts at stripFrom, so a skipped head Monday still shows as skipped', () => {
+    const head = window({
+      stripFrom: '2026-11-09',
+      issues: [{ monday: '2026-11-09', status: 'skipped' }],
+    });
+    expect(slots(item(), head)[0]).toEqual(['2026-11-09', 'skipped']);
   });
 
   it('leaves out a Monday whose issue is already made', () => {

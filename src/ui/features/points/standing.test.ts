@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEADLINE, pointMonday } from '@/domain/calendar';
+import { DEFAULT_DEADLINE, issueSlots, pointMonday } from '@/domain/calendar';
 import { addDays, parseIsoDate, toIsoDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
@@ -148,6 +148,16 @@ describe('the standing line after the deadline', () => {
     );
   });
 
+  it('names the porada that closed even when the Monday after it is skipped', () => {
+    // Sunday 14 March 2027, 18.30: the 15th has closed, the 22nd is skipped, so hand-ins go to
+    // the 29th (the submit Monday the window names); the line still says the 15th has closed.
+    const skipped = issue('2027-03-22', '2027-03-21T17:00:00.000Z', 'skipped');
+    const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-29', [skipped]));
+    expect(result?.text).toBe(
+      `Uzávěrka porady z${NB}15.${NB}3. už proběhla. Bod půjde do porady z${NB}29.${NB}3.`,
+    );
+  });
+
   it('does not talk about a closed porada that is skipped: nobody meets', () => {
     const skipped = issue('2027-03-15', '2027-03-14T17:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-15T08:00:00.000Z', '2027-03-22', [skipped]));
@@ -186,7 +196,12 @@ describe('the line and the porada a resubmit lands in', () => {
     const now = new Date('2026-10-25T20:00:00.000Z');
     const standing = standingOf(input(now.toISOString(), '2026-11-02'));
     const point = { earliest: parseIsoDate('2026-10-26'), submittedAt: now };
-    const landed = pointMonday(point, DEFAULT_DEADLINE, now, []);
+    const landed = pointMonday(
+      point,
+      DEFAULT_DEADLINE,
+      now,
+      issueSlots([], parseIsoDate('2026-10-25'), DEFAULT_DEADLINE),
+    );
     expect(landed && toIsoDate(landed)).toBe('2026-11-02');
     expect(standing && toIsoDate(standing.placement)).toBe('2026-11-02');
   });

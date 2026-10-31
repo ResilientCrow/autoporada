@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
 import { decidePoint } from '@/application/use-cases';
+import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
+import { schoolYear } from '@/domain/cs';
 import { calDate } from '@/domain/time';
 import { TEMPLATE_NAMES, type TemplateName } from '@/notify';
 
@@ -96,6 +98,28 @@ describe('loadSubject', () => {
       expect(await load('reminder.soft', user.id)).toEqual({ monday: MONDAY, hasWork: false });
       world.clock.set(new Date(SOFT.getTime() + 6 * 3_600_000));
       expect(await load('reminder.soft', user.id)).toBeNull();
+    });
+
+    it('drops a mail queued for a Monday that was skipped afterwards, and speaks for the next one', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      // The mail for 26 October was queued at its soft slot; then the headmaster skipped that Monday.
+      await world.tx(system('test.seed'), async (tx) => {
+        const { issue } = await tx.issues.ensure({
+          monday: MONDAY,
+          meetingDate: MONDAY,
+          schoolYear: schoolYear(MONDAY),
+          deadlineAt: deadline(MONDAY, DEFAULT_DEADLINE),
+        });
+        await tx.issues.setStatus(issue.id, issue.version, 'skipped');
+      });
+      world.clock.set(SOFT);
+      expect(await load('reminder.soft', user.id)).toBeNull();
+      // The Monday after has its own soft slot, Friday 30 October 13.00 Prague.
+      world.clock.set(new Date('2026-10-30T12:00:00Z'));
+      expect(await load('reminder.soft', user.id)).toEqual({
+        monday: calDate(2026, 11, 2),
+        hasWork: false,
+      });
     });
 
     it('tells the hard one whether the recipient still has a draft for the Monday', async () => {

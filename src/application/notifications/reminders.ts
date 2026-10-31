@@ -1,4 +1,4 @@
-import { DEADLINE_RULE } from '@/application/core';
+import { DEADLINE_RULE, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
 import {
   deadline,
@@ -7,14 +7,7 @@ import {
   submitMonday,
   type ReminderKind,
 } from '@/domain/calendar';
-import {
-  addDays,
-  instantToWallClock,
-  isSameDate,
-  mondayOf,
-  toIsoDate,
-  type CalDate,
-} from '@/domain/time';
+import { isSameDate, toIsoDate, type CalDate } from '@/domain/time';
 
 type Member = Pick<UserRecord, 'role' | 'status'>;
 
@@ -46,20 +39,15 @@ export interface ReminderIssue {
 }
 
 /**
- * The Monday that submissions go to now, with its frozen deadline or else the rule's. None when
- * that issue is not open (a skipped Monday has no deadline to remind of). Reads only the columns
- * migration 0024 grants the worker.
+ * The Monday that submissions go to now, with its frozen deadline or else the rule's: the first
+ * open slot whose deadline is still ahead, so a skipped Monday is stepped over and its successor
+ * is the one reminded. Reads only the columns migration 0025 grants the worker.
  */
-export async function reminderIssue(
-  tx: Pick<Tx, 'issues'>,
-  now: Date,
-): Promise<ReminderIssue | null> {
-  const from = mondayOf(instantToWallClock(now).date);
-  const known = await tx.issues.deadlines(from, addDays(from, 14));
-  const monday = submitMonday(now, DEADLINE_RULE, known);
-  const row = known.find((issue) => isSameDate(issue.monday, monday));
-  if (row && row.status !== 'open') return null;
-  return { monday, deadlineAt: row?.deadlineAt ?? deadline(monday, DEADLINE_RULE) };
+export async function reminderIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<ReminderIssue> {
+  const slots = await readSlots(tx, now);
+  const monday = submitMonday(now, slots, DEADLINE_RULE);
+  const slot = slots.find((candidate) => isSameDate(candidate.monday, monday));
+  return { monday, deadlineAt: slot?.deadlineAt ?? deadline(monday, DEADLINE_RULE) };
 }
 
 /** Authors of a draft changed in the last 28 days or of a returned point that can still go to `monday`. */
@@ -88,7 +76,7 @@ export async function loadReminder(
 ): Promise<ReminderFacts | null> {
   const { now } = tx.ctx;
   const issue = await reminderIssue(tx, now);
-  if (!issue || !reminderDue(kind, issue.deadlineAt, now)) return null;
+  if (!reminderDue(kind, issue.deadlineAt, now)) return null;
   const hasWork = kind === 'hard' && (await waitingAuthors(tx, issue.monday, now)).includes(userId);
   return { monday: issue.monday, hasWork };
 }

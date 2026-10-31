@@ -6,7 +6,7 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { can } from '@/domain/policy';
-import { compareDates, toIsoDate } from '@/domain/time';
+import { compareDates, mondayOf, toIsoDate } from '@/domain/time';
 
 import { guard } from './guards';
 import { newId, type FakeTxState } from './state';
@@ -36,12 +36,18 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
         .filter((i) => compareDates(i.monday, from) >= 0 && compareDates(i.monday, to) <= 0)
         .sort((a, b) => compareDates(a.monday, b.monday));
     },
-    async deadlines(from, to) {
+    async calendar(today) {
       guard(tx, false);
+      const week = mondayOf(today);
       return [...issues.values()]
-        .filter((i) => compareDates(i.monday, from) >= 0 && compareDates(i.monday, to) <= 0)
+        .filter((i) => compareDates(i.monday, week) >= 0 || compareDates(i.meetingDate, today) >= 0)
         .sort((a, b) => compareDates(a.monday, b.monday))
-        .map(({ monday, deadlineAt, status }) => ({ monday, deadlineAt, status }));
+        .map(({ monday, meetingDate, deadlineAt, status }) => ({
+          monday,
+          meetingDate,
+          deadlineAt,
+          status,
+        }));
     },
     async setStatus(id, expectedVersion, status) {
       guard(tx, true);
