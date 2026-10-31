@@ -30,6 +30,8 @@ export interface IssueItemRepo {
    * none. The source of a derived outline (`derive`).
    */
   latestSourceBefore(monday: CalDate): Promise<DeriveSource | null>;
+  /** The issue's own three texts, each null when never written; all null for an unknown id. */
+  textsOf(issueId: string): Promise<IssueTexts>;
   /**
    * Per text, the value of the latest issue before `monday` whose value is not null (skipped
    * issues count; an empty string or an empty doc is a value: a cleared text carries as cleared).

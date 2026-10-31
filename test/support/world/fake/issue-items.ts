@@ -70,6 +70,12 @@ export function fakeIssueItemRepo(tx: FakeTxState, ctx: TxContext): IssueItemRep
       issueItems.set(issueId, structuredClone(outline));
       tx.written.push({ type: 'issue', id: issueId });
     },
+    async textsOf(issueId) {
+      guard(tx, false);
+      const issue = [...issues.values()].find((i) => i.id === issueId);
+      const own = issue && issueTexts.get(toIsoDate(issue.monday));
+      return structuredClone(own ?? { present: null, guests: null, annex2: null });
+    },
     async latestSourceBefore(monday) {
       guard(tx, false);
       for (const issue of earlier(monday)) {

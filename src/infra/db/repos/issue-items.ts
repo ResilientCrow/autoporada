@@ -58,6 +58,13 @@ export function createIssueItemRepo(db: TxDatabase, ctx: TxContext): IssueItemRe
       );
       if (values.length > 0) await db.insert(issueItems).values(values);
     },
+    async textsOf(issueId) {
+      const [row] = await db
+        .select({ present: issues.presentText, guests: issues.guestsText, annex2: issues.annex2 })
+        .from(issues)
+        .where(eq(issues.id, issueId));
+      return row ?? { present: null, guests: null, annex2: null };
+    },
     async latestSourceBefore(monday) {
       const [issue] = await db
         .select({ id: issues.id, status: issues.status, meetingDate: issues.meetingDate })
