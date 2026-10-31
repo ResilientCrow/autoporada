@@ -10,6 +10,7 @@ import { PaperBlocks } from '@/document/render-html';
 
 import { pointContentOf } from './fields';
 import { PointScreen, type PointScreenModel } from './PointScreen';
+import type { StandingInput } from './standing';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: () => undefined, replace: () => undefined }),
@@ -122,6 +123,25 @@ describe('the read view', () => {
     const html = screen({ ...READ, state: 'submitted', moves: [] });
     expect(html).not.toContain('<form');
     expect(html).not.toContain('<button');
+  });
+
+  it('shows a late report its own close on the read view, from the saved content', () => {
+    const sunday: StandingInput = {
+      ...STANDING,
+      submitMonday: '2026-11-09',
+      now: '2026-11-01T20:30:00.000Z',
+    };
+    const content = { ...EDITOR.content, eventDate: '2026-11-01', timeTo: '21:00' };
+    const html = screen({
+      editor: null,
+      state: 'returned',
+      standing: sunday,
+      read: { content, schoolYear: '2026/2027', timeline: [] },
+    });
+    expect(html).toContain(
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}23.00; půjde na poradu 2.${NB}11.`,
+    );
+    expect(html).not.toContain('už proběhla');
   });
 
   it('shows the standing line and „Zrušit bod“ on the read view of a draft or returned point', () => {

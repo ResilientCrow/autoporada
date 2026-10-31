@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEADLINE, issueSlots, pointMonday } from '@/domain/calendar';
-import { addDays, parseIsoDate, toIsoDate } from '@/domain/time';
+import { DEFAULT_DEADLINE, issueSlots, pointMonday, type LateFacts } from '@/domain/calendar';
+import { addDays, parseIsoDate, parseWallTime, toIsoDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
-import { placementYear, standingOf, standingText, type StandingInput } from './standing';
+import {
+  placementYear,
+  reportFactsOf,
+  standingOf,
+  standingText,
+  type StandingInput,
+} from './standing';
 
 const NB = '\u00a0';
 const { soon } = cs.points.standing;
@@ -22,8 +28,8 @@ const input = (
   issues: StandingInput['issues'] = [],
 ): StandingInput => ({ submitMonday, issues, now, rule: DEFAULT_DEADLINE });
 
-const textOf = (given: StandingInput) => {
-  const standing = standingOf(given);
+const textOf = (given: StandingInput, report?: LateFacts) => {
+  const standing = standingOf(given, report);
   return standing === null ? null : standingText(standing);
 };
 
@@ -206,5 +212,141 @@ describe('the line and the porada a resubmit lands in', () => {
     );
     expect(landed && toIsoDate(landed)).toBe('2026-11-02');
     expect(standing && toIsoDate(standing.placement)).toBe('2026-11-02');
+  });
+});
+
+describe('the standing line of a report on a late event', () => {
+  // Sunday 1 November 2026 21.00: after the Saturday 31 October 20.00 deadline of the 2nd, so the
+  // report closes at 23.00 that Sunday (CET, UTC+1) and still goes to the porada of the 2nd.
+  const ENDS_SUNDAY: LateFacts = {
+    lastDay: parseIsoDate('2026-11-01'),
+    timeTo: parseWallTime('21:00'),
+  };
+  const LATE = `Zprávu odevzdejte do 1.${NB}11. v${NB}23.00; půjde na poradu 2.${NB}11.`;
+  // The wire without the report: its submit Monday is the 9th once the Saturday deadline has passed.
+  const wire = (now: string) => input(now, '2026-11-09');
+
+  it('names the close and the porada on Sunday 21.30, when the plain line says closed', () => {
+    const now = '2026-11-01T20:30:00.000Z';
+    expect(textOf(wire(now))?.text).toContain(`už proběhla`);
+    expect(textOf(wire(now), ENDS_SUNDAY)).toEqual({ text: LATE, urgent: true });
+  });
+
+  it('says the same on the Saturday evening, just after the deadline', () => {
+    // Saturday 31 October 21.00: the deadline of the 2nd (20.00) is past, so the wire says the 9th.
+    const given = wire('2026-10-31T20:00:00.000Z');
+    expect(textOf(given)?.text).toContain('už proběhla');
+    expect(textOf(given, ENDS_SUNDAY)?.text).toBe(LATE);
+  });
+
+  it('says the same on the Wednesday before, when the deadline is still ahead', () => {
+    const given = input('2026-10-28T10:00:00.000Z', '2026-11-02');
+    expect(textOf(given, ENDS_SUNDAY)).toEqual({ text: LATE, urgent: false });
+  });
+
+  it.each([
+    ['exactly 24 hours before the close', '2026-10-31T22:00:00.000Z', false],
+    ['a minute inside the last 24 hours', '2026-10-31T22:01:00.000Z', true],
+  ])('warns as the plain line does: %s is urgent %s', (_name, now, urgent) => {
+    expect(textOf(wire(now), ENDS_SUNDAY)?.urgent).toBe(urgent);
+  });
+
+  it.each([
+    ['ending at 22.30 (capped from 0.30)', '22:30'],
+    ['ending at 23.30 (capped from 1.30)', '23:30'],
+    ['ending at 22.00 (exactly midnight)', '22:00'],
+  ])('writes the cap as 24.00 of the Sunday, not 0.00 of the Monday: %s', (_name, end) => {
+    const facts: LateFacts = { lastDay: parseIsoDate('2026-11-01'), timeTo: parseWallTime(end) };
+    expect(textOf(wire('2026-11-01T20:30:00.000Z'), facts)?.text).toBe(
+      `Zprávu odevzdejte do 1.${NB}11. ve${NB}24.00; půjde na poradu 2.${NB}11.`,
+    );
+  });
+
+  it('is the plain line again once the close has passed', () => {
+    const now = '2026-11-01T23:30:00.000Z'; // Monday 00.30
+    expect(textOf(wire(now), ENDS_SUNDAY)).toEqual(textOf(wire(now)));
+    expect(textOf(wire(now), ENDS_SUNDAY)?.text).toContain(`porady z${NB}9.${NB}11.`);
+  });
+
+  it('is the plain line for an event that ended before the deadline', () => {
+    const early: LateFacts = {
+      lastDay: parseIsoDate('2026-10-30'),
+      timeTo: parseWallTime('10:00'),
+    };
+    const given = input('2026-10-28T10:00:00.000Z', '2026-11-02');
+    expect(textOf(given, early)).toEqual(textOf(given));
+  });
+
+  it('is the plain line for an event on the meeting day itself', () => {
+    const monday: LateFacts = { lastDay: parseIsoDate('2026-11-02'), timeTo: null };
+    const given = input('2026-10-28T10:00:00.000Z', '2026-11-02');
+    expect(textOf(given, monday)).toEqual(textOf(given));
+  });
+
+  it('is the plain line when the porada the report would reach is skipped', () => {
+    const skipped = issue('2026-11-02', '2026-10-31T19:00:00.000Z', 'skipped');
+    const given = input('2026-11-01T20:30:00.000Z', '2026-11-09', [skipped]);
+    expect(textOf(given, ENDS_SUNDAY)).toEqual(textOf(given));
+  });
+
+  it('closes at 20.00 + 2 h without an end time', () => {
+    const noTime: LateFacts = { lastDay: parseIsoDate('2026-11-01'), timeTo: null };
+    expect(textOf(wire('2026-11-01T20:30:00.000Z'), noTime)?.text).toBe(
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}22.00; půjde na poradu 2.${NB}11.`,
+    );
+  });
+
+  it('follows the stored deadline of the porada: one after the report close makes it not late', () => {
+    // The row's deadline is Sunday 23.30, after the report's close (23.00): nothing is late.
+    const row = issue('2026-11-02', '2026-11-01T22:30:00.000Z', 'open');
+    const given = input('2026-11-01T20:30:00.000Z', '2026-11-02', [row]);
+    expect(textOf(given, ENDS_SUNDAY)).toEqual(textOf(given));
+    expect(textOf(given, ENDS_SUNDAY)?.text).toBe(
+      `Zařadíme do porady z${NB}2.${NB}11. Uzávěrka: neděle 1.${NB}11. v${NB}23.30.`,
+    );
+  });
+
+  it('is late for a stored deadline that lies before the close', () => {
+    const row = issue('2026-11-02', '2026-11-01T21:30:00.000Z', 'open'); // Sunday 22.30
+    const given = input('2026-11-01T20:30:00.000Z', '2026-11-09', [row]);
+    expect(textOf(given, ENDS_SUNDAY)?.text).toBe(LATE);
+  });
+
+  it('places the report on the porada of the 2nd, which is what the preview year follows', () => {
+    const standing = standingOf(wire('2026-11-01T20:30:00.000Z'), ENDS_SUNDAY);
+    expect(standing && standing.placement).toEqual(parseIsoDate('2026-11-02'));
+  });
+});
+
+describe('reportFactsOf', () => {
+  const typed = { eventDate: '2026-11-01', endDate: null, timeTo: '21:00' };
+
+  it('reads the typed day and end time of a report', () => {
+    expect(reportFactsOf('report', typed)).toEqual({
+      lastDay: parseIsoDate('2026-11-01'),
+      timeTo: parseWallTime('21:00'),
+    });
+  });
+
+  it('takes the end day when it is later than the start', () => {
+    const facts = reportFactsOf('report', { ...typed, endDate: '2026-11-03' });
+    expect(facts?.lastDay).toEqual(parseIsoDate('2026-11-03'));
+  });
+
+  it.each([
+    ['a finance proposal', 'finance' as const, typed],
+    ['a report without a start date', 'report' as const, { ...typed, eventDate: null }],
+    [
+      'a report with a date that does not exist',
+      'report' as const,
+      { ...typed, eventDate: '2026-02-30' },
+    ],
+    ['no content', 'report' as const, null],
+  ])('is none for %s', (_name, kind, content) => {
+    expect(reportFactsOf(kind, content)).toBeUndefined();
+  });
+
+  it('ignores an end time that is not one', () => {
+    expect(reportFactsOf('report', { ...typed, timeTo: '25:99' })?.timeTo).toBeNull();
   });
 });

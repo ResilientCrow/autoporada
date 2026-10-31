@@ -222,6 +222,9 @@ export const points = {
     closed: (closed: string, porada: string) =>
       `Uzávěrka porady z\u00A0${closed} už proběhla. Bod půjde do porady z\u00A0${porada}`,
     soon: 'Do uzávěrky zbývá méně než 24\u00A0hodin.',
+    /** A report on an event that ends after the deadline has its own close (ADR 0035); both dates arrive written, „1.\u00A011.“. */
+    late: (closeDate: string, closeTime: string, porada: string) =>
+      `Zprávu odevzdejte do ${closeDate} ${closeTime === '24.00' ? 've' : 'v'}\u00A0${closeTime}; půjde na poradu ${porada}`,
   },
   /** „Stáhnout“ and „Zrušit bod“ of the author (design section 9). */
   transitions: {

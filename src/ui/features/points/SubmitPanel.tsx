@@ -9,7 +9,7 @@ import { Button } from '@/ui/kit';
 
 import type { PointContentWire } from './fields';
 import { ReadinessList } from './ReadinessList';
-import type { StandingInput } from './standing';
+import { reportFactsOf, type StandingInput } from './standing';
 import { StandingLine } from './StandingLine';
 
 /**
@@ -55,7 +55,9 @@ export function SubmitPanel({
         <ErrorSummary items={summary} summaryRef={lead} />
       )}
       <ReadinessList kind={kind} content={content} spec={spec} schoolYear={schoolYear} />
-      {standing === null ? null : <StandingLine standing={standing} />}
+      {standing === null ? null : (
+        <StandingLine standing={standing} report={reportFactsOf(kind, content)} />
+      )}
       <div className="submit-bar sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t-2 border-ink bg-light py-3">
         {/* Disabled for a banner only: its role="alert" text says why, and a press would do nothing. */}
         <Button variant="primary" isPending={pending} isDisabled={held} onPress={onSubmit}>

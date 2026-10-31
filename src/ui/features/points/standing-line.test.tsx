@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEADLINE } from '@/domain/calendar';
+import { DEFAULT_DEADLINE, type LateFacts } from '@/domain/calendar';
+import { parseIsoDate, parseWallTime } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
@@ -16,7 +17,8 @@ const input = (now: string, submitMonday: string): StandingInput => ({
   now,
   rule: DEFAULT_DEADLINE,
 });
-const render = (given: StandingInput) => renderToStaticMarkup(<StandingLine standing={given} />);
+const render = (given: StandingInput, report?: LateFacts) =>
+  renderToStaticMarkup(<StandingLine standing={given} report={report} />);
 
 describe('StandingLine', () => {
   it('writes the porada and the deadline in one paragraph', () => {
@@ -56,5 +58,23 @@ describe('StandingLine', () => {
 
   it('is clean for the Content-Security-Policy', () => {
     expect(cspMarkupProblems(render(input('2027-03-13T10:00:00.000Z', '2027-03-15')))).toEqual([]);
+  });
+
+  it('writes the close of a late report and its porada, with the warning in its last 24 hours', () => {
+    // Sunday 1 November 2026, 21.30: the event ended at 21.00, the report is owed until 23.00.
+    const report: LateFacts = {
+      lastDay: parseIsoDate('2026-11-01'),
+      timeTo: parseWallTime('21:00'),
+    };
+    const given = input('2026-11-01T20:30:00.000Z', '2026-11-09');
+    const html = render(given, report);
+    expect(html).toContain(
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}23.00; půjde na poradu 2.${NB}11.`,
+    );
+    expect(html).not.toContain('už proběhla');
+    expect(html).toContain(cs.points.standing.soon);
+    expect(html).toMatch(/^<p[ >]/);
+    expect(cspMarkupProblems(html)).toEqual([]);
+    expect(render(given)).toContain('už proběhla');
   });
 });

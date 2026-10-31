@@ -527,6 +527,35 @@ describe('the standing line in the editor', () => {
     expect(html.indexOf(TEXT)).toBeLessThan(html.indexOf('</form>'));
   });
 
+  it('follows the typed event of a report: a late one names its own close', () => {
+    // Sunday 1 November 2026, 21.30 Prague: the plain line would say the deadline has passed.
+    const sunday: StandingInput = {
+      ...STANDING,
+      submitMonday: '2026-11-09',
+      now: '2026-11-01T20:30:00.000Z',
+    };
+    const html = editorPage(
+      { ...CONTENT, eventDate: '2026-11-01', timeTo: '21:00' },
+      'Exkurze',
+      SPEC,
+      'on',
+      sunday,
+    );
+    expect(html).toContain(
+      `Zprávu odevzdejte do 1.\u00a011. v\u00a023.00; půjde na poradu 2.\u00a011.`,
+    );
+    expect(html).not.toContain('už proběhla');
+    const early = editorPage(
+      { ...CONTENT, eventDate: '2026-10-30' },
+      'Exkurze',
+      SPEC,
+      'on',
+      sunday,
+    );
+    expect(early).toContain('už proběhla');
+    expect(early).not.toContain('Zprávu odevzdejte');
+  });
+
   it('is not there without a standing', () => {
     expect(editorPage()).not.toContain('Zařadíme');
   });

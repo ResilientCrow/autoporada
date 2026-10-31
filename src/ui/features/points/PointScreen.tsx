@@ -13,7 +13,7 @@ import { PointFacts, type PointFactsView } from './PointFacts';
 import { PointHeader } from './PointHeader';
 import { PointReadContent } from './PointReadContent';
 import { PointTransitions } from './PointTransitions';
-import { placementYear, standingOf, type StandingInput } from './standing';
+import { placementYear, reportFactsOf, standingOf, type StandingInput } from './standing';
 import { StandingLine } from './StandingLine';
 import { Timeline, type TimelineEntry } from './Timeline';
 import type { RetractPointAction, WithdrawPointAction } from './transition-call';
@@ -84,7 +84,9 @@ export function PointScreen({
 }) {
   const editor = point.editor;
   const moves = { events: point.moves, retractPoint, withdrawPoint };
-  const standing = point.standing && standingOf(point.standing);
+  const standing =
+    point.standing &&
+    standingOf(point.standing, reportFactsOf(point.kind, editor?.content ?? null));
   return (
     <div className="space-y-4">
       <PointHeader
@@ -96,7 +98,12 @@ export function PointScreen({
       {editor === null ? (
         <>
           {/* The editor shows it with its submit button. */}
-          {point.standing === null ? null : <StandingLine standing={point.standing} />}
+          {point.standing === null ? null : (
+            <StandingLine
+              standing={point.standing}
+              report={reportFactsOf(point.kind, point.read.content)}
+            />
+          )}
           {point.kind === 'report' ? <PointFacts facts={point.facts} /> : null}
           {point.read.content === null ? null : (
             <PointReadContent
