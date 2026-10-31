@@ -83,6 +83,13 @@ export {
   queueFutureInput,
   queueFutureOutput,
 } from './future-review';
+export {
+  ISSUE_TEXT_MAX,
+  issueDetailsInput,
+  issueTextsInput,
+  issueTextsOutput,
+  issueTextsWriteOutput,
+} from './issue-texts';
 export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
 export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';
 export {

@@ -12,6 +12,7 @@ import { first, type SearchParams } from './params';
 export { accessPage } from './access';
 export { futureListPage, futurePage, newFuturePage } from './future';
 export { homePage } from './home';
+export { issueTextsPage } from './issue-texts';
 export { newOutlineItemPage, outlineItemPage, outlinePage } from './outline';
 export { pointTypesPage } from './point-types';
 export { poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';

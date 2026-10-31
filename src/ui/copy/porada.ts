@@ -137,6 +137,17 @@ export const porada = {
       },
     },
   },
+  /** „Údaje“: Přítomni and Hosté (/porada/[datum]/udaje). */
+  details: {
+    title: 'Údaje',
+    back: 'Zpět na přípravu porady',
+    present: 'Přítomni',
+    guests: 'Hosté',
+    save: 'Uložit',
+    saved: 'Údaje jsou uloženy.',
+    carried: 'Údaje jsou převzaté z\u00a0minulé porady. Uloží se při prvním uložení.',
+    stale: 'Porada se mezitím změnila. Načtěte stránku znovu.',
+  },
   origin: {
     /** `meeting` arrives written, „9. 11. 2026“. */
     derived: (meeting: string) =>

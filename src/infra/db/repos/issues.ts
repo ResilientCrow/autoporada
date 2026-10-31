@@ -43,7 +43,12 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
   const versioned = async (
     id: string,
     expectedVersion: number,
-    set: Partial<Pick<typeof issues.$inferInsert, 'status' | 'meetingDate' | 'deadlineAt'>>,
+    set: Partial<
+      Pick<
+        typeof issues.$inferInsert,
+        'status' | 'meetingDate' | 'deadlineAt' | 'presentText' | 'guestsText' | 'annex2'
+      >
+    >,
     action: 'issue.generate' | 'issue.edit' = 'issue.generate',
   ) => {
     // Privileged writes re-check the policy, whatever the use case declared (ADR 0011).
@@ -110,6 +115,17 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
       }));
     },
     touch: (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
+    setTexts: (id, expectedVersion, texts) =>
+      versioned(
+        id,
+        expectedVersion,
+        {
+          ...(texts.present !== undefined && { presentText: texts.present }),
+          ...(texts.guests !== undefined && { guestsText: texts.guests }),
+          ...(texts.annex2 !== undefined && { annex2: texts.annex2 }),
+        },
+        'issue.edit',
+      ),
     setStatus: (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
     reschedule: (id, expectedVersion, to) =>
       versioned(id, expectedVersion, {

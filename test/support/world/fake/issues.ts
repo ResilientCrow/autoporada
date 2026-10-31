@@ -8,13 +8,13 @@ import {
 import { can } from '@/domain/policy';
 import { compareDates, mondayOf, toIsoDate } from '@/domain/time';
 
-import { guard } from './guards';
+import { guard, refusedBy } from './guards';
 import { newId, type FakeTxState } from './state';
 
 /** The issue repository over the fake state, by ISO Monday as issues_monday_key. */
 export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
   const { principal } = ctx;
-  const { issues } = tx.draft;
+  const { issues, issueTexts } = tx.draft;
   const save = (issue: IssueRecord) => {
     issues.set(toIsoDate(issue.monday), issue);
     tx.written.push({ type: 'issue', id: issue.id });
@@ -65,6 +65,22 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
         }));
     },
     touch: async (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
+    setTexts: async (id, expectedVersion, texts) => {
+      const done = versioned(id, expectedVersion, {}, 'issue.edit');
+      const key = toIsoDate(done.monday);
+      const merged = {
+        ...(issueTexts.get(key) ?? { present: null, guests: null, annex2: null }),
+        ...Object.fromEntries(Object.entries(texts).filter(([, value]) => value !== undefined)),
+      };
+      // The issues_texts CHECK of migration 0033.
+      const long = (text: string | null) => [...(text ?? '')].length > 2000;
+      const bytes = Buffer.byteLength(merged.annex2 === null ? '' : JSON.stringify(merged.annex2));
+      if (long(merged.present) || long(merged.guests) || bytes > 65536) {
+        throw refusedBy('issues_texts');
+      }
+      issueTexts.set(key, structuredClone(merged));
+      return done;
+    },
     setStatus: async (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
     reschedule: async (id, expectedVersion, to) => versioned(id, expectedVersion, to),
   };

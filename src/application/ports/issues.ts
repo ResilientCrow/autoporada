@@ -2,6 +2,8 @@ import type { IssueRow } from '@/domain/calendar';
 import type { IssueStatus } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
 
+import type { IssueTexts } from './issue-items';
+
 /** An issue row: a meeting Monday with its meeting date and frozen deadline. */
 export interface IssueRecord extends IssueRow {
   readonly id: string;
@@ -41,6 +43,13 @@ export interface IssueRepo {
    * The caller has read the deadline rule first (lock order, row 12b).
    */
   touch(id: string, expectedVersion: number): Promise<IssueRecord>;
+  /**
+   * Writes the given texts (a key left out stays as it is; an empty string or an empty doc is a
+   * value) in one version-checked UPDATE, as `touch` does: the version rises by one, StaleVersion,
+   * ScopeViolation for a user who may not `issue.edit`. The `issues_texts` CHECK refuses an
+   * over-long text as `db.constraint.issues_texts`. The caller has read the deadline rule first.
+   */
+  setTexts(id: string, expectedVersion: number, texts: Partial<IssueTexts>): Promise<IssueRecord>;
   /**
    * Sets the meeting date and the frozen deadline, as `setStatus` sets the status: version-checked,
    * the version rises by one, ScopeViolation for a user who may not `issue.generate`. A new

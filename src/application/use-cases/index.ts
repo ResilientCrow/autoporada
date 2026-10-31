@@ -23,7 +23,15 @@ import {
   startFutureReport,
   submitFuture,
 } from './future';
-import { issuePreview, issueWindow, issueWorkspace, moveIssue, setSkipped } from './issues';
+import {
+  issuePreview,
+  issueWindow,
+  issueWorkspace,
+  moveIssue,
+  readIssueTexts,
+  setIssueDetails,
+  setSkipped,
+} from './issues';
 import {
   addOutlineItem,
   moveOutlineItem,
@@ -84,7 +92,15 @@ export {
   startFutureReport,
   submitFuture,
 } from './future';
-export { issuePreview, issueWindow, issueWorkspace, moveIssue, setSkipped } from './issues';
+export {
+  issuePreview,
+  issueWindow,
+  issueWorkspace,
+  moveIssue,
+  readIssueTexts,
+  setIssueDetails,
+  setSkipped,
+} from './issues';
 export {
   addOutlineItem,
   moveOutlineItem,
@@ -162,6 +178,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   previewPaste,
   queueFuture,
   queuePoints,
+  readIssueTexts,
   readOutline,
   readOutlineItem,
   readRegistry,
@@ -184,6 +201,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   saveSettings,
   searchGate,
   setReminders,
+  setIssueDetails,
   setSkipped,
   signOut,
   startFutureReport,

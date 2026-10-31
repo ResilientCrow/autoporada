@@ -2,6 +2,8 @@ export { readWindow } from './calendar';
 export { ensureIssue } from './ensure';
 export { moveIssue } from './move';
 export { issuePreview } from './preview';
+export { setIssueDetails } from './set-details';
 export { setSkipped } from './skip';
+export { readIssueTexts } from './texts';
 export { issueWindow } from './window';
 export { issueWorkspace } from './workspace';

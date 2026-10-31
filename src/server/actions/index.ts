@@ -11,13 +11,8 @@ export {
   startFutureReport,
   submitFuture,
 } from './future';
-export { moveIssue, setSkipped } from './issues';
-export {
-  addOutlineItem,
-  moveOutlineItem,
-  removeOutlineItem,
-  saveOutlineItem,
-} from './outline';
+export { moveIssue, setIssueDetails, setSkipped } from './issues';
+export { addOutlineItem, moveOutlineItem, removeOutlineItem, saveOutlineItem } from './outline';
 export {
   createPoint,
   pointStatus,
