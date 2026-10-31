@@ -47,6 +47,21 @@ export const lastCallParts = ({ authorId, kind, id, monday }: LastCallIds) => ({
 /** The ledger key of `report.ended` (`${template}:${key}`), for the prompt that yields to it. */
 const reportEndedKey = (itemId: string) => `report.ended:${itemId}`;
 
+/** How long a queued mail may wait for its send: past its window by no more than this, it still goes. */
+const SEND_GRACE_MS = 5 * 60_000;
+
+/**
+ * Whether the mail is still due when it goes: due now, or due `SEND_GRACE_MS` ago (the queue's
+ * delay), so a mail held back past its window, say by a downtime, is not sent into the next one.
+ */
+function stillDue(kind: 'ended' | 'last-call', facts: LateFacts, close: LateClose, now: Date) {
+  const end = eventEnd(facts);
+  return (
+    lateMailDue(kind, end, close.due, now) ||
+    lateMailDue(kind, end, close.due, new Date(now.getTime() - SEND_GRACE_MS))
+  );
+}
+
 /** A late report's slot: where a hand-in now would go, and when the report closes for it. */
 interface LateClose {
   readonly slot: IssueRow;
@@ -100,14 +115,14 @@ export interface ReportEndedFacts {
   readonly due: Date;
 }
 
-/** Read again when the mail goes: null when the akce is gone, no longer late, or its close has passed. */
+/** Read again when the mail goes: null when the akce is gone, no longer late, its close has passed or its window is over. */
 export async function loadReportEnded(tx: Reads, itemId: string): Promise<ReportEndedFacts | null> {
   const { now } = tx.ctx;
   const item = await tx.futureItems.reportEnding(itemId);
   if (!item) return null;
   const { slots, rule } = await readSlots(tx, now);
   const close = lateClose(slots, rule, now, item);
-  if (!close) return null;
+  if (!close || !stillDue('ended', item, close, now)) return null;
   const { authorId, state, expectsReport, reportState } = item;
   return {
     authorId,
@@ -154,7 +169,7 @@ export interface LastCallFacts {
   readonly due: Date;
 }
 
-/** Read again when the mail goes: null when the report is gone or not late for its slot any more. */
+/** Read again when the mail goes: null when the report is gone, not late for its slot any more or past the last call's window. */
 export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, id: string) {
   const { now } = tx.ctx;
   const item = await tx.futureItems.reportEnding(id);
@@ -171,7 +186,7 @@ export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, id: string) {
   if (!found) return null;
   const { slots, rule } = await readSlots(tx, now);
   const close = lateClose(slots, rule, now, found.facts);
-  if (!close) return null;
+  if (!close || !stillDue('last-call', found.facts, close, now)) return null;
   const facts: LastCallFacts = {
     authorId: found.facts.authorId,
     open: found.open,

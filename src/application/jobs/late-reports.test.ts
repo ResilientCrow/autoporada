@@ -311,6 +311,32 @@ describe('what goes at send time', () => {
     expect(mail.calls).toHaveLength(0);
   });
 
+  it.each([
+    ['21:04', 'sent'],
+    ['21:06', 'skipped.stale'],
+  ])(
+    'at %s, the mail at the end, with the last call started at 21.00Z and a short grace for the queue, is %s',
+    async (time, code) => {
+      const author = await world.seed.user({ role: 'submitter', email: 'jana@ssps.cz' });
+      const id = await akce(author, '2026-11-01', '21:00');
+      world.clock.set(at(time));
+      expect(await send(createFakeMail(), endedMail(author, id))).toMatchObject({ code });
+    },
+  );
+
+  it.each([
+    ['21:49', 'sent'],
+    ['21:51', 'skipped.stale'],
+  ])(
+    'at %s, the last call, which stops at 21.45Z, with the same grace, is %s',
+    async (time, code) => {
+      const author = await world.seed.user({ role: 'submitter', email: 'jana@ssps.cz' });
+      const id = await akce(author, '2026-11-01', '21:00');
+      world.clock.set(at(time));
+      expect(await send(createFakeMail(), callMail(author, 'akce', id))).toMatchObject({ code });
+    },
+  );
+
   it('sends the last call of a draft, and drops it once the draft is handed in or returned to nobody', async () => {
     const author = await world.seed.user({ role: 'submitter', email: 'jana@ssps.cz' });
     const draft = await report(author, '2026-11-01', '21:00');
