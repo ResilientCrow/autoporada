@@ -1,6 +1,7 @@
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
+import { orderConflicts } from '@/domain/calendar';
 import { compareDates } from '@/domain/time';
 
 import { mondayOfText, readWindow } from './calendar';
@@ -16,7 +17,8 @@ const UNTOUCHED_VERSION = 1;
  * calendar (`readWindow`: from this week's Monday on, or earlier with a meeting still ahead)
  * whatever its deadline: after the deadline the approved points move to the next porada, which
  * the form says. A generated slot has no skip or unskip (the machine refuses it as a conflict).
- * A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
+ * An unskip that would break the meeting order is refused (`meeting-order`; the wire carries
+ * codes only, so the conflicting slots are not named). A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
  * is computed on read.
  */
 export const setSkipped = defineUseCase({
@@ -31,8 +33,13 @@ export const setSkipped = defineUseCase({
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
     const { slots, rule } = await readWindow(tx, now);
-    if (!slots.some((slot) => compareDates(slot.monday, monday) === 0)) {
-      return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
+    const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
+    if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
+    // A porada that takes place again must still fit the order of the others (ADR 0034).
+    if (input.event === 'unskip' && slot.status === 'skipped') {
+      const back = { ...slot, status: 'open' as const };
+      if (orderConflicts(slots, back).length > 0)
+        return fail({ code: 'rule', rule: 'meeting-order' });
     }
 
     const { issue } = await ensureIssue(tx, monday, rule);

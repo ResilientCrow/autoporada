@@ -48,6 +48,8 @@ export const rules = {
   'quotes-not-allowed': 'Vyjádření lze přidat jen k\u00A0bodu o\u00A0partnerech.',
   'quotes-full': 'K\u00A0bodu lze přidat nejvýš 20\u00A0vyjádření.',
   'item-missing': 'Tento bod už v\u00A0pokynech není. Načtěte stránku znovu.',
+  'meeting-order':
+    'Porady musí následovat v\u00A0pořadí kalendáře a\u00A0jejich uzávěrky také. Tato změna by pořadí porušila.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {
