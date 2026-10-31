@@ -22,6 +22,7 @@ export {
 } from './points';
 export { savePointType } from './point-types';
 export { setReminders } from './profile';
+export { addEntries, moveList, removeEntry, saveEntry, saveList } from './registry';
 export { decidePoint, reviewEditPoint } from './review';
 export { saveSettings } from './settings';
 export { changeUserAccess } from './users';

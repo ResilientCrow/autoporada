@@ -10,6 +10,7 @@ export { people } from './people';
 export { pointTypes } from './pointTypes';
 export { points } from './points';
 export { profile } from './profile';
+export { registry } from './registry';
 export { review } from './review';
 export { settings } from './settings';
 export { status } from './status';

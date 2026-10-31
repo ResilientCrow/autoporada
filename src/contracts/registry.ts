@@ -51,7 +51,8 @@ const entryValues = {
   classCode,
 };
 
-const listCount = z.strictObject({ active: z.int().min(0), fresh: z.int().min(0) });
+/** `entries`: the list's active students; `fresh`: those never printed. */
+const listCount = z.strictObject({ entries: z.int().min(0), fresh: z.int().min(0) });
 
 const listWire = z.strictObject({
   id: z.uuid(),

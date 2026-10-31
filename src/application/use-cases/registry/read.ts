@@ -19,7 +19,7 @@ export const readRegistry = defineUseCase({
     const counts = new Map((await tx.registry.counts()).map((c) => [c.listId, c]));
     const withCounts = lists.map((list) => ({
       ...list,
-      active: counts.get(list.id)?.active ?? 0,
+      entries: counts.get(list.id)?.active ?? 0,
       fresh: counts.get(list.id)?.fresh ?? 0,
     }));
     if (input.key === undefined) return ok({ lists: withCounts, current: null });

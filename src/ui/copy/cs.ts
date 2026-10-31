@@ -10,6 +10,7 @@ import { people } from './people';
 import { pointTypes } from './pointTypes';
 import { points } from './points';
 import { profile } from './profile';
+import { registry } from './registry';
 import { privacy } from './privacy';
 import { review } from './review';
 import { settings } from './settings';
@@ -39,6 +40,7 @@ export const cs = {
   future,
   pointTypes,
   settings,
+  registry,
   review,
   autosave,
   people,
