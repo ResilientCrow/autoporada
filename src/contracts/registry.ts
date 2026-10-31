@@ -39,7 +39,7 @@ const studentName = z
 const classCode = z
   .string()
   .trim()
-  .max(12)
+  .max(12, { abort: true })
   .refine(isClassCode)
   .transform(normalizeClass)
   .pipe(z.string().min(1).max(8));

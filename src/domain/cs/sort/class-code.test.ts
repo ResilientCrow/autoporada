@@ -65,6 +65,26 @@ describe('class codes', () => {
   });
 });
 
+describe('class code input bounds', () => {
+  const longRun = `1${' '.repeat(100_000)}!`;
+
+  it('refuses a long run of spaces without backtracking', () => {
+    const started = performance.now();
+    expect(parseClass(longRun)).toBeNull();
+    expect(parseClass(`L${' '.repeat(100_000)}1${' '.repeat(100_000)}!`)).toBeNull();
+    expect(normalizeClass(longRun)).toBe(longRun.trim());
+    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it('still reads a generously spaced real class', () => {
+    expect(parseClass('L 2 . AB')).toEqual({ year: 2, program: 'L', letter: 'AB' });
+  });
+
+  it('is not a class when longer than any real one', () => {
+    expect(parseClass('1.                  A')).toBeNull();
+  });
+});
+
 describe('Czech collation', () => {
   it('sorts surnames the Czech way (ch after h, č after c, ř after r)', () => {
     const surnames = [

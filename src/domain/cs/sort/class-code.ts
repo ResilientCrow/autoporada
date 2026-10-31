@@ -11,11 +11,16 @@ export interface ClassKey {
   readonly letter: string;
 }
 
-const NUMERIC = /^(\d)\s*\.?\s*([A-Za-z]{1,2})$/;
-const PROGRAM = /^([A-Za-z]{1,2})\s*(\d)\s*\.?\s*([A-Za-z]{0,2})$/;
+/** The longest text that can be a class once trimmed; a longer one is refused before any regex runs. */
+const CLASS_CODE_MAX = 12;
+
+/** Spacing is at most two blanks in a row, so the patterns cannot backtrack on a long run. */
+const NUMERIC = /^(\d)\s{0,2}\.?\s{0,2}([A-Za-z]{1,2})$/;
+const PROGRAM = /^([A-Za-z]{1,2})\s{0,2}(\d)\s{0,2}\.?\s{0,2}([A-Za-z]{0,2})$/;
 
 export function parseClass(text: string): ClassKey | null {
   const raw = text.trim();
+  if (raw.length > CLASS_CODE_MAX) return null;
   const numeric = NUMERIC.exec(raw);
   if (numeric)
     return { year: Number(numeric[1]), program: '', letter: (numeric[2] ?? '').toUpperCase() };
