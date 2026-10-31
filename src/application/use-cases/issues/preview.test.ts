@@ -272,7 +272,7 @@ describe('issues.preview', () => {
     it('reports a text the snapshot refuses as snapshot-invalid with the path only, and no snapshot', async () => {
       const head = await headmaster();
       const issue = await fixtures.issue(W1);
-      await texts(issue, { present: 'Jan‮Novák' });
+      await texts(issue, { present: 'Jan\u202eNovák' });
       const result = await world.run(issuePreview, world.as(head), { monday: iso(W1) });
       if (!result.ok) throw new Error('refused');
       expect(result.value.snapshot).toBeNull();
