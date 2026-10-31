@@ -12,7 +12,7 @@ record that supersedes it.
 | [0004](0004-module-boundaries.md) | Layered modules with enforced dependency rules | Accepted; the layer table extended in part by 0023 |
 | [0005](0005-document-engine.md) | Snapshot → DocumentModel → DOCX / HTML | Accepted |
 | [0006](0006-background-jobs.md) | pg-boss worker with transactional enqueue | Accepted; partly superseded by 0015 |
-| [0007](0007-rich-text.md) | Restricted rich text as flat indented paragraphs | Accepted |
+| [0007](0007-rich-text.md) | Restricted rich text as flat indented paragraphs | Accepted; refined by 0031 |
 | [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted |
 | [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Accepted |
 | [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted; partly superseded by 0015 |
@@ -23,7 +23,7 @@ record that supersedes it.
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
 | [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
 | [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted; items 5 and 7 superseded in part by 0024 |
-| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026 |
+| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030 |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
 | [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted |
 | [0021](0021-web-access-to-graph.md) | Web access to Graph: a registration of its own, the `ap-edge` bridge | Accepted |
@@ -34,3 +34,6 @@ record that supersedes it.
 | [0026](0026-retract-clears-the-hand-in.md) | A retract clears the hand-in | Accepted |
 | [0027](0027-start-report-goes-to-its-draft.md) | „Napsat zprávu“ goes to its draft from the client | Accepted |
 | [0028](0028-digest-of-requests-links-the-users-page.md) | A digest of access requests links the users page | Accepted |
+| [0029](0029-points-go-to-an-issue-by-their-due-monday.md) | Points go to an issue by their due Monday | Accepted |
+| [0030](0030-the-issue-outline.md) | The issue outline | Accepted |
+| [0031](0031-rich-text-editor-under-the-nonce-csp.md) | Rich-text editor under the nonce CSP | Accepted |
