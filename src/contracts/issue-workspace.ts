@@ -11,6 +11,8 @@ const slot = z.strictObject({
   status: z.enum(['open', 'generated', 'skipped']),
   /** Null for a Monday without a row yet. */
   version: z.number().int().positive().nullable(),
+  /** The meeting the approved points move to if this porada is skipped; null when no slot follows. */
+  next: z.iso.date().nullable(),
   counts: z.strictObject({
     waiting: z.int().min(0),
     returned: z.int().min(0),

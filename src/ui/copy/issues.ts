@@ -4,7 +4,7 @@ export const issues = {
     title: 'Nejbližší porady',
     unconfirmed: 'Potvrďte prosím změnu.',
     meeting: (label: string) => `Porada ${label}`,
-    stale: 'Uzávěrka této porady už proběhla. Načtěte prosím stránku.',
+    stale: 'Tato porada už není v\u00a0kalendáři. Načtěte prosím stránku.',
     said: {
       skip: (label: string) => `Porada ${label} se nekoná.`,
       unskip: (label: string) => `Porada ${label} se koná.`,

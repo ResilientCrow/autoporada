@@ -65,6 +65,8 @@ interface PoradaPageModel {
   readonly status: IssueStatus;
   /** Null for a Monday without a row yet. */
   readonly version: number | null;
+  /** „10. 11. 2026“: the porada the approved points move to if this one is skipped. */
+  readonly nextLabel: string | null;
   readonly counts: NonNullable<Workspace['slot']>['counts'];
 }
 
@@ -96,6 +98,7 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
       deadlinePassed: deadlineAt.getTime() <= getContainer().app.clock.now().getTime(),
       status: slot.status,
       version: slot.version,
+      nextLabel: slot.next === null ? null : formatNumericDate(parseIsoDate(slot.next)),
       counts: slot.counts,
     },
   };

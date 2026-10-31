@@ -35,6 +35,14 @@ export const porada = {
     preview: 'Náhled',
   },
   generate: { button: 'Vygenerovat', later: 'Generování přijde v\u00a0další verzi.' },
+  skip: {
+    title: 'Porada se nekoná',
+    /** `next` arrives written, „10. 11. 2026“. */
+    afterDeadline: (next: string) =>
+      `Uzávěrka už proběhla; schválené body se přesunou na poradu ${next}.`,
+    noNext: 'Uzávěrka už proběhla a\u00a0po této poradě žádná další není v\u00a0kalendáři.',
+    kept: (next: string) => `Body odevzdané během zrušení zůstávají na poradě ${next}.`,
+  },
   preview: {
     title: 'Náhled',
     back: 'Zpět na přípravu porady',

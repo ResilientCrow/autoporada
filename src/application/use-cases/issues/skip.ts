@@ -1,6 +1,5 @@
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
-import { skipWindow } from '@/domain/calendar';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
 import { compareDates } from '@/domain/time';
 
@@ -13,12 +12,12 @@ const ACTIONS = { skip: 'issue.skipped', unskip: 'issue.unskipped' } as const;
 const UNTOUCHED_VERSION = 1;
 
 /**
- * „Porada se nekoná“ and its undo, for one Monday. The headmaster may
- * skip any Monday from the first one whose deadline is still ahead (frozen
- * deadlines counted, a skipped one too, so it can be undone) up to the
- * last slot Monday, the end of the calendar the placement looks at; an
- * earlier Monday is closed to submissions and can no longer be skipped. A missing row is made first (ADR 0018).
- * Skipping writes no point and sends no mail: placement is computed on read.
+ * „Porada se nekoná“ and its undo, for one slot. The headmaster may skip any slot of the
+ * calendar (`readWindow`: from this week's Monday on, or earlier with a meeting still ahead)
+ * whatever its deadline: after the deadline the approved points move to the next porada, which
+ * the form says. A generated slot has no skip or unskip (the machine refuses it as a conflict).
+ * A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
+ * is computed on read.
  */
 export const setSkipped = defineUseCase({
   name: 'issues.setSkipped',
@@ -32,8 +31,7 @@ export const setSkipped = defineUseCase({
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
     const { slots, rule } = await readWindow(tx, now);
-    const { first, last } = skipWindow(now, slots, rule);
-    if (compareDates(monday, first) < 0 || compareDates(monday, last) > 0) {
+    if (!slots.some((slot) => compareDates(slot.monday, monday) === 0)) {
       return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     }
 

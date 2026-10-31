@@ -3,6 +3,7 @@ import { porada } from '@/ui/copy';
 import { Button, Card, SlantLabel } from '@/ui/kit';
 import { Chip, ISSUE_LOOK } from '@/ui/status';
 
+import { SkipControl, type SkipAction } from './SkipControl';
 import { Steps } from './Steps';
 
 /** One porada as /porada/[datum] shows it; the dates arrive written out. */
@@ -10,11 +11,17 @@ export interface WorkspaceView {
   readonly monday: string;
   /** „pondělí 9. listopadu 2026“. */
   readonly meeting: string;
+  /** „9. 11. 2026“. */
+  readonly meetingLabel: string;
   /** „2. 11.“ when the porada was moved from its Monday. */
   readonly movedFrom: string | null;
   readonly deadline: { readonly weekday: string; readonly date: string; readonly time: string };
   readonly deadlinePassed: boolean;
   readonly status: IssueStatus;
+  /** Null for a Monday without a row yet. */
+  readonly version: number | null;
+  /** The porada the approved points move to without this one; null when none follows. */
+  readonly nextLabel: string | null;
   readonly counts: {
     readonly waiting: number;
     readonly returned: number;
@@ -28,7 +35,13 @@ export interface WorkspaceView {
  * waits for it, and the steps of preparing the document. Generating comes with M10 and is only
  * announced.
  */
-export function Workspace({ view }: { readonly view: WorkspaceView }) {
+export function Workspace({
+  view,
+  setSkipped,
+}: {
+  readonly view: WorkspaceView;
+  readonly setSkipped: SkipAction;
+}) {
   const { deadline, counts } = view;
   const when = porada.deadline[view.deadlinePassed ? 'passed' : 'ahead'];
   return (
@@ -52,6 +65,19 @@ export function Workspace({ view }: { readonly view: WorkspaceView }) {
             {counts.later > 0 && <li>{porada.counts.later(counts.later)}</li>}
           </ul>
         </Card>
+        {view.status !== 'generated' && (
+          <SkipControl
+            action={setSkipped}
+            view={{
+              monday: view.monday,
+              label: view.meetingLabel,
+              status: view.status,
+              version: view.version,
+              deadlinePassed: view.deadlinePassed,
+              next: view.nextLabel,
+            }}
+          />
+        )}
         <Steps monday={view.monday} />
         <div className="space-y-2">
           <Button isDisabled describedBy="generovani-pozn">

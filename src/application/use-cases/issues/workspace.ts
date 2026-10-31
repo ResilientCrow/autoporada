@@ -1,6 +1,6 @@
 import { defineUseCase, fail, ok } from '@/application/core';
 import { issueWorkspaceInput, issueWorkspaceOutput } from '@/contracts';
-import { workingSlot } from '@/domain/calendar';
+import { placementSlot, workingSlot } from '@/domain/calendar';
 import { compareDates, instantToWallClock, toIsoDate } from '@/domain/time';
 
 import { mondayOfText, readWindow } from './calendar';
@@ -19,7 +19,8 @@ export const issueWorkspace = defineUseCase({
   access: { kind: 'gate', check: () => ({ action: 'issue.preview' }) },
   async execute({ tx, now }, input) {
     const { slots } = await readWindow(tx, now);
-    const working = workingSlot(instantToWallClock(now).date, slots);
+    const today = instantToWallClock(now).date;
+    const working = workingSlot(today, slots);
     const workingMonday = working && toIsoDate(working.monday);
     if (input.monday === undefined) return ok({ working: workingMonday, slot: null });
 
@@ -28,6 +29,9 @@ export const issueWorkspace = defineUseCase({
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'not-found' });
 
+    // Where the points go if this porada does not take place: the next open slot from its Monday.
+    const without = slots.map((s) => (s === slot ? { ...s, status: 'skipped' as const } : s));
+    const next = placementSlot(slot.monday, today, without);
     const [row] = await tx.issues.between(monday, monday);
     const waiting = await tx.points.waitingFor(monday, slot.meetingDate);
     const approved = await tx.points.eligibleFor(monday, slot.meetingDate);
@@ -39,6 +43,7 @@ export const issueWorkspace = defineUseCase({
         deadlineAt: slot.deadlineAt.toISOString(),
         status: slot.status,
         version: row?.version ?? null,
+        next: next && toIsoDate(next.meetingDate),
         counts: {
           waiting: waiting.submitted.length,
           returned: waiting.returned.length,

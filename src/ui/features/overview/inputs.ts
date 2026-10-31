@@ -18,7 +18,7 @@ const COPY = { skip, unskip } as const;
 
 /**
  * The spec of one Monday's form. `monday` has no control: it names the heading
- * and gives a Monday whose deadline has passed (`invalid`) its own message.
+ * and gives a Monday outside the calendar (`invalid`) its own message.
  */
 export function skipSpec(event: 'skip' | 'unskip', label: string): FormSpec {
   return {

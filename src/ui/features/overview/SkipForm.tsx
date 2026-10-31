@@ -18,7 +18,7 @@ const COPY = { skip: issues.strip.skip, unskip: issues.strip.unskip } as const;
 /**
  * The confirmed „Porada se nekoná“ or „Porada se koná“ of one Monday, a group
  * named by the heading `labelledBy` so each button is announced with its date.
- * A Monday whose deadline has passed fails on `monday`, which the summary links
+ * A Monday that has left the calendar fails on `monday`, which the summary links
  * to that heading; a `conflict` shows as a problem. On success the page
  * re-renders with the new status and version (the action refreshes it) and
  * `onDone` lets the host say what happened.
