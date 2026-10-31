@@ -5,9 +5,22 @@ import {
   typographizeText,
   weekdayName,
 } from '@/domain/cs';
-import { instantToWallClock, type CalDate } from '@/domain/time';
+import { addDays, instantToWallClock, type CalDate } from '@/domain/time';
 
 import { frame, type Body } from './frame';
+
+/**
+ * A close as the mails print it: „1. 11. v 23.59“. A late report's close is capped at 00.00 of the
+ * meeting day (ADR 0035), which would read as the meeting day itself; it is printed as the last
+ * minute of the day before.
+ */
+function closeText(due: Date): string {
+  const { date, time } = instantToWallClock(due);
+  const midnight = time.hour === 0 && time.minute === 0;
+  const day = midnight ? addDays(date, -1) : date;
+  const clock = midnight ? '23.59' : formatTime(time);
+  return `${formatDayMonth(day)} v\u00A0${clock}`;
+}
 
 /**
  * Mails are plain text and carry no personal data: the subjects are constants
@@ -207,9 +220,8 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} proběhla. Schváleno: ${approved}, čeká na kontrolu: ${pending}, vráceno k\u00A0úpravě: ${returned}.`,
     ];
     if (lateExpected > 0 && lastLateDue) {
-      const { date, time } = instantToWallClock(lastLateDue);
       paragraphs.push(
-        `Pozdní zprávy, které ještě chybí: ${lateExpected}. Poslední uzávěrka je ${formatDayMonth(date)} v\u00A0${formatTime(time)}.`,
+        `Pozdní zprávy, které ještě chybí: ${lateExpected}. Poslední uzávěrka je ${closeText(lastLateDue)}.`,
       );
     }
     return {
@@ -242,8 +254,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
   },
   // The akce is not named (ADR 0016): a date, a time and the porada.
   'report.ended': ({ due, meetingDate }) => {
-    const { date, time } = instantToWallClock(due);
-    const when = `${formatDayMonth(date)} v\u00A0${formatTime(time)}`;
+    const when = closeText(due);
     return {
       subject: `Autoporada: akce skončila, zprávu odevzdejte do ${when}`,
       body: {
@@ -256,13 +267,12 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
   },
   // An hour before the close of a late report that is still not handed in; no title, no name.
   'report.last-call': ({ due, meetingDate }) => {
-    const { date, time } = instantToWallClock(due);
-    const when = `${formatDayMonth(date)} v\u00A0${formatTime(time)}`;
+    const when = closeText(due);
     return {
       subject: `Autoporada: poslední hodina na zprávu (do ${when})`,
       body: {
         paragraphs: [
-          `zpráva z\u00A0akce, kterou jste zapsali do přehledu, ještě není odevzdaná. Odevzdejte ji do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
+          `zpráva o\u00A0akci ještě není odevzdaná. Odevzdejte ji do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
         ],
         link: '/body',
       },

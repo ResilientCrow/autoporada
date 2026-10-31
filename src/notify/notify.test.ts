@@ -145,7 +145,7 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
   'report.last-call': {
     subject: `Autoporada: poslední hodina na zprávu (do 23.${NB}11. v${NB}20.00)`,
     text: letter(
-      `zpráva z${NB}akce, kterou jste zapsali do přehledu, ještě není odevzdaná. Odevzdejte ji do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
+      `zpráva o${NB}akci ještě není odevzdaná. Odevzdejte ji do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
     ),
   },
   'headmaster.late-summary': {
@@ -157,6 +157,60 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
 };
 
 describe('renderMail', () => {
+  describe('a close capped at 00.00 of the meeting day', () => {
+    // 00.00 Prague on Monday 2 November 2026 (CET): the close reads as the minute before it.
+    const MIDNIGHT = new Date('2026-11-01T23:00:00Z');
+    const shown = `1.${NB}11. v${NB}23.59`;
+
+    it('prints the day before, 23.59, in the mail at the end and the last call', () => {
+      const ended = renderMail(
+        'report.ended',
+        { meetingDate: calDate(2026, 11, 2), due: MIDNIGHT },
+        ORIGIN,
+      );
+      const call = renderMail(
+        'report.last-call',
+        { meetingDate: calDate(2026, 11, 2), due: MIDNIGHT },
+        ORIGIN,
+      );
+      expect(ended.subject).toContain(`do ${shown}`);
+      expect(ended.text).toContain(`do ${shown},`);
+      expect(call.subject).toContain(`(do ${shown})`);
+      expect(call.text).toContain(`do ${shown},`);
+      expect(ended.text + call.text).not.toContain('0.00');
+    });
+
+    it('prints it in the last close of the headmaster summary too', () => {
+      const { text } = renderMail(
+        'headmaster.summary',
+        {
+          meetingDate: calDate(2026, 11, 2),
+          approved: 1,
+          pending: 0,
+          returned: 0,
+          lateExpected: 2,
+          lastLateDue: MIDNIGHT,
+        },
+        ORIGIN,
+      );
+      expect(text).toContain(`Poslední uzávěrka je ${shown}.`);
+    });
+
+    it('leaves a close just after midnight as it is', () => {
+      const { subject } = renderMail(
+        'report.last-call',
+        { meetingDate: calDate(2026, 11, 2), due: new Date('2026-11-01T23:15:00Z') },
+        ORIGIN,
+      );
+      expect(subject).toContain(`2.${NB}11. v${NB}0.15`);
+    });
+  });
+
+  it('words the last call for an akce and for a report draft alike', () => {
+    const { text } = render('report.last-call');
+    expect(text).not.toContain('zapsali do přehledu');
+  });
+
   it('has a template for every name, in this order', () => {
     expect(TEMPLATE_NAMES).toEqual(Object.keys(EXPECTED));
   });
