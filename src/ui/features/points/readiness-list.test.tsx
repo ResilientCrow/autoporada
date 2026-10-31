@@ -75,7 +75,7 @@ describe('ReadinessList', () => {
   it('makes each link a block tall enough for the WCAG 2.2 target size', () => {
     const anchors = list(EMPTY).match(/<a [^>]*>/g) ?? [];
     expect(anchors).toHaveLength(2);
-    for (const anchor of anchors) expect(anchor).toContain('class="inline-block py-1"');
+    for (const anchor of anchors) expect(anchor).toContain('class="inline-block w-fit py-1"');
   });
 
   it('says so when nothing is missing, and shows no list', () => {
@@ -145,7 +145,9 @@ describe('SubmitPanel', () => {
       ],
     });
     expect(html).toContain(form.summaryTitle);
-    expect(html).toContain('<a href="#bod-title">Vyplňte název.</a>');
+    expect(html).toContain(
+      '<a href="#bod-title" class="inline-block w-fit py-1">Vyplňte název.</a>',
+    );
     expect(html.indexOf(form.summaryTitle)).toBeLessThan(html.indexOf(points.readiness.heading));
     expect(cspMarkupProblems(html)).toEqual([]);
     expect(html).not.toContain('style=');

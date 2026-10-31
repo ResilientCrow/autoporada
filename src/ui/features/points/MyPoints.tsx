@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { formatDayMonth } from '@/domain/cs';
 import { parseIsoDate } from '@/domain/time';
 import { points } from '@/ui/copy';
-import { ArrowLink, buttonStyles, SlantLabel } from '@/ui/kit';
+import { ArrowLink, ButtonLink, ItemLink, SlantLabel } from '@/ui/kit';
 import { Chip, POINT_LOOK } from '@/ui/status';
 
 import { groupMyPoints, type MyPointRow, type MyPointsGroup } from './my-points';
@@ -13,9 +12,9 @@ function PointRow({ row }: { readonly row: MyPointRow }) {
   return (
     <li className="space-y-1">
       <p className="flex flex-wrap items-center gap-2">
-        <Link href={`/body/${row.id}`} prefetch={false} className="font-bold">
+        <ItemLink href={`/body/${row.id}`}>
           {row.title === '' ? points.untitled : row.title}
-        </Link>
+        </ItemLink>
         <Chip look={POINT_LOOK[row.state]} />
       </p>
       {row.returnNote === null ? null : <p>{row.returnNote}</p>}
@@ -77,13 +76,11 @@ export function MyPoints({
       {top}
       {first && rows.length === 0 ? <p>{points.mine.empty}</p> : null}
       <p>
-        <Link href="/body/novy" prefetch={false} className={buttonStyles('primary')}>
-          {points.title.new}
-        </Link>
+        <ButtonLink href="/body/novy">{points.title.new}</ButtonLink>
         {/* A finance or pokyn proposal: the second way to start a point (design section 11). */}{' '}
-        <Link href="/navrhy/novy" prefetch={false} className={buttonStyles('secondary')}>
+        <ButtonLink href="/navrhy/novy" variant="secondary">
           {points.proposal.title}
-        </Link>
+        </ButtonLink>
       </p>
       {groupMyPoints(rows).map((group) => (
         <Group key={group.group} {...group} />

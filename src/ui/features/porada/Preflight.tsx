@@ -1,9 +1,7 @@
-import Link from 'next/link';
-
 import { formatClose, formatDayMonth, formatNumericDate } from '@/domain/cs';
 import { parseIsoDate } from '@/domain/time';
 import { porada } from '@/ui/copy';
-import { Notice } from '@/ui/kit';
+import { ItemLink, Notice } from '@/ui/kit';
 
 /** One line of the preflight list as `issues.preview` answers it. */
 export interface FindingView {
@@ -45,9 +43,9 @@ function dueText(ref: RefView): string {
 function EarlierLink({ earlier }: { readonly earlier: NonNullable<FindingView['earlier']> }) {
   return (
     <p>
-      <Link href={`/porada/${earlier.monday}`} prefetch={false} className="font-bold">
+      <ItemLink href={`/porada/${earlier.monday}`}>
         {porada.preflight.earlier(formatNumericDate(parseIsoDate(earlier.meetingDate)))}
-      </Link>
+      </ItemLink>
     </p>
   );
 }
@@ -65,9 +63,7 @@ function Finding({ finding }: { readonly finding: FindingView }) {
         <ul className="list-disc space-y-1 pl-6">
           {finding.refs.map((ref) => (
             <li key={ref.id}>
-              <Link href={refHref(finding.code, ref)} prefetch={false} className="font-bold">
-                {ref.title}
-              </Link>
+              <ItemLink href={refHref(finding.code, ref)}>{ref.title}</ItemLink>
               {dueText(ref)}
             </li>
           ))}

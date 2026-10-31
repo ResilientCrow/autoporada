@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { ReactNode, Ref } from 'react';
 
 import { app, errors, problemActions, rules } from '@/ui/copy';
-import { Notice } from '@/ui/kit';
+import { Notice, TextLink } from '@/ui/kit';
 
 import { retryAfterText, type Problem } from './settle';
 
@@ -45,11 +44,7 @@ function actionOf(problem: Problem, pathname: string, location: string): ReactNo
     return <SignInLink path="/auth/step-up" label={problemActions.stepUp} pathname={pathname} />;
   }
   if (problem.code === 'conflict' || problem.code === 'not-found') {
-    return (
-      <Link href={location} prefetch={false}>
-        {problemActions.reload}
-      </Link>
-    );
+    return <TextLink href={location}>{problemActions.reload}</TextLink>;
   }
   return null;
 }

@@ -1,10 +1,9 @@
-import Link from 'next/link';
-
 import { QUEUE_LIMIT } from '@/contracts';
 import { formatDayMonth, formatNumericDate, formatNumericRange } from '@/domain/cs';
 import type { FutureKind } from '@/domain/calendar';
 import { compareDates, instantToWallClock, parseIsoDate } from '@/domain/time';
 import { future, points, review } from '@/ui/copy';
+import { ItemLink } from '@/ui/kit';
 
 /** A handed-in akce or jednání as the queue lists it; dates are ISO, the page writes them out. */
 interface QueueFutureRow {
@@ -51,9 +50,9 @@ export function QueueFuture({ future: waiting }: { readonly future: QueueFutureM
         {waiting.items.map((row) => (
           <li key={row.id} className="space-y-1">
             <p>
-              <Link href={`/akce/${row.id}`} prefetch={false} className="font-bold">
+              <ItemLink href={`/akce/${row.id}`}>
                 {row.title === '' ? points.untitled : row.title}
-              </Link>
+              </ItemLink>
             </p>
             <p>
               {future.kind[row.kind]}

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { future, points } from '@/ui/copy';
@@ -12,6 +11,7 @@ import {
   useActionForm,
   type FormSpec,
 } from '@/ui/form';
+import { ItemLink } from '@/ui/kit';
 
 import type { DeclineFutureReportAction, StartFutureReportAction } from './actions';
 import { declineReportInput, reportHref, startReportInput } from './calls';
@@ -74,10 +74,10 @@ export function ReportDueRow({
   const titleId = `akce-zprava-${item.id}-nazev`;
   return (
     <li className="space-y-2">
-      <p className="font-bold">
-        <Link id={titleId} href={`/akce/${item.id}`} prefetch={false}>
+      <p>
+        <ItemLink id={titleId} href={`/akce/${item.id}`}>
           {item.title === '' ? points.untitled : item.title}
-        </Link>
+        </ItemLink>
       </p>
       {when === null ? null : <p>{when}</p>}
       {types.length === 0 ? null : (

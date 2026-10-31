@@ -1,11 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { gallery } from '@/ui/copy';
 import { AutosaveStatus, useAutosave, type SaveAnswer, type StatusAnswer } from '@/ui/form';
-import { buttonStyles } from '@/ui/kit';
+import { buttonStyles, TextLink } from '@/ui/kit';
 
 const { autosave } = gallery;
 
@@ -96,9 +95,7 @@ export function AutosaveDemo() {
       <p>{autosave.armed(autosave.arm[armed])}</p>
       <p>{autosave.refreshed(refreshed)}</p>
       <p>
-        <Link href="/" prefetch={false}>
-          {autosave.leave}
-        </Link>
+        <TextLink href="/">{autosave.leave}</TextLink>
       </p>
     </div>
   );

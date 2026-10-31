@@ -1,9 +1,8 @@
-import Link from 'next/link';
 import type { z } from 'zod';
 
 import type { listFutureOutput } from '@/contracts';
 import { future, points } from '@/ui/copy';
-import { ArrowLink, buttonStyles, SlantLabel } from '@/ui/kit';
+import { ArrowLink, ButtonLink, ItemLink, SlantLabel } from '@/ui/kit';
 import { Chip, FUTURE_LOOK } from '@/ui/status';
 
 import { campusAndPlace, responsibleText, whenText } from './facts';
@@ -18,9 +17,9 @@ function Row({ row }: { readonly row: FutureRow }) {
   return (
     <li className="space-y-1">
       <p className="flex flex-wrap items-center gap-2">
-        <Link href={`/akce/${row.id}`} prefetch={false} className="font-bold">
+        <ItemLink href={`/akce/${row.id}`}>
           {row.title === '' ? points.untitled : row.title}
-        </Link>
+        </ItemLink>
         <span>{future.kind[row.kind]}</span>
         {/* An approved item of someone else needs no mark; a reviewer's list holds the rest too. */}
         {row.isAuthor || row.state !== 'approved' ? <Chip look={FUTURE_LOOK[row.state]} /> : null}
@@ -55,9 +54,7 @@ export function FutureList({
       <SlantLabel level={1}>{future.title}</SlantLabel>
       {canCreate ? (
         <p>
-          <Link href="/akce/novy" prefetch={false} className={buttonStyles('primary')}>
-            {future.new}
-          </Link>
+          <ButtonLink href="/akce/novy">{future.new}</ButtonLink>
         </p>
       ) : null}
       {first && rows.length === 0 ? <p>{future.empty}</p> : null}

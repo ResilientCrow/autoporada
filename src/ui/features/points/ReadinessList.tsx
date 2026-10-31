@@ -5,6 +5,7 @@ import { useDeferredValue, useMemo, type MouseEvent } from 'react';
 import type { BulletSpec, PointKind } from '@/domain/report';
 import { points } from '@/ui/copy';
 import { revealAndFocus } from '@/ui/form';
+import { InPageLink } from '@/ui/kit';
 
 import { pointFormSpec } from './editor-form';
 import type { PointContentWire } from './fields';
@@ -28,9 +29,9 @@ function Items({ items }: { readonly items: readonly ReadinessItem[] }) {
             text
           ) : (
             // A block of its own, so the target is the 24 px that WCAG 2.2 asks for.
-            <a className="inline-block py-1" href={`#${id}`} onClick={(event) => goTo(event, id)}>
+            <InPageLink id={id} onClick={(event) => goTo(event, id)}>
               {text}
-            </a>
+            </InPageLink>
           )}
         </li>
       ))}

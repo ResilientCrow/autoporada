@@ -1,5 +1,5 @@
 import type { PrivacyCopy } from '@/ui/copy';
-import { Card, Notice, SlantLabel } from '@/ui/kit';
+import { Card, InPageLink, Notice, SlantLabel } from '@/ui/kit';
 
 import { Blocks, SummaryBullets } from './Blocks';
 
@@ -24,7 +24,7 @@ export function PrivacyNotice({ notice }: { readonly notice: PrivacyCopy }) {
         <ul className="list-disc pl-6">
           {notice.sections.map((section) => (
             <li key={section.id}>
-              <a href={`#${section.id}`}>{section.title}</a>
+              <InPageLink id={section.id}>{section.title}</InPageLink>
             </li>
           ))}
         </ul>

@@ -155,8 +155,8 @@ describe('Form and TextField', () => {
       expect(bad).toMatch(new RegExp(`<h2 [^>]*>.*${cs.form.summaryTitle}</h2>`));
       const items = [...bad.matchAll(/<li>(.*?)<\/li>/g)].map((m) => m[1]);
       expect(items).toEqual([
-        `<a href="#f-title">Název: ${OWN}</a>`,
-        `<a href="#f-note">Poznámka: ${cs.fieldIssues['too-long']}</a>`,
+        `<a href="#f-title" class="inline-block w-fit py-1">Název: ${OWN}</a>`,
+        `<a href="#f-note" class="inline-block w-fit py-1">Poznámka: ${cs.fieldIssues['too-long']}</a>`,
         cs.fieldIssues.invalid,
       ]);
     });
@@ -321,8 +321,8 @@ describe('SelectField and CheckboxField', () => {
     });
 
     it('links the summary entries to the controls', () => {
-      expect(html).toContain(`<a href="#c-kind">Druh: ${OWN}</a>`);
-      expect(html).toContain('<a href="#c-agree">');
+      expect(html).toContain(`<a href="#c-kind" class="inline-block w-fit py-1">Druh: ${OWN}</a>`);
+      expect(html).toContain('<a href="#c-agree" class="inline-block w-fit py-1">');
       expect(html).toMatch(/<select [^>]*id="c-kind"/);
     });
 

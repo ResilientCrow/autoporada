@@ -214,6 +214,23 @@ export default defineConfig([
     },
   },
   {
+    // Links are the kit's (ADR 0043); it overrides the blocks above, so it repeats their paths.
+    files: ['src/ui/features/**/*.tsx', 'src/app/**/*.tsx'],
+    ignores: ['**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            ...RESTRICTED_IMPORT_PATHS,
+            { name: 'next/link', message: 'Use the kit links (ADR 0043).' },
+          ],
+          patterns: RESTRICTED_IMPORT_PATTERNS,
+        },
+      ],
+    },
+  },
+  {
     // The paper preview is server HTML too; it overrides the src block, so it repeats its selectors.
     files: ['src/document/render-html/**/*.tsx'],
     rules: {

@@ -19,8 +19,10 @@ export function ArrowLink({
   readonly describedBy?: string;
 }) {
   return (
-    <Link href={href} prefetch={false} aria-describedby={describedBy} className="font-bold">
-      {children} <Icon name="arrow" />
+    <Link href={href} prefetch={false} aria-describedby={describedBy} className="w-fit font-bold">
+      {children}
+      {'\u00a0'}
+      <Icon name="arrow" />
     </Link>
   );
 }

@@ -5,17 +5,22 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
 
+import { BackLink } from './BackLink';
 import { buttonStyles } from './button-styles';
 import {
   ArrowLink,
   BulletList,
   Button,
+  ButtonLink,
   Card,
   Cluster,
   Columns,
   Disclosure,
+  DownloadLink,
   FactList,
+  InPageLink,
   Item,
+  ItemLink,
   ItemList,
   Meta,
   Notice,
@@ -24,6 +29,7 @@ import {
   SlantLabel,
   Stack,
   StatusChip,
+  TextLink,
 } from './index';
 
 const TEXT = cs.gallery.title;
@@ -264,5 +270,68 @@ describe('layout primitives', () => {
 
   it('SlantLabel level 1 is smaller on phones', () => {
     expect(html(<SlantLabel level={1}>{TEXT}</SlantLabel>)).toContain('text-2xl sm:text-3xl');
+  });
+});
+
+describe('link kinds', () => {
+  it('TextLink is a plain, unprefetched link', () => {
+    const out = html(<TextLink href="/vzornik">{TEXT}</TextLink>);
+    expect(out).toBe(`<a href="/vzornik">${TEXT}</a>`);
+  });
+
+  it('InPageLink points at a hash and is a block of its own', () => {
+    const out = html(<InPageLink id="cil">{TEXT}</InPageLink>);
+    expect(out).toContain('href="#cil"');
+    expect(out).toContain('inline-block w-fit py-1');
+  });
+
+  it('ItemLink is bold, natural width, and can be named and described', () => {
+    const out = html(
+      <ItemLink href="/body/1" id="t" describedBy="d">
+        {TEXT}
+      </ItemLink>,
+    );
+    expect(out).toContain('id="t"');
+    expect(out).toContain('aria-describedby="d"');
+    expect(out).toContain('class="w-fit font-bold"');
+  });
+
+  it('BackLink leads with a hidden arrow and a no-break space', () => {
+    const out = html(<BackLink href="/akce">{TEXT}</BackLink>);
+    expect(out).toMatch(/^<a [^>]*href="\/akce"[^>]*><svg aria-hidden="true"/);
+    expect(out).toContain(`</svg>\u00a0${TEXT}</a>`);
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('ArrowLink and DownloadLink end in their icon after a no-break space', () => {
+    expect(html(<ArrowLink href="/vzornik">{TEXT}</ArrowLink>)).toContain(`${TEXT}\u00a0<svg`);
+    const download = html(<DownloadLink href="/porada/x/dokument/docx">{TEXT}</DownloadLink>);
+    expect(download).toContain('download=""');
+    expect(download).toContain('w-fit font-bold');
+    expect(download).toContain(`${TEXT}\u00a0<svg`);
+    expect(download).not.toContain('underline');
+  });
+
+  it('ButtonLink looks like a button and marks the current page', () => {
+    const other = html(
+      <ButtonLink href="/body/novy" variant="secondary">
+        {TEXT}
+      </ButtonLink>,
+    );
+    expect(other).toContain(buttonStyles('secondary'));
+    expect(other).not.toContain('aria-current');
+    const current = html(
+      <ButtonLink href="/body/novy" variant="secondary" current>
+        {TEXT}
+      </ButtonLink>,
+    );
+    expect(current).toContain('aria-current="page"');
+    expect(current).toContain(buttonStyles('primary'));
+  });
+
+  it('PageHeader puts the back link above the title', () => {
+    const out = html(<PageHeader title={TEXT} back={{ href: '/akce', label: cs.gallery.intro }} />);
+    expect(out.indexOf('href="/akce"')).toBeGreaterThan(0);
+    expect(out.indexOf('href="/akce"')).toBeLessThan(out.indexOf('<h1'));
   });
 });

@@ -1,7 +1,5 @@
-import Link from 'next/link';
-
 import { cs } from '@/ui/copy';
-import { PageHeader } from '@/ui/kit';
+import { PageHeader, TextLink } from '@/ui/kit';
 
 import { AutosaveDemo } from './AutosaveDemo';
 import { ControlDemos } from './ControlDemos';
@@ -20,9 +18,7 @@ export function Gallery({ unavailable = false }: { readonly unavailable?: boolea
       <PageHeader title={cs.gallery.title}>{cs.gallery.layout.headerMeta}</PageHeader>
       <p>{cs.gallery.intro}</p>
       <p>
-        <Link href="/vzornik?stav=vyjimka" prefetch={false}>
-          {cs.gallery.errorPage}
-        </Link>
+        <TextLink href="/vzornik?stav=vyjimka">{cs.gallery.errorPage}</TextLink>
       </p>
       <KitSections />
       <LayoutSections />

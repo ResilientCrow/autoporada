@@ -1,11 +1,9 @@
-import Link from 'next/link';
-
 import type { z } from 'zod';
 
 import { USER_GROUP_SLUGS, type listUsersOutput, type UserGroup } from '@/contracts';
 import { users } from '@/ui/copy';
 import { SearchForm } from '@/ui/form';
-import { SlantLabel } from '@/ui/kit';
+import { ItemLink, SlantLabel } from '@/ui/kit';
 import { ACCOUNT_LOOK, Chip, ROLE_LOOK, STUDENT_LOOK } from '@/ui/status';
 
 import type { DecideAction } from './DecisionForm';
@@ -54,9 +52,7 @@ export function UsersList({
               {view.users.map((user) => (
                 <li key={user.id} className="space-y-1 border-b-2 border-ink pb-2">
                   <p>
-                    <Link href={`/uzivatele/${user.id}`} prefetch={false} className="font-bold">
-                      {user.displayName}
-                    </Link>
+                    <ItemLink href={`/uzivatele/${user.id}`}>{user.displayName}</ItemLink>
                   </p>
                   {user.email !== null && <p className="break-all">{user.email}</p>}
                   <p className="flex flex-wrap gap-2">

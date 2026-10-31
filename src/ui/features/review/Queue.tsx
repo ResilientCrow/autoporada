@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { QUEUE_LIMIT } from '@/contracts';
@@ -6,7 +5,7 @@ import { formatDayMonth } from '@/domain/cs';
 import type { PointKind } from '@/domain/report';
 import { instantToWallClock, parseIsoDate } from '@/domain/time';
 import { points, review } from '@/ui/copy';
-import { SlantLabel } from '@/ui/kit';
+import { ItemLink, SlantLabel } from '@/ui/kit';
 
 import { QueueFuture, type QueueFutureModel } from './QueueFuture';
 
@@ -46,9 +45,9 @@ function Row({ row, children }: { readonly row: QueueRow; readonly children?: Re
   return (
     <li className="space-y-1">
       <p>
-        <Link href={`/kontrola/${row.id}`} prefetch={false} className="font-bold">
+        <ItemLink href={`/kontrola/${row.id}`}>
           {row.title === '' ? points.untitled : row.title}
-        </Link>
+        </ItemLink>
       </p>
       <p>
         {row.typeName === null ? null : <>{row.typeName} · </>}

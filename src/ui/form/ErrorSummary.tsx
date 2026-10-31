@@ -3,7 +3,7 @@
 import type { MouseEvent, Ref } from 'react';
 
 import { form } from '@/ui/copy';
-import { BulletList, Icon } from '@/ui/kit';
+import { BulletList, Icon, InPageLink } from '@/ui/kit';
 
 import { revealAndFocus } from './reveal-and-focus';
 import type { SummaryEntry } from './spec';
@@ -23,9 +23,9 @@ function SummaryItem({ id, text }: SummaryEntry) {
   if (id === null) return <li>{text}</li>;
   return (
     <li>
-      <a href={`#${id}`} onClick={focusControl}>
+      <InPageLink id={id} onClick={focusControl}>
         {text}
-      </a>
+      </InPageLink>
     </li>
   );
 }
