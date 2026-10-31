@@ -55,5 +55,9 @@ export function fakeSettingsRepo(tx: FakeTxState, ctx: TxContext): SettingsRepo 
       tx.draft.settings.set(key, { value: structuredClone(value), version });
       return version;
     },
+    async lock() {
+      // The fake runs one transaction at a time, which holds every lock.
+      guard(tx, false);
+    },
   };
 }

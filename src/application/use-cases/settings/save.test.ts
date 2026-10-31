@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { system } from '@/application/ports';
-import { SETTINGS } from '@/contracts';
+import { system, type IssueRecord } from '@/application/ports';
+import { SETTINGS, toDeadlineRule } from '@/contracts';
+import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
+import { schoolYear } from '@/domain/cs';
+import type { IssueStatus } from '@/domain/review';
+import { calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { setupWorld } from '../../../../test/support/world';
+import { readWindow } from '../issues';
 import { readSettings, saveSettings } from './index';
 
 const world = setupWorld();
@@ -172,5 +177,118 @@ describe('settings.save', () => {
     await expect(world.run(saveSettings, system('cli:test'), reminders(0))).rejects.toThrow(
       'settings.save: runs as a signed-in user',
     );
+  });
+
+  describe('the deadline rule (ADR 0032)', () => {
+    // The clock starts on Monday 19 October 2026: Saturday's deadline of the 19th has passed, so
+    // a hand-in goes to 26 October and a new rule applies from 2 November.
+    const SUNDAY = { dayOffset: -1, time: '18:00' };
+    const rule = toDeadlineRule(SUNDAY);
+    const deadlineRule = (value: unknown, version = 0) => ({ key: 'deadline', value, version });
+    const seeder = system('test.seed');
+    const issue = (monday: CalDate, status: IssueStatus = 'open', at?: Date) =>
+      world.tx(seeder, async (tx) => {
+        const { issue: row } = await tx.issues.ensure({
+          monday,
+          meetingDate: monday,
+          schoolYear: schoolYear(monday),
+          deadlineAt: at ?? deadline(monday, DEFAULT_DEADLINE),
+        });
+        return status === 'open' ? row : tx.issues.setStatus(row.id, row.version, status);
+      });
+    const rows = () =>
+      world.tx(
+        seeder,
+        (tx) => tx.issues.between(calDate(2026, 10, 1), calDate(2027, 6, 1)),
+        'read',
+      );
+    const byMonday = async () =>
+      new Map((await rows()).map((row): [string, IssueRecord] => [toIsoDate(row.monday), row]));
+    const window = () => world.tx(seeder, (tx) => readWindow(tx, world.clock.now()), 'read');
+
+    it('keeps the deadline people were shown and applies the new rule from the next Monday', async () => {
+      const head = await headmaster();
+      expect(await save(head, deadlineRule(SUNDAY))).toEqual({ ok: true, value: { version: 1 } });
+      const { slots, first } = await window();
+      expect(toIsoDate(first)).toBe('2026-10-26');
+      const at = (iso: string) => slots.find((slot) => toIsoDate(slot.monday) === iso)?.deadlineAt;
+      expect(at('2026-10-26')).toEqual(deadline(calDate(2026, 10, 26), DEFAULT_DEADLINE));
+      expect(at('2026-11-02')).toEqual(deadline(calDate(2026, 11, 2), rule));
+      expect([...(await byMonday()).keys()]).toEqual(['2026-10-19', '2026-10-26']);
+      const event = (await world.inspect.audit()).at(-1);
+      expect(event?.data).toMatchObject({ meta: { key: 'deadline', frozen: 2, refrozen: 0 } });
+    });
+
+    it('never sends the submit Monday backwards: Thursday to Sunday on a Friday (V3)', async () => {
+      await world.seed.setting('deadline', { dayOffset: -4, time: '20:00' });
+      world.clock.set(new Date('2026-10-23T10:00:00Z'));
+      const head = await headmaster();
+      const thursday = toDeadlineRule({ dayOffset: -4, time: '20:00' });
+      expect(await save(head, deadlineRule({ dayOffset: -1, time: '20:00' }, 1))).toMatchObject({
+        ok: true,
+      });
+      expect(toIsoDate((await window()).first)).toBe('2026-11-02');
+      const stored = await byMonday();
+      for (const iso of ['2026-10-26', '2026-11-02']) {
+        expect(stored.get(iso)?.deadlineAt, iso).toEqual(deadline(parseIsoDate(iso), thursday));
+      }
+    });
+
+    it('refreezes open rows after the kept Monday still on the old rule, and nothing else', async () => {
+      const kept = await issue(calDate(2026, 10, 26));
+      const ahead = await issue(calDate(2026, 11, 2));
+      const handSet = await issue(calDate(2026, 11, 9), 'open', new Date('2026-11-06T11:00:00Z'));
+      const skipped = await issue(calDate(2026, 11, 16), 'skipped');
+      const generated = await issue(calDate(2026, 11, 23), 'generated');
+      const head = await headmaster();
+      expect(await save(head, deadlineRule(SUNDAY))).toMatchObject({ ok: true });
+      const stored = await byMonday();
+      expect(stored.get('2026-11-02')).toEqual({
+        ...ahead,
+        deadlineAt: deadline(calDate(2026, 11, 2), rule),
+        version: 2,
+      });
+      for (const row of [kept, handSet, skipped, generated]) {
+        expect(stored.get(toIsoDate(row.monday))).toEqual(row);
+      }
+      const event = (await world.inspect.audit()).at(-1);
+      expect(event?.data).toMatchObject({ meta: { key: 'deadline', frozen: 1, refrozen: 1 } });
+    });
+
+    it('only saves a rule that is the one in force', async () => {
+      const head = await headmaster();
+      const same = { dayOffset: -2, time: '20:00' };
+      expect(await save(head, deadlineRule(same))).toEqual({ ok: true, value: { version: 1 } });
+      expect(await rows()).toEqual([]);
+    });
+
+    it('refuses a stale version with conflict and freezes nothing', async () => {
+      await issue(calDate(2026, 11, 2));
+      const before = await rows();
+      const audit = await world.inspect.audit();
+      const head = await headmaster();
+      expect(await save(head, deadlineRule(SUNDAY, 3))).toEqual({
+        ok: false,
+        error: { code: 'conflict' },
+      });
+      expect(await rows()).toEqual(before);
+      expect(await stored('deadline')).toBeNull();
+      expect(await world.inspect.audit()).toHaveLength(audit.length);
+    });
+
+    it.each([
+      ['the meeting day', { dayOffset: 0, time: '20:00' }],
+      ['five days before', { dayOffset: -5, time: '20:00' }],
+      ['07.45', { dayOffset: -2, time: '07:45' }],
+      ['20.10', { dayOffset: -2, time: '20:10' }],
+    ])('refuses %s as invalid input', async (_, value) => {
+      const head = await headmaster();
+      expect(await save(head, deadlineRule(value))).toMatchObject({
+        ok: false,
+        error: { code: 'invalid-input' },
+      });
+      expect(await stored('deadline')).toBeNull();
+      expect(await rows()).toEqual([]);
+    });
   });
 });

@@ -39,6 +39,25 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
     return toRecord(row);
   };
 
+  /** One version-checked UPDATE of a privileged write; StaleVersion for an unknown id too. */
+  const versioned = async (
+    id: string,
+    expectedVersion: number,
+    set: Partial<Pick<typeof issues.$inferInsert, 'status' | 'meetingDate' | 'deadlineAt'>>,
+  ) => {
+    // Privileged writes re-check the policy, whatever the use case declared (ADR 0011).
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+      throw new ScopeViolation();
+    }
+    const [row] = await db
+      .update(issues)
+      .set({ ...set, updatedAt: ctx.now, version: sql`${issues.version} + 1` })
+      .where(and(eq(issues.id, id), eq(issues.version, expectedVersion)))
+      .returning(ISSUE_ROW);
+    if (!row) throw new StaleVersion();
+    return toRecord(row);
+  };
+
   return {
     async ensure(issue) {
       const monday = toIsoDate(issue.monday);
@@ -89,18 +108,11 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
         meetingDate: parseIsoDate(row.meetingDate),
       }));
     },
-    async setStatus(id, expectedVersion, status) {
-      // Privileged writes re-check the policy, whatever the use case declared (ADR 0011).
-      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
-        throw new ScopeViolation();
-      }
-      const [row] = await db
-        .update(issues)
-        .set({ status, updatedAt: ctx.now, version: sql`${issues.version} + 1` })
-        .where(and(eq(issues.id, id), eq(issues.version, expectedVersion)))
-        .returning(ISSUE_ROW);
-      if (!row) throw new StaleVersion();
-      return toRecord(row);
-    },
+    setStatus: (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
+    reschedule: (id, expectedVersion, to) =>
+      versioned(id, expectedVersion, {
+        meetingDate: toIsoDate(to.meetingDate),
+        deadlineAt: to.deadlineAt,
+      }),
   };
 }

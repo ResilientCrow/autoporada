@@ -35,4 +35,14 @@ export interface IssueRepo {
    * caller checks the move against ISSUE_MACHINE.
    */
   setStatus(id: string, expectedVersion: number, status: IssueStatus): Promise<IssueRecord>;
+  /**
+   * Sets the meeting date and the frozen deadline, as `setStatus` sets the status: version-checked,
+   * the version rises by one, ScopeViolation for a user who may not `issue.generate`. A new
+   * deadline rule refreezes rows nobody was shown with it (ADR 0032); the caller checks the rest.
+   */
+  reschedule(
+    id: string,
+    expectedVersion: number,
+    to: Pick<IssueRecord, 'meetingDate' | 'deadlineAt'>,
+  ): Promise<IssueRecord>;
 }

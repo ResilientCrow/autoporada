@@ -211,6 +211,43 @@ describe('IssueRepo (port contract)', () => {
     });
   });
 
+  describe('reschedule (meeting date and deadline, under the version)', () => {
+    const MOVED = {
+      meetingDate: calDate(2026, 10, 28),
+      deadlineAt: new Date('2026-10-26T19:00:00Z'),
+    };
+    const reschedule = (row: IssueRecord, version = row.version, by: Principal = cli) =>
+      world.tx(by, async (tx) => {
+        const after = await tx.issues.reschedule(row.id, version, MOVED);
+        await tx.audit.record({ action: 'issue.moved', target: { type: 'issue', id: row.id } });
+        return after;
+      });
+
+    it('sets both and raises the version by one', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      const after = await reschedule(issue);
+      expect(after).toEqual({ ...issue, ...MOVED, version: 2 });
+      expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toEqual([after]);
+    });
+
+    it('refuses a stale version or an unknown issue and changes nothing', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      await setStatus(issue, 'skipped');
+      await expect(reschedule(issue)).rejects.toBeInstanceOf(StaleVersion);
+      const unknown = { ...issue, id: '00000000-0000-7000-8000-999999999999' };
+      await expect(reschedule(unknown, 2)).rejects.toBeInstanceOf(StaleVersion);
+      expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toMatchObject([
+        { meetingDate: MONDAY, deadlineAt: issue.deadlineAt, version: 2 },
+      ]);
+    });
+
+    it('lets only someone who may run the meeting reschedule it', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const { issue } = await ensure(issueOf(MONDAY));
+      await expect(reschedule(issue, 1, world.as(author))).rejects.toBeInstanceOf(ScopeViolation);
+    });
+  });
+
   it('writes nothing in a read transaction', async () => {
     await expect(read((tx) => tx.issues.ensure(issueOf(MONDAY)))).rejects.toBeInstanceOf(
       DatabaseFailure,

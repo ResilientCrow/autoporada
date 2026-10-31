@@ -21,6 +21,16 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
     return issue;
   };
 
+  const versioned = (id: string, expectedVersion: number, set: Partial<IssueRecord>) => {
+    guard(tx, true);
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+      throw new ScopeViolation();
+    }
+    const issue = [...issues.values()].find((i) => i.id === id);
+    if (!issue || issue.version !== expectedVersion) throw new StaleVersion();
+    return save({ ...issue, ...set, version: issue.version + 1 });
+  };
+
   return {
     async ensure(issue) {
       guard(tx, true);
@@ -49,14 +59,7 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
           status,
         }));
     },
-    async setStatus(id, expectedVersion, status) {
-      guard(tx, true);
-      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
-        throw new ScopeViolation();
-      }
-      const issue = [...issues.values()].find((i) => i.id === id);
-      if (!issue || issue.version !== expectedVersion) throw new StaleVersion();
-      return save({ ...issue, status, version: issue.version + 1 });
-    },
+    setStatus: async (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
+    reschedule: async (id, expectedVersion, to) => versioned(id, expectedVersion, to),
   };
 }

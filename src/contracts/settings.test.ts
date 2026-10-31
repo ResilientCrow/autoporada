@@ -181,7 +181,10 @@ describe('the save wire', () => {
   });
   const parse = (input: unknown) => settingsSaveInput.safeParse(input);
 
-  it('takes the reminders and the annex 1 texts, each with its own value and a version', () => {
+  it('takes every key, each with its own value and a version', () => {
+    expect(
+      parse({ key: 'deadline', value: { dayOffset: -1, time: '18:00' }, version: 2 }).success,
+    ).toBe(true);
     expect(
       parse({ key: 'reminders', value: { soft: false, hard: true }, version: 0 }).success,
     ).toBe(true);
@@ -205,8 +208,12 @@ describe('the save wire', () => {
       { key: 'texts.annex1', value: { heading: '', intro: doc('a') }, version: 0 },
     ],
     [
-      'the deadline, which another commit adds',
-      { key: 'deadline', value: { dayOffset: -2, time: '20:00' }, version: 0 },
+      'a deadline on the meeting day',
+      { key: 'deadline', value: { dayOffset: 0, time: '20:00' }, version: 0 },
+    ],
+    [
+      'a deadline under another key',
+      { key: 'reminders', value: { dayOffset: -2, time: '20:00' }, version: 0 },
     ],
     ['an unknown key', { key: 'texts.annex2', value: {}, version: 0 }],
     ['a negative version', { key: 'reminders', value: { soft: true, hard: true }, version: -1 }],

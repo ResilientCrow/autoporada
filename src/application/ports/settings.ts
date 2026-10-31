@@ -25,4 +25,11 @@ export interface SettingsRepo {
    * Only someone who may manage the settings writes (ADR 0011).
    */
   save(key: string, value: unknown, expectedVersion: number): Promise<number | null>;
+  /**
+   * Holds `key` until the transaction ends: 'share' waits only for an 'update' of it, 'update' for
+   * both. A save that changes what callers freeze by takes 'update' before it reads; a caller that
+   * freezes by the value takes 'share' before it reads, so under READ COMMITTED the two never
+   * interleave (ADR 0032). Any principal, in a read transaction too, the worker's included.
+   */
+  lock(key: string, mode: 'share' | 'update'): Promise<void>;
 }

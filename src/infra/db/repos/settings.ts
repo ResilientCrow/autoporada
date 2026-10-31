@@ -6,6 +6,12 @@ import { can } from '@/domain/policy';
 import { settings } from '../schema';
 import type { TxDatabase } from './database';
 
+/**
+ * The class key of the setting locks ('STNG'); the key's name, hashed, is the object key. The
+ * two-key form shares no key space with the one-key locks (mail-ledger.ts).
+ */
+const SETTING_LOCK = 0x5354_4e47;
+
 export function createSettingsRepo(db: TxDatabase, ctx: TxContext): SettingsRepo {
   const { principal } = ctx;
   return {
@@ -41,6 +47,11 @@ export function createSettingsRepo(db: TxDatabase, ctx: TxContext): SettingsRepo
               .where(and(eq(settings.key, key), eq(settings.version, expectedVersion)))
               .returning({ version: settings.version });
       return row?.version ?? null;
+    },
+    async lock(key, mode) {
+      await (mode === 'share'
+        ? db.execute(sql`SELECT pg_advisory_xact_lock_shared(${SETTING_LOCK}, hashtext(${key}))`)
+        : db.execute(sql`SELECT pg_advisory_xact_lock(${SETTING_LOCK}, hashtext(${key}))`));
     },
   };
 }

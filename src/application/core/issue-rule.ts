@@ -8,9 +8,12 @@ import { readSettingValue } from './settings';
 /**
  * The deadline rule in force: the stored `deadline` setting, else the default of the registry. A
  * new issue is frozen with it (`ensureIssue`) and a Monday with no row is counted by it. Reads
- * the value alone, which the worker may do (`settings` grants it `key` and `value`).
+ * the value alone, which the worker may do (`settings` grants it `key` and `value`). It first
+ * waits for a save of a new rule in flight, which freezes and refreezes rows by the old one: a
+ * caller never freezes a Monday by a rule that save has replaced (ADR 0032).
  */
 export async function readDeadlineRule(tx: Pick<Tx, 'settings'>): Promise<DeadlineRule> {
+  await tx.settings.lock('deadline', 'share');
   return toDeadlineRule(await readSettingValue(tx, 'deadline'));
 }
 

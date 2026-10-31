@@ -32,7 +32,7 @@ export {
   type LateFacts,
   type PoradaClose,
 } from './late-report';
-export { dueMonday } from './selection';
+export { deadlineChange, dueMonday, refreezable } from './selection';
 export { summaryDue } from './summary';
 export { pointMonday } from './placement';
 export {

@@ -15,6 +15,7 @@ import { richDocWire } from './point';
 /** A time on a quarter hour between 08.00 and 22.00, as the form sends it and the table stores it. */
 const deadlineTime = z
   .string()
+  .max(5)
   .regex(/^([01]\d|2[0-3]):(00|15|30|45)$/)
   .refine((time) => time >= '08:00' && time <= '22:00');
 
@@ -119,8 +120,8 @@ export const settingsReadOutput = z.strictObject({
 /** A version of 0 names a key that has no row yet; any other is the version the form read. */
 const version = z.int().min(0);
 
-/** The keys a save takes. The deadline joins when its save does (it freezes issues). */
-const SAVABLE = ['reminders', 'texts.annex1'] as const satisfies readonly SettingKey[];
+/** The keys a save takes: every one. */
+const SAVABLE = ['deadline', 'reminders', 'texts.annex1'] as const satisfies readonly SettingKey[];
 
 /**
  * One setting and the version it was read at. A use case's input is one strict object, so the
@@ -130,7 +131,7 @@ const SAVABLE = ['reminders', 'texts.annex1'] as const satisfies readonly Settin
 export const settingsSaveInput = z
   .strictObject({
     key: z.enum(SAVABLE),
-    value: z.union([remindersSchema, annex1Shape]),
+    value: z.union([deadlineSchema, remindersSchema, annex1Shape]),
     version,
   })
   .superRefine(({ key, value }, ctx) => {
