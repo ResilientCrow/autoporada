@@ -29,6 +29,7 @@ export {
   eventEnd,
   isLateReport,
   lateFacts,
+  lateMailDue,
   reportCloses,
   type LateFacts,
   type PoradaClose,

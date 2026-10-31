@@ -42,6 +42,14 @@ export const CRON: readonly CronEntry[] = [
     data: {},
     catchUp: 'skip',
   },
+  // A late report's mails have windows of minutes; a missed tick is found by the next while the window is open.
+  {
+    job: 'reports.late',
+    key: 'quarter',
+    schedule: { everyMinutes: 15 },
+    data: {},
+    catchUp: 'skip',
+  },
   // 07.00 and 15.00 name the slots of the ledger key; a missed one is not made up, the next digest counts since the last sent.
   {
     job: 'reviewer.digest',

@@ -60,6 +60,22 @@ export interface ReportPromptItem {
   readonly lastDay: CalDate;
 }
 
+/**
+ * An akce as the late-report mails read it (migrations 0022 and 0035): who wrote it, where its
+ * report stands and when it ends, never what is in it.
+ */
+export interface EndingAkce {
+  readonly id: string;
+  readonly authorId: string;
+  readonly state: FutureState;
+  readonly expectsReport: boolean;
+  readonly reportState: ReportState;
+  /** The end date, or the start date of a one-day akce. */
+  readonly lastDay: CalDate;
+  /** When the last day ends; null counts as 20.00 (`eventEnd`). */
+  readonly timeTo: WallTime | null;
+}
+
 /** Where a page of the list ended: its last row's change and id. */
 export type FutureCursor = Pick<FutureItemRecord, 'updatedAt' | 'id'>;
 
@@ -147,6 +163,18 @@ export interface FutureItemRepo {
     readonly from: CalDate;
     readonly to: CalDate;
   }): Promise<readonly ReportPromptItem[]>;
+  /**
+   * The late-report job's read: the approved akce that expect a report, whose `report_state` is
+   * `none` or `prompted` and that have no report point yet, whose last day falls from `from` to
+   * `to`, both included, ordered by id. Only the columns migrations 0022 and 0035 grant the
+   * worker. ScopeViolation for a user.
+   */
+  reportsEnding(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly EndingAkce[]>;
+  /** The same akce at send time, whatever its state: null for an unknown item. ScopeViolation for a user. */
+  reportEnding(id: string): Promise<EndingAkce | null>;
   /** The worker's read at send time: null for an unknown item. ScopeViolation for a user. */
   mailFacts(id: string): Promise<FutureMailFacts | null>;
   /** The authors with an akce or jednání handed in since `since`, each once, ordered by id. ScopeViolation for a user. */

@@ -5,6 +5,7 @@ import {
   scopeOf,
   ScopeViolation,
   StaleVersion,
+  type EndingAkce,
   type FutureContent,
   type FutureCursor,
   type FutureItemRecord,
@@ -19,6 +20,21 @@ import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 import { codePoints, distinctSorted, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
+
+/** An akce as the late-report mails read it; none while it has no date. */
+function endingOf(item: FakeFutureItem): EndingAkce | null {
+  const lastDay = item.content.endDate ?? item.content.startDate;
+  if (lastDay === null) return null;
+  return {
+    id: item.id,
+    authorId: item.authorId,
+    state: item.state,
+    expectsReport: item.content.expectsReport,
+    reportState: item.reportState,
+    lastDay,
+    timeTo: item.content.timeTo,
+  };
+}
 
 /**
  * What migrations 0019 and 0020 refuse, in PostgreSQL's order: the CHECKs by name, then the
@@ -214,6 +230,30 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
           return due ? [{ id: item.id, authorId: item.authorId, lastDay }] : [];
         })
         .sort((a, b) => (a.id < b.id ? -1 : 1));
+    },
+    async reportsEnding({ from, to }) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      return [...futureItems.values()]
+        .flatMap((item) => {
+          const ending = endingOf(item);
+          return item.state === 'approved' &&
+            item.content.expectsReport &&
+            (item.reportState === 'none' || item.reportState === 'prompted') &&
+            item.reportPointId === null &&
+            ending &&
+            compareDates(ending.lastDay, from) >= 0 &&
+            compareDates(ending.lastDay, to) <= 0
+            ? [ending]
+            : [];
+        })
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
+    },
+    async reportEnding(id) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const item = futureItems.get(id);
+      return (item && endingOf(item)) ?? null;
     },
     async mailFacts(id) {
       guard(tx, false);

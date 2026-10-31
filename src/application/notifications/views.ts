@@ -24,6 +24,7 @@ const VIEWS: {
   'reminder.soft': ({ meetingDate }) => ({ meetingDate }),
   'reminder.hard': ({ meetingDate }) => ({ meetingDate }),
   'reviewer.digest': (counts) => counts,
+  'report.ended': ({ due, meetingDate }) => ({ due, meetingDate }),
   'issue.moved': ({ meetingDate, deadlineAt }) => ({ meetingDate, deadlineAt }),
   'headmaster.summary': ({ meetingDate, approved, pending, returned }) => ({
     meetingDate,

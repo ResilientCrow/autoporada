@@ -56,3 +56,21 @@ export function reportCloses(porada: PoradaClose, report: LateFacts): Date {
 /** A report is late for a porada when it may be handed in after the porada's own deadline. */
 export const isLateReport = (porada: PoradaClose, report: LateFacts): boolean =>
   reportCloses(porada, report).getTime() > porada.deadlineAt.getTime();
+
+const LAST_CALL_BEFORE_MS = 3_600_000;
+const MAIL_ENDS_BEFORE_MS = 15 * 60_000;
+
+/**
+ * Whether a late report's mail is due now (ADR 0035 item 6). `ended` goes from the event's end
+ * until the last call, or until 15 minutes before the close when no last call fits; `last-call`
+ * goes from an hour before the close until 15 minutes before it, and only when that hour starts
+ * after the event's end.
+ */
+export function lateMailDue(kind: 'ended' | 'last-call', end: Date, due: Date, now: Date): boolean {
+  const at = now.getTime();
+  const lastCall = due.getTime() - LAST_CALL_BEFORE_MS;
+  const stop = due.getTime() - MAIL_ENDS_BEFORE_MS;
+  const callFits = lastCall > end.getTime();
+  if (kind === 'ended') return at >= end.getTime() && at < (callFits ? lastCall : stop);
+  return callFits && at >= lastCall && at < stop;
+}

@@ -1,4 +1,4 @@
-import { mailJob } from '@/application/notifications';
+import { endedMailSent, mailJob } from '@/application/notifications';
 import { JOB_TX_TIMEOUT_MS, system, type JobHandler } from '@/application/ports';
 import { reportPromptStage, reportPromptWindow } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
@@ -28,6 +28,8 @@ export const reportPrompt: JobHandler<'future.report-prompt'> = async ({ db, clo
           stage,
         });
         if (await tx.mailLedger.get(dedupeKey)) continue;
+        // The mail at the akce's end already asked for the report (ADR 0035 item 7); stage 2 stays.
+        if (stage === 1 && (await endedMailSent(tx, item))) continue;
         await tx.jobs.enqueue('mail.send', data, { dedupeKey });
         enqueued += 1;
       }

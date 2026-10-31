@@ -35,6 +35,7 @@ export type {
   FutureCursor,
   FutureItemRecord,
   FutureItemRepo,
+  EndingAkce,
   FutureMailFacts,
   NewFutureItem,
   QueuedFuture,

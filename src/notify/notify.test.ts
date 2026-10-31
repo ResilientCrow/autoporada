@@ -36,6 +36,7 @@ const VIEWS = {
   'reviewer.digest': { submitted: 4, accessRequests: 2 },
   'headmaster.summary': { meetingDate: MEETING, approved: 5, pending: 2, returned: 1 },
   'issue.moved': { meetingDate: MEETING, deadlineAt: new Date('2026-11-23T19:00:00Z') },
+  'report.ended': { meetingDate: MEETING, due: new Date('2026-11-23T19:00:00Z') },
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -124,6 +125,12 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: `Autoporada: porada se přesouvá na 26.${NB}října 2026`,
     text: letter(
       `porada se přesouvá na 26.${NB}října 2026. Uzávěrka je dřív: pondělí 23.${NB}11. v${NB}20.00.\n\n${BODY}`,
+    ),
+  },
+  'report.ended': {
+    subject: `Autoporada: akce skončila, zprávu odevzdejte do 23.${NB}11. v${NB}20.00`,
+    text: letter(
+      `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
     ),
   },
 };

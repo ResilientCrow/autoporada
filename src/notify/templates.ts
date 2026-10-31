@@ -31,6 +31,7 @@ export const TEMPLATE_NAMES = [
   'reviewer.digest',
   'headmaster.summary',
   'issue.moved',
+  'report.ended',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -60,6 +61,8 @@ export interface TemplateViews {
   };
   /** The porada that was moved and the deadline it now has. */
   'issue.moved': { readonly meetingDate: CalDate; readonly deadlineAt: Date };
+  /** The close of a late report and the porada it goes to. */
+  'report.ended': { readonly due: Date; readonly meetingDate: CalDate };
 }
 
 interface RenderedMail {
@@ -197,6 +200,20 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       body: {
         paragraphs: [
           `porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dřív: ${weekdayName(date)} ${formatDayMonth(date)} v\u00A0${formatTime(time)}.`,
+        ],
+        link: '/body',
+      },
+    };
+  },
+  // The akce is not named (ADR 0016): a date, a time and the porada.
+  'report.ended': ({ due, meetingDate }) => {
+    const { date, time } = instantToWallClock(due);
+    const when = `${formatDayMonth(date)} v\u00A0${formatTime(time)}`;
+    return {
+      subject: `Autoporada: akce skončila, zprávu odevzdejte do ${when}`,
+      body: {
+        paragraphs: [
+          `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
         ],
         link: '/body',
       },

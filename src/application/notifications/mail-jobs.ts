@@ -3,6 +3,7 @@ import type { DecisionEvent } from '@/domain/review';
 import type { TemplateName } from '@/notify';
 
 import { digestParts, type DigestIds } from './digest';
+import { reportEndedParts, type ReportEndedIds } from './late-reports';
 import { movedParts, type MovedIds } from './moved';
 import { pointMailParts, type PointMailIds } from './point-mails';
 import { reminderParts, type ReminderIds } from './reminders';
@@ -39,6 +40,7 @@ interface MailIds {
   readonly 'reviewer.digest': DigestIds;
   readonly 'headmaster.summary': SummaryIds;
   readonly 'issue.moved': MovedIds;
+  readonly 'report.ended': ReportEndedIds;
 }
 
 interface MailParts {
@@ -81,6 +83,7 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   'reviewer.digest': digestParts,
   'headmaster.summary': summaryParts,
   'issue.moved': movedParts,
+  'report.ended': reportEndedParts,
 };
 
 interface MailJob {

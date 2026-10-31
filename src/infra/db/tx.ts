@@ -9,6 +9,7 @@ import { createAuditWriter } from './repos/audit';
 import { createPointEventRepo } from './repos/events';
 import { createFutureEventRepo } from './repos/future-events';
 import { createFutureIssueReads } from './repos/future-issue';
+import { createFutureReportReads } from './repos/future-reports';
 import { createFutureItemRepo } from './repos/future-items';
 import { createIssueItemRepo } from './repos/issue-items';
 import { createIssueRepo } from './repos/issues';
@@ -54,6 +55,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     futureItems: guard({
       ...createFutureItemRepo(db, ctx),
       ...createFutureIssueReads(db, ctx),
+      ...createFutureReportReads(db, ctx),
     }),
     futureEvents: guard(createFutureEventRepo(db, ctx)),
     audit: guard(createAuditWriter(db, ctx)),

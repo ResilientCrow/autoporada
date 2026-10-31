@@ -66,6 +66,13 @@ const APPLIES: {
   /** The reminders' audience still: staff who keep the soft reminder, or whoever waits on the slot. */
   'issue.moved': ({ hasWork }, recipient) =>
     member(recipient) && (hasWork || wantsSoftReminder(recipient)),
+  /** The akce's author, while the akce stands approved with no report written or declined; the loader drops it past the close. */
+  'report.ended': ({ authorId, state, expectsReport, reportState }, recipient) =>
+    state === 'approved' &&
+    expectsReport &&
+    (reportState === 'none' || reportState === 'prompted') &&
+    authorId === recipient.id &&
+    member(recipient),
   /** The headmaster, while they can sign in; a skipped or closed issue has no subject to begin with. */
   'headmaster.summary': (_subject, recipient) => isHeadmaster(recipient),
 };
