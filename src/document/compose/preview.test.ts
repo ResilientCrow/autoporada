@@ -6,7 +6,7 @@ import { calDate } from '@/domain/time';
 
 import { snapshotFixture } from '../../../test/support/snapshots';
 import type { Block } from '../model';
-import { composePointPreview, reportFromContent } from './index';
+import { composeItemPreview, composePointPreview, reportFromContent } from './index';
 
 const person = (over: Partial<DraftPerson> = {}): DraftPerson => ({
   salutation: 'pan',
@@ -628,5 +628,60 @@ describe('composePointPreview for a proposal', () => {
 
   it('shows nothing for a report without a start date, whatever else it holds', () => {
     expect(composePointPreview(proposal(), { ...opts, kind: 'report' }).blocks).toEqual([]);
+  });
+});
+
+describe('composeItemPreview', () => {
+  const opts = { schoolYear: '2026/2027' };
+  const item = (over: Partial<Parameters<typeof composeItemPreview>[0]> = {}) => ({
+    title: 'Poděkování',
+    slot: null,
+    body: richDocFromText('Děkuji všem.'),
+    quotes: [],
+    ...over,
+  });
+
+  it('prints the title and the text as point 1', () => {
+    const blocks = composeItemPreview(item(), opts);
+    expect(blocks[0]).toMatchObject({ kind: 'point', number: 1, text: 'Poděkování' });
+    expect(blocks.map(textOf).join('\n')).toContain('Děkuji všem.');
+  });
+
+  it('fills the school year token', () => {
+    const blocks = composeItemPreview(item({ body: richDocFromText('Rok {skolniRok}.') }), opts);
+    expect(blocks.map(textOf).join('\n')).toContain('Rok 2026/2027.');
+  });
+
+  it('shows nothing without a title', () => {
+    expect(composeItemPreview(item({ title: '  \t ' }), opts)).toEqual([]);
+  });
+
+  it.each(['meetings', 'events'] as const)(
+    'shows nothing for the %s slot, which fills itself',
+    (slot) => {
+      expect(composeItemPreview(item({ slot }), opts)).toEqual([]);
+    },
+  );
+
+  it('shows nothing for media until it has text', () => {
+    expect(composeItemPreview(item({ slot: 'media', body: richDocFromText('') }), opts)).toEqual(
+      [],
+    );
+    expect(
+      composeItemPreview(item({ slot: 'media', body: richDocFromText('Ohlas.') }), opts),
+    ).not.toEqual([]);
+  });
+
+  it('shows partners only with quotes, one partner line each', () => {
+    expect(composeItemPreview(item({ slot: 'partners' }), opts)).toEqual([]);
+    const blocks = composeItemPreview(
+      item({
+        slot: 'partners',
+        quotes: [{ speakerGenitive: 'pana Nováka', quote: 'Díky.' }],
+      }),
+      opts,
+    );
+    expect(blocks.filter((b) => b.kind === 'partner')).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({ kind: 'point', number: 1 });
   });
 });
