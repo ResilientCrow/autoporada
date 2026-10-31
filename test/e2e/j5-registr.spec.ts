@@ -133,7 +133,8 @@ test.describe('J5: the registry', () => {
       await page.getByLabel(registry.newYear.confirm).check();
       await page.getByRole('button', { name: registry.newYear.submit }).click();
       await expect(page.getByText(registry.newYear.done(0, 3))).toBeVisible();
-      await expect(page.getByText(registry.newYear.count(0))).toBeVisible();
+      // The form starts afresh with every list ticked; the emptied one now says it holds no student.
+      await expect(page.getByLabel(registry.newYear.list(title, 0))).toBeVisible();
     });
   });
 });
@@ -178,20 +179,22 @@ test.describe('J5: the settings', () => {
       await hydrated();
       await expect(page.getByRole('heading', { level: 1, name: settings.title })).toBeVisible();
 
-      // The rule in force: Saturday 20.00 before a Monday porada, and what saving it would leave alone.
+      // The rule in force: Saturday 20.00 before a Monday porada. Its effect is said only once the
+      // choice differs from it.
+      const effect = page.getByText(
+        /^Uzávěrka porady .* zůstává sobota 20\.00\. Nové pravidlo platí od porady /,
+      );
       await expect(page.getByText(settings.deadline.example('sobota', '20.00'))).toBeVisible();
-      await expect(
-        page.getByText(
-          /^Uzávěrka porady .* zůstává sobota 20\.00\. Nové pravidlo platí od porady /,
-        ),
-      ).toBeVisible();
+      await expect(effect).toHaveCount(0);
 
-      // Choosing another rule changes the example at once; nothing is saved.
+      // Choosing another rule changes the example and shows the effect at once; nothing is saved.
       await page.getByLabel(settings.deadline.days.label).selectOption('1');
       await expect(page.getByText(settings.deadline.example('sobota', '20.00'))).toHaveCount(0);
+      await expect(effect).toBeVisible();
       await page.reload();
       await hydrated();
       await expect(page.getByText(settings.deadline.example('sobota', '20.00'))).toBeVisible();
+      await expect(effect).toHaveCount(0);
 
       // The annex 1 intro is a rich text: the server draws it, then the editor mounts on it.
       const editor = editorIn(page, new RegExp(`^${settings.annex1.intro.label}`));
