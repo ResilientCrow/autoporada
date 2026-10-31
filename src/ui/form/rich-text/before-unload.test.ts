@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { askBeforeUnload } from './use-dirty-guard';
+import { askBeforeUnload } from './before-unload';
 
 describe('askBeforeUnload', () => {
   it('cancels the event and sets the empty returnValue older Safari needs', () => {

@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 
 import { richtext } from '@/ui/copy';
 
+import { askBeforeUnload } from './before-unload';
+
 /** The same-origin link a click was on, if it would leave this page. */
 function leavingLink(event: MouseEvent): HTMLAnchorElement | null {
   if (event.defaultPrevented || event.button !== 0) return null;
@@ -16,12 +18,6 @@ function leavingLink(event: MouseEvent): HTMLAnchorElement | null {
   if (url.origin !== window.location.origin) return null;
   const here = window.location;
   return url.pathname === here.pathname && url.search === here.search ? null : target;
-}
-
-/** The browser's own leave dialog; older Safari wants `returnValue` set as well as `preventDefault`. */
-export function askBeforeUnload(event: BeforeUnloadEvent): void {
-  event.preventDefault();
-  event.returnValue = '';
 }
 
 /**
