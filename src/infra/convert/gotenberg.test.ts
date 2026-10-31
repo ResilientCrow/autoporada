@@ -63,6 +63,58 @@ describe('the Gotenberg converter', () => {
     ).resolves.toEqual({ ok: false, code: 'convert.unavailable' });
   });
 
+  it('takes a redirect as a failed answer and does not follow it', async () => {
+    const seen: string[] = [];
+    const fetch: ConvertFetch = async (url, init) => {
+      seen.push(`${url} ${init.redirect}`);
+      return new Response(null, { status: 307, headers: { Location: 'https://elsewhere.test/' } });
+    };
+    const converter = createGotenbergConverter({ url: 'http://g', fetch });
+
+    await expect(converter.docxToPdf(DOCX)).resolves.toEqual({
+      ok: false,
+      code: 'convert.http.307',
+    });
+    expect(seen).toEqual(['http://g/forms/libreoffice/convert manual']);
+  });
+
+  it('refuses an answer past the size limit, by its length or while it streams', async () => {
+    const declared = answering(
+      async () => new Response(PDF, { headers: { 'Content-Length': String(64) } }),
+    );
+    let pulled = 0;
+    const endless = answering(
+      async () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            pull(controller) {
+              pulled += 1;
+              controller.enqueue(pulled === 1 ? PDF : new Uint8Array(16));
+            },
+          }),
+        ),
+    );
+    const capped = (fetch: ConvertFetch) =>
+      createGotenbergConverter({ url: 'http://g', fetch, maxBytes: PDF.length + 8 });
+
+    await expect(capped(declared.fetch).docxToPdf(DOCX)).resolves.toEqual({
+      ok: false,
+      code: 'convert.too-large',
+    });
+    await expect(capped(endless.fetch).docxToPdf(DOCX)).resolves.toEqual({
+      ok: false,
+      code: 'convert.too-large',
+    });
+    expect(pulled).toBeLessThan(5);
+    await expect(
+      createGotenbergConverter({
+        url: 'http://g',
+        fetch: answering(async () => new Response(PDF)).fetch,
+        maxBytes: PDF.length,
+      }).docxToPdf(DOCX),
+    ).resolves.toEqual({ ok: true, pdf: PDF });
+  });
+
   it('never runs inside a transaction', async () => {
     const { calls, fetch } = answering(async () => new Response(PDF));
     const converter = createGotenbergConverter({ url: 'http://g', fetch });

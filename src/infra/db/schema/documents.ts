@@ -9,8 +9,8 @@ export const pdfStatus = pgEnum('pdf_status', ['pending', 'ready', 'failed']);
 /**
  * A generated document of an issue (ADR 0038): the snapshot it was composed from and the DOCX,
  * then the PDF the worker converts it to. Kept for good: the archive downloads it. Who generated it
- * is in the audit log, not here. The worker reads the DOCX and writes the PDF columns only
- * (migration 0037).
+ * is in the audit log, not here. The worker cannot read the DOCX here: it reads `pdf_sources`
+ * and writes the PDF columns only, and a settled document is immutable (migrations 0037, 0039).
  */
 export const generatedDocuments = pgTable(
   'generated_documents',
@@ -43,3 +43,15 @@ export const generatedDocuments = pgTable(
     ),
   ],
 );
+
+/**
+ * The DOCX of a document whose PDF is still to be made: the worker's whole view of the files. The
+ * row is written with the document and deleted when the PDF settles, so the worker never sees the
+ * DOCX of an archived porada (migration 0039).
+ */
+export const pdfSources = pgTable('pdf_sources', {
+  documentId: uuid()
+    .primaryKey()
+    .references(() => generatedDocuments.id, { onDelete: 'cascade' }),
+  docx: bytea().notNull(),
+});

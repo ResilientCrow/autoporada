@@ -59,7 +59,11 @@ describe('documents.download', () => {
     expect(await download(head, 'pdf')).toEqual({ ok: false, error: { code: 'not-found' } });
 
     const pdf = new TextEncoder().encode('%PDF-1.7 test');
-    await world.tx(worker, (tx) => tx.documents.settlePdf(documentId, { pdf }));
+    await world.workerDb.transaction(
+      { principal: worker, now: world.clock.now(), requestId: 'test' },
+      { mode: 'write' },
+      (tx) => tx.documents.settlePdf(documentId, { pdf }),
+    );
     const result = await download(head, 'pdf');
     if (!result.ok) throw new Error(JSON.stringify(result.error));
     expect(result.value).toMatchObject({ fileName: 'porada-2026-10-26.pdf', bytes: pdf });

@@ -8,14 +8,21 @@ import {
 } from '@/application/ports';
 import { can } from '@/domain/policy';
 import { compareDates } from '@/domain/time';
+import { parseIssueSnapshot } from '@/snapshot';
 
 import { guard, refusedBy } from './guards';
 import { newId, type FakeDocument, type FakeTxState } from './state';
 
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
-const record = ({ snapshot: _s, docx: _d, pdf: _p, pdfAt: _a, ...rest }: FakeDocument) =>
-  rest satisfies DocumentRecord;
+const record = ({
+  snapshot: _s,
+  docx: _d,
+  pdf: _p,
+  pdfAt: _a,
+  source: _src,
+  ...rest
+}: FakeDocument) => rest satisfies DocumentRecord;
 
 /**
  * Generated documents over the fake state, with migration 0036's unique key and foreign key. The
@@ -55,6 +62,7 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
         docx,
         pdf: null,
         pdfAt: null,
+        source: docx,
       };
       documents.set(row.id, row);
       tx.written.push({ type: 'document', id: row.id });
@@ -81,7 +89,12 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
     async snapshot(id) {
       guard(tx, false);
       may('archive.view');
-      return documents.get(id)?.snapshot ?? null;
+      const row = documents.get(id);
+      if (!row) return null;
+      // As the repository reads it: through JSON, and refused when it fails its schema.
+      const parsed = parseIssueSnapshot(JSON.parse(JSON.stringify(row.snapshot)));
+      if (!parsed.ok) throw new Error('documents.snapshot: the stored snapshot fails its schema');
+      return parsed.snapshot;
     },
     async file(id, format) {
       guard(tx, false);
@@ -95,7 +108,7 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
       guard(tx, false);
       systemOnly();
       const row = documents.get(id);
-      return row ? { docx: row.docx, pdfStatus: row.pdfStatus } : null;
+      return row ? { pdfStatus: row.pdfStatus, docx: row.source } : null;
     },
     async settlePdf(id, result) {
       guard(tx, true);
@@ -105,13 +118,14 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
       documents.set(
         id,
         result === 'failed'
-          ? { ...row, pdfStatus: 'failed' }
+          ? { ...row, pdfStatus: 'failed', source: null }
           : {
               ...row,
               pdf: result.pdf,
               pdfSha256: sha256(result.pdf),
               pdfStatus: 'ready',
               pdfAt: ctx.now,
+              source: null,
             },
       );
       return true;

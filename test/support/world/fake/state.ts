@@ -75,6 +75,8 @@ export type FakeDocument = DocumentRecord & {
   readonly docx: Uint8Array;
   readonly pdf: Uint8Array | null;
   readonly pdfAt: Date | null;
+  /** pdf_sources: the DOCX staged for the PDF job while the PDF is pending, else null. */
+  readonly source: Uint8Array | null;
 };
 
 export type FakeFutureItem = FutureItemRecord & { readonly clientRef: string };

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { PDF_RENDER_ATTEMPTS, system, type JobInput, type WorkerDeps } from '@/application/ports';
-import { calDate } from '@/domain/time';
+import {
+  PDF_RENDER_ATTEMPTS,
+  system,
+  type Db,
+  type JobInput,
+  type WorkerDeps,
+} from '@/application/ports';
+import { addDays, calDate } from '@/domain/time';
 
 import { createFakeConverter } from '../../../test/support/fake-converter';
 import { issueFixtures } from '../../../test/support/issues';
@@ -37,7 +43,9 @@ const job = (documentId: string, attempt = 1): JobInput<'pdf.render'> => ({
 let week = 0;
 const generated = async () => {
   week += 1;
-  const issue = await fixtures.issue(calDate(2026, 11, 2 + 7 * week), { status: 'generated' });
+  const issue = await fixtures.issue(addDays(calDate(2026, 11, 2), 7 * week), {
+    status: 'generated',
+  });
   return world.tx(system('test.seed'), async (tx) => {
     const document = await tx.documents.insert({
       issueId: issue.id,
@@ -115,5 +123,112 @@ describe('the pdf.render handler', () => {
       await JOB_HANDLERS['pdf.render'](deps, job('00000000-0000-7000-8000-00000000dead')),
     ).toEqual({ kind: 'done', code: 'skipped.unknown' });
     expect(converter.calls).toHaveLength(0);
+  });
+
+  it('treats a pending document without its source as a fault: it is thrown, not skipped', async () => {
+    const { converter, deps } = setup();
+    const document = await generated();
+    const sourceless: Db = {
+      transaction: (ctx, options, work) =>
+        world.workerDb.transaction(ctx, options, (tx) =>
+          work({
+            ...tx,
+            documents: {
+              ...tx.documents,
+              toConvert: () => Promise.resolve({ pdfStatus: 'pending', docx: null }),
+            },
+          }),
+        ),
+    };
+
+    await expect(
+      JOB_HANDLERS['pdf.render']({ ...deps, db: sourceless }, job(document.id)),
+    ).rejects.toThrow(/source/);
+    expect(converter.calls).toHaveLength(0);
+    expect((await stored(document.id)).record?.pdfStatus).toBe('pending');
+  });
+
+  describe('a fault (a throw, not a failed conversion)', () => {
+    const boom = new Error('converter blew up');
+
+    it('propagates before the last attempt, so the queue retries, and leaves the PDF pending', async () => {
+      const { converter, deps } = setup();
+      const document = await generated();
+      converter.script(boom);
+
+      await expect(
+        JOB_HANDLERS['pdf.render'](deps, job(document.id, PDF_RENDER_ATTEMPTS - 1)),
+      ).rejects.toBe(boom);
+      expect((await stored(document.id)).record?.pdfStatus).toBe('pending');
+    });
+
+    it('marks the PDF failed on the last attempt instead of leaving it pending for good', async () => {
+      const { converter, deps } = setup();
+      const document = await generated();
+      converter.script(boom);
+
+      const outcome = await JOB_HANDLERS['pdf.render'](deps, job(document.id, PDF_RENDER_ATTEMPTS));
+
+      expect(outcome).toEqual({ kind: 'done', code: 'failed.error' });
+      const { record, pdf } = await stored(document.id);
+      expect(record?.pdfStatus).toBe('failed');
+      expect(pdf).toBeNull();
+    });
+
+    it('carries a code the job log accepts', async () => {
+      const { converter, deps } = setup();
+      const document = await generated();
+      converter.script(boom);
+
+      const outcome = await JOB_HANDLERS['pdf.render'](deps, job(document.id, PDF_RENDER_ATTEMPTS));
+
+      expect(outcome.kind === 'done' && outcome.code).toMatch(/^[a-z]+(\.[A-Za-z0-9_-]+)*$/);
+      expect(outcome.kind === 'done' && outcome.code.length).toBeLessThanOrEqual(40);
+    });
+
+    it('rethrows the original error on the last attempt when the failed mark cannot be written', async () => {
+      const { converter, deps } = setup();
+      const document = await generated();
+      converter.script(boom);
+      const readOnly: Db = {
+        transaction: (ctx, options, work) =>
+          options.mode === 'write'
+            ? Promise.reject(new Error('the database is gone'))
+            : world.workerDb.transaction(ctx, options, work),
+      };
+
+      await expect(
+        JOB_HANDLERS['pdf.render'](
+          { ...deps, db: readOnly },
+          job(document.id, PDF_RENDER_ATTEMPTS),
+        ),
+      ).rejects.toBe(boom);
+      expect((await stored(document.id)).record?.pdfStatus).toBe('pending');
+    });
+
+    it('does not mark a document failed whose PDF a concurrent run already stored', async () => {
+      const { converter, deps } = setup();
+      const document = await generated();
+      converter.script(boom);
+      // the other run finishes between this one's read and its failure mark
+      const racing: Db = {
+        transaction: async (ctx, options, work) => {
+          if (options.mode === 'write') {
+            await world.workerDb.transaction(ctx, options, (tx) =>
+              tx.documents.settlePdf(document.id, { pdf: new TextEncoder().encode('%PDF-1') }),
+            );
+          }
+          return world.workerDb.transaction(ctx, options, work);
+        },
+      };
+
+      expect(
+        await JOB_HANDLERS['pdf.render'](
+          { ...deps, db: racing },
+          job(document.id, PDF_RENDER_ATTEMPTS),
+        ),
+      ).toEqual({ kind: 'done', code: 'already.settled' });
+      expect((await stored(document.id)).record?.pdfStatus).toBe('ready');
+    });
   });
 });

@@ -267,6 +267,20 @@
       "when": 1793480606869,
       "tag": "0037_document_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793484093332,
+      "tag": "0038_pdf_sources",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793484103664,
+      "tag": "0039_pdf_source_guards",
+      "breakpoints": true
     }
   ]
 }

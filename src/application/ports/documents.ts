@@ -37,10 +37,15 @@ export interface DocumentFile {
 /**
  * Generated documents (ADR 0038). They name every student of the registry, so a user reads them
  * only with `archive.view` and makes one only with `issue.generate` (ScopeViolation otherwise). The
- * worker reads the DOCX and writes the PDF, nothing else (migration 0037).
+ * worker never reads an archived DOCX: it gets the DOCX of a pending document from its staging row
+ * and writes the PDF, nothing else (migrations 0037, 0039). A settled document never changes.
  */
 export interface DocumentRepo {
-  /** Version 1 of the issue's document; ConstraintViolation(`generated_documents_issue_version_key`) for a second. */
+  /**
+   * Version 1 of the issue's document, PDF pending, with the DOCX staged for the PDF job in the
+   * same transaction. A second one for the issue fails as
+   * DatabaseFailure(`db.constraint.generated_documents_issue_version_key`).
+   */
   insert(document: NewDocument): Promise<DocumentRecord>;
   /** The issue's latest document, or null. */
   forIssue(issueId: string): Promise<DocumentRecord | null>;
@@ -50,11 +55,17 @@ export interface DocumentRepo {
   snapshot(id: string): Promise<IssueSnapshot | null>;
   /** The file, or null for an unknown document or a PDF that is not ready. */
   file(id: string, format: DocumentFormat): Promise<DocumentFile | null>;
-  /** What the PDF job reads: the DOCX and where its PDF stands; null for an unknown id. */
+  /**
+   * What the PDF job reads (system only, ScopeViolation for a user): where the PDF stands, and the
+   * staged DOCX, which only a pending document has (null once settled). Null for an unknown id.
+   */
   toConvert(
     id: string,
-  ): Promise<{ readonly docx: Uint8Array; readonly pdfStatus: PdfStatus } | null>;
-  /** Stores the PDF (hashed here) or marks it failed, only while it is pending; false otherwise. */
+  ): Promise<{ readonly pdfStatus: PdfStatus; readonly docx: Uint8Array | null } | null>;
+  /**
+   * Stores the PDF (hashed here) or marks it failed, and drops the staged DOCX, only while the PDF
+   * is pending; false, with nothing changed, otherwise. System only.
+   */
   settlePdf(id: string, result: { readonly pdf: Uint8Array } | 'failed'): Promise<boolean>;
 }
 
@@ -63,7 +74,11 @@ export const PDF_RENDER_ATTEMPTS = 6;
 
 /** Why a conversion failed: a code for the log, never the converter's text. */
 export type ConvertCode =
-  'convert.timeout' | 'convert.unavailable' | 'convert.not-pdf' | `convert.http.${number}`;
+  | 'convert.timeout'
+  | 'convert.unavailable'
+  | 'convert.not-pdf'
+  | 'convert.too-large'
+  | `convert.http.${number}`;
 
 /** DOCX to PDF (Gotenberg, LibreOffice). Called outside any transaction. */
 export interface DocumentConverter {

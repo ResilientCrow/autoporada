@@ -76,6 +76,9 @@ describe('database roles (ADR 0010)', () => {
       mail_ledger: null,
       point_events: 'INSERT,SELECT',
       future_events: 'INSERT,SELECT',
+      // 0039: only the worker settles a PDF; the web writes a source and never reads it.
+      generated_documents: 'DELETE,INSERT,SELECT',
+      pdf_sources: 'INSERT',
     };
     const grants = await database.owner<{ table: string; grantee: string; privileges: string }>(
       `SELECT c.relname AS table, g.grantee,

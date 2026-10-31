@@ -25,12 +25,16 @@ function setup(principal: UserPrincipal | null) {
     appOrigin: ORIGIN,
     requestIdFrom: () => 'req-1',
   };
-  return (format: string, datum = MONDAY) =>
+  return (format: string, datum = MONDAY, init: { method?: string; site?: string } = {}) =>
     runRoute(
       deps,
       documentRouteSpec,
       new Request(`${ORIGIN}/porada/${datum}/dokument/${format}`, {
-        headers: { cookie: '__Host-ap_session=good' },
+        method: init.method ?? 'GET',
+        headers: {
+          cookie: '__Host-ap_session=good',
+          ...(init.site && { 'sec-fetch-site': init.site }),
+        },
       }),
       { params: Promise.resolve({ datum, format }) },
     );
@@ -74,5 +78,22 @@ describe('GET /porada/[datum]/dokument/[format]', () => {
     const signedOut = await setup(null)('docx');
     expect(signedOut.status).toBe(303);
     expect(signedOut.headers.get('location')).toContain('/prihlaseni');
+  });
+
+  it('sends a download another site started to the archive, and answers HEAD 405, auditing neither', async () => {
+    const get = setup(await generated());
+    const crossSite = await get('docx', MONDAY, { site: 'cross-site' });
+    expect(crossSite.status).toBe(303);
+    expect(crossSite.headers.get('location')).toBe('/porada/archiv');
+    const head = await get('docx', MONDAY, { method: 'HEAD' });
+    expect(head.status).toBe(405);
+    expect(head.headers.get('allow')).toBe('GET');
+    const downloads = async () =>
+      (await world.inspect.audit()).filter((row) => row.action === 'document.downloaded');
+    expect(await downloads()).toEqual([]);
+
+    expect((await get('docx', MONDAY, { site: 'same-origin' })).status).toBe(200);
+    expect((await get('docx', MONDAY, { site: 'none' })).status).toBe(200);
+    expect(await downloads()).toHaveLength(2);
   });
 });

@@ -15,7 +15,8 @@
 // searches the directory with a registration of its own (ADR 0021): it holds the web_entra_*
 // pair and a client id other than the worker's, and never the mail registration's entra_*
 // pair. The egress and edge networks keep fixed bridge names so a host firewall rule can
-// target them (docs/ENTRA-SETUP.md §4).
+// target them (docs/ENTRA-SETUP.md §4). Gotenberg (ADR 0038) sits on internal
+// networks only and shares them with no service but the worker.
 import { execFileSync } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
@@ -254,6 +255,16 @@ for (const [network, expected] of [
 const postgres = Object.keys(config.services.postgres?.networks ?? {});
 if (postgres.length === 0 || postgres.some((n) => config.networks[n]?.internal !== true)) {
   problems.push('postgres: must be on internal networks only');
+}
+
+const gotenberg = networksOf(config.services.gotenberg ?? {});
+if (gotenberg.length === 0 || gotenberg.some((n) => config.networks[n]?.internal !== true)) {
+  problems.push('gotenberg: must be on internal networks only');
+}
+for (const [name, service] of Object.entries(config.services)) {
+  if (name === 'gotenberg' || name === 'worker') continue;
+  const shared = networksOf(service).filter((n) => gotenberg.includes(n));
+  if (shared.length > 0) problems.push(`${name}: shares ${shared.join(', ')} with gotenberg`);
 }
 
 if (problems.length > 0) {

@@ -7,7 +7,7 @@ import { can } from '@/domain/policy';
 import { parseIsoDate } from '@/domain/time';
 import { parseIssueSnapshot } from '@/snapshot';
 
-import { generatedDocuments, issues } from '../schema';
+import { generatedDocuments, issues, pdfSources } from '../schema';
 import type { TxDatabase } from './database';
 
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
@@ -22,7 +22,10 @@ const DOCUMENT_ROW = {
   generatedAt: generatedDocuments.generatedAt,
 };
 
-/** Generated documents over `generated_documents` (ADR 0038); the worker's columns are migration 0037's. */
+/**
+ * Generated documents over `generated_documents` and `pdf_sources` (ADR 0038). The worker's grants
+ * are migrations 0037 and 0039: it reads the DOCX only from the source of a pending document.
+ */
 export function createDocumentRepo(db: TxDatabase, ctx: TxContext): DocumentRepo {
   const { principal } = ctx;
   // A user re-checks the policy here (ADR 0011); the worker's role is held by its column grants.
@@ -43,6 +46,8 @@ export function createDocumentRepo(db: TxDatabase, ctx: TxContext): DocumentRepo
         .values({ issueId, snapshot, docx, docxSha256: sha256(docx), generatedAt: ctx.now })
         .returning(DOCUMENT_ROW);
       if (!row) throw new Error('documents.insert: no row came back');
+      // The same transaction: a document without its source could never get a PDF.
+      await db.insert(pdfSources).values({ documentId: row.id, docx });
       return row;
     },
     async forIssue(issueId) {
@@ -98,8 +103,9 @@ export function createDocumentRepo(db: TxDatabase, ctx: TxContext): DocumentRepo
     async toConvert(id) {
       systemOnly();
       const [row] = await db
-        .select({ docx: generatedDocuments.docx, pdfStatus: generatedDocuments.pdfStatus })
+        .select({ pdfStatus: generatedDocuments.pdfStatus, docx: pdfSources.docx })
         .from(generatedDocuments)
+        .leftJoin(pdfSources, eq(pdfSources.documentId, generatedDocuments.id))
         .where(eq(generatedDocuments.id, id));
       return row ?? null;
     },
@@ -119,7 +125,10 @@ export function createDocumentRepo(db: TxDatabase, ctx: TxContext): DocumentRepo
         .set(set)
         .where(and(eq(generatedDocuments.id, id), eq(generatedDocuments.pdfStatus, 'pending')))
         .returning({ id: generatedDocuments.id });
-      return settled.length > 0;
+      if (settled.length === 0) return false;
+      // Settled either way, the DOCX has nothing left to wait for.
+      await db.delete(pdfSources).where(eq(pdfSources.documentId, id));
+      return true;
     },
   };
 }

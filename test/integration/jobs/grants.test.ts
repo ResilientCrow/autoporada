@@ -323,9 +323,15 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
     // every table counts, so a table added without a decision here shows up as readable
     expect(rows.length).toBeGreaterThanOrEqual(5);
     const readable = rows.filter((row) => row.read).map((row) => row.table);
-    expect(readable).toEqual(['access_requests', 'mail_gate', 'mail_ledger', 'users']);
+    expect(readable).toEqual([
+      'access_requests',
+      'mail_gate',
+      'mail_ledger',
+      'pdf_sources',
+      'users',
+    ]);
     const writable = rows.filter((row) => row.write).map((row) => row.table);
-    expect(writable).toEqual(['mail_gate', 'mail_ledger']);
+    expect(writable).toEqual(['mail_gate', 'mail_ledger', 'pdf_sources']);
     expect(await sqlstateAs('autoporada_worker', `SELECT count(*) FROM users`)).toBeUndefined();
     expect(await sqlstateAs('autoporada_worker', `SELECT count(*) FROM sessions`)).toBe(DENIED);
     expect(await sqlstateAs('autoporada_worker', `INSERT INTO audit_events DEFAULT VALUES`)).toBe(
@@ -355,6 +361,9 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     ],
     issues: ['deadline_at', 'id', 'meeting_date', 'monday', 'status'],
     settings: ['key', 'value'],
+    // 0037, 0039: where a document's PDF stands, and the DOCX staged for the job (not the archive's).
+    generated_documents: ['id', 'pdf_status'],
+    pdf_sources: ['document_id', 'docx'],
   };
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
@@ -362,6 +371,10 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     future_items: ['title', 'responsible', 'place', 'client_ref', 'kind', 'campus', 'time_from'],
     issues: ['school_year', 'version', 'created_at', 'updated_at'],
     settings: ['version', 'updated_at'],
+    generated_documents: [
+      ...['docx', 'snapshot', 'pdf', 'issue_id', 'version', 'docx_sha256', 'pdf_sha256'],
+      ...['generated_at', 'pdf_at'],
+    ],
   };
 
   /** Whether autoporada_worker holds `privilege` on each named column of `table`. */
@@ -424,7 +437,8 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     expect(await sqlstateAs('autoporada_app', get)).toBeUndefined();
   });
 
-  it.each(Object.keys(GRANTED))(
+  // generated_documents is the one table the worker also writes: its own test follows.
+  it.each(Object.keys(GRANTED).filter((table) => table !== 'generated_documents'))(
     'reads the granted columns of %s and writes none',
     async (table) => {
       const columns = GRANTED[table]!;
@@ -569,5 +583,135 @@ describe('functions in pgboss', () => {
                OR EXISTS (SELECT FROM aclexplode(proacl) a WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE'))`,
     );
     expect(rows).toEqual([]);
+  });
+});
+
+describe('the generated documents’ grants (ADR 0038: the worker never reads an archived DOCX)', () => {
+  const ISSUE = '01900000-0000-7000-8000-000000000001';
+  const DOC = '01900000-0000-7000-8000-000000000002';
+  const SHA = 'a'.repeat(64);
+
+  /** One document with its source, made as the owner, in the way `documents.insert` does. */
+  async function seedDocument(): Promise<void> {
+    // The database lives for the whole file: start from nothing.
+    await database.owner(`DELETE FROM generated_documents`);
+    await database.owner(`DELETE FROM issues WHERE id = $1`, [ISSUE]);
+    await database.owner(
+      `INSERT INTO issues (id, monday, meeting_date, school_year, deadline_at)
+       VALUES ($1, '2026-11-02', '2026-11-02', '2026/2027', now())`,
+      [ISSUE],
+    );
+    await database.owner(
+      `INSERT INTO generated_documents (id, issue_id, snapshot, docx, docx_sha256)
+       VALUES ($1, $2, '{}', '\\x504b0304', $3)`,
+      [DOC, ISSUE, SHA],
+    );
+    await database.owner(`INSERT INTO pdf_sources (document_id, docx) VALUES ($1, '\\x504b0304')`, [
+      DOC,
+    ]);
+  }
+
+  it('lets the jobs role update exactly the PDF columns of generated_documents', async () => {
+    const rows = await database.owner<{ column: string }>(
+      `SELECT a.attname AS column FROM pg_attribute a
+        WHERE a.attrelid = 'generated_documents'::regclass AND a.attnum > 0 AND NOT a.attisdropped
+          AND has_column_privilege('autoporada_jobs', a.attrelid, a.attnum, 'UPDATE')
+        ORDER BY 1`,
+    );
+    expect(rows.map((row) => row.column)).toEqual(['pdf', 'pdf_at', 'pdf_sha256', 'pdf_status']);
+    const [table] = await database.owner<{ held: boolean }>(
+      `SELECT has_table_privilege('autoporada_jobs', 'generated_documents', 'INSERT, DELETE, TRUNCATE, REFERENCES, TRIGGER') AS held`,
+    );
+    expect(table?.held).toBe(false);
+  });
+
+  it('gives the web no update on generated_documents, and insert only on pdf_sources', async () => {
+    const [facts] = await database.owner<Record<string, boolean>>(
+      `SELECT has_table_privilege('autoporada_app', 'generated_documents', 'UPDATE') AS update_documents,
+              has_table_privilege('autoporada_app', 'generated_documents', 'TRUNCATE') AS truncate_documents,
+              has_table_privilege('autoporada_app', 'pdf_sources', 'INSERT') AS insert_sources,
+              has_table_privilege('autoporada_app', 'pdf_sources', 'SELECT, UPDATE, DELETE, TRUNCATE') AS other_sources`,
+    );
+    expect(facts).toEqual({
+      update_documents: false,
+      truncate_documents: false,
+      insert_sources: true,
+      other_sources: false,
+    });
+  });
+
+  it('shows the worker the staged source and the status, and nothing of the archive', async () => {
+    await seedDocument();
+    const worker = await connectAs('autoporada_worker');
+    try {
+      const { rows } = await worker.query(
+        `SELECT d.pdf_status, s.docx FROM generated_documents d
+           LEFT JOIN pdf_sources s ON s.document_id = d.id WHERE d.id = $1`,
+        [DOC],
+      );
+      expect(rows).toEqual([{ pdf_status: 'pending', docx: Buffer.from([0x50, 0x4b, 3, 4]) }]);
+    } finally {
+      await worker.end();
+    }
+    for (const column of ['docx', 'snapshot', 'pdf']) {
+      expect(
+        await sqlstateAs('autoporada_worker', `SELECT ${column} FROM generated_documents`),
+        column,
+      ).toBe(DENIED);
+    }
+  });
+
+  it.each([
+    [
+      'make a document',
+      `INSERT INTO generated_documents (issue_id, snapshot, docx, docx_sha256)
+       VALUES ('${ISSUE}', '{}', '\\x00', '${SHA}')`,
+    ],
+    ['change the DOCX', `UPDATE generated_documents SET docx = '\\x00'`],
+    ['change the snapshot', `UPDATE generated_documents SET snapshot = '{"a":1}'`],
+    ['delete a document', `DELETE FROM generated_documents`],
+    ['stage a source', `INSERT INTO pdf_sources (document_id, docx) VALUES ('${DOC}', '\\x00')`],
+    ['change a source', `UPDATE pdf_sources SET docx = '\\x00'`],
+  ])('the worker cannot %s', async (_what, statement) => {
+    await seedDocument();
+    expect(await sqlstateAs('autoporada_worker', statement)).toBe(DENIED);
+  });
+
+  it('lets the worker settle a pending document and delete its source', async () => {
+    await seedDocument();
+    const worker = await connectAs('autoporada_worker');
+    try {
+      await worker.query('BEGIN');
+      const settled = await worker.query(
+        `UPDATE generated_documents
+            SET pdf = '\\x255044462d', pdf_sha256 = $2, pdf_status = 'ready', pdf_at = now()
+          WHERE id = $1 AND pdf_status = 'pending'`,
+        [DOC, SHA],
+      );
+      expect(settled.rowCount).toBe(1);
+      expect(
+        (await worker.query(`DELETE FROM pdf_sources WHERE document_id = $1`, [DOC])).rowCount,
+      ).toBe(1);
+      await worker.query('ROLLBACK');
+    } finally {
+      await worker.end();
+    }
+  });
+
+  it('lets the web insert a source but not read it, and the cascade still deletes it', async () => {
+    await seedDocument();
+    await database.owner(`DELETE FROM pdf_sources`);
+    const web = await connectAs('autoporada_app');
+    try {
+      await web.query(`INSERT INTO pdf_sources (document_id, docx) VALUES ($1, '\\x00')`, [DOC]);
+      await expect(web.query(`SELECT docx FROM pdf_sources`)).rejects.toMatchObject({
+        code: DENIED,
+      });
+      expect(await database.owner(`SELECT 1 FROM pdf_sources`)).toHaveLength(1);
+      await web.query(`DELETE FROM generated_documents WHERE id = $1`, [DOC]);
+      expect(await database.owner(`SELECT 1 FROM pdf_sources`)).toEqual([]);
+    } finally {
+      await web.end();
+    }
   });
 });

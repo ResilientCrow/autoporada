@@ -43,4 +43,5 @@ record that supersedes it.
 | [0035](0035-late-event-reports.md) | Late-event reports | Accepted; item 9 (the headmaster's late summary) superseded by 0037 |
 | [0036](0036-a-returned-proposal-keeps-its-place.md) | A returned proposal keeps its place in the outline | Accepted |
 | [0037](0037-four-mails-switched-off.md) | Four mails switched off | Accepted |
-| [0038](0038-generation-and-the-archive.md) | Generation and the archive | Accepted |
+| [0038](0038-generation-and-the-archive.md) | Generation and the archive | Accepted; item 4 (the worker's grant on the DOCX) superseded by 0039 |
+| [0039](0039-the-worker-sees-only-the-docx-it-converts.md) | The worker sees only the DOCX it converts | Accepted |
