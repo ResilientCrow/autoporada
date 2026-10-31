@@ -145,7 +145,7 @@ export async function poradaMovePage(datum: string): Promise<MovePageModel | nul
       deadlineAt: slot.deadlineAt,
       today: toIsoDate(today),
       // The horizon of the calendar (`issues.move` accepts the same).
-      last: toIsoDate(addDays(lastSlotMonday(today), 13)),
+      last: toIsoDate(addDays(lastSlotMonday(today), 6)),
       issues: standing.issues,
       now: standing.now,
       rule: standing.rule,

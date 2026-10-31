@@ -155,7 +155,7 @@ describe('issues.move', () => {
       const head = await headmaster();
       const bad = { code: 'invalid-input', fields: { meetingDate: 'invalid' } };
       await refuses(() => move(head, W1, { meeting: '2026-10-18', deadline: '2026-10-10' }), bad);
-      const horizon = addDays(lastSlotMonday(TODAY), 13);
+      const horizon = addDays(lastSlotMonday(TODAY), 6);
       await refuses(
         () => move(head, W1, { meeting: toIsoDate(addDays(horizon, 1)), deadline: '2026-10-24' }),
         bad,

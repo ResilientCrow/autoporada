@@ -66,7 +66,7 @@ export const moveIssue = defineUseCase({
     if (slot.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
     const today = instantToWallClock(now).date;
-    const horizon = addDays(lastSlotMonday(today), 13);
+    const horizon = addDays(lastSlotMonday(today), 6);
     if (compareDates(meetingDate, today) < 0 || compareDates(meetingDate, horizon) > 0) {
       return fail({ code: 'invalid-input', fields: { meetingDate: 'invalid' } });
     }

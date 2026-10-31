@@ -186,6 +186,8 @@ describe('poradaMovePage', () => {
         meetingDate: '2026-11-11',
         deadlineAt: SLOT.deadlineAt,
         today: '2026-11-03',
+        // The Sunday after the last Monday of the 26 weeks (ADR 0034 item 3).
+        last: '2027-05-02',
         rule: { dayOffset: -2 },
       },
     });
