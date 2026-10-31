@@ -18,7 +18,7 @@ import { ensureIssue } from '../issues';
  * this week's to the one a hand-in goes to now are frozen with the old rule, so nobody's shown
  * deadline moves; the open rows after it still on the old rule are refrozen with the new one. The
  * same rule changes nothing. Then the meeting order is checked over the calendar as it now
- * stands: no slot under the new rule may break it against the others (`conflict`; the caller
+ * stands: no slot under the new rule may break it against the others (`meeting-order`; the caller
  * fails and the transaction rolls back). Gives the rows it wrote, for the audit event.
  */
 async function applyDeadline(tx: Tx, now: Date, value: unknown) {

@@ -30,7 +30,7 @@ const EMPTY: PointContent = {
 };
 
 /** A report the assembler takes whole: a people bullet and a statement, every count zero. */
-export const FULL_REPORT: PointContent = {
+const FULL_REPORT: PointContent = {
   title: 'Seminář o vodě',
   eventDate: calDate(2026, 10, 20),
   endDate: null,
