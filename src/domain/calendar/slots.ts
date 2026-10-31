@@ -9,6 +9,7 @@ import {
 } from '@/domain/time';
 
 import { deadline, type DeadlineRule } from './issue-calendar';
+import { reportCloses, type LateFacts } from './late-report';
 
 /** Placement never looks further ahead than this many Mondays (the slots `issueSlots` makes). */
 export const PLACEMENT_WEEKS = 26;
@@ -67,21 +68,34 @@ export function issueSlots(
 const isOpen = (slot: IssueSlot) => slot.status === 'open';
 
 /**
- * The slot a hand-in at `now` goes to: the first open slot whose deadline is still ahead, the one
- * the submitter was shown. Skipped and generated slots are stepped over whatever their deadline,
- * so a point handed in after slot B's deadline cannot reach B through a skipped slot before it
- * that has a later one. A stored slot's deadline is its frozen value, whatever the rule says now.
- * The virtual Mondays go on past the last slot, so there is always an answer.
+ * The slot a hand-in at `now` goes to: the first open slot whose close is still ahead, the one
+ * the submitter was shown. The close is the slot's deadline, or for a report about an event that
+ * ends before the meeting day its own later close (ADR 0035). Skipped and generated slots are
+ * stepped over whatever their close, so a point handed in after slot B's deadline cannot reach B
+ * through a skipped slot before it that has a later one. A stored slot's deadline is its frozen
+ * value, whatever the rule says now. The virtual Mondays go on past the last slot, so there is
+ * always an answer.
  */
-export function submitMonday(now: Date, slots: readonly IssueSlot[], rule: DeadlineRule): CalDate {
-  const found = slots.find((slot) => isOpen(slot) && now.getTime() < slot.deadlineAt.getTime());
+export function handInMonday(
+  now: Date,
+  slots: readonly IssueSlot[],
+  rule: DeadlineRule,
+  report?: LateFacts,
+): CalDate {
+  const closesAhead = (slot: IssueRow) =>
+    now.getTime() < (report ? reportCloses(slot, report) : slot.deadlineAt).getTime();
+  const found = slots.find((slot) => isOpen(slot) && closesAhead(slot));
   if (found) return found.monday;
   const last = slots.at(-1);
   const start = last ? addDays(last.monday, 7) : mondayOf(instantToWallClock(now).date);
   for (let monday = start; ; monday = addDays(monday, 7)) {
-    if (now.getTime() < virtualRow(monday, rule).deadlineAt.getTime()) return monday;
+    if (closesAhead(virtualRow(monday, rule))) return monday;
   }
 }
+
+/** The slot a hand-in with no close of its own goes to (the first open slot whose deadline is ahead). */
+export const submitMonday = (now: Date, slots: readonly IssueSlot[], rule: DeadlineRule): CalDate =>
+  handInMonday(now, slots, rule);
 
 /**
  * Where a point due in `due` is shown: the first open slot from that Monday on whose meeting is

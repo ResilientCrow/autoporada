@@ -25,10 +25,19 @@ export {
   reminderStagger,
   type ReminderKind,
 } from './reminders';
+export {
+  eventEnd,
+  isLateReport,
+  lateFacts,
+  reportCloses,
+  type LateFacts,
+  type PoradaClose,
+} from './late-report';
 export { dueMonday } from './selection';
 export { summaryDue } from './summary';
 export { placementMonday, pointMonday, type KnownIssue } from './placement';
 export {
+  handInMonday,
   issueSlots,
   lastSlotMonday,
   PLACEMENT_WEEKS,

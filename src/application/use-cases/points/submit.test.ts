@@ -140,6 +140,62 @@ describe('points.submit', () => {
     });
   });
 
+  describe('a report about a late event', () => {
+    // The event ends Sunday 2026-11-01 21.00: due 23.00, after the Saturday 20.00 deadline.
+    const lateDates = { eventDate: '2026-11-01', timeFrom: '18:00', timeTo: '21:00' };
+    const lateEvent = readyReport(lateDates);
+    const NEXT = calDate(2026, 11, 2);
+
+    it('lands in the porada before it, as hand-in and earliest Monday, until its close', async () => {
+      world.clock.set(new Date('2026-11-01T21:59:00Z'));
+      const author = await user();
+      const id = await start(author);
+      expect((await submit(author, id, lateEvent)).ok).toBe(true);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: NEXT, handInMonday: NEXT });
+      expect((await snapshot(id)).issues.map((issue) => toIsoDate(issue.monday))).toEqual([
+        '2026-11-02',
+      ]);
+    });
+
+    it('goes to the porada after that once its close has passed', async () => {
+      world.clock.set(new Date('2026-11-01T22:00:00Z'));
+      const author = await user();
+      const id = await start(author);
+      expect((await submit(author, id, lateEvent)).ok).toBe(true);
+      const after = addDays(NEXT, 7);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: after, handInMonday: after });
+    });
+
+    it('is placed by the same rule again when it is handed in after a return', async () => {
+      world.clock.set(new Date('2026-11-01T20:00:00Z'));
+      const author = await user();
+      const id = await start(author);
+      await submit(author, id, lateEvent);
+      await moveTo(author, id, 'returned');
+      world.clock.set(new Date('2026-11-01T22:30:00Z'));
+      expect((await submit(author, id, lateEvent, 3)).ok).toBe(true);
+      expect(await get(author, id)).toMatchObject({
+        earliestMonday: NEXT,
+        handInMonday: addDays(NEXT, 7),
+      });
+    });
+
+    it.each([
+      ['a proposal dated like the late event', 'pokyn', readyProposal(lateDates)],
+      [
+        'a report about an event that ended Friday',
+        'report',
+        readyReport({ eventDate: '2026-10-30', timeFrom: '13:00', timeTo: '15:00' }),
+      ],
+    ] as const)('gives %s no extra time', async (_name, kind, content) => {
+      world.clock.set(new Date('2026-11-01T20:00:00Z'));
+      const author = await user();
+      const id = await start(author, kind);
+      expect((await submit(author, id, content)).ok).toBe(true);
+      expect(await get(author, id)).toMatchObject({ handInMonday: addDays(NEXT, 7) });
+    });
+  });
+
   describe('a resubmit', () => {
     it.each(['returned', 'draft'] as const)(
       'from %s keeps the first Monday and makes no issue',
