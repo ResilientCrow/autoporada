@@ -17,6 +17,8 @@ import {
   type Db,
   type PointTypeRecord,
   type Principal,
+  type RegistryEntryRecord,
+  type RegistryListRecord,
   type Tx,
   type TxMode,
   type UserPrincipal,
@@ -33,9 +35,12 @@ import {
   deleteUser,
   insertAccessRequest,
   insertPointType,
+  insertRegistryEntry,
+  insertRegistryList,
   insertSetting,
   jobRows,
   lockWaits,
+  nextListPosition,
   resetTables,
 } from './pg/backend';
 
@@ -67,6 +72,22 @@ type AccessRequestRow = Omit<AccessRequestRecord, 'id' | 'version'>;
 type PointTypeSeed = Partial<Omit<PointTypeRecord, 'id' | 'version' | 'name' | 'position'>> &
   Pick<PointTypeRecord, 'name' | 'position'>;
 
+/** A registry list to seed; migration 0032's four lists are in neither world (resetTables truncates them). */
+type RegistryListSeed = Partial<Omit<RegistryListRecord, 'id' | 'version'>> &
+  Pick<RegistryListRecord, 'key' | 'title'>;
+
+/** A registry entry to seed; `printed` stamps it as listed by a generated document. */
+export type RegistryEntrySeed = Partial<
+  Pick<
+    RegistryEntryRecord,
+    'givenName' | 'familyName' | 'classCode' | 'addedAt' | 'removedAt' | 'archivedYear'
+  >
+> &
+  Pick<RegistryEntryRecord, 'listId'> & { readonly printed?: boolean };
+
+/** What the backend inserts for an entry: `printed` has become the id of a real issue or null. */
+type RegistryEntryRow = Omit<RegistryEntryRecord, 'id' | 'version'>;
+
 const SEED_REASON = 'Učím informatiku od září.';
 
 export interface World {
@@ -93,6 +114,10 @@ export interface World {
     pointType(seed: PointTypeSeed): Promise<PointTypeRecord>;
     /** Written straight into the table at version 1, whatever the value: no port writes settings yet. */
     setting(key: string, value: unknown): Promise<void>;
+    /** A list at version 1, past the repository's rules; `position` defaults to after the last, the purpose to `point4`. */
+    registryList(seed: RegistryListSeed): Promise<RegistryListRecord>;
+    /** An entry at version 1, past the repository's rules; `printed` gives it a first-published issue. */
+    registryEntry(seed: RegistryEntrySeed): Promise<RegistryEntryRecord>;
   };
   readonly inspect: {
     audit(): Promise<readonly AuditRow[]>;
@@ -113,6 +138,8 @@ export interface World {
 interface PgInspector {
   /** How many of this database's transactions wait on a lock now. */
   lockWaits(): Promise<number>;
+  /** Runs SQL as the owner, past grants and repositories, for guards the ports cannot reach. */
+  owner<R extends object>(sql: string, params?: unknown[]): Promise<R[]>;
 }
 
 /** What differs between the worlds; the rest of the World is built on top. */
@@ -126,6 +153,10 @@ interface Backend {
   insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
   insertPointType(row: Omit<PointTypeRecord, 'id' | 'version'>): Promise<PointTypeRecord>;
   insertSetting(key: string, value: unknown): Promise<void>;
+  insertRegistryList(row: Omit<RegistryListRecord, 'id' | 'version'>): Promise<RegistryListRecord>;
+  /** `printed`: whether to give the entry a first-published issue (a row is made in the database). */
+  insertRegistryEntry(row: RegistryEntryRow, printed: boolean): Promise<RegistryEntryRecord>;
+  nextListPosition(): Promise<number>;
   deleteUser(id: string): Promise<void>;
 }
 
@@ -206,6 +237,30 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
           ...seed,
         }),
       setting: (key, value) => backend().insertSetting(key, value),
+      registryList: async (seed) => {
+        const position = seed.position ?? (await backend().nextListPosition());
+        return backend().insertRegistryList({
+          docLabel: `seznam ${seed.title}`,
+          purpose: 'point4',
+          active: true,
+          ...seed,
+          position,
+        });
+      },
+      registryEntry: ({ printed = false, ...seed }) =>
+        backend().insertRegistryEntry(
+          {
+            givenName: 'Jan',
+            familyName: 'Novák',
+            classCode: '1.A',
+            addedAt: clock.now(),
+            removedAt: null,
+            archivedYear: null,
+            ...seed,
+            firstPublishedIssueId: null,
+          },
+          printed,
+        ),
     },
     inspect: {
       audit: () => backend().audit(),
@@ -253,6 +308,32 @@ function fakeBackend(db: FakeDb): Backend {
       }
       db.state().settings.set(key, { value: structuredClone(value), version: 1 });
     },
+    async nextListPosition() {
+      return Math.max(0, ...[...db.state().registryLists.values()].map((l) => l.position)) + 1;
+    },
+    async insertRegistryList(row) {
+      const lists = db.state().registryLists;
+      const list = { ...row, id: newId(db.state()), version: 1 };
+      if ([...lists.values()].some((l) => l.key === row.key || l.title === row.title)) {
+        throw refusedBy('registry_lists_key_key');
+      }
+      lists.set(list.id, list);
+      return list;
+    },
+    async insertRegistryEntry(row, printed) {
+      const state = db.state();
+      if (!state.registryLists.has(row.listId)) {
+        throw refusedBy('registry_entries_list_id_registry_lists_id_fk');
+      }
+      const entry = {
+        ...row,
+        firstPublishedIssueId: printed ? newId(state) : null,
+        id: newId(state),
+        version: 1,
+      };
+      state.registryEntries.set(entry.id, entry);
+      return entry;
+    },
     async deleteUser(id) {
       eraseFakeUser(db.state(), id);
     },
@@ -263,12 +344,18 @@ function pgBackend(database: TestDatabase): Backend {
   return {
     db: database.app,
     workerDb: database.worker,
-    pg: { lockWaits: () => lockWaits(database) },
+    pg: {
+      lockWaits: () => lockWaits(database),
+      owner: (sql, params) => database.owner(sql, params),
+    },
     audit: () => auditRows(database),
     jobs: () => jobRows(database),
     insertAccessRequest: (row) => insertAccessRequest(database, row),
     insertPointType: (row) => insertPointType(database, row),
     insertSetting: (key, value) => insertSetting(database, key, value),
+    nextListPosition: () => nextListPosition(database),
+    insertRegistryList: (row) => insertRegistryList(database, row),
+    insertRegistryEntry: (row, printed) => insertRegistryEntry(database, row, printed),
     deleteUser: (id) => deleteUser(database, id),
   };
 }

@@ -1,4 +1,9 @@
-import type { AccessRequestRecord, PointTypeRecord } from '@/application/ports';
+import type {
+  AccessRequestRecord,
+  PointTypeRecord,
+  RegistryEntryRecord,
+  RegistryListRecord,
+} from '@/application/ports';
 
 import type { TestDatabase } from '../../database';
 import type { AuditRow, JobRow } from '../fake/state';
@@ -126,4 +131,66 @@ export async function insertSetting(
     key,
     JSON.stringify(value),
   ]);
+}
+
+/** The position after the last registry list, as the owner sees it. */
+export async function nextListPosition(database: TestDatabase): Promise<number> {
+  const [row] = await database.owner<{ next: number }>(
+    `SELECT coalesce(max(position), 0)::int + 1 AS next FROM registry_lists`,
+  );
+  return row?.next ?? 1;
+}
+
+/** Inserts a registry list as the owner, past the repository and its audit. */
+export async function insertRegistryList(
+  database: TestDatabase,
+  row: Omit<RegistryListRecord, 'id' | 'version'>,
+): Promise<RegistryListRecord> {
+  const [inserted] = await database.owner<{ id: string; version: number }>(
+    `INSERT INTO registry_lists (key, title, doc_label, purpose, position, active)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, version`,
+    [row.key, row.title, row.docLabel, row.purpose, row.position, row.active],
+  );
+  if (!inserted) throw new Error('insertRegistryList: no row returned');
+  return { ...row, id: inserted.id, version: inserted.version };
+}
+
+/**
+ * Inserts a registry entry as the owner. A printed one points at an issue, which is made for it
+ * (the issue of 2026-01-05, once).
+ */
+export async function insertRegistryEntry(
+  database: TestDatabase,
+  row: Omit<RegistryEntryRecord, 'id' | 'version'>,
+  printed: boolean,
+): Promise<RegistryEntryRecord> {
+  let issueId: string | null = null;
+  if (printed) {
+    await database.owner(
+      `INSERT INTO issues (monday, meeting_date, school_year, deadline_at)
+       VALUES ('2026-01-05', '2026-01-05', '2025/2026', '2026-01-02T10:00:00Z')
+       ON CONFLICT (monday) DO NOTHING`,
+    );
+    const [issue] = await database.owner<{ id: string }>(
+      `SELECT id FROM issues WHERE monday = '2026-01-05'`,
+    );
+    issueId = issue?.id ?? null;
+  }
+  const [inserted] = await database.owner<{ id: string; version: number }>(
+    `INSERT INTO registry_entries
+       (list_id, given_name, family_name, class_code, added_at, removed_at, archived_year, first_published_issue_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, version`,
+    [
+      row.listId,
+      row.givenName,
+      row.familyName,
+      row.classCode,
+      row.addedAt,
+      row.removedAt,
+      row.archivedYear,
+      issueId,
+    ],
+  );
+  if (!inserted) throw new Error('insertRegistryEntry: no row returned');
+  return { ...row, firstPublishedIssueId: issueId, id: inserted.id, version: inserted.version };
 }
