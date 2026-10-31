@@ -105,6 +105,20 @@ export const QUEUE_SPECS = {
       deadLetter: DEAD_QUEUE,
     },
   },
+  // Sent every five minutes by the cron registry; it enqueues the summary mails inside an issue's window.
+  'headmaster.summary': {
+    policy: 'standard',
+    options: {
+      retryLimit: 2,
+      retryDelay: 60,
+      retryBackoff: true,
+      retryDelayMax: 600,
+      expireInSeconds: 300,
+      retentionSeconds: 2 * DAY,
+      deleteAfterSeconds: 2 * DAY,
+      deadLetter: DEAD_QUEUE,
+    },
+  },
 } satisfies Record<QueueName, QueueSettings>;
 
 /**

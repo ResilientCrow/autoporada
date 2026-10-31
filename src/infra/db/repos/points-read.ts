@@ -7,6 +7,7 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
   lt,
   lte,
   ne,
@@ -204,6 +205,7 @@ export function createPointReads(
   | 'reminderAuthors'
   | 'submitterIds'
   | 'countSubmittedSince'
+  | 'handedInFor'
 > {
   const byId = (id: string) =>
     db
@@ -285,6 +287,31 @@ export function createPointReads(
         .where(gte(points.submittedAt, since))
         .orderBy(asc(points.authorId));
       return rows.map((row) => row.authorId);
+    },
+    async handedInFor(monday) {
+      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migrations 0017 and 0024 grant the worker, and no other.
+      const rows = await db
+        .select({
+          state: points.state,
+          earliestMonday: points.earliestMonday,
+          submittedAt: points.submittedAt,
+        })
+        .from(points)
+        .where(
+          and(
+            inArray(points.state, ['submitted', 'approved', 'returned']),
+            lte(points.earliestMonday, toIsoDate(monday)),
+            isNotNull(points.submittedAt),
+          ),
+        );
+      return rows.flatMap(({ state, earliestMonday, submittedAt }) =>
+        (state === 'submitted' || state === 'approved' || state === 'returned') &&
+        earliestMonday !== null &&
+        submittedAt !== null
+          ? [{ state, earliestMonday: parseIsoDate(earliestMonday), submittedAt }]
+          : [],
+      );
     },
     async countSubmittedSince({ since, notBy }) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();

@@ -6,6 +6,7 @@ import { digestParts, type DigestIds } from './digest';
 import { pointMailParts, type PointMailIds } from './point-mails';
 import { reminderParts, type ReminderIds } from './reminders';
 import { reportPromptParts, type ReportPromptIds } from './report-prompt';
+import { summaryParts, type SummaryIds } from './summary';
 
 /** Which mail each access decision sends the requester (plan §9); the requester's cancel sends none. */
 export const DECISION_MAIL = {
@@ -35,6 +36,7 @@ interface MailIds {
   readonly 'reminder.soft': ReminderIds;
   readonly 'reminder.hard': ReminderIds;
   readonly 'reviewer.digest': DigestIds;
+  readonly 'headmaster.summary': SummaryIds;
 }
 
 interface MailParts {
@@ -75,6 +77,7 @@ const PARTS: { readonly [T in TemplateName]: (ids: MailIds[T]) => MailParts } = 
   'reminder.soft': reminderParts,
   'reminder.hard': reminderParts,
   'reviewer.digest': digestParts,
+  'headmaster.summary': summaryParts,
 };
 
 interface MailJob {

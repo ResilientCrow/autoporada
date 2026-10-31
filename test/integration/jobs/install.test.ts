@@ -114,6 +114,7 @@ describe('installJobs', () => {
         '__pgboss__send-it',
         'dead',
         'future.report-prompt',
+        'headmaster.summary',
         'mail.prune',
         'mail.send',
         'reminders.deadline',

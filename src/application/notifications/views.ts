@@ -24,6 +24,7 @@ const VIEWS: {
   'reminder.soft': ({ monday }) => ({ meetingDate: monday }),
   'reminder.hard': ({ monday }) => ({ meetingDate: monday }),
   'reviewer.digest': (counts) => counts,
+  'headmaster.summary': ({ monday, ...counts }) => ({ meetingDate: monday, ...counts }),
 };
 
 /** The template's variables, read from its subject. */

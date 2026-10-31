@@ -36,9 +36,15 @@ describe('mails repeat the access screens', () => {
 describe('mails link pages that exist', () => {
   it.each(TEMPLATE_NAMES)('%s', (name) => {
     const date = instantToWallClock(new Date('2026-10-01T10:00:00Z')).date;
-    const view = name.startsWith('reminder.')
-      ? { meetingDate: date }
-      : { retryFrom: date, submitted: 2, accessRequests: 1 };
+    const view = {
+      meetingDate: date,
+      retryFrom: date,
+      submitted: 2,
+      accessRequests: 1,
+      approved: 3,
+      pending: 2,
+      returned: 1,
+    };
     const { text } = renderMail(name, view as never, ORIGIN);
     for (const link of text.match(/https?:\/\/\S*/g) ?? []) {
       const path = link.slice(ORIGIN.length);

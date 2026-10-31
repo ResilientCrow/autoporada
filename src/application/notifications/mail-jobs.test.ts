@@ -95,6 +95,18 @@ describe('mail jobs', () => {
     ).not.toBe(morning.dedupeKey);
   });
 
+  it('keys a summary by person and meeting Monday, so each headmaster is told once per issue', () => {
+    const monday = calDate(2026, 10, 26);
+    const first = mailJob('headmaster.summary', { userId: USER, monday });
+    expect(first).toEqual({
+      data: { template: 'headmaster.summary', recipientId: USER, subjectId: USER },
+      dedupeKey: `headmaster.summary:${USER}:2026-10-26`,
+    });
+    expect(
+      mailJob('headmaster.summary', { userId: USER, monday: calDate(2026, 11, 2) }).dedupeKey,
+    ).not.toBe(first.dedupeKey);
+  });
+
   it('builds payloads of ids only and keys that start with their template, for every template', () => {
     const jobs = [
       mailJob('access.approved', { recipientId: USER, requestId: REQUEST }),
@@ -109,6 +121,7 @@ describe('mail jobs', () => {
       mailJob('reminder.soft', { userId: USER, monday: calDate(2026, 10, 26) }),
       mailJob('reminder.hard', { userId: USER, monday: calDate(2026, 10, 26) }),
       mailJob('reviewer.digest', { userId: USER, date: calDate(2026, 10, 26), slot: '15' }),
+      mailJob('headmaster.summary', { userId: USER, monday: calDate(2026, 10, 26) }),
     ];
     expect(jobs.map((job) => job.data.template)).toEqual(TEMPLATE_NAMES);
     for (const { data, dedupeKey } of jobs) {

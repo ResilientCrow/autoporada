@@ -265,6 +265,18 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       const handedIn = [...points.values()].filter((p) => p.submittedAt && p.submittedAt >= since);
       return distinctSorted(handedIn.map((p) => p.authorId));
     },
+    async handedInFor(monday) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      return [...points.values()].flatMap((p) =>
+        (p.state === 'submitted' || p.state === 'approved' || p.state === 'returned') &&
+        p.earliestMonday !== null &&
+        p.submittedAt !== null &&
+        compareDates(p.earliestMonday, monday) <= 0
+          ? [{ state: p.state, earliestMonday: p.earliestMonday, submittedAt: p.submittedAt }]
+          : [],
+      );
+    },
     async countSubmittedSince({ since, notBy }) {
       guard(tx, false);
       if (principal.kind !== 'system') throw new ScopeViolation();

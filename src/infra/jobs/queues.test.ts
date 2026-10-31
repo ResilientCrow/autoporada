@@ -107,6 +107,23 @@ describe('QUEUES', () => {
     });
   });
 
+  it('retries headmaster.summary twice within ten minutes, well inside its two-hour window', () => {
+    expect(spec('headmaster.summary')).toEqual({
+      name: 'headmaster.summary',
+      policy: 'standard',
+      options: {
+        retryLimit: 2,
+        retryDelay: 60,
+        retryBackoff: true,
+        retryDelayMax: 600,
+        expireInSeconds: 300,
+        retentionSeconds: 2 * DAY,
+        deleteAfterSeconds: 2 * DAY,
+        deadLetter: 'dead',
+      },
+    });
+  });
+
   it('creates the dead-letter queue before any queue that names it', () => {
     const names = QUEUES.map((queue) => queue.name);
     for (const queue of QUEUES) {

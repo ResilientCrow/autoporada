@@ -307,6 +307,26 @@ describe('stillApplies', () => {
     });
   });
 
+  describe('the headmaster summary', () => {
+    const issue = { monday: calDate(2026, 10, 26), approved: 0, pending: 0, returned: 0 };
+
+    it('goes to the headmaster while they can sign in, whatever the counts say', () => {
+      expect(stillApplies('headmaster.summary', issue, user('headmaster'))).toBe(true);
+    });
+
+    it('goes to no one else: not a reviewer, not a headmaster who was blocked or deactivated', () => {
+      for (const recipient of [
+        user('reviewer'),
+        user('submitter'),
+        user('pending'),
+        user('headmaster', 'blocked'),
+        user('headmaster', 'deactivated'),
+      ]) {
+        expect(stillApplies('headmaster.summary', issue, recipient)).toBe(false);
+      }
+    });
+  });
+
   it.each([
     ['access.approved', MEMBER],
     ['access.rejected', PENDING],
@@ -320,6 +340,7 @@ describe('stillApplies', () => {
     ['reminder.soft', MEMBER],
     ['reminder.hard', MEMBER],
     ['reviewer.digest', user('reviewer')],
+    ['headmaster.summary', user('headmaster')],
   ] as const)(
     'never sends %s about a missing subject (a purged request, a deleted point)',
     (template, recipient) => {

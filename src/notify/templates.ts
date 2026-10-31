@@ -23,6 +23,7 @@ export const TEMPLATE_NAMES = [
   'reminder.soft',
   'reminder.hard',
   'reviewer.digest',
+  'headmaster.summary',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -43,6 +44,13 @@ export interface TemplateViews {
   'reminder.hard': { readonly meetingDate: CalDate };
   /** What came in for a reviewer since their last digest; a headmaster's access requests too. One of them is above zero. */
   'reviewer.digest': { readonly submitted: number; readonly accessRequests: number };
+  /** The meeting whose deadline has passed, and where its points stand. */
+  'headmaster.summary': {
+    readonly meetingDate: CalDate;
+    readonly approved: number;
+    readonly pending: number;
+    readonly returned: number;
+  };
 }
 
 interface RenderedMail {
@@ -161,6 +169,16 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       },
     };
   },
+  // Counts, never titles or names (D3 (a)); the colons keep every noun clear of its number.
+  'headmaster.summary': ({ meetingDate, approved, pending, returned }) => ({
+    subject: 'Autoporada: uzávěrka porady proběhla',
+    body: {
+      paragraphs: [
+        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} proběhla. Schváleno: ${approved}, čeká na kontrolu: ${pending}, vráceno k\u00A0úpravě: ${returned}.`,
+      ],
+      link: '/kontrola',
+    },
+  }),
 };
 
 /** Renders one mail. `origin` is the validated app origin, without a trailing slash. */

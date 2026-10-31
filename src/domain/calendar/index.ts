@@ -25,6 +25,7 @@ export {
   reminderStagger,
   type ReminderKind,
 } from './reminders';
+export { summaryDue } from './summary';
 export {
   placementMonday,
   PLACEMENT_WEEKS,

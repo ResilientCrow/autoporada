@@ -172,10 +172,10 @@ installed=$(sql 'SELECT version FROM pgboss.version') || fail 'could not read pg
 [ "$installed" = "$expected" ] || fail "pgboss.version is $installed, the worker expects $expected"
 queues=$(sql "SELECT string_agg(name, ',' ORDER BY name) FROM pgboss.queue WHERE name <> '__pgboss__send-it'") ||
   fail 'could not read the queues'
-[ "$queues" = 'dead,future.report-prompt,mail.prune,mail.send,reminders.deadline,reviewer.digest' ] || fail "unexpected queues: $queues"
+[ "$queues" = 'dead,future.report-prompt,headmaster.summary,mail.prune,mail.send,reminders.deadline,reviewer.digest' ] || fail "unexpected queues: $queues"
 schedule=$(sql "SELECT string_agg(name || ' ' || timezone, ',' ORDER BY name) FROM pgboss.schedule") ||
   fail 'could not read the schedule'
-[ "$schedule" = 'future.report-prompt Europe/Prague,mail.prune Europe/Prague,reminders.deadline Europe/Prague,reviewer.digest Europe/Prague' ] || fail "unexpected schedule: $schedule"
+[ "$schedule" = 'future.report-prompt Europe/Prague,headmaster.summary Europe/Prague,mail.prune Europe/Prague,reminders.deadline Europe/Prague,reviewer.digest Europe/Prague' ] || fail "unexpected schedule: $schedule"
 
 # The worker's own rights: the queue tables and the mail tables, no schema, no role, no business writes.
 # Nothing on pgboss.bam (the owner's migrate runs its rows as SQL), nor on a queue's table or the

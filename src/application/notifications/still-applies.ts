@@ -6,6 +6,7 @@ import type { MailSubjects, PointDecision } from './subjects';
 
 import { isReviewer } from './digest';
 import { isMember as member, wantsSoftReminder } from './reminders';
+import { isHeadmaster } from './summary';
 
 type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'isStudent' | 'remindDeadline'>;
 
@@ -62,6 +63,8 @@ const APPLIES: {
   'reviewer.digest': ({ submitted, accessRequests }, recipient) =>
     isReviewer(recipient) &&
     (submitted > 0 || (recipient.role === 'headmaster' && accessRequests > 0)),
+  /** The headmaster, while they can sign in; a skipped or closed issue has no subject to begin with. */
+  'headmaster.summary': (_subject, recipient) => isHeadmaster(recipient),
 };
 
 /** A missing subject (a decided request purged on 1 September, a deleted point) never applies. */

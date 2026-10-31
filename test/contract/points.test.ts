@@ -918,6 +918,66 @@ describe('PointRepo countSubmittedSince (what the reviewer digest reads, migrati
   });
 });
 
+describe('PointRepo handedInFor (what the headmaster summary reads, migration 0024)', () => {
+  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
+    world.workerDb.transaction(
+      { principal: system('job:headmaster.summary'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      work,
+    );
+  const MONDAY = calDate(2026, 11, 2);
+  const handedIn = (monday = MONDAY) => asWorker((tx) => tx.points.handedInFor(monday));
+
+  /** A point of `author` in `state`, first handed in for `earliest` at `at`. */
+  async function pointIn(
+    author: UserRecord,
+    state: PointPatch['state'],
+    earliest = MONDAY,
+    at = '2026-10-30T09:00:00Z',
+  ) {
+    const { point } = await create(world.as(author), { content: FULL });
+    return update(world.as(author), point, {
+      ...SUBMIT,
+      state,
+      earliestMonday: earliest,
+      submittedAt: new Date(at),
+    });
+  }
+
+  it('lists the submitted, approved and returned points with their state, first Monday and hand-in', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    await pointIn(author, 'submitted', MONDAY, '2026-10-30T09:00:00Z');
+    await pointIn(author, 'approved', calDate(2026, 10, 26), '2026-10-22T09:00:00Z');
+    await pointIn(author, 'returned', MONDAY, '2026-10-29T09:00:00Z');
+    const rows = await handedIn();
+    expect([...rows].sort((a, b) => a.state.localeCompare(b.state))).toEqual([
+      {
+        state: 'approved',
+        earliestMonday: calDate(2026, 10, 26),
+        submittedAt: new Date('2026-10-22T09:00:00Z'),
+      },
+      { state: 'returned', earliestMonday: MONDAY, submittedAt: new Date('2026-10-29T09:00:00Z') },
+      { state: 'submitted', earliestMonday: MONDAY, submittedAt: new Date('2026-10-30T09:00:00Z') },
+    ]);
+  });
+
+  it('leaves out a point first handed in for a later Monday, and every other state', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    await pointIn(author, 'submitted', calDate(2026, 11, 9));
+    for (const state of ['rejected', 'withdrawn', 'published'] as const) {
+      await pointIn(author, state);
+    }
+    await create(world.as(author), { content: FULL });
+    expect(await handedIn()).toEqual([]);
+  });
+
+  it('refuses a user: only the system reads them', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const refused = read(world.as(author), (tx) => tx.points.handedInFor(MONDAY));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('point audit coverage in the fake world', () => {
   it('names every created or updated point as a written row', async () => {
     const author = await world.seed.user({ role: 'submitter' });

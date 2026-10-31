@@ -63,6 +63,7 @@ async function workerFor(
       'future.report-prompt': () => Promise.resolve(purged),
       'reminders.deadline': () => Promise.resolve(purged),
       'reviewer.digest': () => Promise.resolve(purged),
+      'headmaster.summary': () => Promise.resolve(purged),
     },
     schedules: [PRUNE],
     deps,
@@ -221,6 +222,7 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
           'future.report-prompt': () => Promise.resolve(purged),
           'reminders.deadline': () => Promise.resolve(purged),
           'reviewer.digest': () => Promise.resolve(purged),
+          'headmaster.summary': () => Promise.resolve(purged),
         },
         schedules: [PRUNE],
         deps,
@@ -244,6 +246,7 @@ describe('startWorker over pg-boss (as autoporada_worker)', () => {
       'future.report-prompt': () => Promise.resolve(purged),
       'reminders.deadline': () => Promise.resolve(purged),
       'reviewer.digest': () => Promise.resolve(purged),
+      'headmaster.summary': () => Promise.resolve(purged),
     });
     const deps = () =>
       ({

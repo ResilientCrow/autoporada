@@ -75,6 +75,13 @@ export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
     readonly returnedBefore: boolean;
   };
 
+/** A point the summary of a meeting counts: where it stands and what placement reads of it. */
+interface HandedInPoint {
+  readonly state: Extract<PointState, 'submitted' | 'approved' | 'returned'>;
+  readonly earliestMonday: CalDate;
+  readonly submittedAt: Date;
+}
+
 /** What a decision mail reads again of its point at send time (ADR 0020): who wrote it, where it stands. */
 export type PointMailFacts = Pick<PointRecord, 'id' | 'authorId' | 'state'>;
 
@@ -156,4 +163,11 @@ export interface PointRepo {
    * ScopeViolation for a user.
    */
   countSubmittedSince(query: { readonly since: Date; readonly notBy: string }): Promise<number>;
+  /**
+   * The points a meeting's summary counts: those waiting for review, approved or returned whose
+   * first Monday is not after `monday`, with what placement reads of them (`pointMonday`) so the
+   * caller can tell which are the Monday's. Only the columns migrations 0017 and 0024 grant the
+   * worker. ScopeViolation for a user.
+   */
+  handedInFor(monday: CalDate): Promise<readonly HandedInPoint[]>;
 }

@@ -6,6 +6,7 @@ import { mailPrune } from './mail-prune';
 import { mailSend } from './mail-send';
 import { deadlineReminders } from './reminders';
 import { reportPrompt } from './report-prompt';
+import { headmasterSummary } from './summary';
 
 export { CRON } from './cron';
 
@@ -16,6 +17,7 @@ export const JOB_HANDLERS: JobHandlers = {
   'future.report-prompt': reportPrompt,
   'reminders.deadline': deadlineReminders,
   'reviewer.digest': reviewerDigest,
+  'headmaster.summary': headmasterSummary,
 };
 
 /** The registry, checked and resolved once at import: an invalid entry stops the worker's boot. */

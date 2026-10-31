@@ -56,9 +56,11 @@ describe('the jobs admin (as the owner, the way the CLI connects)', () => {
       expect(byQueue['future.report-prompt']).toEqual({});
       expect(byQueue['reminders.deadline']).toEqual({});
       expect(byQueue['reviewer.digest']).toEqual({});
+      expect(byQueue['headmaster.summary']).toEqual({});
       expect(counts.map((c) => c.queue).sort()).toEqual([
         'dead',
         'future.report-prompt',
+        'headmaster.summary',
         'mail.prune',
         'mail.send',
         'reminders.deadline',

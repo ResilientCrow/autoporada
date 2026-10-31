@@ -57,6 +57,14 @@ export const CRON: readonly CronEntry[] = [
     data: {},
     catchUp: 'skip',
   },
+  // The window opens five minutes after a deadline and stays two hours: a missed tick is found by the next.
+  {
+    job: 'headmaster.summary',
+    key: 'tick',
+    schedule: { everyMinutes: 5 },
+    data: {},
+    catchUp: 'skip',
+  },
 ];
 
 /** The cron string is derived, never typed: `10 5 * * *`, `*\/15 * * * *`. */

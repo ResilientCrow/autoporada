@@ -10,6 +10,7 @@ import type { TemplateName } from '@/notify';
 
 import { loadDigest, type DigestFacts } from './digest';
 import { loadReminder, type ReminderFacts } from './reminders';
+import { loadSummary, type SummaryFacts } from './summary';
 
 /** A decision on a point: the event the mail reports, and the point as it stands now. */
 export interface PointDecision {
@@ -35,6 +36,8 @@ export interface MailSubjects {
   readonly 'reminder.hard': ReminderFacts;
   /** The counts that came in for the recipient since their last digest. */
   readonly 'reviewer.digest': DigestFacts;
+  /** The issue closing now and where its points stand. */
+  readonly 'headmaster.summary': SummaryFacts;
 }
 
 /** The repositories a subject is read from. */
@@ -76,6 +79,7 @@ const SUBJECTS: {
   'reminder.soft': (tx, id) => loadReminder(tx, 'soft', id),
   'reminder.hard': (tx, id) => loadReminder(tx, 'hard', id),
   'reviewer.digest': loadDigest,
+  'headmaster.summary': loadSummary,
 };
 
 /** Reads the subject a `mail.send` job names, by the loader of its template. */

@@ -49,6 +49,16 @@ describe('viewOf', () => {
     });
   });
 
+  it('tells a summary the meeting and the counts of its issue', () => {
+    const monday = calDate(2026, 10, 26);
+    expect(viewOf('headmaster.summary', { monday, approved: 5, pending: 2, returned: 1 })).toEqual({
+      meetingDate: monday,
+      approved: 5,
+      pending: 2,
+      returned: 1,
+    });
+  });
+
   it('gives every other template no variables', () => {
     expect(viewOf('access.approved', request(DECIDED))).toEqual({});
     expect(viewOf('access.blocked', request(DECIDED))).toEqual({});

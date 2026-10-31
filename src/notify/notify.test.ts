@@ -16,6 +16,7 @@ const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovíd
 
 const RETRY_FROM = calDate(2026, 10, 31);
 const MEETING = calDate(2026, 10, 26);
+const COUNTS = { submitted: 3, accessRequests: 1, approved: 4, pending: 2, returned: 1 };
 
 /** The views each template needs; a new template name is a compile error until it has one. */
 const VIEWS = {
@@ -31,6 +32,7 @@ const VIEWS = {
   'reminder.soft': { meetingDate: MEETING },
   'reminder.hard': { meetingDate: MEETING },
   'reviewer.digest': { submitted: 4, accessRequests: 2 },
+  'headmaster.summary': { meetingDate: MEETING, approved: 5, pending: 2, returned: 1 },
 } satisfies Record<TemplateName, object>;
 
 function render(name: TemplateName) {
@@ -109,6 +111,12 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     subject: 'Autoporada: nové body ke kontrole',
     text: letter(`nové body ke kontrole: 4.\n\nNové žádosti o${NB}přístup: 2.\n\n${REVIEW}`),
   },
+  'headmaster.summary': {
+    subject: 'Autoporada: uzávěrka porady proběhla',
+    text: letter(
+      `uzávěrka porady z${NB}26.${NB}října 2026 proběhla. Schváleno: 5, čeká na kontrolu: 2, vráceno k${NB}úpravě: 1.\n\n${REVIEW}`,
+    ),
+  },
 };
 
 describe('renderMail', () => {
@@ -184,9 +192,7 @@ describe('renderMail', () => {
         (origin, year, month, day) => {
           const date = calDate(year, month, day);
           for (const name of TEMPLATE_NAMES) {
-            const view = name.startsWith('reminder.')
-              ? { meetingDate: date }
-              : { retryFrom: date, submitted: 3, accessRequests: 1 };
+            const view = { ...COUNTS, meetingDate: date, retryFrom: date };
             const { subject } = renderMail(name, view as never, origin);
             expect(subject).not.toMatch(/[\r\n]/);
           }
