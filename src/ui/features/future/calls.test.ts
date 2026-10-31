@@ -139,10 +139,11 @@ describe('the report calls', () => {
     expect(startReportInput(ID, chosen(), [{ id: TYPE_A }])).toEqual({ id: ID, typeId: TYPE_A });
   });
 
-  it('sends no type when several are offered and none is ticked, for the server to refuse', () => {
-    expect(startReportInput(ID, chosen(), [{ id: TYPE_A }, { id: TYPE_B }])).toEqual({
+  it('sends no type when several are offered and none is ticked, for the server to refuse as missing', () => {
+    // Missing, not empty: an empty string reads as an invalid type, a missing one as „Vyberte druh zprávy.“.
+    expect(startReportInput(ID, chosen(), [{ id: TYPE_A }, { id: TYPE_B }])).toStrictEqual({
       id: ID,
-      typeId: '',
+      typeId: undefined,
     });
   });
 

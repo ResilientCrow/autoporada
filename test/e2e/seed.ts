@@ -92,6 +92,26 @@ const PERSONAS: readonly Persona[] = [
   { subject: 'ukazky-m', role: 'submitter' },
   { subject: 'prohlizi-d', role: 'reviewer' },
   { subject: 'prohlizi-m', role: 'reviewer' },
+  // akce.spec.ts and its siblings, proposals.spec.ts, m8b-screens.spec.ts: -d and -m again. zapis writes the J3 akce,
+  // uprav revises, retracts, decides and cancels (own akce included), rizeni is a headmaster who decides their own,
+  // revizor reviews, ctenar only reads, navrh proposes and obraz owns what the M8b screens show.
+  { subject: 'zapis-d', role: 'submitter' },
+  { subject: 'zapis-m', role: 'submitter' },
+  { subject: 'uprav-d', role: 'submitter' },
+  { subject: 'uprav-m', role: 'submitter' },
+  { subject: 'revizor-d', role: 'reviewer' },
+  { subject: 'revizor-m', role: 'reviewer' },
+  { subject: 'rizeni-d', role: 'headmaster' },
+  { subject: 'rizeni-m', role: 'headmaster' },
+  { subject: 'ctenar-d', role: 'submitter' },
+  { subject: 'ctenar-m', role: 'submitter' },
+  { subject: 'navrh-d', role: 'submitter' },
+  { subject: 'navrh-m', role: 'submitter' },
+  { subject: 'obraz-d', role: 'submitter' },
+  { subject: 'obraz-m', role: 'submitter' },
+  // karta owns the ended akce of the report card.
+  { subject: 'karta-d', role: 'submitter' },
+  { subject: 'karta-m', role: 'submitter' },
 ];
 
 interface Mapping {

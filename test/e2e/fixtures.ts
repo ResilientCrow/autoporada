@@ -89,7 +89,8 @@ async function flushCspGuard(context: BrowserContext): Promise<void> {
   }
 }
 
-const MAX_TAB_STOPS = 80;
+/** The users list has a link per seeded persona (about 50, one for each sign-in the journeys use), so the walk needs room. */
+const MAX_TAB_STOPS = 120;
 
 export const test = base.extend<Fixtures>({
   cspViolations: [

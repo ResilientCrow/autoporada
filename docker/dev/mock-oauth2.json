@@ -511,6 +511,230 @@
         },
         {
           "requestParam": "subject",
+          "match": "zapis-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000002f",
+            "name": "Zdena Zapisující",
+            "preferred_username": "zapis-d@ssps.cz",
+            "upn": "zapis-d@ssps.cz",
+            "email": "zapis-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "zapis-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000030",
+            "name": "Zdeněk Zapisující",
+            "preferred_username": "zapis-m@ssps.cz",
+            "upn": "zapis-m@ssps.cz",
+            "email": "zapis-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "uprav-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000031",
+            "name": "Ulrika Upravující",
+            "preferred_username": "uprav-d@ssps.cz",
+            "upn": "uprav-d@ssps.cz",
+            "email": "uprav-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "uprav-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000032",
+            "name": "Ulrich Upravující",
+            "preferred_username": "uprav-m@ssps.cz",
+            "upn": "uprav-m@ssps.cz",
+            "email": "uprav-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "revizor-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000033",
+            "name": "Radana Revizní",
+            "preferred_username": "revizor-d@ssps.cz",
+            "upn": "revizor-d@ssps.cz",
+            "email": "revizor-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "revizor-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000034",
+            "name": "Radim Revizní",
+            "preferred_username": "revizor-m@ssps.cz",
+            "upn": "revizor-m@ssps.cz",
+            "email": "revizor-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "rizeni-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000035",
+            "name": "Hedvika Řídící",
+            "preferred_username": "rizeni-d@ssps.cz",
+            "upn": "rizeni-d@ssps.cz",
+            "email": "rizeni-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "rizeni-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000036",
+            "name": "Hynek Řídící",
+            "preferred_username": "rizeni-m@ssps.cz",
+            "upn": "rizeni-m@ssps.cz",
+            "email": "rizeni-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "ctenar-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000037",
+            "name": "Čeňka Čtenářská",
+            "preferred_username": "ctenar-d@ssps.cz",
+            "upn": "ctenar-d@ssps.cz",
+            "email": "ctenar-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "ctenar-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000038",
+            "name": "Čeněk Čtenářský",
+            "preferred_username": "ctenar-m@ssps.cz",
+            "upn": "ctenar-m@ssps.cz",
+            "email": "ctenar-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "navrh-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000039",
+            "name": "Nina Návrhová",
+            "preferred_username": "navrh-d@ssps.cz",
+            "upn": "navrh-d@ssps.cz",
+            "email": "navrh-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "navrh-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000003a",
+            "name": "Norbert Návrhový",
+            "preferred_username": "navrh-m@ssps.cz",
+            "upn": "navrh-m@ssps.cz",
+            "email": "navrh-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "obraz-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000003b",
+            "name": "Olina Obrazová",
+            "preferred_username": "obraz-d@ssps.cz",
+            "upn": "obraz-d@ssps.cz",
+            "email": "obraz-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "obraz-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000003c",
+            "name": "Ota Obrazový",
+            "preferred_username": "obraz-m@ssps.cz",
+            "upn": "obraz-m@ssps.cz",
+            "email": "obraz-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "karta-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000003d",
+            "name": "Karolína Kartová",
+            "preferred_username": "karta-d@ssps.cz",
+            "upn": "karta-d@ssps.cz",
+            "email": "karta-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "karta-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000003e",
+            "name": "Kamil Kartový",
+            "preferred_username": "karta-m@ssps.cz",
+            "upn": "karta-m@ssps.cz",
+            "email": "karta-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],

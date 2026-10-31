@@ -16,7 +16,7 @@ export const E2E_DATABASE = 'autoporada_e2e';
 /** What the sessions table stores: the SHA-256 of the cookie value (see src/server/auth/tokens.ts). */
 const digestOf = (token: string): Buffer => createHash('sha256').update(token, 'utf8').digest();
 
-async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
+export async function withClient<T>(run: (client: Client) => Promise<T>): Promise<T> {
   const client = new Client({ connectionString: databaseUrl(E2E_DATABASE) });
   await client.connect();
   try {

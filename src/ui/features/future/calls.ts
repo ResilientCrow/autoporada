@@ -42,7 +42,7 @@ export function createInput(
 
 /**
  * „Napsat zprávu“: the type ticked. Where there is one type nothing is asked and that one is
- * taken; where several are offered and none is ticked, no type is sent and the server refuses it.
+ * taken; where several are offered and none is ticked, no type is sent and the server refuses it as missing.
  */
 export function startReportInput(
   id: string,
@@ -50,7 +50,10 @@ export function startReportInput(
   types: readonly { readonly id: string }[],
 ) {
   const only = types.length === 1 ? types[0] : undefined;
-  return { id, typeId: only?.id ?? textOf(data, 'typeId') };
+  // None ticked is a missing type (the server says „Vyberte druh zprávy.“), not an empty, invalid one.
+  const ticked = textOf(data, 'typeId');
+  // Typed as the action's input, which it is once a type is ticked; the server checks the rest.
+  return { id, typeId: (only?.id ?? (ticked === '' ? undefined : ticked)) as string };
 }
 
 /** „Zprávu psát nebudu“: the akce alone. */
