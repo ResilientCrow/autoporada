@@ -14,8 +14,8 @@ import { ensureIssue } from '../issues';
 
 /**
  * What a new deadline rule does to the issues before it is stored (ADR 0032), in the save's
- * transaction. It first holds the rule against every reader that freezes by it. The Mondays from
- * this week's to the one a hand-in goes to now are frozen with the old rule, so nobody's shown
+ * transaction, once the caller holds the rule against every reader that freezes by it. The Mondays
+ * from this week's to the one a hand-in goes to now are frozen with the old rule, so nobody's shown
  * deadline moves; the open rows after it still on the old rule are refrozen with the new one. The
  * same rule changes nothing. Then the meeting order is checked over the calendar as it now
  * stands: no slot under the new rule may break it against the others (`meeting-order`; the caller
@@ -23,7 +23,6 @@ import { ensureIssue } from '../issues';
  */
 async function applyDeadline(tx: Tx, now: Date, value: unknown) {
   const newRule = toDeadlineRule(SETTINGS.deadline.schema.parse(value));
-  await tx.settings.lock('deadline', 'update');
   const { slots, rule } = await readSlots(tx, now);
   const change = deadlineChange(now, rule, newRule, slots);
   const frozen: AuditTarget[] = [];
@@ -62,6 +61,14 @@ export const saveSettings = defineUseCase({
   output: settingsSaveOutput,
   access: { kind: 'gate', check: () => ({ action: 'settings.manage' }) },
   async execute({ tx, now }, input) {
+    if (input.key === 'deadline') {
+      // Held first, then the version: a stale form is a conflict before any deadline work, not a
+      // `meeting-order` for a rule it never saw.
+      await tx.settings.lock('deadline', 'update');
+      if (((await tx.settings.get('deadline'))?.version ?? 0) !== input.version) {
+        return fail({ code: 'conflict' });
+      }
+    }
     const issues = input.key === 'deadline' ? await applyDeadline(tx, now, input.value) : null;
     if (issues?.conflict) return fail({ code: 'rule', rule: 'meeting-order' });
     const version = await tx.settings.save(input.key, input.value, input.version);

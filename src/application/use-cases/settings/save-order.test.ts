@@ -59,6 +59,17 @@ describe('settings.save, the meeting order after the refreeze', () => {
     expect(before.setting).toBeNull();
   });
 
+  it('answers a stale form with conflict, not with an order error for a rule it never saw', async () => {
+    await issue(W3, 'generated', EARLY_CLOSE);
+    await world.tx(seeder, (tx) =>
+      tx.settings.save('deadline', { dayOffset: -2, time: '20:00' }, 0),
+    );
+    const before = await state();
+    // The form was read before the stored row existed: version 0 is stale now.
+    expect(await saveDeadline()).toEqual({ ok: false, error: { code: 'conflict' } });
+    expect(await state()).toEqual(before);
+  });
+
   it('refuses the same rule for an open porada whose frozen deadline is as early', async () => {
     await issue(W3, 'open', EARLY_CLOSE);
     expect(await saveDeadline()).toEqual({
