@@ -38,10 +38,8 @@ describe('registry.saveList', () => {
       actorId: head.id,
       action: 'registry.list_saved',
       targetType: 'registry_list',
-      data: {
-        meta: { listKey: 'francouzstina-certifikaty', fields: ['title', 'docLabel', 'active'] },
-      },
     });
+    expect(event?.data['meta']).toEqual({ fields: ['title', 'docLabel', 'active'] });
   });
 
   it('gives a second list with the same key stem a numbered key', async () => {
@@ -67,9 +65,7 @@ describe('registry.saveList', () => {
       key: target.key,
       title: 'Angličtina – certifikáty 2',
     });
-    expect((await world.inspect.audit()).at(-1)?.data).toMatchObject({
-      meta: { listKey: target.key, fields: ['title'] },
-    });
+    expect((await world.inspect.audit()).at(-1)?.data['meta']).toEqual({ fields: ['title'] });
   });
 
   it('switches a point-4 list off and on', async () => {

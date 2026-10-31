@@ -10,7 +10,7 @@ const FIELDS = ['title', 'docLabel', 'active'] as const;
  * prints and whether it is on offer. A new list goes last and its key is made from the title. The
  * list of Příloha 1 can be renamed but never switched off (`registry-list-fixed`). A title in use
  * is `registry-list-taken`, checked here and by the database at commit. A save that changes
- * nothing writes nothing. The audit event names the list by its key and the fields that changed.
+ * nothing writes nothing. The audit event names the list by id and the fields that changed, never its title or key.
  */
 export const saveList = defineUseCase({
   name: 'registry.saveList',
@@ -50,7 +50,7 @@ export const saveList = defineUseCase({
     await tx.audit.record({
       action: 'registry.list_saved',
       target: { type: 'registry_list', id: after.id },
-      meta: { listKey: after.key, fields: [...fields] },
+      meta: { fields: [...fields] },
     });
     return ok({ id: after.id, version: after.version, changed: true });
   },

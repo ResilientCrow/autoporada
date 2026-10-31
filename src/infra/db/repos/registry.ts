@@ -165,7 +165,7 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
         .set({ removedAt: ctx.now, archivedYear: year, version: bump })
         .where(and(inLists, isNotNull(registryEntries.firstPublishedIssueId)))
         .returning({ id: registryEntries.id });
-      return { archived: archived.length, deleted: deleted.length };
+      return { archived: archived.map((r) => r.id), deleted: deleted.map((r) => r.id) };
     },
     async createList(key, values) {
       mayEdit();

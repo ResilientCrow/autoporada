@@ -42,8 +42,8 @@ describe('registry.addEntries', () => {
       action: 'registry.entries_added',
       targetType: 'registry_list',
       targetId: target.id,
-      data: { meta: { listKey: target.key, count: 2 } },
     });
+    expect(event?.data['meta']).toEqual({ count: 2 });
     expect(JSON.stringify(event?.data)).not.toMatch(/Jan|Nováko|Novák/);
   });
 

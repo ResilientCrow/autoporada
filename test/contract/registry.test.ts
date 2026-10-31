@@ -404,7 +404,7 @@ describe('RegistryRepo (port contract)', () => {
         });
         return done;
       });
-      expect(result).toEqual({ archived: 1, deleted: 1 });
+      expect(result).toEqual({ archived: [printed.id], deleted: [fresh.id] });
       expect(await read((tx) => tx.registry.entry(fresh.id))).toBeNull();
       expect(await read((tx) => tx.registry.entry(printed.id))).toEqual({
         ...printed,
@@ -419,7 +419,7 @@ describe('RegistryRepo (port contract)', () => {
 
     it('does nothing for lists with no active entries', async () => {
       const a = await list('A');
-      expect(await archive([a.id], '2025/2026')).toEqual({ archived: 0, deleted: 0 });
+      expect(await archive([a.id], '2025/2026')).toEqual({ archived: [], deleted: [] });
     });
   });
 

@@ -151,14 +151,14 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
       ) {
         throw new ScopeViolation();
       }
-      let archived = 0;
-      let deleted = 0;
+      const archived: string[] = [];
+      const deleted: string[] = [];
       for (const entry of [...entries.values()]) {
         if (!listIds.includes(entry.listId) || entry.removedAt !== null) continue;
         tx.written.push({ type: 'registry_entry', id: entry.id });
         if (entry.firstPublishedIssueId === null) {
           entries.delete(entry.id);
-          deleted++;
+          deleted.push(entry.id);
         } else {
           entries.set(entry.id, {
             ...entry,
@@ -166,7 +166,7 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
             archivedYear: year,
             version: entry.version + 1,
           });
-          archived++;
+          archived.push(entry.id);
         }
       }
       return { archived, deleted };

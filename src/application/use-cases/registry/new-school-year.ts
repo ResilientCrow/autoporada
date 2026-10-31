@@ -8,8 +8,8 @@ import { instantToWallClock } from '@/domain/time';
  * under the current school year or the one before (ADR 0033). Their students that no document
  * ever listed are deleted, the others are kept as removed with the year; the lists stay. A box
  * left unticked, a year outside the two or a list that does not exist changes nothing. The
- * audit event names the lists by their keys, the year and how many students it cleared, and
- * lists the students it changed by id.
+ * audit event names the lists by id, holds the year and how many students it cleared, and
+ * lists the students it deleted or archived by the ids the statements returned.
  */
 export const newSchoolYear = defineUseCase({
   name: 'registry.newSchoolYear',
@@ -27,23 +27,18 @@ export const newSchoolYear = defineUseCase({
     const chosen = (await tx.registry.lists()).filter((list) => ids.has(list.id));
     const [first, ...others] = chosen;
     if (first === undefined || chosen.length !== ids.size) return fail({ code: 'not-found' });
-    // Named in the event, as every row the transaction changes must be (ADR 0011): the active
-    // entries are exactly the ones `archiveLists` deletes or archives.
-    const touched = (await Promise.all(chosen.map((list) => tx.registry.entries(list.id)))).flat();
+    // Named in the event, as every row the transaction changes must be (ADR 0011): the ids the
+    // statements gave back, not a read taken before them.
     const { archived, deleted } = await tx.registry.archiveLists([...ids], input.year);
     await tx.audit.record({
       action: 'registry.school_year_archived',
       target: { type: 'registry_list', id: first.id },
-      meta: {
-        listKeys: chosen.map((list) => list.key),
-        count: archived + deleted,
-        year: input.year,
-      },
+      meta: { count: archived.length + deleted.length, year: input.year },
       related: [
         ...others.map((list) => ({ type: 'registry_list' as const, id: list.id })),
-        ...touched.map((entry) => ({ type: 'registry_entry' as const, id: entry.id })),
+        ...[...archived, ...deleted].map((id) => ({ type: 'registry_entry' as const, id })),
       ],
     });
-    return ok({ archived, deleted });
+    return ok({ archived: archived.length, deleted: deleted.length });
   },
 });

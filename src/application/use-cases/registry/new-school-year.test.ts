@@ -51,8 +51,8 @@ describe('registry.newSchoolYear', () => {
       action: 'registry.school_year_archived',
       targetType: 'registry_list',
       targetId: english.id,
-      data: { meta: { listKeys: [english.key], count: 2, year: years().previous } },
     });
+    expect(event?.data['meta']).toEqual({ count: 2, year: years().previous });
     expect(JSON.stringify(event?.data)).not.toMatch(/Nová|Novák/);
   });
 
@@ -65,11 +65,7 @@ describe('registry.newSchoolYear', () => {
       value: { archived: 1, deleted: 0 },
     });
     const meta = (await world.inspect.audit()).at(-1)?.data['meta'];
-    expect(meta).toEqual({
-      listKeys: [english.key, german.key],
-      count: 1,
-      year: years().current,
-    });
+    expect(meta).toEqual({ count: 1, year: years().current });
   });
 
   it('does not touch an already removed student, nor change the year it was archived under', async () => {
