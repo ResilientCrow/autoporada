@@ -6,6 +6,8 @@ import type { RichDoc, RichProfile } from '@/domain/richtext';
 import { richtext } from '@/ui/copy';
 
 import { DocMarkup } from './doc-markup';
+import { LevelAnnouncer } from './LevelAnnouncer';
+import { Toolbar } from './Toolbar';
 import { NativeFieldError, useNativeField } from '../native-field';
 import { useRichEditor } from './use-rich-editor';
 
@@ -65,6 +67,15 @@ export function RichTextField({
       {field.message === null ? null : (
         <NativeFieldError id={field.errorId} message={field.message} />
       )}
+      <Toolbar
+        caret={editor.caret}
+        ready={editor.ready}
+        withLevels={profile === 'outline'}
+        onBold={editor.toggleBold}
+        onItalic={editor.toggleItalic}
+        onShift={editor.shiftIndent}
+      />
+      {profile === 'outline' ? <LevelAnnouncer level={editor.caret.level} /> : null}
       <div className="rt-box">
         <div ref={mountRef} hidden={!editor.ready} />
         {editor.ready ? null : (
