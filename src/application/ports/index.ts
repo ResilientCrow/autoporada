@@ -10,6 +10,18 @@ export {
   type Json,
 } from './audit';
 export type { Clock } from './clock';
+export type {
+  ArchivedDocument,
+  ConvertCode,
+  DocumentConverter,
+  DocumentFile,
+  DocumentFormat,
+  DocumentRecord,
+  DocumentRepo,
+  NewDocument,
+  PdfStatus,
+} from './documents';
+export { PDF_RENDER_ATTEMPTS } from './documents';
 export type { DirectoryCode, DirectoryPerson, DirectoryPort, DirectoryResult } from './directory';
 export type { AppDeps, Db, Tx, TxContext, TxMode, TxOptions } from './db';
 export {

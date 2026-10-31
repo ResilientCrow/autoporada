@@ -1,10 +1,12 @@
 import type { AppDeps } from './db';
+import type { DocumentConverter } from './documents';
 import type { JobInput, JobName, JobOutcome } from './jobs';
 import type { MailPort } from './mail';
 
-/** What a handler may use: the app's dependencies plus the mail transport. */
+/** What a handler may use: the app's dependencies plus the mail transport and the PDF converter. */
 export interface WorkerDeps extends AppDeps {
   readonly mail: MailPort;
+  readonly converter: DocumentConverter;
   readonly appOrigin: string;
 }
 

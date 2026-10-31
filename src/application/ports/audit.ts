@@ -11,7 +11,8 @@ export type AuditTargetType =
   | 'point_type'
   | 'future_item'
   | 'registry_list'
-  | 'registry_entry';
+  | 'registry_entry'
+  | 'document';
 
 export interface AuditTarget {
   readonly type: AuditTargetType;

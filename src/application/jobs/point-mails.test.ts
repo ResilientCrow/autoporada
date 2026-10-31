@@ -11,6 +11,7 @@ import { createFakeMail } from '../../../test/support/fake-mail';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 const { start, moveTo } = pointFixtures(world);
@@ -21,7 +22,13 @@ const NOTE = 'Doplňte prosím vyjádření.';
 /** The worker's side (autoporada_worker in the pg world) and the transport it calls. */
 function worker() {
   const mail = createFakeMail();
-  const deps: WorkerDeps = { db: world.workerDb, clock: world.clock, appOrigin: ORIGIN, mail };
+  const deps: WorkerDeps = {
+    db: world.workerDb,
+    clock: world.clock,
+    appOrigin: ORIGIN,
+    mail,
+    converter: unusedConverter,
+  };
   const run = async () => {
     const [job, ...rest] = await world.inspect.jobs();
     expect(rest).toEqual([]);

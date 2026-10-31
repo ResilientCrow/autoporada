@@ -5,6 +5,7 @@ import { MAIL_LEDGER_RETENTION_DAYS } from '@/domain/retention';
 
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 const DAY = 86_400_000;
@@ -22,6 +23,7 @@ const deps = (): WorkerDeps => ({
   db: world.workerDb,
   clock: world.clock,
   appOrigin: 'https://autoporada.test',
+  converter: unusedConverter,
   mail: { send: () => Promise.reject(new Error('a prune sends no mail')) },
 });
 

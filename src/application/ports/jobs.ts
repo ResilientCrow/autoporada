@@ -14,6 +14,7 @@ export const JOB_NAMES = [
   'headmaster.summary',
   'issues.moved-notice',
   'reports.late',
+  'pdf.render',
 ] as const;
 export type JobName = (typeof JOB_NAMES)[number];
 
@@ -37,6 +38,8 @@ export interface JobCatalog {
   'issues.moved-notice': { readonly monday: string; readonly deadlineAt: string };
   /** Mails the author of an akce that has just ended when its report is late; cron sends it, never a use case. */
   'reports.late': Readonly<Record<string, never>>;
+  /** Converts a generated document's DOCX to its PDF; `issues.generate` enqueues it (ADR 0038). */
+  'pdf.render': { readonly documentId: string };
 }
 
 export interface EnqueueOptions {

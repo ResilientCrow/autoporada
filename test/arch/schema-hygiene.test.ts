@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { USE_CASES } from '@/application/use-cases';
+import { fileBytes } from '@/contracts';
 
 import { inputProblems, outputProblems, PROTOCOL_OUTPUTS } from './hygiene';
 
@@ -41,6 +42,16 @@ describe('the hygiene checks themselves', () => {
       '$.properties.note: string without maxLength',
     ]);
     expect(inputProblems(z.object({}))).toEqual(['$: object accepts unknown keys']);
+  });
+
+  it('take the file bytes as a named output, never as an input', () => {
+    expect(outputProblems(z.strictObject({ bytes: fileBytes }))).toEqual([]);
+    expect(inputProblems(z.strictObject({ bytes: fileBytes }))).toEqual([
+      '$.properties.bytes: accepts anything',
+    ]);
+    expect(outputProblems(z.strictObject({ bytes: z.instanceof(Uint8Array) }))).toEqual([
+      '$.properties.bytes: returns anything',
+    ]);
   });
 
   it('report schemas that accept or return anything', () => {

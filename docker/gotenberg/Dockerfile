@@ -5,7 +5,7 @@
 # - Symbol / Wingdings bullets: LibreOffice maps them to OpenSymbol (in the base image)
 # - Aptos Narrow (Příloha 1 table): PT Sans Narrow (free, full Czech coverage), via fonts.conf
 # - Licensed originals: put .ttf/.otf files into docker/gotenberg/fonts/ and rebuild
-FROM gotenberg/gotenberg:8.38.1
+FROM gotenberg/gotenberg:8.38.1@sha256:aa552cc115db488e0f0bcb07446aac13071ad51505b642c84bb894500907b42b
 
 USER root
 RUN apt-get update \

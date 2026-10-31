@@ -5,6 +5,7 @@
 import { JOB_HANDLERS, SCHEDULES } from '@/application/jobs';
 import type { WorkerDeps } from '@/application/ports';
 import { ConfigError, getConfig } from '@/infra/config';
+import { createGotenbergConverter } from '@/infra/convert';
 import { databaseOn, openPool } from '@/infra/db';
 import { createBoss, createProducer, errorCode, PGBOSS_SCHEMA_VERSION } from '@/infra/jobs';
 import { createLogger } from '@/infra/log';
@@ -80,6 +81,7 @@ async function main(): Promise<void> {
     db: databaseOn(pool, { jobsOn: producer.jobsOn }).app,
     clock: systemClock,
     mail: createMailPort(config, { tokens, clock: systemClock }),
+    converter: createGotenbergConverter({ url: config.gotenbergUrl }),
     appOrigin: config.appOrigin,
   };
 

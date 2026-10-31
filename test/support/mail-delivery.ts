@@ -29,6 +29,7 @@ import type { setupJobs } from './jobs';
 import { createTestIdp, TEST_CLIENT, TEST_ISSUER, TEST_SECRET } from './oidc/test-idp';
 import { FixedClock } from './world/clock';
 import { insertAccessRequest } from './world/pg/backend';
+import { unusedConverter } from './fake-converter';
 
 export const ORIGIN = 'https://autoporada.test';
 export const MAILBOX = 'autoporada@ssps.cz';
@@ -85,7 +86,13 @@ export function setupDelivery(database: TestDatabase, jobs: ReturnType<typeof se
         throw new Error('the completion was lost');
       },
     };
-    const deps: WorkerDeps = { db: database.worker, clock: jobs.clock, appOrigin: ORIGIN, mail };
+    const deps: WorkerDeps = {
+      db: database.worker,
+      clock: jobs.clock,
+      appOrigin: ORIGIN,
+      mail,
+      converter: unusedConverter,
+    };
     const boss = jobs.boss();
     const worker = await startWorker({
       ...{ boss, handlers, schedules: [], deps, log: jobs.log },

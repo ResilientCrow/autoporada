@@ -82,8 +82,8 @@ test.describe('J4: the headmaster prepares a porada', () => {
       for (const label of Object.values(porada.steps).slice(1)) {
         await expect(steps.getByRole('link', { name: label })).toBeVisible();
       }
-      await expect(page.getByRole('button', { name: porada.generate.button })).toBeDisabled();
-      await expect(page.getByText(porada.generate.later)).toBeVisible();
+      await expect(page.getByText(porada.generate.where)).toBeVisible();
+      await expect(page.getByRole('link', { name: porada.generate.open })).toBeVisible();
       await expectAccessible();
       await page.getByRole('link', { name: porada.steps.outline }).click();
       await expect(page).toHaveURL(new RegExp(`/porada/${day}/pokyny$`));

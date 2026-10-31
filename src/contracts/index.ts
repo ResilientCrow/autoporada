@@ -91,9 +91,19 @@ export {
   issueTextsOutput,
   issueTextsWriteOutput,
 } from './issue-texts';
+export {
+  documentArchiveInput,
+  documentArchiveOutput,
+  documentInfo,
+  downloadDocumentInput,
+  downloadDocumentOutput,
+  fileBytes,
+} from './documents';
 export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
 export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';
 export {
+  generateIssueInput,
+  generateIssueOutput,
   issuesWindowInput,
   moveIssueInput,
   moveIssueOutput,

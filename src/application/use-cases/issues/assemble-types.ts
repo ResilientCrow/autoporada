@@ -1,4 +1,4 @@
-import type { PointRef } from '@/application/ports';
+import type { PointRecord, PointRef } from '@/application/ports';
 import type { OutlineOrigin } from '@/domain/outline';
 import type { IssueStatus, PointState } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
@@ -50,8 +50,15 @@ export interface AssemblyFacts {
   readonly ohlasyEmpty: boolean;
 }
 
+/** What a generation publishes with the snapshot: the eligible points, the entries printed first. */
+interface AssemblyPublish {
+  readonly points: readonly PointRecord[];
+  readonly entryIds: readonly string[];
+}
+
 export type AssemblyResult = {
   readonly snapshot: IssueSnapshot | null;
   readonly problems: readonly AssemblyProblem[];
   readonly facts: AssemblyFacts;
+  readonly publish: AssemblyPublish;
 };

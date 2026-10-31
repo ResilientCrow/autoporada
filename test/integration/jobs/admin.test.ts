@@ -64,6 +64,7 @@ describe('the jobs admin (as the owner, the way the CLI connects)', () => {
         'issues.moved-notice',
         'mail.prune',
         'mail.send',
+        'pdf.render',
         'reminders.deadline',
         'reports.late',
         'reviewer.digest',

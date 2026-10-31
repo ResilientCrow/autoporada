@@ -80,6 +80,7 @@ describe('issues.workspace', () => {
         version: null,
         next: '2026-11-02',
         counts: { waiting: 0, returned: 0, approved: 0, later: 0 },
+        document: null,
       });
     });
 

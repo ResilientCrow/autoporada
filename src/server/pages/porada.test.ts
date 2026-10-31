@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { outlineItemPage, outlinePage, newOutlineItemPage } from './outline';
 import { issueTextsPage } from './issue-texts';
-import { poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
+import { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
 const runRegistered = vi.hoisted(() => vi.fn());
@@ -41,6 +41,7 @@ const SLOT = {
   version: 3,
   next: '2026-11-16',
   counts: { waiting: 1, returned: 2, approved: 3, later: 0 },
+  document: null,
 };
 
 /** Use cases answered by name, as the pipeline does. */
@@ -116,6 +117,20 @@ describe('poradaPage', () => {
         version: 3,
         nextLabel: '16. 11. 2026',
         counts: SLOT.counts,
+        generated: null,
+      },
+    });
+  });
+
+  it('writes when a generated porada was generated, in Prague time', async () => {
+    as('headmaster');
+    const document = { generatedAt: '2026-11-09T13:05:00.000Z', pdfStatus: 'ready' };
+    answer({
+      'issues.workspace': { working: null, slot: { ...SLOT, status: 'generated', document } },
+    });
+    expect(await poradaPage('2026-11-09')).toMatchObject({
+      model: {
+        generated: { monday: '2026-11-09', date: '9. 11. 2026', time: '14:05', pdf: 'ready' },
       },
     });
   });
@@ -204,6 +219,7 @@ describe('previewPage', () => {
     problems: [],
     findings: [{ code: 'issue-not-open', level: 'block' }],
     origin: { kind: 'seed' },
+    document: null,
   };
 
   it('refuses a student reviewer, a submitter and a visitor without asking a use case', async () => {
@@ -236,6 +252,36 @@ describe('previewPage', () => {
     expect(await previewPage('2026-11-09')).toMatchObject({ canEdit: false });
   });
 
+  it('offers the headmaster alone the generate form of an open porada, blocked by a block finding', async () => {
+    answer({ 'issues.workspace': { working: null, slot: SLOT }, 'issues.preview': preview });
+    as('headmaster');
+    expect((await previewPage('2026-11-09'))?.generate).toEqual({
+      monday: '2026-11-09',
+      version: 3,
+      blocked: true,
+    });
+    answer({
+      'issues.workspace': { working: null, slot: SLOT },
+      'issues.preview': { ...preview, findings: [{ code: 'deadline-ahead', level: 'warn' }] },
+    });
+    expect((await previewPage('2026-11-09'))?.generate).toMatchObject({ blocked: false });
+    as('staff');
+    expect((await previewPage('2026-11-09'))?.generate).toBeNull();
+  });
+
+  it('names the document of a generated porada and offers no generate form', async () => {
+    as('headmaster');
+    const document = { generatedAt: '2026-11-09T13:05:00.000Z', pdfStatus: 'pending' };
+    answer({
+      'issues.workspace': { working: null, slot: { ...SLOT, status: 'generated' } },
+      'issues.preview': { ...preview, findings: [], origin: { kind: 'stored' }, document },
+    });
+    expect(await previewPage('2026-11-09')).toMatchObject({
+      generate: null,
+      generated: { date: '9. 11. 2026', time: '14:05', pdf: 'pending' },
+    });
+  });
+
   it('has no document where the snapshot is missing or invalid', async () => {
     as('headmaster');
     answer({
@@ -248,6 +294,46 @@ describe('previewPage', () => {
       'issues.preview': { ...preview, snapshot: JSON.stringify({ nonsense: true }) },
     });
     expect((await previewPage('2026-11-09'))?.document).toBeNull();
+  });
+});
+
+describe('archivePage', () => {
+  it('is null for a student reviewer, a submitter and a visitor without asking a use case', async () => {
+    expect(await archivePage()).toBeNull();
+    for (const who of ['student', 'submitter'] as const) {
+      as(who);
+      expect(await archivePage()).toBeNull();
+    }
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it('writes each generated porada out for the staff', async () => {
+    answer({
+      'documents.archive': {
+        documents: [
+          {
+            monday: '2026-11-09',
+            meetingDate: '2026-11-11',
+            generatedAt: '2026-11-09T13:05:00.000Z',
+            pdfStatus: 'failed',
+          },
+        ],
+      },
+    });
+    for (const who of ['headmaster', 'staff'] as const) {
+      as(who);
+      expect(await archivePage()).toEqual({
+        documents: [
+          {
+            monday: '2026-11-09',
+            meeting: 'středa 11. listopadu 2026',
+            date: '9. 11. 2026',
+            time: '14:05',
+            pdf: 'failed',
+          },
+        ],
+      });
+    }
   });
 });
 

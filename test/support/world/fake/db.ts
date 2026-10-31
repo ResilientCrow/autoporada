@@ -2,6 +2,7 @@ import type { Db, Tx, TxContext, TxMode, TxOptions } from '@/application/ports';
 import { inTransactionScope } from '@/infra/system';
 
 import { fakeAccessRequestRepo } from './access-requests';
+import { fakeDocumentRepo } from './documents';
 import { fakeAudit, fakeJobs } from './effects';
 import { fakeFutureEventRepo } from './future-events';
 import { fakeFutureItemRepo } from './future-items';
@@ -66,6 +67,7 @@ export function createFakeDb(): FakeDb {
       pointTypes: fakePointTypeRepo(tx, ctx),
       settings: fakeSettingsRepo(tx, ctx),
       registry: fakeRegistryRepo(tx, ctx),
+      documents: fakeDocumentRepo(tx, ctx),
       points: fakePointRepo(tx, ctx),
       pointEvents: fakePointEventRepo(tx, ctx),
       futureItems: fakeFutureItemRepo(tx, ctx),

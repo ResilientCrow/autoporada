@@ -3,6 +3,7 @@ import { issueWorkspaceInput, issueWorkspaceOutput } from '@/contracts';
 import { placementSlot, workingSlot } from '@/domain/calendar';
 import { compareDates, instantToWallClock, toIsoDate } from '@/domain/time';
 
+import { documentInfoOf } from '../documents/info';
 import { mondayOfText, readWindow } from './calendar';
 
 /**
@@ -35,6 +36,7 @@ export const issueWorkspace = defineUseCase({
     const [row] = await tx.issues.between(monday, monday);
     const waiting = await tx.points.waitingFor(monday, slot.meetingDate);
     const approved = await tx.points.eligibleFor(monday, slot.meetingDate);
+    const document = row && (await tx.documents.forIssue(row.id));
     return ok({
       working: workingMonday,
       slot: {
@@ -50,6 +52,7 @@ export const issueWorkspace = defineUseCase({
           approved: approved.length,
           later: waiting.later.length,
         },
+        document: document ? documentInfoOf(document) : null,
       },
     });
   },

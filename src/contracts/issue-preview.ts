@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { documentInfo } from './documents';
+
 /** The Monday of the slot to preview; a Monday without a row previews as an untouched issue. */
 export const issuePreviewInput = z.strictObject({ monday: z.iso.date().max(10) });
 
@@ -65,4 +67,6 @@ export const issuePreviewOutput = z.strictObject({
   problems: z.array(problem),
   findings: z.array(finding),
   origin,
+  /** A generated porada previews the snapshot it was generated from, with this; null before. */
+  document: documentInfo.nullable(),
 });

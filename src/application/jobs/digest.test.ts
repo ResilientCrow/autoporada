@@ -10,6 +10,7 @@ import { futureFixtures } from '../../../test/support/future';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 const points = pointFixtures(world);
@@ -35,6 +36,7 @@ const deps = (): WorkerDeps => ({
   db: world.workerDb,
   clock: world.clock,
   appOrigin: ORIGIN,
+  converter: unusedConverter,
   mail: { send: () => Promise.reject(new Error('a digest run sends no mail')) },
 });
 const runAt = (instant: Date) => {

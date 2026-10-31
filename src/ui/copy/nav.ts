@@ -4,6 +4,7 @@ export const nav = {
   points: 'Moje body',
   future: 'Akce',
   porada: 'Porada',
+  archive: 'Archiv',
   review: 'Kontrola',
   access: 'Žádost o\u00A0přístup',
   registry: 'Registr',

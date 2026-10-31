@@ -15,6 +15,7 @@ import { saveFuture } from '@/application/use-cases';
 import { futureFixtures, readyAkce } from '../../../test/support/future';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 const { start, moveTo } = futureFixtures(world);
@@ -34,6 +35,7 @@ const deps = (): WorkerDeps => ({
   db: world.workerDb,
   clock: world.clock,
   appOrigin: 'https://autoporada.test',
+  converter: unusedConverter,
   mail: { send: () => Promise.reject(new Error('a prompt sends no mail')) },
 });
 const run = () => JOB_HANDLERS['future.report-prompt'](deps(), job());

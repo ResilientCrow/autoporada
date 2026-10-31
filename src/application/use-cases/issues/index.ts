@@ -1,5 +1,6 @@
 export { readWindow } from './calendar';
 export { ensureIssue } from './ensure';
+export { generateIssue } from './generate';
 export { moveIssue } from './move';
 export { issuePreview } from './preview';
 export { setIssueAnnex2 } from './set-annex2';

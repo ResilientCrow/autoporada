@@ -15,6 +15,7 @@ export const NAV: readonly NavItem[] = [
   { href: '/body', label: cs.nav.points, check: { action: 'point.create' } },
   { href: '/akce', label: cs.nav.future, check: { action: 'future.create' } },
   { href: '/porada', label: cs.nav.porada, check: { action: 'issue.preview' } },
+  { href: '/porada/archiv', label: cs.nav.archive, check: { action: 'archive.view' } },
   { href: '/kontrola', label: cs.nav.review, check: { action: 'review.queue' } },
   { href: '/pristup', label: cs.nav.access, check: { action: 'access.request' } },
   { href: '/registr', label: cs.nav.registry, check: { action: 'registry.view' } },

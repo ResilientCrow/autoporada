@@ -23,10 +23,11 @@ export const E2E_ENV = {
   BOOTSTRAP_HEADMASTER_OID: '0d000000-0000-4000-8000-000000000003',
 };
 
-/** What the bundled worker adds: Mailpit by address (not by name) and a quick poll. */
+/** What the bundled worker adds: Mailpit and Gotenberg by address (not by name) and a quick poll. */
 export const E2E_WORKER_ENV = {
   ...E2E_ENV,
   MAIL_TRANSPORT: 'smtp',
   SMTP_URL: 'smtp://127.0.0.1:1025',
+  GOTENBERG_URL: 'http://127.0.0.1:3001',
   WORKER_POLL_SECONDS: '0.5',
 };

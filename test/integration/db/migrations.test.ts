@@ -49,6 +49,7 @@ describe('runMigrations', () => {
       'issues.moved-notice',
       'mail.prune',
       'mail.send',
+      'pdf.render',
       'reminders.deadline',
       'reports.late',
       'reviewer.digest',

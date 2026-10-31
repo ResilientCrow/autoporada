@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { documentInfo } from './documents';
+
 /** The slot to open, by its Monday; without one the answer names the working slot only. */
 export const issueWorkspaceInput = z.strictObject({ monday: z.iso.date().max(10).optional() });
 
@@ -20,6 +22,8 @@ const slot = z.strictObject({
     /** Approved reports whose event does not end before the meeting. */
     later: z.int().min(0),
   }),
+  /** The generated document; null until the porada is generated. */
+  document: documentInfo.nullable(),
 });
 
 export const issueWorkspaceOutput = z.strictObject({

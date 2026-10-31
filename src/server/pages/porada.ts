@@ -1,8 +1,8 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { issuePreview, issueWorkspace } from '@/application/use-cases';
-import type { issuePreviewOutput, issueWorkspaceOutput } from '@/contracts';
+import { documentArchive, issuePreview, issueWorkspace } from '@/application/use-cases';
+import type { documentInfo, issuePreviewOutput, issueWorkspaceOutput } from '@/contracts';
 import { composeDocument, type DocumentModel } from '@/document';
 import {
   formatDayMonth,
@@ -25,6 +25,22 @@ import { readWindow, standingFrom, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
 type Workspace = z.output<typeof issueWorkspaceOutput>;
+
+/** A generated document with its date written out, „31. 10. 2026“ and „14:05“. */
+interface GeneratedModel {
+  readonly monday: string;
+  readonly date: string;
+  readonly time: string;
+  readonly pdf: z.output<typeof documentInfo>['pdfStatus'];
+}
+
+function generatedOf(monday: string, info: z.output<typeof documentInfo>): GeneratedModel {
+  const { date, time } = instantToWallClock(new Date(info.generatedAt));
+  return { monday, date: formatNumericDate(date), time: formatClock(time), pdf: info.pdfStatus };
+}
+
+const generatedModel = (monday: string, info: z.output<typeof documentInfo> | null) =>
+  info === null ? null : generatedOf(monday, info);
 
 async function readWorkspace(viewer: UserPrincipal, monday?: string): Promise<Workspace | null> {
   return orNotFound(
@@ -70,6 +86,8 @@ interface PoradaPageModel {
   /** „10. 11. 2026“: the porada the approved points move to if this one is skipped. */
   readonly nextLabel: string | null;
   readonly counts: NonNullable<Workspace['slot']>['counts'];
+  /** The document of a generated porada; null before. */
+  readonly generated: GeneratedModel | null;
 }
 
 /** The page of one slot: the headmaster's workspace, or for a staff reviewer the preview to go to. */
@@ -102,6 +120,7 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
       version: slot.version,
       nextLabel: slot.next === null ? null : formatNumericDate(parseIsoDate(slot.next)),
       counts: slot.counts,
+      generated: generatedModel(slot.monday, slot.document),
     },
   };
 }
@@ -165,6 +184,14 @@ export interface PreviewPageModel {
   /** Null when the snapshot is invalid (a `snapshot-invalid` finding says where). */
   readonly document: DocumentModel | null;
   readonly findings: Preview['findings'];
+  /** The headmaster's generate form for an open porada; null otherwise. */
+  readonly generate: {
+    readonly monday: string;
+    readonly version: number | null;
+    readonly blocked: boolean;
+  } | null;
+  /** A generated porada: its document; the paper is the snapshot it was generated from. */
+  readonly generated: GeneratedModel | null;
 }
 
 /** The preview of one slot, or null (404) for anyone but the staff and for a Monday outside the calendar. */
@@ -185,12 +212,52 @@ export async function previewPage(datum: string): Promise<PreviewPageModel | nul
   // The use case cannot name the snapshot type (contracts) and sends it as JSON text, so the page parses what it composes.
   const parsed =
     preview.snapshot === null ? null : parseIssueSnapshot(JSON.parse(preview.snapshot) as unknown);
+  const { slot } = read;
+  const generate =
+    slot.status === 'open' && can(viewer.actor, { action: 'issue.generate' })
+      ? {
+          monday: slot.monday,
+          version: slot.version,
+          blocked: preview.findings.some((f) => f.level === 'block'),
+        }
+      : null;
   return {
-    monday: read.slot.monday,
-    meeting: formatTitleDate(parseIsoDate(read.slot.meetingDate)),
+    monday: slot.monday,
+    meeting: formatTitleDate(parseIsoDate(slot.meetingDate)),
     canEdit: can(viewer.actor, { action: 'issue.edit' }),
     // TODO(m9-verify): composeDocument asserts its model invariants; a throw is a fault, not a finding.
     document: parsed?.ok ? composeDocument(parsed.snapshot) : null,
     findings: preview.findings,
+    generate,
+    generated: generatedModel(slot.monday, preview.document),
+  };
+}
+
+/** /porada/archiv: every generated porada, the latest meeting first, with its files. */
+export interface ArchivePageModel {
+  readonly documents: readonly (GeneratedModel & {
+    /** „pondělí 9. listopadu 2026“: the day it was held. */
+    readonly meeting: string;
+  })[];
+}
+
+/** The archive, or null (404) for anyone but the headmaster and the staff reviewers. */
+export async function archivePage(): Promise<ArchivePageModel | null> {
+  const viewer = await getViewer();
+  if (!viewer || !can(viewer.actor, { action: 'archive.view' })) return null;
+  const read = orNotFound(
+    'documents.archive',
+    await runRegistered(getContainer(), documentArchive, {
+      principal: viewer,
+      requestId: await requestId(),
+      input: {},
+    }),
+  );
+  if (read === null) return null;
+  return {
+    documents: read.documents.map((document) => ({
+      ...generatedOf(document.monday, document),
+      meeting: formatTitleDate(parseIsoDate(document.meetingDate)),
+    })),
   };
 }

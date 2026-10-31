@@ -12,6 +12,7 @@ import { renderMail } from '@/notify';
 import { createFakeMail } from '../../../test/support/fake-mail';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 type UserSeed = NonNullable<Parameters<typeof world.seed.user>[0]>;
@@ -39,7 +40,13 @@ function handler({ takesMs = 0 }: { readonly takesMs?: number } = {}) {
       return fake.send(outgoing);
     },
   };
-  const deps: WorkerDeps = { db: world.workerDb, clock: world.clock, appOrigin: ORIGIN, mail };
+  const deps: WorkerDeps = {
+    db: world.workerDb,
+    clock: world.clock,
+    appOrigin: ORIGIN,
+    mail,
+    converter: unusedConverter,
+  };
   const id = randomUUID();
   const run = (job: MailJob, { redrive, attempt = 1 }: Run = {}) => {
     const { data, dedupeKey } = job;
@@ -288,7 +295,13 @@ describe('the mail.send handler', () => {
   it('dead-letters a job that carries no key: nothing could stop a second copy', async () => {
     const { job } = await decided('approved');
     const { mail } = handler();
-    const deps: WorkerDeps = { db: world.workerDb, clock: world.clock, appOrigin: ORIGIN, mail };
+    const deps: WorkerDeps = {
+      db: world.workerDb,
+      clock: world.clock,
+      appOrigin: ORIGIN,
+      mail,
+      converter: unusedConverter,
+    };
     const input = {
       id: randomUUID(),
       data: job.data,

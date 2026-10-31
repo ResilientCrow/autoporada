@@ -1,6 +1,7 @@
 import type { AccessRequestRepo } from './access-requests';
 import type { AuditPort } from './audit';
 import type { Clock } from './clock';
+import type { DocumentRepo } from './documents';
 import type { FutureEventRepo } from './future-events';
 import type { FutureItemRepo } from './future-items';
 import type { IssueItemRepo } from './issue-items';
@@ -48,6 +49,7 @@ export interface Tx {
   readonly pointTypes: PointTypeRepo;
   readonly settings: SettingsRepo;
   readonly registry: RegistryRepo;
+  readonly documents: DocumentRepo;
   readonly points: PointRepo;
   readonly pointEvents: PointEventRepo;
   readonly futureItems: FutureItemRepo;

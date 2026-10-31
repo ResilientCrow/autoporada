@@ -37,6 +37,7 @@ describe('ports', () => {
       'headmaster.summary',
       'issues.moved-notice',
       'reports.late',
+      'pdf.render',
     ]);
     expectTypeOf<JobName>().toEqualTypeOf<
       | 'mail.send'
@@ -47,6 +48,7 @@ describe('ports', () => {
       | 'headmaster.summary'
       | 'issues.moved-notice'
       | 'reports.late'
+      | 'pdf.render'
     >();
   });
 
@@ -62,8 +64,8 @@ describe('ports', () => {
     void jobs.enqueue('mail.send', mail, {});
     // @ts-expect-error: the template is one of the notify templates
     void jobs.enqueue('mail.send', { ...mail, template: 'nope' }, { dedupeKey: 'k' });
-    // @ts-expect-error: pdf.render is not in the catalogue until M10
-    void jobs.enqueue('pdf.render', { documentId: 'd1' }, { dedupeKey: 'k' });
+    // @ts-expect-error: a payload carries ids only, in the job's own shape
+    void jobs.enqueue('pdf.render', { issueId: 'i1' }, { dedupeKey: 'k' });
   });
 
   it('give a handler a typed job and an outcome with a code', () => {

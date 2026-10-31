@@ -143,6 +143,21 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
       entries.set(id, { ...current, removedAt: ctx.now, version: current.version + 1 });
       return 'archived';
     },
+    async stampPublished(issueId, entryIds) {
+      guard(tx, true);
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+        throw new ScopeViolation();
+      }
+      const stamped: string[] = [];
+      for (const id of entryIds) {
+        const entry = entries.get(id);
+        if (!entry || entry.firstPublishedIssueId !== null) continue;
+        entries.set(id, { ...entry, firstPublishedIssueId: issueId, version: entry.version + 1 });
+        tx.written.push({ type: 'registry_entry', id });
+        stamped.push(id);
+      }
+      return stamped;
+    },
     async archiveLists(listIds, year) {
       guard(tx, true);
       if (

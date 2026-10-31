@@ -19,8 +19,8 @@ const virtualId = (monday: CalDate) => `neulozena-${toIsoDate(monday)}`;
 
 /**
  * The snapshot of one issue as the document would print it now, read from the data (design §4).
- * A Monday without a row assembles as an untouched issue. Read-only; the generation of M10 calls
- * it with `lock: true` so the points it reads cannot change under it. The deadline rule is read
+ * A Monday without a row assembles as an untouched issue. Read-only; `issues.generate` calls it
+ * with `lock: true` so the points it reads cannot change under it, and publishes `publish`. The deadline rule is read
  * first, before any issue row (lock order, row 12b). The snapshot is null when it fails its own
  * schema; the problems say what was left out or why.
  */
@@ -109,5 +109,6 @@ export async function assembleIssueSnapshot(
       newEntries: registry.newEntries,
       ohlasyEmpty: outline.ohlasyEmpty,
     },
+    publish: { points, entryIds: registry.unstamped },
   };
 }

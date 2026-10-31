@@ -6,6 +6,7 @@ import { lateReports } from './late-reports';
 import { mailPrune } from './mail-prune';
 import { mailSend } from './mail-send';
 import { movedNotice } from './moved-notice';
+import { pdfRender } from './pdf-render';
 import { deadlineReminders } from './reminders';
 import { reportPrompt } from './report-prompt';
 import { headmasterSummary } from './summary';
@@ -22,6 +23,7 @@ export const JOB_HANDLERS: JobHandlers = {
   'headmaster.summary': headmasterSummary,
   'issues.moved-notice': movedNotice,
   'reports.late': lateReports,
+  'pdf.render': pdfRender,
 };
 
 /** The registry, checked and resolved once at import: an invalid entry stops the worker's boot. */

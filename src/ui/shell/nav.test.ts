@@ -39,6 +39,7 @@ describe('navFor', () => {
       '/body',
       '/akce',
       '/porada',
+      '/porada/archiv',
       '/kontrola',
       '/registr',
       '/uzivatele',
@@ -137,7 +138,7 @@ describe('navFor', () => {
       NAV.filter(
         (i) =>
           ![
-            ...['/uzivatele', '/body', '/akce', '/porada', '/kontrola'],
+            ...['/uzivatele', '/body', '/akce', '/porada', '/porada/archiv', '/kontrola'],
             ...['/registr', '/nastaveni'],
           ].includes(i.href),
       ),

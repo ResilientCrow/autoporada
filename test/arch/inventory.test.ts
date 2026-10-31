@@ -194,7 +194,13 @@ describe('inventory of entry points', () => {
   it('puts the registry, the outline and the issue’s own edits under the admin limit, each refreshing the page', async () => {
     const found: Record<string, unknown> = {};
     const prefixes = ['registry.', 'outline.'];
-    const named = ['issues.move', 'issues.setDetails', 'issues.setAnnex2', 'issues.setSkipped'];
+    const named = [
+      'issues.move',
+      'issues.setDetails',
+      'issues.setAnnex2',
+      'issues.setSkipped',
+      'issues.generate',
+    ];
     for (const file of ACTION_MODULES) {
       for (const value of Object.values(await exportsOf(file))) {
         const info = wrappedInfo(value);
@@ -223,6 +229,7 @@ describe('inventory of entry points', () => {
       'issues.setDetails': admin,
       'issues.setAnnex2': admin,
       'issues.setSkipped': admin,
+      'issues.generate': admin,
     });
   });
 

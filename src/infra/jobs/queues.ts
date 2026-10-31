@@ -1,6 +1,6 @@
 import type { Queue } from 'pg-boss';
 
-import { JOB_NAMES, type JobName } from '@/application/ports';
+import { JOB_NAMES, PDF_RENDER_ATTEMPTS, type JobName } from '@/application/ports';
 
 const DAY = 86_400;
 
@@ -124,6 +124,21 @@ export const QUEUE_SPECS = {
     policy: 'standard',
     options: {
       retryLimit: 2,
+      retryDelay: 60,
+      retryBackoff: true,
+      retryDelayMax: 600,
+      expireInSeconds: 300,
+      retentionSeconds: 2 * DAY,
+      deleteAfterSeconds: 2 * DAY,
+      deadLetter: DEAD_QUEUE,
+    },
+  },
+  // Enqueued by issues.generate; a run converts in at most a minute. 60 + 120 + 240 + 480 + 600 s:
+  // a converter that is down for up to 25 minutes still gets the PDF made.
+  'pdf.render': {
+    policy: 'standard',
+    options: {
+      retryLimit: PDF_RENDER_ATTEMPTS - 1,
       retryDelay: 60,
       retryBackoff: true,
       retryDelayMax: 600,

@@ -1,6 +1,7 @@
 import {
   type AccessRequestRecord,
   type AuditTarget,
+  type DocumentRecord,
   type EnqueueOptions,
   type FutureEventRecord,
   type FutureItemRecord,
@@ -21,6 +22,7 @@ import {
   type UserRecord,
 } from '@/application/ports';
 import type { Outline } from '@/domain/outline';
+import type { IssueSnapshot } from '@/snapshot';
 
 import { refusedBy } from './guards';
 
@@ -58,6 +60,8 @@ export interface FakeState {
   readonly futureEvents: Map<string, FutureEventRecord>;
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
+  /** generated_documents, by id. */
+  readonly documents: Map<string, FakeDocument>;
   /** mail_gate's one row, as migration 0009 inserts it. */
   mailGate: GateRow;
   /** Hands out UUID-shaped ids in order, as uuidv7() would. */
@@ -65,6 +69,13 @@ export interface FakeState {
 }
 
 export type FakePoint = PointRecord & { readonly clientRef: string };
+
+export type FakeDocument = DocumentRecord & {
+  readonly snapshot: IssueSnapshot;
+  readonly docx: Uint8Array;
+  readonly pdf: Uint8Array | null;
+  readonly pdfAt: Date | null;
+};
 
 export type FakeFutureItem = FutureItemRecord & { readonly clientRef: string };
 
@@ -102,6 +113,7 @@ export const emptyState = (): FakeState => ({
   futureItems: new Map(),
   futureEvents: new Map(),
   mailLedger: new Map(),
+  documents: new Map(),
   mailGate: { notBefore: null, code: null },
   nextId: 1,
 });

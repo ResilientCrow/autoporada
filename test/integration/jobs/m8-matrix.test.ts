@@ -18,6 +18,7 @@ import { calDate, toIsoDate, type CalDate } from '@/domain/time';
 import { futureFixtures, readyAkce } from '../../support/future';
 import { pointFixtures } from '../../support/points';
 import { setupWorld } from '../../support/world';
+import { unusedConverter } from '../../support/fake-converter';
 
 const world = setupWorld();
 const points = pointFixtures(world);
@@ -104,6 +105,7 @@ const deps = (): WorkerDeps => ({
   db: world.workerDb,
   clock: world.clock,
   appOrigin: 'https://autoporada.test',
+  converter: unusedConverter,
   mail: { send: () => Promise.reject(new Error('a producer run sends no mail')) },
 });
 function run(name: Name, at: Date | string) {

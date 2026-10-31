@@ -7,6 +7,7 @@
 #   docker build -f docker/app/Dockerfile --target web -t autoporada-web:check .
 #   docker build -f docker/app/Dockerfile --target worker -t autoporada-worker:check .
 #   docker build -f docker/app/Dockerfile --target tools -t autoporada-tools:check .
+#   docker build -t autoporada-gotenberg:check docker/gotenberg
 #   scripts/check-deploy.sh
 set -eu
 

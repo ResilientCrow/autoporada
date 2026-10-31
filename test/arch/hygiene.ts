@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { fileBytes } from '@/contracts';
+
 /** Output names that suggest a credential: DTOs never carry one. */
 const SECRET_NAME = /token|hash|secret|verifier|nonce|cookie/i;
 
@@ -81,7 +83,18 @@ export const PROTOCOL_OUTPUTS: Readonly<Record<string, readonly string[]>> = {
 /** Outputs return only what they name (z.object strips the rest), never a credential. */
 export function outputProblems(schema: z.ZodType, allowed: readonly string[] = []): string[] {
   const problems: string[] = [];
-  walk(z.toJSONSchema(schema, { io: 'output', unrepresentable: 'any' }), '$', (node, path) => {
+  // The file bytes a route hands out are a named type, not anything (ADR 0038).
+  const json = z.toJSONSchema(schema, {
+    io: 'output',
+    unrepresentable: 'any',
+    override: ({ zodSchema, jsonSchema }) => {
+      if (zodSchema === fileBytes) {
+        jsonSchema.type = 'string';
+        jsonSchema.contentMediaType = 'application/octet-stream';
+      }
+    },
+  });
+  walk(json, '$', (node, path) => {
     if (node['type'] === 'object' && node['additionalProperties'] !== false) {
       problems.push(`${path}: object passes unnamed keys through`);
     }

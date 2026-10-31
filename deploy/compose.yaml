@@ -32,7 +32,7 @@ x-app-env: &app-env
   OIDC_DOMAIN_HINT: ${DOMAIN_HINT:-ssps.cz}
   MAIL_TRANSPORT: graph
   MAIL_FROM: ${MAIL_FROM:-autoporada@ssps.cz}
-  # Required by the configuration; the web process never calls it (M10).
+  # The worker converts each generated DOCX to PDF there (ADR 0038); the web never calls it.
   GOTENBERG_URL: http://gotenberg:3000
 
 # Listed before *hardened in a merge: the first map wins, and a one-shot
@@ -116,8 +116,8 @@ services:
       DATABASE_URL_FILE: /run/secrets/worker_database_url
     secrets: [worker_database_url, entra_key, entra_cert]
     tmpfs: ['/tmp:size=8m']
-    # data: the database. egress: Entra and Graph.
-    networks: [data, egress]
+    # data: the database. egress: Entra and Graph. render: Gotenberg.
+    networks: [data, egress, render]
     # The alive file is touched while the database answers (src/infra/worker/health.ts); a Graph
     # outage never makes the worker unhealthy, since a restart cannot fix it.
     healthcheck:
@@ -133,6 +133,24 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       postgres: { condition: service_healthy }
+
+  # DOCX -> PDF for the worker (ADR 0038), with the porada's fonts (docker/gotenberg). No port, no
+  # secrets and no way out: only the worker reaches it. A PDF job waits and retries while it is down.
+  gotenberg:
+    <<: *hardened
+    image: autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
+    build: { context: ../docker/gotenberg }
+    user: '1001:1001'
+    command: ['gotenberg', '--chromium-auto-start=false', '--api-timeout=60s']
+    # LibreOffice keeps its profile in the home directory.
+    tmpfs: ['/tmp:size=256m', '/home/gotenberg:uid=1001,gid=1001,size=64m']
+    networks: [render]
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', 'http://127.0.0.1:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
 
   migrate:
     <<: [*tools, *hardened]
@@ -195,6 +213,8 @@ networks:
   egress:
     driver_opts:
       com.docker.network.bridge.name: ap-egress
+  # The worker and Gotenberg only, no way out: a document never leaves the server.
+  render: { internal: true }
 
 volumes:
   pgdata: {}

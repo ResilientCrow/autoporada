@@ -20,6 +20,7 @@ import { lateReportFixtures } from '../../../test/support/late-reports';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 const points = pointFixtures(world);
@@ -46,6 +47,7 @@ const deps = (): WorkerDeps => ({
   db: world.workerDb,
   clock: world.clock,
   appOrigin: 'https://autoporada.test',
+  converter: unusedConverter,
   mail: { send: () => Promise.reject(new Error('a reminder run sends no mail')) },
 });
 const runAt = (instant: Date) => {

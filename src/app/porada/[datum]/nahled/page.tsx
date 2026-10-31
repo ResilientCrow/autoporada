@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { generateIssue } from '@/server/actions';
 import { previewPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, porada } from '@/ui/copy';
 import { PreviewPage } from '@/ui/features/porada';
@@ -20,7 +21,7 @@ export default async function PoradaPreviewPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/porada">
-      <PreviewPage view={model} />
+      <PreviewPage view={model} generate={generateIssue} />
     </Shell>
   );
 }

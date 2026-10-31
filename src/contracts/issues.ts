@@ -22,6 +22,20 @@ export const setSkippedOutput = z.object({
 });
 
 /**
+ * Generating a porada's document (ADR 0038): the version of the row the preview showed (none for
+ * a Monday without a row) and the checkbox that says the headmaster has read the preview.
+ */
+export const generateIssueInput = z.strictObject({
+  monday: z.iso.date().max(10),
+  expectedVersion: z.number().int().positive().optional(),
+  confirmed: z.literal(true).optional(),
+});
+export const generateIssueOutput = z.object({
+  documentId: z.uuid(),
+  version: z.number().int().positive(),
+});
+
+/**
  * Moving a porada to another meeting date (ADR 0034). The deadline is a date and a time of day
  * the form pre-fills from the rule. `skip` lists the Mondays of the slots in the way that the
  * move cancels; they must be exactly the conflicts, and `confirmed` is the checkbox that says so.

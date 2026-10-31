@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { MovePage, NoPorada, PreviewPage, Workspace } from './index';
+import { ArchivePage, MovePage, NoPorada, PreviewPage, Workspace } from './index';
 import type { FindingView } from './Preflight';
 import type { MoveView } from './move';
 import { moveEffect, moveInput, ruleDeadline, skipList } from './move';
@@ -26,6 +26,11 @@ const setSkipped = vi.fn(async () => ({
   ok: true as const,
   data: { status: 'skipped' as const, version: 2 },
 }));
+const generate = vi.fn(async () => ({
+  ok: true as const,
+  data: { documentId: '00000000-0000-4000-8000-000000000001', version: 4 },
+}));
+const GENERATED = { monday: MONDAY, date: '9. 11. 2026', time: '14:05', pdf: 'ready' } as const;
 
 const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   monday: MONDAY,
@@ -38,6 +43,7 @@ const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   version: 3,
   nextLabel: '16. 11. 2026',
   counts: { waiting: 2, returned: 0, approved: 1, later: 0 },
+  generated: null,
   ...over,
 });
 const render = (over: Partial<WorkspaceView> = {}) =>
@@ -102,10 +108,60 @@ describe('Workspace', () => {
     expect(render({ version: null })).toContain(porada.skip.title);
   });
 
-  it('announces generating as coming later and keeps its button off', () => {
+  it('sends an open porada to the preview to generate it, and links the archive', () => {
     const html = render();
-    expect(html).toContain(porada.generate.later);
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*Vygenerovat/);
+    expect(html).toContain(porada.generate.where);
+    expect(html).toContain(`href="/porada/${MONDAY}/nahled"`);
+    expect(html).toContain('href="/porada/archiv"');
+    expect(html).not.toContain('/dokument/docx');
+  });
+
+  it('shows the files of a generated porada, and no skip or generate step', () => {
+    const html = render({ status: 'generated', generated: GENERATED });
+    expect(html).toContain(porada.document.at('9. 11. 2026', '14:05'));
+    expect(html).toContain(`href="/porada/${MONDAY}/dokument/docx"`);
+    expect(html).toContain(`href="/porada/${MONDAY}/dokument/pdf"`);
+    expect(html).not.toContain(porada.generate.where);
+    expect(html).not.toContain(porada.skip.title);
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('says where a PDF stands until it can be downloaded', () => {
+    for (const pdf of ['pending', 'failed'] as const) {
+      const html = render({ status: 'generated', generated: { ...GENERATED, pdf } });
+      expect(html).toContain(porada.document[pdf]);
+      expect(html).not.toContain('/dokument/pdf');
+    }
+  });
+});
+
+describe('ArchivePage', () => {
+  it('lists each generated porada with its files, and says when there is none', () => {
+    const html = renderToStaticMarkup(
+      <ArchivePage
+        view={{
+          documents: [
+            { ...GENERATED, meeting: 'pondělí 9. listopadu 2026' },
+            {
+              ...GENERATED,
+              monday: '2026-11-02',
+              pdf: 'pending',
+              meeting: 'pondělí 2. listopadu 2026',
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain(porada.archive.meeting('pondělí 9. listopadu 2026'));
+    expect(html).toContain(`href="/porada/${MONDAY}/dokument/pdf"`);
+    expect(html).toContain('href="/porada/2026-11-02/dokument/docx"');
+    expect(html).not.toContain('href="/porada/2026-11-02/dokument/pdf"');
+    expect(html).toContain(porada.document.pending);
+    expect(cspMarkupProblems(html)).toEqual([]);
+
+    const empty = renderToStaticMarkup(<ArchivePage view={{ documents: [] }} />);
+    expect(empty).toContain(porada.archive.empty);
+    expect(empty).not.toContain('/dokument/');
   });
 });
 
@@ -133,6 +189,7 @@ const DOCUMENT: DocumentModel = {
   meta: { title: 'Porada vedení školy', author: 'Autoporada' },
   sections: [{ layout: 'single', blocks: [{ kind: 'point', number: 1, text: 'Bod náhledu' }] }],
 };
+const DISABLED_CHECKBOX = /<input(?=[^>]*type="checkbox")(?=[^>]*disabled)[^>]*>/;
 const finding = (over: Partial<FindingView> & Pick<FindingView, 'code' | 'level'>): FindingView =>
   over;
 const preview = (findings: readonly FindingView[], over = {}) =>
@@ -144,8 +201,11 @@ const preview = (findings: readonly FindingView[], over = {}) =>
         canEdit: true,
         document: DOCUMENT,
         findings,
+        generate: null,
+        generated: null,
         ...over,
       }}
+      generate={generate}
     />,
   );
 
@@ -156,6 +216,30 @@ describe('PreviewPage and Preflight', () => {
     expect(html).toContain(porada.preflight.none);
     expect(html).not.toContain(porada.preflight.level.block);
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('offers the headmaster the generate form, held off while a finding blocks it', () => {
+    const open = preview([], { generate: { monday: MONDAY, version: 3, blocked: false } });
+    expect(open).toContain(porada.generate.intro);
+    expect(open).toContain(porada.generate.confirm);
+    // The submit waits for hydration either way; the checkbox says whether the form is held off.
+    expect(open).not.toMatch(DISABLED_CHECKBOX);
+    expect(cspMarkupProblems(open)).toEqual([]);
+
+    const blocked = preview([finding({ code: 'issue-not-open', level: 'block' })], {
+      generate: { monday: MONDAY, version: 3, blocked: true },
+    });
+    expect(blocked).toContain(porada.generate.blocked);
+    expect(blocked).toMatch(DISABLED_CHECKBOX);
+    expect(preview([])).not.toContain(porada.generate.title);
+  });
+
+  it('shows a generated porada with its files instead of the preflight', () => {
+    const html = preview([], { generated: GENERATED });
+    expect(html).toContain(porada.document.title);
+    expect(html).toContain(`href="/porada/${MONDAY}/dokument/docx"`);
+    expect(html).not.toContain(porada.preflight.none);
+    expect(html).toContain('Bod náhledu');
   });
 
   it('groups the findings by level, blockers first, each level only when it has some', () => {

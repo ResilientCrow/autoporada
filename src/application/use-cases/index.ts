@@ -23,7 +23,9 @@ import {
   startFutureReport,
   submitFuture,
 } from './future';
+import { documentArchive, downloadDocument } from './documents';
 import {
+  generateIssue,
   issuePreview,
   issueWindow,
   issueWorkspace,
@@ -93,7 +95,9 @@ export {
   startFutureReport,
   submitFuture,
 } from './future';
+export { documentArchive, downloadDocument } from './documents';
 export {
+  generateIssue,
   issuePreview,
   issueWindow,
   issueWorkspace,
@@ -159,8 +163,11 @@ export const USE_CASES: readonly AnyUseCase[] = [
   decideFuture,
   declineFutureReport,
   decidePoint,
+  documentArchive,
+  downloadDocument,
   getFuture,
   getPoint,
+  generateIssue,
   getUser,
   issuePreview,
   issueWindow,

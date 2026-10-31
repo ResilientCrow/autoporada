@@ -83,6 +83,11 @@ export interface RegistryRepo {
    */
   removeEntry(id: string): Promise<'deleted' | 'archived' | null>;
   /**
+   * Marks the entries as first printed in the issue (`first_published_issue_id`), only those not
+   * marked yet, with `issue.generate`. Gives the ids it marked.
+   */
+  stampPublished(issueId: string, entryIds: readonly string[]): Promise<readonly string[]>;
+  /**
    * „Nový školní rok“ for the lists: deletes their active entries that were never printed and
    * sets `removed_at` and `archived_year` on the others, in one go. The lists stay. Gives the ids it
    * archived and deleted, as the statements returned them.

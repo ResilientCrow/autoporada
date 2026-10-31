@@ -15,7 +15,7 @@ export { homePage } from './home';
 export { issueTextsPage } from './issue-texts';
 export { newOutlineItemPage, outlineItemPage, outlinePage } from './outline';
 export { pointTypesPage } from './point-types';
-export { poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
+export { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
 export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points';
 export { newYearPage, registryPage } from './registry';
 export { queuePage, reviewPointPage } from './review';

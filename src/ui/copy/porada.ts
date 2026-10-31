@@ -63,7 +63,35 @@ export const porada = {
     annex2: 'Příloha\u00a02',
     preview: 'Náhled',
   },
-  generate: { button: 'Vygenerovat', later: 'Generování přijde v\u00a0další verzi.' },
+  generate: {
+    title: 'Vygenerovat dokument',
+    intro:
+      'Vygenerováním se dokument uloží, schválené body se zveřejní a\u00a0poradu už nepůjde upravit.',
+    blocked: 'Dokument zatím nelze vygenerovat. Nejdřív opravte, co výše brání vygenerování.',
+    confirm: 'Rozumím, že vygenerovanou poradu už nelze změnit.',
+    unconfirmed: 'Potvrďte prosím vygenerování.',
+    submit: 'Vygenerovat dokument',
+    /** On the workspace of an open porada: the button is on the preview. */
+    where: 'Dokument vygenerujete v\u00a0náhledu, až ho zkontrolujete.',
+    open: 'Zkontrolovat a\u00a0vygenerovat',
+  },
+  /** The generated document of a porada (ADR 0038). */
+  document: {
+    title: 'Dokument',
+    /** `date` and `time` arrive written, „31. 10. 2026“ and „14:05“. */
+    at: (date: string, time: string) => `Vygenerováno ${date} v\u00a0${time}.`,
+    docx: 'Stáhnout DOCX',
+    pdf: 'Stáhnout PDF',
+    pending: 'PDF se ještě připravuje. Načtěte stránku za chvíli.',
+    failed: 'PDF se nepodařilo vytvořit. Stáhněte DOCX a\u00a0uložte ho jako PDF ve Wordu.',
+  },
+  archive: {
+    title: 'Archiv porad',
+    open: 'Archiv porad',
+    empty: 'Zatím není vygenerovaná žádná porada.',
+    /** `meeting` arrives written, „pondělí 9. listopadu 2026“. */
+    meeting: (meeting: string) => `Porada ${meeting}`,
+  },
   skip: {
     title: 'Porada se nekoná',
     /** `next` arrives written, „10. 11. 2026“. */

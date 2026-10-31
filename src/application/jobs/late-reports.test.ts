@@ -17,6 +17,7 @@ import { createFakeMail } from '../../../test/support/fake-mail';
 import { lateReportFixtures } from '../../../test/support/late-reports';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
+import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 
@@ -34,6 +35,7 @@ const deps = (mail = createFakeMail()): WorkerDeps => ({
   db: world.workerDb,
   clock: world.clock,
   appOrigin: ORIGIN,
+  converter: unusedConverter,
   mail,
 });
 const job = (): JobInput<'reports.late'> => ({

@@ -52,6 +52,11 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
       throw new ScopeViolation();
     }
   };
+  const mayGenerate = () => {
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+      throw new ScopeViolation();
+    }
+  };
   const mayArchive = () => {
     if (principal.kind === 'user' && !can(principal.actor, { action: 'registry.newSchoolYear' })) {
       throw new ScopeViolation();
@@ -149,6 +154,21 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
         )
         .returning({ id: registryEntries.id });
       return archived.length > 0 ? 'archived' : null;
+    },
+    async stampPublished(issueId, entryIds) {
+      mayGenerate();
+      if (entryIds.length === 0) return [];
+      const rows = await db
+        .update(registryEntries)
+        .set({ firstPublishedIssueId: issueId, version: bump })
+        .where(
+          and(
+            inArray(registryEntries.id, [...entryIds]),
+            isNull(registryEntries.firstPublishedIssueId),
+          ),
+        )
+        .returning({ id: registryEntries.id });
+      return rows.map((r) => r.id);
     },
     async archiveLists(listIds, year) {
       mayArchive();

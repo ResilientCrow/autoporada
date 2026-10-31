@@ -130,8 +130,13 @@ in v1 unless the [plan of record](plan.md) changes first.
   an invalid snapshot, and warns about points and akce still waiting, returned
   points, late reports still expected, placed proposals no longer eligible, an
   empty Příloha 1 and a deadline still ahead.
-- Generation: a DOCX in the exact template look, plus a PDF. Every version is
-  archived, and an issue can be reopened and regenerated.
+- Generation: „Vygenerovat dokument“ on the Náhled (headmaster, after a
+  confirmation tick; held off while the preflight blocks) stores a DOCX in the
+  exact template look and publishes the points it prints. The worker then makes
+  the PDF with Gotenberg. Both stay downloadable from the porada and from
+  „Archiv porad“ for the headmaster and the staff reviewers, and every download
+  is audited. A generated porada cannot be reopened or regenerated yet (ADR
+  0038).
 - „Porada se nekoná“ (skip a week), before or after its deadline, and
   „Přesunout poradu“: a porada can move to any date in the 26-week horizon, for
   example a holiday Monday to the Friday before. The deadline follows the new

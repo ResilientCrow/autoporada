@@ -1,8 +1,9 @@
 import type { IssueStatus } from '@/domain/review';
 import { porada } from '@/ui/copy';
-import { ArrowLink, Button, Card, SlantLabel } from '@/ui/kit';
+import { ArrowLink, Card, SlantLabel } from '@/ui/kit';
 import { Chip, ISSUE_LOOK } from '@/ui/status';
 
+import { DocumentCard, type GeneratedView } from './DocumentCard';
 import { SkipControl, type SkipAction } from './SkipControl';
 import { Steps } from './Steps';
 
@@ -28,12 +29,14 @@ export interface WorkspaceView {
     readonly approved: number;
     readonly later: number;
   };
+  /** The document of a generated porada; null before. */
+  readonly generated: GeneratedView | null;
 }
 
 /**
  * The headmaster's page of one porada: where and when it is held, its deadline and status, what
- * waits for it, and the steps of preparing the document. Generating comes with M10 and is only
- * announced.
+ * waits for it, and the steps of preparing the document. The document is generated on the
+ * preview; a generated porada shows its files here.
  */
 export function Workspace({
   view,
@@ -81,13 +84,17 @@ export function Workspace({
             }}
           />
         )}
+        {view.generated !== null && <DocumentCard view={view.generated} />}
         <Steps monday={view.monday} />
-        <div className="space-y-2">
-          <Button isDisabled describedBy="generovani-pozn">
-            {porada.generate.button}
-          </Button>
-          <p id="generovani-pozn">{porada.generate.later}</p>
-        </div>
+        {view.status === 'open' && (
+          <div className="space-y-2">
+            <p id="generovani-pozn">{porada.generate.where}</p>
+            <ArrowLink href={`/porada/${view.monday}/nahled`} describedBy="generovani-pozn">
+              {porada.generate.open}
+            </ArrowLink>
+          </div>
+        )}
+        <ArrowLink href="/porada/archiv">{porada.archive.open}</ArrowLink>
       </div>
     </>
   );
