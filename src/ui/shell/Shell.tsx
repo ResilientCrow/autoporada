@@ -3,18 +3,22 @@ import type { ReactNode } from 'react';
 
 import type { Actor } from '@/domain/actor';
 import { cs } from '@/ui/copy';
-import { Button } from '@/ui/kit';
+import { Button, buttonStyles, Icon, TextLink } from '@/ui/kit';
 
 import { navFor } from './nav';
 import { NavLink } from './NavLink';
 
+/** The gap between the top-level blocks of every page (ADR 0043). */
+const STACK = 'flex flex-col gap-8';
+
 /**
  * The frame of every page: skip link first, then the dark brand header, the
- * one `main` (the skip link's target) and the footer. Static, never sticky,
- * and the header wraps on narrow screens. A signed-in viewer adds the
- * navigation the policy allows, their name and the sign-out button. `width="wide"` lets the
- * header, the page and the footer grow together from the wide layout (`lg:`, 1024 px) on, for
- * a page with two columns.
+ * one `main` (the skip link's target) and the footer. Static, never sticky.
+ * Header, `main` and footer share one frame (the same left edge, 72 rem at most);
+ * `width` limits only the content column: 48 rem for `text`, the whole frame for `wide`.
+ * A signed-in viewer adds the navigation the policy allows, their name and the sign-out
+ * button: on the brand row and a row of links from `lg`, below that in a native `<details>`
+ * menu (no script; the `key` closes it on each page). `main` spaces the page's blocks 32 px apart.
  */
 export function Shell({
   viewer,
@@ -28,7 +32,20 @@ export function Shell({
   readonly children: ReactNode;
 }) {
   const items = viewer ? navFor(viewer.actor) : [];
-  const max = width === 'wide' ? 'max-w-3xl lg:max-w-6xl' : 'max-w-3xl';
+  const links = items.map((item) => (
+    <li key={item.href}>
+      <NavLink href={item.href} current={item.href === current}>
+        {item.label}
+      </NavLink>
+    </li>
+  ));
+  const signOut = (
+    <form method="post" action="/auth/logout">
+      <Button variant="onDark" type="submit" name="scope" value="this">
+        {cs.shell.signOut}
+      </Button>
+    </form>
+  );
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -37,8 +54,8 @@ export function Shell({
       >
         {cs.shell.skipLink}
       </a>
-      <header className="surface-dark">
-        <div className={`mx-auto flex ${max} flex-wrap items-center gap-x-4 gap-y-2 p-4`}>
+      <header className="surface-dark relative">
+        <div className="frame flex min-h-14 items-center justify-between gap-4 py-2">
           <Link
             href="/"
             prefetch={false}
@@ -48,36 +65,43 @@ export function Shell({
           </Link>
           {viewer && (
             <>
-              <nav aria-label={cs.nav.label}>
-                <ul className="flex flex-wrap gap-x-4 gap-y-1">
-                  {items.map((item) => (
-                    <li key={item.href}>
-                      <NavLink href={item.href} current={item.href === current}>
-                        {item.label}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-              <p className="ml-auto">{viewer.displayName}</p>
-              <form method="post" action="/auth/logout">
-                <Button variant="onDark" type="submit" name="scope" value="this">
-                  {cs.shell.signOut}
-                </Button>
-              </form>
+              <div className="hidden items-center gap-4 lg:flex">
+                <p>{viewer.displayName}</p>
+                {signOut}
+              </div>
+              <details key={current} className="lg:hidden">
+                <summary className={`${buttonStyles('onDark')} summary-plain gap-2`}>
+                  <Icon name="menu" />
+                  {cs.shell.menu}
+                </summary>
+                <div className="surface-dark absolute inset-x-0 top-full z-20 border-t border-navy-mid">
+                  <div className="frame flex flex-col gap-4 py-4">
+                    <nav aria-label={cs.nav.label}>
+                      <ul className="flex flex-col">{links}</ul>
+                    </nav>
+                    <p className="text-sm">{viewer.displayName}</p>
+                    {signOut}
+                  </div>
+                </div>
+              </details>
             </>
           )}
         </div>
+        {viewer && (
+          <div className="hidden border-t border-navy-mid lg:block">
+            <nav aria-label={cs.nav.label} className="frame">
+              <ul className="flex flex-wrap gap-x-6">{links}</ul>
+            </nav>
+          </div>
+        )}
       </header>
-      <main id="obsah" tabIndex={-1} className={`mx-auto w-full ${max} flex-1 p-4`}>
-        {children}
+      <main id="obsah" tabIndex={-1} className="frame flex-1 py-6 sm:py-8">
+        <div className={width === 'wide' ? STACK : `${STACK} max-w-3xl`}>{children}</div>
       </main>
       <footer className="surface-dark">
-        <div className={`mx-auto flex ${max} flex-wrap gap-x-4 gap-y-1 p-4`}>
+        <div className="frame flex flex-wrap items-center gap-x-6 gap-y-2 py-6 text-sm">
           <p>{cs.shell.school}</p>
-          <Link href="/ochrana-osobnich-udaju" prefetch={false}>
-            {cs.shell.privacy}
-          </Link>
+          <TextLink href="/ochrana-osobnich-udaju">{cs.shell.privacy}</TextLink>
         </div>
       </footer>
     </div>

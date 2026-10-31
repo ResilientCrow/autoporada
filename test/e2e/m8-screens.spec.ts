@@ -20,7 +20,7 @@ import {
   seedPoint,
   type SeedState,
 } from './db';
-import { expect, field, signInElsewhere, test } from './fixtures';
+import { expect, field, openNav, signInElsewhere, test } from './fixtures';
 import { standingLines } from './standing';
 
 const dayMonth = (iso: string) => formatDayMonth(parseIsoDate(iso));
@@ -258,6 +258,7 @@ test.describe('the author’s and the reviewer’s screens', () => {
     // Read after the page: the line is as of the page's load, on the same clock.
     const line = standingLines(new Date());
     await expect(page.getByText(line.before).or(page.getByText(line.closed))).toBeVisible();
+    await openNav(page);
     const navigation = page.getByRole('navigation');
     await expect(navigation.getByRole('link', { name: points.mine.title })).toBeVisible();
     await expect(navigation.getByRole('link', { name: review.title })).toHaveCount(0);
@@ -268,6 +269,7 @@ test.describe('the author’s and the reviewer’s screens', () => {
     const other = await signInElsewhere(newContext, new RegExp(`^Test – ${reviewer.subject}`));
     await hydrated(other);
     await expect(other.getByRole('link', { name: /^Ke kontrole: \d+$/ })).toBeVisible();
+    await openNav(other);
     await expect(
       other.getByRole('navigation').getByRole('link', { name: review.title }),
     ).toBeVisible();

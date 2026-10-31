@@ -19,7 +19,7 @@ export default function GlobalError({ retry }: { readonly retry: () => void }) {
     <html lang="cs">
       <body>
         <title>{pageTitle(appError.title)}</title>
-        <main id="obsah" className="mx-auto flex max-w-3xl flex-col items-start gap-4 p-4">
+        <main id="obsah" className="frame flex flex-col items-start gap-8 py-8">
           <SlantLabel level={1}>{appError.title}</SlantLabel>
           <p>{appError.text}</p>
           <button type="button" className={buttonStyles('primary')} onClick={() => retry()}>

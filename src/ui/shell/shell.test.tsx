@@ -47,9 +47,12 @@ describe('Shell with a viewer', () => {
   );
 
   it('has a labelled navigation, marking the current page', () => {
-    expect(signedIn).toContain(`<nav aria-label="${cs.nav.label}">`);
-    expect(signedIn.match(/aria-current="page"/g)).toHaveLength(1);
-    expect(signedIn).toMatch(new RegExp(`aria-current="page"[^>]*>${cs.nav.overview}</a>`));
+    expect(signedIn.match(new RegExp(`<nav aria-label="${cs.nav.label}"`, 'g'))).toHaveLength(2);
+    // The same href is current in the desktop row and in the phone menu.
+    expect(signedIn.match(/aria-current="page"/g)).toHaveLength(2);
+    expect(
+      signedIn.match(new RegExp(`aria-current="page"[^>]*>${cs.nav.overview}</a>`, 'g')),
+    ).toHaveLength(2);
   });
 
   it('marks no page as current elsewhere', () => {
@@ -77,29 +80,51 @@ describe('Shell with a viewer', () => {
   });
 });
 
-describe('Shell width', () => {
-  const containers = (markup: string) => {
-    const header = /<header [^>]*><div class="([^"]*)"/.exec(markup)?.[1] ?? '';
-    const main = /<main [^>]*class="([^"]*)"/.exec(markup)?.[1] ?? '';
-    const footer = /<footer [^>]*><div class="([^"]*)"/.exec(markup)?.[1] ?? '';
-    return { header, main, footer };
-  };
+describe('Shell frame', () => {
+  const classOf = (markup: string, tag: 'header' | 'footer') =>
+    new RegExp(`<${tag} [^>]*>(?:<div class="([^"]*)")`).exec(markup)?.[1] ?? '';
+  const mainOf = (markup: string) => /<main [^>]*class="([^"]*)"/.exec(markup)?.[1] ?? '';
+  const columnOf = (markup: string) => /<main [^>]*><div class="([^"]*)"/.exec(markup)?.[1] ?? '';
+  const wide = renderToStaticMarkup(<Shell width="wide">{cs.gallery.intro}</Shell>);
 
-  it('is text width by default: header, main and footer stop at max-w-3xl', () => {
-    for (const classes of Object.values(containers(html))) {
-      expect(classes).toContain('max-w-3xl');
-      expect(classes).not.toContain('lg:max-w-6xl');
+  it('gives header, main and footer the one frame, whatever the width', () => {
+    for (const markup of [html, wide]) {
+      expect(classOf(markup, 'header')).toContain('frame');
+      expect(mainOf(markup)).toContain('frame');
+      expect(classOf(markup, 'footer')).toContain('frame');
+      expect(markup).not.toContain('lg:max-w-6xl');
     }
   });
 
-  it('is wide on request: header, main and footer widen together from lg', () => {
-    const wide = renderToStaticMarkup(<Shell width="wide">{cs.gallery.intro}</Shell>);
-    const found = containers(wide);
-    expect(Object.keys(found)).toHaveLength(3);
-    for (const classes of Object.values(found)) {
-      expect(classes).toContain('max-w-3xl');
-      expect(classes).toContain('lg:max-w-6xl');
-    }
+  it('limits only the content column to text width, and spaces its blocks 32 px apart', () => {
+    expect(columnOf(html)).toBe('flex flex-col gap-8 max-w-3xl');
+    expect(columnOf(wide)).toBe('flex flex-col gap-8');
+    expect(mainOf(html)).toContain('py-6 sm:py-8');
+  });
+});
+
+describe('Shell menu', () => {
+  const signedIn = renderToStaticMarkup(
+    <Shell viewer={VIEWER} current="/">
+      {cs.gallery.intro}
+    </Shell>,
+  );
+
+  it('has one details with the Menu summary, closed, for phones', () => {
+    expect(signedIn.match(/<details /g)).toHaveLength(1);
+    expect(signedIn).toMatch(/<details class="lg:hidden"><summary [^>]*summary-plain[^>]*>/);
+    expect(signedIn).toContain(`${cs.shell.menu}</summary>`);
+    expect(signedIn).not.toMatch(/<details [^>]*open/);
+  });
+
+  it('shows the desktop row and the name with sign-out only from lg', () => {
+    expect(signedIn).toContain('class="hidden border-t border-navy-mid lg:block"');
+    expect(signedIn).toContain('class="hidden items-center gap-4 lg:flex"');
+    expect(signedIn.match(new RegExp(`${cs.shell.signOut}</button>`, 'g'))).toHaveLength(2);
+  });
+
+  it('has no menu without a viewer', () => {
+    expect(html).not.toContain('<details');
   });
 });
 

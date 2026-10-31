@@ -20,6 +20,7 @@ import {
   field,
   freezeClock,
   LADDER_MS,
+  openNav,
   SAVED,
   showAllPersonas,
   test,
@@ -73,6 +74,7 @@ test.describe('autosave in the point editor', () => {
     await freezeClock(page);
     await field(page, points.editor.title).fill('Uloženo při odchodu');
     // A programmatic click moves no focus and the clock stands still: only the unmount can save.
+    await openNav(page);
     await page
       .getByRole('navigation')
       .getByRole('link', { name: cs.nav.overview })

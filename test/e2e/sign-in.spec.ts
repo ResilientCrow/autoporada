@@ -4,7 +4,7 @@
  */
 import { cs } from '@/ui/copy';
 
-import { expect, test } from './fixtures';
+import { expect, openNav, test } from './fixtures';
 
 test('a member signs in, waits for approval, and signs out', async ({
   page,
@@ -28,6 +28,7 @@ test('a member signs in, waits for approval, and signs out', async ({
   });
   expect(cookies.find((c) => c.name === '__Host-ap_signin')).toBeUndefined();
 
+  await openNav(page);
   await page.getByRole('button', { name: cs.shell.signOut, exact: true }).click();
   await expect(page).toHaveURL(/\/prihlaseni\?odhlaseno=1$/);
   await expect(page.getByRole('main').getByRole('status')).toContainText(cs.signIn.loggedOut.here);

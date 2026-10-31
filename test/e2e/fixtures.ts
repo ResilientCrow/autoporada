@@ -321,6 +321,19 @@ export function countActions(page: Page): { readonly count: () => number } {
   return { count: () => n };
 }
 
+/**
+ * Opens the header menu when the layout hides the navigation in it (below `lg`, where the
+ * „Menu“ summary shows); on a wide screen the navigation is on the page already. It never closes it.
+ */
+export async function openNav(page: Page): Promise<void> {
+  const menu = page.locator('summary', { hasText: cs.shell.menu });
+  if (!(await menu.isVisible())) return;
+  const opened = await menu.evaluate(
+    (summary) => (summary.parentElement as HTMLDetailsElement).open,
+  );
+  if (!opened) await menu.click();
+}
+
 /** The value of this context's session cookie: what the sessions table stores a digest of. */
 export async function sessionToken(context: BrowserContext): Promise<string> {
   const cookie = (await context.cookies()).find((c) => c.name === '__Host-ap_session');
