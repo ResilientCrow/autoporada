@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm';
-import { check, date, integer, pgEnum, pgTable, text, unique } from 'drizzle-orm/pg-core';
+import { check, date, integer, jsonb, pgEnum, pgTable, text, unique } from 'drizzle-orm/pg-core';
+
+import type { RichDoc } from '@/domain/richtext';
 
 import { at, createdAt, id } from './columns';
 
@@ -20,6 +22,11 @@ export const issues = pgTable(
     /** `schoolYear(monday)`, e.g. `2026/2027`. */
     schoolYear: text().notNull(),
     deadlineAt: at().notNull(),
+    /** Přítomni and Hosté as the headmaster wrote them; null = carried from an earlier issue (D8). */
+    presentText: text(),
+    guestsText: text(),
+    /** Příloha 2; null = carried, an empty doc = removed (D8). */
+    annex2: jsonb().$type<RichDoc>(),
     status: issueStatus().notNull().default('open'),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
@@ -33,5 +40,9 @@ export const issues = pgTable(
       sql`${t.meetingDate} >= ${t.monday} AND ${t.meetingDate} < ${t.monday} + 7`,
     ),
     check('issues_school_year', sql`${t.schoolYear} ~ '^\\d{4}/\\d{4}$'`),
+    check(
+      'issues_texts',
+      sql`char_length(coalesce(${t.presentText},'')) <= 2000 AND char_length(coalesce(${t.guestsText},'')) <= 2000 AND octet_length(coalesce(${t.annex2}::text,'')) <= 65536`,
+    ),
   ],
 );

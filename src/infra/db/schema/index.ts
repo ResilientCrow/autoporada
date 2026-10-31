@@ -6,6 +6,7 @@ export * from './identity';
 export * from './audit';
 export * from './mail';
 export * from './issues';
+export * from './issue-items';
 export * from './point-types';
 export * from './points';
 export * from './future';

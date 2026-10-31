@@ -232,6 +232,13 @@
       "when": 1793457418791,
       "tag": "0032_registry_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793458577080,
+      "tag": "0033_issue_items",
+      "breakpoints": true
     }
   ]
 }
