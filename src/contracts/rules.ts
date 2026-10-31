@@ -18,5 +18,8 @@ export const RULE_CODES = [
   'registry-duplicate',
   'registry-list-taken',
   'registry-list-fixed',
+  'quotes-not-allowed',
+  'quotes-full',
+  'item-missing',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];

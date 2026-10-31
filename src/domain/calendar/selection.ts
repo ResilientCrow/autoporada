@@ -1,3 +1,5 @@
+import type { PointKind } from '@/domain/report';
+import type { PointState } from '@/domain/review';
 import { addDays, compareDates, instantToWallClock, mondayOf, type CalDate } from '@/domain/time';
 
 import { deadline, type DeadlineRule } from './issue-calendar';
@@ -16,6 +18,30 @@ export function dueMonday({
   readonly handIn: CalDate;
 }): CalDate {
   return compareDates(earliest, handIn) >= 0 ? earliest : handIn;
+}
+
+/**
+ * Whether a point belongs to the issue of `slot` (ADR 0029): approved, due by the slot's Monday,
+ * and a report only once its event's last day is before the meeting date (no last day, no
+ * report). Independent of now, the rule and the other slots: the SQL of `points.eligibleFor` says
+ * the same.
+ */
+export function inIssue(
+  point: {
+    readonly state: PointState;
+    readonly kind: PointKind;
+    readonly earliest: CalDate;
+    readonly handIn: CalDate;
+    readonly lastDay: CalDate | null;
+  },
+  slot: Pick<IssueSlot, 'monday' | 'meetingDate'>,
+): boolean {
+  return (
+    point.state === 'approved' &&
+    compareDates(dueMonday(point), slot.monday) <= 0 &&
+    (point.kind !== 'report' ||
+      (point.lastDay !== null && compareDates(point.lastDay, slot.meetingDate) < 0))
+  );
 }
 
 /** The Monday a new rule applies from: the one after `keep`, the Monday a hand-in goes to now. */

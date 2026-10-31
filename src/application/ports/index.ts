@@ -90,9 +90,11 @@ export type {
   PointMailFacts,
   PointPatch,
   PointRecord,
+  PointRef,
   PointRepo,
   PointSummary,
   QueuedPoint,
+  WaitingPoints,
 } from './points';
 export {
   futureReviewScopeOf,

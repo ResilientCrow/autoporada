@@ -14,7 +14,7 @@ import {
 } from '@/application/ports';
 import { parseResponsible } from '@/contracts';
 import { admits, type Scope } from '@/domain/policy';
-import { compareDates, toIsoDate } from '@/domain/time';
+import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
 import { codePoints, distinctSorted, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
@@ -81,6 +81,24 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
   const visible = futureReadable(principal);
   const writable = admitted(futureWriteScopeOf(principal));
   const reviewable = futureReviewable(principal);
+  /** `forIssue`'s order: the earliest start first, ties to the lower id. */
+  const reaching = (state: 'approved' | 'submitted', meetingDate: CalDate) =>
+    [...futureItems.values()]
+      .filter((item) => {
+        const last = item.content.endDate ?? item.content.startDate;
+        return (
+          visible(item) &&
+          item.state === state &&
+          last !== null &&
+          compareDates(last, meetingDate) >= 0
+        );
+      })
+      .sort(
+        (a, b) =>
+          compareDates(a.content.startDate ?? meetingDate, b.content.startDate ?? meetingDate) ||
+          (a.id < b.id ? -1 : 1),
+      )
+      .map(record);
   const find = (id: string, mayUse: (item: FakeFutureItem) => boolean) => {
     const item = futureItems.get(id);
     return item && mayUse(item) ? record(item) : null;
@@ -223,6 +241,14 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
           item.submittedAt > since &&
           item.authorId !== notBy,
       ).length;
+    },
+    async forIssue(meetingDate) {
+      guard(tx, false);
+      return reaching('approved', meetingDate);
+    },
+    async waitingFor(meetingDate) {
+      guard(tx, false);
+      return reaching('submitted', meetingDate);
     },
   };
 }

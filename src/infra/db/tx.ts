@@ -8,11 +8,13 @@ import { createAccessRequestRepo } from './repos/access-requests';
 import { createAuditWriter } from './repos/audit';
 import { createPointEventRepo } from './repos/events';
 import { createFutureEventRepo } from './repos/future-events';
+import { createFutureIssueReads } from './repos/future-issue';
 import { createFutureItemRepo } from './repos/future-items';
 import { createIssueItemRepo } from './repos/issue-items';
 import { createIssueRepo } from './repos/issues';
 import { createMailLedgerRepo } from './repos/mail-ledger';
 import { createPointTypeRepo } from './repos/point-types';
+import { createPointIssueReads } from './repos/points-issue';
 import { createPointReads } from './repos/points-read';
 import { createPointWrites } from './repos/points-write';
 import { createRegistryRepo } from './repos/registry';
@@ -43,9 +45,16 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     pointTypes: guard(createPointTypeRepo(db, ctx)),
     settings: guard(createSettingsRepo(db, ctx)),
     registry: guard(createRegistryRepo(db, ctx)),
-    points: guard({ ...createPointReads(db, ctx), ...createPointWrites(db, ctx) }),
+    points: guard({
+      ...createPointReads(db, ctx),
+      ...createPointIssueReads(db, ctx),
+      ...createPointWrites(db, ctx),
+    }),
     pointEvents: guard(createPointEventRepo(db, ctx)),
-    futureItems: guard(createFutureItemRepo(db, ctx)),
+    futureItems: guard({
+      ...createFutureItemRepo(db, ctx),
+      ...createFutureIssueReads(db, ctx),
+    }),
     futureEvents: guard(createFutureEventRepo(db, ctx)),
     audit: guard(createAuditWriter(db, ctx)),
     jobs: guard(jobsOn(guarded)),

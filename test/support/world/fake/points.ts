@@ -10,6 +10,7 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { parsePointJsonb } from '@/contracts';
+import { dueMonday, inIssue } from '@/domain/calendar';
 import { admits } from '@/domain/policy';
 import type { PointContent } from '@/domain/report';
 import { compareDates, isoWeekday, toIsoDate } from '@/domain/time';
@@ -97,11 +98,16 @@ const returnNoteOf = (tx: FakeTxState, pointId: string): string | null =>
 const handedInFirst = (a: FakePoint, b: FakePoint) =>
   (a.submittedAt?.getTime() ?? 0) - (b.submittedAt?.getTime() ?? 0) || (a.id < b.id ? -1 : 1);
 
+/** A report's last day: the end date, or else the event date (null without one). */
+const lastDay = (p: FakePoint) => p.content.endDate ?? p.content.eventDate;
+
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
 export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const { principal, now } = ctx;
   const { points } = tx.draft;
   const visible = pointReadable(principal);
+  /** Points in the order handed in, as `queue`: the oldest submission first, ties to the lower id. */
+  const handedIn = () => [...points.values()].sort(handedInFirst);
   const find = (id: string) => {
     const point = points.get(id);
     return point && visible(point) ? record(point) : null;
@@ -298,6 +304,52 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         (p) =>
           p.state === 'submitted' && p.submittedAt && p.submittedAt > since && p.authorId !== notBy,
       ).length;
+    },
+    async eligibleFor(monday, meetingDate) {
+      guard(tx, false);
+      return handedIn()
+        .filter(
+          (p) =>
+            visible(p) &&
+            inIssue(
+              {
+                state: p.state,
+                kind: p.kind,
+                earliest: p.earliestMonday ?? monday,
+                handIn: p.handInMonday ?? monday,
+                lastDay: lastDay(p),
+              },
+              { monday, meetingDate },
+            ) &&
+            p.earliestMonday !== null &&
+            p.handInMonday !== null,
+        )
+        .map(record);
+    },
+    async waitingFor(monday, meetingDate) {
+      guard(tx, false);
+      const due = handedIn().filter(
+        (p) =>
+          visible(p) &&
+          p.earliestMonday !== null &&
+          p.handInMonday !== null &&
+          compareDates(dueMonday({ earliest: p.earliestMonday, handIn: p.handInMonday }), monday) <=
+            0,
+      );
+      const refs = (keep: (p: FakePoint) => boolean) =>
+        due.filter(keep).map(({ id, kind, content }) => ({ id, kind, title: content.title }));
+      return {
+        submitted: refs((p) => p.state === 'submitted'),
+        returned: refs((p) => p.state === 'returned'),
+        later: refs((p) => {
+          const last = lastDay(p);
+          return (
+            p.state === 'approved' &&
+            p.kind === 'report' &&
+            (last === null || compareDates(last, meetingDate) >= 0)
+          );
+        }),
+      };
     },
   };
 }

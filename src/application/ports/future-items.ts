@@ -156,4 +156,16 @@ export interface FutureItemRepo {
    * `notBy`: what the reviewer digest counts. ScopeViolation for a user.
    */
   countSubmittedSince(query: { readonly since: Date; readonly notBy: string }): Promise<number>;
+  /**
+   * The approved, not cancelled items the issue whose meeting is on `meetingDate` shows: those
+   * whose last day (the end date, or else the start date) is not before it. Compose routes them
+   * (`routeFutureItem`). Within the read scope, earliest start first, ties to the lower id.
+   */
+  forIssue(meetingDate: CalDate): Promise<readonly FutureItemRecord[]>;
+  /**
+   * The `submitted` items of the same reach (last day not before `meetingDate`), for the preflight's
+   * „akce waiting“; the caller narrows them to the meetings and events windows. Within the read
+   * scope, in the order of `forIssue`.
+   */
+  waitingFor(meetingDate: CalDate): Promise<readonly FutureItemRecord[]>;
 }

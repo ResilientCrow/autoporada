@@ -39,7 +39,7 @@ import type { TxDatabase } from './database';
 import { dateOrNull, isoDate, isoTime, timeOrNull } from './wall-columns';
 
 /** The columns a FutureItemRecord is made of; `clientRef` stays in the table. */
-const ITEM_ROW = {
+export const ITEM_ROW = {
   id: futureItems.id,
   kind: futureItems.kind,
   authorId: futureItems.authorId,
@@ -72,7 +72,7 @@ function parsedResponsible(value: unknown): Responsible | null {
   return parsed.value;
 }
 
-function toRecord(row: ItemRow): FutureItemRecord {
+export function toRecord(row: ItemRow): FutureItemRecord {
   const { id, kind, authorId, state, reportState, reportPointId, submittedAt } = row;
   return {
     id,
@@ -119,7 +119,7 @@ const ITEM_SCOPE = {
 };
 
 /** The rows the principal may see: the SQL projection of the policy's read scope. */
-const visibleFutureItems = (ctx: TxContext): SQL | undefined =>
+export const visibleFutureItems = (ctx: TxContext): SQL | undefined =>
   scopeWhere(scopeOf(ctx.principal, 'futureItem'), ITEM_SCOPE);
 
 /** The rows whose history the principal may read; an approved akce's is not a colleague's. */
@@ -151,7 +151,10 @@ const after = (before: FutureCursor | undefined): SQL | undefined =>
   );
 
 /** Future items over the transaction's connection, read through the principal's scope. */
-export function createFutureItemRepo(db: TxDatabase, ctx: TxContext): FutureItemRepo {
+export function createFutureItemRepo(
+  db: TxDatabase,
+  ctx: TxContext,
+): Omit<FutureItemRepo, 'forIssue' | 'waitingFor'> {
   const { principal, now } = ctx;
   const byId = (id: string, where: SQL | undefined) =>
     db

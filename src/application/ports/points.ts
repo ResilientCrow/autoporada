@@ -91,6 +91,24 @@ interface HandedInPoint {
   readonly handInMonday: CalDate;
 }
 
+/** A point named for a finding: where to find it, and what to call it. */
+export interface PointRef {
+  readonly id: string;
+  readonly kind: PointKind;
+  readonly title: string;
+}
+
+/**
+ * What waits for the porada of one slot (design section 11): handed-in points whose due Monday is
+ * not after the slot's Monday, and approved reports due by then whose event does not end before
+ * the meeting date (`later`: they wait for a later issue).
+ */
+export interface WaitingPoints {
+  readonly submitted: readonly PointRef[];
+  readonly returned: readonly PointRef[];
+  readonly later: readonly PointRef[];
+}
+
 /** What a decision mail reads again of its point at send time (ADR 0020): who wrote it, where it stands. */
 export type PointMailFacts = Pick<PointRecord, 'id' | 'authorId' | 'state'>;
 
@@ -179,4 +197,19 @@ export interface PointRepo {
    * (`hand_in_monday`) grant the worker. ScopeViolation for a user.
    */
   handedInFor(monday: CalDate): Promise<readonly HandedInPoint[]>;
+  /**
+   * The points that belong to the issue of `monday` whose meeting is on `meetingDate` (ADR 0029,
+   * `inIssue`): approved, due by `monday` (`greatest(earliest_monday, hand_in_monday)`), and for a
+   * report only when its last day is before `meetingDate`. Cumulative: a point stays in every
+   * issue from its due Monday on. Within the principal's read scope, in the order handed in
+   * (`submitted_at`, ties to the lower id). With `lock` it holds the rows (SELECT … FOR UPDATE)
+   * until the transaction ends; generation takes it, a preview does not.
+   */
+  eligibleFor(
+    monday: CalDate,
+    meetingDate: CalDate,
+    options?: { readonly lock?: boolean },
+  ): Promise<readonly PointRecord[]>;
+  /** What waits for that issue, within the read scope; each list in the order of `eligibleFor`. */
+  waitingFor(monday: CalDate, meetingDate: CalDate): Promise<WaitingPoints>;
 }
