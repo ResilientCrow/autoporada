@@ -19,7 +19,7 @@ import {
   TEST_SECRET,
 } from '../../../test/support/oidc/test-idp';
 import { FixedClock } from '../../../test/support/world/clock';
-import { createGraphDirectory, QUERY_MAX } from './graph';
+import { createGraphDirectory, QUERY_MAX, type DirectoryFetch } from './graph';
 import { createDirectory } from './index';
 
 const NOVAKOVA = GRAPH_USERS[0]!;
@@ -211,6 +211,57 @@ describe('the Graph directory: the answer', () => {
     });
   });
 
+  it('answers a body over the byte cap as unavailable and cancels the rest', async () => {
+    let cancelled = false;
+    let sent = 0;
+    const tokens: AppTokenSource = { token: () => Promise.resolve('t'), invalidate: () => {} };
+    const fetch = () => {
+      // Endless valid-looking JSON in 64 KiB chunks: only the cap ends the read.
+      const chunk = new TextEncoder().encode(' '.repeat(64 * 1024));
+      const body = new ReadableStream(
+        {
+          pull(controller) {
+            sent++;
+            controller.enqueue(chunk);
+          },
+          cancel() {
+            cancelled = true;
+          },
+        },
+        { highWaterMark: 0 },
+      );
+      return Promise.resolve(new Response(body, { status: 200 }));
+    };
+    const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
+    expect(await directory.search('Nováková', live())).toEqual({
+      ok: false,
+      code: 'directory.unavailable',
+      detail: 'body',
+    });
+    expect(cancelled).toBe(true);
+    expect(sent).toBeLessThanOrEqual(6);
+  });
+
+  it('parses a body that arrives in many small chunks', async () => {
+    const tokens: AppTokenSource = { token: () => Promise.resolve('t'), invalidate: () => {} };
+    const json = JSON.stringify({ value: [NOVAKOVA] });
+    const bytes = new TextEncoder().encode(json);
+    const fetch = () => {
+      const chunks = Array.from({ length: Math.ceil(bytes.length / 7) }, (_, i) =>
+        bytes.slice(i * 7, i * 7 + 7),
+      );
+      const body = new ReadableStream({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(chunk);
+          controller.close();
+        },
+      });
+      return Promise.resolve(new Response(body, { status: 200 }));
+    };
+    const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
+    expect(namesOf(await directory.search('Nováková', live()))).toEqual(['Jana Nováková']);
+  });
+
   it('ignores keys it does not know and accepts null names', async () => {
     const { graph, directory } = await setup();
     graph.script({
@@ -324,6 +375,23 @@ describe('the Graph directory: codes', () => {
       code: 'directory.unavailable',
       detail: 'network',
     });
+  });
+
+  it('asks fetch to fail on a redirect, and a redirect it refuses is unavailable', async () => {
+    const tokens: AppTokenSource = { token: () => Promise.resolve('t'), invalidate: () => {} };
+    const seen: (string | undefined)[] = [];
+    const fetch: DirectoryFetch = (_url, init) => {
+      seen.push(init.redirect);
+      // What fetch does with redirect: 'error' when the server redirects.
+      return Promise.reject(
+        new TypeError('fetch failed', { cause: new Error('unexpected redirect') }),
+      );
+    };
+    const directory = createGraphDirectory({ baseUrl: GRAPH_BASE, tokens, fetch });
+    const result = await directory.search('Nováková', live());
+    expect(seen).toEqual(['error']);
+    expect(result).toEqual({ ok: false, code: 'directory.unavailable', detail: 'network' });
+    expect(JSON.stringify(result)).not.toContain('redirect');
   });
 
   it('calls {baseUrl}/users: another base reaches the fake 404 and is unavailable', async () => {

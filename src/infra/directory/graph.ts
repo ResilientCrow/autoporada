@@ -21,6 +21,8 @@ export const QUERY_MAX = 40;
 const FETCH_TOP = 15;
 const SELECT = 'id,displayName,givenName,surname,mail,userPrincipalName';
 const DEFAULT_TIMEOUT_MS = 3_000;
+/** The most of an answer that is read: 15 hits are a few KiB, so this is far above any real one. */
+const BODY_MAX_BYTES = 256 * 1024;
 
 /** The fetch the adapter needs: the global one, or a test's in-process Graph. */
 export type DirectoryFetch = (
@@ -29,6 +31,8 @@ export type DirectoryFetch = (
     readonly method: string;
     readonly headers: Readonly<Record<string, string>>;
     readonly signal: AbortSignal;
+    /** `error`: a redirect fails the call, the token is never sent anywhere else. */
+    readonly redirect: 'error';
   },
 ) => Promise<Response>;
 
@@ -57,6 +61,24 @@ const TOKEN_FAILURE: Readonly<Record<IdpFailure, DirectoryCode>> = {
 
 const failed = (code: DirectoryCode, detail?: string): DirectoryResult<never> =>
   detail === undefined ? { ok: false, code } : { ok: false, code, detail };
+
+/** The body as JSON, or `null` when it is longer than `BODY_MAX_BYTES` (the rest is cancelled, unread). */
+async function readCapped(response: Response): Promise<{ json: unknown } | null> {
+  const reader = response.body?.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (reader) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > BODY_MAX_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return { json: JSON.parse(new TextDecoder().decode(Buffer.concat(chunks))) };
+}
 
 /** The status class for the log; 429 and the like are 4xx, a 2xx or 3xx that is not 200 is `other`. */
 function statusClass(status: number): string {
@@ -104,7 +126,7 @@ function people(value: z.infer<typeof answer>['value'], wanted: readonly string[
  * The school people search through Microsoft Graph `GET /users?$search`, with the app's own token.
  * Nothing throws and nothing is logged here (the route logs the code and the fixed `detail`): a 429 is `throttled`, a
  * 401 that survives one fresh token or a 403 is `denied`, the caller's abort or the timeout is
- * `timeout`, everything else `unavailable`. The body of a failed answer is closed, never read.
+ * `timeout`, everything else `unavailable` (a redirect, a body over `BODY_MAX_BYTES`). The body of a failed answer is closed, never read.
  */
 export function createGraphDirectory(options: {
   readonly baseUrl: string;
@@ -127,6 +149,7 @@ export function createGraphDirectory(options: {
       method: 'GET',
       headers: { authorization: `Bearer ${token}`, ConsistencyLevel: 'eventual' },
       signal,
+      redirect: 'error',
     });
     const { status } = response;
     if (status !== 200) {
@@ -138,7 +161,9 @@ export function createGraphDirectory(options: {
       if (status === 401 || status === 403) return failed('directory.denied', detail);
       return failed('directory.unavailable', detail);
     }
-    const parsed = answer.safeParse(await response.json());
+    const read = await readCapped(response);
+    if (read === null) return failed('directory.unavailable', 'body');
+    const parsed = answer.safeParse(read.json);
     if (!parsed.success) return failed('directory.unavailable', 'body');
     return { ok: true, value: people(parsed.data.value, wanted) };
   }
