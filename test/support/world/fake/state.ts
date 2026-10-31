@@ -14,6 +14,7 @@ import {
   type PointRecord,
   type PointTypeRecord,
   type SessionRecord,
+  type StoredSetting,
   type UserRecord,
 } from '@/application/ports';
 
@@ -33,6 +34,8 @@ export interface FakeState {
   readonly issues: Map<string, IssueRecord>;
   /** point_types, by id. Migration 0014's seeds are not here: a test makes the types it needs. */
   readonly pointTypes: Map<string, PointTypeRecord>;
+  /** settings, by key. */
+  readonly settings: Map<string, StoredSetting>;
   /** points, by id; the client ref is kept next to the record. */
   readonly points: Map<string, FakePoint>;
   /** point_events, by id. */
@@ -77,6 +80,7 @@ export const emptyState = (): FakeState => ({
   jobs: [],
   issues: new Map(),
   pointTypes: new Map(),
+  settings: new Map(),
   points: new Map(),
   pointEvents: new Map(),
   futureItems: new Map(),

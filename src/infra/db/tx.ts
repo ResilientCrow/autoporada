@@ -15,6 +15,7 @@ import { createPointTypeRepo } from './repos/point-types';
 import { createPointReads } from './repos/points-read';
 import { createPointWrites } from './repos/points-write';
 import { createSessionRepo } from './repos/sessions';
+import { createSettingsRepo } from './repos/settings';
 import { createSignInRepo } from './repos/sign-ins';
 import { createUserRepo } from './repos/users';
 
@@ -37,6 +38,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     sessions: guard(createSessionRepo(db, ctx)),
     issues: guard(createIssueRepo(db, ctx)),
     pointTypes: guard(createPointTypeRepo(db, ctx)),
+    settings: guard(createSettingsRepo(db)),
     points: guard({ ...createPointReads(db, ctx), ...createPointWrites(db, ctx) }),
     pointEvents: guard(createPointEventRepo(db, ctx)),
     futureItems: guard(createFutureItemRepo(db, ctx)),

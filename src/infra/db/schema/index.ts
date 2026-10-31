@@ -9,3 +9,4 @@ export * from './issues';
 export * from './point-types';
 export * from './points';
 export * from './future';
+export * from './settings';

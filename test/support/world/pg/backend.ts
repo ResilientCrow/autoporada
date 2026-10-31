@@ -115,3 +115,15 @@ export async function insertPointType(
   if (!inserted) throw new Error('insertPointType: no row returned');
   return { ...row, id: inserted.id, version: inserted.version };
 }
+
+/** Inserts a setting as the owner, past the checks of any schema: the repository only reads. */
+export async function insertSetting(
+  database: TestDatabase,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  await database.owner(`INSERT INTO settings (key, value) VALUES ($1, $2::jsonb)`, [
+    key,
+    JSON.stringify(value),
+  ]);
+}

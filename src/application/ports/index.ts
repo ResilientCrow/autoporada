@@ -104,5 +104,6 @@ export {
   type UserPrincipal,
 } from './principal';
 export type { NewSession, SessionRecord, SessionRepo, SessionSelector } from './sessions';
+export type { SettingsRepo, StoredSetting } from './settings';
 export type { PendingSignIn, SignInRepo } from './sign-ins';
 export type { AccessPatch, UserRecord, UserRepo, VerifiedIdentity } from './users';

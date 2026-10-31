@@ -26,12 +26,14 @@ import {
 import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
 import { createFakeDb, type FakeDb } from './fake/db';
+import { refusedBy } from './fake/guards';
 import { eraseFakeUser, newId, type AuditRow, type JobRow } from './fake/state';
 import {
   auditRows,
   deleteUser,
   insertAccessRequest,
   insertPointType,
+  insertSetting,
   jobRows,
   lockWaits,
   resetTables,
@@ -89,6 +91,8 @@ export interface World {
     accessRequest(seed: AccessRequestSeed): Promise<AccessRequestRecord>;
     /** Written straight into the table: no port writes point types before commit 49. */
     pointType(seed: PointTypeSeed): Promise<PointTypeRecord>;
+    /** Written straight into the table at version 1, whatever the value: no port writes settings yet. */
+    setting(key: string, value: unknown): Promise<void>;
   };
   readonly inspect: {
     audit(): Promise<readonly AuditRow[]>;
@@ -121,6 +125,7 @@ interface Backend {
   jobs(): Promise<readonly JobRow[]>;
   insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
   insertPointType(row: Omit<PointTypeRecord, 'id' | 'version'>): Promise<PointTypeRecord>;
+  insertSetting(key: string, value: unknown): Promise<void>;
   deleteUser(id: string): Promise<void>;
 }
 
@@ -200,6 +205,7 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
           locked: false,
           ...seed,
         }),
+      setting: (key, value) => backend().insertSetting(key, value),
     },
     inspect: {
       audit: () => backend().audit(),
@@ -240,6 +246,13 @@ function fakeBackend(db: FakeDb): Backend {
       db.state().pointTypes.set(type.id, type);
       return type;
     },
+    async insertSetting(key, value) {
+      // settings_value: every value is an object
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        throw refusedBy('settings_value');
+      }
+      db.state().settings.set(key, { value: structuredClone(value), version: 1 });
+    },
     async deleteUser(id) {
       eraseFakeUser(db.state(), id);
     },
@@ -255,6 +268,7 @@ function pgBackend(database: TestDatabase): Backend {
     jobs: () => jobRows(database),
     insertAccessRequest: (row) => insertAccessRequest(database, row),
     insertPointType: (row) => insertPointType(database, row),
+    insertSetting: (key, value) => insertSetting(database, key, value),
     deleteUser: (id) => deleteUser(database, id),
   };
 }

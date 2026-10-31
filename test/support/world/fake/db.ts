@@ -13,6 +13,7 @@ import { fakePointTypeRepo } from './point-types';
 import { fakePointRepo } from './points';
 import { emptyState, type FakeState, type FakeTxState } from './state';
 import { fakeSessionRepo } from './sessions';
+import { fakeSettingsRepo } from './settings';
 import { fakeSignInRepo } from './sign-ins';
 import { fakeUserRepo } from './users';
 
@@ -60,6 +61,7 @@ export function createFakeDb(): FakeDb {
       sessions: fakeSessionRepo(tx, ctx),
       issues: fakeIssueRepo(tx, ctx),
       pointTypes: fakePointTypeRepo(tx, ctx),
+      settings: fakeSettingsRepo(tx),
       points: fakePointRepo(tx, ctx),
       pointEvents: fakePointEventRepo(tx, ctx),
       futureItems: fakeFutureItemRepo(tx, ctx),
