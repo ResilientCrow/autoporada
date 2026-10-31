@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
-import { richDocToPlainText } from '@/domain/richtext';
+import { ANNEX1_MAX_BYTES, richDocToPlainText } from '@/domain/richtext';
 import { parseWallTime, toIsoTime } from '@/domain/time';
 
 import { snapshotFixture } from '../../test/support/snapshots';
@@ -10,6 +10,8 @@ import {
   SETTINGS,
   settingsReadInput,
   settingsReadOutput,
+  settingsSaveInput,
+  settingsSaveOutput,
   toDeadlineRule,
   toDeadlineWire,
   type SettingKey,
@@ -169,5 +171,82 @@ describe('the read wire', () => {
     );
     const { reminders: _dropped, ...partial } = entries;
     expect(settingsReadOutput.safeParse(partial).success).toBe(false);
+  });
+});
+
+describe('the save wire', () => {
+  const doc = (text: string) => ({
+    type: 'doc',
+    content: [{ type: 'paragraph', attrs: { indent: 0 }, content: [{ type: 'text', text }] }],
+  });
+  const parse = (input: unknown) => settingsSaveInput.safeParse(input);
+
+  it('takes the reminders and the annex 1 texts, each with its own value and a version', () => {
+    expect(
+      parse({ key: 'reminders', value: { soft: false, hard: true }, version: 0 }).success,
+    ).toBe(true);
+    // The value is checked here and normalized by the use case (save.test.ts).
+    expect(
+      parse({
+        key: 'texts.annex1',
+        value: { heading: ' Studenti ', intro: doc('Text') },
+        version: 3,
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    [
+      'another key’s value',
+      { key: 'reminders', value: { heading: 'a', intro: doc('a') }, version: 0 },
+    ],
+    [
+      'a value that breaks its schema',
+      { key: 'texts.annex1', value: { heading: '', intro: doc('a') }, version: 0 },
+    ],
+    [
+      'the deadline, which another commit adds',
+      { key: 'deadline', value: { dayOffset: -2, time: '20:00' }, version: 0 },
+    ],
+    ['an unknown key', { key: 'texts.annex2', value: {}, version: 0 }],
+    ['a negative version', { key: 'reminders', value: { soft: true, hard: true }, version: -1 }],
+    ['a fractional version', { key: 'reminders', value: { soft: true, hard: true }, version: 1.5 }],
+    ['a missing version', { key: 'reminders', value: { soft: true, hard: true } }],
+    ['an extra key', { key: 'reminders', value: { soft: true, hard: true }, version: 0, on: 1 }],
+  ])('refuses %s', (_, input) => {
+    expect(parse(input).success).toBe(false);
+  });
+
+  it('keeps the largest annex 1 text the schema takes well under the table’s 64 KiB, as jsonb prints it', () => {
+    // jsonb adds a space after each ":" and ",": at most one byte in three for the shortest
+    // members, so a stored text that fits the cap prints well inside settings_size.
+    const heading = '€'.repeat(300);
+    let content: unknown[] = [];
+    for (;;) {
+      const next = [...content, { type: 'paragraph', attrs: { indent: 0 } }];
+      if (
+        !SETTINGS['texts.annex1'].schema.safeParse({
+          heading,
+          intro: { type: 'doc', content: next },
+        }).success
+      )
+        break;
+      content = next;
+    }
+    const largest = SETTINGS['texts.annex1'].schema.parse({
+      heading,
+      intro: { type: 'doc', content },
+    });
+    const printed = JSON.stringify(largest).replaceAll(':', ': ').replaceAll(',', ', ');
+    // jsonb adds at most half again to the printed JSON, so the cap leaves room under settings_size.
+    expect(ANNEX1_MAX_BYTES * 1.5).toBeLessThanOrEqual(64 * 1024);
+    expect(content.length).toBeGreaterThan(100);
+    expect(Buffer.byteLength(printed)).toBeLessThan(60_000);
+  });
+
+  it('answers with the version the row has now', () => {
+    expect(settingsSaveOutput.safeParse({ version: 2 }).success).toBe(true);
+    expect(settingsSaveOutput.safeParse({ version: 0 }).success).toBe(false);
+    expect(settingsSaveOutput.safeParse({ version: 2, saved: true }).success).toBe(false);
   });
 });

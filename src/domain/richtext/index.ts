@@ -1,4 +1,5 @@
 export {
+  ANNEX1_MAX_BYTES,
   emptyRichDoc,
   isRichDocEmpty,
   LIMITS,

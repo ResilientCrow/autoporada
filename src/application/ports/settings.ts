@@ -17,4 +17,12 @@ export interface SettingsRepo {
    * role is granted no more (ADR 0032), so its reads go through this and never through `get`.
    */
   value(key: string): Promise<unknown>;
+  /**
+   * Stores `value` for `key` if the row is still at `expectedVersion`, and gives the new version;
+   * null when it is not (a stale save). Version 0 names "no row yet": the insert then loses
+   * quietly to a row another save made first, so two first saves give one winner and one null.
+   * The value is not checked against any schema; the table's CHECKs (key, object, 64 KiB) hold.
+   * Only someone who may manage the settings writes (ADR 0011).
+   */
+  save(key: string, value: unknown, expectedVersion: number): Promise<number | null>;
 }

@@ -38,7 +38,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     sessions: guard(createSessionRepo(db, ctx)),
     issues: guard(createIssueRepo(db, ctx)),
     pointTypes: guard(createPointTypeRepo(db, ctx)),
-    settings: guard(createSettingsRepo(db)),
+    settings: guard(createSettingsRepo(db, ctx)),
     points: guard({ ...createPointReads(db, ctx), ...createPointWrites(db, ctx) }),
     pointEvents: guard(createPointEventRepo(db, ctx)),
     futureItems: guard(createFutureItemRepo(db, ctx)),

@@ -150,6 +150,8 @@ export {
   SETTINGS,
   settingsReadInput,
   settingsReadOutput,
+  settingsSaveInput,
+  settingsSaveOutput,
   toDeadlineRule,
   toDeadlineWire,
   type SettingKey,

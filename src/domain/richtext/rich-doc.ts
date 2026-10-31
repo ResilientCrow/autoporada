@@ -32,6 +32,13 @@ export type RichProfile =
 
 export const LIMITS = { maxBytes: 64 * 1024, maxNodes: 2000 } as const;
 
+/**
+ * What the annex 1 texts (heading and intro) may print as JSON. The `settings_size` CHECK counts
+ * jsonb's own text, which adds a space after each ":" and ",": at most half as many bytes again,
+ * so 32 KiB stays inside 64 KiB. The intro's editor counts against the same number.
+ */
+export const ANNEX1_MAX_BYTES = 32 * 1024;
+
 export function emptyRichDoc(): RichDoc {
   return { type: 'doc', content: [] };
 }

@@ -61,7 +61,7 @@ export function createFakeDb(): FakeDb {
       sessions: fakeSessionRepo(tx, ctx),
       issues: fakeIssueRepo(tx, ctx),
       pointTypes: fakePointTypeRepo(tx, ctx),
-      settings: fakeSettingsRepo(tx),
+      settings: fakeSettingsRepo(tx, ctx),
       points: fakePointRepo(tx, ctx),
       pointEvents: fakePointEventRepo(tx, ctx),
       futureItems: fakeFutureItemRepo(tx, ctx),

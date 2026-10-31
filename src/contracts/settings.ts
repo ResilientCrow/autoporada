@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { DEFAULT_DEADLINE, type DeadlineRule } from '@/domain/calendar';
 import {
+  ANNEX1_MAX_BYTES,
   hasForbiddenCharacters,
   parseRichDoc,
   richDocFromText,
@@ -54,8 +55,15 @@ const annexIntro = richDocWire.transform((value, ctx): RichDoc => {
   return z.NEVER;
 });
 
-/** The text above the list of annex 1: a heading and paragraphs. */
-const annex1Schema = z.strictObject({ heading: annexHeading, intro: annexIntro });
+/** The heading and paragraphs above the list of annex 1, before the size check. */
+const annex1Shape = z.strictObject({ heading: annexHeading, intro: annexIntro });
+
+/** The text above the list of annex 1, small enough for the table (the cap is on its printed JSON). */
+const annex1Schema = annex1Shape.superRefine((value, ctx) => {
+  if (new TextEncoder().encode(JSON.stringify(value)).length > ANNEX1_MAX_BYTES) {
+    ctx.addIssue({ code: 'custom', path: ['intro'], params: { code: 'too-long' } });
+  }
+});
 
 /** What each key holds once read. Writes are validated, so a stored value that is not this is corruption. */
 export interface SettingValues {
@@ -107,3 +115,31 @@ export const settingsReadOutput = z.strictObject({
   reminders: entry(remindersSchema),
   'texts.annex1': entry(z.strictObject({ heading: annexHeading, intro: richDocWire })),
 });
+
+/** A version of 0 names a key that has no row yet; any other is the version the form read. */
+const version = z.int().min(0);
+
+/** The keys a save takes. The deadline joins when its save does (it freezes issues). */
+const SAVABLE = ['reminders', 'texts.annex1'] as const satisfies readonly SettingKey[];
+
+/**
+ * One setting and the version it was read at. A use case's input is one strict object, so the
+ * value is either key's shape, normalized, and a check holds it to the schema of the key it came
+ * with: its issues (an oversize intro as `value.intro`) keep their own paths.
+ */
+export const settingsSaveInput = z
+  .strictObject({
+    key: z.enum(SAVABLE),
+    value: z.union([remindersSchema, annex1Shape]),
+    version,
+  })
+  .superRefine(({ key, value }, ctx) => {
+    const parsed = SETTINGS[key].schema.safeParse(value);
+    if (parsed.success) return;
+    for (const issue of parsed.error.issues) {
+      ctx.addIssue({ ...issue, path: ['value', ...issue.path] });
+    }
+  });
+
+/** The version the row has after the save. */
+export const settingsSaveOutput = z.strictObject({ version: z.int().min(1) });
