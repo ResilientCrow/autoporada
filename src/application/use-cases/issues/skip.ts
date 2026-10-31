@@ -16,7 +16,7 @@ const UNTOUCHED_VERSION = 1;
  * „Porada se nekoná“ and its undo, for one slot. The headmaster may skip any slot of the
  * calendar (`readWindow`: from this week's Monday on, or earlier with a meeting still ahead)
  * whatever its deadline: after the deadline the approved points move to the next porada, which
- * the form says. A generated slot has no skip or unskip (the machine refuses it as a conflict).
+ * the form says. A generated slot has no skip or unskip (refused as `issue-not-open`).
  * An unskip that would break the meeting order is refused (`meeting-order`; the wire carries
  * codes only, so the conflicting slots are not named). A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
  * is computed on read.
@@ -35,6 +35,7 @@ export const setSkipped = defineUseCase({
     const { slots, rule } = await readWindow(tx, now);
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
+    if (slot.status === 'generated') return fail({ code: 'rule', rule: 'issue-not-open' });
     // A porada that takes place again must still fit the order of the others (ADR 0034).
     if (input.event === 'unskip' && slot.status === 'skipped') {
       const back = { ...slot, status: 'open' as const };

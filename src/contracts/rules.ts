@@ -22,5 +22,7 @@ export const RULE_CODES = [
   'quotes-full',
   'item-missing',
   'meeting-order',
+  'issue-not-open',
+  'deadline-past',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];

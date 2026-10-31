@@ -17,7 +17,7 @@ export const issues = pgTable(
   {
     id: id(),
     monday: date({ mode: 'string' }).notNull(),
-    /** The day the meeting is held; the Monday itself in M8 (ADR 0018 defers moving it). */
+    /** The day the meeting is held: the Monday until the headmaster moves the porada to any date (`issues.move`, ADR 0034); the meeting order is checked in TS. */
     meetingDate: date({ mode: 'string' }).notNull(),
     /** `schoolYear(monday)`, e.g. `2026/2027`. */
     schoolYear: text().notNull(),
@@ -35,10 +35,6 @@ export const issues = pgTable(
   (t) => [
     unique('issues_monday_key').on(t.monday),
     check('issues_is_monday', sql`extract(isodow from ${t.monday}) = 1`),
-    check(
-      'issues_meeting_in_week',
-      sql`${t.meetingDate} >= ${t.monday} AND ${t.meetingDate} < ${t.monday} + 7`,
-    ),
     check('issues_school_year', sql`${t.schoolYear} ~ '^\\d{4}/\\d{4}$'`),
     check(
       'issues_texts',

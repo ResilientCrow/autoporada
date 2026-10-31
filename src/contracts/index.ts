@@ -87,6 +87,8 @@ export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
 export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';
 export {
   issuesWindowInput,
+  moveIssueInput,
+  moveIssueOutput,
   issuesWindowOutput,
   setSkippedInput,
   setSkippedOutput,

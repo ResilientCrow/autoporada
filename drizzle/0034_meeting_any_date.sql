@@ -1,0 +1,1 @@
+ALTER TABLE "issues" DROP CONSTRAINT "issues_meeting_in_week";

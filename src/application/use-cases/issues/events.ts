@@ -1,5 +1,5 @@
 import { diffRecords, type AuditShape } from '@/application/core';
-import type { AuditEvent, IssueRecord } from '@/application/ports';
+import type { AuditEvent, IssueRecord, Json } from '@/application/ports';
 import { toIsoDate } from '@/domain/time';
 
 /**
@@ -21,11 +21,12 @@ export function issueEvent(
   action: `issue.${string}`,
   before: IssueRecord | null,
   after: IssueRecord,
+  meta: Readonly<Record<string, Json>> = {},
 ): AuditEvent {
   return {
     action,
     target: { type: 'issue', id: after.id },
     diff: diffRecords(ISSUE, before, after),
-    meta: { monday: toIsoDate(after.monday) },
+    meta: { monday: toIsoDate(after.monday), ...meta },
   };
 }

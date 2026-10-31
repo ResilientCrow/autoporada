@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { IssueRow } from '@/domain/calendar';
+import { PLACEMENT_WEEKS, type IssueRow } from '@/domain/calendar';
 import { parseIsoDate } from '@/domain/time';
 
 import { deadlineSchema } from './settings';
@@ -19,6 +19,28 @@ export const setSkippedInput = z.strictObject({
 export const setSkippedOutput = z.object({
   status: z.enum(['open', 'generated', 'skipped']),
   version: z.number().int().positive(),
+});
+
+/**
+ * Moving a porada to another meeting date (ADR 0034). The deadline is a date and a time of day
+ * the form pre-fills from the rule. `skip` lists the Mondays of the slots in the way that the
+ * move cancels; they must be exactly the conflicts, and `confirmed` is the checkbox that says so.
+ */
+export const moveIssueInput = z.strictObject({
+  monday: z.iso.date().max(10),
+  meetingDate: z.iso.date().max(10),
+  deadlineDate: z.iso.date().max(10),
+  deadlineTime: z
+    .string()
+    .max(5)
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  skip: z.array(z.iso.date().max(10)).max(PLACEMENT_WEEKS),
+  expectedVersion: z.number().int().positive().optional(),
+  confirmed: z.literal(true).optional(),
+});
+export const moveIssueOutput = z.object({
+  version: z.number().int().positive(),
+  skipped: z.int().min(0),
 });
 
 /** The calendar the Přehled, the standing line and the lists read: no input. */

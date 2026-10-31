@@ -50,6 +50,8 @@ export const rules = {
   'item-missing': 'Tento bod už v\u00A0pokynech není. Načtěte stránku znovu.',
   'meeting-order':
     'Porady musí následovat v\u00A0pořadí kalendáře a\u00A0jejich uzávěrky také. Tato změna by pořadí porušila.',
+  'issue-not-open': 'Tuto poradu už nelze změnit, protože se její stav změnil.',
+  'deadline-past': 'Uzávěrka už proběhla. Zvolte pozdější čas.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {
