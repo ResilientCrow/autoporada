@@ -134,7 +134,18 @@ export {
   savePointTypeOutput,
 } from './point-type';
 export { setRemindersInput, setRemindersOutput } from './profile';
-export { previewPasteInput, previewPasteOutput } from './registry';
+export {
+  addEntriesInput,
+  addEntriesOutput,
+  previewPasteInput,
+  previewPasteOutput,
+  readRegistryInput,
+  readRegistryOutput,
+  removeEntryInput,
+  removeEntryOutput,
+  saveEntryInput,
+  saveEntryOutput,
+} from './registry';
 export {
   changeUserAccessInput,
   changeUserAccessOutput,

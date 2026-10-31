@@ -40,7 +40,7 @@ import {
 } from './points';
 import { listPointTypes, savePointType } from './point-types';
 import { me, setReminders } from './profile';
-import { previewPaste } from './registry';
+import { addEntries, previewPaste, readRegistry, removeEntry, saveEntry } from './registry';
 import { readSettings, saveSettings } from './settings';
 import { changeUserAccess, getUser, listUsers } from './users';
 
@@ -84,7 +84,7 @@ export {
 } from './points';
 export { listPointTypes, savePointType } from './point-types';
 export { me, setReminders } from './profile';
-export { previewPaste } from './registry';
+export { addEntries, previewPaste, readRegistry, removeEntry, saveEntry } from './registry';
 export { readSettings, saveSettings } from './settings';
 export { changeUserAccess, getUser, listUsers } from './users';
 
@@ -93,6 +93,7 @@ export { changeUserAccess, getUser, listUsers } from './users';
  * complete and that every server action wraps one of them.
  */
 export const USE_CASES: readonly AnyUseCase[] = [
+  addEntries,
   beginLogin,
   beginStepUp,
   cancelAccess,
@@ -120,14 +121,17 @@ export const USE_CASES: readonly AnyUseCase[] = [
   previewPaste,
   queueFuture,
   queuePoints,
+  readRegistry,
   readSettings,
   recentPeopleOf,
   recordRejection,
+  removeEntry,
   requestAccess,
   resolveSession,
   retractFuture,
   retractPoint,
   reviewEditPoint,
+  saveEntry,
   saveFuture,
   savePoint,
   savePointType,
