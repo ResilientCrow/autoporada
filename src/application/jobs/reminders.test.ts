@@ -290,6 +290,33 @@ describe('which Monday, and when nothing is due', () => {
     expect(await keys()).toEqual([hard(user)]);
   });
 
+  describe('with a stored deadline rule (3 days before the meeting, 20.00)', () => {
+    // Friday 23 October 20.00 Prague for the Monday with no row: the hard slot is that Friday at 12.00.
+    const FRIDAY_HARD = new Date('2026-10-23T10:00:00Z');
+    const stored = () => world.seed.setting('deadline', { dayOffset: -3, time: '20:00' });
+
+    it('counts the deadline of a Monday with no row by the stored rule', async () => {
+      await stored();
+      const user = await submitter();
+      await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
+      await runAt(HARD);
+      expect(await queued()).toEqual([]);
+      await runAt(FRIDAY_HARD);
+      expect(await keys()).toEqual([hard(user)]);
+    });
+
+    it('keeps the deadline a stored row was frozen with', async () => {
+      await stored();
+      const user = await submitter();
+      await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
+      await frozen(MONDAY, deadline(MONDAY, DEFAULT_DEADLINE));
+      await runAt(FRIDAY_HARD);
+      expect(await queued()).toEqual([]);
+      await runAt(HARD);
+      expect(await keys()).toEqual([hard(user)]);
+    });
+  });
+
   it('reminds nobody for a skipped Monday', async () => {
     const user = await submitter();
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');

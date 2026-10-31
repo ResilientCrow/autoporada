@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import { DEFAULT_DEADLINE } from '@/domain/calendar';
+import { DEFAULT_DEADLINE, type DeadlineRule } from '@/domain/calendar';
 import {
   hasForbiddenCharacters,
   parseRichDoc,
   richDocFromText,
   type RichDoc,
 } from '@/domain/richtext';
-import { toIsoTime } from '@/domain/time';
+import { parseWallTime, toIsoTime } from '@/domain/time';
 
 import { richDocWire } from './point';
 
@@ -21,6 +21,21 @@ const deadlineTime = z
 const deadlineSchema = z.strictObject({
   dayOffset: z.int().min(-4).max(-1),
   time: deadlineTime,
+});
+
+/** The deadline rule as the table, the form and `issues.window` carry it. */
+export type DeadlineWire = z.output<typeof deadlineSchema>;
+
+/** The rule the calendar domain computes with, from its wire shape (the one place "HH:MM" becomes a wall time). */
+export const toDeadlineRule = ({ dayOffset, time }: DeadlineWire): DeadlineRule => ({
+  dayOffset,
+  time: parseWallTime(time),
+});
+
+/** The wire shape of a rule, the inverse of `toDeadlineRule`. */
+export const toDeadlineWire = ({ dayOffset, time }: DeadlineRule): DeadlineWire => ({
+  dayOffset,
+  time: toIsoTime(time),
 });
 
 const remindersSchema = z.strictObject({ soft: z.boolean(), hard: z.boolean() });
@@ -44,7 +59,7 @@ const annex1Schema = z.strictObject({ heading: annexHeading, intro: annexIntro }
 
 /** What each key holds once read. Writes are validated, so a stored value that is not this is corruption. */
 export interface SettingValues {
-  readonly deadline: z.output<typeof deadlineSchema>;
+  readonly deadline: DeadlineWire;
   readonly reminders: z.output<typeof remindersSchema>;
   readonly 'texts.annex1': z.output<typeof annex1Schema>;
 }
@@ -75,7 +90,7 @@ const ANNEX1_DEFAULT: SettingValues['texts.annex1'] = {
 export const SETTINGS: { readonly [K in SettingKey]: Setting<SettingValues[K]> } = {
   deadline: {
     schema: deadlineSchema,
-    default: { dayOffset: DEFAULT_DEADLINE.dayOffset, time: toIsoTime(DEFAULT_DEADLINE.time) },
+    default: toDeadlineWire(DEFAULT_DEADLINE),
   },
   reminders: { schema: remindersSchema, default: { soft: true, hard: true } },
   'texts.annex1': { schema: annex1Schema, default: ANNEX1_DEFAULT },

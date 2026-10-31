@@ -111,6 +111,30 @@ describe('points.submit', () => {
       expect(audit.at(-1)?.data).not.toHaveProperty('related');
     });
 
+    // 3 days before the meeting at 12.00: Friday 23 October 2026, 10.00Z, instead of Saturday 20.00.
+    it.each([
+      ['a minute before', '2026-10-23T09:59:00Z', FIRST_MONDAY],
+      ['at', '2026-10-23T10:00:00Z', calDate(2026, 11, 2)],
+    ])('submitted %s the stored rule’s deadline, lands on %s', async (_when, now, monday) => {
+      await world.seed.setting('deadline', { dayOffset: -3, time: '12:00' });
+      world.clock.set(new Date(now));
+      const author = await user();
+      const id = await start(author, 'pokyn');
+      await submit(author, id, readyProposal());
+      expect(await get(author, id)).toMatchObject({ earliestMonday: monday, handInMonday: monday });
+    });
+
+    it('freezes a new issue with the stored rule', async () => {
+      await world.seed.setting('deadline', { dayOffset: -3, time: '12:00' });
+      const author = await user();
+      const id = await start(author, 'pokyn');
+      await submit(author, id, readyProposal());
+      const { issues } = await snapshot(id);
+      expect(issues.map((issue) => issue.deadlineAt.toISOString())).toEqual([
+        '2026-10-23T10:00:00.000Z',
+      ]);
+    });
+
     it.each([
       ['a minute before', '2026-10-24T17:59:00Z', FIRST_MONDAY],
       ['at', '2026-10-24T18:00:00Z', calDate(2026, 11, 2)],

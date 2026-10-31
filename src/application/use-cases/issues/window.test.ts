@@ -155,6 +155,36 @@ describe('issues.window', () => {
     expect(await read(user)).toMatchObject({ ok: true, value: { submitMonday: monday } });
   });
 
+  describe('with a stored deadline rule', () => {
+    const STORED = { dayOffset: -3, time: '12:00' };
+
+    // Friday 6 November 13.00 Prague: past 12.00 of the Friday the stored rule counts, before the
+    // default Saturday 20.00.
+    it.each([
+      ['the stored rule', STORED, '2026-11-16'],
+      ['the default', undefined, '2026-11-09'],
+    ])('names the submit Monday by %s', async (_name, rule, monday) => {
+      world.clock.set(new Date('2026-11-06T12:00:00Z'));
+      if (rule) await world.seed.setting('deadline', rule);
+      const user = await world.seed.user({ role: 'submitter' });
+      expect(await read(user)).toMatchObject({
+        ok: true,
+        value: { submitMonday: monday, stripFrom: monday },
+      });
+    });
+
+    it('keeps the frozen deadline of a stored row and counts only the virtual Mondays by the rule', async () => {
+      world.clock.set(new Date('2026-11-06T12:00:00Z'));
+      await world.seed.setting('deadline', STORED);
+      await seedIssue(SUBMIT);
+      const user = await world.seed.user({ role: 'submitter' });
+      expect(await read(user)).toMatchObject({
+        ok: true,
+        value: { submitMonday: '2026-11-09', issues: [{ monday: '2026-11-09' }] },
+      });
+    });
+  });
+
   it('writes nothing: a read makes no row and no audit event', async () => {
     world.clock.set(NOW);
     const user = await world.seed.user({ role: 'headmaster' });

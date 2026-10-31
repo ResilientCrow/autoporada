@@ -1,4 +1,4 @@
-import { DEADLINE_RULE, defineUseCase, fail, fromTransition, ok } from '@/application/core';
+import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
 import { skipWindow } from '@/domain/calendar';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
@@ -42,13 +42,13 @@ export const setSkipped = defineUseCase({
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
-    const { slots } = await readWindow(tx, now);
-    const { first, last } = skipWindow(now, slots, DEADLINE_RULE);
+    const { slots, rule } = await readWindow(tx, now);
+    const { first, last } = skipWindow(now, slots, rule);
     if (compareDates(monday, first) < 0 || compareDates(monday, last) > 0) {
       return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     }
 
-    const { issue } = await ensureIssue(tx, monday);
+    const { issue } = await ensureIssue(tx, monday, rule);
     if (issue.version !== (input.expectedVersion ?? UNTOUCHED_VERSION)) {
       return fail({ code: 'conflict' });
     }

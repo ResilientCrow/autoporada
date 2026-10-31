@@ -1,4 +1,4 @@
-import { DEADLINE_RULE, defineUseCase, ok } from '@/application/core';
+import { defineUseCase, ok } from '@/application/core';
 import { issuesWindowInput, issuesWindowOutput } from '@/contracts';
 import { lastSlotMonday, skipWindow } from '@/domain/calendar';
 import { instantToWallClock, mondayOf, toIsoDate } from '@/domain/time';
@@ -20,13 +20,13 @@ export const issueWindow = defineUseCase({
   output: issuesWindowOutput,
   access: { kind: 'gate', check: () => ({ action: 'point.create' }) },
   async execute({ tx, now }) {
-    const { slots, first } = await readWindow(tx, now);
+    const { slots, first, rule } = await readWindow(tx, now);
     // The wire carries the version of each row, which the worker-safe calendar does not.
     const today = instantToWallClock(now).date;
     const known = await tx.issues.between(mondayOf(today), lastSlotMonday(today));
     return ok({
       submitMonday: toIsoDate(first),
-      stripFrom: toIsoDate(skipWindow(now, slots, DEADLINE_RULE).first),
+      stripFrom: toIsoDate(skipWindow(now, slots, rule).first),
       issues: known.map((issue) => ({
         monday: toIsoDate(issue.monday),
         deadlineAt: issue.deadlineAt.toISOString(),

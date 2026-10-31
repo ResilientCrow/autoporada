@@ -2,11 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { richDocToPlainText } from '@/domain/richtext';
-import { toIsoTime } from '@/domain/time';
+import { parseWallTime, toIsoTime } from '@/domain/time';
 
 import { snapshotFixture } from '../../test/support/snapshots';
 
-import { SETTINGS, settingsReadInput, settingsReadOutput, type SettingKey } from './settings';
+import {
+  SETTINGS,
+  settingsReadInput,
+  settingsReadOutput,
+  toDeadlineRule,
+  toDeadlineWire,
+  type SettingKey,
+} from './settings';
 
 const KEYS = Object.keys(SETTINGS) as SettingKey[];
 
@@ -37,6 +44,27 @@ describe('SETTINGS', () => {
     expect(SETTINGS['texts.annex1'].default.heading).toMatch(/^Studenti v ředitelském/);
     expect(richDocToPlainText(SETTINGS['texts.annex1'].default.intro)).toContain('{skolniRok}');
     expect(SETTINGS['texts.annex1'].default).toEqual(snapshotFixture('template-replica').annex1);
+  });
+});
+
+describe('the deadline rule on the wire', () => {
+  it('reads the default of the registry as the rule the code already uses', () => {
+    expect(toDeadlineRule(SETTINGS.deadline.default)).toEqual(DEFAULT_DEADLINE);
+  });
+
+  it('reads a time as a wall time, quarter hours and a late evening included', () => {
+    expect(toDeadlineRule({ dayOffset: -3, time: '12:00' })).toEqual({
+      dayOffset: -3,
+      time: parseWallTime('12:00'),
+    });
+    expect(toDeadlineRule({ dayOffset: -1, time: '21:45' }).time).toEqual(parseWallTime('21:45'));
+  });
+
+  it('writes a rule back as the text the form and the table carry', () => {
+    const rule = { dayOffset: -4, time: parseWallTime('08:15') };
+    expect(toDeadlineWire(rule)).toEqual({ dayOffset: -4, time: '08:15' });
+    expect(toDeadlineRule(toDeadlineWire(rule))).toEqual(rule);
+    expect(SETTINGS.deadline.schema.parse(toDeadlineWire(rule))).toEqual(toDeadlineWire(rule));
   });
 });
 

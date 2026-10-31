@@ -352,6 +352,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
       'submitted_at',
     ],
     issues: ['deadline_at', 'id', 'meeting_date', 'monday', 'status'],
+    settings: ['key', 'value'],
   };
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
@@ -368,6 +369,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
       'report_point_id',
     ],
     issues: ['school_year', 'version', 'created_at', 'updated_at'],
+    settings: ['version', 'updated_at'],
   };
 
   /** Whether autoporada_worker holds `privilege` on each named column of `table`. */
@@ -404,6 +406,16 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     const [first] = WITHHELD[table]!;
     expect(await sqlstateAs('autoporada_worker', `SELECT ${first} FROM ${table}`)).toBe(DENIED);
     expect(await sqlstateAs('autoporada_worker', `SELECT * FROM ${table}`)).toBe(DENIED);
+  });
+
+  // The statements the settings repository runs: `value` is all the worker's reads need, `get` also
+  // selects the version, which only the headmaster's screen and save may.
+  it('lets the worker run the repository’s value read of a setting, and refuses its get', async () => {
+    const value = `SELECT "value" FROM "settings" WHERE "settings"."key" = 'deadline'`;
+    const get = `SELECT "value", "version" FROM "settings" WHERE "settings"."key" = 'deadline'`;
+    expect(await sqlstateAs('autoporada_worker', value)).toBeUndefined();
+    expect(await sqlstateAs('autoporada_worker', get)).toBe(DENIED);
+    expect(await sqlstateAs('autoporada_app', get)).toBeUndefined();
   });
 
   it.each(Object.keys(GRANTED))(

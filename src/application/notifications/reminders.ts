@@ -1,4 +1,4 @@
-import { DEADLINE_RULE, readSlots } from '@/application/core';
+import { readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
 import { handInSlot, REMINDER_DRAFT_DAYS, reminderDue, type ReminderKind } from '@/domain/calendar';
 import { toIsoDate, type CalDate } from '@/domain/time';
@@ -35,11 +35,15 @@ export interface ReminderIssue {
 /**
  * The Monday that submissions go to now, with its frozen deadline or else the rule's: the first
  * open slot whose deadline is still ahead, so a skipped Monday is stepped over and its successor
- * is the one reminded. Reads only the columns migrations 0024 and 0025 grant the worker.
+ * is the one reminded. Reads only the columns migrations 0024, 0025 and 0030 grant the worker
+ * (the rule through `settings.value`, never the version).
  */
-export async function reminderIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<ReminderIssue> {
-  const slots = await readSlots(tx, now);
-  const { monday, deadlineAt } = handInSlot(now, slots, DEADLINE_RULE);
+export async function reminderIssue(
+  tx: Pick<Tx, 'issues' | 'settings'>,
+  now: Date,
+): Promise<ReminderIssue> {
+  const { slots, rule } = await readSlots(tx, now);
+  const { monday, deadlineAt } = handInSlot(now, slots, rule);
   return { monday, deadlineAt };
 }
 
@@ -63,7 +67,7 @@ export interface ReminderFacts {
  * the recipient still to have a draft or returned point.
  */
 export async function loadReminder(
-  tx: Pick<Tx, 'ctx' | 'issues' | 'points'>,
+  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
   kind: ReminderKind,
   userId: string,
 ): Promise<ReminderFacts | null> {

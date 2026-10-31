@@ -25,7 +25,7 @@ export const isHeadmaster = (user: Pick<UserRecord, 'role' | 'status'>) =>
 /**
  * The issue whose deadline passed five minutes to two hours ago, with the rest of its row: none
  * when no row is in that window or the meeting does not take place (skipped). Only the columns
- * migrations 0024 and 0025 grant the worker.
+ * migrations 0024, 0025 and 0030 grant the worker.
  */
 export async function summaryIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<IssueRow | null> {
   const rows = await tx.issues.calendar(instantToWallClock(now).date);
@@ -45,11 +45,15 @@ export interface SummaryFacts {
  * except that the issue itself counts as open, so a generated issue still counts what it holds.
  */
 async function summaryFacts(
-  tx: Pick<Tx, 'points' | 'issues' | 'ctx'>,
+  tx: Pick<Tx, 'points' | 'issues' | 'settings' | 'ctx'>,
   monday: CalDate,
 ): Promise<SummaryFacts> {
   const { now } = tx.ctx;
-  const [rows, handedIn] = await Promise.all([readSlots(tx, now), tx.points.handedInFor(monday)]);
+  // Placement reads no deadline, so the rule `readSlots` also returns is not needed here.
+  const [{ slots: rows }, handedIn] = await Promise.all([
+    readSlots(tx, now),
+    tx.points.handedInFor(monday),
+  ]);
   const slots = rows.map((slot) =>
     isSameDate(slot.monday, monday) ? { ...slot, status: 'open' as const } : slot,
   );
@@ -69,7 +73,7 @@ async function summaryFacts(
 
 /** The summary mail's subject, the same for every headmaster: the issue closing now, with its counts as they stand when the mail goes. */
 export async function loadSummary(
-  tx: Pick<Tx, 'ctx' | 'issues' | 'points'>,
+  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
 ): Promise<SummaryFacts | null> {
   const issue = await summaryIssue(tx, tx.ctx.now);
   return issue && summaryFacts(tx, issue.monday);

@@ -50,6 +50,7 @@ export type SubjectReaders = Pick<
   | 'pointEvents'
   | 'futureItems'
   | 'issues'
+  | 'settings'
   | 'mailLedger'
 >;
 

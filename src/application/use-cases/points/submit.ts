@@ -1,4 +1,4 @@
-import { DEADLINE_RULE, defineUseCase, fail, ok } from '@/application/core';
+import { defineUseCase, fail, ok } from '@/application/core';
 import type { AuditTarget, PointPatch, PointRecord, Tx } from '@/application/ports';
 import { submitPointInput, submitPointOutput } from '@/contracts';
 import { handInMonday, lateFacts } from '@/domain/calendar';
@@ -33,11 +33,11 @@ async function handIn(
   content: PointContent,
   now: Date,
 ): Promise<HandIn> {
-  const { slots } = await readWindow(tx, now);
+  const { slots, rule } = await readWindow(tx, now);
   const report = point.kind === 'report' ? lateFacts(content) : undefined;
-  const first = handInMonday(now, slots, DEADLINE_RULE, report);
+  const first = handInMonday(now, slots, rule, report);
   if (point.earliestMonday !== null) return { patch: { handInMonday: first } };
-  const { issue, inserted } = await ensureIssue(tx, first);
+  const { issue, inserted } = await ensureIssue(tx, first, rule);
   return {
     patch: { earliestMonday: first, handInMonday: first },
     ...(inserted && { related: [{ type: 'issue', id: issue.id }] }),

@@ -339,6 +339,17 @@ describe('issues.setSkipped', () => {
       expect((await rowOf(SUBMIT)).deadlineAt).toEqual(new Date('2026-11-07T19:00:00Z'));
     });
 
+    // Friday 6 November 13.00 Prague, with the stored rule 3 days before at 12.00: 9 November is closed.
+    it('counts the window and the frozen deadline by the stored rule', async () => {
+      world.clock.set(new Date('2026-11-06T12:00:00Z'));
+      await world.seed.setting('deadline', { dayOffset: -3, time: '12:00' });
+      const head = await headmaster();
+      await refuses(() => act(head, 'skip', SUBMIT), invalidMonday);
+      const next = weeks(SUBMIT, 1);
+      expect((await act(head, 'skip', next)).ok).toBe(true);
+      expect((await rowOf(next)).deadlineAt).toEqual(new Date('2026-11-13T11:00:00Z'));
+    });
+
     it('puts a September Monday in the next school year', async () => {
       world.clock.set(new Date('2027-08-25T10:00:00Z'));
       const head = await headmaster();
