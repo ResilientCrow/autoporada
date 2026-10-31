@@ -13,7 +13,9 @@ export default async function PoradaPage() {
   const viewer = await requireSignedIn('/porada');
   const model = await poradaIndexPage();
   if (model === null) notFound();
-  if (model.working !== null) redirect(`/porada/${model.working}`);
+  if (model.working !== null) {
+    redirect(`/porada/${model.working}${model.reviewer ? '/nahled' : ''}`);
+  }
   return (
     <Shell viewer={viewer} current="/porada">
       <NoPorada />

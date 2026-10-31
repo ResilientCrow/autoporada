@@ -132,8 +132,8 @@ export function can(subject: Actor, check: Check): boolean {
     case 'future.report':
       return check.item.state === 'approved' && canReport(reviewActor(actor, check.item));
     case 'review.queue':
-    case 'issue.preview':
       return has(actor, 'reviewer');
+    case 'issue.preview':
     case 'archive.view':
     case 'registry.view':
       return staffReviewer(actor);

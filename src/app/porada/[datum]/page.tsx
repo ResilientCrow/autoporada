@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { poradaPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, porada } from '@/ui/copy';
@@ -18,9 +18,10 @@ export default async function PoradaDatumPage({
   const viewer = await requireSignedIn(`/porada/${encodeURIComponent(datum)}`);
   const model = await poradaPage(datum);
   if (model === null) notFound();
+  if (model.kind === 'preview') redirect(`/porada/${model.monday}/nahled`);
   return (
     <Shell viewer={viewer} current="/porada">
-      <Workspace view={model} />
+      <Workspace view={model.model} />
     </Shell>
   );
 }
