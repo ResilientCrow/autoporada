@@ -24,6 +24,11 @@ describe('listKeyFor', () => {
     expect(listKeyFor('Talent', new Set(['talent', 'talent-2', 'talent-3']))).toBe('talent-4');
   });
 
+  it('never gives the key of the static „Nový školní rok“ route', () => {
+    expect(listKeyFor('Nový školní rok', none)).toBe('novy-skolni-rok-2');
+    expect(listKeyFor('Nový školní rok', new Set(['novy-skolni-rok-2']))).toBe('novy-skolni-rok-3');
+  });
+
   it('stays within the 40 characters of the key CHECK, number included', () => {
     const long = 'Dlouhý název seznamu '.repeat(10);
     const first = listKeyFor(long, none);
