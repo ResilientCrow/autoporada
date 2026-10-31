@@ -42,6 +42,16 @@ describe('parsePaste', () => {
     expect(brief(lines)).toEqual(brief(SAMPLE));
   });
 
+  it('reads a class written with a space after the year as one class', () => {
+    expect(brief('Jan Novák 2. B\nEva Nová 1 a')).toEqual(['Jan|Novák|2.B', 'Eva|Nová|1.A']);
+    expect(parsePaste('Jan Novák 2. B')[0]?.problems).toEqual([]);
+  });
+
+  it('leaves a name that only ends like a class alone', () => {
+    expect(brief('Marie Anna B')).toEqual(['Marie Anna|B|null']);
+    expect(parsePaste('Marie Anna B')[0]?.problems).toEqual(['class-missing']);
+  });
+
   it('does not take „1.A Jan“ for a list marker', () => {
     const [row] = parsePaste('1.A Jan Novák');
     expect(row?.source).toBe('1.A Jan Novák');

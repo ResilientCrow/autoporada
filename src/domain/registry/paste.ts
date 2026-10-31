@@ -101,9 +101,14 @@ function readItem(source: string): Item {
     else unknownBracket = true;
   }
   const last = words.at(-1);
+  const spaced = words.length >= 3 ? `${words.at(-2)} ${last}` : '';
   if (last !== undefined && isClassCode(last)) {
     words.pop();
     classCode ??= normalizeClass(last);
+  } else if (isClassCode(spaced)) {
+    // „2. B“ or „1 a“: the class was written with a space.
+    words.splice(-2);
+    classCode ??= normalizeClass(spaced);
   }
   return { source, words, classCode, group, groupWord, unknownBracket };
 }
