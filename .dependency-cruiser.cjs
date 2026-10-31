@@ -288,6 +288,14 @@ module.exports = {
       to: { path: npm('react-aria-components', 'react-aria', 'react-stately') },
     },
     {
+      name: 'tiptap-only-in-rich-text',
+      comment:
+        'TipTap and ProseMirror stay in ui/form/rich-text, behind its index and one lazy chunk (ADR 0031, item 9).',
+      severity: 'error',
+      from: { pathNot: '^src/ui/form/rich-text/' },
+      to: { path: npm('@tiptap/[^/]+', 'prosemirror-[a-z-]+') },
+    },
+    {
       name: 'server-not-into-delivery',
       severity: 'error',
       from: { path: '^src/server/' },

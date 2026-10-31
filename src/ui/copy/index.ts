@@ -13,6 +13,7 @@ export { porada } from './porada';
 export { profile } from './profile';
 export { registry } from './registry';
 export { review } from './review';
+export { richtext } from './richtext';
 export { settings } from './settings';
 export { status } from './status';
 export { users } from './users';

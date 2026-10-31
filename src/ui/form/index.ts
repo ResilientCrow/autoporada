@@ -21,6 +21,7 @@ export type { Chip, Directory, DirectoryFetcher, RawAnswer } from './people-pick
 export { PeopleField } from './people-picker';
 export { RadioGroupField } from './RadioGroupField';
 export { refusalAsGone } from './refusal';
+export { RichTextField } from './rich-text';
 export { SearchForm } from './SearchForm';
 export { SelectField } from './SelectField';
 export { TextField } from './TextField';

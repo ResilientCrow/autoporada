@@ -9,6 +9,7 @@ import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
 import { PeopleDemos } from './PeopleDemos';
 import { ProblemDemos } from './ProblemDemos';
+import { RichTextDemo } from './RichTextDemo';
 import { StatusDemos } from './StatusDemos';
 
 /** The pattern gallery: each UI part, once, for the look and accessibility checks (inside a Shell). */
@@ -42,6 +43,10 @@ export function Gallery({ unavailable = false }: { readonly unavailable?: boolea
       <section aria-labelledby="ukladani">
         <h2 id="ukladani">{cs.gallery.autosave.title}</h2>
         <AutosaveDemo />
+      </section>
+      <section aria-labelledby="textovy-editor">
+        <h2 id="textovy-editor">{cs.gallery.richtext.title}</h2>
+        <RichTextDemo />
       </section>
       <section aria-labelledby="chyby">
         <h2 id="chyby">{cs.gallery.problems.title}</h2>

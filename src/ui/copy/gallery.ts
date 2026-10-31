@@ -72,6 +72,11 @@ export const gallery = {
     },
     triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
   },
+  richtext: {
+    title: 'Textový editor',
+    label: 'Text bodu',
+    paragraphs: 'Text bez odsazení',
+  },
   autosave: {
     title: 'Automatické ukládání',
     label: 'Poznámka',

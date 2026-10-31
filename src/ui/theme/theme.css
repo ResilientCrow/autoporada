@@ -105,3 +105,41 @@
     outline: none;
   }
 }
+
+/*
+ * The rich-text editor (ADR 0031): no <style> is injected and no style attribute is written, so its
+ * look is here. `.rt-box` frames the static markup and the editor alike; the indent is `data-indent`
+ * and a class, `.rt-l1` to `.rt-l3`.
+ */
+.rt-box {
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius-brand);
+  background-color: var(--color-light);
+  padding: 0.5rem 0.75rem;
+  min-height: 8rem;
+}
+.rt-box .ProseMirror {
+  min-height: 7rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+.rt-p {
+  margin: 0 0 0.5rem;
+}
+.rt-l1 {
+  padding-inline-start: 1.5rem;
+}
+.rt-l2 {
+  padding-inline-start: 3rem;
+}
+.rt-l3 {
+  padding-inline-start: 4.5rem;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-navy-mid);
+}

@@ -14,6 +14,7 @@ import { profile } from './profile';
 import { registry } from './registry';
 import { privacy } from './privacy';
 import { review } from './review';
+import { richtext } from './richtext';
 import { settings } from './settings';
 import { shell } from './shell';
 import { signIn } from './sign-in';
@@ -44,6 +45,7 @@ export const cs = {
   settings,
   registry,
   review,
+  richtext,
   autosave,
   people,
   privacy,
