@@ -248,6 +248,50 @@ describe('IssueRepo (port contract)', () => {
     });
   });
 
+  describe('touch (the version of an outline write)', () => {
+    const touch = (row: IssueRecord, version = row.version, by: Principal = cli) =>
+      world.tx(by, async (tx) => {
+        const after = await tx.issues.touch(row.id, version);
+        await tx.audit.record({ action: 'outline.saved', target: { type: 'issue', id: row.id } });
+        return after;
+      });
+
+    it('raises the version by one and changes nothing else', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      const after = await touch(issue);
+      expect(after).toEqual({ ...issue, version: 2 });
+      expect(await touch(after)).toEqual({ ...issue, version: 3 });
+      expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toEqual([
+        { ...issue, version: 3 },
+      ]);
+    });
+
+    it('refuses a stale version or an unknown issue and changes nothing', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      await touch(issue);
+      await expect(touch(issue)).rejects.toBeInstanceOf(StaleVersion);
+      const unknown = { ...issue, id: '00000000-0000-7000-8000-999999999999' };
+      await expect(touch(unknown, 2)).rejects.toBeInstanceOf(StaleVersion);
+      expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toMatchObject([
+        { version: 2, status: 'open' },
+      ]);
+    });
+
+    it('lets only someone who may edit the issue take its version', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const head = await world.seed.user({ role: 'headmaster' });
+      const { issue } = await ensure(issueOf(MONDAY));
+      await expect(touch(issue, 1, world.as(author))).rejects.toBeInstanceOf(ScopeViolation);
+      expect(await touch(issue, 1, world.as(head))).toMatchObject({ version: 2 });
+    });
+
+    it('touches a skipped or generated issue too: the caller decides whether it may be edited', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      const skipped = await setStatus(issue, 'skipped');
+      expect(await touch(skipped)).toMatchObject({ status: 'skipped', version: 3 });
+    });
+  });
+
   it('writes nothing in a read transaction', async () => {
     await expect(read((tx) => tx.issues.ensure(issueOf(MONDAY)))).rejects.toBeInstanceOf(
       DatabaseFailure,
