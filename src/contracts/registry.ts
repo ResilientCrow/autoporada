@@ -22,7 +22,9 @@ export const previewPasteOutput = z.strictObject({
       familyName: z.string(),
       classCode: z.string().nullable(),
       problems: z.array(problem).readonly(),
-      warnings: z.array(z.literal('group-count')).readonly(),
+      warnings: z
+        .array(z.strictObject({ code: z.literal('group-count'), word: z.string() }))
+        .readonly(),
     }),
   ),
 });

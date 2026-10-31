@@ -38,7 +38,9 @@ describe('registry.previewPaste', () => {
       'Milan Nový 1.C',
       'Jiří Novotný 1.C',
     ]);
-    expect(result.value.rows.flatMap((r) => [...r.problems, ...r.warnings])).toEqual([]);
+    expect(
+      result.value.rows.flatMap((r) => [...r.problems, ...r.warnings.map((w) => w.code)]),
+    ).toEqual([]);
   });
 
   it('writes nothing and audits nothing: not the text, not the rows', async () => {
@@ -66,10 +68,11 @@ describe('registry.previewPaste', () => {
 
   it('reports the group-count warning with the rows still unproblematic', async () => {
     const result = await preview('A Bé, C Dé, E Éf (oba 1.A)');
+    const warning = { code: 'group-count', word: 'oba' };
     expect(result.ok && result.value.rows.map((r) => [r.problems, r.warnings])).toEqual([
-      [[], ['group-count']],
-      [[], ['group-count']],
-      [[], ['group-count']],
+      [[], [warning]],
+      [[], [warning]],
+      [[], [warning]],
     ]);
   });
 

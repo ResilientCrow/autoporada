@@ -146,13 +146,17 @@ describe('parsePaste', () => {
 
     it('oba over three names warns on all three, and leaves the problems empty', () => {
       const rows = parsePaste('A Bé, C Dé, E Éf (oba 1.A)');
-      expect(rows.map((r) => r.warnings)).toEqual([
-        ['group-count'],
-        ['group-count'],
-        ['group-count'],
-      ]);
+      const warning = { code: 'group-count', word: 'oba' };
+      expect(rows.map((r) => r.warnings)).toEqual([[warning], [warning], [warning]]);
       expect(rows.flatMap((r) => r.problems)).toEqual([]);
       expect(rows.map((r) => r.classCode)).toEqual(['1.A', '1.A', '1.A']);
+    });
+
+    it('carries the group word as written, on every covered row', () => {
+      const rows = parsePaste('A Bé, C Dé, E Éf (obě 1.A)');
+      expect(rows.flatMap((r) => r.warnings)).toEqual(
+        Array.from({ length: 3 }, () => ({ code: 'group-count', word: 'obě' })),
+      );
     });
 
     it('oba over one name warns, over two does not', () => {

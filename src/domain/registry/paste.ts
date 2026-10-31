@@ -4,7 +4,11 @@ import { foldForSearch, normalizeClass, parseClass } from '@/domain/cs';
 export type NameOrder = 'given-family' | 'family-given';
 
 export type PasteProblem = 'name-missing' | 'class-missing' | 'class-unknown' | 'duplicate';
-export type PasteWarning = 'group-count';
+/** `group-count`: the names before a group word do not fit it; `word` is the word as written. */
+export interface PasteWarning {
+  readonly code: 'group-count';
+  readonly word: string;
+}
 
 /** One student the paste names, before anything is added. */
 export interface PasteRow {
@@ -35,6 +39,8 @@ interface Item {
   readonly classCode: string | null;
   /** The group word of `(oba 1.B)`, folded. */
   readonly group: GroupWord | null;
+  /** The same word as written, for the preview. */
+  readonly groupWord: string;
   readonly unknownBracket: boolean;
 }
 
@@ -66,14 +72,16 @@ function splitItems(line: string): string[] {
 }
 
 /** `(oba 1.B)`, `(všichni z 1.C)`: the group word, folded, and the class. */
-function readGroup(bracket: string): { group: GroupWord; classCode: string } | null {
+function readGroup(
+  bracket: string,
+): { group: GroupWord; groupWord: string; classCode: string } | null {
   const [first = '', ...rest] = bracket.trim().split(/\s+/);
   const word = foldForSearch(first);
   if (!GROUP_WORDS.has(word)) return null;
   if (rest.length > 0 && ['z', 'ze'].includes(foldForSearch(rest[0] ?? ''))) rest.shift();
   const classText = rest.join(' ');
   return isClassCode(classText)
-    ? { group: word as GroupWord, classCode: normalizeClass(classText) }
+    ? { group: word as GroupWord, groupWord: first, classCode: normalizeClass(classText) }
     : null;
 }
 
@@ -84,11 +92,12 @@ function readItem(source: string): Item {
   const words = stripped.replace(/[()]/g, ' ').split(/\s+/).filter(Boolean);
   let classCode: string | null = null;
   let group: GroupWord | null = null;
+  let groupWord = '';
   let unknownBracket = stray;
   for (const [index, bracket] of brackets.entries()) {
     const grouped = index === 0 ? readGroup(bracket) : null;
     if (index === 0 && isClassCode(bracket)) classCode = normalizeClass(bracket);
-    else if (grouped) ({ group, classCode } = grouped);
+    else if (grouped) ({ group, groupWord, classCode } = grouped);
     else unknownBracket = true;
   }
   const last = words.at(-1);
@@ -96,7 +105,7 @@ function readItem(source: string): Item {
     words.pop();
     classCode ??= normalizeClass(last);
   }
-  return { source, words, classCode, group, unknownBracket };
+  return { source, words, classCode, group, groupWord, unknownBracket };
 }
 
 /** A line with a tab is one row of columns: the last class column is the class, the rest the name. */
@@ -112,7 +121,14 @@ function readColumns(line: string): Item {
     .join(' ')
     .split(/\s+/)
     .filter(Boolean);
-  return { source: line.trim(), words, classCode, group: null, unknownBracket: false };
+  return {
+    source: line.trim(),
+    words,
+    classCode,
+    group: null,
+    groupWord: '',
+    unknownBracket: false,
+  };
 }
 
 function readItems(text: string): Item[] {
@@ -149,7 +165,7 @@ export function parsePaste(
 ): PasteRow[] {
   const items = readItems(text);
   const classes = items.map((item) => item.classCode);
-  const warned = new Set<number>();
+  const warned = new Map<number, string>();
   let lastClassed = -1;
   for (const [index, item] of items.entries()) {
     if (item.classCode === null) continue;
@@ -157,7 +173,7 @@ export function parsePaste(
       const covered = index - lastClassed;
       for (let j = lastClassed + 1; j < index; j++) classes[j] = item.classCode;
       if (!groupFits(item.group, covered)) {
-        for (let j = lastClassed + 1; j <= index; j++) warned.add(j);
+        for (let j = lastClassed + 1; j <= index; j++) warned.set(j, item.groupWord);
       }
     }
     lastClassed = index;
@@ -174,6 +190,7 @@ export function parsePaste(
         : others.join(' ');
     const familyName = !named ? first : order === 'given-family' ? last : first;
     const classCode = classes[index] ?? null;
+    const warnedWord = warned.get(index);
     const problems: PasteProblem[] = [];
     if (!named) problems.push('name-missing');
     if (item.unknownBracket) problems.push('class-unknown');
@@ -189,7 +206,7 @@ export function parsePaste(
       familyName,
       classCode,
       problems,
-      warnings: warned.has(index) ? ['group-count'] : [],
+      warnings: warnedWord === undefined ? [] : [{ code: 'group-count', word: warnedWord }],
     };
   });
 }

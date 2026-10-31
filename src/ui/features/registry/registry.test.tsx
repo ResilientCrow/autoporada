@@ -132,7 +132,7 @@ const row = (over: Record<string, unknown> = {}) => ({
   familyName: 'Nováková',
   classCode: '1.A',
   problems: [] as string[],
-  warnings: [] as string[],
+  warnings: [] as { code: string; word: string }[],
   ...over,
 });
 const renderPreview = (rows: unknown[]) =>
@@ -173,9 +173,13 @@ describe('PastePreview', () => {
     expect(t).toContain(registry.paste.preview.add(1));
   });
 
-  it('keeps a warned row ticked and names the group word of the source', () => {
+  it('keeps a warned row ticked and names the group word, also on a row that does not hold it', () => {
     const html = renderPreview([
-      row({ source: 'Jana Nováková (obě 2.B)', classCode: '2.B', warnings: ['group-count'] }),
+      row({
+        source: 'Jana Nováková',
+        classCode: '2.B',
+        warnings: [{ code: 'group-count', word: 'obě' }],
+      }),
     ]);
     expect(inputOf(html, 'pick.0')).toContain('checked');
     expect(inputOf(html, 'pick.0')).not.toContain('disabled=""');

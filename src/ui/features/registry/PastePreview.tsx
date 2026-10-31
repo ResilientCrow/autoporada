@@ -15,9 +15,6 @@ const { paste } = registry;
 /** A row with a problem cannot be added; the headmaster fixes the text and checks again. */
 const canAdd = (row: PreviewRows[number]) => row.problems.length === 0 && row.classCode !== null;
 
-/** The group word of a `group-count` warning, read from the item as written: „obě“ of „(obě 2.B)“. */
-const groupWord = (source: string) => /\(\s*([^\s)]+)/.exec(source)?.[1] ?? '';
-
 /**
  * What the paste would add: a row per name with its class and problems. A row with a problem is
  * unticked and cannot be ticked; a warning leaves the row ticked. „Přidat vybrané“ sends the
@@ -79,8 +76,8 @@ export function PastePreview({
                   <p key={problem}>{paste.problems[problem]}</p>
                 ))}
                 {row.warnings.map((warning) => (
-                  <Notice key={warning} tone="info" live={false}>
-                    {paste.groupCount(groupWord(row.source))}
+                  <Notice key={warning.code} tone="info" live={false}>
+                    {paste.groupCount(warning.word)}
                   </Notice>
                 ))}
               </td>
