@@ -3,6 +3,7 @@
 import {
   addEntries as addEntriesUseCase,
   moveList as moveListUseCase,
+  previewPaste as previewPasteUseCase,
   removeEntry as removeEntryUseCase,
   saveEntry as saveEntryUseCase,
   saveList as saveListUseCase,
@@ -20,3 +21,8 @@ export const removeEntry = defineAction(removeEntryUseCase, { rateLimit: 'admin'
 export const saveList = defineAction(saveListUseCase, { rateLimit: 'admin' });
 /** The ↑↓ buttons of the lists. */
 export const moveList = defineAction(moveListUseCase, { rateLimit: 'admin' });
+/**
+ * „Zkontrolovat“ on the paste form: a read, so the page is not refreshed. The pasted text goes in
+ * and the rows come back; it is kept nowhere (ADR 0033).
+ */
+export const previewPaste = defineAction(previewPasteUseCase, { rateLimit: 'admin' });

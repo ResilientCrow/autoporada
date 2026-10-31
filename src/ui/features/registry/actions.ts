@@ -5,6 +5,8 @@ import type {
   addEntriesOutput,
   moveListInput,
   moveListOutput,
+  previewPasteInput,
+  previewPasteOutput,
   removeEntryInput,
   removeEntryOutput,
   saveEntryInput,
@@ -21,3 +23,4 @@ export type SaveEntryAction = Action<typeof saveEntryInput, typeof saveEntryOutp
 export type RemoveEntryAction = Action<typeof removeEntryInput, typeof removeEntryOutput>;
 export type SaveListAction = Action<typeof saveListInput, typeof saveListOutput>;
 export type MoveListAction = Action<typeof moveListInput, typeof moveListOutput>;
+export type PreviewPasteAction = Action<typeof previewPasteInput, typeof previewPasteOutput>;

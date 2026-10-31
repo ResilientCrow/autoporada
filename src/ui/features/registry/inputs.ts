@@ -3,6 +3,7 @@ import { choiceOf, flagOf, textOf } from '@/ui/form';
 import type {
   AddEntriesAction,
   MoveListAction,
+  PreviewPasteAction,
   RemoveEntryAction,
   SaveEntryAction,
   SaveListAction,
@@ -52,4 +53,30 @@ export const moveListInput =
   (data: FormData): Input<MoveListAction> => ({
     id,
     direction: choiceOf(data, 'direction', ['up', 'down']),
+  });
+
+/** „Zkontrolovat“: the pasted text and the order of the two names. */
+export const previewPasteFor =
+  (listId: string) =>
+  (data: FormData): Input<PreviewPasteAction> => ({
+    listId,
+    text: textOf(data, 'text'),
+    order: choiceOf(data, 'order', ['given-family', 'family-given']),
+  });
+
+/** A row of the preview as the add action takes it; only a row with a class can be ticked. */
+interface PickableRow {
+  readonly givenName: string;
+  readonly familyName: string;
+  readonly classCode: string | null;
+}
+
+/** „Přidat vybrané“: the ticked rows (`pick.<n>`), taken from the preview itself, not from the form. */
+export const addPickedInput =
+  (listId: string, rows: readonly PickableRow[]) =>
+  (data: FormData): Input<AddEntriesAction> => ({
+    listId,
+    rows: rows.flatMap(({ givenName, familyName, classCode }, i) =>
+      flagOf(data, `pick.${i}`) && classCode !== null ? [{ givenName, familyName, classCode }] : [],
+    ),
   });
