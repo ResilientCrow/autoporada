@@ -2,12 +2,15 @@ import type { PointRecord, Tx } from '@/application/ports';
 import {
   derive,
   mergeProposals,
+  SECTIONS,
   SEED_OUTLINE,
   type EligibleProposal,
+  type HeldRow,
   type Outline,
   type OutlineOrigin,
   type OutlineSection,
 } from '@/domain/outline';
+import type { PointState } from '@/domain/review';
 import type { IssueStatus } from '@/domain/review';
 import { isRichDocEmpty, type RichDoc } from '@/domain/richtext';
 import type { CalDate } from '@/domain/time';
@@ -59,20 +62,44 @@ export function eligibleProposals(points: readonly PointRecord[]): readonly Elig
   );
 }
 
+/** The points placed in `outline` that are not among `proposals`, as far as the read scope shows them. */
+export async function placedElsewhere(
+  tx: Tx,
+  outline: Outline,
+  proposals: readonly PointRecord[],
+): Promise<ReadonlyMap<string, PointRecord>> {
+  const eligible = new Set(proposals.map((p) => p.id));
+  const found = new Map<string, PointRecord>();
+  for (const section of SECTIONS) {
+    for (const row of outline[section]) {
+      if (row.sourcePointId === null || eligible.has(row.sourcePointId)) continue;
+      const point = await tx.points.get(row.sourcePointId);
+      if (point) found.set(point.id, point);
+    }
+  }
+  return found;
+}
+
+export interface EditableOutline extends LoadedOutline {
+  /** Placements of proposals back with their authors: not listed, written back (ADR 0036). */
+  readonly held: readonly HeldRow[];
+}
+
 /**
  * The outline an editor works on: `loadOutline` merged with the approved proposals, so a proposal
- * nobody placed yet is a row that can be moved. A placement whose point went out of the running
- * is dropped silently; the next write forgets it.
- * TODO(m9-verify): a write drops a returned proposal's placement before the preview's `proposal-dropped` warning was seen.
+ * nobody placed yet is a row that can be moved. A placement whose point is back with its author is
+ * held; any other whose point went out of the running is dropped, and the next write forgets it.
  */
 export async function loadEditable(
   tx: Tx,
   issue: OutlineIssue,
   proposals: readonly PointRecord[],
-): Promise<LoadedOutline> {
+): Promise<EditableOutline> {
   const loaded = await loadOutline(tx, issue);
-  const merged = mergeProposals(loaded.outline, eligibleProposals(proposals), new Map());
-  return { ...loaded, outline: merged.outline };
+  const elsewhere = await placedElsewhere(tx, loaded.outline, proposals);
+  const states = new Map<string, PointState>([...elsewhere].map(([id, p]) => [id, p.state]));
+  const merged = mergeProposals(loaded.outline, eligibleProposals(proposals), states);
+  return { ...loaded, outline: merged.outline, held: merged.held };
 }
 
 /**

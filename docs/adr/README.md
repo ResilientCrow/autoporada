@@ -35,9 +35,10 @@ record that supersedes it.
 | [0027](0027-start-report-goes-to-its-draft.md) | „Napsat zprávu“ goes to its draft from the client | Accepted |
 | [0028](0028-digest-of-requests-links-the-users-page.md) | A digest of access requests links the users page | Accepted |
 | [0029](0029-points-go-to-an-issue-by-their-due-monday.md) | Points go to an issue by their due Monday | Accepted |
-| [0030](0030-the-issue-outline.md) | The issue outline | Accepted |
+| [0030](0030-the-issue-outline.md) | The issue outline | Accepted; item 5 (a write forgets a returned proposal's placement) superseded in part by 0036 |
 | [0031](0031-rich-text-editor-under-the-nonce-csp.md) | Rich-text editor under the nonce CSP | Accepted |
 | [0032](0032-settings-and-the-meeting-relative-deadline.md) | Settings and the meeting-relative deadline | Accepted |
 | [0033](0033-registry-without-people-ids.md) | Registry without people ids | Accepted |
 | [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted |
 | [0035](0035-late-event-reports.md) | Late-event reports | Accepted |
+| [0036](0036-a-returned-proposal-keeps-its-place.md) | A returned proposal keeps its place in the outline | Accepted |

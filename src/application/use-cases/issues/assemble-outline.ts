@@ -1,5 +1,5 @@
 import type { PointRecord, Tx } from '@/application/ports';
-import { mergeProposals, SECTIONS, type Outline, type OutlineSection } from '@/domain/outline';
+import { mergeProposals, type Outline, type OutlineSection } from '@/domain/outline';
 import type { PointState } from '@/domain/review';
 import { emptyRichDoc, isRichDocEmpty, singleLine } from '@/domain/richtext';
 import type { SnapshotItem } from '@/snapshot';
@@ -8,6 +8,7 @@ import type { DroppedRef } from './assemble-types';
 import {
   eligibleProposals,
   loadOutline,
+  placedElsewhere,
   type LoadedOutline,
   type OutlineIssue,
 } from './outline-store';
@@ -45,17 +46,8 @@ export async function assembleOutline(
   const eligible = eligibleProposals(proposals);
 
   // Placed points that are no longer eligible: what became of them decides whether it is reported.
-  const states = new Map<string, PointState>();
-  const gone = new Map<string, string>();
-  for (const section of SECTIONS) {
-    for (const row of loaded.outline[section]) {
-      if (row.sourcePointId === null || byId.has(row.sourcePointId)) continue;
-      const point = await tx.points.get(row.sourcePointId);
-      if (!point) continue;
-      states.set(point.id, point.state);
-      gone.set(point.id, singleLine(point.content.title));
-    }
-  }
+  const elsewhere = await placedElsewhere(tx, loaded.outline, proposals);
+  const states = new Map<string, PointState>([...elsewhere].map(([id, p]) => [id, p.state]));
 
   const merged = mergeProposals(loaded.outline, eligible, states);
   const item = (row: Outline[OutlineSection][number]): SnapshotItem[] => {
@@ -87,7 +79,7 @@ export async function assembleOutline(
     },
     dropped: merged.dropped.map((d) => ({
       id: d.pointId,
-      title: gone.get(d.pointId) ?? '',
+      title: singleLine(elsewhere.get(d.pointId)?.content.title ?? ''),
       state: d.state,
     })),
     loaded,

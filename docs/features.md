@@ -109,7 +109,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   generated or restricted (partners keep their quotes, at most 20). Approved
   proposals are appended to their section, marked „Nově schválený návrh“, and
   the headmaster places them; a proposal's wording is changed through the
-  reviewer's edit.
+  reviewer's edit. A placed proposal that goes back to its author keeps its
+  place: the editor hides it, and it comes back there once approved again.
 - The rich-text editor: bold, italic, undo, and four indent levels (plain,
   then the o / o / ■ levels). Text pasted from Word or Google Docs is cleaned
   in the browser to paragraphs, bold, italic and levels; nothing else is kept.

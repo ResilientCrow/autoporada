@@ -1,7 +1,7 @@
 import { fail, ok, type Outcome } from '@/application/core';
 import type { Json, Tx } from '@/application/ports';
 import { toIsoDate } from '@/domain/time';
-import type { Outline, OutlineResult } from '@/domain/outline';
+import { restoreHeld, type Outline, type OutlineResult } from '@/domain/outline';
 import { compareDates } from '@/domain/time';
 
 import { mondayOfText, readWindow } from '../issues/calendar';
@@ -64,8 +64,11 @@ export async function editOutline(
   const loaded = await loadEditable(tx, { id: issue.id, monday }, proposals);
   const result = edit.apply(loaded.outline);
   if (!result.ok) return fail({ code: 'rule', rule: result.refusal });
+  // Proposals back with their authors keep their place (ADR 0036).
+  const written = restoreHeld(result.outline, loaded.held);
+  if (!written.ok) return fail({ code: 'rule', rule: written.refusal });
 
-  await writeOutline(tx, issue.id, result.outline);
+  await writeOutline(tx, issue.id, written.outline);
   const target = { type: 'issue', id: issue.id } as const;
   const { origin } = loaded;
   if (origin.kind !== 'stored') {

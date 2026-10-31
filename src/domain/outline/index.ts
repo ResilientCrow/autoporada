@@ -10,7 +10,14 @@ export {
   type SystemSlot,
 } from './model';
 export { OUTLINE_LIMITS } from './limits';
-export { mergeProposals, type DroppedProposal, type EligibleProposal, type Merged } from './merge';
+export {
+  mergeProposals,
+  restoreHeld,
+  type DroppedProposal,
+  type EligibleProposal,
+  type HeldRow,
+  type Merged,
+} from './merge';
 export {
   addItem,
   moveItem,

@@ -12,6 +12,7 @@ import {
   moveItem,
   OUTLINE_LIMITS,
   removeItem,
+  restoreHeld,
   saveItem,
   SEED_OUTLINE,
   type Outline,
@@ -343,6 +344,77 @@ describe('mergeProposals', () => {
     );
     expect(ids(merged.outline)).toEqual(['p']);
     expect(merged.outline.pokyny[0]).not.toHaveProperty('isNew');
+  });
+
+  it.each(['returned', 'draft', 'submitted'] as const)(
+    'holds a placement whose point is %s, with the rows it stood after (ADR 0036)',
+    (state) => {
+      const q = placed('q');
+      const merged = mergeProposals(
+        outlineOf([row('a'), row('b'), q, row('c')]),
+        [],
+        new Map([['q', state]]),
+      );
+      expect(ids(merged.outline)).toEqual(['a', 'b', 'c']);
+      expect(merged.held).toEqual([{ row: q, after: ['b', 'a'] }]);
+    },
+  );
+
+  it.each(['rejected', 'withdrawn', 'published', 'approved'] as const)(
+    'holds no placement whose point is %s, nor one that is gone',
+    (state) => {
+      const merged = mergeProposals(
+        outlineOf([placed('q'), placed('gone')]),
+        [],
+        new Map([['q', state]]),
+      );
+      expect(merged.held).toEqual([]);
+    },
+  );
+});
+
+describe('restoreHeld', () => {
+  const placed = (id: string) => row(id, { sourcePointId: id, persistence: 'once' });
+  const restored = (outline: Outline, held: Parameters<typeof restoreHeld>[1]) => {
+    const result = restoreHeld(outline, held);
+    if (!result.ok) throw new Error(`refused: ${result.refusal}`);
+    return result.outline;
+  };
+
+  it('puts a held row back after the row it stood after, wherever that row is now', () => {
+    const outline = outlineOf([row('b'), row('new'), row('a')]);
+    const out = restored(outline, [{ row: placed('q'), after: ['a'] }]);
+    expect(ids(out)).toEqual(['b', 'new', 'a', 'q']);
+  });
+
+  it('falls back to the nearest earlier row still there, else the top of its section', () => {
+    const outline = outlineOf([row('a'), row('c')], [row('h', { section: 'hospodareni' })]);
+    const out = restored(outline, [
+      { row: placed('q'), after: ['gone', 'a'] },
+      { row: placed('top'), after: ['gone'] },
+      { row: row('f', { section: 'hospodareni', sourcePointId: 'f' }), after: [] },
+    ]);
+    expect(ids(out)).toEqual(['top', 'a', 'q', 'c']);
+    expect(ids(out, 'hospodareni')).toEqual(['f', 'h']);
+  });
+
+  it('keeps the order of rows held after the same row', () => {
+    const out = restored(outlineOf([row('a'), row('b')]), [
+      { row: placed('p'), after: ['a'] },
+      { row: placed('q'), after: ['a'] },
+    ]);
+    expect(ids(out)).toEqual(['a', 'p', 'q', 'b']);
+  });
+
+  it('refuses outline-full when the held rows would pass the bound; new rows do not count', () => {
+    const full = Array.from({ length: OUTLINE_LIMITS.rowsPerSection - 1 }, (_, i) => row(`r${i}`));
+    const fresh: OutlineRow = { ...placed('new'), isNew: true };
+    const held = [{ row: placed('q'), after: [] }];
+    expect(restoreHeld(outlineOf([...full, fresh]), held).ok).toBe(true);
+    expect(restoreHeld(outlineOf([...full, row('one-more')]), held)).toEqual({
+      ok: false,
+      refusal: 'outline-full',
+    });
   });
 });
 
