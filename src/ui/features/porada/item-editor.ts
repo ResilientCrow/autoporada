@@ -51,6 +51,9 @@ const PERSISTENCE = ['standing', 'once'] as const;
 export const persistenceOf = (value: string): 'standing' | 'once' =>
   value === 'standing' ? 'standing' : 'once';
 
+/** The names of one quote's fields in the form (they are the paths of its field issues). */
+export const quoteField = (i: number, field: keyof QuoteDraft) => `quotes.${i}.${field}`;
+
 export const EMPTY_QUOTE: QuoteDraft = { speakerGenitive: '', affiliation: '', quote: '' };
 
 export const draftOf = (q: Statement): QuoteDraft => ({

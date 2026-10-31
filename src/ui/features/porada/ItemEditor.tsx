@@ -24,6 +24,7 @@ import {
   isGenerated,
   newInput,
   persistenceOf,
+  quoteField,
   saveInput,
   type ItemActions,
   type ItemContext,
@@ -32,7 +33,7 @@ import {
 } from './item-editor';
 import { ItemPreview } from './ItemPreview';
 import type { OutlineSectionKey } from './outline';
-import { quoteField, QuotesEditor } from './QuotesEditor';
+import { QuotesEditor } from './QuotesEditor';
 
 const { editor, fields, persistence: persistenceCopy } = porada.outline;
 

@@ -6,12 +6,9 @@ import { porada } from '@/ui/copy';
 import { TextField } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
-import { EMPTY_QUOTE, type QuoteDraft } from './item-editor';
+import { EMPTY_QUOTE, quoteField, type QuoteDraft } from './item-editor';
 
 const { quotes: copy } = porada.outline.editor;
-
-/** The names of one quote's fields in the form (they are the paths of its field issues). */
-export const quoteField = (i: number, field: keyof QuoteDraft) => `quotes.${i}.${field}`;
 
 /**
  * The statements of Ohlasy sociálních partnerů (the partners slot): a speaker in the 2nd case, an
