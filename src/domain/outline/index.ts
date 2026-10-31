@@ -21,3 +21,4 @@ export {
   type OutlineRefusal,
   type OutlineResult,
 } from './ops';
+export { SEED_OUTLINE } from './seed';
