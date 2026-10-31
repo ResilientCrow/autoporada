@@ -1,6 +1,9 @@
+import type { JobName } from '@/application/ports';
+
 import { createLogger } from '../log';
 
 import { createBoss } from './boss';
+import { jobId } from './ids';
 import { DEAD_QUEUE, QUEUES } from './queues';
 
 /** `findJobs` reads at most this many: more dead jobs than that is an incident, not a list. */
@@ -35,6 +38,8 @@ interface JobsAdminHandle {
     }[]
   >;
   redrive(selector: { ids?: readonly string[]; source?: string }): Promise<number>;
+  /** Queues one job now, under the id its key derives; false when that key was sent already. */
+  send(job: JobName, data: object, dedupeKey: string): Promise<boolean>;
 }
 
 /**
@@ -83,6 +88,10 @@ export async function withJobsAdmin<T>(
           ...(ids && { ids: [...ids] }),
           ...(source !== undefined && { sourceName: source }),
         }),
+      // null means a job with this id exists already (kept in every state): a duplicate, not a failure
+      send: async (job, data, dedupeKey) =>
+        (await boss.send(job, data, { id: jobId(job, dedupeKey), singletonKey: dedupeKey })) !==
+        null,
     });
   } finally {
     await boss.stop({ graceful: false, close: true });

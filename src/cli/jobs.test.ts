@@ -36,6 +36,7 @@ function fakeAdmin(
     counts: () => Promise.resolve(parts.counts ?? []),
     deadJobs: () => Promise.resolve(parts.dead ?? []),
     redrive,
+    send: () => Promise.resolve(true),
   };
   return { admin, redrive };
 }

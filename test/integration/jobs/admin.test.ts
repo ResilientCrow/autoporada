@@ -136,6 +136,37 @@ describe('the jobs admin (as the owner, the way the CLI connects)', () => {
   );
 
   it(
+    'sends a job under the id its key derives, once: a second send of the key is a duplicate',
+    async () => {
+      expect(await admin((a) => a.send('reviewer.digest', {}, 'morning:2026-10-31T09:15'))).toBe(
+        true,
+      );
+      expect(await admin((a) => a.send('reviewer.digest', {}, 'morning:2026-10-31T09:15'))).toBe(
+        false,
+      );
+      expect(await admin((a) => a.send('reviewer.digest', {}, 'morning:2026-10-31T09:16'))).toBe(
+        true,
+      );
+      const rows = await database.owner<{ id: string; state: string; singleton_key: string }>(
+        `SELECT id, state, singleton_key FROM pgboss.job WHERE name = 'reviewer.digest' ORDER BY singleton_key`,
+      );
+      expect(rows).toEqual([
+        {
+          id: jobId('reviewer.digest', 'morning:2026-10-31T09:15'),
+          state: 'created',
+          singleton_key: 'morning:2026-10-31T09:15',
+        },
+        {
+          id: jobId('reviewer.digest', 'morning:2026-10-31T09:16'),
+          state: 'created',
+          singleton_key: 'morning:2026-10-31T09:16',
+        },
+      ]);
+    },
+    SLOW,
+  );
+
+  it(
     'holds a connection only while a command runs',
     async () => {
       const open = async () =>

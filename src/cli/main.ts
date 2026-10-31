@@ -4,6 +4,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
+import { SCHEDULES } from '@/application/jobs';
 import { getConfig, getDatabaseUrl } from '@/infra/config';
 import { databaseOn, openPool } from '@/infra/db';
 import { createProducer, withJobsAdmin } from '@/infra/jobs';
@@ -19,6 +20,7 @@ import {
   jobsStatus,
   type JobsAdmin,
 } from './jobs';
+import { JOBS_RUN_USAGE, jobsRun } from './jobs-run';
 import { MAIL_TEST_USAGE, mailTest } from './mail';
 import { renderSnapshot, RENDER_SNAPSHOT_USAGE } from './render-snapshot';
 
@@ -86,6 +88,9 @@ async function mailTestCommand(args: readonly string[]): Promise<string[]> {
 const COMMANDS: Readonly<Record<string, (args: readonly string[]) => Promise<string[]>>> = {
   'auth:probe': authProbe,
   'jobs:redrive': onJobs(jobsRedrive),
+  'jobs:run': onJobs((admin, args) =>
+    jobsRun(admin, args, { schedules: SCHEDULES, now: new Date() }),
+  ),
   'jobs:status': onJobs(jobsStatus),
   'mail:test': mailTestCommand,
   migrate,
@@ -98,6 +103,7 @@ const USAGE = [
   'Commands:',
   '  auth:probe',
   `  ${JOBS_REDRIVE_USAGE}`,
+  `  ${JOBS_RUN_USAGE}`,
   `  ${JOBS_STATUS_USAGE}`,
   `  ${MAIL_TEST_USAGE}`,
   '  migrate',

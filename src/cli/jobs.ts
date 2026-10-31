@@ -1,3 +1,5 @@
+import type { JobName } from '@/application/ports';
+
 /**
  * `jobs:status` and `jobs:redrive` (ADR 0015): what the operator sees of the job queues, and the
  * way back for a dead job. The parsing and the output are here; main.ts hands in the pg-boss side.
@@ -32,6 +34,8 @@ export interface JobsAdmin {
     readonly ids?: readonly string[];
     readonly source?: string;
   }): Promise<number>;
+  /** Queues one job now under a dedupe key; false when that key was queued before (jobs:run). */
+  send(job: JobName, data: object, dedupeKey: string): Promise<boolean>;
 }
 
 /** Left to right, the life of a job. */
