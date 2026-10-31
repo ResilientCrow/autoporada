@@ -1,13 +1,7 @@
 import { DEADLINE_RULE, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
-import {
-  deadline,
-  REMINDER_DRAFT_DAYS,
-  reminderDue,
-  submitMonday,
-  type ReminderKind,
-} from '@/domain/calendar';
-import { isSameDate, toIsoDate, type CalDate } from '@/domain/time';
+import { handInSlot, REMINDER_DRAFT_DAYS, reminderDue, type ReminderKind } from '@/domain/calendar';
+import { toIsoDate, type CalDate } from '@/domain/time';
 
 type Member = Pick<UserRecord, 'role' | 'status'>;
 
@@ -45,9 +39,8 @@ export interface ReminderIssue {
  */
 export async function reminderIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<ReminderIssue> {
   const slots = await readSlots(tx, now);
-  const monday = submitMonday(now, slots, DEADLINE_RULE);
-  const slot = slots.find((candidate) => isSameDate(candidate.monday, monday));
-  return { monday, deadlineAt: slot?.deadlineAt ?? deadline(monday, DEADLINE_RULE) };
+  const { monday, deadlineAt } = handInSlot(now, slots, DEADLINE_RULE);
+  return { monday, deadlineAt };
 }
 
 /** Authors of a draft changed in the last 28 days or of a returned point that can still go to `monday`. */

@@ -8,6 +8,7 @@ import {
   isoWeekday,
   mondayOf,
   parseIsoDate as d,
+  parseWallTime,
   toIsoDate,
   type CalDate,
 } from '@/domain/time';
@@ -15,6 +16,8 @@ import {
 import {
   deadline,
   DEFAULT_DEADLINE as RULE,
+  handInMonday,
+  handInSlot,
   issueSlots,
   lastSlotMonday,
   PLACEMENT_WEEKS,
@@ -120,6 +123,55 @@ describe('skipWindow', () => {
     const now = new Date('2026-11-03T10:00:00Z');
     const slots = slotsAt(now, [row('2026-11-02', 'skipped', '2026-11-05T17:00:00Z')]);
     expect(iso(skipWindow(now, slots, RULE).first)).toBe('2026-11-02');
+  });
+});
+
+describe('handInSlot', () => {
+  const NOON_RULE = { dayOffset: -3, time: parseWallTime('12:00') };
+
+  it('is the slot it stops at, with its frozen deadline whatever the rule says', () => {
+    const now = new Date('2026-10-21T10:00:00Z');
+    const frozen = '2026-10-24T05:00:00Z';
+    const slots = slotsAt(now, [row('2026-10-26', 'open', frozen)]);
+    expect(handInSlot(now, slots, RULE)).toMatchObject({
+      monday: d('2026-10-26'),
+      deadlineAt: new Date(frozen),
+      stored: true,
+    });
+  });
+
+  it('is a virtual row of the rule when the slots run out, past the last Monday', () => {
+    const slots = slotsAt(new Date('2026-10-21T10:00:00Z'));
+    const last = slots.at(-1)!;
+    const now = new Date(last.deadlineAt.getTime() + 60_000);
+    const next = addDays(last.monday, 7);
+    expect(handInSlot(now, slots, NOON_RULE)).toEqual({
+      monday: next,
+      meetingDate: next,
+      deadlineAt: deadline(next, NOON_RULE),
+      status: 'open',
+    });
+  });
+
+  it('is a virtual row from this week when there are no slots at all', () => {
+    const now = new Date('2026-10-21T10:00:00Z');
+    const slot = handInSlot(now, [], NOON_RULE);
+    expect(iso(slot.monday)).toBe('2026-10-26');
+    expect(slot.deadlineAt).toEqual(deadline(d('2026-10-26'), NOON_RULE));
+  });
+
+  it('has the Monday handInMonday and submitMonday answer', () => {
+    fc.assert(
+      fc.property(
+        fc.date({ min: new Date('2026-01-01'), max: new Date('2030-12-31'), noInvalidDate: true }),
+        (now) => {
+          const slots = slotsAt(now);
+          const slot = handInSlot(now, slots, RULE);
+          expect(handInMonday(now, slots, RULE)).toEqual(slot.monday);
+          expect(submitMonday(now, slots, RULE)).toEqual(slot.monday);
+        },
+      ),
+    );
   });
 });
 

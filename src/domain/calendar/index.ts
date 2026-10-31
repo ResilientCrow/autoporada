@@ -37,6 +37,7 @@ export { summaryDue } from './summary';
 export { pointMonday } from './placement';
 export {
   handInMonday,
+  handInSlot,
   issueSlots,
   lastSlotMonday,
   PLACEMENT_WEEKS,

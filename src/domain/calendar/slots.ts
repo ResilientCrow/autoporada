@@ -74,24 +74,33 @@ const isOpen = (slot: IssueSlot) => slot.status === 'open';
  * stepped over whatever their close, so a point handed in after slot B's deadline cannot reach B
  * through a skipped slot before it that has a later one. A stored slot's deadline is its frozen
  * value, whatever the rule says now. The virtual Mondays go on past the last slot, so there is
- * always an answer.
+ * always an answer: the found slot, or the virtual row it stops at.
  */
-export function handInMonday(
+export function handInSlot(
   now: Date,
   slots: readonly IssueSlot[],
   rule: DeadlineRule,
   report?: LateFacts,
-): CalDate {
+): IssueRow {
   const closesAhead = (slot: IssueRow) =>
     now.getTime() < (report ? reportCloses(slot, report) : slot.deadlineAt).getTime();
   const found = slots.find((slot) => isOpen(slot) && closesAhead(slot));
-  if (found) return found.monday;
+  if (found) return found;
   const last = slots.at(-1);
   const start = last ? addDays(last.monday, 7) : mondayOf(instantToWallClock(now).date);
   for (let monday = start; ; monday = addDays(monday, 7)) {
-    if (closesAhead(virtualRow(monday, rule))) return monday;
+    const row = virtualRow(monday, rule);
+    if (closesAhead(row)) return row;
   }
 }
+
+/** The Monday of `handInSlot`: what submit stores as `hand_in_monday`. */
+export const handInMonday = (
+  now: Date,
+  slots: readonly IssueSlot[],
+  rule: DeadlineRule,
+  report?: LateFacts,
+): CalDate => handInSlot(now, slots, rule, report).monday;
 
 /** The slot a hand-in with no close of its own goes to (the first open slot whose deadline is ahead). */
 export const submitMonday = (now: Date, slots: readonly IssueSlot[], rule: DeadlineRule): CalDate =>
