@@ -3,6 +3,7 @@ import type { AuditPort } from './audit';
 import type { Clock } from './clock';
 import type { FutureEventRepo } from './future-events';
 import type { FutureItemRepo } from './future-items';
+import type { IssueItemRepo } from './issue-items';
 import type { IssueRepo } from './issues';
 import type { JobPort } from './jobs';
 import type { MailLedgerPort } from './mail-ledger';
@@ -43,6 +44,7 @@ export interface Tx {
   readonly signIns: SignInRepo;
   readonly sessions: SessionRepo;
   readonly issues: IssueRepo;
+  readonly issueItems: IssueItemRepo;
   readonly pointTypes: PointTypeRepo;
   readonly settings: SettingsRepo;
   readonly registry: RegistryRepo;

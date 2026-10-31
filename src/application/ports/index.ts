@@ -63,6 +63,7 @@ export {
   type OutcomeCode,
   type ScheduledJob,
 } from './jobs';
+export type { IssueItemRepo, IssueTexts } from './issue-items';
 export type { IssueRecord, IssueRepo, NewIssue } from './issues';
 export type { MailPort, MailResult, OutgoingMail } from './mail';
 export type {

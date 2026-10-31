@@ -5,6 +5,7 @@ import { fakeAccessRequestRepo } from './access-requests';
 import { fakeAudit, fakeJobs } from './effects';
 import { fakeFutureEventRepo } from './future-events';
 import { fakeFutureItemRepo } from './future-items';
+import { fakeIssueItemRepo } from './issue-items';
 import { fakeIssueRepo } from './issues';
 import { fakeMailLedger } from './mail-ledger';
 import { checkAuditCoverage } from './oracle';
@@ -61,6 +62,7 @@ export function createFakeDb(): FakeDb {
       signIns: fakeSignInRepo(tx, ctx),
       sessions: fakeSessionRepo(tx, ctx),
       issues: fakeIssueRepo(tx, ctx),
+      issueItems: fakeIssueItemRepo(tx, ctx),
       pointTypes: fakePointTypeRepo(tx, ctx),
       settings: fakeSettingsRepo(tx, ctx),
       registry: fakeRegistryRepo(tx, ctx),

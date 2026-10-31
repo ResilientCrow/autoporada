@@ -6,6 +6,7 @@ import {
   type FutureItemRecord,
   type GateRow,
   type IssueRecord,
+  type IssueTexts,
   type JobCatalog,
   type JobName,
   type LedgerRow,
@@ -19,6 +20,7 @@ import {
   type StoredSetting,
   type UserRecord,
 } from '@/application/ports';
+import type { Outline } from '@/domain/outline';
 
 import { refusedBy } from './guards';
 
@@ -34,6 +36,10 @@ export interface FakeState {
   readonly jobs: JobRow[];
   /** issues, by ISO Monday (issues_monday_key). */
   readonly issues: Map<string, IssueRecord>;
+  /** issue_items, by issue id: the rows of the issue, as the outline they make (empty = none). */
+  readonly issueItems: Map<string, Outline>;
+  /** issues.present_text, guests_text and annex2, by ISO Monday; absent = all three null. */
+  readonly issueTexts: Map<string, IssueTexts>;
   /** point_types, by id. Migration 0014's seeds are not here: a test makes the types it needs. */
   readonly pointTypes: Map<string, PointTypeRecord>;
   /** settings, by key. */
@@ -85,6 +91,8 @@ export const emptyState = (): FakeState => ({
   audit: [],
   jobs: [],
   issues: new Map(),
+  issueItems: new Map(),
+  issueTexts: new Map(),
   pointTypes: new Map(),
   settings: new Map(),
   registryLists: new Map(),
