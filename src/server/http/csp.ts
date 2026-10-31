@@ -10,7 +10,9 @@ export const NONCE_HEADER = 'x-nonce';
  * The Content-Security-Policy of every page (plan §4). Scripts run only
  * with this response's nonce ('strict-dynamic' lets them load Next's
  * chunks); nothing loads from another origin, nothing frames the app, and
- * forms post only here. Development adds 'unsafe-eval' for hot reload.
+ * forms post only here. Development adds 'unsafe-eval' for hot reload, and
+ * allows inline style elements without the nonce, because the Next.js
+ * devtools insert theirs with none (ADR 0042).
  * Inline event handlers and style attributes are refused: browsers already
  * fall back to script-src and style-src for them, and spelling the attribute
  * directives out pins the decision (ADR 0012).
@@ -20,7 +22,8 @@ export function contentSecurityPolicy(nonce: string, options: { readonly dev: bo
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${options.dev ? " 'unsafe-eval'" : ''}`,
     "script-src-attr 'none'",
-    `style-src 'self' 'nonce-${nonce}'`,
+    // A nonce next to 'unsafe-inline' would make browsers ignore it.
+    `style-src 'self' ${options.dev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
     "style-src-attr 'none'",
     "img-src 'self'",
     "font-src 'self'",

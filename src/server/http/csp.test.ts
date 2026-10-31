@@ -43,9 +43,17 @@ describe('contentSecurityPolicy', () => {
     );
   });
 
-  it('never allows inline code', () => {
-    for (const dev of [false, true]) {
-      expect(contentSecurityPolicy('N', { dev })).not.toMatch(/unsafe-inline|\*|data:|http/);
-    }
+  it('never allows inline code in production', () => {
+    expect(contentSecurityPolicy('N', { dev: false })).not.toMatch(/unsafe-inline|\*|data:|http/);
+  });
+
+  it('lets development inline style elements only, for the Next.js devtools (ADR 0042)', () => {
+    const policy = contentSecurityPolicy('N', { dev: true });
+    const dev = directives(policy);
+    // A nonce next to 'unsafe-inline' would make browsers ignore it.
+    expect(dev.get('style-src')).toEqual(["'self'", "'unsafe-inline'"]);
+    expect(dev.get('style-src-attr')).toEqual(["'none'"]);
+    expect(dev.get('script-src')).not.toContain("'unsafe-inline'");
+    expect(policy).not.toMatch(/\*|data:|http/);
   });
 });

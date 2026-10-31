@@ -47,3 +47,4 @@ record that supersedes it.
 | [0039](0039-the-worker-sees-only-the-docx-it-converts.md) | The worker sees only the DOCX it converts | Accepted |
 | [0040](0040-poradas-are-generated-in-order.md) | Poradas are generated in order | Accepted |
 | [0041](0041-no-unskip-behind-a-generated-porada.md) | No unskip behind a generated porada | Accepted |
+| [0042](0042-development-allows-inline-style-elements.md) | Development allows inline style elements | Accepted |
