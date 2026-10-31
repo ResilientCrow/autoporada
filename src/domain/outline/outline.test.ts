@@ -169,6 +169,20 @@ describe('outline ops', () => {
       expect(saveItem(slotted, 't', { persistence: 'standing', title: 'Jiný' }).ok).toBe(true);
     });
 
+    it('refuses a body on the fixed text slots: meetings, events and partners', () => {
+      for (const slot of ['meetings', 'events', 'partners'] as const) {
+        const o = outlineOf([row('x', { slot })]);
+        expect(saveItem(o, 'x', { body: para('jiný') })).toEqual({
+          ok: false,
+          refusal: 'slot-fixed',
+        });
+        expect(saveItem(o, 'x', { title: 'Jiný' }).ok).toBe(true);
+      }
+      expect(saveItem(outlineOf([row('m', { slot: 'media' })]), 'm', { body: para('x') }).ok).toBe(
+        true,
+      );
+    });
+
     it('takes quotes on the partners slot only, at most 20', () => {
       const quote = { speakerGenitive: 'pana Karla', quote: 'Díky.' };
       const o = outlineOf([row('p', { slot: 'partners' }), row('a')]);
@@ -209,6 +223,31 @@ describe('outline ops', () => {
       const moved = unwrap(moveItem(o, 'p', 'up'));
       expect(ids(moved)).toEqual(['p', 'a']);
       expect(moved.pokyny[0]).not.toHaveProperty('isNew');
+    });
+
+    it('places the new proposal row it swaps with, so the move is stored', () => {
+      const proposal = (id: string) =>
+        row(id, { sourcePointId: id, persistence: 'once', isNew: true });
+      const o = outlineOf([row('s1'), row('s2'), proposal('p')]);
+      const moved = unwrap(moveItem(o, 's2', 'down'));
+      expect(ids(moved)).toEqual(['s1', 'p', 's2']);
+      expect(moved.pokyny[1]).not.toHaveProperty('isNew');
+
+      const two = outlineOf([row('s'), proposal('p1'), proposal('p2')]);
+      const swapped = unwrap(moveItem(two, 'p1', 'down'));
+      expect(ids(swapped)).toEqual(['s', 'p2', 'p1']);
+      expect(swapped.pokyny.some((r) => r.isNew)).toBe(false);
+    });
+
+    it('refuses outline-full when placing new rows would store more than a section holds', () => {
+      const stored = Array.from({ length: OUTLINE_LIMITS.rowsPerSection - 1 }, (_, i) =>
+        row(`s${i}`),
+      );
+      const proposal = (id: string) =>
+        row(id, { sourcePointId: id, persistence: 'once', isNew: true });
+      const o = outlineOf([...stored, proposal('p1'), proposal('p2')]);
+      expect(moveItem(o, 'p1', 'down')).toEqual({ ok: false, refusal: 'outline-full' });
+      expect(moveItem(o, 'p1', 'up').ok).toBe(true);
     });
 
     it('refuses an unknown item', () => {

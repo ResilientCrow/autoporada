@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { SEED_OUTLINE } from '@/domain/outline';
+import { OUTLINE_LIMITS, SEED_OUTLINE } from '@/domain/outline';
 
 import { monday, outlineFixtures, WEEK_1, WEEK_2 } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
 import { setSkipped } from '../issues';
-import { moveOutlineItem } from './index';
+import { addOutlineItem, moveOutlineItem } from './index';
 
 const world = setupWorld();
 const fx = outlineFixtures(world);
@@ -119,6 +119,48 @@ describe('outline.move', () => {
       'read',
     );
     expect(stored.pokyny.filter((r) => r.sourcePointId === pointId)).toHaveLength(1);
+  });
+
+  it('stores a new proposal that the moved item swaps with, and the move happens', async () => {
+    const head = await fx.headmaster();
+    const pointId = await fx.approvedProposal();
+    const seed = SEED_OUTLINE.pokyny.map((r) => r.lineageId);
+    const last = seed.at(-1)!;
+
+    const done = await move(head, last, 'down');
+    expect(done).toEqual({ ok: true, value: { version: 2, lineageId: last } });
+    const after = await order(head);
+    expect(after.slice(-2)).toEqual([pointId, last]);
+    const issue = await fx.issueOf(WEEK_1);
+    const stored = await world.tx(
+      world.as(head),
+      (tx) => tx.issueItems.forIssue(issue!.id),
+      'read',
+    );
+    expect(stored.pokyny.map((r) => r.lineageId)).toEqual(after);
+  });
+
+  it('refuses outline-full when placing a new proposal would store a 61st row', async () => {
+    const head = await fx.headmaster();
+    let version: number | undefined;
+    for (let rows = SEED_OUTLINE.pokyny.length; rows < OUTLINE_LIMITS.rowsPerSection; rows++) {
+      const added = await world.run(addOutlineItem, world.as(head), {
+        monday: monday(WEEK_1),
+        lineageId: randomUUID(),
+        section: 'pokyny',
+        title: `Bod ${rows}`,
+        persistence: 'standing',
+        expectedVersion: version,
+      });
+      if (!added.ok) throw new Error(`add ${rows} refused`);
+      version = added.value.version;
+    }
+    const pointId = await fx.approvedProposal();
+    const before = await world.inspect.audit();
+    expect(await move(head, pointId, 'up', { expectedVersion: version })).toEqual(
+      rule('outline-full'),
+    );
+    expect(await world.inspect.audit()).toEqual(before);
   });
 
   it('refuses an unknown item as item-missing', async () => {

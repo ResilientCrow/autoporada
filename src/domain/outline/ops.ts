@@ -7,6 +7,7 @@ import {
   type OutlineRow,
   type OutlineSection,
   type Statement,
+  type SystemSlot,
 } from './model';
 
 /** Rule codes an op refuses with (ADR 0030). */
@@ -39,6 +40,9 @@ export interface ItemPatch {
   readonly quotes?: readonly Statement[];
   readonly persistence?: 'standing' | 'once';
 }
+
+/** Slots the generated document fills itself: their body stays empty (snapshot checks). */
+const FIXED_TEXT_SLOTS: ReadonlySet<SystemSlot> = new Set(['meetings', 'events', 'partners']);
 
 function find(outline: Outline, lineageId: string) {
   for (const section of SECTIONS) {
@@ -87,6 +91,9 @@ export function saveItem(outline: Outline, lineageId: string, patch: ItemPatch):
   const { row, section, index } = found;
   if (row.sourcePointId !== null) return refuse('proposal-fixed');
   if (row.slot !== null && patch.persistence === 'once') return refuse('slot-fixed');
+  if (row.slot !== null && FIXED_TEXT_SLOTS.has(row.slot) && patch.body !== undefined) {
+    return refuse('slot-fixed');
+  }
   if (patch.quotes) {
     if (row.slot !== 'partners') return refuse('quotes-not-allowed');
     if (patch.quotes.length > OUTLINE_LIMITS.quotes) return refuse('quotes-full');
@@ -119,9 +126,17 @@ export function moveItem(
   const rows = [...outline[section]];
   const target = direction === 'up' ? index - 1 : index + 1;
   if (target < 0 || target >= rows.length) return done(outline);
-  const { isNew: _isNew, ...placed } = row;
-  rows[index] = rows[target] as OutlineRow;
-  rows[target] = placed;
+  // Both rows are placed: a new proposal row left as it was would not be stored, and the move lost.
+  const placed = (r: OutlineRow): OutlineRow => {
+    const { isNew: _isNew, ...rest } = r;
+    return rest;
+  };
+  const neighbour = rows[target] as OutlineRow;
+  rows[index] = placed(neighbour);
+  rows[target] = placed(row);
+  if (rows.filter((r) => !r.isNew).length > OUTLINE_LIMITS.rowsPerSection) {
+    return refuse('outline-full');
+  }
   return done(replaceSection(outline, section, rows));
 }
 

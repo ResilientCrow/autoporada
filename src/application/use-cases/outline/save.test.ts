@@ -85,19 +85,23 @@ describe('outline.save', () => {
   it('records the saved fields and the number of quotes, never the text', async () => {
     const head = await fx.headmaster();
     const partners = slotRow('partners');
+    const media = slotRow('media');
     await save(head, partners.lineageId, {
       title: 'Tajný název',
-      body: richText('Tajný text'),
       quotes: [statement(1), statement(2)],
     });
-    const [saved] = await fx.auditOf('outline.saved');
+    await save(head, media.lineageId, { body: richText('Tajný text'), expectedVersion: 2 });
+    const [saved, savedMedia] = await fx.auditOf('outline.saved');
     expect(saved?.data).toEqual({
       meta: {
         monday: monday(WEEK_1),
         lineageId: partners.lineageId,
-        fields: ['title', 'body', 'quotes'],
+        fields: ['title', 'quotes'],
         quotes: 2,
       },
+    });
+    expect(savedMedia?.data).toEqual({
+      meta: { monday: monday(WEEK_1), lineageId: media.lineageId, fields: ['body'] },
     });
     expect(JSON.stringify(await world.inspect.audit())).not.toMatch(/Tajný|Citát|Nováka/);
   });
@@ -120,6 +124,17 @@ describe('outline.save', () => {
       value: { pokyny: expect.arrayContaining([expect.objectContaining({ quotes: 0 })]) },
     });
   });
+
+  it.each(['meetings', 'events', 'partners'] as const)(
+    'refuses a body on the %s slot as slot-fixed, and changes nothing',
+    async (slot) => {
+      const head = await fx.headmaster();
+      expect(await save(head, slotRow(slot).lineageId, { body: richText('Text') })).toEqual(
+        rule('slot-fixed'),
+      );
+      expect(await fx.issueOf(WEEK_1)).toBeNull();
+    },
+  );
 
   it('refuses making a slot a one-off as slot-fixed, and changes nothing', async () => {
     const head = await fx.headmaster();

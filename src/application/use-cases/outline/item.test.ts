@@ -61,16 +61,26 @@ describe('outline.item', () => {
     await world.run(saveOutlineItem, world.as(head), {
       monday: monday(WEEK_1),
       lineageId: partners.lineageId,
-      body: richText('Text ohlasu.'),
       quotes: [quote],
+    });
+    const media = slotRow('media');
+    await world.run(saveOutlineItem, world.as(head), {
+      monday: monday(WEEK_1),
+      lineageId: media.lineageId,
+      expectedVersion: 2,
+      body: richText('Text ohlasu.'),
     });
     const id = await fx.addItem(head, WEEK_1, 'Jednorázový', {
       persistence: 'once',
-      expectedVersion: 2,
+      expectedVersion: 3,
     });
     expect(await item(head, partners.lineageId)).toMatchObject({
       ok: true,
-      value: { version: 3, body: richText('Text ohlasu.'), quotes: [quote] },
+      value: { version: 4, quotes: [quote] },
+    });
+    expect(await item(head, media.lineageId)).toMatchObject({
+      ok: true,
+      value: { version: 4, body: richText('Text ohlasu.') },
     });
     expect(await item(head, id)).toMatchObject({
       ok: true,
