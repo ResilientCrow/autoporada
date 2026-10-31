@@ -61,6 +61,15 @@ describe('Settings', () => {
     expect(t).toContain(settings.deadline.example('čtvrtek', '8.15'));
   });
 
+  it('marks the day and time selects of the deadline as required', () => {
+    const html = render();
+    for (const name of ['value.dayOffset', 'value.time']) {
+      expect(html.match(new RegExp(`<select[^>]*name="${name}"[^>]*>`))?.[0]).toContain(
+        'aria-required="true"',
+      );
+    }
+  });
+
   it('says nothing of an effect while the selects hold the saved rule', () => {
     const t = text(render());
     expect(t).not.toContain(

@@ -211,6 +211,17 @@ describe('Paste', () => {
     expect(html).not.toContain('nahled-vlozeni');
     expect(cspMarkupProblems(html)).toEqual([]);
   });
+
+  it('marks the order select as required, as the form always sends one', () => {
+    const html = renderToStaticMarkup(
+      <Paste
+        view={{ list: { id: ID, key: 'aj-certifikat', title: 'x' } }}
+        previewPaste={action}
+        addEntries={action}
+      />,
+    );
+    expect(html.match(/<select[^>]*name="order"[^>]*>/)?.[0]).toContain('aria-required="true"');
+  });
 });
 
 describe('NewYear', () => {
@@ -228,6 +239,11 @@ describe('NewYear', () => {
     const html = render(false);
     expect(html).toContain('/auth/step-up?returnTo=%2Fregistr%2Fnovy-skolni-rok');
     expect(html).not.toContain('<form');
+  });
+
+  it('marks the year select as required', () => {
+    const html = render(true);
+    expect(html.match(/<select[^>]*name="year"[^>]*>/)?.[0]).toContain('aria-required="true"');
   });
 
   it('shows every list ticked, the years and the unticked confirm box after a fresh sign-in', () => {

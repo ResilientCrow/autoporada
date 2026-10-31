@@ -54,7 +54,7 @@ export function NewYearForm({
     ...Object.fromEntries(
       lists.map((list) => [`list.${list.id}`, { label: newYear.list(list.title, list.entries) }]),
     ),
-    year: { label: newYear.year.label },
+    year: { label: newYear.year.label, required: true },
     confirmed: {
       label: newYear.confirm,
       required: true,

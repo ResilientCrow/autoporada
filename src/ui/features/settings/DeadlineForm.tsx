@@ -27,8 +27,8 @@ export interface DeadlineEffect {
 const { deadline } = settings;
 
 const SPEC: FormSpec = {
-  'value.dayOffset': { label: deadline.days.label },
-  'value.time': { label: deadline.time.label },
+  'value.dayOffset': { label: deadline.days.label, required: true },
+  'value.time': { label: deadline.time.label, required: true },
 };
 
 const DAY_OPTIONS = ([1, 2, 3, 4] as const).map((n) => ({

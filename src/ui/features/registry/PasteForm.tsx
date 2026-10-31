@@ -20,7 +20,7 @@ const { paste } = registry;
 
 const SPEC: FormSpec = {
   text: { label: paste.text.label, required: true, messages: { 'too-long': paste.text.tooLong } },
-  order: { label: paste.order.label },
+  order: { label: paste.order.label, required: true },
 };
 
 const ORDER_OPTIONS = [
