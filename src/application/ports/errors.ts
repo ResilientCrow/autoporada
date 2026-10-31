@@ -11,6 +11,7 @@ export const KNOWN_CONSTRAINTS = [
   'point_types_name_key',
   'registry_entries_active_key',
   'registry_lists_title_key',
+  'registry_lists_key_key',
 ] as const;
 export type KnownConstraint = (typeof KNOWN_CONSTRAINTS)[number];
 

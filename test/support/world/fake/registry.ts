@@ -38,7 +38,8 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
   /** A list's CHECKs and uniques, in the order PostgreSQL reports them. */
   const checkList = (l: RegistryListRecord) => {
     const others = [...lists.values()].filter((o) => o.id !== l.id);
-    if (others.some((o) => o.key === l.key)) throw refusedBy('registry_lists_key_key');
+    if (others.some((o) => o.key === l.key))
+      throw new ConstraintViolation('registry_lists_key_key');
     if (others.some((o) => o.title === l.title)) {
       throw new ConstraintViolation('registry_lists_title_key');
     }
