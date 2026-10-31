@@ -73,6 +73,18 @@ describe('issues.setAnnex2', () => {
     expect(removed?.data).toEqual({ meta: { monday: monday(WEEK_2), removed: true } });
   });
 
+  it('audits a cleared editor (one empty paragraph) as removed, as the texts read it', async () => {
+    const head = await fx.headmaster();
+    expect(
+      await annex(head, {
+        type: 'doc',
+        content: [{ type: 'paragraph', attrs: { indent: 0 }, content: [] }],
+      }),
+    ).toMatchObject({ ok: true });
+    const [saved] = await fx.auditOf('issue.annex2_saved');
+    expect(saved?.data).toEqual({ meta: { monday: monday(WEEK_1), removed: true } });
+  });
+
   it('records the event without the text', async () => {
     const head = await fx.headmaster();
     await annex(head, richText('Tajná příloha'));

@@ -1,5 +1,6 @@
 import { defineUseCase } from '@/application/core';
 import { issueAnnex2Input, issueTextsWriteOutput } from '@/contracts';
+import { isRichDocEmpty } from '@/domain/richtext';
 
 import { editTexts } from './texts-flow';
 
@@ -22,7 +23,7 @@ export const setIssueAnnex2 = defineUseCase({
         expectedVersion: input.expectedVersion,
         texts: { annex2: input.body },
         event: 'issue.annex2_saved',
-        meta: { monday: input.monday, removed: input.body.content.length === 0 },
+        meta: { monday: input.monday, removed: isRichDocEmpty(input.body) },
       },
     );
   },
