@@ -201,3 +201,42 @@ describe('the future.report-prompt handler', () => {
     expect(await keys()).toEqual([`report.prompt:${wanted}:1`]);
   });
 });
+
+describe("the prompt after the mail at an akce's end (ADR 0035 item 7)", () => {
+  const sentEnded = (recipient: UserRecord, itemId: string) =>
+    world.workerDb.transaction(
+      { principal: system('job:test'), now: world.clock.now(), requestId: 'seed' },
+      { mode: 'write' },
+      (tx) =>
+        tx.mailLedger.skip({
+          dedupeKey: `report.ended:${itemId}`,
+          template: 'report.ended',
+          recipientId: recipient.id,
+          subjectId: itemId,
+          code: 'skipped.stale',
+        }),
+    );
+
+  it('skips prompt 1 when report.ended is in the ledger, and keeps prompt 2', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const id = await approved(author, { startDate: '2026-11-11' });
+    await sentEnded(author, id);
+    world.clock.set(at('2026-11-12'));
+    expect(await run()).toEqual({ kind: 'done', code: 'none' });
+    expect(await queued()).toEqual([]);
+
+    world.clock.set(at('2026-11-19'));
+    expect(await run()).toEqual({ kind: 'done', code: 'prompted' });
+    expect(await keys()).toEqual([`report.prompt:${id}:2`]);
+  });
+
+  it('still sends prompt 1 for an akce whose end mail was never written, and only that one skips', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const mailed = await approved(author, { startDate: '2026-11-11' });
+    const other = await approved(author, { startDate: '2026-11-11' });
+    await sentEnded(author, mailed);
+    world.clock.set(at('2026-11-12'));
+    await run();
+    expect(await keys()).toEqual([`report.prompt:${other}:1`]);
+  });
+});

@@ -15,6 +15,7 @@ import { schoolYear } from '@/domain/cs';
 import type { IssueStatus } from '@/domain/review';
 import { addDays, calDate, toIsoDate } from '@/domain/time';
 
+import { lateReportFixtures } from '../../../test/support/late-reports';
 import { createFakeMail } from '../../../test/support/fake-mail';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
@@ -22,6 +23,7 @@ import { JOB_HANDLERS } from './index';
 
 const world = setupWorld();
 const points = pointFixtures(world);
+const late = lateReportFixtures(world);
 
 /** Monday 2 November 2026: the deadline is Saturday 31 October 20.00 Prague, 19.00Z. */
 const MONDAY = calDate(2026, 11, 2);
@@ -288,5 +290,121 @@ describe('the mail that goes out', () => {
     await runAt(OPEN);
     await afterwards(head, { status: 'blocked' });
     expect(await deliver(head)).toEqual({ kind: 'done', code: 'skipped.stale' });
+  });
+});
+
+describe('the late reports of the porada (ADR 0035)', () => {
+  // A report on Sunday 1 November ending at 21.00 closes at 23.00 Prague (22.00Z), after the deadline.
+  const LAST_CLOSE = new Date('2026-11-01T22:00:00Z');
+  const SUNDAY = { day: '2026-11-01', timeTo: '21:00' };
+  const lateKey = (user: UserRecord, day = KEY_DAY) => `headmaster.late-summary:${user.id}:${day}`;
+  const secondAt = (minutes: number) => new Date(LAST_CLOSE.getTime() + minutes * MINUTE);
+
+  /** Runs the queued mail of `key` through mail.send and returns the text sent. */
+  async function deliver(
+    to: UserRecord,
+    template: 'headmaster.summary' | 'headmaster.late-summary',
+  ) {
+    const mail = (await queued()).find(
+      (q) => q.data.template === template && q.data.recipientId === to.id,
+    );
+    const outcome = await JOB_HANDLERS['mail.send'](
+      { ...deps(), mail: fake },
+      {
+        id: randomUUID(),
+        data: mail!.data as Parameters<(typeof JOB_HANDLERS)['mail.send']>[1]['data'],
+        attempt: 1,
+        dedupeKey: mail!.key,
+        redriven: false,
+      },
+    );
+    return { outcome, text: fake.calls.at(-1)?.mail.text ?? '' };
+  }
+
+  it('adds the count and the last close to the first summary', async () => {
+    const head = await headmaster();
+    await issueRow();
+    await late.akce(await author(), SUNDAY);
+    await late.report(await author(), { day: '2026-11-01', timeTo: null }, 'draft', MONDAY);
+    await runAt(OPEN);
+    const { outcome, text } = await deliver(head, 'headmaster.summary');
+    expect(outcome).toMatchObject({ code: 'sent' });
+    expect(text).toContain('Pozdní zprávy, které ještě chybí: 2.');
+    expect(text).toContain('23.00');
+  });
+
+  it('leaves the line out when no report is late', async () => {
+    const head = await headmaster();
+    await issueRow();
+    await late.akce(await author(), { day: '2026-10-30', timeTo: '15:00' }); // closes with the deadline
+    await runAt(OPEN);
+    await deliver(head, 'headmaster.summary');
+    expect(fake.calls.at(-1)?.mail.text).not.toContain('Pozdní zprávy');
+  });
+
+  it('sends the second summary from five minutes after the last close, for two hours, once', async () => {
+    const head = await headmaster();
+    await issueRow();
+    await late.akce(await author(), SUNDAY);
+    expect(await runAt(secondAt(5 - 1))).toEqual({ kind: 'done', code: 'none' });
+    expect(await queued()).toEqual([]);
+    expect(await runAt(secondAt(5))).toEqual({ kind: 'done', code: 'summarised' });
+    expect(await keys()).toEqual([lateKey(head)]);
+    await runAt(secondAt(60));
+    await runAt(secondAt(119));
+    expect(await keys()).toEqual([lateKey(head)]);
+    expect(await runAt(secondAt(120))).toEqual({ kind: 'done', code: 'none' });
+  });
+
+  it('counts what was handed in and what is still missing', async () => {
+    const head = await headmaster();
+    await issueRow();
+    await late.akce(await author(), SUNDAY); // nobody started it
+    await late.report(await author(), SUNDAY, 'draft', MONDAY);
+    await late.report(await author(), SUNDAY, 'submitted', MONDAY);
+    await late.report(await author(), SUNDAY, 'approved', MONDAY);
+    await runAt(secondAt(5));
+    const { outcome, text } = await deliver(head, 'headmaster.late-summary');
+    expect(outcome).toMatchObject({ code: 'sent' });
+    expect(text).toContain('Odevzdáno: 2, chybí: 2.');
+  });
+
+  it('sends the second summary also when every late report was handed in', async () => {
+    const head = await headmaster();
+    await issueRow();
+    await late.report(await author(), SUNDAY, 'submitted', MONDAY);
+    await runAt(secondAt(5));
+    expect(await keys()).toEqual([lateKey(head)]);
+    const { text } = await deliver(head, 'headmaster.late-summary');
+    expect(text).toContain('Odevzdáno: 1, chybí: 0.');
+  });
+
+  it('sends none when the porada has no late report, or when it is skipped', async () => {
+    await headmaster();
+    await issueRow();
+    expect(await runAt(secondAt(5))).toEqual({ kind: 'done', code: 'none' });
+    await late.akce(await author(), SUNDAY);
+    await issueRow('skipped');
+    expect(await runAt(secondAt(5))).toEqual({ kind: 'done', code: 'none' });
+    expect(await queued()).toEqual([]);
+  });
+
+  it('is a key of its own per headmaster and Monday, apart from the first summary', async () => {
+    const [first, second] = [await headmaster(), await headmaster()];
+    await issueRow();
+    await late.akce(await author(), SUNDAY);
+    await runAt(OPEN);
+    await runAt(secondAt(5));
+    expect(await keys()).toEqual([key(first), key(second), lateKey(first), lateKey(second)].sort());
+  });
+
+  it('says nothing at send time once the window is over', async () => {
+    const head = await headmaster();
+    await issueRow();
+    await late.akce(await author(), SUNDAY);
+    await runAt(secondAt(5));
+    world.clock.set(secondAt(121));
+    const { outcome } = await deliver(head, 'headmaster.late-summary');
+    expect(outcome).toEqual({ kind: 'done', code: 'skipped.stale' });
   });
 });

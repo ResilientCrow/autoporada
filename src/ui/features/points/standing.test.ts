@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { toDeadlineRule } from '@/contracts';
-import { DEFAULT_DEADLINE, issueSlots, pointMonday, type LateFacts } from '@/domain/calendar';
+import { toDeadlineRule, toIssueRows } from '@/contracts';
+import {
+  DEFAULT_DEADLINE,
+  isLateReport,
+  issueSlots,
+  pointMonday,
+  reportCloses,
+  type LateFacts,
+} from '@/domain/calendar';
 import { addDays, parseIsoDate, parseWallTime, toIsoDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
@@ -370,5 +377,79 @@ describe('reportFactsOf', () => {
 
   it('ignores an end time that is not one', () => {
     expect(reportFactsOf('report', { ...typed, timeTo: '25:99' })?.timeTo).toBeNull();
+  });
+});
+
+describe('the standing line of a report when the porada was moved (ADR 0034)', () => {
+  // Monday 2 November's porada is held on Wednesday the 4th; its deadline is Monday 20.00 (19.00Z).
+  const moved = {
+    monday: '2026-11-02',
+    meetingDate: '2026-11-04',
+    deadlineAt: '2026-11-02T19:00:00.000Z',
+    status: 'open' as const,
+    version: 2,
+  };
+  const wire = (now: string) => input(now, '2026-11-02', [moved]);
+  const TUESDAY_18: LateFacts = {
+    lastDay: parseIsoDate('2026-11-03'),
+    timeTo: parseWallTime('18:00'),
+  };
+
+  it('closes two hours after the event and names the meeting day, not the Monday', () => {
+    expect(textOf(wire('2026-11-03T16:00:00.000Z'), TUESDAY_18)).toEqual({
+      text: `Zprávu odevzdejte do 3.${NB}11. v${NB}20.00; půjde na poradu 4.${NB}11.`,
+      urgent: true,
+    });
+  });
+
+  it('is not late for an event on the meeting day itself, nor on the Monday before the deadline', () => {
+    const wednesday: LateFacts = { lastDay: parseIsoDate('2026-11-04'), timeTo: null };
+    const monday: LateFacts = {
+      lastDay: parseIsoDate('2026-11-02'),
+      timeTo: parseWallTime('10:00'),
+    };
+    const given = wire('2026-10-30T10:00:00.000Z');
+    expect(textOf(given, wednesday)).toEqual(textOf(given));
+    expect(textOf(given, monday)).toEqual(textOf(given));
+  });
+
+  it('caps the close at 00.00 of the meeting day, which is Wednesday, not Monday', () => {
+    const late: LateFacts = { lastDay: parseIsoDate('2026-11-03'), timeTo: parseWallTime('23:30') };
+    expect(textOf(wire('2026-11-03T20:00:00.000Z'), late)?.text).toBe(
+      `Zprávu odevzdejte do 3.${NB}11. ve${NB}24.00; půjde na poradu 4.${NB}11.`,
+    );
+  });
+
+  // The standing line must agree with the rule the submit uses, over a table of events and instants.
+  it.each([
+    ['2026-11-01', '12:00'],
+    ['2026-11-02', '21:00'],
+    ['2026-11-03', null],
+    ['2026-11-03', '18:00'],
+    ['2026-11-03', '23:00'],
+    ['2026-11-04', '10:00'],
+  ] as const)('agrees with reportCloses and isLateReport for an event ending %s %s', (day, end) => {
+    const facts: LateFacts = {
+      lastDay: parseIsoDate(day),
+      timeTo: end === null ? null : parseWallTime(end),
+    };
+    const rows = toIssueRows([moved]);
+    const slot = issueSlots(rows, parseIsoDate('2026-11-02'), DEFAULT_DEADLINE).find(
+      (s) => toIsoDate(s.monday) === moved.monday,
+    )!;
+    for (const now of ['2026-11-02T12:00:00.000Z', '2026-11-03T12:00:00.000Z']) {
+      const standing = standingOf(wire(now), facts);
+      const closes = reportCloses(slot, facts);
+      const expected = isLateReport(slot, facts) && new Date(now).getTime() < closes.getTime();
+      if (expected) {
+        expect(standing).toMatchObject({
+          kind: 'late',
+          meeting: slot.meetingDate,
+          closesAt: closes,
+        });
+      } else {
+        expect(standing?.kind).not.toBe('late');
+      }
+    }
   });
 });

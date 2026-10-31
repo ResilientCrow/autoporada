@@ -16,6 +16,7 @@ import { schoolYear } from '@/domain/cs';
 import { calDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { futureFixtures } from '../../../test/support/future';
+import { lateReportFixtures } from '../../../test/support/late-reports';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
@@ -23,6 +24,7 @@ import { JOB_HANDLERS } from './index';
 const world = setupWorld();
 const points = pointFixtures(world);
 const akce = futureFixtures(world);
+const late = lateReportFixtures(world);
 
 /** Monday 26 October 2026: deadline Saturday 24 October 20.00 (18.00Z, the night before the clocks go back). */
 const MONDAY = calDate(2026, 10, 26);
@@ -265,6 +267,48 @@ describe('the hard reminder (the deadline day, 12.00 Prague)', () => {
     expect(await keys()).toEqual([soft(user)]);
     await runAt(HARD);
     expect(await keys()).toEqual([hard(user), soft(user)].sort());
+  });
+});
+
+describe('the hard reminder leaves late reports alone (ADR 0035)', () => {
+  // Monday 26 October closes on Saturday 24th at 20.00 (18.00Z). An event on Sunday the 25th, the
+  // night the clocks go back, ending at 21.00 closes at 23.00 that day: that report has its own mails.
+  it('asks the author of a plain draft, not of a draft about a late event, returned or not', async () => {
+    const [plain, lateDraft, lateReturned, earlyReport, meetingDay] = [
+      await submitter(),
+      await submitter(),
+      await submitter(),
+      await submitter(),
+      await submitter(),
+    ];
+    world.clock.set(new Date('2026-10-20T08:00:00Z'));
+    await pointAt(plain, 'draft', '2026-10-20T08:00:00Z');
+    await late.report(lateDraft, { day: '2026-10-25', timeTo: '21:00' }, 'draft', MONDAY);
+    await late.report(lateReturned, { day: '2026-10-25', timeTo: '21:00' }, 'returned', MONDAY);
+    // an event that ended before the deadline, and one on the meeting day, are not late
+    await late.report(earlyReport, { day: '2026-10-23', timeTo: '15:00' }, 'draft', MONDAY);
+    await late.report(meetingDay, { day: '2026-10-26', timeTo: null }, 'draft', MONDAY);
+    await runAt(HARD);
+    expect(await keys()).toEqual([hard(plain), hard(earlyReport), hard(meetingDay)].sort());
+  });
+
+  it('asks an author who has a late report and a plain draft, for the plain one', async () => {
+    const user = await submitter();
+    await late.report(user, { day: '2026-10-25', timeTo: null }, 'draft', MONDAY);
+    await runAt(HARD);
+    expect(await keys()).toEqual([]);
+    await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
+    await runAt(HARD);
+    expect(await keys()).toEqual([hard(user)]);
+  });
+
+  it('judges lateness against the deadline the Monday really has', async () => {
+    // a deadline frozen at Sunday 23.30 is after the report's close (23.00): the report is not late
+    const user = await submitter();
+    await frozen(MONDAY, new Date('2026-10-25T22:30:00Z'));
+    await late.report(user, { day: '2026-10-25', timeTo: '21:00' }, 'draft', MONDAY);
+    await runAt(new Date('2026-10-25T11:00:00Z')); // 12.00 Prague on the deadline's day
+    expect(await keys()).toEqual([hard(user)]);
   });
 });
 
