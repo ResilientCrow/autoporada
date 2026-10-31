@@ -11,10 +11,11 @@ import type { CalDate } from '@/domain/time';
  * audit event it records.
  */
 export function ensureIssue(tx: Tx, monday: CalDate) {
+  const meetingDate = monday; // a new row meets on its Monday
   return tx.issues.ensure({
     monday,
-    meetingDate: monday,
+    meetingDate,
     schoolYear: schoolYear(monday),
-    deadlineAt: deadline(monday, DEADLINE_RULE),
+    deadlineAt: deadline(meetingDate, DEADLINE_RULE),
   });
 }

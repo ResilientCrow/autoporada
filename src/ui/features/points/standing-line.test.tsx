@@ -22,7 +22,7 @@ describe('StandingLine', () => {
   it('writes the porada and the deadline in one paragraph', () => {
     const html = render(input('2027-03-09T10:00:00.000Z', '2027-03-15'));
     expect(html).toContain(
-      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: neděle 14.${NB}3. v${NB}18.00.`,
+      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20.00.`,
     );
     expect(html).toMatch(/^<p[ >]/);
     expect(html).not.toContain(cs.points.standing.soon);
@@ -30,7 +30,7 @@ describe('StandingLine', () => {
   });
 
   it('adds the warning with the accent in the last 24 hours', () => {
-    const html = render(input('2027-03-14T10:00:00.000Z', '2027-03-15'));
+    const html = render(input('2027-03-13T10:00:00.000Z', '2027-03-15'));
     expect(html).toContain(`Zařadíme do porady z${NB}15.${NB}3.`);
     expect(html).toContain(cs.points.standing.soon);
     expect(html).toContain('bg-accent');
@@ -47,7 +47,7 @@ describe('StandingLine', () => {
   it('renders nothing when no porada is open', () => {
     const issues = Array.from({ length: 27 }, (_, week) => ({
       monday: new Date(Date.UTC(2027, 2, 15 + 7 * week)).toISOString().slice(0, 10),
-      deadlineAt: '2027-03-14T17:00:00.000Z',
+      deadlineAt: '2027-03-13T19:00:00.000Z',
       status: 'skipped' as const,
       version: 1,
     }));
@@ -55,6 +55,6 @@ describe('StandingLine', () => {
   });
 
   it('is clean for the Content-Security-Policy', () => {
-    expect(cspMarkupProblems(render(input('2027-03-14T10:00:00.000Z', '2027-03-15')))).toEqual([]);
+    expect(cspMarkupProblems(render(input('2027-03-13T10:00:00.000Z', '2027-03-15')))).toEqual([]);
   });
 });

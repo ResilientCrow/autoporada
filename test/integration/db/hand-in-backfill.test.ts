@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { DEFAULT_DEADLINE, submitMonday, type DeadlineRule } from '@/domain/calendar';
+import { submitMonday, type DeadlineRule } from '@/domain/calendar';
 import { addDays, parseIsoDate, parseWallTime, toIsoDate, wallClockToInstant } from '@/domain/time';
 import { MIGRATIONS_DIR } from '@/infra/migrate';
 
@@ -112,7 +112,7 @@ describe('the hand-in Monday backfill (migration 0027)', () => {
     await database.owner(
       `INSERT INTO issues (monday, meeting_date, school_year, deadline_at)
        VALUES ('2026-10-26', '2026-10-26', '2026/2027', $1)`,
-      [wallClockToInstant(parseIsoDate('2026-10-25'), DEFAULT_DEADLINE.time)],
+      [wallClockToInstant(parseIsoDate('2026-10-25'), LEGACY_RULE.time)],
     );
     const id = await handedIn(new Date('2026-10-21T08:00:00Z'));
     await migrate();

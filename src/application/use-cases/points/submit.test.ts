@@ -112,9 +112,9 @@ describe('points.submit', () => {
     });
 
     it.each([
-      ['a minute before', '2026-10-25T16:59:00Z', FIRST_MONDAY],
-      ['at', '2026-10-25T17:00:00Z', calDate(2026, 11, 2)],
-    ])('submitted %s the Sunday 18.00 deadline, lands on %s', async (_when, now, monday) => {
+      ['a minute before', '2026-10-24T17:59:00Z', FIRST_MONDAY],
+      ['at', '2026-10-24T18:00:00Z', calDate(2026, 11, 2)],
+    ])('submitted %s the Saturday 20.00 deadline, lands on %s', async (_when, now, monday) => {
       world.clock.set(new Date(now));
       const author = await user();
       const id = await start(author, 'pokyn');

@@ -67,7 +67,7 @@ describe('placementMonday', () => {
   });
 
   describe('a point waiting for review keeps its Monday until that porada is over', () => {
-    // Sunday 2026-10-25 21:00 Prague: the deadline of Monday 2026-10-26 (18:00) has passed.
+    // Sunday 2026-10-25 21:00 Prague: the deadline of Monday 2026-10-26 (Saturday 20:00) has passed.
     const AFTER_DEADLINE = new Date('2026-10-25T20:00:00Z');
 
     it('keeps a point handed in on time under its Monday while reviewers finish the issue', () => {
@@ -75,7 +75,7 @@ describe('placementMonday', () => {
     });
 
     it('does not push a point forward to the submit Monday', () => {
-      // Friday 2026-10-16: the submit Monday is 2026-10-19 until Sunday evening, then 2026-10-26.
+      // Friday 2026-10-16: the submit Monday is 2026-10-19 until Saturday 20:00, then 2026-10-26.
       expect(iso(placementMonday(d('2026-10-19'), new Date('2026-10-16T10:00:00Z'), []))).toBe(
         '2026-10-19',
       );
@@ -169,7 +169,7 @@ describe('placementMonday', () => {
 });
 
 describe('pointMonday', () => {
-  // The deadline of Monday 2026-10-26 is Sunday 2026-10-25 18:00 Prague (16:00Z).
+  // The deadline of Monday 2026-10-26 is Saturday 2026-10-24 20:00 Prague (18:00Z).
   const ON_TIME = new Date('2026-10-23T10:00:00Z');
   const LATE = new Date('2026-10-25T20:00:00Z');
   const today = (now: Date) => instantToWallClock(now).date;

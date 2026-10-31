@@ -18,7 +18,7 @@ const world = setupWorld();
 const { start, snapshot } = pointFixtures(world);
 
 const NEXT_MONDAY = calDate(2026, 11, 2);
-/** Sunday 25 October 2026, 21.00 in Prague: the deadline of 26 October has passed. */
+/** Sunday 25 October 2026, 21.00 in Prague: the deadline of 26 October (Saturday 20.00) has passed. */
 const AFTER_DEADLINE = new Date('2026-10-25T20:00:00Z');
 
 /** One report type for the whole test: its name is unique. */

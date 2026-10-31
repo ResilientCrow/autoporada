@@ -25,7 +25,7 @@ same word.
 | uvolnění z výuky | `point4` registry lists | Students exempted from a subject based on certificates or exams (point 4). |
 | registr | `registry` | Named student lists that feed Příloha 1 and point 4. |
 | trvalý / jednorázový | `standing` / `once` | Whether a POKYNY item carries over to the next issue. |
-| uzávěrka | `deadline` | Submission deadline for an issue (default Sunday 18:00). It is fixed when the issue row is created, so a deadline already shown never moves. A point handed in after it goes to the next meeting whose deadline is still ahead. |
+| uzávěrka | `deadline` | Submission deadline for an issue (default Saturday 20:00 for a Monday meeting: two days before the meeting date, counted back from it). It is fixed when the issue row is created, so a deadline already shown never moves. A point handed in after it goes to the next meeting whose deadline is still ahead. |
 | porada se nekoná | `issue` status `skipped` | A meeting the headmaster cancelled. Its points go to the next meeting; „Porada se koná“ undoes it. |
 | dříve použité osoby | `people.recent` | People the author already put into their own recent points, offered again with their salutation, class and genitive. Nobody else sees them, and there is no separate list. |
 | školní rok | `schoolYear` | School year, e.g. „2026/2027“. Switches on 1 September. |

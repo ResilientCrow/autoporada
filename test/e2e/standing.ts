@@ -16,7 +16,7 @@ import { points } from '@/ui/copy';
 
 /**
  * The standing line of a draft as the app words it at `now`, in both of its variants: before the
- * deadline of the porada it goes to, or, from Sunday 18.00 to the end of Monday, after the
+ * deadline of the porada it goes to, or, from Saturday 20.00 to the end of Monday, after the
  * deadline of the porada just held. Worked out with the app's own calendar functions and copy, on
  * the same real clock the server reads, so it is right on any day: the porada is the first Monday
  * from the submit Monday that is open (no skipped Monday lies that near), and it is the same in

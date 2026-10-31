@@ -66,8 +66,8 @@ function closedPorada(
 /**
  * The standing of a point that is not in yet (design sections 3 and 6). `placement` is the first
  * Monday from the submit Monday on that is neither skipped nor generated. When the latest porada
- * that is not skipped has closed and is still ahead (today is its Monday or earlier, i.e. the
- * Sunday evening and the meeting day itself), the line says the deadline has passed, whether or
+ * that is not skipped has closed and is still ahead (today is its Monday or earlier, i.e. from the
+ * deadline on Saturday evening to the meeting day itself), the line says the deadline has passed, whether or
  * not a skipped Monday lies between it and the submit Monday; from the day after the porada it
  * names the next deadline. Null when no Monday of the window is open.
  */

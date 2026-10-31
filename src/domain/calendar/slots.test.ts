@@ -149,9 +149,9 @@ describe('submitMonday', () => {
   });
 
   it('does not let a skipped slot with a later deadline take a hand-in that missed the next one', () => {
-    // Slot 19 Oct is skipped and its deadline was moved to Tuesday; slot 26 Oct closes Sunday
-    // 25 Oct 18.00 (16.00Z). A hand-in on Sunday 25 Oct 20.00 is after 26 Oct's deadline.
-    const now = new Date('2026-10-25T19:00:00Z');
+    // Slot 19 Oct is skipped and its deadline was moved to Tuesday; slot 26 Oct closes Saturday
+    // 24 Oct 20.00 (18.00Z). A hand-in on Saturday 24 Oct 21.00 is after 26 Oct's deadline.
+    const now = new Date('2026-10-24T19:00:00Z');
     const slots = slotsAt(now, [row('2026-10-19', 'skipped', '2026-10-27T10:00:00Z')]);
     expect(iso(submitMonday(now, slots, RULE))).toBe('2026-11-02');
   });
@@ -161,22 +161,22 @@ describe('submitMonday', () => {
     (status) => {
       const now = new Date('2026-10-17T12:00:00Z');
       const frozen = row('2026-10-19', status, '2026-10-17T10:00:00Z');
-      // The frozen deadline is behind us; the computed Sunday 18.00 would not have been.
+      // The frozen deadline is behind us; the computed Saturday 20.00 would not have been.
       expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe('2026-10-19');
       expect(iso(submitMonday(now, slotsAt(now, [frozen]), RULE))).toBe('2026-10-26');
     },
   );
 
   it('keeps a frozen deadline that is later than the computed one', () => {
-    // Computed: Sunday 2026-10-18 18:00 Prague = 16:00Z. This row was frozen at 20:00Z.
-    const now = new Date('2026-10-18T17:00:00Z');
-    const late = row('2026-10-19', 'open', '2026-10-18T20:00:00Z');
+    // Computed: Saturday 2026-10-17 20:00 Prague = 18:00Z. This row was frozen at 21:00Z.
+    const now = new Date('2026-10-17T19:00:00Z');
+    const late = row('2026-10-19', 'open', '2026-10-17T21:00:00Z');
     expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe('2026-10-26');
     expect(iso(submitMonday(now, slotsAt(now, [late]), RULE))).toBe('2026-10-19');
   });
 
   it('takes the frozen deadline of a stored slot over the computed one', () => {
-    // Computed: Sunday 2026-10-18 18:00 Prague = 16:00Z. This row was frozen a day earlier.
+    // Computed: Saturday 2026-10-17 20:00 Prague = 18:00Z. This row was frozen eight hours earlier.
     const now = new Date('2026-10-17T12:00:00Z');
     const early = row('2026-10-19', 'open', '2026-10-17T10:00:00Z');
     expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe('2026-10-19');
@@ -194,8 +194,8 @@ describe('submitMonday', () => {
   });
 
   it('goes by the deadline of a slot, not by its meeting date', () => {
-    // The 19 Oct slot meets on Friday 23 Oct; its frozen deadline is still Sunday 18 Oct 18.00.
-    const now = new Date('2026-10-18T17:00:00Z');
+    // The 19 Oct slot meets on Friday 23 Oct; its frozen deadline is still Saturday 17 Oct 20.00.
+    const now = new Date('2026-10-17T19:00:00Z');
     const moved = row('2026-10-19', 'open', undefined, '2026-10-23');
     expect(iso(submitMonday(now, slotsAt(now, [moved]), RULE))).toBe('2026-10-26');
   });
@@ -219,31 +219,39 @@ describe('submitMonday', () => {
     );
   });
 
+  it('goes on from this week with no slots at all, either side of Saturday 20.00', () => {
+    expect(iso(submitMonday(new Date('2026-10-24T17:59:59Z'), [], RULE))).toBe('2026-10-26');
+    expect(iso(submitMonday(new Date('2026-10-24T18:00:00Z'), [], RULE))).toBe('2026-11-02');
+  });
+
   it('goes on from this week with no slots at all', () => {
     const now = new Date('2026-10-21T10:00:00Z');
     expect(iso(submitMonday(now, [], RULE))).toBe('2026-10-26');
   });
 
   it.each([
-    ['2026-10-24T23:00:00Z', '2026-10-26'],
-    ['2026-10-25T16:59:59Z', '2026-10-26'],
-    ['2026-10-25T17:00:00Z', '2026-11-02'],
+    ['2026-10-23T22:00:00Z', '2026-10-26'],
+    ['2026-10-24T17:59:59Z', '2026-10-26'],
+    ['2026-10-24T18:00:00Z', '2026-11-02'],
     ['2026-10-25T23:59:59Z', '2026-11-02'],
-    ['2027-03-27T23:00:00Z', '2027-03-29'],
-    ['2027-03-28T15:59:59Z', '2027-03-29'],
-    ['2027-03-28T16:00:00Z', '2027-04-05'],
+    ['2027-03-26T22:00:00Z', '2027-03-29'],
+    ['2027-03-27T18:59:59Z', '2027-03-29'],
+    ['2027-03-27T19:00:00Z', '2027-04-05'],
     ['2027-03-28T22:00:00Z', '2027-04-05'],
-  ])('at %s the submit Monday is %s (Europe/Prague DST changes)', (at, monday) => {
-    const now = new Date(at);
-    expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe(monday);
-  });
+  ])(
+    'at %s the submit Monday is %s (Saturday 20.00 either side of the DST weekends)',
+    (at, monday) => {
+      const now = new Date(at);
+      expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe(monday);
+    },
+  );
 
   it('reads a frozen deadline that differs from the computed one across the DST changes', () => {
-    // Computed: 17:00Z (autumn) and 16:00Z (spring). These rows were frozen an hour later.
-    const autumn = row('2026-10-26', 'open', '2026-10-25T18:00:00Z');
-    const spring = row('2027-03-29', 'open', '2027-03-28T17:00:00Z');
-    const autumnNow = new Date('2026-10-25T17:30:00Z');
-    const springNow = new Date('2027-03-28T16:30:00Z');
+    // Computed: 18:00Z (autumn) and 19:00Z (spring). These rows were frozen an hour later.
+    const autumn = row('2026-10-26', 'open', '2026-10-24T19:00:00Z');
+    const spring = row('2027-03-29', 'open', '2027-03-27T20:00:00Z');
+    const autumnNow = new Date('2026-10-24T18:30:00Z');
+    const springNow = new Date('2027-03-27T19:30:00Z');
     expect(iso(submitMonday(autumnNow, slotsAt(autumnNow), RULE))).toBe('2026-11-02');
     expect(iso(submitMonday(autumnNow, slotsAt(autumnNow, [autumn]), RULE))).toBe('2026-10-26');
     expect(iso(submitMonday(springNow, slotsAt(springNow), RULE))).toBe('2027-04-05');
@@ -251,6 +259,7 @@ describe('submitMonday', () => {
   });
 
   it('uses a frozen deadline on each side of the DST changes', () => {
+    // Old rows frozen on Sunday 18.00 (ADR 0032 item 8): deliberately later than the computed deadline.
     const autumn = row('2026-10-26', 'open', '2026-10-25T17:00:00Z');
     const spring = row('2027-03-29', 'open', '2027-03-28T16:00:00Z');
     const at = (text: string, rows: IssueRow[]) => {

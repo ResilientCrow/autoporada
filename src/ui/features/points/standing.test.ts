@@ -28,12 +28,12 @@ const textOf = (given: StandingInput) => {
 };
 
 describe('the standing line before the deadline', () => {
-  // Tuesday 9 March 2027, 11.00: the porada of the 15th closes on Sunday the 14th at 18.00.
+  // Tuesday 9 March 2027, 11.00: the porada of the 15th closes on Saturday the 13th at 20.00.
   const TUESDAY = input('2027-03-09T10:00:00.000Z', '2027-03-15');
 
   it('names the porada the point goes to and its deadline, with the weekday', () => {
     expect(textOf(TUESDAY)).toEqual({
-      text: `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: neděle 14.${NB}3. v${NB}18.00.`,
+      text: `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20.00.`,
       urgent: false,
     });
   });
@@ -55,15 +55,15 @@ describe('the standing line before the deadline', () => {
   });
 
   it('names the Monday after a skipped one', () => {
-    const skipped = issue('2027-03-15', '2027-03-14T17:00:00.000Z', 'skipped');
+    const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', [skipped]));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: neděle 21.${NB}3. v${NB}18.00.`,
+      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20.00.`,
     );
   });
 
   it('moves past a generated issue too', () => {
-    const generated = issue('2027-03-15', '2027-03-14T17:00:00.000Z', 'generated');
+    const generated = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'generated');
     expect(textOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', [generated]))?.text).toContain(
       `porady z${NB}22.${NB}3.`,
     );
@@ -72,31 +72,31 @@ describe('the standing line before the deadline', () => {
   it('is the before text on the Tuesday after the meeting, for the next porada', () => {
     const result = textOf(input('2027-03-16T08:00:00.000Z', '2027-03-22'));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: neděle 21.${NB}3. v${NB}18.00.`,
+      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20.00.`,
     );
   });
 });
 
 describe('the last 24 hours', () => {
-  // The deadline is Sunday 14 March 2027, 18.00 = 17.00 UTC.
+  // The deadline is Saturday 13 March 2027, 20.00 = 19.00 UTC.
   const at = (now: string) => textOf(input(now, '2027-03-15'));
 
   it.each([
-    ['25 hours before', '2027-03-13T16:00:00.000Z', false],
-    ['24 hours and a minute before', '2027-03-13T16:59:00.000Z', false],
-    ['exactly 24 hours before', '2027-03-13T17:00:00.000Z', false],
-    ['24 hours minus a minute before', '2027-03-13T17:01:00.000Z', true],
-    ['a minute before', '2027-03-14T16:59:00.000Z', true],
+    ['25 hours before', '2027-03-12T18:00:00.000Z', false],
+    ['24 hours and a minute before', '2027-03-12T18:59:00.000Z', false],
+    ['exactly 24 hours before', '2027-03-12T19:00:00.000Z', false],
+    ['24 hours minus a minute before', '2027-03-12T19:01:00.000Z', true],
+    ['a minute before', '2027-03-13T18:59:00.000Z', true],
   ])('%s: urgent is %s', (_name, now, urgent) => {
     expect(at(now)?.urgent).toBe(urgent);
   });
 
-  // The computed deadline is Sunday 14 March 18.00 (17.00 UTC); the row kept Monday 15 March 08.00 (07.00 UTC).
+  // The computed deadline is Saturday 13 March 20.00 (19.00 UTC); the row kept Monday 15 March 08.00 (07.00 UTC).
   const ROW = issue('2027-03-15', '2027-03-15T07:00:00.000Z', 'open');
 
   it('measures against the deadline of the row, not the computed one', () => {
-    // 21 hours before the computed deadline, 35 before the row's: only the row's counts.
-    const result = textOf(input('2027-03-13T20:00:00.000Z', '2027-03-15', [ROW]));
+    // 21 hours before the computed deadline, 57 before the row's: only the row's counts.
+    const result = textOf(input('2027-03-12T22:00:00.000Z', '2027-03-15', [ROW]));
     expect(result?.urgent).toBe(false);
   });
 
@@ -108,8 +108,8 @@ describe('the last 24 hours', () => {
 
   it('measures against the deadline of the porada the point goes to', () => {
     // 15 March is skipped: the point goes to the 22nd, whose deadline is a week later.
-    const skipped = issue('2027-03-15', '2027-03-14T17:00:00.000Z', 'skipped');
-    const result = textOf(input('2027-03-14T10:00:00.000Z', '2027-03-15', [skipped]));
+    const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
+    const result = textOf(input('2027-03-13T10:00:00.000Z', '2027-03-15', [skipped]));
     expect(result?.urgent).toBe(false);
   });
 
@@ -119,9 +119,12 @@ describe('the last 24 hours', () => {
 });
 
 describe('the standing line after the deadline', () => {
-  it('on a Sunday evening after 18.00 says the porada of tomorrow has closed', () => {
-    // Sunday 14 March 2027, 18.30: the submit Monday is the 22nd.
-    const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-22'));
+  it.each([
+    ['on the Saturday evening at 20.00', '2027-03-13T19:00:00.000Z'],
+    ['on the Sunday', '2027-03-14T17:30:00.000Z'],
+  ])('%s says the porada of the 15th has closed', (_when, now) => {
+    // The submit Monday is the 22nd.
+    const result = textOf(input(now, '2027-03-22'));
     expect(result).toEqual({
       text: `Uzávěrka porady z${NB}15.${NB}3. už proběhla. Bod půjde do porady z${NB}22.${NB}3.`,
       urgent: false,
@@ -141,7 +144,7 @@ describe('the standing line after the deadline', () => {
   });
 
   it('names the Monday after a skipped one as the porada the point goes to', () => {
-    const skipped = issue('2027-03-22', '2027-03-21T17:00:00.000Z', 'skipped');
+    const skipped = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-22', [skipped]));
     expect(result?.text).toBe(
       `Uzávěrka porady z${NB}15.${NB}3. už proběhla. Bod půjde do porady z${NB}29.${NB}3.`,
@@ -151,7 +154,7 @@ describe('the standing line after the deadline', () => {
   it('names the porada that closed even when the Monday after it is skipped', () => {
     // Sunday 14 March 2027, 18.30: the 15th has closed, the 22nd is skipped, so hand-ins go to
     // the 29th (the submit Monday the window names); the line still says the 15th has closed.
-    const skipped = issue('2027-03-22', '2027-03-21T17:00:00.000Z', 'skipped');
+    const skipped = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-29', [skipped]));
     expect(result?.text).toBe(
       `Uzávěrka porady z${NB}15.${NB}3. už proběhla. Bod půjde do porady z${NB}29.${NB}3.`,
@@ -159,10 +162,10 @@ describe('the standing line after the deadline', () => {
   });
 
   it('does not talk about a closed porada that is skipped: nobody meets', () => {
-    const skipped = issue('2027-03-15', '2027-03-14T17:00:00.000Z', 'skipped');
+    const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-15T08:00:00.000Z', '2027-03-22', [skipped]));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: neděle 21.${NB}3. v${NB}18.00.`,
+      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20.00.`,
     );
   });
 });
@@ -171,7 +174,7 @@ describe('without an open Monday', () => {
   it('has no standing when the 26 Mondays are all skipped', () => {
     const first = parseIsoDate('2027-03-15');
     const issues = Array.from({ length: 27 }, (_, week) =>
-      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-14T17:00:00.000Z', 'skipped'),
+      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-13T19:00:00.000Z', 'skipped'),
     );
     expect(standingOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', issues))).toBeNull();
   });

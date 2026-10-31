@@ -35,6 +35,14 @@ export function lastSlotMonday(today: CalDate): CalDate {
   return addDays(mondayOf(today), 7 * (PLACEMENT_WEEKS - 1));
 }
 
+/** A Monday nobody has touched: open, the meeting on the Monday, the deadline counted back from it. */
+const virtualRow = (monday: CalDate, rule: DeadlineRule): IssueRow => ({
+  monday,
+  meetingDate: monday,
+  deadlineAt: deadline(monday, rule),
+  status: 'open',
+});
+
 /**
  * The calendar at `today` (a Prague date): `rows`, as `issues.calendar(today)` reads them, plus
  * a virtual slot for each Monday without a row from this week's Monday up to
@@ -51,13 +59,7 @@ export function issueSlots(
   const last = lastSlotMonday(today);
   for (let monday = mondayOf(today); compareDates(monday, last) <= 0; monday = addDays(monday, 7)) {
     if (stored.has(toIsoDate(monday))) continue;
-    slots.push({
-      monday,
-      meetingDate: monday,
-      deadlineAt: deadline(monday, rule),
-      status: 'open',
-      stored: false,
-    });
+    slots.push({ ...virtualRow(monday, rule), stored: false });
   }
   return slots.sort((a, b) => compareDates(a.monday, b.monday));
 }
@@ -77,7 +79,7 @@ export function submitMonday(now: Date, slots: readonly IssueSlot[], rule: Deadl
   const last = slots.at(-1);
   const start = last ? addDays(last.monday, 7) : mondayOf(instantToWallClock(now).date);
   for (let monday = start; ; monday = addDays(monday, 7)) {
-    if (now.getTime() < deadline(monday, rule).getTime()) return monday;
+    if (now.getTime() < virtualRow(monday, rule).deadlineAt.getTime()) return monday;
   }
 }
 

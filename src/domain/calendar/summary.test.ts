@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { summaryDue } from './index';
 
-/** Sunday 25 October 2026, 18.00 Prague: 17.00Z, the night the clocks go back. */
-const DEADLINE = new Date('2026-10-25T17:00:00Z');
+/** Saturday 24 October 2026, 20.00 Prague: 18.00Z, the night before the clocks go back. */
+const DEADLINE = new Date('2026-10-24T18:00:00Z');
 const MINUTE = 60_000;
 const at = (offsetMs: number) => new Date(DEADLINE.getTime() + offsetMs);
 

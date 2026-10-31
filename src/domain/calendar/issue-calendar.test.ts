@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   addDays,
+  instantToWallClock,
   isoWeekday,
   parseIsoDate as d,
   parseWallTime as t,
@@ -20,30 +21,65 @@ import {
 
 describe('deadline', () => {
   it.each([
-    ['2026-10-19', '2026-10-18T16:00:00.000Z'],
-    ['2026-10-26', '2026-10-25T17:00:00.000Z'],
-    ['2027-03-29', '2027-03-28T16:00:00.000Z'],
-  ])('issue %s closes at %s (Sunday 18:00 Prague, across DST)', (monday, iso) => {
-    expect(deadline(d(monday)).toISOString()).toBe(iso);
+    ['2026-10-19', '2026-10-17T18:00:00.000Z', 'Saturday 20.00 for a Monday meeting'],
+    ['2026-10-26', '2026-10-24T18:00:00.000Z', 'Saturday 24 October, still summer time'],
+    ['2027-03-29', '2027-03-27T19:00:00.000Z', 'Saturday 27 March, still winter time'],
+  ])('meeting %s closes at %s (%s)', (meeting, iso) => {
+    expect(deadline(d(meeting)).toISOString()).toBe(iso);
+  });
+
+  it('is Monday 20.00 for a Wednesday meeting', () => {
+    expect(deadline(d('2026-10-21')).toISOString()).toBe('2026-10-19T18:00:00.000Z');
+  });
+
+  it.each([
+    [
+      '2026-10-26',
+      '2026-10-24T18:00:00.000Z',
+      'the Monday after the clocks go back: Saturday before it, CEST',
+    ],
+    ['2026-10-27', '2026-10-25T19:00:00.000Z', 'Sunday 25 October itself, 20.00 is already CET'],
+    [
+      '2027-03-29',
+      '2027-03-27T19:00:00.000Z',
+      'the Monday after the clocks go forward: Saturday, CET',
+    ],
+    ['2027-03-30', '2027-03-28T18:00:00.000Z', 'Sunday 28 March itself, 20.00 is already CEST'],
+  ])(
+    'keeps 20.00 wall time over the DST weekends: meeting %s closes at %s (%s)',
+    (meeting, iso) => {
+      expect(deadline(d(meeting)).toISOString()).toBe(iso);
+    },
+  );
+
+  it('counts back from the meeting date, whatever its weekday (property)', () => {
+    fc.assert(
+      fc.property(
+        fc.date({ min: new Date('2026-01-01'), max: new Date('2030-12-31'), noInvalidDate: true }),
+        (day) => {
+          const meeting = instantToWallClock(day).date;
+          const { date, time } = instantToWallClock(deadline(meeting));
+          expect(toIsoDate(date)).toBe(toIsoDate(addDays(meeting, -2)));
+          expect(time).toEqual(t('20:00'));
+        },
+      ),
+    );
   });
 
   it('follows a configured rule', () => {
     const friday = { dayOffset: -3, time: t('12:00') };
     expect(deadline(d('2026-10-19'), friday).toISOString()).toBe('2026-10-16T10:00:00.000Z');
   });
-
-  it('refuses a day that is not a Monday', () => {
-    expect(() => deadline(d('2026-10-20'))).toThrow(RangeError);
-  });
 });
 
 describe('targetMonday', () => {
   it.each([
-    ['2026-10-18T15:59:00Z', '2026-10-19', 'Sunday 17:59 → tomorrow'],
-    ['2026-10-18T16:00:00Z', '2026-10-26', 'Sunday 18:00 sharp → next week'],
+    ['2026-10-17T17:59:00Z', '2026-10-19', 'Saturday 19:59 → the Monday after'],
+    ['2026-10-17T18:00:00Z', '2026-10-26', 'Saturday 20:00 sharp → next week'],
+    ['2026-10-18T10:00:00Z', '2026-10-26', 'Sunday → next week'],
     ['2026-10-19T08:00:00Z', '2026-10-26', 'meeting Monday → next week'],
     ['2026-10-14T10:00:00Z', '2026-10-19', 'mid-week → coming Monday'],
-    ['2026-12-27T20:00:00Z', '2027-01-04', 'across the new year'],
+    ['2026-12-26T19:00:00Z', '2027-01-04', 'across the new year'],
   ])('%s → %s (%s)', (now, monday) => {
     expect(toIsoDate(targetMonday(new Date(now)))).toBe(monday);
   });
@@ -64,9 +100,9 @@ describe('targetMonday', () => {
 });
 
 describe('issuePhase', () => {
-  const closes = new Date('2026-10-18T16:00:00Z');
+  const closes = new Date('2026-10-17T18:00:00Z');
   it('collects before the deadline and reviews from it on', () => {
-    expect(issuePhase(new Date('2026-10-18T15:59:59Z'), closes)).toBe('collecting');
+    expect(issuePhase(new Date('2026-10-17T17:59:59Z'), closes)).toBe('collecting');
     expect(issuePhase(closes, closes)).toBe('review');
   });
 });

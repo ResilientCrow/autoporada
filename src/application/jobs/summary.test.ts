@@ -23,7 +23,7 @@ import { JOB_HANDLERS } from './index';
 const world = setupWorld();
 const points = pointFixtures(world);
 
-/** Monday 2 November 2026: the deadline is Sunday 1 November 18.00 Prague, 17.00Z. */
+/** Monday 2 November 2026: the deadline is Saturday 31 October 20.00 Prague, 19.00Z. */
 const MONDAY = calDate(2026, 11, 2);
 const KEY_DAY = toIsoDate(MONDAY);
 const DEADLINE = deadline(MONDAY, DEFAULT_DEADLINE);

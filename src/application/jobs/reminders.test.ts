@@ -24,12 +24,12 @@ const world = setupWorld();
 const points = pointFixtures(world);
 const akce = futureFixtures(world);
 
-/** Monday 26 October 2026: deadline Sunday 25 October 18.00 (17.00Z, the night the clocks go back). */
+/** Monday 26 October 2026: deadline Saturday 24 October 20.00 (18.00Z, the night before the clocks go back). */
 const MONDAY = calDate(2026, 10, 26);
 const KEY_DAY = toIsoDate(MONDAY);
-/** Soft slot Friday 13.00 Prague (11.00Z); hard slot Sunday 12.00 Prague (11.00Z). */
-const SOFT = new Date('2026-10-23T11:00:00Z');
-const HARD = new Date('2026-10-25T11:00:00Z');
+/** Soft slot Thursday 13.00 Prague (11.00Z); hard slot Saturday 12.00 Prague (10.00Z), both before the deadline. */
+const SOFT = new Date('2026-10-22T11:00:00Z');
+const HARD = new Date('2026-10-24T10:00:00Z');
 const HOUR = 3_600_000;
 
 const job = (): JobInput<'reminders.deadline'> => ({
@@ -244,8 +244,8 @@ describe('the hard reminder (the deadline day, 12.00 Prague)', () => {
       await submitter(),
       await submitter(),
     ];
-    await pointAt(stale, 'draft', '2026-09-27T10:59:59Z');
-    await pointAt(fresh, 'draft', '2026-09-27T11:00:00Z');
+    await pointAt(stale, 'draft', '2026-09-26T09:59:59Z');
+    await pointAt(fresh, 'draft', '2026-09-26T10:00:00Z');
     await pointAt(later, 'returned', '2026-10-20T08:00:00Z', calDate(2026, 11, 2));
     await pointAt(submitted, 'submitted', '2026-10-20T08:00:00Z');
     await pointAt(approved, 'approved', '2026-10-20T08:00:00Z');
@@ -273,7 +273,7 @@ describe('which Monday, and when nothing is due', () => {
     const user = await submitter();
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
     await handedIn(user);
-    expect(await runAt(new Date('2026-10-25T17:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
+    expect(await runAt(new Date('2026-10-24T18:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
     expect(await runAt(new Date('2026-10-26T11:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
     expect(await runAt(new Date('2026-10-28T11:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
     expect(await queued()).toEqual([]);
@@ -308,10 +308,10 @@ describe('which Monday, and when nothing is due', () => {
     await runAt(SOFT);
     await runAt(HARD);
     expect(await queued()).toEqual([]);
-    // 2 November closes on Sunday 1 November, 18.00 Prague: soft Friday 13.00, hard Sunday 12.00.
-    await runAt(new Date('2026-10-30T12:00:00Z'));
+    // 2 November closes on Saturday 31 October, 20.00 Prague: soft Thursday 13.00, hard Saturday 12.00.
+    await runAt(new Date('2026-10-29T12:00:00Z'));
     expect(await keys()).toEqual([next('soft')]);
-    await runAt(new Date('2026-11-01T11:00:00Z'));
+    await runAt(new Date('2026-10-31T11:00:00Z'));
     expect(await keys()).toEqual([next('hard'), next('soft')].sort());
   });
 });

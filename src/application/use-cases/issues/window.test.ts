@@ -12,7 +12,7 @@ import { issueWindow } from './index';
 const world = setupWorld();
 const seeder = system('test.seed');
 
-// Tuesday 3 November 2026: the deadline of Monday 2 November (Sunday 18.00) has passed.
+// Tuesday 3 November 2026: the deadline of Monday 2 November (Saturday 31 October 20.00) has passed.
 const NOW = new Date('2026-11-03T10:00:00Z');
 const CURRENT = calDate(2026, 11, 2);
 const SUBMIT = calDate(2026, 11, 9);
@@ -96,9 +96,9 @@ describe('issues.window', () => {
     });
 
     it('ends at the last slot Monday, however far on the submit Monday is', async () => {
-      // Sunday 8 November, 19.00 in Prague: the deadline of 9 November has passed, so the submit
+      // Saturday 7 November, 21.00 in Prague: the deadline of 9 November has passed, so the submit
       // Monday is 16 November; the rows still end 25 weeks after this week's Monday.
-      world.clock.set(new Date('2026-11-08T18:00:00Z'));
+      world.clock.set(new Date('2026-11-07T20:00:00Z'));
       const user = await world.seed.user({ role: 'submitter' });
       const last = await seedIssue(weeks(CURRENT, 25), { status: 'skipped' });
       await seedIssue(weeks(CURRENT, 26), { status: 'skipped' });
@@ -145,10 +145,10 @@ describe('issues.window', () => {
     });
   });
 
-  // The deadline is Sunday 18.00 Prague time (17.00 UTC in November).
+  // The deadline is Saturday 20.00 Prague time (19.00 UTC in November).
   it.each([
-    ['just before Sunday 18.00', '2026-11-08T16:59:59Z', '2026-11-09'],
-    ['at Sunday 18.00', '2026-11-08T17:00:00Z', '2026-11-16'],
+    ['just before Saturday 20.00', '2026-11-07T18:59:59Z', '2026-11-09'],
+    ['at Saturday 20.00', '2026-11-07T19:00:00Z', '2026-11-16'],
   ])('moves the submit Monday on at the deadline: %s', async (_name, now, monday) => {
     world.clock.set(new Date(now));
     const user = await world.seed.user({ role: 'submitter' });

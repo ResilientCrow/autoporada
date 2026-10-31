@@ -10,22 +10,23 @@ import {
   type WallTime,
 } from '@/domain/time';
 
-/** When submissions for the issue of Monday M close: M + dayOffset at `time`, Prague time. */
+/** When hand-in for a porada closes: its meeting date + dayOffset at `time`, Prague time. */
 export interface DeadlineRule {
-  /** Days relative to the meeting Monday; -1 = the Sunday before. */
+  /** Days relative to the meeting date; -2 = two days before (the Saturday before a Monday). */
   readonly dayOffset: number;
   readonly time: WallTime;
 }
 
-export const DEFAULT_DEADLINE: DeadlineRule = { dayOffset: -1, time: parseWallTime('18:00') };
+/** Saturday 20.00 for a Monday meeting. */
+export const DEFAULT_DEADLINE: DeadlineRule = { dayOffset: -2, time: parseWallTime('20:00') };
 
 export function assertMonday(monday: CalDate): void {
   if (isoWeekday(monday) !== 1) throw new RangeError('An issue belongs to a Monday');
 }
 
-export function deadline(monday: CalDate, rule: DeadlineRule = DEFAULT_DEADLINE): Date {
-  assertMonday(monday);
-  return wallClockToInstant(addDays(monday, rule.dayOffset), rule.time);
+/** The deadline of a porada held on `meetingDate`, which need not be a Monday. */
+export function deadline(meetingDate: CalDate, rule: DeadlineRule = DEFAULT_DEADLINE): Date {
+  return wallClockToInstant(addDays(meetingDate, rule.dayOffset), rule.time);
 }
 
 /**

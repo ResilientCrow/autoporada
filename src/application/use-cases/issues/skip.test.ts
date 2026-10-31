@@ -12,7 +12,7 @@ import { setSkipped } from './index';
 const world = setupWorld();
 const seeder = system('test.seed');
 
-// Tuesday 3 November 2026: the deadline of Monday 2 November (Sunday 18.00) has passed.
+// Tuesday 3 November 2026: the deadline of Monday 2 November (Saturday 31 October 20.00) has passed.
 const NOW = new Date('2026-11-03T10:00:00Z');
 const CURRENT = calDate(2026, 11, 2);
 const SUBMIT = calDate(2026, 11, 9);
@@ -176,29 +176,29 @@ describe('issues.setSkipped', () => {
       expect((await act(head, 'skip', last)).ok).toBe(true);
     });
 
-    // The deadline is Sunday 18.00 Prague time; daylight saving ends 2026-10-25 and starts 2027-03-28.
+    // The deadline is Saturday 20.00 Prague time; daylight saving ends 2026-10-25 and starts 2027-03-28.
     it.each([
-      ['just before the deadline', '2026-11-08T16:59:59Z', calDate(2026, 11, 9)],
-      ['at the deadline', '2026-11-08T17:00:00Z', calDate(2026, 11, 16)],
-      ['just after the deadline', '2026-11-08T17:00:01Z', calDate(2026, 11, 16)],
+      ['just before the deadline', '2026-11-07T18:59:59Z', calDate(2026, 11, 9)],
+      ['at the deadline', '2026-11-07T19:00:00Z', calDate(2026, 11, 16)],
+      ['just after the deadline', '2026-11-07T19:00:01Z', calDate(2026, 11, 16)],
       [
-        'just before the deadline on the day clocks go back',
-        '2026-10-25T16:59:59Z',
+        'just before the deadline the night before the clocks go back',
+        '2026-10-24T17:59:59Z',
         calDate(2026, 10, 26),
       ],
       [
-        'after the deadline on the day clocks go back',
-        '2026-10-25T17:00:00Z',
+        'after the deadline the night before the clocks go back',
+        '2026-10-24T18:00:00Z',
         calDate(2026, 11, 2),
       ],
       [
-        'just before the deadline on the day clocks go forward',
-        '2027-03-28T15:59:59Z',
+        'just before the deadline the night before the clocks go forward',
+        '2027-03-27T18:59:59Z',
         calDate(2027, 3, 29),
       ],
       [
-        'after the deadline on the day clocks go forward',
-        '2027-03-28T16:00:00Z',
+        'after the deadline the night before the clocks go forward',
+        '2027-03-27T19:00:00Z',
         calDate(2027, 4, 5),
       ],
     ])('%s: the first Monday to skip moves with it', async (_label, now, first) => {
@@ -336,7 +336,7 @@ describe('issues.setSkipped', () => {
         status: 'skipped',
         version: 2,
       });
-      expect((await rowOf(SUBMIT)).deadlineAt).toEqual(new Date('2026-11-08T17:00:00Z'));
+      expect((await rowOf(SUBMIT)).deadlineAt).toEqual(new Date('2026-11-07T19:00:00Z'));
     });
 
     it('puts a September Monday in the next school year', async () => {

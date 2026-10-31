@@ -87,8 +87,8 @@ describe('loadSubject', () => {
 
   describe('the reminders, read at the time the mail goes', () => {
     const MONDAY = calDate(2026, 10, 26);
-    const SOFT = new Date('2026-10-23T11:00:00Z');
-    const HARD = new Date('2026-10-25T11:00:00Z');
+    const SOFT = new Date('2026-10-22T11:00:00Z');
+    const HARD = new Date('2026-10-24T10:00:00Z');
 
     it('gives the Monday while the soft slot is open, and nothing before or after', async () => {
       const user = await world.seed.user({ role: 'submitter' });
@@ -114,8 +114,8 @@ describe('loadSubject', () => {
       });
       world.clock.set(SOFT);
       expect(await load('reminder.soft', user.id)).toBeNull();
-      // The Monday after has its own soft slot, Friday 30 October 13.00 Prague.
-      world.clock.set(new Date('2026-10-30T12:00:00Z'));
+      // The Monday after has its own soft slot, Thursday 29 October 13.00 Prague.
+      world.clock.set(new Date('2026-10-29T12:00:00Z'));
       expect(await load('reminder.soft', user.id)).toEqual({
         monday: calDate(2026, 11, 2),
         hasWork: false,
@@ -130,7 +130,7 @@ describe('loadSubject', () => {
       world.clock.set(HARD);
       expect(await load('reminder.hard', author.id)).toEqual({ monday: MONDAY, hasWork: true });
       expect(await load('reminder.hard', idle.id)).toEqual({ monday: MONDAY, hasWork: false });
-      world.clock.set(new Date('2026-10-25T17:00:00Z'));
+      world.clock.set(new Date('2026-10-24T18:00:00Z'));
       expect(await load('reminder.hard', author.id)).toBeNull();
     });
   });

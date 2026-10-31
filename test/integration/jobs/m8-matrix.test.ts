@@ -1,6 +1,6 @@
 /**
- * The M8b cron jobs across the three autumn and spring weeks whose deadline Sunday (18.00 Prague)
- * is the day the clocks change, with a worker down for three hours, a skipped issue and a frozen
+ * The M8b cron jobs across the three autumn and spring weeks whose Sunday is the day the clocks
+ * change (the deadline, Saturday 20.00 Prague, falls the evening before), with a worker down for three hours, a skipped issue and a frozen
  * deadline. Every case checks the exact set of ledger keys the run enqueued, never a count. The
  * expected instants are written out in UTC on purpose: they are the oracle for the zone rules.
  */
@@ -31,9 +31,9 @@ const SLOW = 60_000;
 interface Week {
   readonly name: string;
   readonly monday: CalDate;
-  /** The deadline Sunday, the day the clocks change. */
+  /** The Sunday after the deadline, the day the clocks change. */
   readonly sunday: string;
-  /** Soft slot Friday 13.00, hard slot Sunday 12.00, deadline Sunday 18.00, all Prague. */
+  /** Soft slot Thursday 13.00, hard slot Saturday 12.00, deadline Saturday 20.00, all Prague. */
   readonly soft: string;
   readonly hard: string;
   readonly deadline: string;
@@ -50,9 +50,9 @@ const WEEKS: readonly Week[] = [
     name: 'autumn 2026, the clocks go back',
     monday: calDate(2026, 10, 26),
     sunday: '2026-10-25',
-    soft: '2026-10-23T11:00:00Z',
-    hard: '2026-10-25T11:00:00Z',
-    deadline: '2026-10-25T17:00:00Z',
+    soft: '2026-10-22T11:00:00Z',
+    hard: '2026-10-24T10:00:00Z',
+    deadline: '2026-10-24T18:00:00Z',
     morning: '2026-10-25T06:00:00Z',
     afternoon: '2026-10-25T14:00:00Z',
     midnight: '2026-10-25T23:00:00Z',
@@ -66,9 +66,9 @@ const WEEKS: readonly Week[] = [
     name: 'spring 2027, the clocks go forward',
     monday: calDate(2027, 3, 29),
     sunday: '2027-03-28',
-    soft: '2027-03-26T12:00:00Z',
-    hard: '2027-03-28T10:00:00Z',
-    deadline: '2027-03-28T16:00:00Z',
+    soft: '2027-03-25T12:00:00Z',
+    hard: '2027-03-27T11:00:00Z',
+    deadline: '2027-03-27T19:00:00Z',
     morning: '2027-03-28T05:00:00Z',
     afternoon: '2027-03-28T13:00:00Z',
     midnight: '2027-03-28T22:00:00Z',
@@ -82,9 +82,9 @@ const WEEKS: readonly Week[] = [
     name: 'autumn 2027, the clocks go back',
     monday: calDate(2027, 11, 1),
     sunday: '2027-10-31',
-    soft: '2027-10-29T11:00:00Z',
-    hard: '2027-10-31T11:00:00Z',
-    deadline: '2027-10-31T17:00:00Z',
+    soft: '2027-10-28T11:00:00Z',
+    hard: '2027-10-30T10:00:00Z',
+    deadline: '2027-10-30T18:00:00Z',
     morning: '2027-10-31T06:00:00Z',
     afternoon: '2027-10-31T14:00:00Z',
     midnight: '2027-10-31T23:00:00Z',
