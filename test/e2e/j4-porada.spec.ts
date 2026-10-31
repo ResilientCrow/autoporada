@@ -11,7 +11,7 @@ import type { Locator, Page } from '@playwright/test';
 
 import { porada, richtext } from '@/ui/copy';
 
-import { forgetPointsOf, personaOf } from './db';
+import { forgetPoints, personaOf } from './db';
 import {
   editorIn,
   mounted,
@@ -41,8 +41,10 @@ const headmaster = (project: string) =>
 const titlesOf = (page: Page) => page.locator('span[id^="bod-"]').allTextContents();
 
 test.describe('J4: the headmaster prepares a porada', () => {
+  const seeded: string[] = [];
   test.afterEach(async ({}, testInfo) => {
-    await forgetPointsOf(personaOf('ctenar', testInfo.project.name).email);
+    // Only the point this test made: the other tests of the file share the author, in parallel.
+    await forgetPoints(seeded.splice(0));
     await forgetIssues([monday('journey', testInfo.project.name)]);
   });
 
@@ -57,11 +59,12 @@ test.describe('J4: the headmaster prepares a porada', () => {
     const day = monday('journey', project);
     const title = `Bod J4 ${project}`;
     const waiting = `Čekající bod J4 ${project}`;
-    await seedHandedIn(personaOf('ctenar', project).email, waiting, 'submitted', {
+    const waitingId = await seedHandedIn(personaOf('ctenar', project).email, waiting, 'submitted', {
       monday: day,
       eventDate: addDaysIso(day, -1),
       submittedAt: `${addDaysIso(day, -2)}T10:00:00Z`,
     });
+    seeded.push(waitingId);
     await signInAs(headmaster(project));
 
     await test.step('the porada page names the meeting and links the four steps', async () => {
