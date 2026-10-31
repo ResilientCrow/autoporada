@@ -1,3 +1,3 @@
 export { composeDocument } from './compose-document';
 export { composePointPreview } from './preview';
-export { reportFromContent, type Omitted } from './report';
+export { reportFromContent, snapshotPerson, type Omitted } from './report';

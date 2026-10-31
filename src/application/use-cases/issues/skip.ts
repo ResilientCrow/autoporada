@@ -2,26 +2,15 @@ import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
 import { skipWindow } from '@/domain/calendar';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
-import { compareDates, isoWeekday, parseIsoDate, type CalDate } from '@/domain/time';
+import { compareDates } from '@/domain/time';
 
-import { readWindow } from './calendar';
+import { mondayOfText, readWindow } from './calendar';
 import { ensureIssue } from './ensure';
 import { issueEvent } from './events';
 
 const ACTIONS = { skip: 'issue.skipped', unskip: 'issue.unskipped' } as const;
 /** What a client that saw no row for the Monday read: an untouched issue. */
 const UNTOUCHED_VERSION = 1;
-
-/** The Monday the text names, or null when it is no Monday or is out of the calendar's range. */
-function mondayOfText(text: string): CalDate | null {
-  try {
-    const date = parseIsoDate(text);
-    return isoWeekday(date) === 1 ? date : null;
-  } catch (error) {
-    if (error instanceof RangeError) return null;
-    throw error;
-  }
-}
 
 /**
  * „Porada se nekoná“ and its undo, for one Monday. The headmaster may

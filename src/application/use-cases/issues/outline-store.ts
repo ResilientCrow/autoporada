@@ -27,7 +27,8 @@ const size = (outline: Outline) => outline.pokyny.length + outline.hospodareni.l
 export async function loadOutline(tx: Tx, issue: OutlineIssue): Promise<LoadedOutline> {
   if (issue.id !== null) {
     const stored = await tx.issueItems.forIssue(issue.id);
-    if (size(stored) > 0) return { outline: stored, origin: { kind: 'stored' }, sourceStatus: null };
+    if (size(stored) > 0)
+      return { outline: stored, origin: { kind: 'stored' }, sourceStatus: null };
   }
   const source = await tx.issueItems.latestSourceBefore(issue.monday);
   return { ...derive(source, SEED_OUTLINE), sourceStatus: source?.status ?? null };

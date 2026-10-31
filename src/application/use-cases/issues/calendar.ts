@@ -1,7 +1,7 @@
 import { readSlots } from '@/application/core';
 import type { Tx } from '@/application/ports';
 import { submitMonday, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
-import type { CalDate } from '@/domain/time';
+import { isoWeekday, parseIsoDate, type CalDate } from '@/domain/time';
 
 /** What the meeting calendar shows at `now`, read once for every use case that needs it. */
 export interface IssueWindow {
@@ -17,4 +17,15 @@ export interface IssueWindow {
 export async function readWindow(tx: Tx, now: Date): Promise<IssueWindow> {
   const { slots, rule } = await readSlots(tx, now);
   return { slots, first: submitMonday(now, slots, rule), rule };
+}
+
+/** The Monday the text names, or null when it is no Monday or is out of the calendar's range. */
+export function mondayOfText(text: string): CalDate | null {
+  try {
+    const date = parseIsoDate(text);
+    return isoWeekday(date) === 1 ? date : null;
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
 }

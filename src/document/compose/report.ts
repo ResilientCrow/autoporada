@@ -77,7 +77,7 @@ const optional = <K extends string>(key: K, value: string | undefined) => {
 };
 
 /** The snapshot's person, or null when it cannot show them: no salutation, no family name. */
-function snapshotPerson(p: DraftPerson): SnapshotPerson | null {
+export function snapshotPerson(p: DraftPerson): SnapshotPerson | null {
   const familyName = singleLine(p.familyName);
   if (p.salutation === null || familyName === '') return null;
   return {
