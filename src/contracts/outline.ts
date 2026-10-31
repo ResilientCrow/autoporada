@@ -94,6 +94,8 @@ const row = z.strictObject({
 });
 export const outlineReadOutput = z.strictObject({
   monday: z.iso.date(),
+  /** The day the porada is held. */
+  meetingDate: z.iso.date(),
   /** Null for a Monday without a row yet. */
   version: z.int().positive().nullable(),
   origin: z.strictObject({

@@ -72,6 +72,50 @@ export const porada = {
     noNext: 'Uzávěrka už proběhla a\u00a0po této poradě žádná další není v\u00a0kalendáři.',
     kept: (next: string) => `Body odevzdané během zrušení zůstávají na poradě ${next}.`,
   },
+  /** „Pokyny a hospodaření“: the items of the two sections (/porada/[datum]/pokyny). */
+  outline: {
+    title: 'Pokyny a\u00a0hospodaření',
+    back: 'Zpět na přípravu porady',
+    sections: { pokyny: 'Pokyny', hospodareni: 'Hospodaření' },
+    empty: 'V\u00a0této části zatím nic není.',
+    slot: 'Pevný bod',
+    persistence: {
+      standing: 'Stálý bod (přejde do další porady)',
+      once: 'Jen pro tuto poradu',
+    },
+    chip: { standing: 'Stálý', once: 'Jen tato porada' },
+    proposal: {
+      new: 'Nově schválený návrh – zařazen na konec',
+      placed: 'Schválený návrh',
+      edit: 'Text návrhu upravíte v\u00a0kontrole.',
+      open: 'Otevřít v\u00a0kontrole',
+    },
+    edit: 'Upravit',
+    remove: 'Odebrat',
+    move: {
+      up: 'Nahoru',
+      down: 'Dolů',
+      label: (title: string) => `Pořadí bodu ${title}`,
+    },
+    said: {
+      added: 'Bod je přidán na konec.',
+      moved: 'Pořadí je změněno.',
+      removed: 'Bod je odebrán.',
+    },
+    add: {
+      title: 'Přidat bod',
+      name: 'Název bodu',
+      persistence: 'Platnost bodu',
+      submit: 'Přidat bod',
+    },
+    fields: { stale: 'Porada se mezitím změnila. Načtěte stránku znovu.' },
+  },
+  origin: {
+    /** `meeting` arrives written, „9. 11. 2026“. */
+    derived: (meeting: string) =>
+      `Obsah převzatý z\u00a0porady ${meeting}. Uloží se při první změně.`,
+    seed: 'Výchozí obsah ze šablony. Uloží se při první změně.',
+  },
   preview: {
     title: 'Náhled',
     back: 'Zpět na přípravu porady',

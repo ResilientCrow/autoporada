@@ -45,6 +45,7 @@ export const readOutline = defineUseCase({
     const [pokyny, hospodareni] = SECTIONS.map((s) => outline[s].map(row));
     return ok({
       monday: toIsoDate(monday),
+      meetingDate: toIsoDate(slot.meetingDate),
       version: issue?.version ?? null,
       origin: {
         kind: origin.kind,
