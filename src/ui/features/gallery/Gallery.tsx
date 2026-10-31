@@ -1,12 +1,13 @@
 import Link from 'next/link';
 
 import { cs } from '@/ui/copy';
-import { SlantLabel } from '@/ui/kit';
+import { PageHeader } from '@/ui/kit';
 
 import { AutosaveDemo } from './AutosaveDemo';
 import { ControlDemos } from './ControlDemos';
 import { FormDemos } from './FormDemos';
 import { KitSections } from './KitSections';
+import { LayoutSections } from './LayoutSections';
 import { PeopleDemos } from './PeopleDemos';
 import { ProblemDemos } from './ProblemDemos';
 import { RichTextDemo } from './RichTextDemo';
@@ -16,7 +17,7 @@ import { StatusDemos } from './StatusDemos';
 export function Gallery({ unavailable = false }: { readonly unavailable?: boolean }) {
   return (
     <>
-      <SlantLabel level={1}>{cs.gallery.title}</SlantLabel>
+      <PageHeader title={cs.gallery.title}>{cs.gallery.layout.headerMeta}</PageHeader>
       <p>{cs.gallery.intro}</p>
       <p>
         <Link href="/vzornik?stav=vyjimka" prefetch={false}>
@@ -24,6 +25,7 @@ export function Gallery({ unavailable = false }: { readonly unavailable?: boolea
         </Link>
       </p>
       <KitSections />
+      <LayoutSections />
       <section aria-labelledby="stavy-aplikace">
         <h2 id="stavy-aplikace">{cs.gallery.statusMaps.title}</h2>
         <StatusDemos />

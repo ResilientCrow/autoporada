@@ -5,7 +5,7 @@ import { cx } from './cx';
 type Level = 1 | 2 | 3;
 
 /** Size steps by heading level; a label without one is as small as level 3. */
-const SIZE: Record<Level, string> = { 1: 'text-3xl', 2: 'text-2xl', 3: 'text-xl' };
+const SIZE: Record<Level, string> = { 1: 'text-2xl sm:text-3xl', 2: 'text-2xl', 3: 'text-xl' };
 
 /**
  * A slanted title block. The background is the skewed element itself (never a

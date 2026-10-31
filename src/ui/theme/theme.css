@@ -43,6 +43,25 @@
   --ap-focus: var(--color-light);
 }
 
+/* The one page frame: header, main and footer share its left edge and 72 rem maximum (ADR 0043). */
+@utility frame {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1rem;
+  @media (min-width: 40rem) {
+    padding-inline: 1.5rem;
+  }
+}
+
+/* A <summary> without the browser's marker; the kit draws its own icon. */
+@utility summary-plain {
+  list-style: none;
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
 /* A pane that fits the screen under the sticky top offset (top-4) with the same gap below, and scrolls inside. */
 @utility pane-fit {
   max-height: calc(100vh - 2rem);
@@ -86,11 +105,24 @@
   }
   h1,
   h2,
-  h3 {
+  h3,
+  h4 {
     font-family: var(--font-slab);
     font-weight: 700;
     text-transform: uppercase;
     color: var(--ap-heading);
+  }
+  h2 {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line-height);
+  }
+  h3,
+  h4 {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+  dt {
+    font-weight: 700;
   }
   a {
     color: var(--ap-link);

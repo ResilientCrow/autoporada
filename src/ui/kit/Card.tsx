@@ -18,17 +18,17 @@ export function Card({
 }) {
   const Heading = `h${level}` as const;
   return (
-    <div className="rounded-brand bg-sublight p-4">
+    <div className="flex flex-col gap-3 rounded-brand bg-sublight p-4 sm:p-6">
       {title !== undefined && (
         <Heading
           ref={headingRef}
           tabIndex={headingRef === undefined ? undefined : -1}
-          className="mb-2 text-xl"
+          className="text-lg"
         >
           {title}
         </Heading>
       )}
-      {children}
+      <div className="flex flex-col gap-4">{children}</div>
     </div>
   );
 }

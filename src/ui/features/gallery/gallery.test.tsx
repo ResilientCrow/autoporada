@@ -23,6 +23,9 @@ describe('Gallery', () => {
     cs.gallery.statuses.title,
     cs.gallery.statusMaps.title,
     cs.gallery.buttons.title,
+    cs.gallery.layout.title,
+    cs.gallery.lists.title,
+    cs.gallery.disclosure.title,
     cs.gallery.notices.title,
     cs.gallery.forms.title,
     cs.gallery.forms.controls.title,
@@ -101,6 +104,18 @@ describe('Gallery', () => {
         's',
       ),
     );
+  });
+
+  it('shows the layout kit: stacks, columns, lists and a closed disclosure', () => {
+    const { layout, lists, disclosure } = cs.gallery;
+    expect(html).toContain(layout.item);
+    expect(html).toContain('grid gap-4 sm:grid-cols-2');
+    expect(html).toContain('lg:grid-cols-2');
+    expect(html).toContain('divide-y');
+    expect(html).toContain(lists.meta);
+    expect(html).toContain(lists.fact[0][0]);
+    expect(html).toMatch(new RegExp(`<details [^>]*><summary [^>]*>.*${disclosure.summary}`));
+    expect(html).not.toMatch(/<details [^>]*open/);
   });
 
   it('renders markup the CSP accepts', () => {

@@ -6,7 +6,25 @@ import { cs } from '@/ui/copy';
 import { cspMarkupProblems } from '../../../test/support/markup';
 
 import { buttonStyles } from './button-styles';
-import { ArrowLink, Button, Card, Notice, SlantLabel, StatusChip } from './index';
+import {
+  ArrowLink,
+  BulletList,
+  Button,
+  Card,
+  Cluster,
+  Columns,
+  Disclosure,
+  FactList,
+  Item,
+  ItemList,
+  Meta,
+  Notice,
+  PageHeader,
+  Section,
+  SlantLabel,
+  Stack,
+  StatusChip,
+} from './index';
 
 const TEXT = cs.gallery.title;
 const html = renderToStaticMarkup;
@@ -151,5 +169,99 @@ describe('Button', () => {
 
   it('marks itself pending', () => {
     expect(html(<Button isPending>{TEXT}</Button>)).toContain('data-pending="true"');
+  });
+});
+
+describe('layout primitives', () => {
+  it('Stack takes its gap from the scale and the tag it is asked for', () => {
+    expect(html(<Stack>{TEXT}</Stack>)).toBe(`<div class="flex flex-col gap-4">${TEXT}</div>`);
+    expect(html(<Stack gap="item">{TEXT}</Stack>)).toContain('gap-2');
+    expect(html(<Stack gap="section">{TEXT}</Stack>)).toContain('gap-8');
+    expect(html(<Stack as="ul">{TEXT}</Stack>)).toMatch(/^<ul /);
+  });
+
+  it('Cluster wraps and aligns', () => {
+    const out = html(<Cluster as="p">{TEXT}</Cluster>);
+    expect(out).toBe(`<p class="flex flex-wrap items-center gap-x-3 gap-y-2">${TEXT}</p>`);
+  });
+
+  it('Columns has the two breakpoints', () => {
+    expect(html(<Columns at="sm">{TEXT}</Columns>)).toContain('sm:grid-cols-2');
+    expect(html(<Columns at="lg">{TEXT}</Columns>)).toContain('lg:grid-cols-2 lg:items-start');
+  });
+
+  it('Section is named by its heading when it has an id, and can be divided', () => {
+    const out = html(
+      <Section title={TEXT} headingId="x" divided>
+        {cs.gallery.intro}
+      </Section>,
+    );
+    expect(out).toContain('<section aria-labelledby="x"');
+    expect(out).toContain('border-t border-ink pt-6');
+    expect(out).toContain(`<h2 id="x">${TEXT}</h2>`);
+    expect(html(<Section title={TEXT}>{TEXT}</Section>)).not.toContain('aria-labelledby');
+    expect(
+      html(
+        <Section title={TEXT} level={3}>
+          {TEXT}
+        </Section>,
+      ),
+    ).toContain('<h3>');
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('Card spaces its title and body', () => {
+    const out = html(<Card title={TEXT}>{cs.gallery.intro}</Card>);
+    expect(out).toContain('p-4 sm:p-6');
+    expect(out).toContain('class="text-lg"');
+    expect(out).toContain(`<div class="flex flex-col gap-4">${cs.gallery.intro}</div>`);
+  });
+
+  it('PageHeader has one h1 and a meta row only when given one', () => {
+    const out = html(<PageHeader title={TEXT}>{cs.gallery.intro}</PageHeader>);
+    expect(out).toMatch(/^<header class="flex flex-col items-start gap-3"><h1 /);
+    expect(out).toContain(`gap-y-2">${cs.gallery.intro}</div>`);
+    expect(html(<PageHeader title={TEXT} />)).not.toContain('<div');
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('Item is a row with a title line, optional heading and badges', () => {
+    const out = html(
+      <ItemList>
+        <Item
+          title={TEXT}
+          heading={3}
+          headingId="i"
+          badges={<StatusChip tone="done">{TEXT}</StatusChip>}
+        >
+          <Meta>{cs.gallery.intro}</Meta>
+        </Item>
+        <Item title={TEXT} />
+      </ItemList>,
+    );
+    expect(out).toMatch(/^<ul class="flex flex-col divide-y divide-ink">/);
+    expect(out).toContain('py-3 first:pt-0 last:pb-0');
+    expect(out).toContain(`<h3 id="i" class="text-base">${TEXT}</h3>`);
+    expect(out).toContain(`<p class="text-sm">${cs.gallery.intro}</p>`);
+    expect(out).toContain(`>${TEXT}</span>`);
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('BulletList and FactList', () => {
+    expect(html(<BulletList>{TEXT}</BulletList>)).toContain('list-disc');
+    const out = html(<FactList rows={[['Termín', 'Pondělí']]} />);
+    expect(out).toContain('<dt class="font-bold">Termín</dt><dd>Pondělí</dd>');
+  });
+
+  it('Disclosure is a closed details with a hidden chevron', () => {
+    const out = html(<Disclosure summary={TEXT}>{cs.gallery.intro}</Disclosure>);
+    expect(out).toMatch(/^<details class="group"><summary class="summary-plain [^"]*min-h-11/);
+    expect(out).toContain('<svg aria-hidden="true"');
+    expect(out).not.toContain('open=');
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('SlantLabel level 1 is smaller on phones', () => {
+    expect(html(<SlantLabel level={1}>{TEXT}</SlantLabel>)).toContain('text-2xl sm:text-3xl');
   });
 });
