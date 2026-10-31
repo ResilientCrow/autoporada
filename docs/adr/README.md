@@ -25,7 +25,7 @@ record that supersedes it.
 | [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted; items 5 and 7 superseded in part by 0024 |
 | [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030; item 1 refined by 0032 and 0034 |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
-| [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted |
+| [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted; item 4 (digest and headmaster summary) superseded in part by 0037 |
 | [0021](0021-web-access-to-graph.md) | Web access to Graph: a registration of its own, the `ap-edge` bridge | Accepted |
 | [0022](0022-database-errors-by-constraint-name.md) | Database errors by constraint name | Accepted |
 | [0023](0023-zod-jitless-in-the-browser.md) | Zod runs jitless in the browser | Accepted |
@@ -33,12 +33,13 @@ record that supersedes it.
 | [0025](0025-review-moves-to-the-next-point.md) | Review moves to the next point from the client | Accepted |
 | [0026](0026-retract-clears-the-hand-in.md) | A retract clears the hand-in | Accepted |
 | [0027](0027-start-report-goes-to-its-draft.md) | „Napsat zprávu“ goes to its draft from the client | Accepted |
-| [0028](0028-digest-of-requests-links-the-users-page.md) | A digest of access requests links the users page | Accepted |
+| [0028](0028-digest-of-requests-links-the-users-page.md) | A digest of access requests links the users page | Accepted; the digest is switched off by 0037 |
 | [0029](0029-points-go-to-an-issue-by-their-due-monday.md) | Points go to an issue by their due Monday | Accepted |
 | [0030](0030-the-issue-outline.md) | The issue outline | Accepted; item 5 (a write forgets a returned proposal's placement) superseded in part by 0036 |
 | [0031](0031-rich-text-editor-under-the-nonce-csp.md) | Rich-text editor under the nonce CSP | Accepted |
 | [0032](0032-settings-and-the-meeting-relative-deadline.md) | Settings and the meeting-relative deadline | Accepted |
 | [0033](0033-registry-without-people-ids.md) | Registry without people ids | Accepted |
-| [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted |
-| [0035](0035-late-event-reports.md) | Late-event reports | Accepted |
+| [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted; item 6 (the moved mail) superseded by 0037 |
+| [0035](0035-late-event-reports.md) | Late-event reports | Accepted; item 9 (the headmaster's late summary) superseded by 0037 |
 | [0036](0036-a-returned-proposal-keeps-its-place.md) | A returned proposal keeps its place in the outline | Accepted |
+| [0037](0037-four-mails-switched-off.md) | Four mails switched off | Accepted |

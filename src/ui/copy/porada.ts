@@ -35,8 +35,7 @@ export const porada = {
     submit: 'Přesunout poradu',
     said: (meeting: string) => `Porada je přesunuta na ${meeting}.`,
     /** `when` arrives written, „sobota 7. 11. v 20:00“. */
-    effectEarlier: (when: string) =>
-      `Uzávěrka bude dřív (${when}). Autorům, kteří ještě neodevzdali, pošleme e-mail.`,
+    effectEarlier: (when: string) => `Uzávěrka bude dřív (${when}).`,
     effectLater: (when: string) =>
       `Uzávěrka bude později (${when}). Body odevzdané do té doby půjdou na tuto poradu.`,
     /** `list` arrives written, „9. 11. 2026, 16. 11. 2026“. */

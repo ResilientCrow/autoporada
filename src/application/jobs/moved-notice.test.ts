@@ -1,4 +1,7 @@
-/** The mail for a deadline that came earlier (D21): who is told, when the job is stale, which key. */
+/**
+ * The mail for a deadline that came earlier (D21), switched off (ADR 0037): the move no longer
+ * queues it, but the handler stays. Who is told, when the job is stale, which key.
+ */
 import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
@@ -71,11 +74,8 @@ async function jobs(name: string) {
   const all = await world.inspect.jobs();
   return all.filter((j) => j.name === name);
 }
-const notices = async () =>
-  (await jobs('issues.moved-notice')).map((j) => ({
-    data: j.data as { monday: string; deadlineAt: string },
-    key: j.options.dedupeKey,
-  }));
+/** The job a move to `deadlineAt` queued before the mail was switched off (ADR 0037). */
+const noticeFor = (deadlineAt: Date) => movedNoticeJob(MONDAY, deadlineAt).data;
 const mailKeys = async () =>
   (await jobs('mail.send')).map((j) => j.options.dedupeKey as string).sort();
 const mailTo = async () =>
@@ -95,61 +95,25 @@ async function draft(author: UserRecord) {
   world.clock.set(WEDNESDAY);
 }
 
-describe('what the move enqueues', () => {
-  it('queues one notice, with dates only, when the deadline comes earlier and is still ahead', async () => {
-    const head = await headmaster();
-    world.clock.set(WEDNESDAY);
-    await moveDeadline(head, '2026-10-30');
-    const notice = movedNoticeJob(MONDAY, FRIDAY_8PM);
-    expect(await notices()).toEqual([{ data: notice.data, key: notice.dedupeKey }]);
-    expect(notice.data).toEqual({ monday: ISO, deadlineAt: FRIDAY_8PM.toISOString() });
+describe('the notice job', () => {
+  it('carries dates only', () => {
+    expect(movedNoticeJob(MONDAY, FRIDAY_8PM).data).toEqual({
+      monday: ISO,
+      deadlineAt: FRIDAY_8PM.toISOString(),
+    });
   });
 
-  it('queues nothing for a later deadline, an unchanged one, or an earlier one already past', async () => {
-    const head = await headmaster();
-    world.clock.set(WEDNESDAY);
-    await moveDeadline(head, '2026-11-01', '12:00'); // later than Saturday 20.00
-    expect(await notices()).toEqual([]);
-    // the same deadline as now (Sunday 12.00): not earlier
-    await world.run(moveIssue, world.as(head), {
-      monday: ISO,
-      meetingDate: ISO,
-      deadlineDate: '2026-11-01',
-      deadlineTime: '12:00',
-      skip: [],
-      expectedVersion: 2,
-    });
-    expect(await notices()).toEqual([]);
-    // an earlier deadline that is already past is refused (deadline-past), so no notice either
-    world.clock.set(new Date('2026-10-30T12:00:00Z'));
-    const past = await world.run(moveIssue, world.as(head), {
-      monday: ISO,
-      meetingDate: ISO,
-      deadlineDate: '2026-10-29',
-      deadlineTime: '20:00',
-      skip: [],
-      expectedVersion: 2,
-    });
-    expect(past).toMatchObject({ ok: false });
-    expect(await notices()).toEqual([]);
-  });
-
-  it('keys the notice by slot and deadline: a second earlier deadline queues its own', async () => {
-    const head = await headmaster();
-    world.clock.set(WEDNESDAY);
-    await moveDeadline(head, '2026-10-30');
-    await world.run(moveIssue, world.as(head), {
-      monday: ISO,
-      meetingDate: ISO,
-      deadlineDate: '2026-10-29',
-      deadlineTime: '20:00',
-      skip: [],
-      expectedVersion: 2,
-    });
-    expect((await notices()).map((n) => n.key)).toEqual([
-      movedNoticeJob(MONDAY, FRIDAY_8PM).dedupeKey,
+  it('is keyed by slot and deadline: a second earlier deadline has its own key', () => {
+    expect(movedNoticeJob(MONDAY, FRIDAY_8PM).dedupeKey).not.toBe(
       movedNoticeJob(MONDAY, THURSDAY_8PM).dedupeKey,
-    ]);
+    );
+  });
+
+  it('is not queued by a move: the mail is switched off (ADR 0037)', async () => {
+    const head = await headmaster();
+    world.clock.set(WEDNESDAY);
+    await moveDeadline(head, '2026-10-30');
+    expect(await jobs('issues.moved-notice')).toEqual([]);
   });
 });
 
@@ -178,7 +142,7 @@ describe('the audience', () => {
     void idle;
 
     await moveDeadline(head, '2026-10-30');
-    const data = (await notices())[0]!.data;
+    const data = noticeFor(FRIDAY_8PM);
     expect(await runNotice(data)).toEqual({ kind: 'done', code: 'notified' });
     expect(await mailTo()).toEqual([active.id, writer.id, both.id].sort());
     expect(await mailKeys()).toEqual(
@@ -198,7 +162,7 @@ describe('the audience', () => {
     const head = await headmaster();
     world.clock.set(WEDNESDAY);
     await moveDeadline(head, '2026-10-30');
-    const data = (await notices())[0]!.data;
+    const data = noticeFor(FRIDAY_8PM);
     expect(await runNotice(data)).toEqual({ kind: 'done', code: 'none' });
     expect(await jobs('mail.send')).toEqual([]);
   });
@@ -222,7 +186,7 @@ describe('the audience', () => {
           code: 'skipped.stale',
         }),
     );
-    const data = (await notices())[0]!.data;
+    const data = noticeFor(FRIDAY_8PM);
     await runNotice(data);
     expect(await mailTo()).toEqual([fresh.id]);
   });
@@ -240,10 +204,9 @@ describe('the audience', () => {
       skip: [],
       expectedVersion: 2,
     });
-    const [first, second] = await notices();
     // the first notice is stale once the second move happened; only the second mails
-    expect(await runNotice(first!.data)).toEqual({ kind: 'done', code: 'none' });
-    expect(await runNotice(second!.data)).toEqual({ kind: 'done', code: 'notified' });
+    expect(await runNotice(noticeFor(FRIDAY_8PM))).toEqual({ kind: 'done', code: 'none' });
+    expect(await runNotice(noticeFor(THURSDAY_8PM))).toEqual({ kind: 'done', code: 'notified' });
     expect(await mailKeys()).toEqual([movedKey(user, THURSDAY_8PM)]);
   });
 });
@@ -254,8 +217,8 @@ describe('a stale job is dropped', () => {
     const user = await submitter();
     await handedIn(user);
     await moveDeadline(head, '2026-10-30');
-    const data = (await notices())[0]!.data;
-    return { head, user, data: data! };
+    const data = noticeFor(FRIDAY_8PM);
+    return { head, user, data };
   }
 
   it('when the deadline was moved again since', async () => {

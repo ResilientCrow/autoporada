@@ -68,9 +68,9 @@ in v1 unless the [plan of record](plan.md) changes first.
 - A reviewer's edit keeps the original wording of the changed fields in the
   point's timeline („Původní znění“).
 - E-mail notifications to authors (a point returned, approved or rejected; none
-  when the author decided their own point; none for akce decisions) and a
-  digest to reviewers and the headmaster twice a working day, at 7:00 and
-  15:00, with counts only (items to review, access requests).
+  when the author decided their own point; none for akce decisions). Reviewers
+  and the headmaster get no digest mail (switched off, ADR 0037): what waits
+  for review and the access requests are in the app.
 
 ### Weekly issue
 
@@ -91,10 +91,9 @@ in v1 unless the [plan of record](plan.md) changes first.
   reminder leaves out late reports, which have their own mails: one when the
   akce ends (with the exact deadline) and one an hour before it, to the author
   of the akce or of the late draft.
-- A summary for the headmaster five minutes after the deadline: counts of
-  approved, waiting and returned points. When a porada had late reports, a
-  second summary follows after the last late deadline, with counts of those
-  handed in and those missing.
+- No summary mail for the headmaster after the deadline or after the late
+  reports (switched off, ADR 0037): the preflight of the porada shows where
+  its points stand.
 - The porada pages (`/porada`, headmaster): the working slot is the first open
   porada whose meeting date is today or later, with steps for the outline,
   „Údaje“, Příloha 2 and the preview.
@@ -138,8 +137,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   example a holiday Monday to the Friday before. The deadline follows the new
   date by the rule and can be changed in the same form. Porady in the way are
   skipped in the same step or the move is refused, so meeting dates and
-  deadlines keep their order. Přehled shows a moved porada, and submitters get
-  one mail when a move brings the deadline earlier.
+  deadlines keep their order. Přehled shows a moved porada; nobody is mailed
+  about a move (switched off, ADR 0037).
 - Times: screens and mails write „23:59“ (a colon, no leading zero); the
   document keeps the template's „7.00“.
 
@@ -163,8 +162,8 @@ in v1 unless the [plan of record](plan.md) changes first.
 
 - The editor's unsaved-changes guard catches closing the tab and clicking a
   link of the app, but not the browser's Back button.
-- Moving a porada does not notify the authors of late event reports: a mail
-  already sent keeps the old close, and the last call carries the new one.
+- Moving a porada notifies nobody: a late report's first mail already sent
+  keeps the old close, and the last call carries the new one.
 
 ## Deferred (later)
 

@@ -50,29 +50,9 @@ export const CRON: readonly CronEntry[] = [
     data: {},
     catchUp: 'skip',
   },
-  // 07.00 and 15.00 name the slots of the ledger key; a missed one is not made up, the next digest counts since the last sent.
-  {
-    job: 'reviewer.digest',
-    key: 'morning',
-    schedule: { daily: { hour: 7, minute: 0 } },
-    data: {},
-    catchUp: 'skip',
-  },
-  {
-    job: 'reviewer.digest',
-    key: 'afternoon',
-    schedule: { daily: { hour: 15, minute: 0 } },
-    data: {},
-    catchUp: 'skip',
-  },
-  // The window opens five minutes after a deadline and stays two hours: a missed tick is found by the next.
-  {
-    job: 'headmaster.summary',
-    key: 'tick',
-    schedule: { everyMinutes: 5 },
-    data: {},
-    catchUp: 'skip',
-  },
+  // Switched off (ADR 0037): `reviewer.digest` (morning 7:00 and afternoon 15:00, skip) and
+  // `headmaster.summary` (every 5 minutes, skip; it also sends the late summary). Their handlers
+  // stay; listing them here again turns them back on, and the worker drops what is not listed.
 ];
 
 /** The cron string is derived, never typed: `10 5 * * *`, `*\/15 * * * *`. */

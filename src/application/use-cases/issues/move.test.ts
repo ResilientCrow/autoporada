@@ -303,7 +303,7 @@ describe('issues.move', () => {
     });
   });
 
-  describe('audit and the notice', () => {
+  describe('audit, and no notice', () => {
     it('records issue.moved with the Monday, both dates, whether the deadline moved and the count', async () => {
       const head = await headmaster();
       await move(head, W1, { meeting: '2026-10-28', deadline: '2026-10-23' });
@@ -346,13 +346,11 @@ describe('issues.move', () => {
       });
     });
 
-    it('queues one notice for a deadline that comes earlier and is still ahead', async () => {
+    it('queues no mail for a deadline that comes earlier and is still ahead (ADR 0037)', async () => {
       const head = await headmaster();
-      await move(head, W1, { meeting: '2026-10-28', deadline: '2026-10-23' });
-      const jobs = await world.inspect.jobs();
-      expect(jobs).toHaveLength(1);
-      expect(JSON.stringify(jobs[0])).toContain('issues.moved-notice');
-      expect(JSON.stringify(jobs[0])).toContain('2026-10-26');
+      const result = await move(head, W1, { meeting: '2026-10-28', deadline: '2026-10-23' });
+      expect(result.ok).toBe(true);
+      expect(await world.inspect.jobs()).toEqual([]);
     });
 
     it('queues nothing for the same deadline, a later one, or a past one that did not change', async () => {

@@ -23,7 +23,7 @@ describe('cron registry', () => {
     expect(cronExpression(schedule)).toBe(cron);
   });
 
-  it('ships mail.prune daily at 05:10, the report prompt daily at 08:00 Prague time the deadline reminders and the late-report mails every 15 minutes and the reviewer digest at 07:00 and 15:00 and the headmaster summary every five minutes, only the daily mail ones catching up', () => {
+  it('ships mail.prune daily at 05:10, the report prompt daily at 08:00 Prague time, the deadline reminders and the late-report mails every 15 minutes, only the daily ones catching up; no reviewer digest and no headmaster summary (ADR 0037)', () => {
     expect(CRON).toEqual([
       entry(),
       {
@@ -47,36 +47,12 @@ describe('cron registry', () => {
         data: {},
         catchUp: 'skip',
       },
-      {
-        job: 'reviewer.digest',
-        key: 'morning',
-        schedule: { daily: { hour: 7, minute: 0 } },
-        data: {},
-        catchUp: 'skip',
-      },
-      {
-        job: 'reviewer.digest',
-        key: 'afternoon',
-        schedule: { daily: { hour: 15, minute: 0 } },
-        data: {},
-        catchUp: 'skip',
-      },
-      {
-        job: 'headmaster.summary',
-        key: 'tick',
-        schedule: { everyMinutes: 5 },
-        data: {},
-        catchUp: 'skip',
-      },
     ]);
     expect(SCHEDULES).toEqual([
       { job: 'mail.prune', key: 'daily', cron: '10 5 * * *', data: {}, missed: 'once' },
       { job: 'future.report-prompt', key: 'daily', cron: '0 8 * * *', data: {}, missed: 'once' },
       { job: 'reminders.deadline', key: 'quarter', cron: '*/15 * * * *', data: {}, missed: 'skip' },
       { job: 'reports.late', key: 'quarter', cron: '*/15 * * * *', data: {}, missed: 'skip' },
-      { job: 'reviewer.digest', key: 'morning', cron: '0 7 * * *', data: {}, missed: 'skip' },
-      { job: 'reviewer.digest', key: 'afternoon', cron: '0 15 * * *', data: {}, missed: 'skip' },
-      { job: 'headmaster.summary', key: 'tick', cron: '*/5 * * * *', data: {}, missed: 'skip' },
     ]);
   });
 
