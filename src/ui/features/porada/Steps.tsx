@@ -3,7 +3,6 @@ import { ArrowLink, Card } from '@/ui/kit';
 
 /**
  * The steps of preparing a porada, each a page of its own under /porada/[datum].
- * TODO(m9-verify): udaje, pokyny and priloha-2 are built in rows 47, 43 and 48; their links 404 until then.
  */
 const STEPS = [
   { path: 'udaje', label: porada.steps.details },

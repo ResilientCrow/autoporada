@@ -85,6 +85,7 @@ export {
 } from './future-review';
 export {
   ISSUE_TEXT_MAX,
+  issueAnnex2Input,
   issueDetailsInput,
   issueTextsInput,
   issueTextsOutput,

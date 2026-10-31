@@ -148,6 +148,19 @@ export const porada = {
     carried: 'Údaje jsou převzaté z\u00a0minulé porady. Uloží se při prvním uložení.',
     stale: 'Porada se mezitím změnila. Načtěte stránku znovu.',
   },
+  /** „Příloha 2“: its text (/porada/[datum]/priloha-2). */
+  annex2: {
+    title: 'Příloha\u00a02',
+    back: 'Zpět na přípravu porady',
+    body: 'Text přílohy',
+    save: 'Uložit',
+    saved: 'Příloha je uložena.',
+    remove: 'Odebrat přílohu',
+    removed: 'Příloha je odebrána. Dokument bude bez Přílohy\u00a02.',
+    none: 'Porada nemá Přílohu\u00a02.',
+    carried: 'Text je převzatý z\u00a0minulé porady. Uloží se při prvním uložení.',
+    stale: 'Porada se mezitím změnila. Načtěte stránku znovu.',
+  },
   origin: {
     /** `meeting` arrives written, „9. 11. 2026“. */
     derived: (meeting: string) =>

@@ -1,10 +1,18 @@
 'use client';
 
+import { ANNEX1_MAX_BYTES, type RichDoc } from '@/domain/richtext';
 import { settings } from '@/ui/copy';
-import { Form, SubmitButton, TextField, useActionForm, type FormSpec } from '@/ui/form';
+import {
+  Form,
+  RichTextField,
+  SubmitButton,
+  TextField,
+  useActionForm,
+  type FormSpec,
+} from '@/ui/form';
 
 import type { SaveAction } from './DeadlineForm';
-import { annexInput, introText, type IntroDoc } from './inputs';
+import { annexInput } from './inputs';
 
 const { annex1 } = settings;
 
@@ -21,7 +29,7 @@ const SPEC: FormSpec = {
   },
 };
 
-/** The heading and intro above the list of annex 1; the intro is plain paragraphs until the rich field (row 48). */
+/** The heading and intro above the list of annex 1; the intro is a rich text of plain paragraphs. */
 export function AnnexForm({
   action,
   value,
@@ -29,7 +37,7 @@ export function AnnexForm({
   onSaved,
 }: {
   readonly action: SaveAction;
-  readonly value: { readonly heading: string; readonly intro: IntroDoc };
+  readonly value: { readonly heading: string; readonly intro: RichDoc };
   readonly version: number;
   readonly onSaved: () => void;
 }) {
@@ -41,11 +49,12 @@ export function AnnexForm({
   return (
     <Form id="priloha-1" spec={SPEC} state={state}>
       <TextField name="value.heading" defaultValue={value.heading} />
-      <TextField
+      <p>{annex1.intro.description}</p>
+      <RichTextField
         name="value.intro"
-        multiline
-        defaultValue={introText(value.intro)}
-        description={annex1.intro.description}
+        profile="paragraphs"
+        defaultValue={value.intro}
+        maxBytes={ANNEX1_MAX_BYTES}
       />
       <SubmitButton>{settings.save}</SubmitButton>
     </Form>

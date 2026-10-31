@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import { stripForbiddenCharacters } from '@/domain/richtext';
+import {
+  ANNEX1_MAX_BYTES,
+  parseRichDoc,
+  stripForbiddenCharacters,
+  type RichDoc,
+} from '@/domain/richtext';
 
 import { richDocWire } from './point';
 
@@ -17,6 +22,20 @@ const names = z
   .max(ISSUE_TEXT_MAX)
   .refine((text) => stripForbiddenCharacters(text) === text);
 
+/** Příloha 2 as stored: the widest profile, and small enough for the table (jsonb prints more than JSON). */
+const annex = richDocWire.transform((value, ctx): RichDoc => {
+  const parsed = parseRichDoc(value, 'outline');
+  if (!parsed.ok) {
+    ctx.addIssue({ code: 'custom', message: 'invalid' });
+    return z.NEVER;
+  }
+  if (new TextEncoder().encode(JSON.stringify(parsed.doc)).length > ANNEX1_MAX_BYTES) {
+    ctx.addIssue({ code: 'custom', params: { code: 'too-long' } });
+    return z.NEVER;
+  }
+  return parsed.doc;
+});
+
 /** „Údaje“: both texts are always sent; an empty one clears the text. */
 export const issueDetailsInput = z.strictObject({
   monday,
@@ -24,6 +43,8 @@ export const issueDetailsInput = z.strictObject({
   present: names,
   guests: names,
 });
+/** „Příloha 2“: an empty document removes the annex. */
+export const issueAnnex2Input = z.strictObject({ monday, expectedVersion: version, body: annex });
 export const issueTextsWriteOutput = z.strictObject({
   /** The issue's version after the write: what the next write starts from. */
   version: z.int().positive(),

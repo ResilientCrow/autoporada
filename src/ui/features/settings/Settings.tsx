@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 
+import type { RichDoc } from '@/domain/richtext';
 import { settings } from '@/ui/copy';
 import { LiveStatus } from '@/ui/form';
 import { ArrowLink, Card, SlantLabel } from '@/ui/kit';
 
 import { AnnexForm } from './AnnexForm';
 import { DeadlineForm, type DeadlineEffect, type SaveAction } from './DeadlineForm';
-import type { IntroDoc } from './inputs';
 import { RemindersForm } from './RemindersForm';
 
 /** The page's model: each setting with the version its form names, and the deadline's effect. */
@@ -22,7 +22,7 @@ export interface SettingsView {
     readonly version: number;
   };
   readonly annex1: {
-    readonly value: { readonly heading: string; readonly intro: IntroDoc };
+    readonly value: { readonly heading: string; readonly intro: RichDoc };
     readonly version: number;
   };
   readonly effect: DeadlineEffect;

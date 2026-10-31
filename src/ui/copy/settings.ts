@@ -31,8 +31,7 @@ export const settings = {
     heading: { label: 'Nadpis', tooLong: 'Nadpis je příliš dlouhý.' },
     intro: {
       label: 'Úvodní text',
-      description:
-        'Odstavce oddělte prázdným řádkem. Zápis {skolniRok} se v\u00a0dokumentu nahradí školním rokem.',
+      description: 'Zápis {skolniRok} se v\u00a0dokumentu nahradí školním rokem.',
       tooLong: 'Text je příliš dlouhý.',
     },
   },

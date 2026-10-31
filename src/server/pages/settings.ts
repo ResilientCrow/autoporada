@@ -5,6 +5,7 @@ import { toDeadlineRule, type settingsReadOutput } from '@/contracts';
 import { deadline, ruleFrom } from '@/domain/calendar';
 import { formatNumericDate, formatTime, weekdayName } from '@/domain/cs';
 import { can } from '@/domain/policy';
+import { emptyRichDoc, parseRichDoc, type RichDoc } from '@/domain/richtext';
 import { instantToWallClock, parseIsoDate } from '@/domain/time';
 
 import { getContainer } from '../container';
@@ -32,7 +33,10 @@ export interface SettingsPageModel {
     readonly version: number;
   };
   readonly reminders: z.output<typeof settingsReadOutput>['reminders'];
-  readonly annex1: z.output<typeof settingsReadOutput>['texts.annex1'];
+  readonly annex1: {
+    readonly value: { readonly heading: string; readonly intro: RichDoc };
+    readonly version: number;
+  };
   readonly effect: DeadlineEffect;
 }
 
@@ -69,10 +73,17 @@ export async function settingsPage(): Promise<SettingsPageModel | null> {
   );
   const window = await readWindow(viewer);
   if (read === null || window === null) return null;
+  const intro = parseRichDoc(read['texts.annex1'].value.intro, 'paragraphs');
   return {
     deadline: { rule: read.deadline.value, version: read.deadline.version },
     reminders: read.reminders,
-    annex1: read['texts.annex1'],
+    annex1: {
+      ...read['texts.annex1'],
+      value: {
+        heading: read['texts.annex1'].value.heading,
+        intro: intro.ok ? intro.doc : emptyRichDoc(),
+      },
+    },
     effect: effectOf(window),
   };
 }

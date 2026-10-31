@@ -29,6 +29,7 @@ import {
   issueWorkspace,
   moveIssue,
   readIssueTexts,
+  setIssueAnnex2,
   setIssueDetails,
   setSkipped,
 } from './issues';
@@ -98,6 +99,7 @@ export {
   issueWorkspace,
   moveIssue,
   readIssueTexts,
+  setIssueAnnex2,
   setIssueDetails,
   setSkipped,
 } from './issues';
@@ -201,6 +203,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   saveSettings,
   searchGate,
   setReminders,
+  setIssueAnnex2,
   setIssueDetails,
   setSkipped,
   signOut,
