@@ -55,10 +55,14 @@ export async function reminderIssue(
   return { monday, meetingDate, deadlineAt };
 }
 
-/** Authors of a draft changed in the last 28 days or of a returned point that can still go to `monday`. */
-export function waitingAuthors(tx: Pick<Tx, 'points'>, monday: CalDate, now: Date) {
+/**
+ * Authors of a draft changed in the last 28 days or of a returned point that can still go to the
+ * issue's Monday, except those whose report is late for it: a late report has its own mails.
+ */
+export function waitingAuthors(tx: Pick<Tx, 'points'>, issue: ReminderIssue, now: Date) {
   const draftsSince = new Date(now.getTime() - REMINDER_DRAFT_DAYS * 86_400_000);
-  return tx.points.reminderAuthors({ draftsSince, monday });
+  const { monday, meetingDate, deadlineAt } = issue;
+  return tx.points.reminderAuthors({ draftsSince, monday, meetingDate, deadlineAt });
 }
 
 /** Staff who handed in a point or an akce this school year (D7 (a)), by granted columns only. */
@@ -78,10 +82,10 @@ export async function activeSubmitters(
 /** Everyone with a draft or returned point for the Monday, students too: it is about their own work. */
 export async function authorsWaiting(
   tx: Pick<Tx, 'points' | 'users'>,
-  monday: CalDate,
+  issue: ReminderIssue,
   now: Date,
 ): Promise<readonly string[]> {
-  const users = await tx.users.getMany(await waitingAuthors(tx, monday, now));
+  const users = await tx.users.getMany(await waitingAuthors(tx, issue, now));
   return users.filter(isMember).map((user) => user.id);
 }
 
@@ -110,6 +114,6 @@ export async function loadReminder(
   if (!(await readSettingValue(tx, 'reminders'))[kind]) return null;
   const issue = await reminderIssue(tx, now);
   if (!reminderDue(kind, issue.deadlineAt, now)) return null;
-  const hasWork = kind === 'hard' && (await waitingAuthors(tx, issue.monday, now)).includes(userId);
+  const hasWork = kind === 'hard' && (await waitingAuthors(tx, issue, now)).includes(userId);
   return { monday: issue.monday, meetingDate: issue.meetingDate, hasWork };
 }

@@ -188,12 +188,16 @@ export interface PointRepo {
   mailFacts(id: string): Promise<PointMailFacts | null>;
   /**
    * The authors the hard reminder is for, each once, ordered by id: those with a draft changed
-   * since `draftsSince` and those with a returned point whose first Monday is not after `monday`.
-   * Only the columns migrations 0017 and 0024 grant the worker. ScopeViolation for a user.
+   * since `draftsSince` and those with a returned point whose first Monday is not after `monday`,
+   * leaving out the reports that are late for the porada held on `meetingDate` with `deadlineAt`
+   * (the SQL twin of `isLateReport`: they have a close of their own, ADR 0035 item 8). Only the
+   * columns migrations 0017, 0024 and 0035 grant the worker. ScopeViolation for a user.
    */
   reminderAuthors(window: {
     readonly draftsSince: Date;
     readonly monday: CalDate;
+    readonly meetingDate: CalDate;
+    readonly deadlineAt: Date;
   }): Promise<readonly string[]>;
   /**
    * The authors with a point handed in since `since` (`submitted_at`, which a retract clears),

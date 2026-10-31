@@ -19,7 +19,7 @@ export interface PoradaClose {
 }
 
 /** The grace after an event ends (absolute time, so a night the clocks change counts 2 h too). */
-const LATE_GRACE_MS = 2 * 3_600_000;
+export const LATE_GRACE_MS = 2 * 3_600_000;
 
 const END_OF_EVENT_DEFAULT = parseWallTime('20:00');
 const MIDNIGHT = parseWallTime('0:00');

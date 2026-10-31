@@ -161,7 +161,6 @@ export function createPointReads(
   | 'queue'
   | 'ownRecent'
   | 'mailFacts'
-  | 'reminderAuthors'
   | 'submitterIds'
   | 'countSubmittedSince'
   | 'handedInFor'
@@ -223,21 +222,6 @@ export function createPointReads(
         .from(points)
         .where(eq(points.id, id));
       return row ?? null;
-    },
-    async reminderAuthors({ draftsSince, monday }) {
-      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
-      // The columns migrations 0017 and 0024 grant the worker, and no other.
-      const rows = await db
-        .selectDistinct({ authorId: points.authorId })
-        .from(points)
-        .where(
-          or(
-            and(eq(points.state, 'draft'), gte(points.updatedAt, draftsSince)),
-            and(eq(points.state, 'returned'), lte(points.earliestMonday, toIsoDate(monday))),
-          ),
-        )
-        .orderBy(asc(points.authorId));
-      return rows.map((row) => row.authorId);
     },
     async submitterIds(since) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();

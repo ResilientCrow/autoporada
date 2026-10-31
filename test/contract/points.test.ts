@@ -824,8 +824,16 @@ describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
     );
   const MONDAY = calDate(2026, 11, 2);
   const SINCE = new Date('2026-10-05T00:00:00Z');
+  const DEADLINE = new Date('2026-10-31T19:00:00Z');
   const waiting = () =>
-    asWorker((tx) => tx.points.reminderAuthors({ draftsSince: SINCE, monday: MONDAY }));
+    asWorker((tx) =>
+      tx.points.reminderAuthors({
+        draftsSince: SINCE,
+        monday: MONDAY,
+        meetingDate: MONDAY,
+        deadlineAt: DEADLINE,
+      }),
+    );
 
   /** A point of `author` that stands in `state` with the given first Monday. */
   async function pointIn(author: UserRecord, state: PointPatch['state'], earliest = MONDAY) {
@@ -893,7 +901,12 @@ describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
     const refused = read(world.as(author), (tx) => tx.points.submitterIds(SINCE));
     expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
     const other = read(world.as(author), (tx) =>
-      tx.points.reminderAuthors({ draftsSince: SINCE, monday: MONDAY }),
+      tx.points.reminderAuthors({
+        draftsSince: SINCE,
+        monday: MONDAY,
+        meetingDate: MONDAY,
+        deadlineAt: DEADLINE,
+      }),
     );
     expect(await failure(other)).toBeInstanceOf(ScopeViolation);
   });

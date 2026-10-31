@@ -11,7 +11,7 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { parsePointJsonb } from '@/contracts';
-import { dueMonday, inIssue } from '@/domain/calendar';
+import { dueMonday, inIssue, isLateReport, lateFacts, type PoradaClose } from '@/domain/calendar';
 import { admits } from '@/domain/policy';
 import type { PointContent } from '@/domain/report';
 import { compareDates, isoWeekday, toIsoDate } from '@/domain/time';
@@ -103,6 +103,12 @@ const handedInFirst = (a: FakePoint, b: FakePoint) =>
 const lastDay = (p: FakePoint) => p.content.endDate ?? p.content.eventDate;
 
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
+/** True for a report that is late for the porada (`isLateReport`); the fake uses the domain's own rule. */
+function isLate(p: FakePoint, porada: PoradaClose): boolean {
+  const facts = p.kind === 'report' ? lateFacts(p.content) : undefined;
+  return facts !== undefined && isLateReport(porada, facts);
+}
+
 /** A report point as the late-report jobs read it; none for another kind, a missing date or a dead point. */
 function reportPointOf(p: FakePoint): ReportPoint[] {
   const { eventDate, endDate, timeTo } = p.content;
@@ -306,15 +312,16 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       const point = points.get(id);
       return (point && reportPointOf(point)[0]) ?? null;
     },
-    async reminderAuthors({ draftsSince, monday }) {
+    async reminderAuthors({ draftsSince, monday, meetingDate, deadlineAt }) {
       guard(tx, false);
       if (principal.kind !== 'system') throw new ScopeViolation();
       const waiting = [...points.values()].filter(
         (p) =>
-          (p.state === 'draft' && p.updatedAt >= draftsSince) ||
-          (p.state === 'returned' &&
-            p.earliestMonday !== null &&
-            compareDates(p.earliestMonday, monday) <= 0),
+          ((p.state === 'draft' && p.updatedAt >= draftsSince) ||
+            (p.state === 'returned' &&
+              p.earliestMonday !== null &&
+              compareDates(p.earliestMonday, monday) <= 0)) &&
+          !isLate(p, { meetingDate, deadlineAt }),
       );
       return distinctSorted(waiting.map((p) => p.authorId));
     },

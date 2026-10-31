@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, lte, not, or, sql } from 'drizzle-orm';
 
 import {
   ScopeViolation,
@@ -6,7 +6,8 @@ import {
   type ReportPoint,
   type TxContext,
 } from '@/application/ports';
-import { parseIsoDate, toIsoDate } from '@/domain/time';
+import { LATE_GRACE_MS } from '@/domain/calendar';
+import { parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { points } from '../schema';
 import type { TxDatabase } from './database';
@@ -45,12 +46,47 @@ function toReportPoint(row: {
   ];
 }
 
+/**
+ * The SQL twin of `isLateReport` (domain/calendar/late-report.ts): a report about an event that
+ * ends before the meeting day, whose close, the event's end + 2 h capped at 00.00 of the meeting
+ * day, is after the deadline. A parity contract test keeps the two in step.
+ * TODO(m9-verify): this SQL has not run against PostgreSQL; check the parity test, incl. the DST nights.
+ */
+function lateFor(meetingDate: CalDate, deadlineAt: Date) {
+  const end = sql`((${lastDay} + coalesce(${points.timeTo}, time '20:00')) AT TIME ZONE 'Europe/Prague')`;
+  const cap = sql`(${toIsoDate(meetingDate)}::date::timestamp AT TIME ZONE 'Europe/Prague')`;
+  return sql<boolean>`coalesce(
+    ${points.kind} = 'report'
+    AND ${points.eventDate} IS NOT NULL
+    AND ${lastDay} < ${toIsoDate(meetingDate)}::date
+    AND least(${end} + make_interval(secs => ${LATE_GRACE_MS / 1000}::float8), ${cap}) > ${deadlineAt.toISOString()}::timestamptz,
+    false)`;
+}
+
 /** The worker's reads of report points for the late-report jobs (ADR 0035). */
 export function createPointReportReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'reportPoints' | 'reportPoint'> {
+): Pick<PointRepo, 'reportPoints' | 'reportPoint' | 'reminderAuthors'> {
   return {
+    async reminderAuthors({ draftsSince, monday, meetingDate, deadlineAt }) {
+      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
+      // The columns migrations 0017, 0024 and 0035 grant the worker, and no other.
+      const rows = await db
+        .selectDistinct({ authorId: points.authorId })
+        .from(points)
+        .where(
+          and(
+            or(
+              and(eq(points.state, 'draft'), gte(points.updatedAt, draftsSince)),
+              and(eq(points.state, 'returned'), lte(points.earliestMonday, toIsoDate(monday))),
+            ),
+            not(lateFor(meetingDate, deadlineAt)),
+          ),
+        )
+        .orderBy(asc(points.authorId));
+      return rows.map((row) => row.authorId);
+    },
     async reportPoints({ from, to }) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();
       const rows = await db

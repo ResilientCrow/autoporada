@@ -30,9 +30,7 @@ export const deadlineReminders: JobHandler<'reminders.deadline'> = async ({ db, 
       for (const kind of ['soft', 'hard'] as const satisfies readonly ReminderKind[]) {
         if (!switches[kind] || !reminderDue(kind, issue.deadlineAt, now)) continue;
         const recipients =
-          kind === 'soft'
-            ? await activeSubmitters(tx, now)
-            : await authorsWaiting(tx, issue.monday, now);
+          kind === 'soft' ? await activeSubmitters(tx, now) : await authorsWaiting(tx, issue, now);
         const slot = reminderSlot(kind, issue.deadlineAt).getTime();
         for (const userId of recipients) {
           const { data, dedupeKey } = mailJob(TEMPLATE[kind], { userId, monday: issue.monday });

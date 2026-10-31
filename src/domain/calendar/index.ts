@@ -28,6 +28,7 @@ export {
 export {
   eventEnd,
   isLateReport,
+  LATE_GRACE_MS,
   lateFacts,
   lateMailDue,
   reportCloses,

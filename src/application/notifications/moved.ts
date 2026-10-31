@@ -54,7 +54,7 @@ export async function movedRecipients(
   if (!current) return null;
   const [submitters, waiting] = await Promise.all([
     activeSubmitters(tx, now),
-    authorsWaiting(tx, issue.monday, now),
+    authorsWaiting(tx, issue, now),
   ]);
   return { monday: issue.monday, userIds: [...new Set([...submitters, ...waiting])] };
 }
@@ -75,6 +75,6 @@ export async function loadMoved(
 ): Promise<MovedFacts> {
   const { now } = tx.ctx;
   const issue = await reminderIssue(tx, now);
-  const hasWork = (await waitingAuthors(tx, issue.monday, now)).includes(userId);
+  const hasWork = (await waitingAuthors(tx, issue, now)).includes(userId);
   return { ...issue, hasWork };
 }
