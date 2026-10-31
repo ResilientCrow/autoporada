@@ -28,6 +28,7 @@ import {
   addOutlineItem,
   moveOutlineItem,
   readOutline,
+  readOutlineItem,
   removeOutlineItem,
   saveOutlineItem,
 } from './outline';
@@ -88,6 +89,7 @@ export {
   addOutlineItem,
   moveOutlineItem,
   readOutline,
+  readOutlineItem,
   removeOutlineItem,
   saveOutlineItem,
 } from './outline';
@@ -161,6 +163,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   queueFuture,
   queuePoints,
   readOutline,
+  readOutlineItem,
   readRegistry,
   readSettings,
   recentPeopleOf,

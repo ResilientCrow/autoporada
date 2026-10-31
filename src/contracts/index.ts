@@ -106,6 +106,7 @@ export {
   parsePointPeople,
   retractPointInput,
   retractPointOutput,
+  richDocWire,
   reviewEditPointInput,
   reviewEditPointOutput,
   savePointInput,
@@ -130,6 +131,8 @@ export {
 } from './point-read';
 export {
   outlineAddInput,
+  outlineItemInput,
+  outlineItemOutput,
   outlineMoveInput,
   outlineReadInput,
   outlineReadOutput,

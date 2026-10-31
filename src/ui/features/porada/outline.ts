@@ -4,6 +4,7 @@ import type {
   outlineAddInput,
   outlineMoveInput,
   outlineRemoveInput,
+  outlineSaveInput,
   outlineWriteOutput,
   ServerAction,
 } from '@/contracts';
@@ -14,6 +15,7 @@ type Action<In extends z.ZodType> = ServerAction<z.input<In>, z.output<typeof ou
 export type OutlineAddAction = Action<typeof outlineAddInput>;
 export type OutlineMoveAction = Action<typeof outlineMoveInput>;
 export type OutlineRemoveAction = Action<typeof outlineRemoveInput>;
+export type OutlineSaveAction = Action<typeof outlineSaveInput>;
 
 /** The three actions of the list. */
 export interface OutlineActions {
@@ -45,7 +47,7 @@ export interface OutlineView {
 }
 
 /** What a write starts from: the version only for a Monday with a row. */
-const versioned = (version: number | null) =>
+export const versioned = (version: number | null) =>
   version === null ? {} : { expectedVersion: version };
 
 export const moveInput =

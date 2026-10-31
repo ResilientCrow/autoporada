@@ -6,7 +6,7 @@ import type { Block } from '../model';
 import type { ComposeContext } from './context';
 import { futureBullet } from './future';
 import { inlineStudents } from './students';
-import { finalRuns, finalText, point, quoted, richBlocks, spacer, statementLabel } from './text';
+import { finalRuns, finalText, partnerBlocks, point, richBlocks, spacer } from './text';
 
 function futurePoint(
   heading: string,
@@ -65,16 +65,7 @@ function slotBlocks(item: SnapshotItem, ctx: ComposeContext): Block[] {
     case 'media':
       return isRichDocEmpty(item.body) ? [] : point(item.title, body());
     case 'partners':
-      return item.quotes.length === 0
-        ? []
-        : point(
-            item.title,
-            item.quotes.map((q) => ({
-              kind: 'partner',
-              label: statementLabel(q.speakerGenitive, q.affiliation),
-              quote: quoted(q.quote),
-            })),
-          );
+      return item.quotes.length === 0 ? [] : point(item.title, partnerBlocks(item.quotes));
     case null:
       return point(item.title, body());
   }

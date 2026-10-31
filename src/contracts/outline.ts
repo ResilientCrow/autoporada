@@ -106,3 +106,20 @@ export const outlineReadOutput = z.strictObject({
   pokyny: z.array(row),
   hospodareni: z.array(row),
 });
+
+export const outlineItemInput = z.strictObject({ monday, lineageId: z.uuid() });
+/** One item for its editor: the text as stored (wire shape), the partners' quotes, and who it belongs to. */
+export const outlineItemOutput = z.strictObject({
+  monday: z.iso.date(),
+  /** Null for a Monday without a row yet. */
+  version: z.int().positive().nullable(),
+  lineageId: z.uuid(),
+  section,
+  slot: slot.nullable(),
+  persistence,
+  title: z.string(),
+  body: richDocWire,
+  quotes: z.array(statement),
+  /** Set on a proposal row, whose text is the point's: it is not edited here. */
+  proposal: z.strictObject({ pointId: z.uuid() }).nullable(),
+});

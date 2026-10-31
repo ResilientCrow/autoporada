@@ -1,4 +1,5 @@
 export { addOutlineItem } from './add';
+export { readOutlineItem } from './item';
 export { moveOutlineItem } from './move';
 export { readOutline } from './read';
 export { removeOutlineItem } from './remove';

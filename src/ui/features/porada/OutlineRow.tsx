@@ -89,7 +89,6 @@ function RemoveButton({
  * One item of a section: its title with a badge for a slot, a chip for how long it stays and a
  * flag for a newly approved proposal, then the order buttons, „Upravit“ (for a proposal a link to
  * its review instead) and, for an item the headmaster added, „Odebrat“.
- * TODO(m9-verify): the „Upravit“ pages come with row 46 and 404 until then.
  */
 export function OutlineRow({
   monday,

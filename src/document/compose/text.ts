@@ -64,6 +64,21 @@ export function richBlocks(doc: RichDoc, tokens: Tokens): Block[] {
   });
 }
 
+/** The „vyjádření pana …“ lines of Ohlasy sociálních partnerů. */
+export function partnerBlocks(
+  quotes: readonly {
+    readonly speakerGenitive: string;
+    readonly affiliation?: string;
+    readonly quote: string;
+  }[],
+): Block[] {
+  return quotes.map((q) => ({
+    kind: 'partner',
+    label: statementLabel(q.speakerGenitive, q.affiliation),
+    quote: quoted(q.quote),
+  }));
+}
+
 export const spacer = (count = 1): Block[] =>
   Array.from({ length: count }, () => ({ kind: 'spacer' }));
 

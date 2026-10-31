@@ -2,6 +2,7 @@
 // reportFromContent is also M9's snapshot builder: for a submitted point every count is zero and report is never null.
 export {
   composeDocument,
+  composeItemPreview,
   composePointPreview,
   reportFromContent,
   snapshotPerson,

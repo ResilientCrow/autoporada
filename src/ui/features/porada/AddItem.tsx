@@ -11,6 +11,7 @@ import {
   useActionForm,
   type FormSpec,
 } from '@/ui/form';
+import { ArrowLink } from '@/ui/kit';
 
 import { addInput, type OutlineAddAction, type OutlineSectionKey } from './outline';
 
@@ -57,7 +58,10 @@ export function AddItem({
           { value: 'standing', label: persistence.standing },
         ]}
       />
-      <SubmitButton>{add.submit}</SubmitButton>
+      <div className="flex flex-wrap items-center gap-4">
+        <SubmitButton>{add.submit}</SubmitButton>
+        <ArrowLink href={`/porada/${monday}/pokyny/nova?cast=${section}`}>{add.withText}</ArrowLink>
+      </div>
     </Form>
   );
 }
