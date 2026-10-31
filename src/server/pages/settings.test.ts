@@ -111,6 +111,25 @@ describe('settingsPage', () => {
     expect([effect.day, effect.time]).toEqual(['pátek', '18.30']);
   });
 
+  it('labels a moved porada by its meeting date, not by its Monday', async () => {
+    asRole('headmaster');
+    answer({
+      submitMonday: '2026-11-09',
+      issues: [
+        {
+          monday: '2026-11-09',
+          meetingDate: '2026-11-11',
+          deadlineAt: '2026-11-06T17:30:00.000Z',
+          status: 'open',
+          version: 2,
+        },
+      ],
+    });
+    const { effect } = (await settingsPage())!;
+    expect(effect.keep).toBe('11. 11. 2026');
+    expect(effect.from).toBe('16. 11. 2026');
+  });
+
   it('agrees with deadlineChange on the porada kept and the one the rule starts at', async () => {
     asRole('headmaster');
     const old = { dayOffset: -2, time: parseWallTime('20:00') };

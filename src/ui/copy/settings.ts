@@ -2,7 +2,7 @@
 export const settings = {
   title: 'Nastavení',
   typesLink: 'Typy bodů',
-  said: { changed: 'Nastavení je uloženo.', unchanged: 'Nic se nezměnilo.' },
+  said: { changed: 'Nastavení je uloženo.' },
   save: 'Uložit',
   deadline: {
     title: 'Uzávěrka',
@@ -18,7 +18,7 @@ export const settings = {
     timeOption: (time: string) => `v\u00a0${time}`,
     example: (day: string, time: string) => `U\u00a0pondělní porady: ${day} ${time}`,
     effect: (keep: string, day: string, time: string, from: string) =>
-      `Uzávěrka porady ${keep} zůstává ${day} ${time}. Nové pravidlo platí od porady ${from}. Uzávěrky přesunutých porad se nemění.`,
+      `Uzávěrka porady ${keep} zůstává ${day} ${time}. Nové pravidlo platí od porady ${from}. Ručně nastavené uzávěrky se nemění.`,
   },
   reminders: {
     title: 'Připomínky',

@@ -25,6 +25,15 @@ export function exampleOf(days: number, time: string): { day: string; time: stri
   };
 }
 
+/** Whether the selects hold another rule than the saved one; only then is there an effect to tell. */
+export function differsFromSaved(
+  saved: { readonly dayOffset: number; readonly time: string },
+  days: string,
+  time: string,
+): boolean {
+  return -saved.dayOffset !== Number(days) || saved.time !== time;
+}
+
 /** What the deadline form sends: the days before the meeting as a negative offset, and the time. */
 export function deadlineInput(version: number, data: FormData): SaveInput {
   return {

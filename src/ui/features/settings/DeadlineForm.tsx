@@ -9,7 +9,7 @@ import { parseWallTime } from '@/domain/time';
 import { settings } from '@/ui/copy';
 import { Form, SelectField, SubmitButton, useActionForm, type FormSpec } from '@/ui/form';
 
-import { deadlineInput, exampleOf, QUARTER_HOURS } from './inputs';
+import { deadlineInput, differsFromSaved, exampleOf, QUARTER_HOURS } from './inputs';
 
 export type SaveAction = ServerAction<
   z.input<typeof settingsSaveInput>,
@@ -68,7 +68,9 @@ export function DeadlineForm({
       <SelectField name="value.dayOffset" options={DAY_OPTIONS} value={days} onChange={setDays} />
       <SelectField name="value.time" options={TIME_OPTIONS} value={time} onChange={setTime} />
       <p>{deadline.example(example.day, example.time)}</p>
-      <p>{deadline.effect(effect.keep, effect.day, effect.time, effect.from)}</p>
+      {differsFromSaved(rule, days, time) && (
+        <p>{deadline.effect(effect.keep, effect.day, effect.time, effect.from)}</p>
+      )}
       <SubmitButton>{settings.save}</SubmitButton>
     </Form>
   );

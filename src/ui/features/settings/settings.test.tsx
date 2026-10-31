@@ -5,6 +5,7 @@ import { settings } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
+import { differsFromSaved } from './inputs';
 import { Settings, type SettingsView } from './Settings';
 
 const VIEW: SettingsView = {
@@ -60,10 +61,29 @@ describe('Settings', () => {
     expect(t).toContain(settings.deadline.example('čtvrtek', '8.15'));
   });
 
-  it('writes the effect line with the porada, its deadline and the next one, whatever the rule chosen', () => {
+  it('says nothing of an effect while the selects hold the saved rule', () => {
     const t = text(render());
-    expect(t).toContain(settings.deadline.effect('9. 11. 2026', 'sobota', '20.00', '16. 11. 2026'));
-    expect(t).toContain('Uzávěrky přesunutých porad se nemění.');
+    expect(t).not.toContain(
+      settings.deadline.effect('9. 11. 2026', 'sobota', '20.00', '16. 11. 2026'),
+    );
+    expect(t).not.toContain('Ručně nastavené uzávěrky se nemění');
+  });
+
+  it('writes the effect line with the porada, its deadline and the next one', () => {
+    expect(settings.deadline.effect('9. 11. 2026', 'sobota', '20.00', '16. 11. 2026')).toBe(
+      'Uzávěrka porady 9. 11. 2026 zůstává sobota 20.00. Nové pravidlo platí od porady 16. 11. 2026. Ručně nastavené uzávěrky se nemění.',
+    );
+  });
+
+  describe('differsFromSaved', () => {
+    const saved = { dayOffset: -2, time: '20:00' };
+    it.each([
+      ['2', '20:00', false],
+      ['3', '20:00', true],
+      ['2', '18:15', true],
+    ])('days %s at %s: %s', (days, time, differs) => {
+      expect(differsFromSaved(saved, days, time)).toBe(differs);
+    });
   });
 
   it('checks the reminders the view has on and leaves the other off', () => {
