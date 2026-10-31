@@ -19,9 +19,34 @@ const origin = z.discriminatedUnion('kind', [
   }),
 ]);
 
+/** One line of the preflight list (design §11); the copy is `porada.preflight.<code>`. */
+const finding = z.strictObject({
+  code: z.enum([
+    'issue-not-open',
+    'snapshot-invalid',
+    'report-incomplete',
+    'points-waiting',
+    'points-returned',
+    'akce-waiting',
+    'proposal-dropped',
+    'deadline-ahead',
+    'source-not-generated',
+    'annex1-empty',
+    'reports-later',
+    'ohlasy-empty',
+    'registry-new',
+    'meeting-moved',
+  ]),
+  level: z.enum(['block', 'warn', 'info']),
+  refs: z.array(z.strictObject({ id: z.string(), title: z.string() })).optional(),
+  paths: z.array(z.string()).optional(),
+  count: z.int().min(0).optional(),
+});
+
 export const issuePreviewOutput = z.strictObject({
   /** An `IssueSnapshot` (the contract layer cannot name it; read it with `parseIssueSnapshot`), or null when it is invalid. */
   snapshot: z.unknown(),
   problems: z.array(problem),
+  findings: z.array(finding),
   origin,
 });
