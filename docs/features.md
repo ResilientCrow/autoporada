@@ -47,6 +47,12 @@ in v1 unless the [plan of record](plan.md) changes first.
 - Autosave with conflict detection, a status timeline, „Stáhnout“ (back to a
   draft) and „Zrušit bod“. A late hand-in goes to the next meeting whose
   deadline is still ahead, and the editor says which one.
+- A report on an event that ends after its porada's deadline but before the
+  meeting day is a late report: it is due two hours after the event ends (an
+  event with no end time ends at 20.00), but never after 00.00 of the meeting
+  day, and it goes to that porada. The editor and the detail say „Zprávu
+  odevzdejte do …; půjde na poradu …“. A report is owed from the end of its
+  akce, so it can be started on the akce's last evening.
 
 ### Reviewing
 
@@ -54,6 +60,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   hand-in first, a mark for a changed approved akce). Reviewers approve, edit,
   return (a note is
   required) or reject; they can also cancel an approved akce. A reviewer cannot approve their own point.
+- Staff reviewers see the full preview of the porada (`/porada/[datum]/nahled`,
+  read-only); it names students, so students never see it.
 - A reviewer sees a colleague's point only after the author handed it in; a
   draft stays private. A returned point stays visible to reviewers.
 - A reviewer's edit keeps the original wording of the changed fields in the
@@ -65,25 +73,71 @@ in v1 unless the [plan of record](plan.md) changes first.
 
 ### Weekly issue
 
-- One issue per Monday with a configurable deadline. Submissions after the
-  deadline go to the next issue.
+- One issue (porada) per Monday slot. The deadline counts back from the
+  meeting date: by default two days before, at 20.00, which is Saturday 20.00
+  for a Monday meeting. Submissions after the deadline go to the next porada,
+  except the late reports above.
+- Settings (`/nastaveni`, headmaster): the deadline (1 to 4 days before the
+  meeting, 8.00 to 22.00 on a quarter hour), the two deadline reminders on or
+  off, and the heading and intro of Příloha 1. The form shows its effect before
+  saving. A deadline already shown to an author never moves: saving freezes the
+  porady shown so far with the old rule and applies the new one to those nobody
+  has seen, and never to a deadline set by hand.
 - Deadline reminders by e-mail: two days before the deadline at 13.00 to
   staff who handed in something this school year (switched off in the
   profile), and on its day at 12.00 to authors with a draft or returned point.
+  The headmaster can switch either reminder off for everyone. Saturday's
+  reminder leaves out late reports, which have their own mails: one when the
+  akce ends (with the exact deadline) and one an hour before it, to the author
+  of the akce or of the late draft.
 - A summary for the headmaster five minutes after the deadline: counts of
-  approved, waiting and returned points.
-- Přítomni and Hosté, prefilled from the last issue.
-- A POKYNY outline editor with carry-over. Each item is standing or one-time,
-  items can be reordered, and the text is restricted rich text with three
-  indent levels.
-- Ohlasy v médiích and ohlasy sociálních partnerů (headmaster only).
+  approved, waiting and returned points. When a porada had late reports, a
+  second summary follows after the last late deadline, with counts of those
+  handed in and those missing.
+- The porada pages (`/porada`, headmaster): the working slot is the first open
+  porada whose meeting date is today or later, with steps for the outline,
+  „Údaje“, Příloha 2 and the preview.
+- Přítomni, Hosté and Příloha 2 carry from the latest earlier porada that has
+  a value, and the headmaster edits them in „Údaje“ and „Příloha 2“. An
+  empty value clears and carries as cleared; „Odebrat přílohu“ removes Příloha 2.
+- A POKYNY outline editor with carry-over (`/porada/[datum]/pokyny`). Each item
+  is standing or one-time, items can be reordered, edited, added with text and
+  removed, and the text is restricted rich text with three indent levels. The
+  first write copies the outline that was derived from the earlier porada, or
+  from the school's starting content. The meetings, events and partner slots are
+  generated or restricted (partners keep their quotes, at most 20). Approved
+  proposals are appended to their section, marked „Nově schválený návrh“, and
+  the headmaster places them; a proposal's wording is changed through the
+  reviewer's edit.
+- The rich-text editor: bold, italic, undo, and four indent levels (plain,
+  then the o / o / ■ levels). Text pasted from Word or Google Docs is cleaned
+  in the browser to paragraphs, bold, italic and levels; nothing else is kept.
+  Every M9 editor saves with „Uložit“ and asks before leaving with unsaved
+  changes.
+- Ohlasy v médiích and ohlasy sociálních partnerů (headmaster only), in the
+  outline.
 - Příloha 2, optional free-form content.
-- Student registry: Příloha 1 and point-4 lists, sorted by class, with new
-  students in bold. Supports bulk paste and „Nový školní rok“.
-- Full preview and a preflight check before generating.
+- Student registry (`/registr`, headmaster edits, staff reviewers read): the
+  lists of Příloha 1 and point 4, more can be added, each entry with given
+  name, family name and class, sorted by class, with students added since the
+  last document in bold („NOVÉ“). Bulk paste reads the document's own list
+  format („Jana Nováková (1.A), Patricie Nováková, Anna Nováková (obě 2.B), …“)
+  and one name per line, with a preview of the problems before anything is
+  added. „Nový školní rok“ (step-up) archives the chosen lists for the ending
+  school year; entries never printed are deleted.
+- Full preview and a preflight check before generating. The preflight blocks on
+  an invalid snapshot, and warns about points and akce still waiting, returned
+  points, late reports still expected, placed proposals no longer eligible, an
+  empty Příloha 1 and a deadline still ahead.
 - Generation: a DOCX in the exact template look, plus a PDF. Every version is
   archived, and an issue can be reopened and regenerated.
-- „Porada se nekoná“ (skip a week) and a shifted meeting day for holidays.
+- „Porada se nekoná“ (skip a week), before or after its deadline, and
+  „Přesunout poradu“: a porada can move to any date in the 26-week horizon, for
+  example a holiday Monday to the Friday before. The deadline follows the new
+  date by the rule and can be changed in the same form. Porady in the way are
+  skipped in the same step or the move is refused, so meeting dates and
+  deadlines keep their order. Přehled shows a moved porada, and submitters get
+  one mail when a move brings the deadline earlier.
 
 ### Operations
 
@@ -100,6 +154,13 @@ in v1 unless the [plan of record](plan.md) changes first.
   queue, `jobs:redrive` replays dead jobs, and `mail:test` sends a test e-mail
   to a reviewer or headmaster.
 - Privacy notice page.
+
+### Known limits
+
+- The editor's unsaved-changes guard catches closing the tab and clicking a
+  link of the app, but not the browser's Back button.
+- Moving a porada does not notify the authors of late event reports: a mail
+  already sent keeps the old close, and the last call carries the new one.
 
 ## Deferred (later)
 

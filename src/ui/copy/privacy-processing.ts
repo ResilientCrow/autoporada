@@ -73,7 +73,12 @@ export const processingSections = [
           { term: 'Porady', value: 'přítomní a\u00A0hosté porady' },
           {
             term: 'Seznamy studentů',
-            value: 'jméno a\u00A0třída, pro přílohy dokumentu porady',
+            value:
+              'jméno a\u00A0třída studentů, včetně nezletilých, pro přílohy a\u00A0seznamy v\u00A0dokumentu porady; seznamy vede ředitel',
+            review: {
+              by: 'dpo',
+              note: 'Ověřit, že seznamy studentů smějí obsahovat jména nezletilých.',
+            },
           },
           { term: 'Záznam změn', value: 'kdo, co a\u00A0kdy změnil' },
           {
@@ -148,6 +153,14 @@ export const processingSections = [
         review: {
           by: 'dpo',
           note: 'Ověřit, že studenti smějí vidět jména zodpovědných osob u\u00A0schválených akcí.',
+        },
+      },
+      {
+        kind: 'p',
+        text: 'Seznamy studentů upravuje ředitel. Kontroloři, kteří jsou zaměstnanci školy, je vidí také, na\u00A0stránce seznamů i\u00A0v\u00A0náhledu dokumentu porady.',
+        review: {
+          by: 'dpo',
+          note: 'Ověřit, že kontroloři smějí vidět jména studentů v\u00A0seznamech a\u00A0v\u00A0náhledu dokumentu.',
         },
       },
       {

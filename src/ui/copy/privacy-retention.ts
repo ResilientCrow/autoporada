@@ -31,6 +31,15 @@ export const retentionSections = [
             },
           },
           {
+            term: 'Seznamy studentů',
+            value:
+              'zůstávají, dokud je ředitel neodebere; na\u00A0začátku nového školního roku je ředitel uloží do archivu seznamů. Dokument porady, který je obsahuje, zůstává trvale.',
+            review: {
+              by: 'dpo',
+              note: 'Ověřit dobu uchování archivovaných seznamů studentů.',
+            },
+          },
+          {
             term: 'Koncepty, vrácené, zamítnuté a\u00A0zrušené body',
             value: 'smažeme 1.\u00A0září, na\u00A0konci školního roku',
           },

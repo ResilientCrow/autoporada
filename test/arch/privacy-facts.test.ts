@@ -208,6 +208,30 @@ describe('points and the people memory in the notice (M8a)', () => {
   });
 });
 
+describe('the students’ lists in the notice (M9)', () => {
+  it('names the lists, who edits and who reads them, and flags the minors for the DPO', () => {
+    const udaje = sectionText('udaje');
+    expect(udaje).toContain('Seznamy studentů');
+    expect(udaje).toContain('včetně nezletilých');
+    expect(notesOf('udaje')).toContain(
+      'Ověřit, že seznamy studentů smějí obsahovat jména nezletilých.',
+    );
+    const recipients = sectionText('prijemci');
+    expect(recipients).toContain('Seznamy studentů upravuje ředitel.');
+    expect(recipients).toContain('Studenti nikdy nevidí registr ani archiv.');
+    expect(notesOf('prijemci')).toContain(
+      'Ověřit, že kontroloři smějí vidět jména studentů v\u00A0seznamech a\u00A0v\u00A0náhledu dokumentu.',
+    );
+  });
+
+  it('keeps them until the headmaster removes them and archives them for a new school year', () => {
+    const row = retentionRow(/^Seznamy studentů$/);
+    expect(row?.value).toContain('zůstávají, dokud je ředitel neodebere');
+    expect(row?.value).toContain('uloží do archivu seznamů');
+    expect(row).toMatchObject({ review: { by: 'dpo' } });
+  });
+});
+
 /**
  * Columns the notice describes under „Jaké údaje zpracováváme“. A new column
  * must be described there first, then added to this list.

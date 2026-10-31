@@ -264,9 +264,46 @@ now; the handler works from the clock and the data, so it sends only what is due
           returned counts, linking `/kontrola`; none for a skipped meeting; sent once.
     - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
 
+## Headmaster tools (M9)
+
+These steps need the mail steps (16–19) and `jobs:status` at `dead: 0`. Sign in as the
+headmaster.
+
+34. **The deadline setting.** In „Nastavení“ note the deadline of the porada already shown
+    (`SELECT monday, meeting_date, deadline_at FROM issues ORDER BY monday DESC LIMIT 3;`),
+    then save a different rule (for example three days before at 18.00).
+    - [ ] The porada already shown keeps its `deadline_at` (the save freezes the shown ones first).
+    - [ ] A porada created afterwards counts back from its meeting date by the new rule.
+    - [ ] A second headmaster tab saving the old form is refused as changed.
+35. **A moved porada mails the authors only when the deadline comes earlier.** Move the shown
+    porada („Přesunout poradu“) to a date that makes its deadline earlier (the job is enqueued
+    by the move, so there is no `jobs:run`; watch `docker compose run --rm cli jobs:status`).
+    - [ ] Each author with a draft or returned point (and each active submitter the rule names) gets one
+          „Autoporada: porada se přesouvá na <datum>“ with the new deadline and the `/body` link,
+          and no title or name; moving the same porada to the same deadline again sends nothing.
+    - [ ] A move that makes the deadline later sends no mail.
+    - [ ] Known limit: authors of late event reports are not mailed (features.md, Known limits).
+36. **The worker reads settings and dates, nothing else new** (migrations 0030 and 0035).
+    - [ ] `psql`: `SELECT grantee, column_name FROM information_schema.column_privileges WHERE table_name = 'settings' AND grantee = 'autoporada_jobs' ORDER BY 2;`
+          lists `key` and `value` only (`\dp settings` shows the same).
+    - [ ] The same for `table_name IN ('future_items', 'points')`: besides the earlier columns the
+          jobs role holds `time_to` and `report_point_id` on `future_items`, and `event_date`,
+          `end_date` and `time_to` on `points`; it holds no `title`, `body` or `place` column.
+    - [ ] `\dp issues` shows `id`, `monday`, `meeting_date`, `deadline_at` and `status` for the jobs role.
+    - [ ] `SELECT has_any_column_privilege('autoporada_jobs', t::regclass, 'SELECT') FROM unnest(ARRAY['registry_lists', 'registry_entries', 'issue_items']) AS t;`
+          answers `f` three times: the jobs role cannot read the students' names or the outline.
+    - [ ] `jobs:run reports.late` ends `sent` or with nothing due, never with a database code.
+37. **Paste into the editor on the school's own Office and browsers.** In a point and in the
+    outline item editor, paste a Word paragraph with a list, bold and a table, and a Google
+    Docs paragraph with a link, in the browsers the school uses.
+    - [ ] Headings, lists, bold and links survive; fonts, colours, sizes and classes do not.
+    - [ ] The browser console shows no Content-Security-Policy violation while pasting.
+    - [ ] Pasting a list of students into the registry shows a preview that counts the lines it
+          could not read, and nothing is stored until it is confirmed.
+
 ## At go-live
 
-34. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
+38. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
     - [ ] Record how many sign-ins per minute the school's NAT address sees;
           the `auth` limit allows 600 per address.
 
