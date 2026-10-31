@@ -30,7 +30,7 @@ Then, when the change warrants it:
 - `worker-isolated`: worker never imports server, app or ui.
 - `use-cases-not-into-jobs`: use cases enqueue via application/notifications, never import application/jobs.
 - `src/instrumentation-client.ts` imports only zod (it sets zod jitless before hydration; ADR 0023, `instrumentation-client-is-light`).
-- `docx` only in `document/render-docx`; React Aria only in `ui/kit` and `ui/form`; TipTap/ProseMirror only in `ui/form/rich-text` (`tiptap-only-in-rich-text`, ADR 0031); `.tsx` only in app, ui and `document/render-html`.
+- `docx` only in `document/render-docx`; React Aria only in `ui/kit` and `ui/form`; TipTap/ProseMirror only in `ui/form/rich-text/{editor,indent,paste}.ts`, and `./editor` only by dynamic import (ADR 0031); `.tsx` only in app, ui and `document/render-html`.
 - No circular imports, no orphans, no `test/` imports from `src/`.
 
 ## Conventions
