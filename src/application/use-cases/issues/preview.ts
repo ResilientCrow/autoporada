@@ -40,7 +40,7 @@ export const issuePreview = defineUseCase({
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     const { snapshot, problems, facts } = await assembleIssueSnapshot(tx, monday, { now });
     return ok({
-      snapshot,
+      snapshot: snapshot === null ? null : JSON.stringify(snapshot),
       problems: problems.map(problemWire),
       findings: preflight(facts, problems, now).map(findingWire),
       origin: originWire(facts.origin),

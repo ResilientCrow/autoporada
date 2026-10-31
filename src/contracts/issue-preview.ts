@@ -56,8 +56,12 @@ const finding = z.strictObject({
 });
 
 export const issuePreviewOutput = z.strictObject({
-  /** An `IssueSnapshot` (the contract layer cannot name it; read it with `parseIssueSnapshot`), or null when it is invalid. */
-  snapshot: z.unknown(),
+  /**
+   * The `IssueSnapshot` as JSON text, or null when it is invalid. The contract layer cannot name
+   * the snapshot and a wire type must not accept anything, so the reader parses the text and then
+   * `parseIssueSnapshot`.
+   */
+  snapshot: z.string().nullable(),
   problems: z.array(problem),
   findings: z.array(finding),
   origin,

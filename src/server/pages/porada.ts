@@ -182,8 +182,9 @@ export async function previewPage(datum: string): Promise<PreviewPageModel | nul
     }),
   );
   if (preview === null) return null;
-  // The use case cannot name the snapshot type (contracts), so the page parses what it composes.
-  const parsed = preview.snapshot === null ? null : parseIssueSnapshot(preview.snapshot);
+  // The use case cannot name the snapshot type (contracts) and sends it as JSON text, so the page parses what it composes.
+  const parsed =
+    preview.snapshot === null ? null : parseIssueSnapshot(JSON.parse(preview.snapshot) as unknown);
   return {
     monday: read.slot.monday,
     meeting: formatTitleDate(parseIsoDate(read.slot.meetingDate)),
