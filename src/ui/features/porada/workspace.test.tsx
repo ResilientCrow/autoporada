@@ -214,6 +214,21 @@ describe('PreviewPage and Preflight', () => {
     expect(html).toContain(porada.preflight.due('23.\u00a011.\u00a0v\u00a020.00'));
   });
 
+  it('says how many late drafts of others are not named, with or without named ones', () => {
+    const only = preview([finding({ code: 'late-reports-expected', level: 'warn', count: 2 })]);
+    expect(only).toContain(porada.preflight.hiddenDrafts(2));
+    const both = preview([
+      finding({
+        code: 'late-reports-expected',
+        level: 'warn',
+        refs: [{ id: 'q-1', title: 'Pozdní akce', of: 'akce' }],
+        count: 1,
+      }),
+    ]);
+    expect(both).toContain('Pozdní akce');
+    expect(both).toContain(porada.preflight.hiddenDrafts(1));
+  });
+
   it('counts the entries marked NOVÉ and lists the invalid fields', () => {
     const html = preview([
       finding({ code: 'registry-new', level: 'info', count: 3 }),

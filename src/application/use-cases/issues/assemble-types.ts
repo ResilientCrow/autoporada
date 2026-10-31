@@ -41,6 +41,8 @@ export interface AssemblyFacts {
   readonly akceWaiting: readonly { readonly id: string; readonly title: string }[];
   /** Late reports (ADR 0035) the porada still waits for, within the read scope. */
   readonly lateExpected: readonly LateExpected[];
+  /** Late drafts of other authors no akce answers for: only counted (SSU-5). */
+  readonly lateDraftsHidden: number;
   readonly dropped: readonly DroppedRef[];
   readonly annex1Entries: number;
   readonly newEntries: number;

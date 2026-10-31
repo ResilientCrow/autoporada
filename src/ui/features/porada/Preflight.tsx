@@ -18,7 +18,7 @@ export interface FindingView {
   }[];
   /** `snapshot-invalid`: the fields that are wrong. */
   readonly paths?: readonly string[];
-  /** `registry-new`: how many entries will be marked NOVÉ. */
+  /** `registry-new`: how many entries will be marked NOVÉ; `late-reports-expected`: late drafts not named. */
   readonly count?: number;
 }
 
@@ -58,6 +58,9 @@ function Finding({ finding }: { readonly finding: FindingView }) {
             </li>
           ))}
         </ul>
+      )}
+      {finding.code === 'late-reports-expected' && (finding.count ?? 0) > 0 && (
+        <p>{porada.preflight.hiddenDrafts(finding.count ?? 0)}</p>
       )}
       {finding.paths !== undefined && (
         <ul className="list-disc space-y-1 pl-6">

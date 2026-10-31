@@ -16,8 +16,9 @@ const SLOT = { meetingDate: MONDAY, deadlineAt: new Date('2026-10-31T19:00:00Z')
 const SUNDAY_21 = { day: '2026-11-01', timeTo: '21:00' };
 const SUNDAY_NO_END = { day: '2026-11-01', timeTo: null };
 
-const expectedAs = (user: Parameters<typeof world.as>[0]) =>
+const lateAs = (user: Parameters<typeof world.as>[0]) =>
   world.tx(world.as(user), (tx) => lateReportsExpected(tx, SLOT), 'read');
+const expectedAs = async (user: Parameters<typeof world.as>[0]) => (await lateAs(user)).expected;
 
 describe('lateReportsExpected', () => {
   it('lists the akce nobody wrote a report for, with the close, sorted by close and then title', async () => {
@@ -63,37 +64,76 @@ describe('lateReportsExpected', () => {
     ]);
   });
 
-  it('shows an author their own drafts and returned reports, an akce linked to a draft once, as the draft', async () => {
+  it('shows an author their own unlinked drafts and returned reports; an akce linked to a draft once, as the akce', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const draft = await late.report(author, SUNDAY_21);
     const returned = await late.report(author, SUNDAY_NO_END, 'returned', MONDAY);
     const done = await late.report(author, SUNDAY_21, 'submitted', MONDAY);
     const early = await late.report(author, { day: '2026-10-30', timeTo: '15:00' });
-    const linkedAkce = await late.akce(author, SUNDAY_21);
+    const linkedAkce = await late.akce(author, SUNDAY_21, { title: 'Hlavní akce' });
     const linked = await late.report(author, SUNDAY_21);
-    await late.patchAkce(author, linkedAkce, { reportPointId: linked });
+    await late.patchAkce(author, linkedAkce, { reportState: 'written', reportPointId: linked });
     const listed = await expectedAs(author);
     expect(listed.map((e) => [e.id, e.of]).sort()).toEqual(
       [
         [draft, 'point'],
         [returned, 'point'],
-        [linked, 'point'],
+        [linkedAkce, 'akce'],
       ].sort(),
     );
+    expect(listed.find((e) => e.id === linkedAkce)?.title).toBe('Hlavní akce');
+    expect(listed.map((e) => e.id)).not.toContain(linked);
     expect(listed.map((e) => e.id)).not.toContain(done);
     expect(listed.map((e) => e.id)).not.toContain(early);
-    expect(listed.map((e) => e.id)).not.toContain(linkedAkce);
   });
 
-  // The known gap (TODO(m9-verify) in late-reports.ts): the headmaster's web read does not see
-  // another author's drafts, so the preflight lists only the akce awaiting a report for them.
-  it('shows the headmaster the akce but not another author’s draft, only their own', async () => {
+  it.each(['draft', 'returned'] as const)(
+    'keeps an akce in the headmaster’s list once its report is started and %s, under the akce’s own title',
+    async (state) => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const author = await world.seed.user({ role: 'submitter' });
+      const id = await late.akce(author, SUNDAY_21, { title: 'Beseda' });
+      const report = await late.report(author, SUNDAY_21, state, MONDAY);
+      await late.patchAkce(author, id, { reportState: 'written', reportPointId: report });
+      const result = await lateAs(head);
+      expect(result.expected).toEqual([
+        { id, of: 'akce', title: 'Beseda', due: new Date('2026-11-01T22:00:00Z') },
+      ]);
+      expect(result.hiddenDrafts).toBe(0);
+    },
+  );
+
+  it('drops an akce whose started report is handed in', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const author = await world.seed.user({ role: 'submitter' });
+    const id = await late.akce(author, SUNDAY_21);
+    const report = await late.report(author, SUNDAY_21, 'submitted', MONDAY);
+    await late.patchAkce(author, id, { reportState: 'written', reportPointId: report });
+    expect(await lateAs(head)).toEqual({ expected: [], hiddenDrafts: 0 });
+  });
+
+  it('gives the headmaster another author’s never-submitted drafts as a count, never as a title', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const author = await world.seed.user({ role: 'submitter' });
     const awaiting = await late.akce(author, SUNDAY_21);
     await late.report(author, SUNDAY_21);
+    await late.report(author, SUNDAY_21);
+    await late.report(author, { day: '2026-10-30', timeTo: '15:00' }); // not late
+    // A returned report was handed in once, so the reviewers already read it.
+    const returned = await late.report(author, SUNDAY_NO_END, 'returned', MONDAY);
     const own = await late.report(head, SUNDAY_21);
-    expect((await expectedAs(head)).map((e) => e.id).sort()).toEqual([awaiting, own].sort());
+    const result = await lateAs(head);
+    expect(result.expected.map((e) => e.id).sort()).toEqual([awaiting, returned, own].sort());
+    expect(result.hiddenDrafts).toBe(2);
+  });
+
+  it('does not count a draft linked to an akce twice', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const author = await world.seed.user({ role: 'submitter' });
+    const id = await late.akce(author, SUNDAY_21);
+    const report = await late.report(author, SUNDAY_21);
+    await late.patchAkce(author, id, { reportState: 'written', reportPointId: report });
+    expect((await lateAs(head)).hiddenDrafts).toBe(0);
   });
 
   it('judges lateness against the deadline of the porada it is given', async () => {
@@ -103,6 +143,6 @@ describe('lateReportsExpected', () => {
     const laterDeadline = { meetingDate: MONDAY, deadlineAt: new Date('2026-11-01T22:30:00Z') };
     expect(
       await world.tx(world.as(head), (tx) => lateReportsExpected(tx, laterDeadline), 'read'),
-    ).toEqual([]);
+    ).toEqual({ expected: [], hiddenDrafts: 0 });
   });
 });

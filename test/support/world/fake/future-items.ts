@@ -294,10 +294,15 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, false);
       return reaching('approved', from).filter((item) => {
         const last = item.content.endDate ?? item.content.startDate;
+        const linked =
+          item.reportPointId === null ? undefined : tx.draft.points.get(item.reportPointId);
+        const notStarted =
+          (item.reportState === 'none' || item.reportState === 'prompted') &&
+          item.reportPointId === null;
+        const unfinished = linked?.state === 'draft' || linked?.state === 'returned';
         return (
           item.content.expectsReport &&
-          (item.reportState === 'none' || item.reportState === 'prompted') &&
-          item.reportPointId === null &&
+          (notStarted || unfinished) &&
           last !== null &&
           compareDates(last, to) <= 0
         );

@@ -1,9 +1,9 @@
-import { and, asc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, exists, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 
 import type { FutureItemRepo, TxContext } from '@/application/ports';
 import { toIsoDate, type CalDate } from '@/domain/time';
 
-import { futureItems } from '../schema';
+import { futureItems, points } from '../schema';
 import type { TxDatabase } from './database';
 import { ITEM_ROW, toRecord, visibleFutureItems } from './future-items';
 
@@ -43,8 +43,24 @@ export function createFutureIssueReads(
             visibleFutureItems(ctx),
             eq(futureItems.state, 'approved'),
             eq(futureItems.expectsReport, true),
-            inArray(futureItems.reportState, ['none', 'prompted']),
-            isNull(futureItems.reportPointId),
+            or(
+              and(
+                inArray(futureItems.reportState, ['none', 'prompted']),
+                isNull(futureItems.reportPointId),
+              ),
+              // Started but not handed in: the point's state is all this reads of it.
+              exists(
+                db
+                  .select({ one: sql`1` })
+                  .from(points)
+                  .where(
+                    and(
+                      eq(points.id, futureItems.reportPointId),
+                      inArray(points.state, ['draft', 'returned']),
+                    ),
+                  ),
+              ),
+            ),
             gte(lastDay, toIsoDate(from)),
             lte(lastDay, toIsoDate(to)),
           ),

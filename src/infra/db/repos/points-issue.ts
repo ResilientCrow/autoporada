@@ -1,11 +1,12 @@
 import { and, asc, eq, gte, inArray, isNotNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 
 import type { PointRef, PointRepo, TxContext } from '@/application/ports';
-import { toIsoDate } from '@/domain/time';
+import { parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
-import { points } from '../schema';
+import { futureItems, points } from '../schema';
 import type { TxDatabase } from './database';
 import { POINT_ROW, toRecord, visiblePoints } from './points-read';
+import { timeOrNull } from './wall-columns';
 
 /** The Monday a point is due for (`dueMonday`): the later of its fixed first Monday and its hand-in one. */
 const dueMonday = sql`greatest(${points.earliestMonday}, ${points.handInMonday})`;
@@ -17,13 +18,31 @@ const lastDay = sql`coalesce(${points.endDate}, ${points.eventDate})`;
 const HANDED_IN_FIRST = [asc(points.submittedAt), asc(points.id)];
 
 /**
+ * Report drafts (`draft` or `returned`) about an event ending from `from` to `to`, that no approved
+ * akce expecting a report is linked to: the akce speaks for those (`FutureItemRepo.awaitingReport`).
+ */
+const draftReportsIn = (from: CalDate, to: CalDate) =>
+  and(
+    eq(points.kind, 'report'),
+    inArray(points.state, ['draft', 'returned']),
+    isNotNull(points.eventDate),
+    gte(lastDay, toIsoDate(from)),
+    lte(lastDay, toIsoDate(to)),
+    sql`NOT EXISTS (
+      SELECT 1 FROM ${futureItems}
+      WHERE ${futureItems.reportPointId} = ${points.id}
+        AND ${futureItems.state} = 'approved'
+        AND ${futureItems.expectsReport})`,
+  );
+
+/**
  * What an issue reads of the points (design section 3): the SQL twin of `inIssue` in
  * domain/calendar, and what waits for the slot. Both within the principal's read scope.
  */
 export function createPointIssueReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'eligibleFor' | 'waitingFor' | 'draftReports'> {
+): Pick<PointRepo, 'eligibleFor' | 'waitingFor' | 'draftReports' | 'draftReportFacts'> {
   return {
     async eligibleFor(monday, meetingDate, options) {
       const query = db
@@ -71,18 +90,25 @@ export function createPointIssueReads(
       const rows = await db
         .select(POINT_ROW)
         .from(points)
-        .where(
-          and(
-            visiblePoints(ctx),
-            eq(points.kind, 'report'),
-            inArray(points.state, ['draft', 'returned']),
-            isNotNull(points.eventDate),
-            gte(lastDay, toIsoDate(from)),
-            lte(lastDay, toIsoDate(to)),
-          ),
-        )
+        .where(and(visiblePoints(ctx), draftReportsIn(from, to)))
         .orderBy(asc(points.id));
       return rows.map(toRecord);
+    },
+    async draftReportFacts({ from, to }) {
+      const rows = await db
+        .select({
+          id: points.id,
+          timeTo: points.timeTo,
+          lastDay: sql<string>`${lastDay}::text`,
+        })
+        .from(points)
+        .where(draftReportsIn(from, to))
+        .orderBy(asc(points.id));
+      return rows.map(({ id, timeTo, lastDay: last }) => ({
+        id,
+        lastDay: parseIsoDate(last),
+        timeTo: timeOrNull(timeTo),
+      }));
     },
   };
 }

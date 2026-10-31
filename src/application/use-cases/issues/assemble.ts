@@ -50,7 +50,7 @@ export async function assembleIssueSnapshot(
   const future = await tx.futureItems.forIssue(meeting);
   const waiting = await tx.points.waitingFor(monday, meeting);
   const waitingAkce = await tx.futureItems.waitingFor(meeting);
-  const lateExpected = await lateReportsExpected(tx, {
+  const late = await lateReportsExpected(tx, {
     meetingDate: meeting,
     deadlineAt: issue.deadlineAt,
   });
@@ -102,7 +102,8 @@ export async function assembleIssueSnapshot(
       akceWaiting: waitingAkce
         .filter((i) => inAgendaWindow(i, meeting))
         .map((i) => ({ id: i.id, title: singleLine(i.content.title) })),
-      lateExpected,
+      lateExpected: late.expected,
+      lateDraftsHidden: late.hiddenDrafts,
       dropped: outline.dropped,
       annex1Entries: registry.annex1Entries,
       newEntries: registry.newEntries,

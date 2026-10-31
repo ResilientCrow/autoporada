@@ -245,11 +245,21 @@ export interface PointRepo {
   waitingFor(monday: CalDate, meetingDate: CalDate): Promise<WaitingPoints>;
   /**
    * The report points still with their author (`draft` or `returned`) about an event that has a
-   * date and whose last day is from `from` to `to`, both included: the preflight's late reports
-   * (ADR 0035). Within the read scope, in the order of `eligibleFor`.
+   * date and whose last day is from `from` to `to`, both included, that no approved akce expecting
+   * a report is linked to (those are listed by `FutureItemRepo.awaitingReport`): the preflight's
+   * late reports (ADR 0035). Within the read scope, in the order of `eligibleFor`.
    */
   draftReports(window: {
     readonly from: CalDate;
     readonly to: CalDate;
   }): Promise<readonly PointRecord[]>;
+  /**
+   * The same drafts as `draftReports` whoever wrote them, whatever the read scope, as facts about
+   * the event only: no title, no text, no author. The preflight turns the ones it cannot read
+   * into a count (SSU-5: drafts stay with their author). Ordered by id.
+   */
+  draftReportFacts(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly Pick<ReportPoint, 'id' | 'lastDay' | 'timeTo'>[]>;
 }

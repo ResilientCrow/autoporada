@@ -1,6 +1,7 @@
 import { countWord, type PluralForms } from '@/domain/cs';
 
 const POINT: PluralForms = { one: 'bod', few: 'body', many: 'bodů' };
+const DRAFT: PluralForms = { one: 'zpráva', few: 'zprávy', many: 'zpráv' };
 const NAME: PluralForms = { one: 'jméno', few: 'jména', many: 'jmen' };
 
 /** „Porada“: where the headmaster prepares the weekly meeting and its document. */
@@ -203,6 +204,9 @@ export const porada = {
     },
     /** `late-reports-expected`: when the report closes, after the title. */
     due: (when: string) => ` (do\u00a0${when})`,
+    /** `late-reports-expected`: drafts of other authors the headmaster may not read, only counted. */
+    hiddenDrafts: (n: number) =>
+      `Rozepsané zprávy bez akce, které nevidíte: ${countWord(n, DRAFT)}.`,
     /** `registry-new`: how many entries the document marks NOVÉ. */
     newEntries: (n: number) => `Označeno NOVÉ bude ${countWord(n, NAME)}.`,
   },

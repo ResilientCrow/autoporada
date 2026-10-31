@@ -8,6 +8,7 @@ import { calDate, parseIsoDate as d } from '@/domain/time';
 import { parseIssueSnapshot, type IssueSnapshot } from '@/snapshot';
 
 import { issueFixtures } from '../../../../test/support/issues';
+import { lateReportFixtures } from '../../../../test/support/late-reports';
 import { START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { assembleIssueSnapshot } from './assemble';
@@ -15,6 +16,7 @@ import { issuePreview } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
+const lateReports = lateReportFixtures(world);
 const seeder = system('test.seed');
 
 // The clock starts Monday 19 October 2026 10.00 Prague; the deadline of 26 October is still ahead.
@@ -471,6 +473,14 @@ describe('issues.preview', () => {
       expect(found?.refs).toEqual([
         { id, title: 'Víkendová akce', of: 'akce', due: '2026-10-25T22:00:00.000Z' },
       ]);
+    });
+
+    it('counts other authors’ late report drafts without naming them', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      await lateReports.report(author, { day: '2026-10-25', timeTo: '21:00' });
+      const found = (await preview(head)).findings.find((f) => f.code === 'late-reports-expected');
+      expect(found).toEqual({ code: 'late-reports-expected', level: 'warn', count: 1 });
     });
   });
 

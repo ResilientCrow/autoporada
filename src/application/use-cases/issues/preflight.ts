@@ -34,7 +34,7 @@ export interface Finding {
   }[];
   /** `snapshot-invalid`: where the snapshot is wrong. */
   readonly paths?: readonly string[];
-  /** `registry-new`: how many entries will be marked NOVÉ. */
+  /** `registry-new`: how many entries will be marked NOVÉ. `late-reports-expected`: late drafts of others, not named. */
   readonly count?: number;
 }
 
@@ -71,11 +71,14 @@ export function preflight(
   if (facts.akceWaiting.length > 0) {
     add({ code: 'akce-waiting', level: 'warn', ...refs(facts.akceWaiting) });
   }
-  if (facts.lateExpected.length > 0) {
+  if (facts.lateExpected.length > 0 || facts.lateDraftsHidden > 0) {
     add({
       code: 'late-reports-expected',
       level: 'warn',
-      refs: facts.lateExpected.map(({ id, of, title, due }) => ({ id, of, title, due })),
+      ...(facts.lateExpected.length > 0 && {
+        refs: facts.lateExpected.map(({ id, of, title, due }) => ({ id, of, title, due })),
+      }),
+      ...(facts.lateDraftsHidden > 0 && { count: facts.lateDraftsHidden }),
     });
   }
   if (facts.dropped.length > 0)

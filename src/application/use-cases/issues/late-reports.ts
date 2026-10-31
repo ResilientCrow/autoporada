@@ -11,25 +11,33 @@ export interface LateExpected {
   readonly due: Date;
 }
 
+/** What the preflight says about late reports: those it may name, and the drafts it may only count. */
+export interface LateReportsExpected {
+  readonly expected: readonly LateExpected[];
+  /** Late drafts of other authors that no akce answers for: counted, never named (SSU-5). */
+  readonly hiddenDrafts: number;
+}
+
 /**
  * The reports about events that end before the meeting day, are late for the porada (ADR 0035) and
- * are not handed in: the akce nobody has started a report for, and the reports still with their
- * author. Titles are kept for the preflight, so this reads only what the principal may see (a
- * headmaster sees the akce, not another author's draft). Sorted by close, then title.
- * TODO(m9-verify): drafts are not in a headmaster's read scope, so only the akce show up for them.
+ * are not handed in: the akce nobody has handed a report in for (not started, or started and still
+ * a draft or returned; named by the akce), and the principal's own drafts of reports no akce
+ * answers for. Other authors' drafts of those are only counted: drafts stay with their author.
+ * Sorted by close, then title.
  */
 export async function lateReportsExpected(
   tx: Pick<Tx, 'futureItems' | 'points'>,
   slot: { readonly meetingDate: CalDate; readonly deadlineAt: Date },
-): Promise<LateExpected[]> {
+): Promise<LateReportsExpected> {
   // An end before the deadline's day cannot be late: the earliest candidate ends the day before it.
   const window = {
     from: addDays(instantToWallClock(slot.deadlineAt).date, -1),
     to: addDays(slot.meetingDate, -1),
   };
-  const [akce, drafts] = await Promise.all([
+  const [akce, drafts, draftFacts] = await Promise.all([
     tx.futureItems.awaitingReport(window),
     tx.points.draftReports(window),
+    tx.points.draftReportFacts(window),
   ]);
   const candidates: { id: string; of: 'akce' | 'point'; title: string; facts: LateFacts }[] = [
     ...akce.flatMap(({ id, content }) => {
@@ -42,7 +50,7 @@ export async function lateReportsExpected(
       return facts === undefined ? [] : [{ id, of: 'point' as const, title: content.title, facts }];
     }),
   ];
-  return candidates
+  const expected = candidates
     .filter(({ facts }) => isLateReport(slot, facts))
     .map(({ id, of, title, facts }) => ({
       id,
@@ -51,4 +59,9 @@ export async function lateReportsExpected(
       due: reportCloses(slot, facts),
     }))
     .sort((a, b) => a.due.getTime() - b.due.getTime() || (a.title < b.title ? -1 : 1));
+  const readable = new Set(drafts.map(({ id }) => id));
+  const hiddenDrafts = draftFacts.filter(
+    ({ id, lastDay, timeTo }) => !readable.has(id) && isLateReport(slot, { lastDay, timeTo }),
+  ).length;
+  return { expected, hiddenDrafts };
 }

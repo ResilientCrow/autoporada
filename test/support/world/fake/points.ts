@@ -14,7 +14,7 @@ import { parsePointJsonb } from '@/contracts';
 import { dueMonday, inIssue, isLateReport, lateFacts, type PoradaClose } from '@/domain/calendar';
 import { admits } from '@/domain/policy';
 import type { PointContent } from '@/domain/report';
-import { compareDates, isoWeekday, toIsoDate } from '@/domain/time';
+import { compareDates, isoWeekday, toIsoDate, type CalDate } from '@/domain/time';
 
 import { distinctSorted } from './events';
 import { guard, refusedBy } from './guards';
@@ -143,6 +143,22 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
     const point = points.get(id);
     return point && visible(point) ? record(point) : null;
   };
+  /** Report drafts ending in the window that no approved akce expecting a report is linked to. */
+  const draftReportsIn = (from: CalDate, to: CalDate) =>
+    [...points.values()].filter((p) => {
+      const last = lastDay(p);
+      return (
+        p.kind === 'report' &&
+        (p.state === 'draft' || p.state === 'returned') &&
+        last !== null &&
+        compareDates(last, from) >= 0 &&
+        compareDates(last, to) <= 0 &&
+        ![...tx.draft.futureItems.values()].some(
+          (item) =>
+            item.reportPointId === p.id && item.state === 'approved' && item.content.expectsReport,
+        )
+      );
+    });
   /** The user's own points, whatever the read scope; the system has none. */
   const own = () => {
     guard(tx, false);
@@ -374,20 +390,19 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
     },
     async draftReports({ from, to }) {
       guard(tx, false);
-      return [...points.values()]
-        .filter((p) => {
-          const last = lastDay(p);
-          return (
-            visible(p) &&
-            p.kind === 'report' &&
-            (p.state === 'draft' || p.state === 'returned') &&
-            last !== null &&
-            compareDates(last, from) >= 0 &&
-            compareDates(last, to) <= 0
-          );
-        })
+      return draftReportsIn(from, to)
+        .filter(visible)
         .sort((a, b) => (a.id < b.id ? -1 : 1))
         .map(record);
+    },
+    async draftReportFacts({ from, to }) {
+      guard(tx, false);
+      return draftReportsIn(from, to)
+        .sort((a, b) => (a.id < b.id ? -1 : 1))
+        .flatMap((p) => {
+          const last = lastDay(p);
+          return last === null ? [] : [{ id: p.id, lastDay: last, timeTo: p.content.timeTo }];
+        });
     },
     async waitingFor(monday, meetingDate) {
       guard(tx, false);
