@@ -44,6 +44,15 @@ export function inIssue(
   );
 }
 
+/**
+ * The porada the headmaster prepares: the first open slot whose meeting is today (a Prague date)
+ * or later, whatever its deadline. Null when the calendar has none (the strip reaches
+ * `PLACEMENT_WEEKS`): „Žádná porada k přípravě“.
+ */
+export const workingSlot = (today: CalDate, slots: readonly IssueSlot[]): IssueSlot | null =>
+  slots.find((slot) => slot.status === 'open' && compareDates(slot.meetingDate, today) >= 0) ??
+  null;
+
 /** The Monday a new rule applies from: the one after `keep`, the Monday a hand-in goes to now. */
 export const ruleFrom = (keep: CalDate): CalDate => addDays(keep, 7);
 

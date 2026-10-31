@@ -84,6 +84,7 @@ export {
   queueFutureOutput,
 } from './future-review';
 export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
+export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';
 export {
   issuesWindowInput,
   issuesWindowOutput,

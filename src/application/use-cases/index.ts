@@ -23,7 +23,7 @@ import {
   startFutureReport,
   submitFuture,
 } from './future';
-import { issuePreview, issueWindow, setSkipped } from './issues';
+import { issuePreview, issueWindow, issueWorkspace, setSkipped } from './issues';
 import { recentPeopleOf, searchGate } from './people';
 import {
   createPoint,
@@ -76,7 +76,7 @@ export {
   startFutureReport,
   submitFuture,
 } from './future';
-export { issuePreview, issueWindow, setSkipped } from './issues';
+export { issuePreview, issueWindow, issueWorkspace, setSkipped } from './issues';
 export { recentPeopleOf, searchGate } from './people';
 export {
   createPoint,
@@ -129,6 +129,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   getUser,
   issuePreview,
   issueWindow,
+  issueWorkspace,
   listFuture,
   listMyPoints,
   listPointTypes,

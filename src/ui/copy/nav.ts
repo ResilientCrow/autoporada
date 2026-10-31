@@ -3,6 +3,7 @@ export const nav = {
   overview: 'Přehled',
   points: 'Moje body',
   future: 'Akce',
+  porada: 'Porada',
   review: 'Kontrola',
   access: 'Žádost o\u00A0přístup',
   registry: 'Registr',

@@ -9,6 +9,7 @@ import { nav } from './nav';
 import { people } from './people';
 import { pointTypes } from './pointTypes';
 import { points } from './points';
+import { porada } from './porada';
 import { profile } from './profile';
 import { registry } from './registry';
 import { privacy } from './privacy';
@@ -39,6 +40,7 @@ export const cs = {
   profile,
   future,
   pointTypes,
+  porada,
   settings,
   registry,
   review,
