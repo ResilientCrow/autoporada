@@ -34,14 +34,15 @@ describe('IssueSnapshot v1', () => {
     if (result.ok) expect(result.snapshot.pokyny[0]?.quotes).toEqual([]);
   });
 
+  it.each(['2026-10-19', '2026-10-09'])(
+    'accepts a meeting date %s outside the week of the Monday (a moved porada)',
+    (meetingDate) => {
+      expect(parseIssueSnapshot(variant(['issue', 'meetingDate'], meetingDate)).ok).toBe(true);
+    },
+  );
+
   it.each<[string, Path, unknown, unknown]>([
     ['a non-Monday', ['issue', 'monday'], '2026-10-13', 'issue.monday: must be a Monday'],
-    [
-      'a meeting outside the week',
-      ['issue', 'meetingDate'],
-      '2026-10-19',
-      'issue.meetingDate: must be in the week of the Monday',
-    ],
     [
       'an inverted report range',
       ['reports', 0, 'endDate'],

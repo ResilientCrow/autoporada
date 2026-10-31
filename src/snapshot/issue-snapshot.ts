@@ -149,9 +149,9 @@ export const issueSnapshotSchema = z
     schema: z.literal(1),
     issue: z.strictObject({
       id: required,
-      /** The Monday the issue belongs to; drives the agenda windows. */
+      /** The Monday of the issue's slot, its key. */
       monday: isoDate,
-      /** The day the meeting actually happens (a holiday can move it); title and closing. */
+      /** The day the meeting happens (it can move off the Monday); title, closing, agenda windows and ended-before. */
       meetingDate: isoDate,
       schoolYear: z.string().regex(/^\d{4}\/\d{4}$/, 'must be like 2026/2027'),
     }),

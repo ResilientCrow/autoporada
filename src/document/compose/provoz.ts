@@ -26,7 +26,7 @@ export function composeProvoz(ctx: ComposeContext): Block[] {
     .filter((r) =>
       eventEndedBefore(
         { date: parseIsoDate(r.date), ...(r.endDate && { endDate: parseIsoDate(r.endDate) }) },
-        ctx.monday,
+        ctx.meeting,
       ),
     )
     .sort(compareReports);

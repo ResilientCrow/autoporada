@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import { assertMonday } from '@/domain/calendar';
-import { addDays, compareDates, compareTimes, parseIsoDate, parseWallTime } from '@/domain/time';
+import { compareDates, compareTimes, parseIsoDate, parseWallTime } from '@/domain/time';
 
 /**
  * Cross-field rules of IssueSnapshot v1 that a field schema cannot express.
@@ -21,20 +21,13 @@ interface Dated {
   readonly timeTo?: string | undefined;
 }
 
-export function checkIssueWeek(
-  issue: { monday: string; meetingDate: string; schoolYear: string },
-  ctx: Ctx,
-): void {
+export function checkIssueWeek(issue: { monday: string; schoolYear: string }, ctx: Ctx): void {
   const monday = parseIsoDate(issue.monday);
   try {
     assertMonday(monday);
   } catch {
     problem(ctx, ['issue', 'monday'], 'must be a Monday');
     return;
-  }
-  const meeting = parseIsoDate(issue.meetingDate);
-  if (compareDates(meeting, monday) < 0 || compareDates(meeting, addDays(monday, 6)) > 0) {
-    problem(ctx, ['issue', 'meetingDate'], 'must be in the week of the Monday');
   }
   const [first, second] = issue.schoolYear.split('/').map(Number);
   if (second !== (first ?? 0) + 1)

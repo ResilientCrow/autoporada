@@ -43,9 +43,9 @@ function compareFuture(a: SnapshotFutureItem, b: SnapshotFutureItem): number {
 }
 
 /** Splits approved future items into points 1 and 2 and the last PROVOZ point. */
-export function routeFuture(items: readonly SnapshotFutureItem[], monday: CalDate): RoutedFuture {
+export function routeFuture(items: readonly SnapshotFutureItem[], meeting: CalDate): RoutedFuture {
   const sorted = [...items].sort(compareFuture);
-  const slot = (item: SnapshotFutureItem) => routeFutureItem(dated(item), monday);
+  const slot = (item: SnapshotFutureItem) => routeFutureItem(dated(item), meeting);
   return {
     meetings: sorted.filter((i) => slot(i) === 'meetings'),
     events: sorted.filter((i) => slot(i) === 'events'),

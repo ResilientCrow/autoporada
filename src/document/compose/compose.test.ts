@@ -305,3 +305,54 @@ describe('report eligibility', () => {
     expect(titles).toContain('Vesmírný seminář');
   });
 });
+
+describe('a meeting that is not on the Monday', () => {
+  const wednesday = (change?: (raw: Record<string, unknown>) => void) =>
+    composeDocument(
+      snapshotFixture('template-replica', (raw) => {
+        (raw['issue'] as Record<string, unknown>)['meetingDate'] = '2026-10-14';
+        change?.(raw);
+      }),
+    );
+  const items = (raw: Record<string, unknown>) => raw['futureItems'] as Record<string, unknown>[];
+  const plain = (model: DocumentModel, n: number) =>
+    pointContent(model, n).map((b) => text(b).replaceAll(NB, ' '));
+
+  it('drops agenda items that ended before the meeting date', () => {
+    const model = wednesday();
+    expect(plain(model, 1).join('\n')).not.toContain('jednání s MČ Praha 5');
+    expect(plain(model, 1).join('\n')).toContain('schůzka s rodiči 1.A');
+    expect(plain(model, 2).join('\n')).not.toContain('piškvorkový');
+    expect(plain(model, 2).join('\n')).not.toContain('Den otevřených dveří');
+    expect(plain(model, 2).join('\n')).toContain('exkurze 2.B do CERNu');
+  });
+
+  it('counts the jednání week and the akce weeks from the meeting date', () => {
+    const model = wednesday((raw) => {
+      items(raw).push(
+        { id: 'w1', kind: 'jednani', title: 'jednání za týden', date: '2026-10-21' },
+        { id: 'w4', kind: 'jednani', title: 'jednání po týdnu', date: '2026-10-22' },
+        { id: 'w5', kind: 'akce', title: 'akce v den porady', date: '2026-10-14' },
+        { id: 'w2', kind: 'akce', title: 'akce za dva týdny', date: '2026-10-28' },
+        { id: 'w3', kind: 'akce', title: 'akce po oknu', date: '2026-10-29' },
+      );
+    });
+    expect(plain(model, 1).join('\n')).toContain('jednání za týden');
+    expect(allBlocks(model).map(text).join('\n')).not.toContain('jednání po týdnu');
+    expect(plain(model, 2).join('\n')).toContain('akce v den porady');
+    expect(plain(model, 2).join('\n')).toContain('akce za dva týdny');
+    expect(plain(model, 2).join('\n')).not.toContain('akce po oknu');
+    expect(plain(model, 17).join('\n')).toContain('akce po oknu');
+  });
+
+  it('prints reports of events that ended before the meeting date, not before the Monday', () => {
+    const model = wednesday((raw) => {
+      const reports = raw['reports'] as Record<string, unknown>[];
+      reports[1] = { ...reports[1], date: '2026-10-13' };
+      reports[0] = { ...reports[0], date: '2026-10-14' };
+    });
+    const titles = allBlocks(model).flatMap((b) => (b.kind === 'point' ? [b.text] : []));
+    expect(titles).toContain('Vesmírný seminář');
+    expect(titles).not.toContain('Seminář Matika Česku');
+  });
+});

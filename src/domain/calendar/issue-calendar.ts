@@ -55,14 +55,14 @@ export interface DateRange {
   readonly to: CalDate;
 }
 
-/** Point 1: „Zatím známá jednání v týdnu od M do M+7“ (both ends inclusive). */
-export function meetingsWindow(monday: CalDate): DateRange {
-  return { from: monday, to: addDays(monday, 7) };
+/** Point 1: „Zatím známá jednání v týdnu od M do M+7“, M the meeting date (both ends inclusive). */
+export function meetingsWindow(meeting: CalDate): DateRange {
+  return { from: meeting, to: addDays(meeting, 7) };
 }
 
-/** Point 2: „Zatím známé akce v týdnech od M do M+14“. */
-export function eventsWindow(monday: CalDate): DateRange {
-  return { from: monday, to: addDays(monday, 14) };
+/** Point 2: „Zatím známé akce v týdnech od M do M+14“, M the meeting date. */
+export function eventsWindow(meeting: CalDate): DateRange {
+  return { from: meeting, to: addDays(meeting, 14) };
 }
 
 export interface Dated {
@@ -87,8 +87,8 @@ export type FutureKind = 'jednani' | 'akce';
 export type FutureSlot = 'meetings' | 'events' | 'later' | 'hidden';
 
 /**
- * Where an approved future item appears in the issue of `monday`:
- * - jednání overlapping the meeting week → point 1;
+ * Where an approved future item appears in the issue whose meeting is on `meeting`:
+ * - jednání overlapping the week from the meeting date → point 1;
  * - akce overlapping the next two weeks → point 2;
  * - later akce → the last PROVOZ point, „Další doposud známé akce školy“;
  * - finished items, and jednání beyond the week, are not listed (yet).
@@ -96,16 +96,16 @@ export type FutureSlot = 'meetings' | 'events' | 'later' | 'hidden';
  */
 export function routeFutureItem(
   item: Dated & { readonly kind: FutureKind },
-  monday: CalDate,
+  meeting: CalDate,
 ): FutureSlot {
-  if (compareDates(lastDay(item), monday) < 0) return 'hidden';
+  if (compareDates(lastDay(item), meeting) < 0) return 'hidden';
   if (item.kind === 'jednani')
-    return overlaps(item, meetingsWindow(monday)) ? 'meetings' : 'hidden';
-  if (overlaps(item, eventsWindow(monday))) return 'events';
+    return overlaps(item, meetingsWindow(meeting)) ? 'meetings' : 'hidden';
+  if (overlaps(item, eventsWindow(meeting))) return 'events';
   return 'later';
 }
 
 /** A report belongs in an issue only once its event is over before the meeting day. */
-export function eventEndedBefore(item: Dated, monday: CalDate): boolean {
-  return compareDates(lastDay(item), monday) < 0;
+export function eventEndedBefore(item: Dated, meeting: CalDate): boolean {
+  return compareDates(lastDay(item), meeting) < 0;
 }

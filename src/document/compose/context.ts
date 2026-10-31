@@ -8,9 +8,8 @@ import type { Tokens } from './text';
 /** What every part of compose needs, computed once per document. */
 export interface ComposeContext {
   readonly snapshot: IssueSnapshot;
-  readonly monday: CalDate;
   readonly meeting: CalDate;
-  /** Point 1 window: the meeting week; the same window routes the items. */
+  /** Point 1 window: a week from the meeting date; the same window routes the items. */
   readonly meetings: DateRange;
   /** Point 2 window: two weeks. */
   readonly events: DateRange;
@@ -19,14 +18,13 @@ export interface ComposeContext {
 }
 
 export function composeContext(snapshot: IssueSnapshot): ComposeContext {
-  const monday = parseIsoDate(snapshot.issue.monday);
+  const meeting = parseIsoDate(snapshot.issue.meetingDate);
   return {
     snapshot,
-    monday,
-    meeting: parseIsoDate(snapshot.issue.meetingDate),
-    meetings: meetingsWindow(monday),
-    events: eventsWindow(monday),
+    meeting,
+    meetings: meetingsWindow(meeting),
+    events: eventsWindow(meeting),
     tokens: { skolniRok: snapshot.issue.schoolYear },
-    future: routeFuture(snapshot.futureItems, monday),
+    future: routeFuture(snapshot.futureItems, meeting),
   };
 }
