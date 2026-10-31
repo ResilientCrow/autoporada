@@ -32,11 +32,21 @@ for (const [name, url, persona] of NONCED_PAGES) {
     const nonce = nonceOf(response?.headers()['content-security-policy']);
     expect(nonce).toBeTruthy();
     await hydrated();
-    const scripts = await page
-      .locator('script')
-      .evaluateAll((all) => all.map((s) => (s as HTMLScriptElement).nonce));
-    expect(scripts.length).toBeGreaterThan(0);
-    expect(new Set(scripts)).toEqual(new Set([nonce]));
+    const all = await page.locator('script').evaluateAll((list) =>
+      list.map((s) => ({
+        nonce: (s as HTMLScriptElement).nonce,
+        src: (s as HTMLScriptElement).src,
+      })),
+    );
+    expect(all.length).toBeGreaterThan(0);
+    // A chunk the page loads later (the rich-text editor's) is added by a nonced script, which
+    // `strict-dynamic` trusts, and carries no nonce itself; it must still be one of the app's own.
+    const own = `${new URL(page.url()).origin}/_next/static/`;
+    const bare = all.filter((s) => s.nonce === '');
+    expect(bare.filter((s) => !s.src.startsWith(own))).toEqual([]);
+    expect(new Set(all.filter((s) => s.nonce !== '').map((s) => s.nonce))).toEqual(
+      new Set([nonce]),
+    );
     await expectAccessible();
   });
 }

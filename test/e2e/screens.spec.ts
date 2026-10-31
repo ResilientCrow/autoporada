@@ -45,6 +45,10 @@ for (const [name, url, status, persona] of SCREENS) {
     hydrated,
     checkScreen,
     signInAs,
+    expectAccessible,
+    attachScreenshot,
+    expectNoReflow,
+    expectSkipLink,
   }) => {
     if (persona) await signInAs(persona);
     const response = await page.goto(url);
@@ -70,7 +74,17 @@ for (const [name, url, status, persona] of SCREENS) {
       if (chip) await expect(page.getByRole('main').getByText(chip, { exact: true })).toBeVisible();
       await expect(shownNotices(page)).toHaveCount(0);
     }
-    await checkScreen(name);
+    if (url === '/vzornik') {
+      // The gallery holds the rich-text editor, which takes Tab for the levels (Esc lets go of it), so
+      // the walk of `checkScreen` ends in it by design; its keys are SP-T's, in j4-porada.
+      await expectAccessible();
+      await attachScreenshot(name);
+      await expectNoReflow();
+      expect(await (await page.request.get(url)).text()).not.toContain('style="');
+      await expectSkipLink();
+    } else {
+      await checkScreen(name);
+    }
   });
 }
 
