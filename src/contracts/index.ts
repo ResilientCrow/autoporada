@@ -88,7 +88,7 @@ export {
   issuesWindowOutput,
   setSkippedInput,
   setSkippedOutput,
-  toKnownIssues,
+  toIssueRows,
 } from './issues';
 export {
   bodyWire,

@@ -41,7 +41,7 @@ export interface ReminderIssue {
 /**
  * The Monday that submissions go to now, with its frozen deadline or else the rule's: the first
  * open slot whose deadline is still ahead, so a skipped Monday is stepped over and its successor
- * is the one reminded. Reads only the columns migration 0025 grants the worker.
+ * is the one reminded. Reads only the columns migrations 0024 and 0025 grant the worker.
  */
 export async function reminderIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<ReminderIssue> {
   const slots = await readSlots(tx, now);

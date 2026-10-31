@@ -155,7 +155,7 @@ export interface PointRepo {
   /**
    * The authors the hard reminder is for, each once, ordered by id: those with a draft changed
    * since `draftsSince` and those with a returned point whose first Monday is not after `monday`.
-   * Only the columns migration 0024 grants the worker. ScopeViolation for a user.
+   * Only the columns migrations 0017 and 0024 grant the worker. ScopeViolation for a user.
    */
   reminderAuthors(window: {
     readonly draftsSince: Date;
@@ -168,7 +168,7 @@ export interface PointRepo {
   submitterIds(since: Date): Promise<readonly string[]>;
   /**
    * How many points wait for review (`submitted`) that were handed in after `since` by anyone but
-   * `notBy`: what the reviewer digest counts. Only the columns migration 0024 grants the worker.
+   * `notBy`: what the reviewer digest counts. Only the columns migrations 0017 and 0024 grant the worker.
    * ScopeViolation for a user.
    */
   countSubmittedSince(query: { readonly since: Date; readonly notBy: string }): Promise<number>;

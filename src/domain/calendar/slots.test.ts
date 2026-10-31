@@ -1,9 +1,11 @@
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import type { IssueStatus } from '@/domain/review';
 import {
   addDays,
   instantToWallClock,
+  isoWeekday,
   mondayOf,
   parseIsoDate as d,
   toIsoDate,
@@ -19,7 +21,6 @@ import {
   placementSlot,
   skipWindow,
   submitMonday,
-  targetMonday,
   type IssueRow,
   type IssueSlot,
 } from './index';
@@ -123,10 +124,37 @@ describe('skipWindow', () => {
 });
 
 describe('submitMonday', () => {
-  it('is the target Monday when no issue is known', () => {
+  it('is the first Monday whose deadline is ahead when no issue is known', () => {
     const now = new Date('2026-10-21T10:00:00Z');
-    expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe(iso(targetMonday(now, RULE)));
     expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe('2026-10-26');
+  });
+
+  it.each([
+    ['2026-10-17T17:59:00Z', '2026-10-19', 'Saturday 19:59 → the Monday after'],
+    ['2026-10-17T18:00:00Z', '2026-10-26', 'Saturday 20:00 sharp → next week'],
+    ['2026-10-18T10:00:00Z', '2026-10-26', 'Sunday → next week'],
+    ['2026-10-19T08:00:00Z', '2026-10-26', 'meeting Monday → next week'],
+    ['2026-10-14T10:00:00Z', '2026-10-19', 'mid-week → coming Monday'],
+    ['2026-12-26T19:00:00Z', '2027-01-04', 'across the new year'],
+  ])('with no issue known, %s → %s (%s)', (instant, monday) => {
+    const now = new Date(instant);
+    expect(iso(submitMonday(now, slotsAt(now), RULE))).toBe(monday);
+  });
+
+  it('with no issue known is the first Monday whose deadline is still ahead (property)', () => {
+    fc.assert(
+      fc.property(
+        fc.date({ min: new Date('2026-01-01'), max: new Date('2030-12-31'), noInvalidDate: true }),
+        (now) => {
+          const monday = submitMonday(now, slotsAt(now), RULE);
+          expect(isoWeekday(monday)).toBe(1);
+          expect(now.getTime()).toBeLessThan(deadline(monday, RULE).getTime());
+          expect(now.getTime()).toBeGreaterThanOrEqual(
+            deadline(addDays(monday, -7), RULE).getTime(),
+          );
+        },
+      ),
+    );
   });
 
   it.each<IssueStatus>(['skipped', 'generated'])(

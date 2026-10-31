@@ -67,7 +67,7 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
       return rows.map(toRecord);
     },
     async calendar(today) {
-      // The columns migration 0025 grants the worker, and no other.
+      // The columns migrations 0024 and 0025 grant the worker, and no other.
       const rows = await db
         .select({
           monday: issues.monday,

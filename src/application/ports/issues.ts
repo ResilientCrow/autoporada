@@ -25,8 +25,8 @@ export interface IssueRepo {
   /**
    * The calendar at `today` (a Prague date): the rows of the Mondays from this week's Monday on
    * and of any earlier Monday whose meeting is `today` or later (a porada moved past its week),
-   * earliest Monday first. Only the columns the worker is granted (migration 0025), so jobs read
-   * it too.
+   * earliest Monday first. Only the columns the worker is granted (migrations 0024 and 0025), so jobs
+   * read it too.
    */
   calendar(today: CalDate): Promise<readonly IssueRow[]>;
   /**

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { KnownIssue } from '@/domain/calendar';
+import type { IssueRow } from '@/domain/calendar';
 import { parseIsoDate } from '@/domain/time';
 
 /**
@@ -38,16 +38,21 @@ export const issuesWindowOutput = z.object({
 });
 
 /** The rows of `issues.window` as the calendar domain reads them (placement, standing line). */
-export function toKnownIssues(
+export function toIssueRows(
   rows: readonly {
     readonly monday: string;
     readonly deadlineAt: string;
-    readonly status: KnownIssue['status'];
+    readonly status: IssueRow['status'];
   }[],
-): readonly KnownIssue[] {
-  return rows.map((row) => ({
-    monday: parseIsoDate(row.monday),
-    deadlineAt: new Date(row.deadlineAt),
-    status: row.status,
-  }));
+): readonly IssueRow[] {
+  return rows.map((row) => {
+    const monday = parseIsoDate(row.monday);
+    // The wire carries no meeting date until row 35: every stored row meets on its Monday (ADR 0034).
+    return {
+      monday,
+      meetingDate: monday,
+      deadlineAt: new Date(row.deadlineAt),
+      status: row.status,
+    };
+  });
 }

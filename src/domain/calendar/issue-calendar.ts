@@ -1,9 +1,7 @@
 import {
   addDays,
   compareDates,
-  instantToWallClock,
   isoWeekday,
-  mondayOf,
   parseWallTime,
   wallClockToInstant,
   type CalDate,
@@ -27,20 +25,6 @@ export function assertMonday(monday: CalDate): void {
 /** The deadline of a porada held on `meetingDate`, which need not be a Monday. */
 export function deadline(meetingDate: CalDate, rule: DeadlineRule = DEFAULT_DEADLINE): Date {
   return wallClockToInstant(addDays(meetingDate, rule.dayOffset), rule.time);
-}
-
-/**
- * The issue a submission made at `now` goes into: the first Monday whose
- * deadline is still ahead. Fixed at first submit, so a returned and
- * resubmitted point keeps its place (plan §5, `earliest_monday`).
- */
-export function targetMonday(now: Date, rule: DeadlineRule = DEFAULT_DEADLINE): CalDate {
-  if (rule.dayOffset > 0) throw new RangeError('A deadline cannot fall after the meeting');
-  const start = mondayOf(instantToWallClock(now).date);
-  for (let week = 0; ; week++) {
-    const monday = addDays(start, 7 * week);
-    if (now.getTime() < deadline(monday, rule).getTime()) return monday;
-  }
 }
 
 export type IssuePhase = 'collecting' | 'review';

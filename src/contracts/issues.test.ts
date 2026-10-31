@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { toIsoDate } from '@/domain/time';
 
-import { toKnownIssues } from './index';
+import { toIssueRows } from './index';
 
-describe('toKnownIssues', () => {
+describe('toIssueRows', () => {
   it('reads the wire rows as calendar days, instants and statuses, in order', () => {
-    const known = toKnownIssues([
+    const known = toIssueRows([
       { monday: '2026-10-26', deadlineAt: '2026-10-25T17:00:00.000Z', status: 'open' },
       { monday: '2026-11-02', deadlineAt: '2026-11-01T17:00:00.000Z', status: 'skipped' },
     ]);
@@ -18,6 +18,13 @@ describe('toKnownIssues', () => {
     expect(known.map((row) => row.status)).toEqual(['open', 'skipped']);
   });
 
+  it('puts the meeting on the Monday: the wire has no meeting date yet', () => {
+    const [row] = toIssueRows([
+      { monday: '2026-10-26', deadlineAt: '2026-10-25T17:00:00.000Z', status: 'open' },
+    ]);
+    expect(row && toIsoDate(row.meetingDate)).toBe('2026-10-26');
+  });
+
   it('takes the rows of issues.window as they come, version and all', () => {
     const wire = [
       {
@@ -27,10 +34,10 @@ describe('toKnownIssues', () => {
         version: 3,
       },
     ];
-    expect(toKnownIssues(wire)[0]?.status).toBe('generated');
+    expect(toIssueRows(wire)[0]?.status).toBe('generated');
   });
 
   it('is empty for no rows', () => {
-    expect(toKnownIssues([])).toEqual([]);
+    expect(toIssueRows([])).toEqual([]);
   });
 });

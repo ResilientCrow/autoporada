@@ -7,7 +7,6 @@ export {
   issuePhase,
   meetingsWindow,
   routeFutureItem,
-  targetMonday,
   type DateRange,
   type Dated,
   type DeadlineRule,
@@ -35,7 +34,7 @@ export {
 } from './late-report';
 export { dueMonday } from './selection';
 export { summaryDue } from './summary';
-export { placementMonday, pointMonday, type KnownIssue } from './placement';
+export { pointMonday } from './placement';
 export {
   handInMonday,
   issueSlots,

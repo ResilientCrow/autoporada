@@ -4,20 +4,12 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   instantToWallClock,
-  isoWeekday,
   parseIsoDate as d,
   parseWallTime as t,
   toIsoDate,
 } from '@/domain/time';
 
-import {
-  deadline,
-  eventEndedBefore,
-  issuePhase,
-  routeFutureItem,
-  targetMonday,
-  type FutureKind,
-} from './index';
+import { deadline, eventEndedBefore, issuePhase, routeFutureItem, type FutureKind } from './index';
 
 describe('deadline', () => {
   it.each([
@@ -69,33 +61,6 @@ describe('deadline', () => {
   it('follows a configured rule', () => {
     const friday = { dayOffset: -3, time: t('12:00') };
     expect(deadline(d('2026-10-19'), friday).toISOString()).toBe('2026-10-16T10:00:00.000Z');
-  });
-});
-
-describe('targetMonday', () => {
-  it.each([
-    ['2026-10-17T17:59:00Z', '2026-10-19', 'Saturday 19:59 → the Monday after'],
-    ['2026-10-17T18:00:00Z', '2026-10-26', 'Saturday 20:00 sharp → next week'],
-    ['2026-10-18T10:00:00Z', '2026-10-26', 'Sunday → next week'],
-    ['2026-10-19T08:00:00Z', '2026-10-26', 'meeting Monday → next week'],
-    ['2026-10-14T10:00:00Z', '2026-10-19', 'mid-week → coming Monday'],
-    ['2026-12-26T19:00:00Z', '2027-01-04', 'across the new year'],
-  ])('%s → %s (%s)', (now, monday) => {
-    expect(toIsoDate(targetMonday(new Date(now)))).toBe(monday);
-  });
-
-  it('always returns the first Monday whose deadline is still ahead (property)', () => {
-    fc.assert(
-      fc.property(
-        fc.date({ min: new Date('2026-01-01'), max: new Date('2030-12-31'), noInvalidDate: true }),
-        (now) => {
-          const monday = targetMonday(now);
-          expect(isoWeekday(monday)).toBe(1);
-          expect(now.getTime()).toBeLessThan(deadline(monday).getTime());
-          expect(now.getTime()).toBeGreaterThanOrEqual(deadline(addDays(monday, -7)).getTime());
-        },
-      ),
-    );
   });
 });
 

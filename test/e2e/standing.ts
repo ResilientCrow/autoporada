@@ -7,7 +7,7 @@ import {
   deadline,
   DEFAULT_DEADLINE,
   issueSlots,
-  placementMonday,
+  placementSlot,
   submitMonday,
 } from '@/domain/calendar';
 import { formatDayMonth, formatTime, weekdayName } from '@/domain/cs';
@@ -25,8 +25,8 @@ import { points } from '@/ui/copy';
 export function standingLines(now: Date): { before: string; closed: string } {
   const slots = issueSlots([], instantToWallClock(now).date, DEFAULT_DEADLINE);
   const first = submitMonday(now, slots, DEFAULT_DEADLINE);
-  const placement = placementMonday(first, now, []);
-  if (placement === null) throw new Error('no porada is open');
+  const placement = placementSlot(first, instantToWallClock(now).date, slots)?.monday;
+  if (placement === undefined) throw new Error('no porada is open');
   const { date, time } = instantToWallClock(deadline(placement, DEFAULT_DEADLINE));
   return {
     before: points.standing.before(

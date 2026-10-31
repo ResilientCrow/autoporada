@@ -3,11 +3,24 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
-import { QUEUE_LIMIT, toKnownIssues } from '@/contracts';
-import { deadline, DEFAULT_DEADLINE, PLACEMENT_WEEKS, placementMonday } from '@/domain/calendar';
+import { QUEUE_LIMIT, toIssueRows } from '@/contracts';
+import {
+  deadline,
+  DEFAULT_DEADLINE,
+  issueSlots,
+  PLACEMENT_WEEKS,
+  placementSlot,
+} from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
 import { newDraft, type PointKind } from '@/domain/report';
-import { addDays, calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
+import {
+  addDays,
+  calDate,
+  instantToWallClock,
+  parseIsoDate,
+  toIsoDate,
+  type CalDate,
+} from '@/domain/time';
 
 import { FIRST_MONDAY, pointFixtures, readyProposal, START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
@@ -268,12 +281,10 @@ describe('points.queue', () => {
       const got = await world.run(issueWindow, world.as(by), {});
       if (!got.ok) throw new Error(`window refused: ${got.error.code}`);
       const { submitMonday, issues } = got.value;
-      const monday = placementMonday(
-        parseIsoDate(submitMonday),
-        world.clock.now(),
-        toKnownIssues(issues),
-      );
-      return toIsoDate(monday!);
+      const today = instantToWallClock(world.clock.now()).date;
+      const slots = issueSlots(toIssueRows(issues), today, DEFAULT_DEADLINE);
+      const slot = placementSlot(parseIsoDate(submitMonday), today, slots);
+      return toIsoDate(slot!.monday);
     }
 
     it('keeps a resubmitted point on the Monday it was handed in for when the skipped one before it is unskipped (ADR 0029 item 3)', async () => {

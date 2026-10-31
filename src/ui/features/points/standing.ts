@@ -1,11 +1,10 @@
-import { toKnownIssues } from '@/contracts';
+import { toIssueRows } from '@/contracts';
 import {
-  deadline,
   handInMonday,
   isLateReport,
   issueSlots,
   lateFacts,
-  placementMonday,
+  placementSlot,
   reportCloses,
   type DeadlineRule,
   type IssueSlot,
@@ -19,7 +18,6 @@ import {
   instantToWallClock,
   parseIsoDate,
   parseWallTime,
-  toIsoDate,
   type CalDate,
 } from '@/domain/time';
 import { points } from '@/ui/copy';
@@ -131,24 +129,17 @@ export function standingOf(
   report?: LateFacts,
 ): Standing | null {
   const instant = new Date(now);
-  const known = toKnownIssues(issues);
-  const first = parseIsoDate(submitMonday);
-  const placement = placementMonday(first, instant, known);
-  if (placement === null) return null;
-
   const today = instantToWallClock(instant).date;
-  const slots = issueSlots(
-    known.map((row) => ({ ...row, meetingDate: row.monday })),
-    today,
-    rule,
-  );
+  const slots = issueSlots(toIssueRows(issues), today, rule);
+  const slot = placementSlot(parseIsoDate(submitMonday), today, slots);
+  if (slot === null) return null;
+  const placement = slot.monday;
   const late = report && lateStanding(slots, instant, rule, report);
   if (late) return late;
   const closed = closedPorada(slots, today, instant);
   if (closed !== null) return { kind: 'closed', closed, placement };
 
-  const row = issues.find((candidate) => candidate.monday === toIsoDate(placement));
-  const deadlineAt = row === undefined ? deadline(placement, rule) : new Date(row.deadlineAt);
+  const { deadlineAt } = slot;
   return {
     kind: 'before',
     placement,

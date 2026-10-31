@@ -184,6 +184,18 @@ describe('without an open Monday', () => {
     );
     expect(standingOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', issues))).toBeNull();
   });
+
+  it('has no standing when the submit Monday lies past the last slot', () => {
+    // Tuesday 9 March 2027: the calendar ends at Monday 30 August. With every Monday from 15 March
+    // to it skipped, the server hands in for 6 September, which no slot reaches: the server places
+    // nothing there, so the line names nothing either.
+    const first = parseIsoDate('2027-03-15');
+    const issues = Array.from({ length: 25 }, (_, week) =>
+      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-13T19:00:00.000Z', 'skipped'),
+    );
+    expect(issues.at(-1)?.monday).toBe('2027-08-30');
+    expect(standingOf(input('2027-03-09T10:00:00.000Z', '2027-09-06', issues))).toBeNull();
+  });
 });
 
 describe('the school year of the paper', () => {

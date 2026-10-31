@@ -226,7 +226,7 @@ export function createPointReads(
     },
     async reminderAuthors({ draftsSince, monday }) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();
-      // The columns migration 0024 grants the worker, and no other.
+      // The columns migrations 0017 and 0024 grant the worker, and no other.
       const rows = await db
         .selectDistinct({ authorId: points.authorId })
         .from(points)
@@ -250,7 +250,7 @@ export function createPointReads(
     },
     async handedInFor(monday) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();
-      // The columns migrations 0017 and 0024 grant the worker, and no other.
+      // The columns migrations 0017, 0024 and 0027 grant the worker, and no other.
       const rows = await db
         .select({
           state: points.state,
