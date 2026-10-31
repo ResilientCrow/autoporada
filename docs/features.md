@@ -38,8 +38,11 @@ in v1 unless the [plan of record](plan.md) changes first.
   saved in the school's form ("1. a" becomes "1.A").
 - Genitive suggestion with a confidence indicator. The submitter can correct it.
 - Future items (jednání / akce). They are placed into points 1 and 2 and the
-  last PROVOZ point by date. After the event, the author is asked to write the
-  report.
+  last PROVOZ point by date. An approved akce is visible to every signed-in
+  user, students included, with the people who run it. An approved akce is
+  changed only by „Uložit změny“, which sends it for review again. After the
+  event, the author is asked to write the report by e-mail and gets a draft
+  prefilled from the akce (or can decline).
 - Proposals for HOSPODAŘENÍ items and for extra POKYNY points.
 - Autosave with conflict detection, a status timeline, „Stáhnout“ (back to a
   draft) and „Zrušit bod“. A late hand-in goes to the next meeting whose
@@ -47,20 +50,28 @@ in v1 unless the [plan of record](plan.md) changes first.
 
 ### Reviewing
 
-- A queue grouped by section. Reviewers approve, edit, return (a note is
-  required) or reject. A reviewer cannot approve their own point.
+- A queue grouped by section, with a flat queue of akce beside it (oldest
+  hand-in first, a mark for a changed approved akce). Reviewers approve, edit,
+  return (a note is
+  required) or reject; they can also cancel an approved akce. A reviewer cannot approve their own point.
 - A reviewer sees a colleague's point only after the author handed it in; a
   draft stays private. A returned point stays visible to reviewers.
 - A reviewer's edit keeps the original wording of the changed fields in the
   point's timeline („Původní znění“).
 - E-mail notifications to authors (a point returned, approved or rejected; none
-  when the author decided their own point) and digests to reviewers.
+  when the author decided their own point; none for akce decisions) and a
+  digest to reviewers and the headmaster twice a working day, at 7.00 and
+  15.00, with counts only (items to review, access requests).
 
 ### Weekly issue
 
 - One issue per Monday with a configurable deadline. Submissions after the
   deadline go to the next issue.
-- Deadline reminders by e-mail.
+- Deadline reminders by e-mail: two days before the deadline at 13.00 to
+  staff who handed in something this school year (switched off in the
+  profile), and on its day at 12.00 to authors with a draft or returned point.
+- A summary for the headmaster five minutes after the deadline: counts of
+  approved, waiting and returned points.
 - Přítomni and Hosté, prefilled from the last issue.
 - A POKYNY outline editor with carry-over. Each item is standing or one-time,
   items can be reordered, and the text is restricted rich text with three

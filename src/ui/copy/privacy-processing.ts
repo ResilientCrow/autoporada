@@ -53,6 +53,11 @@ export const processingSections = [
               'jména, tituly, třídy nebo funkce lidí, včetně nezletilých studentů, a\u00A0jejich vyjádření',
           },
           {
+            term: 'Akce k\u00A0poradě',
+            value:
+              'název, termín, místo a\u00A0jména vyučujících, kteří akci zajišťují, a\u00A0poznámka, kterou kontrola napíše autorovi',
+          },
+          {
             term: 'Postup bodu',
             value:
               'kdo bod odeslal, vrátil, schválil nebo zamítl a\u00A0kdy, a\u00A0poznámka, kterou kontrola napíše autorovi',
@@ -135,6 +140,14 @@ export const processingSections = [
         review: {
           by: 'dpo',
           note: 'Ověřit, že kontroloři a\u00A0ředitel smějí číst vrácený bod, který autor dál upravuje.',
+        },
+      },
+      {
+        kind: 'p',
+        text: 'Schválené akce vidí všichni přihlášení, i\u00A0studenti, a\u00A0to i\u00A0se jmény osob, které akci zajišťují.',
+        review: {
+          by: 'dpo',
+          note: 'Ověřit, že studenti smějí vidět jména zodpovědných osob u\u00A0schválených akcí.',
         },
       },
       {

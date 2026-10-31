@@ -14,7 +14,8 @@ same word.
 | INFORMACE Z PROVOZU ŠKOLY | `provoz` | Section 3: reports about past events. |
 | zpráva / bod z provozu | `report` point | A report about an event that already happened. |
 | jednání | `jednani` future item | An upcoming meeting. Listed in point 1. |
-| akce | `akce` future item | An upcoming event. Listed in point 2 or in the last PROVOZ point. |
+| akce | `akce` future item | An upcoming event, written by its author before it happens and reviewed like a point. Listed in point 2 or in the last PROVOZ point. An approved akce is visible to every signed-in user, students included, with the people who run it. An approved akce can be changed only by an explicit „Uložit změny“, which sends it for review again; a reviewer can cancel it. After it is over, its author is asked for a report. |
+| návrh | `proposal` (point kind `finance`, `pokyn`) | A proposal for an item in HOSPODAŘENÍ or for an extra POKYNY point. It has no point type and no bullets. Approving it only approves it; the headmaster's tools (M9) place it into the document. |
 | vyjádření | `statement` | A quoted statement by a participant, with its speaker. At least one is mandatory per report. The speaker's name is written in the genitive. |
 | účast | participants bullet | The list of people who took part („účast studentů: …“). |
 | areál | `campus` | School site: Smíchov, Radlice, Na Vidouli, or elsewhere. |

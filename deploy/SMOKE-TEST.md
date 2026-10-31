@@ -227,9 +227,46 @@ the headmaster (step 25).
           registration's (`docker compose exec web /nodejs/bin/node -e "console.log(require('fs').readdirSync('/run/secrets'))"`
           lists `web_entra_key` and `web_entra_cert`, and no `entra_key`).
 
+## Akce, reminders and the digest (M8b)
+
+These steps need the mail steps (16–19) to have passed. In a `psql` shell the
+deadline of the coming issues is `SELECT monday, deadline_at FROM issues ORDER BY monday DESC LIMIT 3;`.
+Mail steps use `docker compose run --rm cli jobs:run <job> [key]` to start a run
+now; the handler works from the clock and the data, so it sends only what is due
+(`jobs:run` with no arguments prints the jobs).
+
+30. **The report prompt.** An author writes an akce that expects a report and
+    the reviewer approves it. The prompt is due the day after
+    its last day, so use an akce whose last day was yesterday, or wait a day. Then
+    `docker compose run --rm cli jobs:run future.report-prompt`.
+    - [ ] The author gets one mail with the subject „Autoporada: napište zprávu z akce“ and the
+          `/body` link; it does not name the akce. A second `jobs:run` sends nothing.
+    - [ ] On the home page and in „Moje body“ the card „Akce čekající na zprávu“ offers
+          „Napsat zprávu“, which opens a draft prefilled from the akce, and
+          „Zprávu psát nebudu“, which drops the card.
+31. **Deadline reminders.** Near the deadline (two days before it at 13.00, and on its
+    day at 12.00 Prague time) the worker mails on its own every 15 minutes; or use
+    `jobs:run reminders.deadline` inside that window.
+    - [ ] An active submitter gets „Autoporada: uzávěrka porady se blíží“ two days ahead, once,
+          and not when they switched „Posílat mi připomínky uzávěrky“ off in `/profil`.
+    - [ ] An author with a draft or returned point gets „Autoporada: dnes je uzávěrka porady“
+          on the deadline day, a student too.
+    - [ ] The mails leave spread over about half an hour, not in one burst.
+32. **The reviewer digest.** Hand in a point and an akce, then at 7.00 or 15.00 (or
+    `jobs:run reviewer.digest morning` or `afternoon`):
+    - [ ] Each reviewer and the headmaster gets „Autoporada: novinky ke kontrole“ with counts
+          only („Nové položky ke kontrole: 2.“) and no title or name; it links `/kontrola`.
+    - [ ] With only a pending access request the headmaster's digest links `/uzivatele`.
+    - [ ] A second run in the same slot sends nothing.
+33. **The headmaster summary.** Five minutes after a deadline (or `jobs:run headmaster.summary`
+    inside the two hours after it):
+    - [ ] Each headmaster gets „Autoporada: uzávěrka porady proběhla“ with approved, waiting and
+          returned counts, linking `/kontrola`; none for a skipped meeting; sent once.
+    - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
+
 ## At go-live
 
-30. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
+34. - [ ] Set `HSTS_MAX_AGE=31536000` and run `docker compose up -d`.
     - [ ] Record how many sign-ins per minute the school's NAT address sees;
           the `auth` limit allows 600 per address.
 

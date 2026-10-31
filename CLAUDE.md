@@ -5,7 +5,7 @@ Weekly management-meeting ("Porada vedení školy") app for a Czech school: Czec
 ## Commands (pnpm)
 
 - `pnpm dev:services` starts Postgres, Mailpit, mock IdP, Gotenberg (compose.dev.yaml); `dev:services:down` stops them.
-- `pnpm dev` (web), `pnpm dev:worker` (worker), `pnpm db:migrate` (= `pnpm cli migrate`), `pnpm cli <command>`.
+- `pnpm dev` (web), `pnpm dev:worker` (worker), `pnpm db:migrate` (= `pnpm cli migrate`), `pnpm cli <command>`; `pnpm cli jobs:run <job> [key]` queues one cron job now (an unknown name prints the jobs).
 - `pnpm build`; `pnpm build:node` bundles `dist/worker.mjs` (and the CLI) with esbuild.
 
 ## Gate before calling work done
@@ -22,7 +22,7 @@ Then, when the change warrants it:
 
 ## Layers (enforced by `.dependency-cruiser.cjs`; changing a rule means updating ADR 0004)
 
-`src/`: `domain` (pure, imports only domain; `report` and `people` hold points and the people memory) <- `snapshot`, `contracts`, `notify` (zod + domain only) <- `document` (compose, model, render-docx, render-html) <- `application` (core, ports, use-cases, jobs, notifications; no I/O) <- `infra` (implements ports; a leaf). Edges and composition roots: `server` (container.ts binds infra), `app` (thin routes, reach server only via `actions|routes|pages/index.ts`), `ui` (theme, copy, kit, form, shell, status, features; fixed set, ADR 0012), `worker/main.ts`, `cli/main.ts`. `infra/directory` is the school people search (a port with `off` and `dev` adapters).
+`src/`: `domain` (pure, imports only domain; `report` and `people` hold points and the people memory) <- `snapshot`, `contracts`, `notify` (zod + domain only) <- `document` (compose, model, render-docx, render-html) <- `application` (core, ports, use-cases, jobs, notifications; no I/O) <- `infra` (implements ports; a leaf). Edges and composition roots: `server` (container.ts binds infra), `app` (thin routes, reach server only via `actions|routes|pages/index.ts`), `ui` (theme, copy, kit, form, shell, status, features; fixed set, ADR 0012), `worker/main.ts`, `cli/main.ts`. `infra/directory` is the school people search (a port with `off`, `dev` and `graph` adapters).
 
 - Cross-module imports go through `index.ts` only.
 - Only infra imports drizzle, pg, pg-boss, openid-client, jose; only `infra/mail/smtp.ts` imports nodemailer (`nodemailer-only-in-smtp`).
@@ -37,8 +37,9 @@ Then, when the change warrants it:
 
 - Two test worlds: Vitest `unit` runs against in-memory fakes (`provide: world=fake`), `integration` runs the same suites against PostgreSQL (`world=pg`, a database per test file). Port contracts live in `test/contract` and run in both worlds; helpers in `test/support/world`.
 - Every use case is in `USE_CASES` (`use-cases/index.ts`) and its folder's `index.ts`, with a colocated `.test.ts` (`test/arch/inventory.test.ts`). An export with no consumer fails knip, so land it with its first user.
-- Autosaving editors: `points.create` and `points.save` are the only actions with `refresh: 'none'` (default `'page'`; the inventory pins the set, ADR 0017). `points.save` and `points.status` use the `autosave` rate limit (120 a minute per user); create, submit, retract and withdraw use `submission`, decisions and reviewer edits use `admin`.
-- `DIRECTORY=off` (default) or `dev` (with `DIRECTORY_DEV_PATH`, e.g. `docker/dev/directory.json`) switches the people search; production is `off` until the Graph adapter (M8b). The people memory is the author's own points, with no table of its own.
+- Autosaving editors: `points.create`, `points.save`, `future.create` and `future.save` are the only actions with `refresh: 'none'` (default `'page'`; the inventory pins the set, ADR 0017). `points.save`, `points.status` and `future.save`/`future.get` use the `autosave` rate limit (120 a minute per user); create, submit, retract and withdraw use `submission`, decisions and reviewer edits use `admin`. An approved akce never autosaves: it changes only through `future.save` with intent `revise` („Uložit změny“). The autosave machine, `NoteField` and the refusal pieces live in `ui/form`.
+- `DIRECTORY=off` (default), `dev` (with `DIRECTORY_DEV_PATH`, e.g. `docker/dev/directory.json`) or `graph` (the web's own Entra registration, ADR 0021) switches the people search; `dev` is refused in production, and production stays `off` until SMOKE-TEST step 29 has run on the tenant. The people memory is the author's own points, with no table of its own.
+- Timed jobs are the `CRON` entries in `application/jobs/cron.ts` (mail prune, report prompt, deadline reminders, reviewer digest at 7.00 and 15.00, headmaster summary). A handler reconciles to the clock and the data, never to the tick, and the mail ledger key makes a rerun send nothing; the worker reads business tables only through narrow column grants (a new column it reads needs a grants migration).
 - Audit meta and logs never carry text people wrote (`test/arch/audit-meta.test.ts` scans `src/application`). Point bounds live in `domain/report/limits.ts` and feed Zod, the UI counters and the CHECK numbers.
 - Errors and logs carry codes, never messages, addresses, subjects or provider text (ADR 0015, 0016); a database constraint outside `KNOWN_CONSTRAINTS` fails as `db.constraint.<name>` (ADR 0022).
 - Czech UI copy lives in `src/ui/copy`. `lint:chars` forbids raw invisible or look-alike characters in `src`, `test/support`, `scripts`: write NBSP as `\u00a0`.
