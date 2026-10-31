@@ -23,7 +23,7 @@ record that supersedes it.
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
 | [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
 | [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted; items 5 and 7 superseded in part by 0024 |
-| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030 |
+| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030; item 1 refined by 0032 and 0034 |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
 | [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted |
 | [0021](0021-web-access-to-graph.md) | Web access to Graph: a registration of its own, the `ap-edge` bridge | Accepted |
@@ -37,3 +37,7 @@ record that supersedes it.
 | [0029](0029-points-go-to-an-issue-by-their-due-monday.md) | Points go to an issue by their due Monday | Accepted |
 | [0030](0030-the-issue-outline.md) | The issue outline | Accepted |
 | [0031](0031-rich-text-editor-under-the-nonce-csp.md) | Rich-text editor under the nonce CSP | Accepted |
+| [0032](0032-settings-and-the-meeting-relative-deadline.md) | Settings and the meeting-relative deadline | Accepted |
+| [0033](0033-registry-without-people-ids.md) | Registry without people ids | Accepted |
+| [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted |
+| [0035](0035-late-event-reports.md) | Late-event reports | Accepted |
