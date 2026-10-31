@@ -10,3 +10,4 @@ export * from './point-types';
 export * from './points';
 export * from './future';
 export * from './settings';
+export * from './registry';

@@ -218,6 +218,20 @@
       "when": 1793453699958,
       "tag": "0030_settings_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793457415050,
+      "tag": "0031_registry",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793457418791,
+      "tag": "0032_registry_guards",
+      "breakpoints": true
     }
   ]
 }

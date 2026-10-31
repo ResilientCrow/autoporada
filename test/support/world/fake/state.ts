@@ -13,6 +13,8 @@ import {
   type PointEventRecord,
   type PointRecord,
   type PointTypeRecord,
+  type RegistryEntryRecord,
+  type RegistryListRecord,
   type SessionRecord,
   type StoredSetting,
   type UserRecord,
@@ -36,6 +38,10 @@ export interface FakeState {
   readonly pointTypes: Map<string, PointTypeRecord>;
   /** settings, by key. */
   readonly settings: Map<string, StoredSetting>;
+  /** registry_lists, by id. Migration 0032's seeds are not here: a test makes the lists it needs. */
+  readonly registryLists: Map<string, RegistryListRecord>;
+  /** registry_entries, by id; removed entries stay (`removedAt`). */
+  readonly registryEntries: Map<string, RegistryEntryRecord>;
   /** points, by id; the client ref is kept next to the record. */
   readonly points: Map<string, FakePoint>;
   /** point_events, by id. */
@@ -81,6 +87,8 @@ export const emptyState = (): FakeState => ({
   issues: new Map(),
   pointTypes: new Map(),
   settings: new Map(),
+  registryLists: new Map(),
+  registryEntries: new Map(),
   points: new Map(),
   pointEvents: new Map(),
   futureItems: new Map(),

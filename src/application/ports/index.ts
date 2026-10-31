@@ -103,6 +103,14 @@ export {
   type SystemReason,
   type UserPrincipal,
 } from './principal';
+export type {
+  RegistryEntryRecord,
+  RegistryEntryValues,
+  RegistryListCount,
+  RegistryListRecord,
+  RegistryListValues,
+  RegistryRepo,
+} from './registry';
 export type { NewSession, SessionRecord, SessionRepo, SessionSelector } from './sessions';
 export type { SettingsRepo, StoredSetting } from './settings';
 export type { PendingSignIn, SignInRepo } from './sign-ins';

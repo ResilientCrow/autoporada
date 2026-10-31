@@ -42,6 +42,9 @@ export const rules = {
   'type-name-taken': 'Typ bodu s\u00A0tímto názvem už existuje.',
   'type-locked': 'Tento typ nelze vypnout.',
   'bullet-kind-fixed': 'Druh uložené odrážky nelze změnit. Odeberte ji a\u00A0přidejte novou.',
+  'registry-duplicate': 'Student se stejným jménem a\u00A0třídou už na seznamu je.',
+  'registry-list-taken': 'Seznam s\u00A0tímto názvem už existuje.',
+  'registry-list-fixed': 'Seznam pro Přílohu\u00A01 nelze vypnout.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {

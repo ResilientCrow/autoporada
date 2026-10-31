@@ -15,5 +15,8 @@ export const RULE_CODES = [
   'type-name-taken',
   'type-locked',
   'bullet-kind-fixed',
+  'registry-duplicate',
+  'registry-list-taken',
+  'registry-list-fixed',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];

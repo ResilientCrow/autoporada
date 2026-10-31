@@ -10,6 +10,7 @@ import type { PointEventRepo } from './point-events';
 import type { PointTypeRepo } from './point-types';
 import type { PointRepo } from './points';
 import type { Principal } from './principal';
+import type { RegistryRepo } from './registry';
 import type { SessionRepo } from './sessions';
 import type { SettingsRepo } from './settings';
 import type { SignInRepo } from './sign-ins';
@@ -44,6 +45,7 @@ export interface Tx {
   readonly issues: IssueRepo;
   readonly pointTypes: PointTypeRepo;
   readonly settings: SettingsRepo;
+  readonly registry: RegistryRepo;
   readonly points: PointRepo;
   readonly pointEvents: PointEventRepo;
   readonly futureItems: FutureItemRepo;
