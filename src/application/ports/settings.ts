@@ -12,4 +12,9 @@ export interface StoredSetting {
 export interface SettingsRepo {
   /** The row, or null when nothing is stored and the key's default applies. */
   get(key: string): Promise<StoredSetting | null>;
+  /**
+   * The value alone, or null when nothing is stored. Selects `key` and `value` only: the worker
+   * role is granted no more (ADR 0032), so its reads go through this and never through `get`.
+   */
+  value(key: string): Promise<unknown>;
 }

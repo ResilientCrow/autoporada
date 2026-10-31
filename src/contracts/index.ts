@@ -91,6 +91,7 @@ export {
   toKnownIssues,
 } from './issues';
 export {
+  bodyWire,
   contentWire,
   createPointInput,
   createPointOutput,
@@ -145,3 +146,10 @@ export {
   USER_GROUPS,
   type UserGroup,
 } from './users';
+export {
+  SETTINGS,
+  settingsReadInput,
+  settingsReadOutput,
+  type SettingKey,
+  type SettingValues,
+} from './settings';

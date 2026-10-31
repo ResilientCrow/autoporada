@@ -11,5 +11,10 @@ export function fakeSettingsRepo(tx: FakeTxState): SettingsRepo {
       const row = tx.draft.settings.get(key);
       return row ? structuredClone(row) : null;
     },
+    async value(key) {
+      guard(tx, false);
+      const row = tx.draft.settings.get(key);
+      return row ? structuredClone(row.value) : null;
+    },
   };
 }

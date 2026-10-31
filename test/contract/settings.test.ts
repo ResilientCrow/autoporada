@@ -57,4 +57,24 @@ describe('SettingsRepo (port contract)', () => {
       expect(got, role).toEqual(expected);
     }
   });
+
+  describe('value (key and value only, what the worker may select)', () => {
+    it('is null when nothing is stored', async () => {
+      expect(await read((tx) => tx.settings.value('deadline'))).toBeNull();
+    });
+
+    it('returns the stored value as it was written, without the version', async () => {
+      const value = { list: [1, null, { ž: 'řeřicha' }], flag: false };
+      await world.seed.setting('texts.annex1', value);
+      expect(await read((tx) => tx.settings.value('texts.annex1'))).toEqual(value);
+      expect(await read((tx) => tx.settings.value('reminders'))).toBeNull();
+    });
+
+    it('can be read in a read transaction by the system', async () => {
+      await world.seed.setting('reminders', { soft: true, hard: false });
+      expect(
+        await world.tx(system('job:test'), (tx) => tx.settings.value('reminders'), 'read'),
+      ).toEqual({ soft: true, hard: false });
+    });
+  });
 });

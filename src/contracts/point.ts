@@ -177,8 +177,8 @@ const richParagraphSchema = z.strictObject({
   content: z.array(richTextSchema).max(RICH_LIMITS.maxNodes).optional(),
 });
 
-/** The body as the editor sends it and a read gives it back. */
-const richDocWire = z.strictObject({
+/** A rich document as the editor sends it and a read gives it back. */
+export const richDocWire = z.strictObject({
   type: z.literal('doc'),
   content: z.array(richParagraphSchema).max(RICH_LIMITS.maxNodes),
 });
@@ -253,7 +253,8 @@ const paragraphWire = ({ attrs, content }: RichParagraph) => ({
   ...(content && { content: content.map(textWire) }),
 });
 
-const bodyWire = (body: PointContent['body']) => ({
+/** A stored rich document in the wire shape of `richDocWire`. */
+export const bodyWire = (body: PointContent['body']) => ({
   type: 'doc' as const,
   content: body.content.map(paragraphWire),
 });

@@ -14,5 +14,12 @@ export function createSettingsRepo(db: TxDatabase): SettingsRepo {
         .where(eq(settings.key, key));
       return row ?? null;
     },
+    async value(key) {
+      const [row] = await db
+        .select({ value: settings.value })
+        .from(settings)
+        .where(eq(settings.key, key));
+      return row ? row.value : null;
+    },
   };
 }

@@ -11,6 +11,7 @@ export { fromTransition } from './failure';
 export { MAX_FIELDS } from './field-issues';
 export { DEADLINE_RULE, readSlots } from './issue-rule';
 export { readAccess, writeAccess } from './resource-access';
+export { readSetting, readSettingValue, type SettingState } from './settings';
 export {
   fail,
   ok,
