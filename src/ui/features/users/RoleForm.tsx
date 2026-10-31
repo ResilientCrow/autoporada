@@ -11,6 +11,7 @@ import {
   CheckboxField,
   Form,
   SelectField,
+  FormActions,
   SubmitButton,
   useActionForm,
   type FormSpec,
@@ -86,7 +87,9 @@ export function RoleForm({
         defaultValue={user.isStudent ? 'student' : 'staff'}
       />
       {lowers && <CheckboxField name="confirmed" />}
-      <SubmitButton>{copy.save}</SubmitButton>
+      <FormActions>
+        <SubmitButton>{copy.save}</SubmitButton>
+      </FormActions>
     </Form>
   );
 }

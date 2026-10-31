@@ -49,7 +49,11 @@ export function RadioGroupField({
       className="flex flex-col gap-1"
     >
       <legend className="font-bold">{field.label}</legend>
-      {description === undefined ? null : <span id={field.descriptionId}>{description}</span>}
+      {description === undefined ? null : (
+        <span id={field.descriptionId} className="text-sm">
+          {description}
+        </span>
+      )}
       {field.message === null ? null : (
         <NativeFieldError id={field.errorId} message={field.message} />
       )}

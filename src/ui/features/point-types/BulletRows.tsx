@@ -1,7 +1,7 @@
 'use client';
 
 import { pointTypes } from '@/ui/copy';
-import { CheckboxField, SelectField, TextField, fieldId } from '@/ui/form';
+import { CheckboxField, FieldGroup, SelectField, TextField, fieldId } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
 import type { BulletRow } from './rows';
@@ -34,14 +34,12 @@ export function BulletRows({
   readonly onRemove: (uid: number) => void;
 }) {
   return (
-    <fieldset id={fieldId(formId, 'defaultBullets')} tabIndex={-1} className="space-y-4">
-      <legend className="text-lg font-bold">{copy.title}</legend>
+    <FieldGroup id={fieldId(formId, 'defaultBullets')} legend={copy.title}>
       {rows.length === 0 && <p>{copy.empty}</p>}
       {rows.map((row, i) => {
         const at = (field: string) => `defaultBullets.${i}.${field}`;
         return (
-          <fieldset key={row.uid} className="space-y-3 rounded-brand border p-3">
-            <legend className="px-1 font-bold">{copy.row(i + 1)}</legend>
+          <FieldGroup key={row.uid} legend={copy.row(i + 1)}>
             <input type="hidden" name={at('key')} value={row.key} />
             <TextField name={at('label')} defaultValue={row.label} />
             {row.key === '' ? (
@@ -74,7 +72,7 @@ export function BulletRows({
             <Button variant="secondary" onPress={() => onRemove(row.uid)}>
               {copy.remove(i + 1)}
             </Button>
-          </fieldset>
+          </FieldGroup>
         );
       })}
       {canAdd ? (
@@ -84,6 +82,6 @@ export function BulletRows({
       ) : (
         <p>{copy.tooMany}</p>
       )}
-    </fieldset>
+    </FieldGroup>
   );
 }

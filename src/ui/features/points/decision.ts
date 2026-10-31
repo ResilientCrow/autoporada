@@ -62,14 +62,13 @@ export function decideInput(id: string, version: number, data: FormData) {
 export const decidedEvent = (press: Press): ReviewDecision =>
   press === 'approve-next' ? 'approve' : press;
 
-const BAR = 'submit-bar border-t-2 border-ink bg-light py-3';
 /**
  * The bar's box. From md on the closed bar is one row of buttons, which fits the room `bar-room`
  * keeps clear, so it sticks to the bottom; narrower, or with the note open, it is taller than that
  * room and would cover what focus brings into view, so it sits in the flow above the history.
  */
 export const barClass = (noted: Noted | null): string =>
-  noted === null ? `${BAR} md:sticky md:bottom-0 md:z-10` : BAR;
+  noted === null ? 'submit-bar md:submit-bar-stuck' : 'submit-bar';
 
 /** Where a decision that went through leads: „Schválit a pokračovat“ to the next point or the queue, else nowhere. */
 export function afterDecision(press: Press, next: string | null): string | null {

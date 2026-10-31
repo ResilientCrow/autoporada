@@ -62,6 +62,23 @@
   }
 }
 
+/* The bar that ends a long form (about 3.5rem high); `submit-bar-stuck` keeps it in reach at the bottom. */
+@utility submit-bar-stuck {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+@utility submit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 2px solid var(--color-ink);
+  background-color: var(--color-light);
+  padding-block: 0.75rem;
+}
+
 /* A pane that fits the screen under the sticky top offset (top-4) with the same gap below, and scrolls inside. */
 @utility pane-fit {
   max-height: calc(100vh - 2rem);

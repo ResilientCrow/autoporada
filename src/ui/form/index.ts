@@ -7,7 +7,9 @@ export {
   type StatusAnswer,
 } from './autosave';
 export type { FormState } from './context';
+export { FieldGroup } from './FieldGroup';
 export { Form } from './Form';
+export { FormActions } from './FormActions';
 export { CheckboxField } from './CheckboxField';
 export { DateField } from './DateField';
 export { pickedTime, readText, typedDate } from './dates';

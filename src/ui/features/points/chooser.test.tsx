@@ -108,7 +108,7 @@ describe('RadioGroupField', () => {
 
   it('points aria-describedby at the description first, then the error', () => {
     const html = render({ choice: 'required' }, 'Vyberte jednu.');
-    expect(html).toMatch(/<span id="f-choice-description">Vyberte jednu\.<\/span>/);
+    expect(html).toMatch(/<span id="f-choice-description" class="text-sm">Vyberte jednu\.<\/span>/);
     expect(html).toMatch(/aria-describedby="f-choice-description f-choice-error"/);
   });
 

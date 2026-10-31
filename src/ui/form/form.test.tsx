@@ -3,13 +3,16 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { cs } from '@/ui/copy';
+import { BulletList } from '@/ui/kit';
 
 import { cspMarkupProblems } from '../../../test/support/markup';
 
 import {
   CheckboxField,
   ErrorSummary,
+  FieldGroup,
   Form,
+  FormActions,
   FormProblem,
   LiveStatus,
   NoScriptNotice,
@@ -294,7 +297,7 @@ describe('SelectField and CheckboxField', () => {
     it('lists the description id in aria-describedby', () => {
       expect(html).toMatch(/<select [^>]*aria-describedby="c-kind-description"/);
       expect(html).toMatch(/<input [^>]*aria-describedby="c-agree-description"/);
-      expect(html).toMatch(/<span id="c-kind-description">/);
+      expect(html).toMatch(/<span id="c-kind-description" class="text-sm">/);
     });
   });
 
@@ -559,7 +562,7 @@ describe('ErrorSummary entries', () => {
       if (Array.isArray(node)) return node.forEach(walk);
       if (!isValidElement(node)) return;
       const element = node as ReactElement<{ children?: ReactNode }>;
-      if (element.type === 'ul') {
+      if (element.type === BulletList) {
         const children = element.props.children;
         for (const child of Array.isArray(children) ? children : [children])
           if (isValidElement(child)) keys.push(child.key);
@@ -623,5 +626,53 @@ describe('ErrorSummary entries', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('field rhythm', () => {
+  const state: FormState = {
+    issues: null,
+    problem: null,
+    attempt: 0,
+    submitting: null,
+    onSubmit: () => undefined,
+  };
+
+  it('puts 24 px between the fields of a form', () => {
+    const out = renderToStaticMarkup(
+      <Form id="f" spec={spec} state={state}>
+        {NOTE}
+      </Form>,
+    );
+    expect(out).toContain('class="flex flex-col gap-6"');
+  });
+
+  it('sets a description in small type', () => {
+    const out = renderToStaticMarkup(
+      <Form id="f" spec={{ ...spec, role: { label: 'Role' } }} state={state}>
+        <TextField name="note" description={NOTE} />
+        <SelectField name="role" options={[{ value: 'a', label: 'A' }]} description={NOTE} />
+      </Form>,
+    );
+    expect(out.match(/class="text-sm"/g)).toHaveLength(2);
+  });
+
+  it('FieldGroup is a bordered fieldset with its legend, and can be focused or disabled', () => {
+    const plain = renderToStaticMarkup(<FieldGroup legend={NOTE}>{OWN}</FieldGroup>);
+    expect(plain).toContain('gap-4 rounded-brand border-2 border-ink p-4');
+    expect(plain).toContain(`<legend class="px-1 font-bold">${NOTE}</legend>`);
+    expect(plain).not.toContain('tabindex');
+    const named = renderToStaticMarkup(
+      <FieldGroup legend={NOTE} id="g" disabled describedBy="d">
+        {OWN}
+      </FieldGroup>,
+    );
+    expect(named).toMatch(/<fieldset id="g" tabindex="-1" disabled="" aria-describedby="d"/);
+    expect(cspMarkupProblems(named)).toEqual([]);
+  });
+
+  it('FormActions is a row of actions', () => {
+    const out = renderToStaticMarkup(<FormActions>{NOTE}</FormActions>);
+    expect(out).toBe(`<div class="flex flex-wrap items-center gap-x-3 gap-y-2">${NOTE}</div>`);
   });
 });

@@ -99,10 +99,10 @@ describe('what the reviewer hears after a decision', () => {
 });
 
 describe('where the bar sits', () => {
-  const sticky = (classes: string) => classes.split(' ').filter((c) => /sticky|bottom-0/.test(c));
+  const sticky = (classes: string) => classes.split(' ').filter((c) => /stuck/.test(c));
 
   it('sticks to the bottom only from md on, while the note is closed', () => {
-    expect(sticky(barClass(null))).toEqual(['md:sticky', 'md:bottom-0']);
+    expect(sticky(barClass(null))).toEqual(['md:submit-bar-stuck']);
   });
 
   it('sits in the flow once the note is open, at every width', () => {
@@ -112,7 +112,7 @@ describe('where the bar sits', () => {
 
   it('keeps the submit bar’s marker and look either way', () => {
     for (const noted of [null, 'return'] as const) {
-      expect(barClass(noted)).toMatch(/^submit-bar border-t-2 border-ink bg-light py-3/);
+      expect(barClass(noted)).toMatch(/^submit-bar( |$)/);
     }
   });
 });

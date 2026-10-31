@@ -44,7 +44,11 @@ export function SelectField({
       <label htmlFor={field.id} className="font-bold">
         {field.label}
       </label>
-      {description === undefined ? null : <span id={field.descriptionId}>{description}</span>}
+      {description === undefined ? null : (
+        <span id={field.descriptionId} className="text-sm">
+          {description}
+        </span>
+      )}
       {field.message === null ? null : (
         <NativeFieldError id={field.errorId} message={field.message} />
       )}

@@ -3,7 +3,7 @@
 import type { MouseEvent, Ref } from 'react';
 
 import { form } from '@/ui/copy';
-import { Icon } from '@/ui/kit';
+import { BulletList, Icon } from '@/ui/kit';
 
 import { revealAndFocus } from './reveal-and-focus';
 import type { SummaryEntry } from './spec';
@@ -53,13 +53,13 @@ export function ErrorSummary({
           <Icon name="exclamation" />
           {form.summaryTitle}
         </h2>
-        <ul className="list-disc pl-6">
+        <BulletList>
           {items.map((item, i) => (
             // Entries can share an id (the people of one row lead to the row's one control) or a
             // text; the position tells them apart.
             <SummaryItem key={`${i}:${String(item.id)}`} id={item.id} text={item.text} />
           ))}
-        </ul>
+        </BulletList>
       </div>
     </div>
   );

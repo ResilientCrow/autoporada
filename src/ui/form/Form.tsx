@@ -51,7 +51,7 @@ export function Form({
           method="post"
           validationBehavior="aria"
           onSubmit={onSubmit}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-6"
         >
           {lead}
           {children}

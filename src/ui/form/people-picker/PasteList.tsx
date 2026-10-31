@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 import { parsePeopleList } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
 import { people } from '@/ui/copy';
-import { buttonStyles } from '@/ui/kit';
+import { buttonStyles, Disclosure } from '@/ui/kit';
 
 import { CONTROL } from '../control-styles';
 
@@ -60,33 +60,30 @@ export function PasteList({
   }
 
   return (
-    <details>
-      <summary className="min-h-11 cursor-pointer py-2 font-bold">{paste.summary}</summary>
-      <div className="flex flex-col gap-3 pt-2">
-        <div className="flex flex-col gap-1">
-          <label htmlFor={id} className="font-bold">
-            {paste.label}
-          </label>
-          <span id={hintId}>{paste.hint}</span>
-          <textarea
-            id={id}
-            rows={6}
-            maxLength={PASTE_INPUT_CEILING}
-            value={text}
-            aria-describedby={hintId}
-            onChange={(event) => setText(event.target.value)}
-            className={CONTROL}
-          />
-        </div>
-        <div>
-          <button type="button" onClick={check} className={buttonStyles('secondary')}>
-            {paste.check}
-          </button>
-        </div>
-        {preview === null ? null : (
-          <PastePreview preview={preview} onPreview={setPreview} onAdd={add} />
-        )}
+    <Disclosure summary={paste.summary}>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={id} className="font-bold">
+          {paste.label}
+        </label>
+        <span id={hintId}>{paste.hint}</span>
+        <textarea
+          id={id}
+          rows={6}
+          maxLength={PASTE_INPUT_CEILING}
+          value={text}
+          aria-describedby={hintId}
+          onChange={(event) => setText(event.target.value)}
+          className={CONTROL}
+        />
       </div>
-    </details>
+      <div>
+        <button type="button" onClick={check} className={buttonStyles('secondary')}>
+          {paste.check}
+        </button>
+      </div>
+      {preview === null ? null : (
+        <PastePreview preview={preview} onPreview={setPreview} onAdd={add} />
+      )}
+    </Disclosure>
   );
 }

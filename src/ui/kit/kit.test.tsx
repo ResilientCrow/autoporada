@@ -133,6 +133,7 @@ describe('buttonStyles', () => {
     const styles = buttonStyles(variant);
     expect(styles).toContain(look);
     expect(styles).toContain('min-h-11');
+    expect(styles).toContain('w-fit');
     expect(styles).toContain('no-underline');
     expect(styles).not.toMatch(/opacity|outline/);
   });

@@ -3,7 +3,7 @@ import { cx } from './cx';
 export type ButtonVariant = 'primary' | 'secondary' | 'onDark';
 
 const BASE =
-  'inline-flex min-h-11 cursor-pointer items-center justify-center rounded-brand border-2 px-4 py-2 font-bold no-underline disabled:cursor-not-allowed data-pending:cursor-progress';
+  'inline-flex w-fit min-h-11 cursor-pointer items-center justify-center rounded-brand border-2 px-4 py-2 font-bold no-underline disabled:cursor-not-allowed data-pending:cursor-progress';
 
 /**
  * Hover uses the native pseudo-class, a press (no native signal) React Aria's

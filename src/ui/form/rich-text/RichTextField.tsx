@@ -63,7 +63,9 @@ export function RichTextField({
       <span id={labelId} className="font-bold">
         {field.label}
       </span>
-      <span id={helpId}>{profile === 'outline' ? richtext.help : richtext.helpPlain}</span>
+      <span id={helpId} className="text-sm">
+        {profile === 'outline' ? richtext.help : richtext.helpPlain}
+      </span>
       {field.message === null ? null : (
         <NativeFieldError id={field.errorId} message={field.message} />
       )}

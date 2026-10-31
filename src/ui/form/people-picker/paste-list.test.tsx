@@ -163,7 +163,7 @@ describe('the paste list in a people field', () => {
 
   it('is a details with the summary „Vložit seznam“', () => {
     const html = pasteMarkup(field());
-    expect(html).toMatch(/<details[^>]*><summary[^>]*>Vložit seznam<\/summary>/);
+    expect(html).toMatch(/<details[^>]*><summary[^>]*>.*Vložit seznam<\/summary>/);
     expect(html).not.toMatch(/<details[^>]* open/);
   });
 

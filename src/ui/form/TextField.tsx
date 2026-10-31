@@ -91,7 +91,11 @@ export function TextField({
       className="flex flex-col gap-1"
     >
       <Label className="font-bold">{label}</Label>
-      {description === undefined ? null : <Text slot="description">{description}</Text>}
+      {description === undefined ? null : (
+        <Text slot="description" className="text-sm">
+          {description}
+        </Text>
+      )}
       <FieldError className="flex items-start gap-2 font-bold text-ink">
         <Icon name="exclamation" />
         <span className="sr-only">{hiddenPrefix}</span>

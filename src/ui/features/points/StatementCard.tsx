@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { RecentPerson } from '@/domain/people';
 import { POINT_LIMITS, type DraftPerson, type DraftStatement } from '@/domain/report';
 import { points } from '@/ui/copy';
-import { fieldId, PeopleField, SelectField, TextField, type Chip } from '@/ui/form';
+import { FieldGroup, fieldId, PeopleField, SelectField, TextField, type Chip } from '@/ui/form';
 import { buttonStyles } from '@/ui/kit';
 
 import type { PickerContext } from './BulletRow';
@@ -81,11 +81,7 @@ export function StatementCard({
   };
 
   return (
-    <fieldset
-      disabled={readOnly}
-      className="flex min-w-0 flex-col gap-3 rounded-brand border-2 border-ink p-3"
-    >
-      <legend className="px-1 font-bold">{copy.legend(n)}</legend>
+    <FieldGroup legend={copy.legend(n)} disabled={readOnly}>
       <SelectField
         name={speakerName}
         options={speakerOptions(participants, selected)}
@@ -171,6 +167,6 @@ export function StatementCard({
           {copy.remove}
         </button>
       </div>
-    </fieldset>
+    </FieldGroup>
   );
 }

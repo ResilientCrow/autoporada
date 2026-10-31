@@ -5,6 +5,7 @@ import { POINT_LIMITS } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
 import { form, people, points } from '@/ui/copy';
 import {
+  FieldGroup,
   fieldId,
   NativeFieldError,
   PeopleField,
@@ -158,14 +159,12 @@ export function BulletRow(props: RowProps) {
   const id = fieldId(EDITOR_FORM_ID, name);
   const message = issues[name];
   return (
-    <fieldset
+    <FieldGroup
       id={id}
-      tabIndex={-1}
+      legend={removable ? `${title} ${form.optional}` : title}
       disabled={readOnly}
-      aria-describedby={message === undefined ? undefined : `${id}-error`}
-      className="flex min-w-0 flex-col gap-3 rounded-brand border-2 border-ink p-3"
+      describedBy={message === undefined ? undefined : `${id}-error`}
     >
-      <legend className="px-1 font-bold">{removable ? `${title} ${form.optional}` : title}</legend>
       <p>{people.count(bullet.people.length)}</p>
       {message === undefined ? null : <NativeFieldError id={`${id}-error`} message={message} />}
       {label}
@@ -184,6 +183,6 @@ export function BulletRow(props: RowProps) {
         onChange={(value) => props.onOrder(value === 'class-surname' ? 'class-surname' : 'input')}
       />
       {remove}
-    </fieldset>
+    </FieldGroup>
   );
 }

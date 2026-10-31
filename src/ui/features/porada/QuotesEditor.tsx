@@ -3,7 +3,7 @@
 import { OUTLINE_LIMITS } from '@/domain/outline';
 import { POINT_LIMITS } from '@/domain/report';
 import { porada } from '@/ui/copy';
-import { TextField } from '@/ui/form';
+import { FieldGroup, TextField } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
 import { EMPTY_QUOTE, quoteField, type QuoteDraft } from './item-editor';
@@ -28,8 +28,7 @@ export function QuotesEditor({
     <div className="flex flex-col gap-4">
       {quotes.length === 0 ? <p>{copy.none}</p> : null}
       {quotes.map((quote, i) => (
-        <fieldset key={i} className="flex flex-col gap-4 rounded-brand border-2 border-ink p-4">
-          <legend className="px-1 font-bold">{copy.group(i + 1)}</legend>
+        <FieldGroup key={i} legend={copy.group(i + 1)}>
           <TextField
             name={quoteField(i, 'speakerGenitive')}
             description={copy.speakerHint}
@@ -58,7 +57,7 @@ export function QuotesEditor({
               {copy.remove(i + 1)}
             </Button>
           </div>
-        </fieldset>
+        </FieldGroup>
       ))}
       <div>
         <Button

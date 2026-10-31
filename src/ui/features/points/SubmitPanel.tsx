@@ -58,7 +58,7 @@ export function SubmitPanel({
       {standing === null ? null : (
         <StandingLine standing={standing} report={reportFactsOf(kind, content)} />
       )}
-      <div className="submit-bar sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t-2 border-ink bg-light py-3">
+      <div className="submit-bar submit-bar-stuck">
         {/* Disabled for a banner only: its role="alert" text says why, and a press would do nothing. */}
         <Button variant="primary" isPending={pending} isDisabled={held} onPress={onSubmit}>
           {points.submit.button}

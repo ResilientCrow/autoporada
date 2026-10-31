@@ -4,7 +4,14 @@ import type { z } from 'zod';
 
 import type { requestAccessInput, requestAccessOutput, ServerAction } from '@/contracts';
 import { access } from '@/ui/copy';
-import { Form, SubmitButton, TextField, useActionForm, type FormSpec } from '@/ui/form';
+import {
+  Form,
+  FormActions,
+  SubmitButton,
+  TextField,
+  useActionForm,
+  type FormSpec,
+} from '@/ui/form';
 
 import { requestInput } from './inputs';
 
@@ -33,7 +40,9 @@ export function RequestForm({
   return (
     <Form id="zadost" spec={SPEC} state={state}>
       <TextField name="reason" multiline description={access.open.reason.description} />
-      <SubmitButton>{access.open.send}</SubmitButton>
+      <FormActions>
+        <SubmitButton>{access.open.send}</SubmitButton>
+      </FormActions>
       <p>{access.open.note}</p>
     </Form>
   );

@@ -5,6 +5,7 @@ import { POINT_LIMITS } from '@/domain/report';
 import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
 import {
+  FieldGroup,
   NativeFieldError,
   PeopleField,
   SelectField,
@@ -54,14 +55,12 @@ export function ResponsibleFields({
     issue: issues['responsible.people'],
   });
   return (
-    <fieldset
+    <FieldGroup
       id={people.id}
-      tabIndex={-1}
+      legend={copy.legend}
       disabled={readOnly}
-      aria-describedby={people.describedBy}
-      className="flex min-w-0 flex-col gap-3 rounded-brand border-2 border-ink p-3"
+      describedBy={people.describedBy}
     >
-      <legend className="px-1 font-bold">{copy.legend}</legend>
       <p id={people.descriptionId}>{copy.hint}</p>
       {people.message === null ? null : (
         <NativeFieldError id={people.errorId} message={people.message} />
@@ -92,6 +91,6 @@ export function ResponsibleFields({
         limit={POINT_LIMITS.responsiblePeople}
         {...picker}
       />
-    </fieldset>
+    </FieldGroup>
   );
 }
