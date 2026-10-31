@@ -7,4 +7,5 @@ export const nav = {
   access: 'Žádost o\u00A0přístup',
   users: 'Uživatelé',
   pointTypes: 'Typy bodů',
+  profile: 'Profil',
 } as const;

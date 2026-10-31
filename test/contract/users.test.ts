@@ -259,7 +259,11 @@ describe('UserRepo.setReminders (port contract)', () => {
     const user = await world.seed.user({ role: 'submitter' });
     expect(user.remindDeadline).toBe(true);
     const off = await setOwn(user, false);
-    expect(off).toMatchObject({ remindDeadline: false, version: user.version });
+    expect(off).toMatchObject({
+      remindDeadline: false,
+      version: user.version,
+      updatedAt: user.updatedAt,
+    });
     expect(await setOwn(off, true)).toMatchObject({ remindDeadline: true, version: user.version });
   });
 

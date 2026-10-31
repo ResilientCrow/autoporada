@@ -20,7 +20,10 @@ export const LIMITS = {
    * tabs and a retry ladder, and still stops a script.
    */
   autosave: { max: 120, windowMs: MINUTE, key: 'user' },
-  /** Creating, submitting, proposing and an author's retract, withdraw or cancel; never autosave. */
+  /**
+   * Creating, submitting, proposing and an author's retract, withdraw or cancel, and the
+   * profile's reminder box; never autosave.
+   */
   submission: { max: 30, windowMs: HOUR, key: 'user' },
   /**
    * An abuse guard for the headmaster's and reviewers' writes (deciding access requests and

@@ -22,6 +22,7 @@ export const NAV: readonly NavItem[] = [
     label: cs.nav.pointTypes,
     check: { action: 'pointTypes.manage' },
   },
+  { href: '/profil', label: cs.nav.profile, check: { action: 'profile.manage' } },
 ];
 
 /** The entries this actor may use. */

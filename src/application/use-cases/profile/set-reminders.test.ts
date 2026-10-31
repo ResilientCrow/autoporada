@@ -77,7 +77,7 @@ describe('profile.setReminders', () => {
 
   it('refuses a blocked user', async () => {
     const user = await world.seed.user({ role: 'submitter', status: 'blocked' });
-    expect(await set(user, { on: false })).toMatchObject({ ok: false });
+    expect(await set(user, { on: false })).toEqual({ ok: false, error: { code: 'forbidden' } });
     expect((await stored(user.id))?.remindDeadline).toBe(true);
   });
 

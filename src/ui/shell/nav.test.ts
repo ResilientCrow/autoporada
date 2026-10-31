@@ -28,7 +28,7 @@ describe('navFor', () => {
   });
 
   it('shows the access request page to a pending user only', () => {
-    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/', '/pristup']);
+    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/', '/pristup', '/profil']);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/pristup');
     expect(navFor(actor('headmaster')).map((i) => i.href)).not.toContain('/pristup');
   });
@@ -41,6 +41,7 @@ describe('navFor', () => {
       '/kontrola',
       '/uzivatele',
       '/nastaveni/typy-bodu',
+      '/profil',
     ]);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/uzivatele');
     expect(navFor(actor('reviewer')).map((i) => i.href)).not.toContain('/uzivatele');
@@ -105,6 +106,24 @@ describe('navFor', () => {
     ['a blocked reviewer', actor('reviewer', { status: 'blocked' })],
   ])('hides „Kontrola“ from %s', (_name, who) => {
     expect(navFor(who).map((i) => i.href)).not.toContain('/kontrola');
+  });
+
+  it.each([
+    ['pending user', actor('pending')],
+    ['student submitter', actor('submitter', { isStudent: true })],
+    ['submitter', actor('submitter')],
+    ['reviewer', actor('reviewer')],
+    ['headmaster', actor('headmaster')],
+  ])('shows „Profil“ to a %s, last', (_name, who) => {
+    const items = navFor(who);
+    expect(items.at(-1)).toMatchObject({ href: '/profil', label: 'Profil' });
+  });
+
+  it.each([
+    ['a blocked submitter', actor('submitter', { status: 'blocked' })],
+    ['a deactivated reviewer', actor('reviewer', { status: 'deactivated' })],
+  ])('hides „Profil“ from %s', (_name, who) => {
+    expect(navFor(who).map((i) => i.href)).not.toContain('/profil');
   });
 
   it('lists „Moje body“ right after the Přehled', () => {

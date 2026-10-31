@@ -18,7 +18,7 @@ describe('Profile', () => {
     const html = render(true);
     expect(html).toMatch(new RegExp(`<h1 [^>]*>.*${profile.title}.*</h1>`));
     expect(html.match(/<h1 /g)).toHaveLength(1);
-    expect(html).toContain(`>${profile.reminders.title}</h2>`);
+    expect(html).toMatch(new RegExp(`<h2 [^>]*tabindex="-1"[^>]*>${profile.reminders.title}</h2>`));
     expect(html).toContain('<div role="status"></div>');
     expect(cspMarkupProblems(html)).toEqual([]);
   });

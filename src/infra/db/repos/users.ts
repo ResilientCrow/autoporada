@@ -115,7 +115,8 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
       if (principal.kind !== 'user' || principal.actor.id !== id) throw new ScopeViolation();
       const [row] = await db
         .update(users)
-        .set({ remindDeadline: on })
+        // updatedAt keeps its value: $onUpdate would stamp it, and this is not an access change.
+        .set({ remindDeadline: on, updatedAt: users.updatedAt })
         .where(and(eq(users.id, id), visible()))
         .returning(USER_RECORD);
       if (!row) throw new ScopeViolation();
