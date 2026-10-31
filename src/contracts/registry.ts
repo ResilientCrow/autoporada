@@ -150,7 +150,10 @@ export const moveListOutput = z.strictObject({ moved: z.boolean() });
  */
 export const newSchoolYearInput = z.strictObject({
   listIds: z.array(z.uuid()).min(1).max(50).readonly(),
-  year: z.string().regex(/^\d{4}\/\d{4}$/),
+  year: z
+    .string()
+    .max(9)
+    .regex(/^\d{4}\/\d{4}$/),
   confirmed: z.boolean(),
 });
 /** `archived`: students kept in the archive; `deleted`: students no document had listed. */
