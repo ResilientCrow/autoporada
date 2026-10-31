@@ -51,6 +51,7 @@ test.describe('a proposal', () => {
 
     const reviewer = await signInElsewhere(newContext, signInAsRe('revizor', project));
     await reviewer.goto(`/kontrola/${id}`);
+    await hydrated(reviewer);
     await expect(reviewer.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
     await reviewer.getByRole('button', { name: review.edit.open }).click();
     const editor = reviewer.getByRole('region', { name: review.edit.label });

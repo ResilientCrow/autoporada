@@ -4,9 +4,9 @@
  * „Napsat zprávu“ opens the draft report made from it.
  */
 import { renderMail } from '@/notify';
-import { future, points, review } from '@/ui/copy';
+import { future, people, points, review } from '@/ui/copy';
 
-import { fillAkce, emailOf, idOfUrl, isoInDays, signInAsRe } from './akce-steps';
+import { fillAkce, emailOf, idOfUrl, isoInDays, signInAsRe, statusSaying } from './akce-steps';
 import { forgetFutureOf, moveFutureToPast, readFuture } from './future-db';
 import { forgetPointsOf } from './db';
 import { E2E_ENV } from './env';
@@ -22,7 +22,7 @@ test.describe('the akce journey', () => {
   // One author per project; their akce, reports and mail are cleared around the test.
   test.describe.configure({ mode: 'serial' });
   // The job runs from the CLI, and waits for the next minute when the other project queued it in this one.
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
   const clear = async (project: string) => {
     const email = emailOf('zapis', project);
     await forgetFutureOf(email);
@@ -69,7 +69,7 @@ test.describe('the akce journey', () => {
     await expect(reviewer).toHaveURL(new RegExp(`/akce/${id}$`));
     await hydrated(reviewer);
     await reviewer.getByRole('button', { name: review.decision.approve, exact: true }).click();
-    await expect(reviewer.getByRole('status')).toContainText(future.review.said.approve);
+    await expect(statusSaying(reviewer, future.review.said.approve)).toBeVisible();
     expect((await readFuture(id)).state).toBe('approved');
 
     // A colleague who wrote nothing finds it on the list and reads it.
@@ -104,5 +104,34 @@ test.describe('the akce journey', () => {
     await expect(field(page, points.facts.eventDate)).toHaveValue(day);
     await expect(page.getByRole('listitem').filter({ hasText: 'Jana Nováková' })).toBeVisible();
     await expectAccessible();
+
+    // The author submits the report; the akce counts as written and the card stops offering it.
+    const reportId = idOfUrl(page);
+    // What the report still needs: a participant from the directory and one statement.
+    const participants = page.getByRole('main').getByRole('group', { name: /^Účastníci/ });
+    const box = participants.getByRole('combobox', { name: points.bullets.addPerson });
+    await box.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await box.click();
+    await box.pressSequentially('Svobod');
+    await page
+      .getByRole('listbox')
+      .getByRole('option', { name: 'Petr Svoboda', exact: true })
+      .click();
+    await participants
+      .getByRole('button', { name: people.chips.bulk.setLabel('pan'), exact: true })
+      .click();
+    await page.getByRole('button', { name: points.statements.add }).click();
+    const statement = page.getByRole('group', { name: points.statements.legend(1) });
+    await field(statement, points.statements.speaker).selectOption({ label: 'Petr Svoboda' });
+    await field(statement, points.statements.genitive).fill('Petra Svobody');
+    await field(statement, points.statements.quote).fill('Exkurze se vydařila.');
+    await field(statement, points.statements.quote).blur();
+    await expect(page.getByText(/^Uloženo v/)).toBeVisible();
+    await page.getByRole('button', { name: points.submit.button }).click();
+    await expect(page.getByText(points.state.submitted, { exact: true }).first()).toBeVisible();
+    expect(await readFuture(id)).toMatchObject({ reportState: 'written', reportPointId: reportId });
+    await page.goto('/body');
+    await hydrated();
+    await expect(page.getByRole('heading', { name: future.report.title })).toHaveCount(0);
   });
 });

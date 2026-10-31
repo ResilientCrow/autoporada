@@ -113,6 +113,7 @@ test.describe('deciding on an akce', () => {
 
     const reviewer = await signInElsewhere(newContext, signInAsRe('revizor', project));
     await reviewer.goto(`/akce/${other}`);
+    await hydrated(reviewer);
     await reviewer.getByRole('checkbox', { name: future.review.cancel.confirm }).check();
     await reviewer.getByRole('button', { name: future.review.cancel.button }).click();
     await expectSaidAndFocused(reviewer, future.review.cancel.said, OTHER);
