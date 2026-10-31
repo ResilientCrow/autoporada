@@ -1,7 +1,7 @@
 import type { RecentSource } from '@/domain/people';
 import type { PointContent, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
-import type { CalDate } from '@/domain/time';
+import type { CalDate, WallTime } from '@/domain/time';
 
 /** A point as its author wrote it, with where it stands in review. */
 export interface PointRecord {
@@ -89,6 +89,22 @@ interface HandedInPoint {
   readonly state: Extract<PointState, 'submitted' | 'approved' | 'returned'>;
   readonly earliestMonday: CalDate;
   readonly handInMonday: CalDate;
+}
+
+/**
+ * A report point as the late-report jobs read it (migrations 0017, 0024, 0027 and 0035): who wrote
+ * it, where it stands, the Monday it was handed in for and when its event ends, never what is in it.
+ */
+export interface ReportPoint {
+  readonly id: string;
+  readonly authorId: string;
+  readonly state: PointState;
+  /** Set while the point is handed in. */
+  readonly handInMonday: CalDate | null;
+  /** The event's end date, or else its date. */
+  readonly lastDay: CalDate;
+  /** When the last day ends; null counts as 20.00 (`eventEnd`). */
+  readonly timeTo: WallTime | null;
 }
 
 /** A point named for a finding: where to find it, and what to call it. */
@@ -197,6 +213,17 @@ export interface PointRepo {
    * (`hand_in_monday`) grant the worker. ScopeViolation for a user.
    */
   handedInFor(monday: CalDate): Promise<readonly HandedInPoint[]>;
+  /**
+   * The late-report jobs' read: the report points that are neither withdrawn nor rejected, with an
+   * event date, whose last day falls from `from` to `to`, both included, ordered by id. Only the
+   * columns migrations 0017, 0024, 0027 and 0035 grant the worker. ScopeViolation for a user.
+   */
+  reportPoints(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly ReportPoint[]>;
+  /** The same point at send time, whatever its state: null for an unknown point or one with no event date. ScopeViolation for a user. */
+  reportPoint(id: string): Promise<ReportPoint | null>;
   /**
    * The points that belong to the issue of `monday` whose meeting is on `meetingDate` (ADR 0029,
    * `inIssue`): approved, due by `monday` (`greatest(earliest_monday, hand_in_monday)`), and for a

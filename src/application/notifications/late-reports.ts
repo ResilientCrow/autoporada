@@ -10,7 +10,7 @@ import {
   type IssueSlot,
   type LateFacts,
 } from '@/domain/calendar';
-import { addDays, instantToWallClock, type CalDate } from '@/domain/time';
+import { addDays, instantToWallClock, toIsoDate, type CalDate } from '@/domain/time';
 
 /** What the caller knows when it enqueues the mail at an akce's end: the author and the akce. */
 export interface ReportEndedIds {
@@ -23,6 +23,22 @@ export const reportEndedParts = ({ authorId, itemId }: ReportEndedIds) => ({
   recipientId: authorId,
   subjectId: itemId,
   key: itemId,
+});
+
+/** The mail an hour before the close: to the akce's author while no report is started, else to the author of the draft. */
+export interface LastCallIds {
+  readonly authorId: string;
+  readonly kind: 'akce' | 'point';
+  readonly id: string;
+  /** The Monday of the slot the report is late for. */
+  readonly monday: CalDate;
+}
+
+/** One mail per report and slot; the subject names the report and which table it is in. */
+export const lastCallParts = ({ authorId, kind, id, monday }: LastCallIds) => ({
+  recipientId: authorId,
+  subjectId: `${kind}:${id}`,
+  key: `${kind}:${id}:${toIsoDate(monday)}`,
 });
 
 /** The ledger key of `report.ended` (`${template}:${key}`), for the prompt that yields to it. */
@@ -98,4 +114,70 @@ export async function loadReportEnded(tx: Reads, itemId: string): Promise<Report
     meetingDate: close.slot.meetingDate,
     due: close.due,
   };
+}
+
+/** The reports whose last call is due now: akce still without a report, and late drafts and returned reports. */
+export async function lastCalls(
+  tx: Pick<Tx, 'futureItems' | 'points' | 'issues' | 'settings'>,
+  now: Date,
+): Promise<readonly LastCallIds[]> {
+  const today = instantToWallClock(now).date;
+  const window = { from: addDays(today, -1), to: today };
+  const [akce, reports, { slots, rule }] = await Promise.all([
+    tx.futureItems.reportsEnding(window),
+    tx.points.reportPoints(window),
+    readSlots(tx, now),
+  ]);
+  const candidates = [
+    ...akce.map((item) => ({ kind: 'akce' as const, ...item })),
+    ...reports
+      .filter((point) => point.state === 'draft' || point.state === 'returned')
+      .map((point) => ({ kind: 'point' as const, ...point })),
+  ];
+  return candidates.flatMap(({ kind, id, authorId, ...facts }) => {
+    const close = lateClose(slots, rule, now, facts);
+    return close && lateMailDue('last-call', eventEnd(facts), close.due, now)
+      ? [{ authorId, kind, id, monday: close.slot.monday }]
+      : [];
+  });
+}
+
+/** What the last call is about at send time. */
+export interface LastCallFacts {
+  readonly authorId: string;
+  /** The report is still to be handed in: the akce has none, or the draft is a draft or returned. */
+  readonly open: boolean;
+  readonly meetingDate: CalDate;
+  readonly due: Date;
+}
+
+/** Read again when the mail goes: null when the report is gone or not late for its slot any more. */
+export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, subjectId: string) {
+  const { now } = tx.ctx;
+  const [kind, id = ''] = subjectId.split(':');
+  const found =
+    kind === 'akce'
+      ? await tx.futureItems.reportEnding(id).then((item) => {
+          const open =
+            item?.state === 'approved' &&
+            item.expectsReport &&
+            (item.reportState === 'none' || item.reportState === 'prompted');
+          return item && { item, open };
+        })
+      : kind === 'point'
+        ? await tx.points.reportPoint(id).then((item) => {
+            return item && { item, open: item.state === 'draft' || item.state === 'returned' };
+          })
+        : null;
+  if (!found) return null;
+  const { slots, rule } = await readSlots(tx, now);
+  const close = lateClose(slots, rule, now, found.item);
+  if (!close) return null;
+  const facts: LastCallFacts = {
+    authorId: found.item.authorId,
+    open: found.open,
+    meetingDate: close.slot.meetingDate,
+    due: close.due,
+  };
+  return facts;
 }

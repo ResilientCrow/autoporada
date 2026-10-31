@@ -6,6 +6,7 @@ import {
   type PointCursor,
   type PointRecord,
   type PointRepo,
+  type ReportPoint,
   type Principal,
   type TxContext,
 } from '@/application/ports';
@@ -102,6 +103,30 @@ const handedInFirst = (a: FakePoint, b: FakePoint) =>
 const lastDay = (p: FakePoint) => p.content.endDate ?? p.content.eventDate;
 
 /** The point repository over the fake state, with the same scope, version and CHECK rules. */
+/** A report point as the late-report jobs read it; none for another kind, a missing date or a dead point. */
+function reportPointOf(p: FakePoint): ReportPoint[] {
+  const { eventDate, endDate, timeTo } = p.content;
+  if (
+    p.kind !== 'report' ||
+    eventDate === null ||
+    p.state === 'withdrawn' ||
+    p.state === 'rejected'
+  ) {
+    return [];
+  }
+  const lastDay = endDate ?? eventDate;
+  return [
+    {
+      id: p.id,
+      authorId: p.authorId,
+      state: p.state,
+      handInMonday: p.handInMonday,
+      lastDay,
+      timeTo,
+    },
+  ];
+}
+
 export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   const { principal, now } = ctx;
   const { points } = tx.draft;
@@ -266,6 +291,20 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       if (principal.kind !== 'system') throw new ScopeViolation();
       const point = points.get(id);
       return point ? { id: point.id, authorId: point.authorId, state: point.state } : null;
+    },
+    async reportPoints({ from, to }) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      return [...points.values()]
+        .flatMap(reportPointOf)
+        .filter((p) => compareDates(p.lastDay, from) >= 0 && compareDates(p.lastDay, to) <= 0)
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
+    },
+    async reportPoint(id) {
+      guard(tx, false);
+      if (principal.kind !== 'system') throw new ScopeViolation();
+      const point = points.get(id);
+      return (point && reportPointOf(point)[0]) ?? null;
     },
     async reminderAuthors({ draftsSince, monday }) {
       guard(tx, false);

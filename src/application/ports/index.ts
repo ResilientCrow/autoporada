@@ -95,6 +95,7 @@ export type {
   PointRepo,
   PointSummary,
   QueuedPoint,
+  ReportPoint,
   WaitingPoints,
 } from './points';
 export {

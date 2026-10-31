@@ -17,6 +17,7 @@ import { createMailLedgerRepo } from './repos/mail-ledger';
 import { createPointTypeRepo } from './repos/point-types';
 import { createPointIssueReads } from './repos/points-issue';
 import { createPointReads } from './repos/points-read';
+import { createPointReportReads } from './repos/points-reports';
 import { createPointWrites } from './repos/points-write';
 import { createRegistryRepo } from './repos/registry';
 import { createSessionRepo } from './repos/sessions';
@@ -49,6 +50,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     points: guard({
       ...createPointReads(db, ctx),
       ...createPointIssueReads(db, ctx),
+      ...createPointReportReads(db, ctx),
       ...createPointWrites(db, ctx),
     }),
     pointEvents: guard(createPointEventRepo(db, ctx)),

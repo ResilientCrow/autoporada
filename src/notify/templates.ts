@@ -32,6 +32,7 @@ export const TEMPLATE_NAMES = [
   'headmaster.summary',
   'issue.moved',
   'report.ended',
+  'report.last-call',
 ] as const;
 export type TemplateName = (typeof TEMPLATE_NAMES)[number];
 
@@ -63,6 +64,7 @@ export interface TemplateViews {
   'issue.moved': { readonly meetingDate: CalDate; readonly deadlineAt: Date };
   /** The close of a late report and the porada it goes to. */
   'report.ended': { readonly due: Date; readonly meetingDate: CalDate };
+  'report.last-call': { readonly due: Date; readonly meetingDate: CalDate };
 }
 
 interface RenderedMail {
@@ -214,6 +216,20 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       body: {
         paragraphs: [
           `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
+        ],
+        link: '/body',
+      },
+    };
+  },
+  // An hour before the close of a late report that is still not handed in; no title, no name.
+  'report.last-call': ({ due, meetingDate }) => {
+    const { date, time } = instantToWallClock(due);
+    const when = `${formatDayMonth(date)} v\u00A0${formatTime(time)}`;
+    return {
+      subject: `Autoporada: poslední hodina na zprávu (do ${when})`,
+      body: {
+        paragraphs: [
+          `zpráva z\u00A0akce, kterou jste zapsali do přehledu, ještě není odevzdaná. Odevzdejte ji do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
         ],
         link: '/body',
       },

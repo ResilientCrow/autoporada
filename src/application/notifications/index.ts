@@ -1,6 +1,6 @@
 export { digestFacts, hasNews, isReviewer, type DigestFacts } from './digest';
 export { DECISION_MAIL, mailJob } from './mail-jobs';
-export { endedAkce, endedMailSent } from './late-reports';
+export { endedAkce, endedMailSent, lastCalls } from './late-reports';
 export { movedNoticeJob, movedRecipients } from './moved';
 export { isHeadmaster, summaryIssue } from './summary';
 export { POINT_MAIL } from './point-mails';
