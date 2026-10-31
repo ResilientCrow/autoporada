@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
-import { formatClose, formatDayMonth } from '@/domain/cs';
+import { formatClose, formatDayMonth, formatNumericDate } from '@/domain/cs';
+import { parseIsoDate } from '@/domain/time';
 import { porada } from '@/ui/copy';
 import { Notice } from '@/ui/kit';
 
@@ -15,6 +16,8 @@ export interface FindingView {
     readonly due?: string;
     readonly of?: 'akce' | 'point';
   }[];
+  /** `earlier-open`: the porada to generate or skip first, as ISO dates. */
+  readonly earlier?: { readonly monday: string; readonly meetingDate: string };
   /** `snapshot-invalid`: the fields that are wrong. */
   readonly paths?: readonly string[];
   /** `registry-new`: how many entries will be marked NOVÉ; `late-reports-expected`: late drafts not named. */
@@ -38,6 +41,17 @@ function dueText(ref: RefView): string {
   return porada.preflight.due(`${formatDayMonth(date)}\u00a0v\u00a0${time}`);
 }
 
+/** `earlier-open`: the workspace of the porada to generate or skip first, by its meeting date. */
+function EarlierLink({ earlier }: { readonly earlier: NonNullable<FindingView['earlier']> }) {
+  return (
+    <p>
+      <Link href={`/porada/${earlier.monday}`} prefetch={false} className="font-bold">
+        {porada.preflight.earlier(formatNumericDate(parseIsoDate(earlier.meetingDate)))}
+      </Link>
+    </p>
+  );
+}
+
 function Finding({ finding }: { readonly finding: FindingView }) {
   const text =
     finding.code === 'registry-new'
@@ -46,6 +60,7 @@ function Finding({ finding }: { readonly finding: FindingView }) {
   return (
     <li className="space-y-1">
       <p>{text}</p>
+      {finding.earlier !== undefined && <EarlierLink earlier={finding.earlier} />}
       {finding.refs !== undefined && (
         <ul className="list-disc space-y-1 pl-6">
           {finding.refs.map((ref) => (

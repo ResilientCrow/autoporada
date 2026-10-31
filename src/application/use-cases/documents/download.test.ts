@@ -12,8 +12,8 @@ const world = setupWorld();
 const fixtures = issueFixtures(world);
 const worker = system('job:pdf.render');
 
-// The clock starts Monday 19 October 2026 10.00 Prague; W1's deadline is still ahead.
-const W1 = calDate(2026, 10, 26);
+// The clock starts Monday 19 October 2026 10.00 Prague: W1, this week's, is the first porada open.
+const W1 = calDate(2026, 10, 19);
 const W2 = calDate(2026, 11, 2);
 
 const headmaster = () => world.seed.user({ role: 'headmaster' });
@@ -38,7 +38,7 @@ describe('documents.download', () => {
 
     const result = await download(reviewer, 'docx');
     if (!result.ok) throw new Error(JSON.stringify(result.error));
-    expect(result.value.fileName).toBe('porada-2026-10-26.docx');
+    expect(result.value.fileName).toBe('porada-2026-10-19.docx');
     expect(result.value.bytes.slice(0, 2)).toEqual(new Uint8Array([0x50, 0x4b]));
 
     const audit = await world.inspect.audit();
@@ -66,11 +66,11 @@ describe('documents.download', () => {
     );
     const result = await download(head, 'pdf');
     if (!result.ok) throw new Error(JSON.stringify(result.error));
-    expect(result.value).toMatchObject({ fileName: 'porada-2026-10-26.pdf', bytes: pdf });
+    expect(result.value).toMatchObject({ fileName: 'porada-2026-10-19.pdf', bytes: pdf });
   });
 
   it('names the file by the meeting date of a moved porada', async () => {
-    await fixtures.issue(W1, { meetingDate: calDate(2026, 10, 27) });
+    await fixtures.issue(W1, { meetingDate: calDate(2026, 10, 20) });
     const head = await headmaster();
     const result = await world.run(generateIssue, world.as(head), {
       monday: toIsoDate(W1),
@@ -80,7 +80,7 @@ describe('documents.download', () => {
     expect(result.ok).toBe(true);
     expect(await download(head, 'docx')).toMatchObject({
       ok: true,
-      value: { fileName: 'porada-2026-10-27.docx' },
+      value: { fileName: 'porada-2026-10-20.docx' },
     });
   });
 

@@ -28,6 +28,8 @@ export interface AssemblyFacts {
     readonly status: IssueStatus;
     readonly deadlineAt: Date;
   };
+  /** The earliest porada of the calendar before this one that is neither generated nor skipped. */
+  readonly earlierOpen: { readonly monday: CalDate; readonly meetingDate: CalDate } | null;
   readonly origin: OutlineOrigin;
   /** Status of the issue the outline was derived from; null when stored or seeded. */
   readonly sourceStatus: IssueStatus | null;

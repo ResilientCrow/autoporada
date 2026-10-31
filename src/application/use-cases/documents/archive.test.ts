@@ -8,9 +8,9 @@ import { documentArchive } from './index';
 
 const world = setupWorld();
 
-// The clock starts Monday 19 October 2026 10.00 Prague.
-const W1 = calDate(2026, 10, 26);
-const W2 = calDate(2026, 11, 2);
+// The clock starts Monday 19 October 2026 10.00 Prague: W1, this week's, is the first porada open.
+const W1 = calDate(2026, 10, 19);
+const W2 = calDate(2026, 10, 26);
 
 const headmaster = () => world.seed.user({ role: 'headmaster' });
 

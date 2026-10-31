@@ -141,8 +141,14 @@ describe('issues.preview', () => {
       expect(snapshot.annex2).toBeNull();
       expect(snapshot.reports).toEqual([]);
       expect(snapshot.futureItems).toEqual([]);
-      expect(codes(result.findings)).toEqual(['deadline-ahead', 'annex1-empty', 'ohlasy-empty']);
-      expect(result.findings.map((f) => f.level)).toEqual(['warn', 'warn', 'info']);
+      // This week's porada (19 October) is still open, so W1 cannot be generated yet (ADR 0040).
+      expect(codes(result.findings)).toEqual([
+        'earlier-open',
+        'deadline-ahead',
+        'annex1-empty',
+        'ohlasy-empty',
+      ]);
+      expect(result.findings.map((f) => f.level)).toEqual(['block', 'warn', 'warn', 'info']);
       // The snapshot is what the document engine takes.
       expect(() => composeDocument(snapshot)).not.toThrow();
     });
@@ -242,6 +248,40 @@ describe('issues.preview', () => {
       expect(codes(result.findings)).not.toContain('source-not-generated');
       // A skipped meeting did not happen: its one-off item is still there.
       expect(titlesOf(result.snapshot)).toContain('Vlastní 2');
+    });
+  });
+
+  describe('an earlier porada still open (ADR 0040)', () => {
+    const THIS_WEEK = calDate(2026, 10, 19);
+    const earlierOf = async (monday: ReturnType<typeof calDate>) =>
+      (await preview(await headmaster(), monday)).findings.find((f) => f.code === 'earlier-open');
+
+    it('names the earliest one as a block, until it is skipped or generated', async () => {
+      expect(await earlierOf(W2)).toEqual({
+        code: 'earlier-open',
+        level: 'block',
+        earlier: { monday: '2026-10-19', meetingDate: '2026-10-19' },
+      });
+      await fixtures.issue(THIS_WEEK, { status: 'skipped' });
+      expect((await earlierOf(W2))?.earlier).toEqual({
+        monday: '2026-10-26',
+        meetingDate: '2026-10-26',
+      });
+      await fixtures.issue(W1, { status: 'generated' });
+      expect(await earlierOf(W2)).toBeUndefined();
+    });
+
+    it('gives the meeting date of a moved one', async () => {
+      await fixtures.issue(THIS_WEEK, { meetingDate: d('2026-10-21') });
+      expect((await earlierOf(W1))?.earlier).toEqual({
+        monday: '2026-10-19',
+        meetingDate: '2026-10-21',
+      });
+    });
+
+    it('counts no porada of a past week: the first open one of the calendar has none', async () => {
+      await fixtures.issue(calDate(2026, 10, 12));
+      expect(await earlierOf(THIS_WEEK)).toBeUndefined();
     });
   });
 

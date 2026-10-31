@@ -17,8 +17,11 @@ const originWire = (origin: OutlineOrigin) =>
 const problemWire = (problem: AssemblyProblem) =>
   problem.code === 'snapshot-invalid' ? { ...problem, paths: [...problem.paths] } : problem;
 
-const findingWire = ({ refs, paths, ...finding }: Finding) => ({
+const findingWire = ({ refs, paths, earlier, ...finding }: Finding) => ({
   ...finding,
+  ...(earlier && {
+    earlier: { monday: toIsoDate(earlier.monday), meetingDate: toIsoDate(earlier.meetingDate) },
+  }),
   ...(refs && {
     refs: refs.map(({ due, ...r }) => ({ ...r, ...(due && { due: due.toISOString() }) })),
   }),

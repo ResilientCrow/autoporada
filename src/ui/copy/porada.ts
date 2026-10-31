@@ -211,6 +211,8 @@ export const porada = {
     },
     code: {
       'issue-not-open': 'Porada se nekoná nebo už je vygenerovaná.',
+      'earlier-open':
+        'Dřívější porada ještě není vygenerovaná ani zrušená. Nejdřív ji vygenerujte, nebo u\u00a0ní zvolte „Porada se nekoná“:',
       'snapshot-invalid': 'Údaje nesplňují požadavky šablony. Chybí nebo nesedí:',
       'report-incomplete': 'Zpráva je neúplná a\u00a0v\u00a0dokumentu chybí:',
       'points-waiting': 'Body čekají na kontrolu a\u00a0v\u00a0dokumentu zatím nejsou:',
@@ -229,6 +231,8 @@ export const porada = {
         'Ohlasy v\u00a0médiích i\u00a0partneři jsou prázdní, v\u00a0dokumentu nebudou.',
       'meeting-moved': 'Porada se nekoná v\u00a0pondělí, ale v\u00a0jiný den.',
     },
+    /** `earlier-open`: the link to that porada; `meeting` arrives written, „19. 10. 2026“. */
+    earlier: (meeting: string) => `Porada ${meeting}`,
     /** `late-reports-expected`: when the report closes, after the title. */
     due: (when: string) => ` (do\u00a0${when})`,
     /** `late-reports-expected`: drafts of other authors the headmaster may not read, only counted. */

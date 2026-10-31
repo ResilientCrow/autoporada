@@ -25,6 +25,7 @@ const origin = z.discriminatedUnion('kind', [
 const finding = z.strictObject({
   code: z.enum([
     'issue-not-open',
+    'earlier-open',
     'snapshot-invalid',
     'report-incomplete',
     'points-waiting',
@@ -41,6 +42,8 @@ const finding = z.strictObject({
     'meeting-moved',
   ]),
   level: z.enum(['block', 'warn', 'info']),
+  /** `earlier-open`: the porada to generate or skip first. */
+  earlier: z.strictObject({ monday: z.iso.date(), meetingDate: z.iso.date() }).optional(),
   refs: z
     .array(
       z.strictObject({

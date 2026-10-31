@@ -11,8 +11,8 @@ import { documentRouteSpec } from './documents';
 
 const world = setupWorld();
 const ORIGIN = 'https://autoporada.ssps.cz';
-// The clock starts Monday 19 October 2026; the porada of 26 October is still open.
-const MONDAY = '2026-10-26';
+// The clock starts Monday 19 October 2026: this week's porada is the first one open.
+const MONDAY = '2026-10-19';
 
 function setup(principal: UserPrincipal | null) {
   const { log } = recordingLog();
@@ -56,7 +56,7 @@ describe('GET /porada/[datum]/dokument/[format]', () => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     );
     expect(response.headers.get('content-disposition')).toBe(
-      'attachment; filename="porada-2026-10-26.docx"',
+      'attachment; filename="porada-2026-10-19.docx"',
     );
     expect(response.headers.get('cache-control')).toBe('no-store');
     const bytes = new Uint8Array(await response.arrayBuffer());

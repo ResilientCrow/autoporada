@@ -127,7 +127,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   added. „Nový školní rok“ (step-up) archives the chosen lists for the ending
   school year; entries never printed are deleted.
 - Full preview and a preflight check before generating. The preflight blocks on
-  an invalid snapshot, and warns about points and akce still waiting, returned
+  an invalid snapshot and on an earlier porada neither generated nor skipped
+  (named, with a link; ADR 0040), and warns about points and akce still waiting, returned
   points, late reports still expected, placed proposals no longer eligible, an
   empty Příloha 1 and a deadline still ahead.
 - Generation: „Vygenerovat dokument“ on the Náhled (headmaster, after a

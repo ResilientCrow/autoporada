@@ -1,9 +1,10 @@
-import { compareDates } from '@/domain/time';
+import { compareDates, type CalDate } from '@/domain/time';
 
 import type { AssemblyFacts, AssemblyProblem } from './assemble-types';
 
 type FindingCode =
   | 'issue-not-open'
+  | 'earlier-open'
   | 'snapshot-invalid'
   | 'report-incomplete'
   | 'points-waiting'
@@ -32,6 +33,8 @@ export interface Finding {
     /** `late-reports-expected`: whether `id` is an akce or a report draft. */
     readonly of?: 'akce' | 'point';
   }[];
+  /** `earlier-open`: the porada to generate or skip first, by its Monday and meeting date. */
+  readonly earlier?: { readonly monday: CalDate; readonly meetingDate: CalDate };
   /** `snapshot-invalid`: where the snapshot is wrong. */
   readonly paths?: readonly string[];
   /** `registry-new`: how many entries will be marked NOVÉ. `late-reports-expected`: late drafts of others, not named. */
@@ -54,6 +57,8 @@ export function preflight(
   });
 
   if (facts.issue.status !== 'open') add({ code: 'issue-not-open', level: 'block' });
+  else if (facts.earlierOpen)
+    add({ code: 'earlier-open', level: 'block', earlier: facts.earlierOpen });
   for (const problem of problems) {
     if (problem.code === 'snapshot-invalid') {
       add({ code: 'snapshot-invalid', level: 'block', paths: problem.paths });

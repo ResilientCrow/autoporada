@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
 import { calDate, toIsoDate, type CalDate } from '@/domain/time';
@@ -14,6 +14,7 @@ const registry = registryFixtures(world);
 const seeder = system('test.seed');
 
 // The clock starts Monday 19 October 2026 10.00 Prague; W1's deadline is still ahead.
+const THIS_WEEK = calDate(2026, 10, 19);
 const W1 = calDate(2026, 10, 26);
 const W2 = calDate(2026, 11, 2);
 
@@ -45,6 +46,9 @@ const pointOf = (id: string) => world.tx(seeder, (tx) => tx.points.get(id), 'rea
 const eventsOf = (id: string) => world.tx(seeder, (tx) => tx.pointEvents.list(id), 'read');
 
 describe('issues.generate', () => {
+  // This week's porada did not happen, so W1 is the first one open (ADR 0040).
+  beforeEach(() => fixtures.issue(THIS_WEEK, { status: 'skipped' }));
+
   it('stores the document, publishes the points, marks the new entries and queues the PDF', async () => {
     const head = await headmaster();
     const author = await world.seed.user({ role: 'submitter' });
@@ -199,5 +203,22 @@ describe('issues.generate', () => {
       [a, b].find((r) => !r.ok)?.error,
     );
     expect((await everything()).documents).toHaveLength(1);
+  });
+});
+
+describe('issues.generate in order (ADR 0040)', () => {
+  it('refuses a porada while an earlier one is open, then generates both in order', async () => {
+    const head = await headmaster();
+    await refuses(() => generate(head, W1), { code: 'rule', rule: 'issue-blocked' });
+    expect((await generate(head, THIS_WEEK)).ok).toBe(true);
+    await refuses(() => generate(head, W2), { code: 'rule', rule: 'issue-blocked' });
+    expect((await generate(head, W1)).ok).toBe(true);
+    expect((await everything()).documents).toHaveLength(2);
+  });
+
+  it('generates a later porada once the earlier one is skipped', async () => {
+    const head = await headmaster();
+    await fixtures.issue(THIS_WEEK, { status: 'skipped' });
+    expect((await generate(head, W1)).ok).toBe(true);
   });
 });

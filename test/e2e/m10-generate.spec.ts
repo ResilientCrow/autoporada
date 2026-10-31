@@ -1,20 +1,24 @@
 /**
  * M10: the headmaster generates a porada from its preview, downloads the DOCX at once and the PDF
- * once the worker has converted it, and finds both in the archive. Generating publishes every
- * approved point it prints, so this file runs in a project of its own after the others (see
- * playwright.config.ts) and leaves its rows: each run has a database of its own.
+ * once the worker has converted it, and finds both in the archive. A porada waits until every
+ * earlier one is generated or skipped (ADR 0040), so this generates this week's. Generating
+ * publishes every approved point it prints, so this file runs in a project of its own after the
+ * others (see playwright.config.ts) and leaves its rows: each run has a database of its own.
  */
 import { readFile } from 'node:fs/promises';
 
 import type { Download, Page } from '@playwright/test';
 
+import { formatNumericDate } from '@/domain/cs';
+import { parseIsoDate } from '@/domain/time';
 import { porada } from '@/ui/copy';
 
 import { personaOf } from './db';
 import { expect, test } from './fixtures';
 import { mondayIn } from './porada-db';
 
-const DAY = mondayIn(14);
+const DAY = mondayIn(0);
+const NEXT = mondayIn(1);
 const PDF_WITHIN_MS = 30_000;
 
 const bytesOf = async (download: Download) => readFile(await download.path());
@@ -36,6 +40,18 @@ test('the headmaster generates the porada and downloads its DOCX and PDF', async
   expectAccessible,
 }) => {
   await signInAs(new RegExp(`^Test – ${personaOf('rizeni', 'desktop').subject}`));
+  const earlierOpen = page.getByText(porada.preflight.code['earlier-open']);
+
+  // Next week's porada is held: this week's comes first, and the finding links to it.
+  await page.goto(`/porada/${NEXT}/nahled`);
+  await hydrated();
+  await expect(earlierOpen).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: porada.generate.confirm })).toBeDisabled();
+  await page
+    .getByRole('link', { name: porada.preflight.earlier(formatNumericDate(parseIsoDate(DAY))) })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/porada/${DAY}$`));
+
   await page.goto(`/porada/${DAY}/nahled`);
   await hydrated();
   await expect(page.getByRole('heading', { name: porada.generate.title })).toBeVisible();
@@ -63,6 +79,10 @@ test('the headmaster generates the porada and downloads its DOCX and PDF', async
   const pdf = await download(page, porada.document.pdf);
   expect(pdf.suggestedFilename()).toMatch(/\.pdf$/);
   expect((await bytesOf(pdf)).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+
+  await page.goto(`/porada/${NEXT}/nahled`);
+  await hydrated();
+  await expect(earlierOpen).toHaveCount(0);
 
   await page.goto('/porada/archiv');
   await expect(page.getByRole('heading', { name: porada.archive.title })).toBeVisible();

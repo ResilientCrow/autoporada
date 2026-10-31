@@ -287,6 +287,19 @@ describe('PreviewPage and Preflight', () => {
     expect(html).toContain('href="/body/r-1"');
   });
 
+  it('links an earlier open porada to its workspace, named by its meeting date', () => {
+    const html = preview([
+      finding({
+        code: 'earlier-open',
+        level: 'block',
+        earlier: { monday: '2026-11-02', meetingDate: '2026-11-04' },
+      }),
+    ]);
+    expect(html).toContain(porada.preflight.code['earlier-open']);
+    expect(html).toContain('href="/porada/2026-11-02"');
+    expect(html).toContain(porada.preflight.earlier('4. 11. 2026'));
+  });
+
   it('writes the close of a late report after its title', () => {
     const html = preview([
       finding({
