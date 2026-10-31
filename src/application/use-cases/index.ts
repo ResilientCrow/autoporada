@@ -40,6 +40,7 @@ import {
 } from './points';
 import { listPointTypes, savePointType } from './point-types';
 import { me, setReminders } from './profile';
+import { previewPaste } from './registry';
 import { readSettings, saveSettings } from './settings';
 import { changeUserAccess, getUser, listUsers } from './users';
 
@@ -83,6 +84,7 @@ export {
 } from './points';
 export { listPointTypes, savePointType } from './point-types';
 export { me, setReminders } from './profile';
+export { previewPaste } from './registry';
 export { readSettings, saveSettings } from './settings';
 export { changeUserAccess, getUser, listUsers } from './users';
 
@@ -115,6 +117,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   myAccess,
   pendingAccess,
   pointStatus,
+  previewPaste,
   queueFuture,
   queuePoints,
   readSettings,
