@@ -7,7 +7,7 @@ const NEW: PluralForms = { one: 'nový', few: 'noví', many: 'nových' };
 export const registry = {
   title: 'Registr',
   intro:
-    'Seznamy studentů, které se tisknou do zápisu z\u00a0porady. Jména studentů vidí jen vedení školy a kontroloři.',
+    'Seznamy studentů, které se tisknou do zápisu z\u00a0porady. Jména studentů vidí jen vedení školy a\u00a0kontroloři.',
   new: 'NOVÉ',
   newHint: 'Dosud nebyl v\u00a0žádném vytištěném zápisu.',
   said: {
@@ -73,7 +73,7 @@ export const registry = {
       'Vložte seznam jmen, třeba ve tvaru z\u00a0dokumentu: „Jana Nováková (1.A), Patricie Nováková, Anna Nováková (obě 2.B)“. Nejdřív uvidíte, co se přidá; nic se neuloží, dokud to nepotvrdíte.',
     text: {
       label: 'Seznam jmen',
-      description: 'Nejvýše 20\u00a0000 znaků a\u00a0200 jmen.',
+      description: 'Nejvýše 20\u00a0000\u00a0znaků a\u00a0200 jmen.',
       tooLong: 'Text je příliš dlouhý nebo má víc než 200 jmen.',
     },
     order: {

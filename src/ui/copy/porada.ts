@@ -175,7 +175,7 @@ export const porada = {
   },
   preflight: {
     title: 'Před vygenerováním',
-    none: 'Nic nebrání vygenerování a nic nestojí za kontrolu.',
+    none: 'Nic nebrání vygenerování a\u00a0nic nestojí za kontrolu.',
     level: {
       block: 'Brání vygenerování',
       warn: 'Stojí za kontrolu',
