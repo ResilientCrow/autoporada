@@ -118,6 +118,7 @@ describe('homePage', () => {
   describe('for the one who may skip a meeting', () => {
     const row = (monday: string, status: string, version: number) => ({
       monday,
+      meetingDate: monday,
       deadlineAt: '2026-11-08T17:00:00.000Z',
       status,
       version,
@@ -154,10 +155,16 @@ describe('homePage', () => {
         row('2026-12-07', 'skipped', 9),
       ]);
       expect(await stripOfHome()).toEqual([
-        { monday: '2026-11-09', label: '9. 11. 2026', status: 'open', version: null },
-        { monday: '2026-11-16', label: '16. 11. 2026', status: 'skipped', version: 2 },
-        { monday: '2026-11-23', label: '23. 11. 2026', status: 'generated', version: 5 },
-        { monday: '2026-11-30', label: '30. 11. 2026', status: 'open', version: null },
+        { monday: '2026-11-09', label: '9. 11. 2026', held: null, status: 'open', version: null },
+        { monday: '2026-11-16', label: '16. 11. 2026', held: null, status: 'skipped', version: 2 },
+        {
+          monday: '2026-11-23',
+          label: '23. 11. 2026',
+          held: null,
+          status: 'generated',
+          version: 5,
+        },
+        { monday: '2026-11-30', label: '30. 11. 2026', held: null, status: 'open', version: null },
       ]);
     });
 
@@ -166,11 +173,21 @@ describe('homePage', () => {
       // 9 November is skipped: a hand-in goes to the 16th, the strip still starts at the 9th.
       window('2026-11-16', [row('2026-11-09', 'skipped', 3)], '2026-11-09');
       expect(await stripOfHome()).toEqual([
-        { monday: '2026-11-09', label: '9. 11. 2026', status: 'skipped', version: 3 },
-        { monday: '2026-11-16', label: '16. 11. 2026', status: 'open', version: null },
-        { monday: '2026-11-23', label: '23. 11. 2026', status: 'open', version: null },
-        { monday: '2026-11-30', label: '30. 11. 2026', status: 'open', version: null },
+        { monday: '2026-11-09', label: '9. 11. 2026', held: null, status: 'skipped', version: 3 },
+        { monday: '2026-11-16', label: '16. 11. 2026', held: null, status: 'open', version: null },
+        { monday: '2026-11-23', label: '23. 11. 2026', held: null, status: 'open', version: null },
+        { monday: '2026-11-30', label: '30. 11. 2026', held: null, status: 'open', version: null },
       ]);
+    });
+
+    // Row 35: a porada moved to another day is labelled by its meeting, and says when it is held.
+    it('labels a moved porada by its meeting date and names the day it is held', async () => {
+      as('headmaster');
+      window('2026-11-09', [{ ...row('2026-11-16', 'open', 2), meetingDate: '2026-11-18' }]);
+      const moved = (await stripOfHome())?.[1];
+      expect(moved).toMatchObject({ monday: '2026-11-16', label: '18. 11. 2026', version: 2 });
+      // The row’s deadline, 8 November 2026 at 17.00 UTC, is Sunday 18.00 in Prague.
+      expect(moved?.held).toEqual({ weekday: 'neděle', date: '8.\u00a011.', time: '18.00' });
     });
 
     it('follows a submit Monday across the year end', async () => {

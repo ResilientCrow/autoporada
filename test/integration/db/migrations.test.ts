@@ -46,9 +46,11 @@ describe('runMigrations', () => {
       'dead',
       'future.report-prompt',
       'headmaster.summary',
+      'issues.moved-notice',
       'mail.prune',
       'mail.send',
       'reminders.deadline',
+      'reports.late',
       'reviewer.digest',
     ]);
   });

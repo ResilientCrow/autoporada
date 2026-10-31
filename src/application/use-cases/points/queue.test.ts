@@ -177,6 +177,7 @@ describe('points.queue', () => {
         mondays: [
           {
             monday: '2026-10-26',
+            meetingDate: '2026-10-26',
             kinds: [
               {
                 kind: 'report',

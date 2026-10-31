@@ -81,18 +81,21 @@ describe('issues.window', () => {
       expect(result.value.issues).toEqual([
         {
           monday: '2026-11-02',
+          meetingDate: '2026-11-02',
           deadlineAt: current.deadlineAt.toISOString(),
           status: 'open',
           version: 1,
         },
         {
           monday: '2026-11-16',
+          meetingDate: '2026-11-16',
           deadlineAt: skipped.deadlineAt.toISOString(),
           status: 'skipped',
           version: 2,
         },
         {
           monday: toIsoDate(weeks(CURRENT, 25)),
+          meetingDate: toIsoDate(weeks(CURRENT, 25)),
           deadlineAt: late.deadlineAt.toISOString(),
           status: 'open',
           version: 1,
@@ -113,6 +116,7 @@ describe('issues.window', () => {
       expect(result.value.issues).toEqual([
         {
           monday: toIsoDate(weeks(CURRENT, 25)),
+          meetingDate: toIsoDate(weeks(CURRENT, 25)),
           deadlineAt: last.deadlineAt.toISOString(),
           status: 'skipped',
           version: 2,

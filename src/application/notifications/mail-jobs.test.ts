@@ -122,6 +122,19 @@ describe('mail jobs', () => {
       mailJob('reminder.hard', { userId: USER, monday: calDate(2026, 10, 26) }),
       mailJob('reviewer.digest', { userId: USER, date: calDate(2026, 10, 26), slot: '15' }),
       mailJob('headmaster.summary', { userId: USER, monday: calDate(2026, 10, 26) }),
+      mailJob('issue.moved', {
+        userId: USER,
+        monday: calDate(2026, 10, 26),
+        deadlineAt: new Date('2026-11-23T19:00:00Z'),
+      }),
+      mailJob('report.ended', { authorId: USER, itemId: REQUEST }),
+      mailJob('report.last-call', {
+        authorId: USER,
+        kind: 'akce',
+        id: REQUEST,
+        monday: calDate(2026, 10, 26),
+      }),
+      mailJob('headmaster.late-summary', { userId: USER, monday: calDate(2026, 10, 26) }),
     ];
     expect(jobs.map((job) => job.data.template)).toEqual(TEMPLATE_NAMES);
     for (const { data, dedupeKey } of jobs) {

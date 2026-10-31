@@ -33,14 +33,18 @@ interface Seed {
   readonly status?: IssueStatus;
   readonly version?: number;
   readonly deadlineAt?: Date;
+  readonly meetingDate?: CalDate;
 }
 
 /** A row as the world already holds it: status and version reached through the repository. */
-function seedIssue(monday: CalDate, { status = 'open', version = 1, deadlineAt }: Seed = {}) {
+function seedIssue(
+  monday: CalDate,
+  { status = 'open', version = 1, deadlineAt, meetingDate }: Seed = {},
+) {
   return world.tx(seeder, async (tx) => {
     const created = await tx.issues.ensure({
       monday,
-      meetingDate: monday,
+      meetingDate: meetingDate ?? monday,
       schoolYear: schoolYear(monday),
       deadlineAt: deadlineAt ?? deadline(monday, DEFAULT_DEADLINE),
     });
@@ -126,15 +130,27 @@ describe('issues.setSkipped', () => {
 
     it.each([
       ['skip', 'skipped'],
-      ['skip', 'generated'],
       ['unskip', 'open'],
-      ['unskip', 'generated'],
     ] as const)('refuses %s on a %s issue as a conflict', async (event, status) => {
       world.clock.set(NOW);
       const head = await headmaster();
       const issue = await seedIssue(SUBMIT, { status, version: 2 });
       await refuses(() => act(head, event, SUBMIT, { expectedVersion: issue.version }), conflict);
     });
+
+    // Row 34: a generated porada is out of the headmaster's hands, whatever the event.
+    it.each(['skip', 'unskip'] as const)(
+      'refuses %s on a generated issue as issue-not-open',
+      async (event) => {
+        world.clock.set(NOW);
+        const head = await headmaster();
+        const issue = await seedIssue(SUBMIT, { status: 'generated', version: 2 });
+        await refuses(() => act(head, event, SUBMIT, { expectedVersion: issue.version }), {
+          code: 'rule',
+          rule: 'issue-not-open',
+        });
+      },
+    );
   });
 
   describe('bounds', () => {
@@ -158,11 +174,13 @@ describe('issues.setSkipped', () => {
       },
     );
 
-    it('refuses the Monday before the submit Monday: its deadline has passed', async () => {
+    // Design §3: the calendar starts at this week's Monday; the deadline of a slot does not close it to a skip.
+    it('takes this week’s Monday after its deadline, and refuses the Mondays before it', async () => {
       world.clock.set(NOW);
       const head = await headmaster();
-      await refuses(() => act(head, 'skip', CURRENT), invalidMonday);
+      await refuses(() => act(head, 'skip', weeks(CURRENT, -1)), invalidMonday);
       await refuses(() => act(head, 'skip', weeks(CURRENT, -10)), invalidMonday);
+      expect((await act(head, 'skip', CURRENT)).ok).toBe(true);
     });
 
     it('takes the submit Monday and the last slot Monday, and not the week after', async () => {
@@ -178,30 +196,30 @@ describe('issues.setSkipped', () => {
 
     // The deadline is Saturday 20.00 Prague time; daylight saving ends 2026-10-25 and starts 2027-03-28.
     it.each([
-      ['just before the deadline', '2026-11-07T18:59:59Z', calDate(2026, 11, 9)],
-      ['at the deadline', '2026-11-07T19:00:00Z', calDate(2026, 11, 16)],
-      ['just after the deadline', '2026-11-07T19:00:01Z', calDate(2026, 11, 16)],
+      ['just before the deadline', '2026-11-07T18:59:59Z', calDate(2026, 11, 2)],
+      ['at the deadline', '2026-11-07T19:00:00Z', calDate(2026, 11, 2)],
+      ['just after the deadline', '2026-11-07T19:00:01Z', calDate(2026, 11, 2)],
       [
         'just before the deadline the night before the clocks go back',
         '2026-10-24T17:59:59Z',
-        calDate(2026, 10, 26),
+        calDate(2026, 10, 19),
       ],
       [
         'after the deadline the night before the clocks go back',
         '2026-10-24T18:00:00Z',
-        calDate(2026, 11, 2),
+        calDate(2026, 10, 19),
       ],
       [
         'just before the deadline the night before the clocks go forward',
         '2027-03-27T18:59:59Z',
-        calDate(2027, 3, 29),
+        calDate(2027, 3, 22),
       ],
       [
         'after the deadline the night before the clocks go forward',
         '2027-03-27T19:00:00Z',
-        calDate(2027, 4, 5),
+        calDate(2027, 3, 22),
       ],
-    ])('%s: the first Monday to skip moves with it', async (_label, now, first) => {
+    ])('%s: the window starts at this week’s Monday', async (_label, now, first) => {
       world.clock.set(new Date(now));
       const head = await headmaster();
       await refuses(() => act(head, 'skip', weeks(first, -1)), invalidMonday);
@@ -211,7 +229,7 @@ describe('issues.setSkipped', () => {
       await refuses(() => act(head, 'skip', weeks(last, 1)), invalidMonday);
     });
 
-    it('keeps a Monday whose frozen deadline is later in the window, and moves the end with it', async () => {
+    it('keeps the window by the week, not by a frozen deadline, and leaves that deadline alone', async () => {
       world.clock.set(NOW);
       const head = await headmaster();
       const later = new Date('2026-11-04T11:00:00Z');
@@ -219,12 +237,22 @@ describe('issues.setSkipped', () => {
       expect((await act(head, 'skip', CURRENT)).ok).toBe(true);
       expect((await act(head, 'skip', weeks(CURRENT, 25))).ok).toBe(true);
       await refuses(() => act(head, 'skip', weeks(CURRENT, 26)), invalidMonday);
-      // The frozen deadline itself does not move.
       expect((await rowOf(CURRENT)).deadlineAt).toEqual(later);
 
-      // Once that frozen deadline has passed too, the Monday is out of the window again.
+      // Past that deadline the Monday is still this week's, so the undo stays open.
       world.clock.set(later);
-      await refuses(() => act(head, 'unskip', CURRENT, { expectedVersion: 2 }), invalidMonday);
+      expect((await act(head, 'unskip', CURRENT, { expectedVersion: 2 })).ok).toBe(true);
+    });
+
+    it('keeps a Monday before this week while its meeting is still ahead, and drops it after', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      const before = weeks(CURRENT, -1);
+      await seedIssue(before, { meetingDate: calDate(2026, 11, 5) });
+      expect((await act(head, 'skip', before)).ok).toBe(true);
+
+      world.clock.set(new Date('2026-11-06T12:00:00Z'));
+      await refuses(() => act(head, 'unskip', before, { expectedVersion: 2 }), invalidMonday);
     });
   });
 
@@ -339,12 +367,13 @@ describe('issues.setSkipped', () => {
       expect((await rowOf(SUBMIT)).deadlineAt).toEqual(new Date('2026-11-07T19:00:00Z'));
     });
 
-    // Friday 6 November 13.00 Prague, with the stored rule 3 days before at 12.00: 9 November is closed.
-    it('counts the window and the frozen deadline by the stored rule', async () => {
+    // Friday 6 November 13.00 Prague, with the stored rule 3 days before at 12.00: 9 November is closed, yet skippable.
+    it('freezes the deadline by the stored rule', async () => {
       world.clock.set(new Date('2026-11-06T12:00:00Z'));
       await world.seed.setting('deadline', { dayOffset: -3, time: '12:00' });
       const head = await headmaster();
-      await refuses(() => act(head, 'skip', SUBMIT), invalidMonday);
+      expect((await act(head, 'skip', SUBMIT)).ok).toBe(true);
+      expect((await rowOf(SUBMIT)).deadlineAt).toEqual(new Date('2026-11-06T11:00:00Z'));
       const next = weeks(SUBMIT, 1);
       expect((await act(head, 'skip', next)).ok).toBe(true);
       expect((await rowOf(next)).deadlineAt).toEqual(new Date('2026-11-13T11:00:00Z'));

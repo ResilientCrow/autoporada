@@ -61,9 +61,11 @@ describe('the jobs admin (as the owner, the way the CLI connects)', () => {
         'dead',
         'future.report-prompt',
         'headmaster.summary',
+        'issues.moved-notice',
         'mail.prune',
         'mail.send',
         'reminders.deadline',
+        'reports.late',
         'reviewer.digest',
       ]);
       expect(await admin((a) => Promise.resolve(a.deadQueue))).toBe('dead');

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { isUseCase } from '@/application/core';
 import { USE_CASES } from '@/application/use-cases';
+import { requiresStepUp, STEP_UP_ACTIONS } from '@/domain/policy';
 import { wrappedInfo } from '@/server/bind';
 import { LIMITS } from '@/server/rate-limit';
 
@@ -176,6 +177,65 @@ describe('inventory of entry points', () => {
       }
     }
     expect(found).toEqual({ 'profile.setReminders': ['submission', 'page'] });
+  });
+
+  it('lets the settings save refresh the page, under the admin limit', async () => {
+    const found: Record<string, unknown> = {};
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind === 'action' && info.useCase.name === 'settings.save')
+          found[info.useCase.name] = [info.rateLimit, info.refresh];
+      }
+    }
+    expect(found).toEqual({ 'settings.save': ['admin', 'page'] });
+  });
+
+  it('puts the registry, the outline and the issue’s own edits under the admin limit, each refreshing the page', async () => {
+    const found: Record<string, unknown> = {};
+    const prefixes = ['registry.', 'outline.'];
+    const named = ['issues.move', 'issues.setDetails', 'issues.setAnnex2', 'issues.setSkipped'];
+    for (const file of ACTION_MODULES) {
+      for (const value of Object.values(await exportsOf(file))) {
+        const info = wrappedInfo(value);
+        if (info?.kind !== 'action') continue;
+        const name = info.useCase.name;
+        if (prefixes.some((prefix) => name.startsWith(prefix)) || named.includes(name)) {
+          found[name] = [info.rateLimit, info.refresh];
+        }
+      }
+    }
+    const admin = ['admin', 'page'];
+    // The headmaster’s tools are not autosaving editors: every one refreshes (ADR 0017 lists the four that do not).
+    expect(found).toEqual({
+      'registry.addEntries': admin,
+      'registry.saveEntry': admin,
+      'registry.removeEntry': admin,
+      'registry.saveList': admin,
+      'registry.moveList': admin,
+      'registry.previewPaste': admin,
+      'registry.newSchoolYear': admin,
+      'outline.add': admin,
+      'outline.save': admin,
+      'outline.move': admin,
+      'outline.remove': admin,
+      'issues.move': admin,
+      'issues.setDetails': admin,
+      'issues.setAnnex2': admin,
+      'issues.setSkipped': admin,
+    });
+  });
+
+  it('makes the paste preview a read, so no page refresh follows it', () => {
+    // defineAction refreshes after a successful write only (define-action.test.ts pins that).
+    expect(USE_CASES.find((u) => u.name === 'registry.previewPaste')?.mode).toBe('read');
+  });
+
+  it('asks for a fresh sign-in before „Nový školní rok“, and before no other registry action', () => {
+    expect(requiresStepUp('registry.newSchoolYear')).toBe(true);
+    expect(STEP_UP_ACTIONS.filter((action) => action.startsWith('registry.'))).toEqual([
+      'registry.newSchoolYear',
+    ]);
   });
 
   it('registers every use case exactly once, under a unique name', async () => {

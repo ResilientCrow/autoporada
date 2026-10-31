@@ -634,6 +634,7 @@ describe('myPointsPage', () => {
   });
   const issue = (monday: string, status: string) => ({
     monday,
+    meetingDate: monday,
     deadlineAt: `${monday}T00:00:00.000Z`,
     status,
     version: 1,

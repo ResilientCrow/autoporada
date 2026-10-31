@@ -38,7 +38,9 @@ describe('navFor', () => {
       '/',
       '/body',
       '/akce',
+      '/porada',
       '/kontrola',
+      '/registr',
       '/uzivatele',
       '/nastaveni',
       '/profil',
@@ -134,7 +136,10 @@ describe('navFor', () => {
     expect(navFor(actor('pending'))).toEqual(
       NAV.filter(
         (i) =>
-          !['/uzivatele', '/body', '/akce', '/kontrola', '/nastaveni/typy-bodu'].includes(i.href),
+          ![
+            ...['/uzivatele', '/body', '/akce', '/porada', '/kontrola'],
+            ...['/registr', '/nastaveni'],
+          ].includes(i.href),
       ),
     );
   });

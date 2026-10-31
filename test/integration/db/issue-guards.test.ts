@@ -33,12 +33,19 @@ describe('issue guards (migrations 0011 and 0012)', () => {
 
   it.each([
     [{ monday: '2026-10-27' }, 'issues_is_monday'],
-    [{ monday: '2026-11-23', meetingDate: '2026-11-22' }, 'issues_meeting_in_week'],
-    [{ monday: '2026-11-23', meetingDate: '2026-11-30' }, 'issues_meeting_in_week'],
     [{ monday: '2026-11-23', schoolYear: '2026/27' }, 'issues_school_year'],
     [{ monday: '2026-11-23', schoolYear: 'x2026/2027' }, 'issues_school_year'],
   ])('refuses %o by %s', async (row, constraint) => {
     expect(await pgErrorOf(insert(row))).toMatchObject({ code: CHECK, constraint });
+  });
+
+  // Migration 0034: the meeting may be any date, so the week no longer bounds it.
+  it.each([
+    ['2026-11-22', '2027-02-01'],
+    ['2026-11-30', '2027-02-08'],
+    ['2027-01-15', '2027-02-15'],
+  ])('lets the meeting of a Monday fall on %s', async (meetingDate, monday) => {
+    await insert({ monday, meetingDate });
   });
 
   it('lets a version rise by exactly one, for the app and the owner alike', async () => {

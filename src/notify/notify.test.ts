@@ -136,10 +136,10 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
       `porada se přesouvá na 26.${NB}října 2026. Uzávěrka je dřív: pondělí 23.${NB}11. v${NB}20.00.\n\n${BODY}`,
     ),
   },
-  'headmaster.late-summary': {
-    subject: `Autoporada: pozdní zprávy k${NB}poradě 26.${NB}října 2026: odevzdáno 3, chybí 1`,
+  'report.ended': {
+    subject: `Autoporada: akce skončila, zprávu odevzdejte do 23.${NB}11. v${NB}20.00`,
     text: letter(
-      `poslední uzávěrka pozdních zpráv k${NB}poradě z${NB}26.${NB}října 2026 proběhla. Odevzdáno: 3, chybí: 1.\n\n${REVIEW}`,
+      `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
     ),
   },
   'report.last-call': {
@@ -148,10 +148,10 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
       `zpráva z${NB}akce, kterou jste zapsali do přehledu, ještě není odevzdaná. Odevzdejte ji do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
     ),
   },
-  'report.ended': {
-    subject: `Autoporada: akce skončila, zprávu odevzdejte do 23.${NB}11. v${NB}20.00`,
+  'headmaster.late-summary': {
+    subject: `Autoporada: pozdní zprávy k${NB}poradě 26.${NB}října 2026: odevzdáno 3, chybí 1`,
     text: letter(
-      `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
+      `poslední uzávěrka pozdních zpráv k${NB}poradě z${NB}26.${NB}října 2026 proběhla. Odevzdáno: 3, chybí: 1.\n\n${REVIEW}`,
     ),
   },
 };
@@ -237,7 +237,13 @@ describe('renderMail', () => {
         (origin, year, month, day) => {
           const date = calDate(year, month, day);
           for (const name of TEMPLATE_NAMES) {
-            const view = { ...COUNTS, meetingDate: date, retryFrom: date, deadlineAt: new Date(0) };
+            const view = {
+              ...COUNTS,
+              meetingDate: date,
+              retryFrom: date,
+              deadlineAt: new Date(0),
+              due: new Date(0),
+            };
             const { subject } = renderMail(name, view as never, origin);
             expect(subject).not.toMatch(/[\r\n]/);
           }

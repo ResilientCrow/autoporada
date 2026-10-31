@@ -44,6 +44,8 @@ describe('mails link pages that exist', () => {
       approved: 3,
       pending: 2,
       returned: 1,
+      deadlineAt: new Date('2026-10-01T10:00:00Z'),
+      due: new Date('2026-10-01T10:00:00Z'),
     };
     const { text } = renderMail(name, view as never, ORIGIN);
     for (const link of text.match(/https?:\/\/\S*/g) ?? []) {

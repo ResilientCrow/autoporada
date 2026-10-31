@@ -337,8 +337,8 @@ describe('the worker role (autoporada_worker, in autoporada_jobs only)', () => {
 describe('the mails’ column grants (ADR 0020: the worker reads no text people wrote)', () => {
   const GRANTED: Readonly<Record<string, readonly string[]>> = {
     points: [
-      ...['author_id', 'earliest_monday', 'hand_in_monday', 'id', 'kind'],
-      ...['state', 'submitted_at', 'updated_at'],
+      ...['author_id', 'earliest_monday', 'end_date', 'event_date', 'hand_in_monday', 'id'],
+      ...['kind', 'state', 'submitted_at', 'time_to', 'updated_at'],
     ],
     point_events: ['event', 'id', 'point_id', 'to_state'],
     future_items: [
@@ -346,10 +346,12 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
       'end_date',
       'expects_report',
       'id',
+      'report_point_id',
       'report_state',
       'start_date',
       'state',
       'submitted_at',
+      'time_to',
     ],
     issues: ['deadline_at', 'id', 'meeting_date', 'monday', 'status'],
     settings: ['key', 'value'],
@@ -357,17 +359,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
     point_events: ['note', 'before', 'edited_fields'],
-    future_items: [
-      'title',
-      'responsible',
-      'place',
-      'client_ref',
-      'kind',
-      'campus',
-      'time_from',
-      'time_to',
-      'report_point_id',
-    ],
+    future_items: ['title', 'responsible', 'place', 'client_ref', 'kind', 'campus', 'time_from'],
     issues: ['school_year', 'version', 'created_at', 'updated_at'],
     settings: ['version', 'updated_at'],
   };
@@ -407,6 +399,19 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     expect(await sqlstateAs('autoporada_worker', `SELECT ${first} FROM ${table}`)).toBe(DENIED);
     expect(await sqlstateAs('autoporada_worker', `SELECT * FROM ${table}`)).toBe(DENIED);
   });
+
+  // Migration 0031: the names of the school's people are no business of any job.
+  it.each(['registry_lists', 'registry_entries'])(
+    'gives the worker no privilege at all on %s',
+    async (table) => {
+      const [row] = await database.owner<{ held: boolean }>(
+        `SELECT has_any_column_privilege('autoporada_worker', $1::regclass, 'SELECT, INSERT, UPDATE, REFERENCES') AS held`,
+        [table],
+      );
+      expect(row?.held).toBe(false);
+      expect(await sqlstateAs('autoporada_worker', `SELECT * FROM ${table}`)).toBe(DENIED);
+    },
+  );
 
   // The statements the settings repository runs: `value` is all the worker's reads need, `get` also
   // selects the version, which only the headmaster's screen and save may.

@@ -95,7 +95,11 @@ describe('loadSubject', () => {
       world.clock.set(new Date(SOFT.getTime() - 1));
       expect(await load('reminder.soft', user.id)).toBeNull();
       world.clock.set(SOFT);
-      expect(await load('reminder.soft', user.id)).toEqual({ monday: MONDAY, hasWork: false });
+      expect(await load('reminder.soft', user.id)).toEqual({
+        monday: MONDAY,
+        meetingDate: MONDAY,
+        hasWork: false,
+      });
       world.clock.set(new Date(SOFT.getTime() + 6 * 3_600_000));
       expect(await load('reminder.soft', user.id)).toBeNull();
     });
@@ -118,6 +122,7 @@ describe('loadSubject', () => {
       world.clock.set(new Date('2026-10-29T12:00:00Z'));
       expect(await load('reminder.soft', user.id)).toEqual({
         monday: calDate(2026, 11, 2),
+        meetingDate: calDate(2026, 11, 2),
         hasWork: false,
       });
     });
@@ -128,8 +133,16 @@ describe('loadSubject', () => {
       world.clock.set(new Date('2026-10-20T08:00:00Z'));
       await start(author);
       world.clock.set(HARD);
-      expect(await load('reminder.hard', author.id)).toEqual({ monday: MONDAY, hasWork: true });
-      expect(await load('reminder.hard', idle.id)).toEqual({ monday: MONDAY, hasWork: false });
+      expect(await load('reminder.hard', author.id)).toEqual({
+        monday: MONDAY,
+        meetingDate: MONDAY,
+        hasWork: true,
+      });
+      expect(await load('reminder.hard', idle.id)).toEqual({
+        monday: MONDAY,
+        meetingDate: MONDAY,
+        hasWork: false,
+      });
       world.clock.set(new Date('2026-10-24T18:00:00Z'));
       expect(await load('reminder.hard', author.id)).toBeNull();
     });
@@ -158,6 +171,7 @@ describe('loadSubject', () => {
       world.clock.set(HARD);
       expect(await load('reminder.hard', author.id)).toEqual({
         monday: calDate(2026, 10, 26),
+        meetingDate: calDate(2026, 10, 26),
         hasWork: true,
       });
       await switches({ soft: true, hard: false });
@@ -265,8 +279,16 @@ describe('loadSubject', () => {
     });
   });
 
-  it.each(TEMPLATE_NAMES)('gives null for a missing subject of %s', async (template) => {
-    expect(await load(template, MISSING)).toBeNull();
+  it.each(TEMPLATE_NAMES.filter((template) => template !== 'issue.moved'))(
+    'gives null for a missing subject of %s',
+    async (template) => {
+      expect(await load(template, MISSING)).toBeNull();
+    },
+  );
+
+  // The moved mail speaks for the slot open now; whether it still applies to this person is hasWork (still-applies).
+  it('tells issue.moved of a missing user that they have no work', async () => {
+    expect(await load('issue.moved', MISSING)).toMatchObject({ hasWork: false });
   });
 
   it('does not read a user through a request template', async () => {
