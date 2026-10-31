@@ -35,7 +35,7 @@ const insert = ({
     INSERT INTO point_types (name, default_bullets, locked, active, position)
     VALUES (${name}, ${bullets}::jsonb, ${locked}, ${active}, 100)`);
 
-describe('point type seeds (migration 0014)', () => {
+describe('point type seeds (migrations 0014 and 0040)', () => {
   it('has six placeholder types in the order of the design, Jiné last', async () => {
     const rows = await seeded();
     expect(rows.map((r) => [r.name, r.title_gender])).toEqual([
@@ -84,6 +84,20 @@ describe('point type seeds (migration 0014)', () => {
     const locked = (await seeded()).filter((r) => r.locked);
     expect(locked.map((r) => [r.name, r.active])).toEqual([['Jiné', true]]);
     expect((await seeded()).every((r) => r.active)).toBe(true);
+  });
+
+  it('lets a point of Jiné name its organisers, before the participants (migration 0040)', async () => {
+    const other = (await seeded()).find((r) => r.name === 'Jiné');
+    expect(defaultBulletsSchema.parse(other?.default_bullets)).toEqual([
+      {
+        key: 'organisers',
+        label: 'Organizátoři',
+        kind: 'people',
+        required: false,
+        role: 'organisers',
+      },
+      { key: 'participants', label: 'Účastníci', kind: 'people', required: true },
+    ]);
   });
 });
 
