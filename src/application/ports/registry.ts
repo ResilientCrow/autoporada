@@ -83,6 +83,14 @@ export interface RegistryRepo {
    */
   removeEntry(id: string): Promise<'deleted' | 'archived' | null>;
   /**
+   * „Nový školní rok“ for the lists: deletes their active entries that were never printed and
+   * sets `removed_at` and `archived_year` on the others, in one go. The lists stay.
+   */
+  archiveLists(
+    listIds: readonly string[],
+    year: string,
+  ): Promise<{ readonly archived: number; readonly deleted: number }>;
+  /**
    * A new `point4` list at the end, active, at version 1, with a key made from the title by the
    * caller. ConstraintViolation(`registry_lists_title_key`) for a title in use.
    */

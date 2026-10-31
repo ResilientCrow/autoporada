@@ -3,6 +3,7 @@
 import {
   addEntries as addEntriesUseCase,
   moveList as moveListUseCase,
+  newSchoolYear as newSchoolYearUseCase,
   previewPaste as previewPasteUseCase,
   removeEntry as removeEntryUseCase,
   saveEntry as saveEntryUseCase,
@@ -26,3 +27,5 @@ export const moveList = defineAction(moveListUseCase, { rateLimit: 'admin' });
  * and the rows come back; it is kept nowhere (ADR 0033).
  */
 export const previewPaste = defineAction(previewPasteUseCase, { rateLimit: 'admin' });
+/** „Archivovat vybrané seznamy“ of „Nový školní rok“; the pipeline asks for a fresh sign-in first. */
+export const newSchoolYear = defineAction(newSchoolYearUseCase, { rateLimit: 'admin' });

@@ -48,6 +48,11 @@ export function Lists({
       <SlantLabel level={1}>{registry.title}</SlantLabel>
       <div className="mt-4 space-y-8">
         <p>{registry.intro}</p>
+        {canEdit && (
+          <p>
+            <ArrowLink href="/registr/novy-skolni-rok">{registry.newYear.link}</ArrowLink>
+          </p>
+        )}
         <LiveStatus message={said.message} count={said.count} />
         <section className="space-y-4">
           <h2 className="text-xl">{registry.lists.title}</h2>

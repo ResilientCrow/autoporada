@@ -45,6 +45,28 @@ export const registry = {
       active: { label: 'Nabízet seznam' },
     },
   },
+  newYear: {
+    title: 'Nový školní rok',
+    link: 'Nový školní rok',
+    intro:
+      'Vybrané seznamy se vyprázdní. Studenti, kteří byli v\u00a0některém vytištěném zápisu, se přesunou do archivu, ostatní se smažou. Samotné seznamy zůstanou.',
+    lists: { label: 'Seznamy k\u00a0vyprázdnění', none: 'Nejsou žádné seznamy.' },
+    list: (title: string, n: number) => `${title} (${countWord(n, STUDENT)})`,
+    count: (n: number) => `Vyprázdní se ${countWord(n, STUDENT)}.`,
+    year: {
+      label: 'Školní rok, který končí',
+      description: 'Pod tímto rokem se studenti uloží do archivu.',
+    },
+    confirm: 'Rozumím, že vybrané seznamy se vyprázdní a\u00a0studenti se přesunou do archivu.',
+    submit: 'Vyprázdnit vybrané seznamy',
+    issues: {
+      listIds: 'Vyberte aspoň jeden seznam.',
+      confirmed: 'Potvrďte, že rozumíte důsledkům.',
+    },
+    done: (archived: number, deleted: number) =>
+      `Hotovo. V\u00a0archivu je ${countWord(archived, STUDENT)}, smazáno ${countWord(deleted, STUDENT)}.`,
+    back: 'Všechny seznamy',
+  },
   paste: {
     title: 'Vložit seznam',
     intro:

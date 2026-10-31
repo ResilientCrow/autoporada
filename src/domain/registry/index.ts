@@ -9,4 +9,5 @@ export {
   type PasteRow,
   type PasteWarning,
 } from './paste';
+export { archiveYears, type ArchiveYears } from './school-year';
 export { entriesAsOf, isNewInIssue, sortForDocument, type RegistryEntry } from './registry';

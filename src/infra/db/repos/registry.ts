@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import {
   ScopeViolation,
@@ -49,6 +49,11 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
   };
   const mayEdit = () => {
     if (principal.kind === 'user' && !can(principal.actor, { action: 'registry.edit' })) {
+      throw new ScopeViolation();
+    }
+  };
+  const mayArchive = () => {
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'registry.newSchoolYear' })) {
       throw new ScopeViolation();
     }
   };
@@ -144,6 +149,23 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
         )
         .returning({ id: registryEntries.id });
       return archived.length > 0 ? 'archived' : null;
+    },
+    async archiveLists(listIds, year) {
+      mayArchive();
+      const inLists = and(
+        inArray(registryEntries.listId, [...listIds]),
+        isNull(registryEntries.removedAt),
+      );
+      const deleted = await db
+        .delete(registryEntries)
+        .where(and(inLists, isNull(registryEntries.firstPublishedIssueId)))
+        .returning({ id: registryEntries.id });
+      const archived = await db
+        .update(registryEntries)
+        .set({ removedAt: ctx.now, archivedYear: year, version: bump })
+        .where(and(inLists, isNotNull(registryEntries.firstPublishedIssueId)))
+        .returning({ id: registryEntries.id });
+      return { archived: archived.length, deleted: deleted.length };
     },
     async createList(key, values) {
       mayEdit();

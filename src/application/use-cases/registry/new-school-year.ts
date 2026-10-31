@@ -1,0 +1,42 @@
+import { defineUseCase, fail, ok } from '@/application/core';
+import { newSchoolYearInput, newSchoolYearOutput } from '@/contracts';
+import { archiveYears } from '@/domain/registry';
+import { instantToWallClock } from '@/domain/time';
+
+/**
+ * „Nový školní rok“: the headmaster, signed in afresh (step-up), archives the lists he ticked
+ * under the current school year or the one before (ADR 0033). Their students that no document
+ * ever listed are deleted, the others are kept as removed with the year; the lists stay. A box
+ * left unticked, a year outside the two or a list that does not exist changes nothing. The
+ * audit event names the lists by their keys, the year and how many students it cleared.
+ */
+export const newSchoolYear = defineUseCase({
+  name: 'registry.newSchoolYear',
+  mode: 'write',
+  input: newSchoolYearInput,
+  output: newSchoolYearOutput,
+  access: { kind: 'gate', check: () => ({ action: 'registry.newSchoolYear' }) },
+  async execute({ tx, now }, input) {
+    if (!input.confirmed) return fail({ code: 'invalid-input', fields: { confirmed: 'required' } });
+    const { options } = archiveYears(instantToWallClock(now).date);
+    if (!options.includes(input.year)) {
+      return fail({ code: 'invalid-input', fields: { year: 'invalid' } });
+    }
+    const ids = new Set(input.listIds);
+    const chosen = (await tx.registry.lists()).filter((list) => ids.has(list.id));
+    const [first, ...others] = chosen;
+    if (first === undefined || chosen.length !== ids.size) return fail({ code: 'not-found' });
+    const { archived, deleted } = await tx.registry.archiveLists([...ids], input.year);
+    await tx.audit.record({
+      action: 'registry.school_year_archived',
+      target: { type: 'registry_list', id: first.id },
+      meta: {
+        listKeys: chosen.map((list) => list.key),
+        count: archived + deleted,
+        year: input.year,
+      },
+      related: others.map((list) => ({ type: 'registry_list', id: list.id })),
+    });
+    return ok({ archived, deleted });
+  },
+});

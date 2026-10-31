@@ -43,6 +43,7 @@ import { me, setReminders } from './profile';
 import {
   addEntries,
   moveList,
+  newSchoolYear,
   previewPaste,
   readRegistry,
   removeEntry,
@@ -95,6 +96,7 @@ export { me, setReminders } from './profile';
 export {
   addEntries,
   moveList,
+  newSchoolYear,
   previewPaste,
   readRegistry,
   removeEntry,
@@ -133,6 +135,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   me,
   moveList,
   myAccess,
+  newSchoolYear,
   pendingAccess,
   pointStatus,
   previewPaste,

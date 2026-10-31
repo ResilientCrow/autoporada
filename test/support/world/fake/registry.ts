@@ -142,6 +142,34 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
       entries.set(id, { ...current, removedAt: ctx.now, version: current.version + 1 });
       return 'archived';
     },
+    async archiveLists(listIds, year) {
+      guard(tx, true);
+      if (
+        principal.kind === 'user' &&
+        !can(principal.actor, { action: 'registry.newSchoolYear' })
+      ) {
+        throw new ScopeViolation();
+      }
+      let archived = 0;
+      let deleted = 0;
+      for (const entry of [...entries.values()]) {
+        if (!listIds.includes(entry.listId) || entry.removedAt !== null) continue;
+        tx.written.push({ type: 'registry_entry', id: entry.id });
+        if (entry.firstPublishedIssueId === null) {
+          entries.delete(entry.id);
+          deleted++;
+        } else {
+          entries.set(entry.id, {
+            ...entry,
+            removedAt: ctx.now,
+            archivedYear: year,
+            version: entry.version + 1,
+          });
+          archived++;
+        }
+      }
+      return { archived, deleted };
+    },
     async createList(key, values) {
       guard(tx, true);
       policy('registry.edit');

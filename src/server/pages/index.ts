@@ -14,7 +14,7 @@ export { futureListPage, futurePage, newFuturePage } from './future';
 export { homePage } from './home';
 export { pointTypesPage } from './point-types';
 export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points';
-export { registryPage } from './registry';
+export { newYearPage, registryPage } from './registry';
 export { queuePage, reviewPointPage } from './review';
 export { settingsPage } from './settings';
 export { userPage } from './user';

@@ -3,6 +3,8 @@ import type { z } from 'zod';
 import { readRegistry } from '@/application/use-cases';
 import type { readRegistryOutput } from '@/contracts';
 import { can } from '@/domain/policy';
+import { archiveYears, type ArchiveYears } from '@/domain/registry';
+import { instantToWallClock } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runRegistered } from '../pipeline';
@@ -30,4 +32,18 @@ export async function registryPage(key?: string): Promise<RegistryPageModel | nu
   );
   if (read === null) return null;
   return { ...read, canEdit: can(viewer.actor, { action: 'registry.edit' }) };
+}
+
+/** /registr/novy-skolni-rok: every list with its active students, and the years it may archive under. */
+export interface NewYearPageModel {
+  readonly lists: RegistryPageModel['lists'];
+  readonly years: ArchiveYears;
+}
+
+/** The page of „Nový školní rok“, or null (404) for anyone but the headmaster. */
+export async function newYearPage(): Promise<NewYearPageModel | null> {
+  const model = await registryPage();
+  if (model === null || !model.canEdit) return null;
+  const today = instantToWallClock(getContainer().app.clock.now()).date;
+  return { lists: model.lists, years: archiveYears(today) };
 }

@@ -3,6 +3,7 @@ import { choiceOf, flagOf, textOf } from '@/ui/form';
 import type {
   AddEntriesAction,
   MoveListAction,
+  NewSchoolYearAction,
   PreviewPasteAction,
   RemoveEntryAction,
   SaveEntryAction,
@@ -79,4 +80,13 @@ export const addPickedInput =
     rows: rows.flatMap(({ givenName, familyName, classCode }, i) =>
       flagOf(data, `pick.${i}`) && classCode !== null ? [{ givenName, familyName, classCode }] : [],
     ),
+  });
+
+/** „Vyprázdnit vybrané seznamy“: the lists ticked (`list.<id>`), the year and the confirm box. */
+export const newYearInput =
+  (listIds: readonly string[], years: readonly string[]) =>
+  (data: FormData): Input<NewSchoolYearAction> => ({
+    listIds: listIds.filter((id) => flagOf(data, `list.${id}`)),
+    year: choiceOf(data, 'year', years),
+    confirmed: flagOf(data, 'confirmed'),
   });

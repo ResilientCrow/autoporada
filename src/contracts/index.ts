@@ -139,6 +139,8 @@ export {
   addEntriesOutput,
   moveListInput,
   moveListOutput,
+  newSchoolYearInput,
+  newSchoolYearOutput,
   previewPasteInput,
   previewPasteOutput,
   readRegistryInput,

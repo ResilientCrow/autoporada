@@ -142,3 +142,19 @@ export const moveListInput = z.strictObject({
   direction: z.enum(['up', 'down']),
 });
 export const moveListOutput = z.strictObject({ moved: z.boolean() });
+
+/**
+ * „Nový školní rok“: the lists ticked, the school year they are archived under (`YYYY/YYYY`, the
+ * current one or the one before, checked by the use case) and the confirm box. Unticked is
+ * `confirmed: false`, which the use case answers as a missing field.
+ */
+export const newSchoolYearInput = z.strictObject({
+  listIds: z.array(z.uuid()).min(1).max(50).readonly(),
+  year: z.string().regex(/^\d{4}\/\d{4}$/),
+  confirmed: z.boolean(),
+});
+/** `archived`: students kept in the archive; `deleted`: students no document had listed. */
+export const newSchoolYearOutput = z.strictObject({
+  archived: z.int().min(0),
+  deleted: z.int().min(0),
+});
