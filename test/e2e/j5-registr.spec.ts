@@ -184,16 +184,16 @@ test.describe('J5: the settings', () => {
       const effect = page.getByText(
         /^Uzávěrka porady .* zůstává sobota 20\.00\. Nové pravidlo platí od porady /,
       );
-      await expect(page.getByText(settings.deadline.example('sobota', '20.00'))).toBeVisible();
+      await expect(page.getByText(settings.deadline.example('sobota', '20:00'))).toBeVisible();
       await expect(effect).toHaveCount(0);
 
       // Choosing another rule changes the example and shows the effect at once; nothing is saved.
       await page.getByLabel(settings.deadline.days.label).selectOption('1');
-      await expect(page.getByText(settings.deadline.example('sobota', '20.00'))).toHaveCount(0);
+      await expect(page.getByText(settings.deadline.example('sobota', '20:00'))).toHaveCount(0);
       await expect(effect).toBeVisible();
       await page.reload();
       await hydrated();
-      await expect(page.getByText(settings.deadline.example('sobota', '20.00'))).toBeVisible();
+      await expect(page.getByText(settings.deadline.example('sobota', '20:00'))).toBeVisible();
       await expect(effect).toHaveCount(0);
 
       // The annex 1 intro is a rich text: the server draws it, then the editor mounts on it.

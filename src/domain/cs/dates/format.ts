@@ -1,4 +1,11 @@
-import { compareDates, isoWeekday, type CalDate, type WallTime } from '@/domain/time';
+import {
+  addDays,
+  compareDates,
+  instantToWallClock,
+  isoWeekday,
+  type CalDate,
+  type WallTime,
+} from '@/domain/time';
 
 import { MONTH_GENITIVE, WEEKDAY_ACCUSATIVE, WEEKDAY_NOMINATIVE } from './tables';
 
@@ -102,9 +109,25 @@ export function formatWindow(from: CalDate, to: CalDate): string {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-/** „7.00“, „14.30“ */
-export function formatTime(t: WallTime): string {
+/** „7.00“, „14.30“: the document's times. */
+function formatTime(t: WallTime): string {
   return `${t.hour}${TIME_SEPARATOR}${pad2(t.minute)}`;
+}
+
+/** „7:00“, „23:59“: screens and mails write times with a colon and no leading zero. */
+export function formatClock(t: WallTime): string {
+  return `${t.hour}:${pad2(t.minute)}`;
+}
+
+/**
+ * A close as screens and mails print it: the Prague day and „23:59“. A late report's close is capped
+ * at 00:00 of the meeting day (ADR 0035), which would read as the meeting day itself, so 00:00 is
+ * printed as the last minute of the day before.
+ */
+export function formatClose(due: Date): { readonly date: CalDate; readonly time: string } {
+  const { date, time } = instantToWallClock(due);
+  if (time.hour !== 0 || time.minute !== 0) return { date, time: formatClock(time) };
+  return { date: addDays(date, -1), time: '23:59' };
 }
 
 /** „7.00 až 14.00 hodin“ or „8.00 hodin“ — agenda bullets (points 1 and 2). */

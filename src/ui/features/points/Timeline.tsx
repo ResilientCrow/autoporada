@@ -1,4 +1,4 @@
-import { formatDayMonth, formatTime } from '@/domain/cs';
+import { formatDayMonth, formatClock } from '@/domain/cs';
 import type { PointEvent } from '@/domain/review';
 import { instantToWallClock } from '@/domain/time';
 import { points } from '@/ui/copy';
@@ -22,7 +22,7 @@ function lineOf({ event, note, editedFields, createdAt }: TimelineEntry): string
   switch (event) {
     case 'submit': {
       const { date, time } = instantToWallClock(new Date(createdAt));
-      return copy.submit(formatDayMonth(date), formatTime(time));
+      return copy.submit(formatDayMonth(date), formatClock(time));
     }
     case 'return':
       return copy.returned(note);

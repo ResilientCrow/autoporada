@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
-import { formatDayMonth, formatTime } from '@/domain/cs';
-import { instantToWallClock } from '@/domain/time';
+import { formatClose, formatDayMonth } from '@/domain/cs';
 import { porada } from '@/ui/copy';
 import { Notice } from '@/ui/kit';
 
@@ -32,11 +31,11 @@ const refHref = (code: FindingView['code'], ref: RefView): `/${string}` => {
   return ref.of === 'point' ? `/body/${ref.id}` : `/kontrola/${ref.id}`;
 };
 
-/** „do 23. 11. v 20.00“ for a ref that closes at an hour; empty for any other. */
+/** „do 23. 11. v 20:00“ for a ref that closes at an hour; empty for any other. A 00:00 cap is 23:59 the day before. */
 function dueText(ref: RefView): string {
   if (ref.due === undefined) return '';
-  const { date, time } = instantToWallClock(new Date(ref.due));
-  return porada.preflight.due(`${formatDayMonth(date)}\u00a0v\u00a0${formatTime(time)}`);
+  const { date, time } = formatClose(new Date(ref.due));
+  return porada.preflight.due(`${formatDayMonth(date)}\u00a0v\u00a0${time}`);
 }
 
 function Finding({ finding }: { readonly finding: FindingView }) {

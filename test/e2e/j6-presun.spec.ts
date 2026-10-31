@@ -109,7 +109,7 @@ test.describe('J6: moving a porada', () => {
     }
   });
 
-  test('a report of a Sunday akce handed in at 22.00 is in Monday’s preview', async ({
+  test('a report of a Sunday akce handed in at 22:00 is in Monday’s preview', async ({
     page,
     hydrated,
     signInAs,

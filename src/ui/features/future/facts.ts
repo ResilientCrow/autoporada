@@ -1,12 +1,7 @@
 import type { z } from 'zod';
 
 import type { getFutureOutput } from '@/contracts';
-import {
-  formatAgendaTimeRange,
-  formatNumericDate,
-  formatNumericRange,
-  responsibleVerb,
-} from '@/domain/cs';
+import { formatClock, formatNumericDate, formatNumericRange, responsibleVerb } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime } from '@/domain/time';
 import { points } from '@/ui/copy';
 
@@ -16,7 +11,7 @@ export type FutureView = z.output<typeof getFutureOutput>['view'];
 type When = Pick<FutureView, 'startDate' | 'endDate' | 'timeFrom' | 'timeTo'>;
 
 /**
- * „10.–12. 11. 2026, 8.00 až 10.30 hodin“: the days and, when it starts at a time, the hours. Null
+ * „10.–12. 11. 2026, 8:00 až 10:30 hodin“: the days and, when it starts at a time, the hours. Null
  * before the item has a start date. An end date before the start (a draft's) is left out.
  */
 export function whenText({ startDate, endDate, timeFrom, timeTo }: When): string | null {
@@ -28,11 +23,9 @@ export function whenText({ startDate, endDate, timeFrom, timeTo }: When): string
       ? formatNumericRange(start, end)
       : formatNumericDate(start);
   if (timeFrom === null) return days;
-  const hours = formatAgendaTimeRange(
-    parseWallTime(timeFrom),
-    timeTo === null ? undefined : parseWallTime(timeTo),
-  );
-  return `${days}, ${hours}`;
+  const from = formatClock(parseWallTime(timeFrom));
+  const hours = timeTo === null ? from : `${from} až ${formatClock(parseWallTime(timeTo))}`;
+  return `${days}, ${hours} hodin`;
 }
 
 /** „za 8.A koordinuje Jana Nováková“; null where no one is named. */

@@ -4,6 +4,8 @@ import { addDays, parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
   formatAgendaTimeRange,
+  formatClock,
+  formatClose,
   formatDayMonth,
   formatLongDate,
   formatLongRange,
@@ -107,6 +109,22 @@ describe('times', () => {
     expect(formatAgendaTimeRange(t('09:05'))).toBe('9.05 hodin');
     expect(formatProseTimeRange(t('10:00'), t('12:00'))).toBe('od 10.00 do 12.00 hodin');
     expect(formatProseTimeRange(t('8:30'))).toBe('od 8.30 hodin');
+  });
+});
+
+describe('clock and close', () => {
+  it('writes screen and mail times with a colon and no leading zero', () => {
+    expect(formatClock(t('07:05'))).toBe('7:05');
+    expect(formatClock(t('20:00'))).toBe('20:00');
+  });
+
+  it.each([
+    ['an hour', '2026-10-31T19:00:00.000Z', '2026-10-31', '20:00'],
+    ['00:00 (CET) as 23:59 of the day before', '2026-11-01T23:00:00.000Z', '2026-11-01', '23:59'],
+    ['00:00 (CEST) as 23:59 of the day before', '2026-06-30T22:00:00.000Z', '2026-06-30', '23:59'],
+    ['a minute after midnight as it is', '2026-11-01T23:01:00.000Z', '2026-11-02', '0:01'],
+  ])('writes a close at %s', (_name, iso, date, time) => {
+    expect(formatClose(new Date(iso))).toEqual({ date: d(date), time });
   });
 });
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { z } from 'zod';
 
 import type { ServerAction, settingsSaveInput, settingsSaveOutput } from '@/contracts';
-import { formatTime } from '@/domain/cs';
+import { formatClock } from '@/domain/cs';
 import { parseWallTime } from '@/domain/time';
 import { settings } from '@/ui/copy';
 import { Form, SelectField, SubmitButton, useActionForm, type FormSpec } from '@/ui/form';
@@ -37,7 +37,7 @@ const DAY_OPTIONS = ([1, 2, 3, 4] as const).map((n) => ({
 }));
 const TIME_OPTIONS = QUARTER_HOURS.map((time) => ({
   value: time,
-  label: deadline.timeOption(formatTime(parseWallTime(time))),
+  label: deadline.timeOption(formatClock(parseWallTime(time))),
 }));
 
 /** The deadline rule, the example it gives for a Monday porada and what saving it leaves alone. */

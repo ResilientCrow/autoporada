@@ -224,7 +224,7 @@ export const points = {
     soon: 'Do uzávěrky zbývá méně než 24\u00A0hodin.',
     /** A report on an event that ends after the deadline has its own close (ADR 0035); both dates arrive written, „1.\u00A011.“. */
     late: (closeDate: string, closeTime: string, porada: string) =>
-      `Zprávu odevzdejte do ${closeDate} ${closeTime === '24.00' ? 've' : 'v'}\u00A0${closeTime}; půjde na poradu ${porada}`,
+      `Zprávu odevzdejte do ${closeDate} v\u00A0${closeTime}; půjde na poradu ${porada}`,
   },
   /** „Stáhnout“ and „Zrušit bod“ of the author (design section 9). */
   transitions: {
@@ -252,7 +252,7 @@ export const points = {
   /** What happened to a point, newest first. Names no one. */
   timeline: {
     label: 'Průběh',
-    /** `day` and `time` are written out, „14.\u00A03.“ and „16.02“. */
+    /** `day` and `time` are written out, „14.\u00A03.“ and „16:02“. */
     submit: (day: string, time: string) => `Odesláno ke kontrole ${day} v\u00A0${time}`,
     returned: (note: string | null) =>
       note === null ? 'Vráceno k\u00A0úpravě' : `Vráceno k\u00A0úpravě: ${note}`,

@@ -44,7 +44,7 @@ describe('FutureRead', () => {
   it('lists the facts that are set', () => {
     const html = render();
     expect(html).toContain(`<dt class="font-bold">${future.facts.when}</dt>`);
-    expect(html).toContain('10. 11. 2026, 8.00 hodin');
+    expect(html).toContain('10. 11. 2026, 8:00 hodin');
     expect(html).toContain(points.campus.radlice);
     expect(html).toContain('Špindlerův Mlýn');
     expect(html).toContain('za 8.A koordinuje Jana Nováková');

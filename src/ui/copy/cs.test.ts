@@ -28,8 +28,8 @@ const NUMBER_UNIT =
   /\d (?=(?:hodin|hodiny|hodina|minut|minuty|let|roky|roku|dní|dnů|dny|znaků|znaky|MB|KB|%))/;
 /** A plain space inside a number of four or more digits. */
 const THOUSANDS = /\d \d{3}\b/;
-/** „18:00“: the product writes times as „18.00“ (formatTime). */
-const CLOCK_COLON = /\d:\d\d/;
+/** „18.00“: screens and mails write times as „18:00“ (formatClock); only the document keeps the dot. */
+const CLOCK_DOT = /(?<![\d.])\d{1,2}\.\d\d(?![\d.])/;
 const POSTAL_CODE = /\d{3} \d{2} (?=\p{Lu})|\d{3} (?=\d{2}\p{Zs}\p{Lu})/u;
 
 /** What the typography oracle does not know: legal references, number + unit, postal codes. */
@@ -61,16 +61,18 @@ describe('extra typography rule', () => {
   });
 });
 
-describe('clock colon rule', () => {
+describe('clock dot rule', () => {
   it.each([
-    ['v 18:00', true],
-    ['v 7:30', true],
-    ['od 7:00 do 8:30', true],
-    [`v${NBSP}18.00`, false],
-    ['7.00–8.30', false],
-    ['poměr 1:2', false],
+    [`v${NBSP}18.00`, true],
+    ['v 7.30', true],
+    ['7.00–8.30', true],
+    ['v 18:00', false],
+    ['od 7:00 do 8:30', false],
+    [`14.${NBSP}3. 2027`, false],
+    ['19.10.', false],
+    ['verze 2026.10', false],
   ])('%s -> %j', (text, banned) => {
-    expect(CLOCK_COLON.test(text)).toBe(banned);
+    expect(CLOCK_DOT.test(text)).toBe(banned);
   });
 });
 
@@ -105,8 +107,8 @@ describe('typography', () => {
     );
   });
 
-  it('writes times with a dot (7.00), never a colon (7:00)', () => {
-    expect(all.filter(([, text]) => CLOCK_COLON.test(text)).map(([path]) => path)).toEqual([]);
+  it('writes times with a colon (7:00), never a dot (7.00)', () => {
+    expect(all.filter(([, text]) => CLOCK_DOT.test(text)).map(([path]) => path)).toEqual([]);
   });
 
   it('keeps the no-break spaces the oracle does not know', () => {

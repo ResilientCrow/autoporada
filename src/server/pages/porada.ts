@@ -7,7 +7,7 @@ import { composeDocument, type DocumentModel } from '@/document';
 import {
   formatDayMonth,
   formatNumericDate,
-  formatTime,
+  formatClock,
   formatTitleDate,
   weekdayName,
 } from '@/domain/cs';
@@ -96,7 +96,7 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
       meeting: formatTitleDate(meeting),
       meetingLabel: formatNumericDate(meeting),
       movedFrom: compareDates(monday, meeting) === 0 ? null : formatDayMonth(monday),
-      deadline: { weekday: weekdayName(date), date: formatDayMonth(date), time: formatTime(time) },
+      deadline: { weekday: weekdayName(date), date: formatDayMonth(date), time: formatClock(time) },
       deadlinePassed: deadlineAt.getTime() <= getContainer().app.clock.now().getTime(),
       status: slot.status,
       version: slot.version,

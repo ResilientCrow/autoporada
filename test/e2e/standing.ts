@@ -10,7 +10,7 @@ import {
   placementSlot,
   submitMonday,
 } from '@/domain/calendar';
-import { formatDayMonth, formatTime, weekdayName } from '@/domain/cs';
+import { formatDayMonth, formatClock, weekdayName } from '@/domain/cs';
 import { addDays, instantToWallClock } from '@/domain/time';
 import { points } from '@/ui/copy';
 
@@ -33,7 +33,7 @@ export function standingLines(now: Date): { before: string; closed: string } {
       formatDayMonth(placement),
       weekdayName(date),
       formatDayMonth(date),
-      formatTime(time),
+      formatClock(time),
     ),
     closed: points.standing.closed(formatDayMonth(addDays(first, -7)), formatDayMonth(placement)),
   };

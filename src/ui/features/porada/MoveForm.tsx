@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { z } from 'zod';
 
 import type { moveIssueInput, moveIssueOutput, ServerAction } from '@/contracts';
-import { formatDayMonth, formatNumericDate, formatTime, weekdayName } from '@/domain/cs';
+import { formatDayMonth, formatNumericDate, formatClock, weekdayName } from '@/domain/cs';
 import { instantToWallClock, parseIsoDate } from '@/domain/time';
 import { porada } from '@/ui/copy';
 import {
@@ -36,10 +36,10 @@ const SPEC: FormSpec = {
   skip: { label: porada.move.title, messages: { invalid: fields.skip } },
 };
 
-/** „sobota 7. 11. v 20.00“ for the effect line. */
+/** „sobota 7. 11. v 20:00“ for the effect line. */
 function when(at: Date): string {
   const { date, time } = instantToWallClock(at);
-  return `${weekdayName(date)} ${formatDayMonth(date)} v\u00a0${formatTime(time)}`;
+  return `${weekdayName(date)} ${formatDayMonth(date)} v\u00a0${formatClock(time)}`;
 }
 
 /**

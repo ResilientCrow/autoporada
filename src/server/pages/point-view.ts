@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { getPointOutput } from '@/contracts';
-import { formatLongDate, formatTime, schoolYear, type Campus } from '@/domain/cs';
+import { formatLongDate, formatClock, schoolYear, type Campus } from '@/domain/cs';
 import type { PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import { parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
@@ -54,7 +54,7 @@ export interface PointViewModel<C = LoadedPoint['content']> {
 }
 
 const dateText = (iso: string | null) => (iso === null ? null : formatLongDate(parseIsoDate(iso)));
-const timeText = (iso: string | null) => (iso === null ? null : formatTime(parseWallTime(iso)));
+const timeText = (iso: string | null) => (iso === null ? null : formatClock(parseWallTime(iso)));
 
 /** The header, facts and read view of a loaded point, as of the Prague day `today`. */
 export function pointView(

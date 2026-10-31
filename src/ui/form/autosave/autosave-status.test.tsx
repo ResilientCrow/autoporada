@@ -33,7 +33,7 @@ describe('the status line', () => {
     ['idle', ''],
     ['dirty', autosave.unsaved],
     ['saving', autosave.saving],
-    ['saved', autosave.saved('14.32')],
+    ['saved', autosave.saved('14:32')],
     ['failed', autosave.unsaved],
     ['conflict', autosave.unsaved],
     ['locked', autosave.unsaved],
@@ -46,7 +46,7 @@ describe('the status line', () => {
   });
 
   it('says the time with a dot and a no-break space', () => {
-    expect(statusLine(render('saved', { savedAt: wallTime(7, 5) }))).toBe('Uloženo v\u00A07.05');
+    expect(statusLine(render('saved', { savedAt: wallTime(7, 5) }))).toBe('Uloženo v\u00A07:05');
   });
 });
 

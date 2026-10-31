@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { getPointOutput } from '@/contracts';
-import { formatLongDate, formatTime } from '@/domain/cs';
+import { formatLongDate, formatClock } from '@/domain/cs';
 import { displayName } from '@/domain/report';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 import { points } from '@/ui/copy';
@@ -24,7 +24,7 @@ const lines = (items: readonly string[]) => (items.length === 0 ? copy.empty : i
 
 const date = (iso: string | null) =>
   iso === null ? copy.empty : formatLongDate(parseIsoDate(iso));
-const time = (iso: string | null) => (iso === null ? copy.empty : formatTime(parseWallTime(iso)));
+const time = (iso: string | null) => (iso === null ? copy.empty : formatClock(parseWallTime(iso)));
 
 const bullets = (list: NonNullable<Fields['bullets']>) =>
   lines(

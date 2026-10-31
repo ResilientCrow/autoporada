@@ -305,7 +305,7 @@ export const LADDER_MS = [5_000, 15_000, 60_000] as const;
  */
 export const freezeClock = (page: Page) => page.clock.pauseAt(new Date(Date.now() + 1_000));
 
-/** The status line after a save: „Uloženo v 14.05“. */
+/** The status line after a save: „Uloženo v 14:05“. */
 export const SAVED = /^Uloženo v/;
 
 /** The banners (`role="alert"`) of a page, not Next's empty route announcer, which has the same role. */

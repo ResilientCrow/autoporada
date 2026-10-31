@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { settingsSaveInput } from '@/contracts';
-import { formatTime, weekdayName } from '@/domain/cs';
+import { formatClock, weekdayName } from '@/domain/cs';
 import { addDays, parseIsoDate, parseWallTime } from '@/domain/time';
 import { choiceOf, flagOf, richDocOf, textOf } from '@/ui/form';
 
@@ -10,18 +10,18 @@ export type SaveInput = z.input<typeof settingsSaveInput>;
 /** A Monday, for the example line: the rule counts back from it. */
 const EXAMPLE_MONDAY = parseIsoDate('2026-11-02');
 
-/** The quarter hours from 08.00 to 22.00 a deadline may be set to, as „HH:MM“. */
+/** The quarter hours from 8:00 to 22:00 a deadline may be set to, as „HH:MM“. */
 export const QUARTER_HOURS: readonly string[] = Array.from({ length: 57 }, (_, i) => {
   const minutes = 8 * 60 + i * 15;
   const two = (n: number) => String(n).padStart(2, '0');
   return `${two(Math.floor(minutes / 60))}:${two(minutes % 60)}`;
 });
 
-/** The weekday and time of the deadline of a Monday porada under the rule, „sobota“ and „20.00“. */
+/** The weekday and time of the deadline of a Monday porada under the rule, „sobota“ and „20:00“. */
 export function exampleOf(days: number, time: string): { day: string; time: string } {
   return {
     day: weekdayName(addDays(EXAMPLE_MONDAY, -days)),
-    time: formatTime(parseWallTime(time)),
+    time: formatClock(parseWallTime(time)),
   };
 }
 

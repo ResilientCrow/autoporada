@@ -193,8 +193,8 @@ describe('pointPage', () => {
       facts: {
         eventDate: '14. ledna 2027',
         endDate: '15. ledna 2027',
-        timeFrom: '7.00',
-        timeTo: '14.30',
+        timeFrom: '7:00',
+        timeTo: '14:30',
         campus: 'radlice',
         place: 'v učebně S206',
       },

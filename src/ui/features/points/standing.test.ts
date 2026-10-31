@@ -43,21 +43,21 @@ const textOf = (given: StandingInput, report?: LateFacts) => {
 };
 
 describe('the standing line before the deadline', () => {
-  // Tuesday 9 March 2027, 11.00: the porada of the 15th closes on Saturday the 13th at 20.00.
+  // Tuesday 9 March 2027, 11:00: the porada of the 15th closes on Saturday the 13th at 20:00.
   const TUESDAY = input('2027-03-09T10:00:00.000Z', '2027-03-15');
 
   it('names the porada the point goes to and its deadline, with the weekday', () => {
     expect(textOf(TUESDAY)).toEqual({
-      text: `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20.00.`,
+      text: `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20:00.`,
       urgent: false,
     });
   });
 
-  it('follows the rule the window carries: 3 days before at 12.00 is the Friday', () => {
+  it('follows the rule the window carries: 3 days before at 12:00 is the Friday', () => {
     const stored = toDeadlineRule({ dayOffset: -3, time: '12:00' });
     const result = textOf({ ...TUESDAY, rule: stored });
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: pátek 12.${NB}3. v${NB}12.00.`,
+      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: pátek 12.${NB}3. v${NB}12:00.`,
     );
   });
 
@@ -69,11 +69,11 @@ describe('the standing line before the deadline', () => {
   });
 
   it('takes the deadline from the row when it differs from the computed one', () => {
-    // The row's deadline stayed on Monday 08.00 (a deadline already shown never moves).
+    // The row's deadline stayed on Monday 08:00 (a deadline already shown never moves).
     const row = issue('2027-03-15', '2027-03-15T07:00:00.000Z', 'open');
     const result = textOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', [row]));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: pondělí 15.${NB}3. v${NB}8.00.`,
+      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: pondělí 15.${NB}3. v${NB}8:00.`,
     );
   });
 
@@ -81,7 +81,7 @@ describe('the standing line before the deadline', () => {
     const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', [skipped]));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20.00.`,
+      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20:00.`,
     );
   });
 
@@ -95,13 +95,13 @@ describe('the standing line before the deadline', () => {
   it('is the before text on the Tuesday after the meeting, for the next porada', () => {
     const result = textOf(input('2027-03-16T08:00:00.000Z', '2027-03-22'));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20.00.`,
+      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20:00.`,
     );
   });
 });
 
 describe('the last 24 hours', () => {
-  // The deadline is Saturday 13 March 2027, 20.00 = 19.00 UTC.
+  // The deadline is Saturday 13 March 2027, 20:00 = 19:00 UTC.
   const at = (now: string) => textOf(input(now, '2027-03-15'));
 
   it.each([
@@ -114,7 +114,7 @@ describe('the last 24 hours', () => {
     expect(at(now)?.urgent).toBe(urgent);
   });
 
-  // The computed deadline is Saturday 13 March 20.00 (19.00 UTC); the row kept Monday 15 March 08.00 (07.00 UTC).
+  // The computed deadline is Saturday 13 March 20:00 (19:00 UTC); the row kept Monday 15 March 08:00 (07:00 UTC).
   const ROW = issue('2027-03-15', '2027-03-15T07:00:00.000Z', 'open');
 
   it('measures against the deadline of the row, not the computed one', () => {
@@ -143,7 +143,7 @@ describe('the last 24 hours', () => {
 
 describe('the standing line after the deadline', () => {
   it.each([
-    ['on the Saturday evening at 20.00', '2027-03-13T19:00:00.000Z'],
+    ['on the Saturday evening at 20:00', '2027-03-13T19:00:00.000Z'],
     ['on the Sunday', '2027-03-14T17:30:00.000Z'],
   ])('%s says the porada of the 15th has closed', (_when, now) => {
     // The submit Monday is the 22nd.
@@ -175,7 +175,7 @@ describe('the standing line after the deadline', () => {
   });
 
   it('names the porada that closed even when the Monday after it is skipped', () => {
-    // Sunday 14 March 2027, 18.30: the 15th has closed, the 22nd is skipped, so hand-ins go to
+    // Sunday 14 March 2027, 18:30: the 15th has closed, the 22nd is skipped, so hand-ins go to
     // the 29th (the submit Monday the window names); the line still says the 15th has closed.
     const skipped = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-29', [skipped]));
@@ -188,7 +188,7 @@ describe('the standing line after the deadline', () => {
     const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
     const result = textOf(input('2027-03-15T08:00:00.000Z', '2027-03-22', [skipped]));
     expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20.00.`,
+      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20:00.`,
     );
   });
 });
@@ -217,7 +217,7 @@ describe('without an open Monday', () => {
 
 describe('the school year of the paper', () => {
   it('is the year of the porada the point goes to, not of today', () => {
-    // Sunday 29 August 2027, 21.00: the porada of 30 August has closed, the point goes to 6 September.
+    // Sunday 29 August 2027, 21:00: the porada of 30 August has closed, the point goes to 6 September.
     const standing = standingOf(input('2027-08-29T19:00:00.000Z', '2027-09-06'));
     expect(placementYear(standing, '2026/2027')).toBe('2027/2028');
   });
@@ -229,7 +229,7 @@ describe('the school year of the paper', () => {
 
 describe('the line and the porada a resubmit lands in', () => {
   it('names the Monday pointMonday gives a point handed in again at that instant', () => {
-    // Sunday 25 October 2026, 21.00: the porada of the 26th has closed. A point first handed in
+    // Sunday 25 October 2026, 21:00: the porada of the 26th has closed. A point first handed in
     // for the 26th, retracted and sent again now, goes where the line says: the 2nd of November.
     const now = new Date('2026-10-25T20:00:00.000Z');
     const standing = standingOf(input(now.toISOString(), '2026-11-02'));
@@ -245,24 +245,24 @@ describe('the line and the porada a resubmit lands in', () => {
 });
 
 describe('the standing line of a report on a late event', () => {
-  // Sunday 1 November 2026 21.00: after the Saturday 31 October 20.00 deadline of the 2nd, so the
-  // report closes at 23.00 that Sunday (CET, UTC+1) and still goes to the porada of the 2nd.
+  // Sunday 1 November 2026 21:00: after the Saturday 31 October 20:00 deadline of the 2nd, so the
+  // report closes at 23:00 that Sunday (CET, UTC+1) and still goes to the porada of the 2nd.
   const ENDS_SUNDAY: LateFacts = {
     lastDay: parseIsoDate('2026-11-01'),
     timeTo: parseWallTime('21:00'),
   };
-  const LATE = `Zprávu odevzdejte do 1.${NB}11. v${NB}23.00; půjde na poradu 2.${NB}11.`;
+  const LATE = `Zprávu odevzdejte do 1.${NB}11. v${NB}23:00; půjde na poradu 2.${NB}11.`;
   // The wire without the report: its submit Monday is the 9th once the Saturday deadline has passed.
   const wire = (now: string) => input(now, '2026-11-09');
 
-  it('names the close and the porada on Sunday 21.30, when the plain line says closed', () => {
+  it('names the close and the porada on Sunday 21:30, when the plain line says closed', () => {
     const now = '2026-11-01T20:30:00.000Z';
     expect(textOf(wire(now))?.text).toContain(`už proběhla`);
     expect(textOf(wire(now), ENDS_SUNDAY)).toEqual({ text: LATE, urgent: true });
   });
 
   it('says the same on the Saturday evening, just after the deadline', () => {
-    // Saturday 31 October 21.00: the deadline of the 2nd (20.00) is past, so the wire says the 9th.
+    // Saturday 31 October 21:00: the deadline of the 2nd (20:00) is past, so the wire says the 9th.
     const given = wire('2026-10-31T20:00:00.000Z');
     expect(textOf(given)?.text).toContain('už proběhla');
     expect(textOf(given, ENDS_SUNDAY)?.text).toBe(LATE);
@@ -281,18 +281,18 @@ describe('the standing line of a report on a late event', () => {
   });
 
   it.each([
-    ['ending at 22.30 (capped from 0.30)', '22:30'],
-    ['ending at 23.30 (capped from 1.30)', '23:30'],
-    ['ending at 22.00 (exactly midnight)', '22:00'],
-  ])('writes the cap as 24.00 of the Sunday, not 0.00 of the Monday: %s', (_name, end) => {
+    ['ending at 22:30 (capped from 0:30)', '22:30'],
+    ['ending at 23:30 (capped from 1:30)', '23:30'],
+    ['ending at 22:00 (exactly midnight)', '22:00'],
+  ])('writes the cap as 23:59 of the Sunday, not 0:00 of the Monday: %s', (_name, end) => {
     const facts: LateFacts = { lastDay: parseIsoDate('2026-11-01'), timeTo: parseWallTime(end) };
     expect(textOf(wire('2026-11-01T20:30:00.000Z'), facts)?.text).toBe(
-      `Zprávu odevzdejte do 1.${NB}11. ve${NB}24.00; půjde na poradu 2.${NB}11.`,
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}23:59; půjde na poradu 2.${NB}11.`,
     );
   });
 
   it('is the plain line again once the close has passed', () => {
-    const now = '2026-11-01T23:30:00.000Z'; // Monday 00.30
+    const now = '2026-11-01T23:30:00.000Z'; // Monday 00:30
     expect(textOf(wire(now), ENDS_SUNDAY)).toEqual(textOf(wire(now)));
     expect(textOf(wire(now), ENDS_SUNDAY)?.text).toContain(`porady z${NB}9.${NB}11.`);
   });
@@ -318,25 +318,25 @@ describe('the standing line of a report on a late event', () => {
     expect(textOf(given, ENDS_SUNDAY)).toEqual(textOf(given));
   });
 
-  it('closes at 20.00 + 2 h without an end time', () => {
+  it('closes at 20:00 + 2 h without an end time', () => {
     const noTime: LateFacts = { lastDay: parseIsoDate('2026-11-01'), timeTo: null };
     expect(textOf(wire('2026-11-01T20:30:00.000Z'), noTime)?.text).toBe(
-      `Zprávu odevzdejte do 1.${NB}11. v${NB}22.00; půjde na poradu 2.${NB}11.`,
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}22:00; půjde na poradu 2.${NB}11.`,
     );
   });
 
   it('follows the stored deadline of the porada: one after the report close makes it not late', () => {
-    // The row's deadline is Sunday 23.30, after the report's close (23.00): nothing is late.
+    // The row's deadline is Sunday 23:30, after the report's close (23:00): nothing is late.
     const row = issue('2026-11-02', '2026-11-01T22:30:00.000Z', 'open');
     const given = input('2026-11-01T20:30:00.000Z', '2026-11-02', [row]);
     expect(textOf(given, ENDS_SUNDAY)).toEqual(textOf(given));
     expect(textOf(given, ENDS_SUNDAY)?.text).toBe(
-      `Zařadíme do porady z${NB}2.${NB}11. Uzávěrka: neděle 1.${NB}11. v${NB}23.30.`,
+      `Zařadíme do porady z${NB}2.${NB}11. Uzávěrka: neděle 1.${NB}11. v${NB}23:30.`,
     );
   });
 
   it('is late for a stored deadline that lies before the close', () => {
-    const row = issue('2026-11-02', '2026-11-01T21:30:00.000Z', 'open'); // Sunday 22.30
+    const row = issue('2026-11-02', '2026-11-01T21:30:00.000Z', 'open'); // Sunday 22:30
     const given = input('2026-11-01T20:30:00.000Z', '2026-11-09', [row]);
     expect(textOf(given, ENDS_SUNDAY)?.text).toBe(LATE);
   });
@@ -381,7 +381,7 @@ describe('reportFactsOf', () => {
 });
 
 describe('the standing line of a report when the porada was moved (ADR 0034)', () => {
-  // Monday 2 November's porada is held on Wednesday the 4th; its deadline is Monday 20.00 (19.00Z).
+  // Monday 2 November's porada is held on Wednesday the 4th; its deadline is Monday 20:00 (19:00Z).
   const moved = {
     monday: '2026-11-02',
     meetingDate: '2026-11-04',
@@ -397,7 +397,7 @@ describe('the standing line of a report when the porada was moved (ADR 0034)', (
 
   it('closes two hours after the event and names the meeting day, not the Monday', () => {
     expect(textOf(wire('2026-11-03T16:00:00.000Z'), TUESDAY_18)).toEqual({
-      text: `Zprávu odevzdejte do 3.${NB}11. v${NB}20.00; půjde na poradu 4.${NB}11.`,
+      text: `Zprávu odevzdejte do 3.${NB}11. v${NB}20:00; půjde na poradu 4.${NB}11.`,
       urgent: true,
     });
   });
@@ -413,10 +413,10 @@ describe('the standing line of a report when the porada was moved (ADR 0034)', (
     expect(textOf(given, monday)).toEqual(textOf(given));
   });
 
-  it('caps the close at 00.00 of the meeting day, which is Wednesday, not Monday', () => {
+  it('caps the close at 00:00 of the meeting day, which is Wednesday, not Monday', () => {
     const late: LateFacts = { lastDay: parseIsoDate('2026-11-03'), timeTo: parseWallTime('23:30') };
     expect(textOf(wire('2026-11-03T20:00:00.000Z'), late)?.text).toBe(
-      `Zprávu odevzdejte do 3.${NB}11. ve${NB}24.00; půjde na poradu 4.${NB}11.`,
+      `Zprávu odevzdejte do 3.${NB}11. v${NB}23:59; půjde na poradu 4.${NB}11.`,
     );
   });
 

@@ -139,7 +139,7 @@ describe('the read view', () => {
       read: { content, schoolYear: '2026/2027', timeline: [] },
     });
     expect(html).toContain(
-      `Zprávu odevzdejte do 1.${NB}11. v${NB}23.00; půjde na poradu 2.${NB}11.`,
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}23:00; půjde na poradu 2.${NB}11.`,
     );
     expect(html).not.toContain('už proběhla');
   });
@@ -276,7 +276,7 @@ describe('the timeline of the screen', () => {
   it('is below the read view', () => {
     const html = screen({ editor: null, standing: null, state: 'submitted', read });
     expect(html).toContain(`Vráceno k${NB}úpravě: Doplňte název.`);
-    expect(html).toContain(`Odesláno ke kontrole 1.${NB}2. v${NB}10.00`);
+    expect(html).toContain(`Odesláno ke kontrole 1.${NB}2. v${NB}10:00`);
   });
 
   it('is below the editor of a returned point, where the author reads the reviewer’s note', () => {

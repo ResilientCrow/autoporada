@@ -110,7 +110,7 @@ describe('poradaPage', () => {
         meeting: 'středa 11. listopadu 2026',
         meetingLabel: '11. 11. 2026',
         movedFrom: '9.\u00a011.',
-        deadline: { weekday: 'sobota', date: '7.\u00a011.', time: '20.00' },
+        deadline: { weekday: 'sobota', date: '7.\u00a011.', time: '20:00' },
         deadlinePassed: false,
         status: 'open',
         version: 3,

@@ -32,7 +32,7 @@ const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   meeting: 'pondělí 9. listopadu 2026',
   meetingLabel: '9. 11. 2026',
   movedFrom: null,
-  deadline: { weekday: 'sobota', date: '7.\u00a011.', time: '20.00' },
+  deadline: { weekday: 'sobota', date: '7.\u00a011.', time: '20:00' },
   deadlinePassed: false,
   status: 'open',
   version: 3,
@@ -48,15 +48,15 @@ describe('Workspace', () => {
     const html = render();
     expect(html).toContain(porada.meeting('pondělí 9. listopadu 2026'));
     expect(html).toContain(cs.status.issue.open);
-    expect(html).toContain(porada.deadline.ahead('sobota', '7.\u00a011.', '20.00'));
+    expect(html).toContain(porada.deadline.ahead('sobota', '7.\u00a011.', '20:00'));
     expect(html).not.toContain('style=');
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
   it('says the deadline has passed', () => {
     const html = render({ deadlinePassed: true });
-    expect(html).toContain(porada.deadline.passed('sobota', '7.\u00a011.', '20.00'));
-    expect(html).not.toContain(porada.deadline.ahead('sobota', '7.\u00a011.', '20.00'));
+    expect(html).toContain(porada.deadline.passed('sobota', '7.\u00a011.', '20:00'));
+    expect(html).not.toContain(porada.deadline.ahead('sobota', '7.\u00a011.', '20:00'));
   });
 
   it('tells a moved porada where it was moved from', () => {
@@ -211,7 +211,20 @@ describe('PreviewPage and Preflight', () => {
         refs: [{ id: 'q-1', title: 'Pozdní akce', of: 'akce', due: '2026-11-23T19:00:00.000Z' }],
       }),
     ]);
-    expect(html).toContain(porada.preflight.due('23.\u00a011.\u00a0v\u00a020.00'));
+    expect(html).toContain(porada.preflight.due('23.\u00a011.\u00a0v\u00a020:00'));
+  });
+
+  it('writes a close capped at 00:00 of the meeting day as 23:59 of the day before, as the mails do', () => {
+    // 00:00 Prague on Monday 2 November 2026 (CET) is 23:00Z on the Sunday.
+    const html = preview([
+      finding({
+        code: 'late-reports-expected',
+        level: 'warn',
+        refs: [{ id: 'q-1', title: 'Pozdní akce', of: 'akce', due: '2026-11-01T23:00:00.000Z' }],
+      }),
+    ]);
+    expect(html).toContain(porada.preflight.due('1.\u00a011.\u00a0v\u00a023:59'));
+    expect(html).not.toContain('0:00');
   });
 
   it('says how many late drafts of others are not named, with or without named ones', () => {

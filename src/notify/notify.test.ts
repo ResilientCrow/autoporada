@@ -133,19 +133,19 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
   'issue.moved': {
     subject: `Autoporada: porada se přesouvá na 26.${NB}října 2026`,
     text: letter(
-      `porada se přesouvá na 26.${NB}října 2026. Uzávěrka je dřív: pondělí 23.${NB}11. v${NB}20.00.\n\n${BODY}`,
+      `porada se přesouvá na 26.${NB}října 2026. Uzávěrka je dřív: pondělí 23.${NB}11. v${NB}20:00.\n\n${BODY}`,
     ),
   },
   'report.ended': {
-    subject: `Autoporada: akce skončila, zprávu odevzdejte do 23.${NB}11. v${NB}20.00`,
+    subject: `Autoporada: akce skončila, zprávu odevzdejte do 23.${NB}11. v${NB}20:00`,
     text: letter(
-      `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
+      `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do 23.${NB}11. v${NB}20:00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
     ),
   },
   'report.last-call': {
-    subject: `Autoporada: poslední hodina na zprávu (do 23.${NB}11. v${NB}20.00)`,
+    subject: `Autoporada: poslední hodina na zprávu (do 23.${NB}11. v${NB}20:00)`,
     text: letter(
-      `zpráva o${NB}akci ještě není odevzdaná. Odevzdejte ji do 23.${NB}11. v${NB}20.00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
+      `zpráva o${NB}akci ještě není odevzdaná. Odevzdejte ji do 23.${NB}11. v${NB}20:00, půjde na poradu z${NB}26.${NB}října 2026.\n\n${BODY}`,
     ),
   },
   'headmaster.late-summary': {
@@ -157,12 +157,12 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
 };
 
 describe('renderMail', () => {
-  describe('a close capped at 00.00 of the meeting day', () => {
-    // 00.00 Prague on Monday 2 November 2026 (CET): the close reads as the minute before it.
+  describe('a close capped at 00:00 of the meeting day', () => {
+    // 00:00 Prague on Monday 2 November 2026 (CET): the close reads as the minute before it.
     const MIDNIGHT = new Date('2026-11-01T23:00:00Z');
-    const shown = `1.${NB}11. v${NB}23.59`;
+    const shown = `1.${NB}11. v${NB}23:59`;
 
-    it('prints the day before, 23.59, in the mail at the end and the last call', () => {
+    it('prints the day before, 23:59, in the mail at the end and the last call', () => {
       const ended = renderMail(
         'report.ended',
         { meetingDate: calDate(2026, 11, 2), due: MIDNIGHT },
@@ -177,7 +177,7 @@ describe('renderMail', () => {
       expect(ended.text).toContain(`do ${shown},`);
       expect(call.subject).toContain(`(do ${shown})`);
       expect(call.text).toContain(`do ${shown},`);
-      expect(ended.text + call.text).not.toContain('0.00');
+      expect(ended.text + call.text).not.toContain(`v${NB}0:00`);
     });
 
     it('prints it in the last close of the headmaster summary too', () => {
@@ -202,7 +202,7 @@ describe('renderMail', () => {
         { meetingDate: calDate(2026, 11, 2), due: new Date('2026-11-01T23:15:00Z') },
         ORIGIN,
       );
-      expect(subject).toContain(`2.${NB}11. v${NB}0.15`);
+      expect(subject).toContain(`2.${NB}11. v${NB}0:15`);
     });
   });
 

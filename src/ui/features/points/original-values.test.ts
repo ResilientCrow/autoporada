@@ -42,8 +42,8 @@ describe('originalValues', () => {
     ).toEqual([
       { label: 'Datum začátku', text: '14. ledna 2027' },
       { label: 'Datum konce', text: '16. ledna 2027' },
-      { label: 'Čas od', text: '8.05' },
-      { label: 'Čas do', text: '14.30' },
+      { label: 'Čas od', text: '8:05' },
+      { label: 'Čas do', text: '14:30' },
       { label: 'Areál', text: 'Na Vidouli' },
     ]);
   });

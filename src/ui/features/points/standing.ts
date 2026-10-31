@@ -10,10 +10,9 @@ import {
   type IssueSlot,
   type LateFacts,
 } from '@/domain/calendar';
-import { formatDayMonth, formatTime, schoolYear, weekdayName } from '@/domain/cs';
+import { formatClock, formatClose, formatDayMonth, schoolYear, weekdayName } from '@/domain/cs';
 import type { PointKind } from '@/domain/report';
 import {
-  addDays,
   compareDates,
   instantToWallClock,
   parseIsoDate,
@@ -70,9 +69,6 @@ export type Standing =
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** 00.00 written as the end of the day before. */
-const MIDNIGHT_TEXT = '24.00';
-
 /**
  * The latest porada that is not skipped, whose deadline has passed and whose meeting is today or
  * later; its meeting date.
@@ -91,7 +87,7 @@ function closedPorada(slots: readonly IssueSlot[], today: CalDate, now: Date): C
  * The line of a report on an event that ends after the porada's deadline, worked out as the submit
  * does: `handInMonday` over the same slots with the report's facts. Null when the report is not
  * late for the porada it would reach, so the plain line stands. `reportCloses` reads the slot's
- * meeting date for both the last-day check and the 00.00 cap.
+ * meeting date for both the last-day check and the 00:00 cap.
  */
 function lateStanding(
   slots: readonly IssueSlot[],
@@ -162,15 +158,10 @@ export function standingOf(
 /** The line as words, and whether it is the last 24 hours (the accent). */
 export function standingText(standing: Standing): { text: string; urgent: boolean } {
   if (standing.kind === 'late') {
-    const { date, time } = instantToWallClock(standing.closesAt);
-    // The cap is 00.00 of the meeting day; „do 2. 11. v 0.00“ would read as „by Monday“.
-    const midnight = time.hour === 0 && time.minute === 0;
+    // The cap is 00:00 of the meeting day; „do 2. 11. v 0:00“ would read as „by Monday“.
+    const { date, time } = formatClose(standing.closesAt);
     return {
-      text: points.standing.late(
-        formatDayMonth(midnight ? addDays(date, -1) : date),
-        midnight ? MIDNIGHT_TEXT : formatTime(time),
-        formatDayMonth(standing.meeting),
-      ),
+      text: points.standing.late(formatDayMonth(date), time, formatDayMonth(standing.meeting)),
       urgent: standing.urgent,
     };
   }
@@ -189,7 +180,7 @@ export function standingText(standing: Standing): { text: string; urgent: boolea
       formatDayMonth(standing.meeting),
       weekdayName(date),
       formatDayMonth(date),
-      formatTime(time),
+      formatClock(time),
     ),
     urgent: standing.urgent,
   };

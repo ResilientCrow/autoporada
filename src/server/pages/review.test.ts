@@ -184,7 +184,7 @@ describe('reviewPointPage', () => {
       facts: {
         eventDate: '14. ledna 2027',
         endDate: null,
-        timeFrom: '7.00',
+        timeFrom: '7:00',
         timeTo: null,
         campus: 'radlice',
         place: 'v učebně S206',

@@ -49,10 +49,11 @@ in v1 unless the [plan of record](plan.md) changes first.
   deadline is still ahead, and the editor says which one.
 - A report on an event that ends after its porada's deadline but before the
   meeting day is a late report: it is due two hours after the event ends (an
-  event with no end time ends at 20.00), but never after 00.00 of the meeting
-  day, and it goes to that porada. The editor and the detail say „Zprávu
-  odevzdejte do …; půjde na poradu …“. A report is owed from the end of its
-  akce, so it can be started on the akce's last evening.
+  event with no end time ends at 20:00), but never after midnight before the
+  meeting day (printed as 23:59 of the day before), and it goes to that
+  porada. The editor and the detail say „Zprávu odevzdejte do …; půjde na
+  poradu …“. A report is owed from the end of its akce, so it can be started
+  on the akce's last evening.
 
 ### Reviewing
 
@@ -68,24 +69,24 @@ in v1 unless the [plan of record](plan.md) changes first.
   point's timeline („Původní znění“).
 - E-mail notifications to authors (a point returned, approved or rejected; none
   when the author decided their own point; none for akce decisions) and a
-  digest to reviewers and the headmaster twice a working day, at 7.00 and
-  15.00, with counts only (items to review, access requests).
+  digest to reviewers and the headmaster twice a working day, at 7:00 and
+  15:00, with counts only (items to review, access requests).
 
 ### Weekly issue
 
 - One issue (porada) per Monday slot. The deadline counts back from the
-  meeting date: by default two days before, at 20.00, which is Saturday 20.00
+  meeting date: by default two days before, at 20:00, which is Saturday 20:00
   for a Monday meeting. Submissions after the deadline go to the next porada,
   except the late reports above.
 - Settings (`/nastaveni`, headmaster): the deadline (1 to 4 days before the
-  meeting, 8.00 to 22.00 on a quarter hour), the two deadline reminders on or
+  meeting, 8:00 to 22:00 on a quarter hour), the two deadline reminders on or
   off, and the heading and intro of Příloha 1. The form shows its effect before
   saving. A deadline already shown to an author never moves: saving freezes the
   porady shown so far with the old rule and applies the new one to those nobody
   has seen, and never to a deadline set by hand.
-- Deadline reminders by e-mail: two days before the deadline at 13.00 to
+- Deadline reminders by e-mail: two days before the deadline at 13:00 to
   staff who handed in something this school year (switched off in the
-  profile), and on its day at 12.00 to authors with a draft or returned point.
+  profile), and on its day at 12:00 to authors with a draft or returned point.
   The headmaster can switch either reminder off for everyone. Saturday's
   reminder leaves out late reports, which have their own mails: one when the
   akce ends (with the exact deadline) and one an hour before it, to the author
@@ -138,6 +139,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   skipped in the same step or the move is refused, so meeting dates and
   deadlines keep their order. Přehled shows a moved porada, and submitters get
   one mail when a move brings the deadline earlier.
+- Times: screens and mails write „23:59“ (a colon, no leading zero); the
+  document keeps the template's „7.00“.
 
 ### Operations
 

@@ -25,7 +25,7 @@ const world = setupWorld();
 const points = pointFixtures(world);
 const late = lateReportFixtures(world);
 
-/** Monday 2 November 2026: the deadline is Saturday 31 October 20.00 Prague, 19.00Z. */
+/** Monday 2 November 2026: the deadline is Saturday 31 October 20:00 Prague, 19:00Z. */
 const MONDAY = calDate(2026, 11, 2);
 const KEY_DAY = toIsoDate(MONDAY);
 const DEADLINE = deadline(MONDAY, DEFAULT_DEADLINE);
@@ -294,7 +294,7 @@ describe('the mail that goes out', () => {
 });
 
 describe('the late reports of the porada (ADR 0035)', () => {
-  // A report on Sunday 1 November ending at 21.00 closes at 23.00 Prague (22.00Z), after the deadline.
+  // A report on Sunday 1 November ending at 21:00 closes at 23:00 Prague (22:00Z), after the deadline.
   const LAST_CLOSE = new Date('2026-11-01T22:00:00Z');
   const SUNDAY = { day: '2026-11-01', timeTo: '21:00' };
   const lateKey = (user: UserRecord, day = KEY_DAY) => `headmaster.late-summary:${user.id}:${day}`;
@@ -330,7 +330,7 @@ describe('the late reports of the porada (ADR 0035)', () => {
     const { outcome, text } = await deliver(head, 'headmaster.summary');
     expect(outcome).toMatchObject({ code: 'sent' });
     expect(text).toContain('Pozdní zprávy, které ještě chybí: 2.');
-    expect(text).toContain('23.00');
+    expect(text).toContain('23:00');
   });
 
   it('leaves the line out when no report is late', async () => {

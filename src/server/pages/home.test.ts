@@ -186,8 +186,8 @@ describe('homePage', () => {
       window('2026-11-09', [{ ...row('2026-11-16', 'open', 2), meetingDate: '2026-11-18' }]);
       const moved = (await stripOfHome())?.[1];
       expect(moved).toMatchObject({ monday: '2026-11-16', label: '18. 11. 2026', version: 2 });
-      // The row’s deadline, 8 November 2026 at 17.00 UTC, is Sunday 18.00 in Prague.
-      expect(moved?.held).toEqual({ weekday: 'neděle', date: '8.\u00a011.', time: '18.00' });
+      // The row’s deadline, 8 November 2026 at 17:00 UTC, is Sunday 18:00 in Prague.
+      expect(moved?.held).toEqual({ weekday: 'neděle', date: '8.\u00a011.', time: '18:00' });
     });
 
     it('follows a submit Monday across the year end', async () => {

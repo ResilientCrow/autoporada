@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import type { UserPrincipal } from '@/application/ports';
 import { listMyPoints, queuePoints } from '@/application/use-cases';
 import type { issuesWindowOutput } from '@/contracts';
-import { formatDayMonth, formatNumericDate, formatTime, weekdayName } from '@/domain/cs';
+import { formatDayMonth, formatNumericDate, formatClock, weekdayName } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus, PointState } from '@/domain/review';
 import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
@@ -59,7 +59,7 @@ type HomePageModel =
 /** Where a moved porada is held and when it closes, written out. */
 function held(row: { readonly deadlineAt: string }): NonNullable<MeetingDay['held']> {
   const { date, time } = instantToWallClock(new Date(row.deadlineAt));
-  return { weekday: weekdayName(date), date: formatDayMonth(date), time: formatTime(time) };
+  return { weekday: weekdayName(date), date: formatDayMonth(date), time: formatClock(time) };
 }
 
 /** The Mondays from the first one whose deadline is ahead on (a skipped one stays, to be undone), each with its row's status and version or the untouched defaults. */

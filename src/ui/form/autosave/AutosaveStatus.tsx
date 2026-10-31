@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { formatTime } from '@/domain/cs';
+import { formatClock } from '@/domain/cs';
 import type { WallTime } from '@/domain/time';
 import { autosave } from '@/ui/copy';
 import { Button, Notice } from '@/ui/kit';
@@ -14,7 +14,7 @@ function lineOf(phase: Phase, savedAt: WallTime | null): string {
     case 'saving':
       return autosave.saving;
     case 'saved':
-      return savedAt === null ? '' : autosave.saved(formatTime(savedAt));
+      return savedAt === null ? '' : autosave.saved(formatClock(savedAt));
     case 'dirty':
     case 'failed':
     case 'conflict':

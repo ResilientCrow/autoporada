@@ -87,7 +87,7 @@ describe('settingsPage', () => {
     expect((await settingsPage())?.effect).toEqual({
       keep: '9. 11. 2026',
       day: 'sobota',
-      time: '20.00',
+      time: '20:00',
       from: '16. 11. 2026',
     });
   });
@@ -108,7 +108,7 @@ describe('settingsPage', () => {
       ],
     });
     const { effect } = (await settingsPage())!;
-    expect([effect.day, effect.time]).toEqual(['pátek', '18.30']);
+    expect([effect.day, effect.time]).toEqual(['pátek', '18:30']);
   });
 
   it('labels a moved porada by its meeting date, not by its Monday', async () => {

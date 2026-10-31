@@ -1,25 +1,19 @@
 import {
+  formatClock,
+  formatClose,
   formatDayMonth,
   formatLongDate,
-  formatTime,
   typographizeText,
   weekdayName,
 } from '@/domain/cs';
-import { addDays, instantToWallClock, type CalDate } from '@/domain/time';
+import { instantToWallClock, type CalDate } from '@/domain/time';
 
 import { frame, type Body } from './frame';
 
-/**
- * A close as the mails print it: „1. 11. v 23.59“. A late report's close is capped at 00.00 of the
- * meeting day (ADR 0035), which would read as the meeting day itself; it is printed as the last
- * minute of the day before.
- */
+/** A close as the mails print it: „1. 11. v 23:59“ (`formatClose`: a 00:00 cap is the day before). */
 function closeText(due: Date): string {
-  const { date, time } = instantToWallClock(due);
-  const midnight = time.hour === 0 && time.minute === 0;
-  const day = midnight ? addDays(date, -1) : date;
-  const clock = midnight ? '23.59' : formatTime(time);
-  return `${formatDayMonth(day)} v\u00A0${clock}`;
+  const { date, time } = formatClose(due);
+  return `${formatDayMonth(date)} v\u00A0${time}`;
 }
 
 /**
@@ -246,7 +240,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       subject: `Autoporada: porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}`,
       body: {
         paragraphs: [
-          `porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dřív: ${weekdayName(date)} ${formatDayMonth(date)} v\u00A0${formatTime(time)}.`,
+          `porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dřív: ${weekdayName(date)} ${formatDayMonth(date)} v\u00A0${formatClock(time)}.`,
         ],
         link: '/body',
       },

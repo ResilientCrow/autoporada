@@ -24,7 +24,7 @@ describe('StandingLine', () => {
   it('writes the porada and the deadline in one paragraph', () => {
     const html = render(input('2027-03-09T10:00:00.000Z', '2027-03-15'));
     expect(html).toContain(
-      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20.00.`,
+      `Zařadíme do porady z${NB}15.${NB}3. Uzávěrka: sobota 13.${NB}3. v${NB}20:00.`,
     );
     expect(html).toMatch(/^<p[ >]/);
     expect(html).not.toContain(cs.points.standing.soon);
@@ -62,7 +62,7 @@ describe('StandingLine', () => {
   });
 
   it('writes the close of a late report and its porada, with the warning in its last 24 hours', () => {
-    // Sunday 1 November 2026, 21.30: the event ended at 21.00, the report is owed until 23.00.
+    // Sunday 1 November 2026, 21:30: the event ended at 21:00, the report is owed until 23:00.
     const report: LateFacts = {
       lastDay: parseIsoDate('2026-11-01'),
       timeTo: parseWallTime('21:00'),
@@ -70,7 +70,7 @@ describe('StandingLine', () => {
     const given = input('2026-11-01T20:30:00.000Z', '2026-11-09');
     const html = render(given, report);
     expect(html).toContain(
-      `Zprávu odevzdejte do 1.${NB}11. v${NB}23.00; půjde na poradu 2.${NB}11.`,
+      `Zprávu odevzdejte do 1.${NB}11. v${NB}23:00; půjde na poradu 2.${NB}11.`,
     );
     expect(html).not.toContain('už proběhla');
     expect(html).toContain(cs.points.standing.soon);

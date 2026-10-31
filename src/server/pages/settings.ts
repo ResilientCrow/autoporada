@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { readSettings } from '@/application/use-cases';
 import { toDeadlineRule, type settingsReadOutput } from '@/contracts';
 import { deadline, ruleFrom } from '@/domain/calendar';
-import { formatNumericDate, formatTime, weekdayName } from '@/domain/cs';
+import { formatNumericDate, formatClock, weekdayName } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import { emptyRichDoc, parseRichDoc, type RichDoc } from '@/domain/richtext';
 import { instantToWallClock, parseIsoDate } from '@/domain/time';
@@ -19,7 +19,7 @@ import { getViewer, requestId } from './viewer';
 interface DeadlineEffect {
   /** The porada people are shown now, by its meeting date, „9. 11. 2026“. */
   readonly keep: string;
-  /** The weekday and time its deadline stays at, „sobota“ and „20.00“. */
+  /** The weekday and time its deadline stays at, „sobota“ and „20:00“. */
   readonly day: string;
   readonly time: string;
   /** The first porada the new rule applies to. */
@@ -54,7 +54,7 @@ function effectOf(window: NonNullable<Awaited<ReturnType<typeof readWindow>>>): 
   return {
     keep: formatNumericDate(row ? parseIsoDate(row.meetingDate) : keep),
     day: weekdayName(date),
-    time: formatTime(time),
+    time: formatClock(time),
     from: formatNumericDate(ruleFrom(keep)),
   };
 }

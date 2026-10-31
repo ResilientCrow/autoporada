@@ -26,15 +26,15 @@ describe('Timeline', () => {
   });
 
   it('writes the submit with the Prague day and time', () => {
-    // 15.02 UTC on 14 March 2027 is 16.02 in Prague (CET).
+    // 15:02 UTC on 14 March 2027 is 16:02 in Prague (CET).
     expect(lines(render([entry({ event: 'submit' })]))).toEqual([
-      `Odesláno ke kontrole 14.${NB}3. v${NB}16.02`,
+      `Odesláno ke kontrole 14.${NB}3. v${NB}16:02`,
     ]);
   });
 
   it('uses summer time after the change', () => {
     const summer = entry({ event: 'submit', createdAt: '2027-06-01T07:05:00.000Z' });
-    expect(lines(render([summer]))).toEqual([`Odesláno ke kontrole 1.${NB}6. v${NB}9.05`]);
+    expect(lines(render([summer]))).toEqual([`Odesláno ke kontrole 1.${NB}6. v${NB}9:05`]);
   });
 
   it.each([
@@ -74,7 +74,7 @@ describe('Timeline', () => {
     expect(lines(html)).toEqual([
       'Schváleno',
       `Vráceno k${NB}úpravě: Doplňte název.`,
-      `Odesláno ke kontrole 14.${NB}3. v${NB}16.02`,
+      `Odesláno ke kontrole 14.${NB}3. v${NB}16:02`,
     ]);
     expect(html).toMatch(/<ol[ >]/);
   });
