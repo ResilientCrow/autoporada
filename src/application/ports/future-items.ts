@@ -196,4 +196,13 @@ export interface FutureItemRepo {
    * scope, in the order of `forIssue`.
    */
   waitingFor(meetingDate: CalDate): Promise<readonly FutureItemRecord[]>;
+  /**
+   * The approved akce that expect a report nobody has started (`reportState` none or prompted, no
+   * report point) and whose last day is from `from` to `to`, both included: the preflight's late
+   * reports (ADR 0035). Within the read scope, in the order of `forIssue`.
+   */
+  awaitingReport(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly FutureItemRecord[]>;
 }

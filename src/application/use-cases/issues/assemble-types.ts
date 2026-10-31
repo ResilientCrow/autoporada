@@ -4,6 +4,8 @@ import type { IssueStatus, PointState } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
 import type { IssueSnapshot } from '@/snapshot';
 
+import type { LateExpected } from './late-reports';
+
 /** What the assembler left out or refused; the preflight turns each into a block. */
 export type AssemblyProblem =
   | { readonly code: 'report-incomplete'; readonly pointId: string; readonly title: string }
@@ -37,6 +39,8 @@ export interface AssemblyFacts {
   };
   /** Submitted akce and jednání that fall in the meetings or events window. */
   readonly akceWaiting: readonly { readonly id: string; readonly title: string }[];
+  /** Late reports (ADR 0035) the porada still waits for, within the read scope. */
+  readonly lateExpected: readonly LateExpected[];
   readonly dropped: readonly DroppedRef[];
   readonly annex1Entries: number;
   readonly newEntries: number;

@@ -9,6 +9,7 @@ export type FindingCode =
   | 'points-waiting'
   | 'points-returned'
   | 'akce-waiting'
+  | 'late-reports-expected'
   | 'proposal-dropped'
   | 'deadline-ahead'
   | 'source-not-generated'
@@ -23,7 +24,14 @@ export interface Finding {
   readonly code: FindingCode;
   readonly level: 'block' | 'warn' | 'info';
   /** What to look at: a point or an akce, named for a link. */
-  readonly refs?: readonly { readonly id: string; readonly title: string }[];
+  readonly refs?: readonly {
+    readonly id: string;
+    readonly title: string;
+    /** `late-reports-expected`: when the report closes. */
+    readonly due?: Date;
+    /** `late-reports-expected`: whether `id` is an akce or a report draft. */
+    readonly of?: 'akce' | 'point';
+  }[];
   /** `snapshot-invalid`: where the snapshot is wrong. */
   readonly paths?: readonly string[];
   /** `registry-new`: how many entries will be marked NOVÉ. */
@@ -33,7 +41,6 @@ export interface Finding {
 /**
  * What the headmaster should know before the document is generated (design §11), in the order
  * the screen shows it. Pure; it logs nothing and carries ids, titles and counts only.
- * TODO(m9-verify): `late-reports-expected` joins when the late-report read of row 41 lands.
  */
 export function preflight(
   facts: AssemblyFacts,
@@ -63,6 +70,13 @@ export function preflight(
   if (returned.length > 0) add({ code: 'points-returned', level: 'warn', ...refs(returned) });
   if (facts.akceWaiting.length > 0) {
     add({ code: 'akce-waiting', level: 'warn', ...refs(facts.akceWaiting) });
+  }
+  if (facts.lateExpected.length > 0) {
+    add({
+      code: 'late-reports-expected',
+      level: 'warn',
+      refs: facts.lateExpected.map(({ id, of, title, due }) => ({ id, of, title, due })),
+    });
   }
   if (facts.dropped.length > 0)
     add({ code: 'proposal-dropped', level: 'warn', ...refs(facts.dropped) });

@@ -154,7 +154,10 @@ const after = (before: FutureCursor | undefined): SQL | undefined =>
 export function createFutureItemRepo(
   db: TxDatabase,
   ctx: TxContext,
-): Omit<FutureItemRepo, 'forIssue' | 'waitingFor' | 'reportsEnding' | 'reportEnding'> {
+): Omit<
+  FutureItemRepo,
+  'forIssue' | 'waitingFor' | 'awaitingReport' | 'reportsEnding' | 'reportEnding'
+> {
   const { principal, now } = ctx;
   const byId = (id: string, where: SQL | undefined) =>
     db

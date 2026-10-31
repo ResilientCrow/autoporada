@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import type { FutureItemRepo, TxContext } from '@/application/ports';
 import { toIsoDate, type CalDate } from '@/domain/time';
@@ -14,7 +14,7 @@ const lastDay = sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`;
 export function createFutureIssueReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<FutureItemRepo, 'forIssue' | 'waitingFor'> {
+): Pick<FutureItemRepo, 'forIssue' | 'waitingFor' | 'awaitingReport'> {
   const reaching = (state: 'approved' | 'submitted', meetingDate: CalDate) =>
     db
       .select(ITEM_ROW)
@@ -33,6 +33,24 @@ export function createFutureIssueReads(
     },
     async waitingFor(meetingDate) {
       return (await reaching('submitted', meetingDate)).map(toRecord);
+    },
+    async awaitingReport({ from, to }) {
+      const rows = await db
+        .select(ITEM_ROW)
+        .from(futureItems)
+        .where(
+          and(
+            visibleFutureItems(ctx),
+            eq(futureItems.state, 'approved'),
+            eq(futureItems.expectsReport, true),
+            inArray(futureItems.reportState, ['none', 'prompted']),
+            isNull(futureItems.reportPointId),
+            gte(lastDay, toIsoDate(from)),
+            lte(lastDay, toIsoDate(to)),
+          ),
+        )
+        .orderBy(asc(futureItems.startDate), asc(futureItems.id));
+      return rows.map(toRecord);
     },
   };
 }

@@ -28,6 +28,7 @@ const finding = z.strictObject({
     'points-waiting',
     'points-returned',
     'akce-waiting',
+    'late-reports-expected',
     'proposal-dropped',
     'deadline-ahead',
     'source-not-generated',
@@ -38,7 +39,18 @@ const finding = z.strictObject({
     'meeting-moved',
   ]),
   level: z.enum(['block', 'warn', 'info']),
-  refs: z.array(z.strictObject({ id: z.string(), title: z.string() })).optional(),
+  refs: z
+    .array(
+      z.strictObject({
+        id: z.string(),
+        title: z.string(),
+        /** `late-reports-expected`: when the report closes. */
+        due: z.iso.datetime().optional(),
+        /** `late-reports-expected`: an akce or a report draft. */
+        of: z.enum(['akce', 'point']).optional(),
+      }),
+    )
+    .optional(),
   paths: z.array(z.string()).optional(),
   count: z.int().min(0).optional(),
 });

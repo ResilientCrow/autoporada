@@ -243,4 +243,13 @@ export interface PointRepo {
   ): Promise<readonly PointRecord[]>;
   /** What waits for that issue, within the read scope; each list in the order of `eligibleFor`. */
   waitingFor(monday: CalDate, meetingDate: CalDate): Promise<WaitingPoints>;
+  /**
+   * The report points still with their author (`draft` or `returned`) about an event that has a
+   * date and whose last day is from `from` to `to`, both included: the preflight's late reports
+   * (ADR 0035). Within the read scope, in the order of `eligibleFor`.
+   */
+  draftReports(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly PointRecord[]>;
 }

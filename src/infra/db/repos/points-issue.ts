@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, lte, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, lt, lte, ne, or, sql } from 'drizzle-orm';
 
 import type { PointRef, PointRepo, TxContext } from '@/application/ports';
 import { toIsoDate } from '@/domain/time';
@@ -23,7 +23,7 @@ const HANDED_IN_FIRST = [asc(points.submittedAt), asc(points.id)];
 export function createPointIssueReads(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'eligibleFor' | 'waitingFor'> {
+): Pick<PointRepo, 'eligibleFor' | 'waitingFor' | 'draftReports'> {
   return {
     async eligibleFor(monday, meetingDate, options) {
       const query = db
@@ -66,6 +66,23 @@ export function createPointIssueReads(
           .filter((row) => row.state === state)
           .map(({ id, kind, title }) => ({ id, kind, title }));
       return { submitted: refs('submitted'), returned: refs('returned'), later: refs('approved') };
+    },
+    async draftReports({ from, to }) {
+      const rows = await db
+        .select(POINT_ROW)
+        .from(points)
+        .where(
+          and(
+            visiblePoints(ctx),
+            eq(points.kind, 'report'),
+            inArray(points.state, ['draft', 'returned']),
+            isNotNull(points.eventDate),
+            gte(lastDay, toIsoDate(from)),
+            lte(lastDay, toIsoDate(to)),
+          ),
+        )
+        .orderBy(asc(points.id));
+      return rows.map(toRecord);
     },
   };
 }

@@ -11,6 +11,7 @@ import { assembleOutline } from './assemble-outline';
 import { assembleRegistry } from './assemble-registry';
 import { assembleReports } from './assemble-reports';
 import type { AssemblyResult } from './assemble-types';
+import { lateReportsExpected } from './late-reports';
 import { loadTexts } from './outline-store';
 
 /** The id a Monday without a row gets in a preview; no stored row has it. */
@@ -49,6 +50,10 @@ export async function assembleIssueSnapshot(
   const future = await tx.futureItems.forIssue(meeting);
   const waiting = await tx.points.waitingFor(monday, meeting);
   const waitingAkce = await tx.futureItems.waitingFor(meeting);
+  const lateExpected = await lateReportsExpected(tx, {
+    meetingDate: meeting,
+    deadlineAt: issue.deadlineAt,
+  });
   const { reports, problems } = assembleReports(points);
 
   const candidate = {
@@ -97,6 +102,7 @@ export async function assembleIssueSnapshot(
       akceWaiting: waitingAkce
         .filter((i) => inAgendaWindow(i, meeting))
         .map((i) => ({ id: i.id, title: singleLine(i.content.title) })),
+      lateExpected,
       dropped: outline.dropped,
       annex1Entries: registry.annex1Entries,
       newEntries: registry.newEntries,

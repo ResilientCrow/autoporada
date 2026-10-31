@@ -290,5 +290,18 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, false);
       return reaching('submitted', meetingDate);
     },
+    async awaitingReport({ from, to }) {
+      guard(tx, false);
+      return reaching('approved', from).filter((item) => {
+        const last = item.content.endDate ?? item.content.startDate;
+        return (
+          item.content.expectsReport &&
+          (item.reportState === 'none' || item.reportState === 'prompted') &&
+          item.reportPointId === null &&
+          last !== null &&
+          compareDates(last, to) <= 0
+        );
+      });
+    },
   };
 }

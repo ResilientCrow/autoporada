@@ -372,6 +372,23 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         )
         .map(record);
     },
+    async draftReports({ from, to }) {
+      guard(tx, false);
+      return [...points.values()]
+        .filter((p) => {
+          const last = lastDay(p);
+          return (
+            visible(p) &&
+            p.kind === 'report' &&
+            (p.state === 'draft' || p.state === 'returned') &&
+            last !== null &&
+            compareDates(last, from) >= 0 &&
+            compareDates(last, to) <= 0
+          );
+        })
+        .sort((a, b) => (a.id < b.id ? -1 : 1))
+        .map(record);
+    },
     async waitingFor(monday, meetingDate) {
       guard(tx, false);
       const due = handedIn().filter(

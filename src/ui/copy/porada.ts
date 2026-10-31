@@ -93,6 +93,8 @@ export const porada = {
       'points-waiting': 'Body čekají na kontrolu a\u00a0v\u00a0dokumentu zatím nejsou:',
       'points-returned': 'Body jsou vrácené autorům a\u00a0v\u00a0dokumentu zatím nejsou:',
       'akce-waiting': 'Akce čekají na kontrolu a\u00a0v\u00a0dokumentu zatím nejsou:',
+      'late-reports-expected':
+        'Zprávy z\u00a0již skončených akcí se ještě mohou odevzdat po uzávěrce a\u00a0v\u00a0dokumentu zatím nejsou:',
       'proposal-dropped':
         'Návrhy zařazené v\u00a0pokynech už nejsou schválené, a\u00a0proto se z\u00a0dokumentu vynechaly:',
       'deadline-ahead': 'Uzávěrka ještě neproběhla, body mohou ještě přibýt.',
@@ -104,6 +106,8 @@ export const porada = {
         'Ohlasy v\u00a0médiích i\u00a0partneři jsou prázdní, v\u00a0dokumentu nebudou.',
       'meeting-moved': 'Porada se nekoná v\u00a0pondělí, ale v\u00a0jiný den.',
     },
+    /** `late-reports-expected`: when the report closes, after the title. */
+    due: (when: string) => ` (do\u00a0${when})`,
     /** `registry-new`: how many entries the document marks NOVÉ. */
     newEntries: (n: number) => `Označeno NOVÉ bude ${countWord(n, NAME)}.`,
   },

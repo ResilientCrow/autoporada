@@ -18,7 +18,9 @@ const problemWire = (problem: AssemblyProblem) =>
 
 const findingWire = ({ refs, paths, ...finding }: Finding) => ({
   ...finding,
-  ...(refs && { refs: refs.map((r) => ({ ...r })) }),
+  ...(refs && {
+    refs: refs.map(({ due, ...r }) => ({ ...r, ...(due && { due: due.toISOString() }) })),
+  }),
   ...(paths && { paths: [...paths] }),
 });
 
