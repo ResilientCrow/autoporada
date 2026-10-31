@@ -23,4 +23,5 @@ export {
 export { savePointType } from './point-types';
 export { setReminders } from './profile';
 export { decidePoint, reviewEditPoint } from './review';
+export { saveSettings } from './settings';
 export { changeUserAccess } from './users';

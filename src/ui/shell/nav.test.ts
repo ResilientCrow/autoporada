@@ -40,7 +40,7 @@ describe('navFor', () => {
       '/akce',
       '/kontrola',
       '/uzivatele',
-      '/nastaveni/typy-bodu',
+      '/nastaveni',
       '/profil',
     ]);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/uzivatele');
@@ -48,9 +48,9 @@ describe('navFor', () => {
     expect(navFor(actor('pending')).map((i) => i.href)).not.toContain('/uzivatele');
   });
 
-  it('shows „Typy bodů“ to a headmaster only', () => {
-    const entry = (who: Actor) => navFor(who).find((i) => i.href === '/nastaveni/typy-bodu');
-    expect(entry(actor('headmaster'))?.label).toBe('Typy bodů');
+  it('shows „Nastavení“ to a headmaster only', () => {
+    const entry = (who: Actor) => navFor(who).find((i) => i.href === '/nastaveni');
+    expect(entry(actor('headmaster'))?.label).toBe('Nastavení');
     for (const who of [actor('reviewer'), actor('submitter'), actor('pending')]) {
       expect(entry(who)).toBeUndefined();
     }

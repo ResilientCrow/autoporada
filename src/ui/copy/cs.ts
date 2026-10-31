@@ -12,6 +12,7 @@ import { points } from './points';
 import { profile } from './profile';
 import { privacy } from './privacy';
 import { review } from './review';
+import { settings } from './settings';
 import { shell } from './shell';
 import { signIn } from './sign-in';
 import { status } from './status';
@@ -37,6 +38,7 @@ export const cs = {
   profile,
   future,
   pointTypes,
+  settings,
   review,
   autosave,
   people,

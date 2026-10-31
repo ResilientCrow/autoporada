@@ -15,7 +15,7 @@ export default async function PointTypesPage() {
   const model = await pointTypesPage();
   if (model === null) notFound();
   return (
-    <Shell viewer={viewer} current="/nastaveni/typy-bodu">
+    <Shell viewer={viewer} current="/nastaveni">
       <PointTypes view={model} savePointType={savePointType} />
     </Shell>
   );

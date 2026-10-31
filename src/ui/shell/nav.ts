@@ -17,11 +17,7 @@ export const NAV: readonly NavItem[] = [
   { href: '/kontrola', label: cs.nav.review, check: { action: 'review.queue' } },
   { href: '/pristup', label: cs.nav.access, check: { action: 'access.request' } },
   { href: '/uzivatele', label: cs.nav.users, check: { action: 'users.view' } },
-  {
-    href: '/nastaveni/typy-bodu',
-    label: cs.nav.pointTypes,
-    check: { action: 'pointTypes.manage' },
-  },
+  { href: '/nastaveni', label: cs.nav.settings, check: { action: 'settings.manage' } },
   { href: '/profil', label: cs.nav.profile, check: { action: 'profile.manage' } },
 ];
 

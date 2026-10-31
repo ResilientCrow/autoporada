@@ -18,6 +18,9 @@ export function dueMonday({
   return compareDates(earliest, handIn) >= 0 ? earliest : handIn;
 }
 
+/** The Monday a new rule applies from: the one after `keep`, the Monday a hand-in goes to now. */
+export const ruleFrom = (keep: CalDate): CalDate => addDays(keep, 7);
+
 const sameRule = (a: DeadlineRule, b: DeadlineRule) =>
   a.dayOffset === b.dayOffset && a.time.hour === b.time.hour && a.time.minute === b.time.minute;
 
@@ -41,7 +44,7 @@ export function deadlineChange(
     .filter((slot) => !slot.stored)
     .map((slot) => slot.monday)
     .filter((monday) => compareDates(monday, week) >= 0 && compareDates(monday, keep) <= 0);
-  return { keep, from: addDays(keep, 7), freeze };
+  return { keep, from: ruleFrom(keep), freeze };
 }
 
 /**

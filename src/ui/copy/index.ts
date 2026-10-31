@@ -11,6 +11,7 @@ export { pointTypes } from './pointTypes';
 export { points } from './points';
 export { profile } from './profile';
 export { review } from './review';
+export { settings } from './settings';
 export { status } from './status';
 export { users } from './users';
 export type { Block, PrivacyCopy, Review, Rich, SummaryItem } from './privacy-types';
