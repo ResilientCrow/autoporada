@@ -135,6 +135,38 @@ describe('loadSubject', () => {
     });
   });
 
+  describe('the reminders, after the headmaster switched a kind off', () => {
+    const SOFT = new Date('2026-10-22T11:00:00Z');
+    const HARD = new Date('2026-10-24T10:00:00Z');
+    const switches = (value: { soft: boolean; hard: boolean }) =>
+      world.seed.setting('reminders', value);
+
+    it('drops a soft mail queued before the switch, and keeps the hard one', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      world.clock.set(SOFT);
+      expect(await load('reminder.soft', user.id)).not.toBeNull();
+      await switches({ soft: false, hard: true });
+      expect(await load('reminder.soft', user.id)).toBeNull();
+      world.clock.set(HARD);
+      expect(await load('reminder.hard', user.id)).not.toBeNull();
+    });
+
+    it('drops a hard mail queued before the switch, and keeps the soft one', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      world.clock.set(new Date('2026-10-20T08:00:00Z'));
+      await start(author);
+      world.clock.set(HARD);
+      expect(await load('reminder.hard', author.id)).toEqual({
+        monday: calDate(2026, 10, 26),
+        hasWork: true,
+      });
+      await switches({ soft: true, hard: false });
+      expect(await load('reminder.hard', author.id)).toBeNull();
+      world.clock.set(SOFT);
+      expect(await load('reminder.soft', author.id)).not.toBeNull();
+    });
+  });
+
   describe('the reviewer digest, counted from the last one sent when the mail goes', () => {
     const NOW = new Date('2026-10-26T14:00:00Z');
     const HOUR = 3_600_000;

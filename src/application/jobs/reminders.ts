@@ -1,3 +1,4 @@
+import { readSettingValue } from '@/application/core';
 import {
   isMember,
   mailJob,
@@ -40,6 +41,7 @@ async function authorsWaiting(tx: Tx, monday: CalDate, now: Date): Promise<reado
  * it is for and has not been mailed (design section 13, D7). It reconciles to the clock and the
  * data, so a rerun enqueues nothing new: the ledger key is per Monday and person, and the start is
  * the slot plus a fixed offset from the recipient's id, so recipients are spread over half an hour.
+ * A kind the headmaster switched off (the `reminders` setting) is skipped whole.
  */
 export const deadlineReminders: JobHandler<'reminders.deadline'> = async ({ db, clock }, job) => {
   const enqueued = await db.transaction(
@@ -48,9 +50,10 @@ export const deadlineReminders: JobHandler<'reminders.deadline'> = async ({ db, 
     async (tx) => {
       const { now } = tx.ctx;
       const issue = await reminderIssue(tx, now);
+      const switches = await readSettingValue(tx, 'reminders');
       let count = 0;
       for (const kind of ['soft', 'hard'] as const satisfies readonly ReminderKind[]) {
-        if (!reminderDue(kind, issue.deadlineAt, now)) continue;
+        if (!switches[kind] || !reminderDue(kind, issue.deadlineAt, now)) continue;
         const recipients =
           kind === 'soft'
             ? await activeSubmitters(tx, now)

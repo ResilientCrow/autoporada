@@ -268,6 +268,61 @@ describe('the hard reminder (the deadline day, 12.00 Prague)', () => {
   });
 });
 
+describe('the headmaster’s switches (the reminders setting)', () => {
+  const switches = (value: { soft: boolean; hard: boolean }) =>
+    world.seed.setting('reminders', value);
+  /** One person who gets either kind: they handed in a point and have a draft for the Monday. */
+  async function both() {
+    const user = await submitter();
+    await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
+    await handedIn(user);
+    return user;
+  }
+
+  it('sends both kinds when nothing is stored, and when both are stored on', async () => {
+    const user = await both();
+    await runAt(HARD);
+    await runAt(SOFT);
+    expect(await keys()).toEqual([hard(user), soft(user)].sort());
+  });
+
+  it('sends no soft mail while the soft switch is off, and still sends the hard one', async () => {
+    const user = await both();
+    await switches({ soft: false, hard: true });
+    expect(await runAt(SOFT)).toEqual({ kind: 'done', code: 'none' });
+    expect(await queued()).toEqual([]);
+    expect(await runAt(HARD)).toEqual({ kind: 'done', code: 'reminded' });
+    expect(await keys()).toEqual([hard(user)]);
+  });
+
+  it('sends no hard mail while the hard switch is off, and still sends the soft one', async () => {
+    const user = await both();
+    await switches({ soft: true, hard: false });
+    expect(await runAt(HARD)).toEqual({ kind: 'done', code: 'none' });
+    expect(await runAt(SOFT)).toEqual({ kind: 'done', code: 'reminded' });
+    expect(await keys()).toEqual([soft(user)]);
+  });
+
+  it('sends nothing with both off, and catches up when a switch is turned on inside the slot', async () => {
+    const user = await both();
+    await switches({ soft: false, hard: false });
+    expect(await runAt(SOFT)).toEqual({ kind: 'done', code: 'none' });
+    await world.tx(system('test.seed'), (tx) =>
+      tx.settings.save('reminders', { soft: true, hard: false }, 1),
+    );
+    await runAt(new Date(SOFT.getTime() + HOUR));
+    expect(await keys()).toEqual([soft(user)]);
+  });
+
+  it('keeps the users’ own opt-out apart: a switch on does not mail someone who opted out', async () => {
+    const user = await both();
+    await optOut(user);
+    await switches({ soft: true, hard: true });
+    await runAt(SOFT);
+    expect(await keys()).toEqual([]);
+  });
+});
+
 describe('which Monday, and when nothing is due', () => {
   it('reminds nobody after the deadline, nor for the week after', async () => {
     const user = await submitter();

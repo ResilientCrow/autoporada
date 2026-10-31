@@ -1,4 +1,4 @@
-import { readSlots } from '@/application/core';
+import { readSettingValue, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
 import { handInSlot, REMINDER_DRAFT_DAYS, reminderDue, type ReminderKind } from '@/domain/calendar';
 import { toIsoDate, type CalDate } from '@/domain/time';
@@ -64,7 +64,8 @@ export interface ReminderFacts {
 /**
  * Read again when the mail is about to go: the slot of this kind must still be open for the Monday
  * collected now (a mail held up past its window says something false), and the hard reminder needs
- * the recipient still to have a draft or returned point.
+ * the recipient still to have a draft or returned point. A kind the headmaster switched off after
+ * the mail was queued is dropped too; the user's own opt-out is checked where the mail is queued.
  */
 export async function loadReminder(
   tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
@@ -72,6 +73,7 @@ export async function loadReminder(
   userId: string,
 ): Promise<ReminderFacts | null> {
   const { now } = tx.ctx;
+  if (!(await readSettingValue(tx, 'reminders'))[kind]) return null;
   const issue = await reminderIssue(tx, now);
   if (!reminderDue(kind, issue.deadlineAt, now)) return null;
   const hasWork = kind === 'hard' && (await waitingAuthors(tx, issue.monday, now)).includes(userId);
