@@ -7,8 +7,7 @@ import type { z } from 'zod';
 
 import type { issueTextsOutput } from '@/contracts';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { getViewer, requestId } from './viewer';
@@ -33,7 +32,7 @@ export async function issueTextsPage(datum: string): Promise<IssueTextsPageModel
   if (!viewer || !can(viewer.actor, { action: 'issue.edit' })) return null;
   const read = orNotFound(
     'issues.texts',
-    await runRegistered(getContainer(), readIssueTexts, {
+    await runPage(readIssueTexts, {
       principal: viewer,
       requestId: await requestId(),
       input: { monday: datum },

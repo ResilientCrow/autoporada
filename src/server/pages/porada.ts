@@ -18,7 +18,7 @@ import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } fr
 import { parseIssueSnapshot } from '@/snapshot';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { readWindow, standingFrom, type StandingModel } from './standing';
@@ -45,7 +45,7 @@ const generatedModel = (monday: string, info: z.output<typeof documentInfo> | nu
 async function readWorkspace(viewer: UserPrincipal, monday?: string): Promise<Workspace | null> {
   return orNotFound(
     'issues.workspace',
-    await runRegistered(getContainer(), issueWorkspace, {
+    await runPage(issueWorkspace, {
       principal: viewer,
       requestId: await requestId(),
       input: monday === undefined ? {} : { monday },
@@ -202,7 +202,7 @@ export async function previewPage(datum: string): Promise<PreviewPageModel | nul
   if (read === null || read.slot === null) return null;
   const preview = orNotFound(
     'issues.preview',
-    await runRegistered(getContainer(), issuePreview, {
+    await runPage(issuePreview, {
       principal: viewer,
       requestId: await requestId(),
       input: { monday: read.slot.monday },
@@ -247,7 +247,7 @@ export async function archivePage(): Promise<ArchivePageModel | null> {
   if (!viewer || !can(viewer.actor, { action: 'archive.view' })) return null;
   const read = orNotFound(
     'documents.archive',
-    await runRegistered(getContainer(), documentArchive, {
+    await runPage(documentArchive, {
       principal: viewer,
       requestId: await requestId(),
       input: {},

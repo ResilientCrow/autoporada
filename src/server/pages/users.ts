@@ -3,8 +3,7 @@ import { USER_GROUP_SLUGS, USER_QUERY_MAX, type UserGroup } from '@/contracts';
 import type { z } from 'zod';
 import type { listUsersOutput, pendingAccessOutput } from '@/contracts';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { day } from './dates';
 import { orNotFound } from './not-found';
@@ -51,11 +50,11 @@ export async function usersPage(params: SearchParams): Promise<UsersPageModel | 
   const group = GROUP_OF.get(first(params['skupina']) ?? '') ?? 'all';
   const base = { principal: viewer, requestId: await requestId() };
   const [list, pending] = await Promise.all([
-    runRegistered(getContainer(), listUsers, {
+    runPage(listUsers, {
       ...base,
       input: { ...(q === '' ? {} : { q }), group },
     }).then((result) => orNotFound('users.list', result)),
-    runRegistered(getContainer(), pendingAccess, { ...base, input: {} }).then((result) =>
+    runPage(pendingAccess, { ...base, input: {} }).then((result) =>
       orNotFound('access.pending', result),
     ),
   ]);

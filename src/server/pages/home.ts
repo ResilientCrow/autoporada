@@ -9,7 +9,7 @@ import type { IssueStatus, PointState } from '@/domain/review';
 import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { myStanding } from './my-access';
 import { orNotFound } from './not-found';
@@ -94,7 +94,7 @@ const NO_POINTS: PointCounts = {
 async function pointCounts(viewer: UserPrincipal): Promise<PointCounts | null> {
   const listed = orNotFound(
     'points.listMine',
-    await runRegistered(getContainer(), listMyPoints, {
+    await runPage(listMyPoints, {
       principal: viewer,
       requestId: await requestId(),
       input: {},
@@ -111,7 +111,7 @@ async function pointCounts(viewer: UserPrincipal): Promise<PointCounts | null> {
 async function waitingCount(viewer: UserPrincipal): Promise<number | null> {
   const queue = orNotFound(
     'points.queue',
-    await runRegistered(getContainer(), queuePoints, {
+    await runPage(queuePoints, {
       principal: viewer,
       requestId: await requestId(),
       input: {},

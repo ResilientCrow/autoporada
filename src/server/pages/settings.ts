@@ -8,8 +8,7 @@ import { can } from '@/domain/policy';
 import { emptyRichDoc, parseRichDoc, type RichDoc } from '@/domain/richtext';
 import { instantToWallClock, parseIsoDate } from '@/domain/time';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { readWindow } from './standing';
@@ -65,7 +64,7 @@ export async function settingsPage(): Promise<SettingsPageModel | null> {
   if (!viewer || !can(viewer.actor, { action: 'settings.manage' })) return null;
   const read = orNotFound(
     'settings.read',
-    await runRegistered(getContainer(), readSettings, {
+    await runPage(readSettings, {
       principal: viewer,
       requestId: await requestId(),
       input: {},

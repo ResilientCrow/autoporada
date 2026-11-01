@@ -14,7 +14,6 @@ export const notFound = {
 
 export const appError = {
   title: 'Něco se nepovedlo',
-  text: 'Stránku se nepodařilo zobrazit. Zkuste to prosím znovu; pokud potíže trvají, obraťte se na vedení školy.',
   retry: 'Zkusit znovu',
 } as const;
 

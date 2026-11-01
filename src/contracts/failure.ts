@@ -36,3 +36,9 @@ export function causeFromDigest(digest: string | undefined): FailureCause {
   }
   return 'bug';
 }
+
+/** The cause of an error a boundary was given, which may be any thrown value: a bug unless it is ours. */
+export function causeOfError(error: unknown): FailureCause {
+  if (!(error instanceof Error) || !('digest' in error)) return 'bug';
+  return causeFromDigest(typeof error.digest === 'string' ? error.digest : undefined);
+}

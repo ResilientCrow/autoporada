@@ -7,8 +7,7 @@ import type { z } from 'zod';
 
 import type { outlineItemOutput, outlineReadOutput } from '@/contracts';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { getViewer, requestId } from './viewer';
@@ -30,7 +29,7 @@ export async function outlinePage(datum: string): Promise<OutlinePageModel | nul
   if (!viewer || !can(viewer.actor, { action: 'issue.edit' })) return null;
   const read = orNotFound(
     'outline.read',
-    await runRegistered(getContainer(), readOutline, {
+    await runPage(readOutline, {
       principal: viewer,
       requestId: await requestId(),
       input: { monday: datum },
@@ -87,7 +86,7 @@ async function readContext(datum: string): Promise<EditorContext | null> {
   if (!viewer || !can(viewer.actor, { action: 'issue.edit' })) return null;
   const read = orNotFound(
     'outline.read',
-    await runRegistered(getContainer(), readOutline, {
+    await runPage(readOutline, {
       principal: viewer,
       requestId: await requestId(),
       input: { monday: datum },
@@ -112,7 +111,7 @@ export async function outlineItemPage(
   if (!viewer || context === null) return null;
   const item = orNotFound(
     'outline.item',
-    await runRegistered(getContainer(), readOutlineItem, {
+    await runPage(readOutlineItem, {
       principal: viewer,
       requestId: await requestId(),
       input: { monday: datum, lineageId },

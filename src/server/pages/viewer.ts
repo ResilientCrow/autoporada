@@ -10,7 +10,9 @@ import { safeReturnTo } from '@/domain/identity';
 import { isFreshAuth } from '@/domain/policy';
 
 import { getContainer } from '../container';
-import { runRegistered, sessionTokenFrom } from '../pipeline';
+import { sessionTokenFrom } from '../pipeline';
+import { pageFailureOf } from './page-failure';
+import { guardPage, runPage } from './run-page';
 
 export async function requestId(): Promise<string> {
   return getContainer().requestIdFrom((await headers()).get('x-request-id'));
@@ -23,7 +25,8 @@ export async function requestId(): Promise<string> {
  */
 export const getViewer = cache(async (): Promise<UserPrincipal | null> => {
   const token = sessionTokenFrom((await headers()).get('cookie'));
-  return getContainer().resolvePrincipal(token, await requestId());
+  const id = await requestId();
+  return guardPage('auth.session', id, () => getContainer().resolvePrincipal(token, id));
 });
 
 interface SignedInModel {
@@ -41,12 +44,12 @@ interface SignedInModel {
 const currentSignedIn = cache(async (): Promise<SignedInModel | null> => {
   const viewer = await getViewer();
   if (!viewer) return null;
-  const result = await runRegistered(getContainer(), me, {
+  const result = await runPage(me, {
     principal: viewer,
     requestId: await requestId(),
     input: {},
   });
-  if (!result.ok) throw new Error(`profile.me: ${result.error.code}`);
+  if (!result.ok) throw pageFailureOf(`profile.me: ${result.error.code}`, result.error.code);
   const { displayName, role, remindDeadline } = result.value;
   return {
     displayName,

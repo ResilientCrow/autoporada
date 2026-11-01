@@ -9,7 +9,7 @@ import type { FutureState } from '@/domain/review';
 import { instantToWallClock, type CalDate } from '@/domain/time';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { futureBarOf, type FutureBarModel } from './future-bar';
 import { orNotFound } from './not-found';
@@ -38,7 +38,7 @@ export async function futureListPage(params: SearchParams): Promise<FutureListPa
   const before = first(params['pred']);
   const listed = orNotFound(
     'future.list',
-    await runRegistered(getContainer(), listFuture, {
+    await runPage(listFuture, {
       principal: viewer,
       requestId: await requestId(),
       input: before === undefined ? {} : { before },
@@ -116,7 +116,7 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
   if (!viewer) return null;
   const loaded = orNotFound(
     'future.get',
-    await runRegistered(getContainer(), getFuture, {
+    await runPage(getFuture, {
       principal: viewer,
       requestId: await requestId(),
       input: { id },

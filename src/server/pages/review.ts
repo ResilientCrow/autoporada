@@ -11,7 +11,7 @@ import { REVIEW_DECISIONS, type ReviewDecision } from '@/domain/review';
 import { instantToWallClock, type CalDate } from '@/domain/time';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
@@ -70,8 +70,8 @@ export async function queuePage(): Promise<QueuePageModel | null> {
   const ask = { principal: viewer, requestId: await requestId(), input: {} };
   // Independent reads behind the same gate: one refusal is the other's.
   const [points, future] = await Promise.all([
-    runRegistered(getContainer(), queuePoints, ask),
-    runRegistered(getContainer(), queueFuture, ask),
+    runPage(queuePoints, ask),
+    runPage(queueFuture, ask),
   ]);
   const queue = orNotFound('points.queue', points);
   const akce = orNotFound('future.queue', future);
@@ -105,7 +105,7 @@ export async function reviewPointPage(id: string): Promise<ReviewPointPageModel 
   if (!viewer || !can(viewer.actor, { action: 'review.queue' })) return null;
   const loaded = orNotFound(
     'points.get',
-    await runRegistered(getContainer(), getPoint, {
+    await runPage(getPoint, {
       principal: viewer,
       requestId: await requestId(),
       input: { id },

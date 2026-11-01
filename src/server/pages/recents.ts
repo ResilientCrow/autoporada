@@ -2,8 +2,7 @@ import type { UserPrincipal } from '@/application/ports';
 import { recentPeopleOf } from '@/application/use-cases';
 import type { RecentPerson } from '@/domain/people';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { requestId } from './viewer';
 
@@ -12,7 +11,7 @@ import { requestId } from './viewer';
  * refusal or failure opens the editor with none.
  */
 export async function recentsOf(viewer: UserPrincipal): Promise<readonly RecentPerson[]> {
-  const found = await runRegistered(getContainer(), recentPeopleOf, {
+  const found = await runPage(recentPeopleOf, {
     principal: viewer,
     requestId: await requestId(),
     input: {},

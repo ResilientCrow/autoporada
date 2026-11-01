@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DatabaseFailure } from '@/application/ports';
+
 import {
   cspNonce,
   galleryPage,
@@ -31,6 +33,7 @@ vi.mock('../pipeline', async () => ({
   ...(await vi.importActual<object>('../pipeline')),
   runRegistered,
 }));
+const logged = vi.hoisted(() => ({ error: vi.fn() }));
 const where = vi.hoisted(() => ({
   environment: 'development',
   now: new Date('2026-10-24T12:00:00Z'),
@@ -39,6 +42,7 @@ vi.mock('../container', () => ({
   getContainer: () => ({
     resolvePrincipal,
     requestIdFrom: () => 'req-1',
+    log: logged,
     environment: where.environment,
     app: { clock: { now: () => where.now } },
   }),
@@ -173,6 +177,7 @@ describe('signed-in pages', () => {
     resolvePrincipal.mockResolvedValue(null);
     runRegistered.mockReset();
     redirect.mockClear();
+    logged.error.mockClear();
   });
 
   it('sends an anonymous visitor to sign in and back, to a safe path only', async () => {
@@ -218,9 +223,38 @@ describe('signed-in pages', () => {
     expect(runRegistered).not.toHaveBeenCalled();
   });
 
-  it('fails loudly when the profile cannot be read', async () => {
+  it('fails loudly when the profile cannot be read, as a bug', async () => {
     resolvePrincipal.mockResolvedValue(principal('pending'));
     runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
-    await expect(optionalSignedIn()).rejects.toThrow('profile.me: unavailable');
+    await expect(optionalSignedIn()).rejects.toMatchObject({
+      message: 'profile.me: unavailable',
+      digest: 'autoporada:bug',
+    });
+  });
+
+  it('reads a busy profile as a timeout', async () => {
+    resolvePrincipal.mockResolvedValue(principal('pending'));
+    runRegistered.mockResolvedValue({ ok: false, error: { code: 'busy' } });
+    await expect(optionalSignedIn()).rejects.toMatchObject({ digest: 'autoporada:timeout' });
+  });
+
+  it('names a lost database when the profile call throws', async () => {
+    resolvePrincipal.mockResolvedValue(principal('pending'));
+    runRegistered.mockRejectedValue(new DatabaseFailure('08006'));
+    await expect(optionalSignedIn()).rejects.toMatchObject({ digest: 'autoporada:database-down' });
+    expect(logged.error).toHaveBeenCalledWith(
+      expect.objectContaining({ reqId: 'req-1', name: 'profile.me', cause: 'database-down' }),
+      'page failed',
+    );
+  });
+
+  it('names a lost database when the session lookup throws', async () => {
+    request.headers = new Headers({ cookie: '__Host-ap_session=tok' });
+    resolvePrincipal.mockRejectedValue(new DatabaseFailure('08006'));
+    await expect(getViewer()).rejects.toMatchObject({ digest: 'autoporada:database-down' });
+    expect(logged.error).toHaveBeenCalledWith(
+      expect.objectContaining({ reqId: 'req-1', name: 'auth.session', cause: 'database-down' }),
+      'page failed',
+    );
   });
 });

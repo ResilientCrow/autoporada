@@ -150,9 +150,9 @@ export default defineConfig([
   {
     // Configuration is read in exactly one place (ADR 0004).
     files: ['src/**/*.{ts,tsx,mts,cts,js,mjs}'],
-    // instrumentation.ts and proxy.ts read only NEXT_RUNTIME / NODE_ENV, constants Next
-    // inlines at build time.
-    ignores: ['src/infra/config/**', 'src/instrumentation.ts', 'src/proxy.ts'],
+    // instrumentation.ts, proxy.ts and the client error page read only NEXT_RUNTIME /
+    // NODE_ENV, constants Next inlines at build time (a client component has no config).
+    ignores: ['src/infra/config/**', 'src/instrumentation.ts', 'src/proxy.ts', 'src/app/error.tsx'],
     rules: {
       'no-restricted-properties': [
         'error',

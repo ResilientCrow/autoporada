@@ -1,6 +1,7 @@
 'use client';
 
-import { appError, pageTitle } from '@/ui/copy';
+import { causeOfError } from '@/contracts';
+import { appError, failures, pageTitle } from '@/ui/copy';
 import { buttonStyles, SlantLabel } from '@/ui/kit';
 import '@/ui/theme';
 
@@ -13,15 +14,26 @@ import '@/ui/theme';
  *
  * No shell (if it threw, it would throw again) and no React Aria: this page
  * has no csp-nonce meta for React Aria's runtime <style> (ADR 0012).
+ *
+ * It names the cause the same way `error.tsx` does (ADR 0044), from the digest of
+ * the error. A failure of the root layout carries Next's own digest, so it is
+ * mostly a bug; one of ours says what broke.
  */
-export default function GlobalError({ retry }: { readonly retry: () => void }) {
+export default function GlobalError({
+  error,
+  retry,
+}: {
+  readonly error: unknown;
+  readonly retry: () => void;
+}) {
+  const cause = causeOfError(error);
   return (
     <html lang="cs">
       <body>
         <title>{pageTitle(appError.title)}</title>
         <main id="obsah" className="frame flex flex-col items-start gap-8 py-8">
           <SlantLabel level={1}>{appError.title}</SlantLabel>
-          <p>{appError.text}</p>
+          <p>{failures[cause]}</p>
           <button type="button" className={buttonStyles('primary')} onClick={() => retry()}>
             {appError.retry}
           </button>

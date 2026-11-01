@@ -23,7 +23,7 @@ import {
 } from '@/domain/time';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { first, type SearchParams } from './params';
@@ -44,7 +44,7 @@ export async function newPointPage(): Promise<NewPointPageModel | null> {
   if (!viewer) return null;
   const listed = orNotFound(
     'pointTypes.list',
-    await runRegistered(getContainer(), listPointTypes, {
+    await runPage(listPointTypes, {
       principal: viewer,
       requestId: await requestId(),
       input: {},
@@ -151,7 +151,7 @@ export async function pointPage(id: string): Promise<PointPageModel | null> {
   if (!viewer) return null;
   const loaded = orNotFound(
     'points.get',
-    await runRegistered(getContainer(), getPoint, {
+    await runPage(getPoint, {
       principal: viewer,
       requestId: await requestId(),
       input: { id },
@@ -225,7 +225,7 @@ export async function myPointsPage(params: SearchParams): Promise<MyPointsPageMo
   const before = first(params['pred']);
   const listed = orNotFound(
     'points.listMine',
-    await runRegistered(getContainer(), listMyPoints, {
+    await runPage(listMyPoints, {
       principal: viewer,
       requestId: await requestId(),
       input: before === undefined ? {} : { before },

@@ -5,8 +5,7 @@ import { issueWindow } from '@/application/use-cases';
 import { toDeadlineRule, type issuesWindowOutput } from '@/contracts';
 import type { DeadlineRule } from '@/domain/calendar';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { requestId } from './viewer';
@@ -27,7 +26,7 @@ export interface StandingModel {
 export async function readWindow(viewer: UserPrincipal): Promise<MeetingWindow | null> {
   return orNotFound(
     'issues.window',
-    await runRegistered(getContainer(), issueWindow, {
+    await runPage(issueWindow, {
       principal: viewer,
       requestId: await requestId(),
       input: {},

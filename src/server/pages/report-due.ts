@@ -6,7 +6,7 @@ import { reportDue } from '@/domain/review';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { requestId } from './viewer';
@@ -37,12 +37,12 @@ export interface ReportDueModel {
 export async function reportDueOf(viewer: UserPrincipal): Promise<ReportDueModel | null> {
   if (!can(viewer.actor, { action: 'future.create' })) return null;
   const [future, listed] = await Promise.all([
-    runRegistered(getContainer(), listFuture, {
+    runPage(listFuture, {
       principal: viewer,
       requestId: await requestId(),
       input: {},
     }),
-    runRegistered(getContainer(), listPointTypes, {
+    runPage(listPointTypes, {
       principal: viewer,
       requestId: await requestId(),
       input: {},

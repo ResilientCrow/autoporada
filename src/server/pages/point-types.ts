@@ -3,8 +3,7 @@ import type { z } from 'zod';
 import { listPointTypes } from '@/application/use-cases';
 import type { listPointTypesOutput } from '@/contracts';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { getViewer, requestId } from './viewer';
@@ -25,7 +24,7 @@ export async function pointTypesPage(): Promise<PointTypesPageModel | null> {
   if (!viewer) return null;
   const listed = orNotFound(
     'pointTypes.list',
-    await runRegistered(getContainer(), listPointTypes, {
+    await runPage(listPointTypes, {
       principal: viewer,
       requestId: await requestId(),
       input: { includeInactive: true },

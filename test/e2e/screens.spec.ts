@@ -187,7 +187,8 @@ test('the error page answers 500 and passes axe', async ({
   await expectAccessible();
   await attachScreenshot('the error page');
   await expectNoReflow();
-  // No skip link here: the global error page has no shell, by design.
+  // The page's own error boundary (error.tsx) answers, inside the root layout with the visitor's
+  // shell; global-error.tsx is left for a failure of the root layout itself (ADR 0044).
   expect(await (await page.request.get('/vzornik?stav=vyjimka')).text()).not.toContain('style="');
   await expectFocusRings();
 });

@@ -7,7 +7,7 @@ import { archiveYears, type ArchiveYears } from '@/domain/registry';
 import { instantToWallClock } from '@/domain/time';
 
 import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
 import { getViewer, requestId } from './viewer';
@@ -24,7 +24,7 @@ export async function registryPage(key?: string): Promise<RegistryPageModel | nu
   if (!viewer) return null;
   const read = orNotFound(
     'registry.read',
-    await runRegistered(getContainer(), readRegistry, {
+    await runPage(readRegistry, {
       principal: viewer,
       requestId: await requestId(),
       input: key === undefined ? {} : { key },

@@ -2,8 +2,7 @@ import { getUser } from '@/application/use-cases';
 import type { z } from 'zod';
 import type { getUserOutput } from '@/contracts';
 
-import { getContainer } from '../container';
-import { runRegistered } from '../pipeline';
+import { runPage } from './run-page';
 
 import { day } from './dates';
 import { orNotFound } from './not-found';
@@ -31,7 +30,7 @@ export async function userPage(id: string): Promise<UserPageModel | null> {
   if (!viewer) return null;
   const loaded = orNotFound(
     'users.get',
-    await runRegistered(getContainer(), getUser, {
+    await runPage(getUser, {
       principal: viewer,
       requestId: await requestId(),
       input: { userId: id },
