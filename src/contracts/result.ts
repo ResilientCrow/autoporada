@@ -1,3 +1,4 @@
+import type { FailureCause } from './failure';
 import type { RuleCode } from './rules';
 
 /** What is wrong with one input field; the form shows the Czech text for it. */
@@ -7,8 +8,9 @@ export type FieldIssueCode = 'required' | 'too-short' | 'too-long' | 'invalid';
 export type FieldIssues = Readonly<Record<string, FieldIssueCode>>;
 
 /**
- * Why an action did not happen. Codes only: no text crosses the wire, and
- * the one free-form value is the request id the user can report.
+ * Why an action did not happen. Codes only: no text crosses the wire, except
+ * `unavailable`'s `detail`, a technical line the server sends in development
+ * alone (ADR 0044). The request id stays in the log.
  */
 export type ActionError =
   | { readonly code: 'invalid-input'; readonly fields: FieldIssues }
@@ -18,7 +20,7 @@ export type ActionError =
     }
   | { readonly code: 'rule'; readonly rule: RuleCode }
   | { readonly code: 'rate-limited'; readonly retryAfterSeconds: number }
-  | { readonly code: 'unavailable'; readonly requestId: string };
+  | { readonly code: 'unavailable'; readonly cause: FailureCause; readonly detail?: string };
 
 export type ErrorCode = ActionError['code'];
 

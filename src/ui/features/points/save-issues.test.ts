@@ -203,7 +203,7 @@ describe('issuesAfter', () => {
 
   it.each([
     { code: 'conflict' },
-    { code: 'unavailable', requestId: 'req-1' },
+    { code: 'unavailable', cause: 'database-down' },
     { code: 'rate-limited', retryAfterSeconds: 4 },
   ] as const)('keeps them through %j, which says nothing about the text', (error) => {
     expect(issuesAfter(FIELDS, fail(error))).toBe(FIELDS);

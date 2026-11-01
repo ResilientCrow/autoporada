@@ -14,6 +14,8 @@ export interface FormState {
   /** The pressed submit button's value ('' if unnamed); null when idle. */
   readonly submitting: string | null;
   readonly onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  /** The form's action only reads, so a failure does not say „Změny se neuložily“. */
+  readonly readOnly?: boolean;
 }
 
 export interface FormContextValue {

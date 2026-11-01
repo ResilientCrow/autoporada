@@ -161,7 +161,7 @@ test('a network failure shows its problem, focused', async ({ page, hydrated, se
   await expect(page).toHaveTitle(/^(?!Chyba:)/);
 });
 
-test('an unavailable answer shows the problem with the request id', async ({
+test('an unavailable answer names its cause, with the development detail and no code', async ({
   page,
   hydrated,
   settled,
@@ -176,7 +176,9 @@ test('an unavailable answer shows the problem with the request id', async ({
   await settled();
   const problem = summaryOf(page);
   await expect(problem).toBeFocused();
-  await expect(problem).toContainText(`${cs.app.errorCode} abcdef12-3456`);
+  await expect(problem).toContainText(`${cs.errors.unavailable} ${cs.failures['database-down']}`);
+  await expect(problem).toContainText(`${cs.app.technical} ${cs.gallery.problems.detail}`);
+  await expect(problem).not.toContainText(cs.app.errorCode);
   await expectAccessible();
 });
 

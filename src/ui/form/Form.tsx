@@ -35,13 +35,14 @@ export function Form({
   readonly state: FormState;
   readonly children: ReactNode;
 }) {
-  const { issues, problem, attempt, submitting, onSubmit } = state;
+  const { issues, problem, attempt, submitting, onSubmit, readOnly } = state;
   const leadRef = useRef<HTMLDivElement>(null);
   useFocusOnRise(leadRef, attempt);
   const items = issues === null ? [] : summaryItems(id, spec, issues);
   let lead: ReactNode = null;
   if (items.length > 0) lead = <ErrorSummary items={items} summaryRef={leadRef} />;
-  else if (problem !== null) lead = <FormProblem problem={problem} focusRef={leadRef} />;
+  else if (problem !== null)
+    lead = <FormProblem problem={problem} focusRef={leadRef} readOnly={readOnly} />;
 
   return (
     <I18nProvider locale="cs-CZ">

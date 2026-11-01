@@ -3,6 +3,7 @@ export { app, appError } from './app';
 export { autosave } from './autosave';
 export { cs, pageTitle } from './cs';
 export { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
+export { failures } from './failures';
 export { future, type StripSlot } from './future';
 export { gallery } from './gallery';
 export { issues } from './issues';

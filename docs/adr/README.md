@@ -16,9 +16,9 @@ record that supersedes it.
 | [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted |
 | [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Accepted |
 | [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted; partly superseded by 0015 |
-| [0011](0011-application-core.md) | Application core: principal-bound transactions and one pipeline | Accepted; database error codes superseded in part by 0022 |
+| [0011](0011-application-core.md) | Application core: principal-bound transactions and one pipeline | Accepted; database error codes superseded in part by 0022; errors reach the client as a named cause, superseded in part by 0044 |
 | [0012](0012-ui-foundation.md) | UI foundation: brand-only Tailwind, audited React Aria, no inline styles | Accepted; items 4, 6 and 9 partly superseded by 0043 |
-| [0013](0013-forms-submit-through-actions.md) | Forms submit through actions: one hook, typed problems, refresh after success | Accepted; items 1 and 4, and the no-client-refresh rule, superseded in part by 0017 and 0025 |
+| [0013](0013-forms-submit-through-actions.md) | Forms submit through actions: one hook, typed problems, refresh after success | Accepted; items 1 and 4, and the no-client-refresh rule, superseded in part by 0017 and 0025; `unavailable` no longer shows the request id, superseded in part by 0044 |
 | [0014](0014-access-and-users.md) | Access requests and user administration | Accepted; item 13 superseded by 0016 |
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
 | [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
@@ -49,3 +49,4 @@ record that supersedes it.
 | [0041](0041-no-unskip-behind-a-generated-porada.md) | No unskip behind a generated porada | Accepted |
 | [0042](0042-development-allows-inline-style-elements.md) | Development allows inline style elements | Accepted |
 | [0043](0043-ui-layout-primitives-link-kinds-and-one-frame.md) | UI layout primitives, link kinds and one frame | Accepted; supersedes 0012 items 4, 6 and 9 in part |
+| [0044](0044-errors-name-what-failed.md) | Errors name what failed | Accepted; supersedes 0011's error bullet and 0013's `unavailable` text in part |

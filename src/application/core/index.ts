@@ -1,4 +1,5 @@
 export { diffRecords, type AuditShape, type FieldRule } from './audit-diff';
+export { classifyFailure, sqlstateOf } from './classify-failure';
 export {
   defineSystemUseCase,
   defineUseCase,

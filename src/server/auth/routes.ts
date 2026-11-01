@@ -21,28 +21,28 @@ export function authRouteSpecs(
       access: 'public',
       rateLimit: 'auth',
       handle: (request, ctx) => login(deps(), request, ctx),
-      failure: (requestId) => failed(requestId),
+      failure: ({ requestId }) => failed(requestId),
     },
     callback: {
       name: 'auth.callback',
       access: 'public',
       rateLimit: 'auth',
       handle: (request, ctx) => callback(deps(), request, ctx),
-      failure: (requestId) => failed(requestId, [clearCookie(SIGN_IN_COOKIE)]),
+      failure: ({ requestId }) => failed(requestId, [clearCookie(SIGN_IN_COOKIE)]),
     },
     logout: {
       name: 'auth.logout',
       access: 'public',
       rateLimit: 'auth',
       handle: (request, ctx) => logout(deps(), request, ctx),
-      failure: (requestId) => signOutFailed(deps(), requestId),
+      failure: ({ requestId }) => signOutFailed(deps(), requestId),
     },
     stepUp: {
       name: 'auth.stepUp',
       access: 'session',
       rateLimit: 'auth',
       handle: (request, ctx) => stepUp(deps(), request, ctx),
-      failure: (requestId) => failed(requestId),
+      failure: ({ requestId }) => failed(requestId),
     },
   };
 }

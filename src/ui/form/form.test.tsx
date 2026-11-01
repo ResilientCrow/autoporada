@@ -2,6 +2,7 @@ import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { FAILURE_CAUSES } from '@/contracts';
 import { cs } from '@/ui/copy';
 import { BulletList } from '@/ui/kit';
 
@@ -389,8 +390,8 @@ describe('FormProblem', () => {
       `${cs.errors['rate-limited']} ${cs.problemActions.retry} ${retryAfterText(720)}.`,
     ],
     [
-      { code: 'unavailable', requestId: 'abcdef12-3456' },
-      `${cs.errors.unavailable} ${cs.app.errorCode} abcdef12-3456`,
+      { code: 'unavailable', cause: 'database-down' },
+      `${cs.errors.unavailable} ${cs.failures['database-down']}`,
     ],
     [{ code: 'network' }, cs.errors.network],
   ];
@@ -402,6 +403,34 @@ describe('FormProblem', () => {
     expect(out).toContain(text);
     expect(out).not.toContain('style=');
     expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it.each(FAILURE_CAUSES)('unavailable by %s: names the cause, with no code', (cause) => {
+    const out = html({ code: 'unavailable', cause });
+    expect(out).toContain(`${cs.errors.unavailable} ${cs.failures[cause]}`);
+    expect(out).not.toContain(cs.app.errorCode);
+    expect(out).not.toContain(cs.app.technical);
+  });
+
+  it('unavailable: a development detail goes on a second, monospace line', () => {
+    const out = html({
+      code: 'unavailable',
+      cause: 'database-down',
+      detail: 'DatabaseFailure 08000',
+    });
+    expect(out).toMatch(
+      new RegExp(`<p class="[^"]*font-mono[^"]*">${cs.app.technical} DatabaseFailure 08000</p>`),
+    );
+    expect(out).not.toContain('style=');
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+
+  it('unavailable: a form that only reads does not say the changes were not saved', () => {
+    const out = renderToStaticMarkup(
+      <FormProblem problem={{ code: 'unavailable', cause: 'timeout' }} readOnly />,
+    );
+    expect(out).toContain(cs.failures.timeout);
+    expect(out).not.toContain(cs.errors.unavailable);
   });
 
   it.each([

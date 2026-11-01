@@ -65,6 +65,8 @@ export const gallery = {
   },
   problems: {
     title: 'Chyby při odeslání',
+    /** The technical line development adds under an `unavailable` failure (ADR 0044). */
+    detail: 'DatabaseFailure 08000 (databáze na\u00A0localhost:5432, spusťte pnpm dev:services)',
     code: {
       'invalid-input': 'Bez označeného pole',
       unauthenticated: 'Vypršelo přihlášení',

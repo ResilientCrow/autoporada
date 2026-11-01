@@ -16,7 +16,7 @@ const SAMPLE: Readonly<Record<string, ActionError>> = {
   busy: { code: 'busy' },
   rule: { code: 'rule', rule: 'last-headmaster' },
   'rate-limited': { code: 'rate-limited', retryAfterSeconds: 30 },
-  unavailable: { code: 'unavailable', requestId: 'r-1' },
+  unavailable: { code: 'unavailable', cause: 'timeout', detail: 'x' },
 };
 
 function failed(error: ActionError): ActionResult<number> {
@@ -61,7 +61,9 @@ describe('settle', () => {
     expect(settle(failed(SAMPLE['rate-limited']!))).toMatchObject({
       problem: { retryAfterSeconds: 30 },
     });
-    expect(settle(failed(SAMPLE['unavailable']!))).toMatchObject({ problem: { requestId: 'r-1' } });
+    expect(settle(failed(SAMPLE['unavailable']!))).toMatchObject({
+      problem: { cause: 'timeout', detail: 'x' },
+    });
   });
 });
 

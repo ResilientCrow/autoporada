@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 
 import { defineUseCase, ok } from '@/application/core';
-import { system, type UserPrincipal } from '@/application/ports';
+import { DatabaseFailure, system, type UserPrincipal } from '@/application/ports';
 
 import { recordingLog } from '../../../test/support/log';
 import { setupWorld } from '../../../test/support/world';
 import { createRateLimiter, LIMITS } from '../rate-limit';
-import { runRoute, type RouteDeps, type RouteSpec } from './index';
+import { runRoute, technicalDetail, type RouteDeps, type RouteSpec } from './index';
 
 const world = setupWorld();
 const ORIGIN = 'https://autoporada.ssps.cz';
@@ -120,23 +120,44 @@ describe('runRoute', () => {
     });
   });
 
-  it('answers the route’s own failure when anything throws, the session lookup too', async () => {
+  it('answers the route’s own failure with the cause when anything throws, the session lookup too', async () => {
     const { routeDeps: base, lines } = deps();
     const routeDeps = {
       ...base,
-      resolvePrincipal: () => Promise.reject(new Error('database down')),
+      resolvePrincipal: () => Promise.reject(new DatabaseFailure('08006')),
     };
     const failing = route({
       access: 'public',
-      failure: (requestId) => new Response(null, { status: 303, headers: { Location: requestId } }),
+      failure: ({ cause, requestId }) =>
+        new Response(null, { status: 303, headers: { Location: `${cause} ${requestId}` } }),
     });
     const response = await runRoute(routeDeps, failing, request('/x'), segment);
     expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toBe(REQUEST_ID);
+    expect(response.headers.get('location')).toBe(`database-down ${REQUEST_ID}`);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
-      err: { message: 'database down' },
+      reqId: REQUEST_ID,
+      cause: 'database-down',
+      err: { sqlstate: '08006' },
     });
+  });
+
+  it('hands the failure callback the technical line only when a describer is bound', async () => {
+    const { routeDeps: base } = deps();
+    const failing = route({
+      access: 'public',
+      handle: () => Promise.reject(new Error('boom')),
+      failure: ({ detail }) => new Response(detail ?? 'none', { status: 500 }),
+    });
+    const quiet = await runRoute(base, failing, request('/x'), segment);
+    expect(await quiet.text()).toBe('none');
+    const loud = await runRoute(
+      { ...base, describe: technicalDetail('development', undefined) },
+      failing,
+      request('/x'),
+      segment,
+    );
+    expect(await loud.text()).toBe('Error: boom');
   });
 
   it('treats a session cookie sent twice as none', async () => {

@@ -100,6 +100,25 @@ describe('web container', () => {
     expect(graph.report.facts).toMatchObject({ directory: 'graph' });
   });
 
+  it('describes failures in development, naming the database address and never its credentials', async () => {
+    for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    const { DatabaseFailure } = await import('@/application/ports');
+    const detail = getContainer().describe?.(new DatabaseFailure('08000'), 'database-down');
+    expect(detail).toContain('127.0.0.1:9');
+    expect(detail).not.toContain('nobody');
+    expect(detail).not.toContain('nothing@');
+  });
+
+  it('binds no failure describer in production, so no technical line can be sent', async () => {
+    for (const [name, value] of Object.entries(PRODUCTION())) {
+      if (value !== undefined) vi.stubEnv(name, value);
+    }
+    vi.stubEnv('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY', Buffer.alloc(32, 1).toString('base64'));
+    const { getContainer } = await import('./container');
+    expect(getContainer().describe).toBeUndefined();
+  });
+
   it('opens no connection for jobs until startProducer() is called', async () => {
     for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
     const { getContainer } = await import('./container');

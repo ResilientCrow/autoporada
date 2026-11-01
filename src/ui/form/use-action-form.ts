@@ -32,11 +32,14 @@ export function useActionForm<In, Out>({
   action,
   toInput,
   onSuccess,
+  readOnly = false,
 }: {
   readonly action: ServerAction<In, Out>;
   /** Maps the fields to the action's input; a throw here is a bug, not a network problem. */
   readonly toInput: (data: FormData) => In;
   readonly onSuccess?: (value: Out) => void;
+  /** The action only reads (a preview): a failure must not claim that changes were lost. */
+  readonly readOnly?: boolean;
 }): FormState {
   const [issues, setIssues] = useState<FieldIssues | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
@@ -79,5 +82,5 @@ export function useActionForm<In, Out>({
     });
   }
 
-  return { issues, problem, attempt, submitting, onSubmit };
+  return { issues, problem, attempt, submitting, onSubmit, ...(readOnly && { readOnly }) };
 }

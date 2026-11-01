@@ -7,6 +7,7 @@ export {
   type FieldIssues,
   type ServerAction,
 } from './result';
+export { causeFromDigest, FAILURE_CAUSES, failureDigest, type FailureCause } from './failure';
 export { RULE_CODES, type RuleCode } from './rules';
 export {
   cancelAccessInput,

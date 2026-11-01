@@ -44,6 +44,7 @@ export function PasteForm({
     action,
     toInput: previewPasteFor(listId),
     onSuccess: (value) => onRows(value.rows),
+    readOnly: true,
   });
   return (
     <Form id="vlozit" spec={SPEC} state={state}>

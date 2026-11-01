@@ -17,6 +17,7 @@ import {
 } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
 
+import { databaseAddress, technicalDetail, type DescribeFailure } from './pipeline';
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
 import { principalResolver, type AuthDeps } from './auth';
 
@@ -33,6 +34,8 @@ export interface WebContainer {
   /** One per process: the single web replica of ADR 0008. */
   readonly limiter: RateLimiter;
   readonly log: Logger;
+  /** Development's technical line for a failure; absent in production (ADR 0044). */
+  readonly describe?: DescribeFailure;
   readonly appOrigin: string;
   /** Where this process runs; the pattern gallery is closed in production. */
   readonly environment: Config['environment'];
@@ -137,12 +140,14 @@ function buildWeb(config: Config): WebContainer {
     expect: { issuer: oidc.issuer, clientId: oidc.clientId, tenantId: oidc.tenantId },
     bootstrapHeadmasterOid: config.bootstrapHeadmasterOid ?? null,
   };
+  const describe = technicalDetail(config.environment, databaseAddress(config.databaseUrl));
   return {
     app,
     useCases: new Set(USE_CASES),
     resolvePrincipal: principalResolver(app),
     limiter,
     log,
+    ...(describe && { describe }),
     appOrigin: config.appOrigin,
     environment: config.environment,
     requestIdFrom,

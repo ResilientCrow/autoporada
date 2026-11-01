@@ -34,7 +34,7 @@ describe('saveAnswer', () => {
     { code: 'forbidden' },
     { code: 'busy' },
     { code: 'step-up-required' },
-    { code: 'unavailable', requestId: 'req-1' },
+    { code: 'unavailable', cause: 'database-down' },
     { code: 'rule', rule: 'draft-cap' },
   ] as const)('maps %j to a failed save', (error) => {
     expect(saveAnswer(fail(error))).toEqual({ kind: 'failed' });
@@ -66,7 +66,7 @@ describe('statusAnswer', () => {
   it.each([
     { code: 'forbidden' },
     { code: 'rate-limited', retryAfterSeconds: 3 },
-    { code: 'unavailable', requestId: 'req-1' },
+    { code: 'unavailable', cause: 'database-down' },
   ] as const)('maps %j to failed', (error) => {
     expect(statusAnswer(fail(error))).toEqual({ kind: 'failed' });
   });

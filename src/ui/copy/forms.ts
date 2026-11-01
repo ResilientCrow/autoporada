@@ -14,7 +14,8 @@ export const errors = {
   busy: 'Položka se právě zpracovává. Zkuste to prosím za chvíli znovu.',
   rule: 'Akci nelze provést.',
   'rate-limited': 'Příliš mnoho pokusů za krátkou dobu.',
-  unavailable: 'Něco se nepovedlo. Pokud potíže trvají, pošlete správci kód chyby.',
+  /** The lead of an `unavailable` failure: a failure always rolls back (ADR 0011); `failures` says why. */
+  unavailable: 'Změny se neuložily.',
   network:
     'Nepodařilo se spojit se serverem. Zkontrolujte připojení; pokud to nepomůže, načtěte stránku znovu.',
 } as const satisfies Record<ErrorCode | 'network', string>;

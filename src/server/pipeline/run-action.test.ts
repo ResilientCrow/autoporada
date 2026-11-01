@@ -8,6 +8,7 @@ import { recordingLog } from '../../../test/support/log';
 import { setupWorld } from '../../../test/support/world';
 import { createRateLimiter, LIMITS } from '../rate-limit';
 import { runAction, type ActionDeps } from './index';
+import { technicalDetail } from './technical-detail';
 
 const world = setupWorld();
 
@@ -20,7 +21,7 @@ const echo = defineUseCase({
   execute: async (_ctx, input) => ok({ length: input.text.length }),
 });
 
-function deps(principal: UserPrincipal | null, max = 30) {
+function deps(principal: UserPrincipal | null, max = 30, describe?: ActionDeps['describe']) {
   const { lines, log } = recordingLog();
   const actionDeps: ActionDeps = {
     app: world.deps,
@@ -31,6 +32,7 @@ function deps(principal: UserPrincipal | null, max = 30) {
       now: () => 0,
     }),
     log,
+    ...(describe && { describe }),
   };
   return { actionDeps, lines };
 }
@@ -95,7 +97,7 @@ describe('runAction', () => {
     expect(lines.at(-1)).toMatchObject({ level: 'warn', fields: { outcome: 'rate-limited' } });
   });
 
-  it('answers unavailable with the request id when something breaks, logging the SQLSTATE only', async () => {
+  it('answers unavailable with its cause when something breaks, logging the SQLSTATE and cause only', async () => {
     const user = await world.seed.user({ role: 'submitter' });
     const { actionDeps, lines } = deps(world.as(user));
     world.fake?.failNext(new DatabaseFailure('08000'));
@@ -108,11 +110,79 @@ describe('runAction', () => {
         text: SECRET,
       },
     );
-    expect(result).toEqual({ ok: false, error: { code: 'unavailable', requestId: 'req-1' } });
+    expect(result).toEqual({ ok: false, error: { code: 'unavailable', cause: 'database-down' } });
     expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
+      reqId: 'req-1',
+      cause: 'database-down',
       err: { name: 'DatabaseFailure', sqlstate: '08000' },
     });
     expect(JSON.stringify(lines)).not.toContain('Jana');
+  });
+
+  it('never puts the request id on the wire', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    const { actionDeps } = deps(world.as(user));
+    world.fake?.failNext(new DatabaseFailure('08000'));
+    const result = await runAction(
+      actionDeps,
+      request('good'),
+      echo,
+      { rateLimit: 'none' },
+      { text: 'x' },
+    );
+    expect(JSON.stringify(result)).not.toContain('req-1');
+  });
+
+  it.each([
+    ['57014', 'timeout'],
+    ['42P01', 'database-setup'],
+    ['db.parse.points', 'stored-data'],
+    ['25P02', 'bug'],
+  ] as const)('names SQLSTATE %s as %s', async (sqlstate, cause) => {
+    const user = await world.seed.user({ role: 'submitter' });
+    const { actionDeps } = deps(world.as(user));
+    world.fake?.failNext(new DatabaseFailure(sqlstate));
+    const result = await runAction(
+      actionDeps,
+      request('good'),
+      echo,
+      { rateLimit: 'none' },
+      { text: 'x' },
+    );
+    expect(result).toEqual({ ok: false, error: { code: 'unavailable', cause } });
+  });
+
+  it('adds the technical line only when the container supplied a describer', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    const describe = technicalDetail('development', 'localhost:5432');
+    const { actionDeps } = deps(world.as(user), 30, describe);
+    world.fake?.failNext(new DatabaseFailure('08000'));
+    const result = await runAction(
+      actionDeps,
+      request('good'),
+      echo,
+      { rateLimit: 'none' },
+      { text: 'x' },
+    );
+    expect(result).toMatchObject({ ok: false, error: { code: 'unavailable' } });
+    const error = result.ok ? undefined : result.error;
+    expect(error).toMatchObject({ cause: 'database-down' });
+    expect(error?.code === 'unavailable' ? error.detail : undefined).toContain('08000');
+  });
+
+  it('sends no detail in production, where the container binds no describer', async () => {
+    const user = await world.seed.user({ role: 'submitter' });
+    const { actionDeps } = deps(world.as(user), 30, technicalDetail('production', 'db:5432'));
+    world.fake?.failNext(new DatabaseFailure('08000'));
+    const result = await runAction(
+      actionDeps,
+      request('good'),
+      echo,
+      { rateLimit: 'none' },
+      { text: 'x' },
+    );
+    expect(result).toEqual({ ok: false, error: { code: 'unavailable', cause: 'database-down' } });
+    expect(result).not.toHaveProperty('error.detail');
   });
 });
 
@@ -135,8 +205,9 @@ describe('runAction and the registry', () => {
       { rateLimit: 'none' },
       {},
     );
-    expect(result).toEqual({ ok: false, error: { code: 'unavailable', requestId: 'req-1' } });
+    expect(result).toEqual({ ok: false, error: { code: 'unavailable', cause: 'bug' } });
     expect(lines.find((l) => l.level === 'error')?.fields).toMatchObject({
+      cause: 'bug',
       err: { message: 'test.unlisted: not in USE_CASES' },
     });
     expect(world.fake?.history).toEqual([expect.objectContaining({ outcome: 'commit' })]);

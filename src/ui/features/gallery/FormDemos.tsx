@@ -81,7 +81,10 @@ function liveAction(unavailable: boolean): ServerAction<LiveInput, null> {
     if (fields !== null) return { ok: false, error: { code: 'invalid-input', fields } };
     if (input.name.trim() === forms.live.networkTrigger) throw new Error('network');
     if (unavailable) {
-      return { ok: false, error: { code: 'unavailable', requestId: 'abcdef12-3456' } };
+      return {
+        ok: false,
+        error: { code: 'unavailable', cause: 'database-down', detail: gallery.problems.detail },
+      };
     }
     return { ok: true, data: null };
   };

@@ -4,6 +4,8 @@ export {
   runRoute,
   type RouteContext,
   type RouteDeps,
+  type RouteFailure,
   type RouteSpec,
   type Segment,
 } from './run-route';
+export { databaseAddress, technicalDetail, type DescribeFailure } from './technical-detail';

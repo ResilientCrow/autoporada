@@ -1,10 +1,17 @@
-import { runUseCase, type AnyUseCase, type Call, type UseCase } from '@/application/core';
+import {
+  classifyFailure,
+  runUseCase,
+  type AnyUseCase,
+  type Call,
+  type UseCase,
+} from '@/application/core';
 import type { AppDeps, UserPrincipal } from '@/application/ports';
 import type { ActionResult } from '@/contracts';
 
 import type { LIMITS, LimitName, RateLimiter } from '../rate-limit';
 import { errorSummary, type Log } from '../log';
 import { logCall, toActionResult, type CallLine } from './outcome';
+import type { DescribeFailure } from './technical-detail';
 
 export interface ActionDeps {
   readonly app: AppDeps;
@@ -16,6 +23,11 @@ export interface ActionDeps {
   ) => Promise<UserPrincipal | null>;
   readonly limiter: RateLimiter;
   readonly log: Log;
+  /**
+   * The technical line an unexpected failure may carry (ADR 0044). The container binds it in
+   * development only; without it a failure sends its cause and nothing else.
+   */
+  readonly describe?: DescribeFailure;
 }
 
 export interface RequestFacts {
@@ -48,7 +60,8 @@ export function runRegistered<In, Out>(deps: ActionDeps, useCase: UseCase<In, Ou
 /**
  * A server action (ADR 0011): session (1), rate limit (1a), then the use
  * case's pipeline. A bug or an outage reaches the client as `unavailable`
- * with the request id, and the log gets the error without any input.
+ * with its classified cause, and the log gets the cause and the error
+ * without any input; the request id stays in the log (ADR 0044).
  */
 export async function runAction<In, Out>(
   deps: ActionDeps,
@@ -82,8 +95,10 @@ export async function runAction<In, Out>(
     const call = { principal, requestId: request.requestId, input };
     return answer(toActionResult(await runRegistered(deps, useCase, call)));
   } catch (error) {
-    deps.log.error({ ...line, err: errorSummary(error) }, 'action failed');
-    return { ok: false, error: { code: 'unavailable', requestId: request.requestId } };
+    const cause = classifyFailure(error);
+    deps.log.error({ ...line, cause, err: errorSummary(error) }, 'action failed');
+    const detail = deps.describe?.(error, cause);
+    return { ok: false, error: { code: 'unavailable', cause, ...(detail && { detail }) } };
   } finally {
     logCall(deps.log, line, performance.now() - started);
   }

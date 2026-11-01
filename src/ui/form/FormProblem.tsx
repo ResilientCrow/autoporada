@@ -3,18 +3,20 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { ReactNode, Ref } from 'react';
 
-import { app, errors, problemActions, rules } from '@/ui/copy';
+import { app, errors, failures, problemActions, rules } from '@/ui/copy';
 import { Notice, TextLink } from '@/ui/kit';
 
 import { retryAfterText, type Problem } from './settle';
 
-function textOf(problem: Problem): string {
+function textOf(problem: Problem, readOnly: boolean): string {
   if (problem.code === 'rule') return rules[problem.rule];
   if (problem.code === 'rate-limited') {
     return `${errors['rate-limited']} ${problemActions.retry} ${retryAfterText(problem.retryAfterSeconds)}.`;
   }
   if (problem.code === 'unavailable') {
-    return `${errors.unavailable} ${app.errorCode} ${problem.requestId}`;
+    // A failure always rolls back (ADR 0011), so a write says its changes were not saved.
+    const cause = failures[problem.cause];
+    return readOnly ? cause : `${errors.unavailable} ${cause}`;
   }
   return errors[problem.code];
 }
@@ -57,9 +59,12 @@ function actionOf(problem: Problem, pathname: string, location: string): ReactNo
 export function FormProblem({
   problem,
   focusRef,
+  readOnly = false,
 }: {
   readonly problem: Problem;
   readonly focusRef?: Ref<HTMLDivElement>;
+  /** The form's action only reads: no „Změny se neuložily“. */
+  readonly readOnly?: boolean;
 }) {
   // Both are available on the server here: every route is dynamic, so no Suspense boundary is needed.
   const pathname = usePathname();
@@ -69,7 +74,12 @@ export function FormProblem({
   return (
     <div ref={focusRef} tabIndex={-1}>
       <Notice tone="problem">
-        <p>{textOf(problem)}</p>
+        <p>{textOf(problem, readOnly)}</p>
+        {problem.code === 'unavailable' && problem.detail !== undefined ? (
+          <p className="font-mono text-sm break-words">
+            {app.technical} {problem.detail}
+          </p>
+        ) : null}
         {action === null ? null : <p>{action}</p>}
       </Notice>
     </div>

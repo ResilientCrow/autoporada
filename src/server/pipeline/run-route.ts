@@ -1,6 +1,6 @@
-import type { UseCase } from '@/application/core';
+import { classifyFailure, type UseCase } from '@/application/core';
 import type { SystemPrincipal, UserPrincipal } from '@/application/ports';
-import type { ActionResult } from '@/contracts';
+import type { ActionResult, FailureCause } from '@/contracts';
 import { safeReturnTo } from '@/domain/identity';
 
 import { clientIp, LIMITS, type LimitName } from '../rate-limit';
@@ -35,10 +35,19 @@ export interface RouteSpec {
   handle(request: Request, ctx: RouteContext): Promise<Response>;
   /**
    * The answer when something throws (an outage, a bug); without one, an
-   * empty 500. Sign-in routes redirect to a page that names the request
-   * id and still clear their cookies.
+   * empty 500. It is told the classified cause (and, in development, the
+   * technical line) so a page can name what broke. Sign-in routes redirect to
+   * the sign-in page and still clear their cookies.
    */
-  failure?(requestId: string): Response;
+  failure?(failure: RouteFailure): Response;
+}
+
+/** What a route's `failure` hears of an exception (ADR 0044). */
+export interface RouteFailure {
+  readonly cause: FailureCause;
+  /** Development's technical line; never set in production. */
+  readonly detail?: string;
+  readonly requestId: string;
 }
 
 export interface Segment {
@@ -62,7 +71,8 @@ const status = (code: number, headers: HeadersInit = {}) =>
  * A route handler (ADR 0011): Origin check for unsafe methods, rate limit
  * (by client address before the session lookup, or by user after it),
  * session, then the handler. Every answer is `no-store` and names the
- * request id; an exception is logged and answers the route's `failure`.
+ * request id; an exception is logged with its cause and answers the route's
+ * `failure`.
  */
 export async function runRoute(
   deps: RouteDeps,
@@ -127,8 +137,11 @@ export async function runRoute(
     return finish(response, requestId);
   } catch (error) {
     line.outcome = 'unavailable';
-    deps.log.error({ ...line, err: errorSummary(error) }, 'route failed');
-    return finish(spec.failure?.(requestId) ?? status(500), requestId);
+    const cause = classifyFailure(error);
+    deps.log.error({ ...line, cause, err: errorSummary(error) }, 'route failed');
+    const detail = deps.describe?.(error, cause);
+    const failure: RouteFailure = { cause, ...(detail && { detail }), requestId };
+    return finish(spec.failure?.(failure) ?? status(500), requestId);
   } finally {
     logCall(deps.log, line, performance.now() - started);
   }

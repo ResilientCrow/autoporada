@@ -3,7 +3,7 @@
 import { gallery } from '@/ui/copy';
 import { FormProblem, type Problem } from '@/ui/form';
 
-const { code } = gallery.problems;
+const { code, detail } = gallery.problems;
 
 const PROBLEMS: readonly Problem[] = [
   { code: 'invalid-input' },
@@ -15,7 +15,7 @@ const PROBLEMS: readonly Problem[] = [
   { code: 'busy' },
   { code: 'rule', rule: 'last-headmaster' },
   { code: 'rate-limited', retryAfterSeconds: 720 },
-  { code: 'unavailable', requestId: 'abcdef12-3456' },
+  { code: 'unavailable', cause: 'database-down', detail },
   { code: 'network' },
 ];
 

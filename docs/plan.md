@@ -239,7 +239,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 - The worker is built from its own distroless target and sits on `data` and `egress`, never on `edge`. `egress` allows any host (bridge name `ap-egress`); the school firewall narrows it to `login.microsoftonline.com` and `graph.microsoft.com`. The `edge` network (Caddy and the web) has the bridge name `ap-edge`; the firewall allows the Microsoft hosts for the web and the ACME host for Caddy from it (ADR 0021). There is exactly one worker replica.
 - A `cli` maintenance container gives IT a shell for debugging.
 
-**Logs.** pino redacts cookies, tokens, `code` and request bodies. PG errors are logged as code only, actors as UUIDs, and the error page shows a `reqId`.
+**Logs.** pino redacts cookies, tokens, `code` and request bodies. PG errors are logged as code only, actors as UUIDs. The log line of a failure carries its `reqId` and its cause; the page names the cause and shows no id (ADR 0044).
 
 **GDPR** (legal basis Art. 6(1)(e))
 - A privacy notice at `/ochrana-osobnich-udaju`.
