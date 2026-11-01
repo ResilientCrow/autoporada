@@ -12,8 +12,7 @@ import { APP_ORIGIN, expectSignInFailed, setupSignInHarness } from '../support/o
 import type { TestIdp } from '../support/oidc/test-idp';
 
 const harness = setupSignInHarness();
-const failed = (error: string, withCode = false) =>
-  `${APP_ORIGIN}/prihlaseni?chyba=${error}${withCode ? '&kod=req-test-0001' : ''}`;
+const failed = (error: string) => `${APP_ORIGIN}/prihlaseni?chyba=${error}`;
 
 type Browser = ReturnType<typeof harness.h.browser>;
 
@@ -42,7 +41,7 @@ describe('forged ID tokens', () => {
     'refuses a token signed with %s and keeps nothing',
     async (sign) => {
       const response = await signIn(harness.h.browser(), (idp) => idp.next({ sign }));
-      expectSignInFailed(response, 'failed', true);
+      expectSignInFailed(response, 'idp-invalid');
       await nothingKept();
       expect(harness.h.idp.seen.jwksFetches).toBeLessThanOrEqual(2);
     },
@@ -64,7 +63,7 @@ describe('claims the library checks', () => {
     ['a token not valid for 2 minutes', () => ({ nbf: now() + 120 })],
   ])('refuses %s', async (_name, claims) => {
     const response = await signIn(harness.h.browser(), (idp) => idp.next({ claims: claims() }));
-    expectSignInFailed(response, 'failed', true);
+    expectSignInFailed(response, 'idp-invalid');
     await nothingKept();
   });
 
@@ -78,15 +77,22 @@ describe('claims the library checks', () => {
 
 describe('what Entra answers', () => {
   it.each([
-    ['access_denied', undefined, 'cancelled', false],
-    ['server_error', 'AADSTS90033: transient error for jana.novakova@ssps.cz', 'unavailable', true],
-    ['invalid_request', 'AADSTS50011: redirect URI mismatch', 'failed', true],
-  ])('maps %s at the authorization step', async (error, description, shown, withCode) => {
+    ['access_denied', undefined, 'cancelled', ''],
+    ['server_error', 'AADSTS90033: transient error for jana.novakova@ssps.cz', 'unavailable', ''],
+    [
+      'invalid_request',
+      'AADSTS50011: redirect URI mismatch for jana.novakova@ssps.cz',
+      'idp-refused',
+      '&aadsts=AADSTS50011',
+    ],
+    ['invalid_scope', undefined, 'idp-refused', ''],
+    ['invalid_request', 'AADSTS1: too short', 'idp-refused', ''],
+  ])('maps %s (%s) at the authorization step', async (error, description, shown, more) => {
     const response = await signIn(harness.h.browser(), undefined, {
       error,
       ...(description && { description }),
     });
-    expectSignInFailed(response, shown, withCode);
+    expectSignInFailed(response, shown, more);
     await nothingKept();
   });
 
@@ -101,23 +107,25 @@ describe('what Entra answers', () => {
   });
 
   it.each([
-    ['a refused code', { status: 400, body: { error: 'invalid_grant' } }, 'failed'],
+    ['a refused code', { status: 400, body: { error: 'invalid_grant' } }, 'idp-refused', ''],
     [
       'a refused client',
       { status: 401, body: { error: 'invalid_client', error_description: 'AADSTS700027: x' } },
-      'failed',
+      'idp-refused',
+      '&aadsts=AADSTS700027',
     ],
-    ['an outage', { status: 503, body: { error: 'temporarily_unavailable' } }, 'unavailable'],
+    ['an outage', { status: 503, body: { error: 'temporarily_unavailable' } }, 'unavailable', ''],
     [
       'a challenge header instead of a body',
       { status: 401, body: {}, headers: { 'WWW-Authenticate': 'Bearer error="invalid_token"' } },
-      'failed',
+      'idp-refused',
+      '',
     ],
-    ['the network', 'network', 'unavailable'],
-    ['a timeout', 'timeout', 'unavailable'],
-  ] as const)('maps %s at the token endpoint', async (_name, answer, error) => {
+    ['the network', 'network', 'unavailable', ''],
+    ['a timeout', 'timeout', 'unavailable', ''],
+  ] as const)('maps %s at the token endpoint', async (_name, answer, error, more) => {
     const response = await signIn(harness.h.browser(), (idp) => idp.failToken(answer));
-    expectSignInFailed(response, error, true);
+    expectSignInFailed(response, error, more);
     // Mapped by the adapter, not caught as a bug by the pipeline.
     expect(harness.h.lines.filter((l) => l.level === 'error')).toEqual([]);
     await nothingKept();

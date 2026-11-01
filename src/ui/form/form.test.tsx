@@ -408,7 +408,7 @@ describe('FormProblem', () => {
   it.each(FAILURE_CAUSES)('unavailable by %s: names the cause, with no code', (cause) => {
     const out = html({ code: 'unavailable', cause });
     expect(out).toContain(`${cs.errors.unavailable} ${cs.failures[cause]}`);
-    expect(out).not.toContain(cs.app.errorCode);
+    expect(out).not.toContain('Kód chyby');
     expect(out).not.toContain(cs.app.technical);
   });
 

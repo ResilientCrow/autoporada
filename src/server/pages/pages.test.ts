@@ -37,6 +37,10 @@ const logged = vi.hoisted(() => ({ error: vi.fn() }));
 const where = vi.hoisted(() => ({
   environment: 'development',
   now: new Date('2026-10-24T12:00:00Z'),
+  devServices: {
+    issuer: 'http://localhost:8080/ssps',
+    database: '127.0.0.1:5432' as string | undefined,
+  } as { issuer: string; database: string | undefined } | undefined,
 }));
 vi.mock('../container', () => ({
   getContainer: () => ({
@@ -44,6 +48,7 @@ vi.mock('../container', () => ({
     requestIdFrom: () => 'req-1',
     log: logged,
     environment: where.environment,
+    ...(where.devServices && { devServices: where.devServices }),
     app: { clock: { now: () => where.now } },
   }),
 }));
@@ -81,10 +86,17 @@ describe('galleryPage', () => {
 });
 
 describe('signInPage', () => {
-  it('shows known errors with their code, and links that come back to a safe path', () => {
-    expect(signInPage({ chyba: 'failed', kod: 'abcdef12-3456', returnTo: '/porada' })).toEqual({
-      error: 'failed',
-      code: 'abcdef12-3456',
+  beforeEach(() => {
+    where.environment = 'development';
+    where.devServices = { issuer: 'http://localhost:8080/ssps', database: '127.0.0.1:5432' };
+  });
+
+  it('shows a known error, and links that come back to a safe path', () => {
+    expect(signInPage({ chyba: 'bug', returnTo: '/porada' })).toEqual({
+      error: 'bug',
+      aadsts: null,
+      cause: null,
+      technical: null,
       loggedOut: null,
       sharedComputerHint: false,
       loginHref: '/auth/login?returnTo=%2Fporada',
@@ -92,23 +104,105 @@ describe('signInPage', () => {
     });
   });
 
-  it('ignores anything it does not know', () => {
+  it('ignores anything it does not know, the old request id among it', () => {
     expect(
       signInPage({
         chyba: '<script>',
-        kod: '<b>x</b>',
+        kod: 'abcdef12-3456',
+        aadsts: '<b>x</b>',
+        pricina: 'evil',
         returnTo: '//evil.example',
         odhlaseno: 'x',
       }),
     ).toEqual({
       error: null,
-      code: null,
+      aadsts: null,
+      cause: null,
+      technical: null,
       loggedOut: null,
       sharedComputerHint: false,
       loginHref: '/auth/login?returnTo=%2F',
       switchHref: '/auth/login?returnTo=%2F&account=select',
     });
+    expect(signInPage({ chyba: 'failed' }).error).toBeNull();
     expect(signInPage({ odhlaseno: 'vsude' }).loggedOut).toBe('everywhere');
+  });
+
+  it('takes the AADSTS number of a refusal', () => {
+    expect(signInPage({ chyba: 'idp-refused', aadsts: 'AADSTS50011' })).toMatchObject({
+      error: 'idp-refused',
+      aadsts: 'AADSTS50011',
+    });
+  });
+
+  it.each([
+    ['text around the number', 'AADSTS50011: redirect URI mismatch'],
+    ['too few digits', 'AADSTS1'],
+    ['too many digits', 'AADSTS123456789'],
+    ['markup', '<b>AADSTS50011</b>'],
+    ['lower case', 'aadsts50011'],
+  ])('drops an AADSTS value with %s', (_name, aadsts) => {
+    expect(signInPage({ chyba: 'idp-refused', aadsts }).aadsts).toBeNull();
+  });
+
+  it('takes an AADSTS number only with a refusal', () => {
+    expect(signInPage({ chyba: 'unavailable', aadsts: 'AADSTS50011' }).aadsts).toBeNull();
+  });
+
+  it('takes the cause of a failed sign-out, and only a known one', () => {
+    expect(signInPage({ chyba: 'signout-failed', pricina: 'database-down' }).cause).toBe(
+      'database-down',
+    );
+    expect(signInPage({ chyba: 'signout-failed', pricina: 'network' }).cause).toBeNull();
+    expect(signInPage({ chyba: 'bug', pricina: 'database-down' }).cause).toBeNull();
+  });
+
+  describe('technical line', () => {
+    it.each(['unavailable', 'idp-invalid'])(
+      'names the mock IdP and how to start it for %s',
+      (chyba) => {
+        expect(signInPage({ chyba }).technical).toBe(
+          'OIDC issuer http://localhost:8080/ssps (mock IdP, spusťte pnpm dev:services)',
+        );
+      },
+    );
+
+    it('names a remote issuer by origin and path only, without the hint', () => {
+      where.devServices = {
+        issuer: 'https://user:secret@login.example.org/tenant/v2.0?x=1#y',
+        database: undefined,
+      };
+      const technical = signInPage({ chyba: 'unavailable' }).technical;
+      expect(technical).toBe('OIDC issuer https://login.example.org/tenant/v2.0');
+    });
+
+    it('names where the database is when it is down', () => {
+      expect(signInPage({ chyba: 'database-down' }).technical).toBe(
+        'databáze na 127.0.0.1:5432, spusťte pnpm dev:services',
+      );
+      where.devServices = { issuer: 'http://localhost:8080/ssps', database: undefined };
+      expect(signInPage({ chyba: 'database-down' }).technical).toBeNull();
+    });
+
+    it.each(['bug', 'idp-refused', 'claims', 'expired', 'signout-failed'])(
+      'has none for %s',
+      (chyba) => {
+        expect(signInPage({ chyba }).technical).toBeNull();
+      },
+    );
+
+    it.each(['unavailable', 'idp-invalid', 'database-down'])(
+      'is never there in production (%s)',
+      (chyba) => {
+        where.environment = 'production';
+        expect(signInPage({ chyba }).technical).toBeNull();
+      },
+    );
+
+    it('is not there without the development facts', () => {
+      where.devServices = undefined;
+      expect(signInPage({ chyba: 'unavailable' }).technical).toBeNull();
+    });
   });
 });
 

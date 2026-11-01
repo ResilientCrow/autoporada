@@ -1,9 +1,6 @@
 /** What pages under src/app read, through the same container and pipeline as actions. */
 import { cookies, headers } from 'next/headers';
 
-import { isSignInError, type SignInError } from '@/contracts';
-import { safeReturnTo } from '@/domain/identity';
-
 import { getContainer } from '../container';
 import { NONCE_HEADER } from '../http';
 
@@ -20,11 +17,10 @@ export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points
 export { newYearPage, registryPage } from './registry';
 export { queuePage, reviewPointPage } from './review';
 export { settingsPage } from './settings';
+export { signInPage } from './sign-in';
 export { userPage } from './user';
 export { usersPage } from './users';
 export { getViewer, optionalSignedIn, requireSignedIn } from './viewer';
-
-const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
 
 /** What newNonce makes: 128 bits in base64. */
 const NONCE_SHAPE = /^[A-Za-z0-9+/]{22}==$/;
@@ -37,17 +33,6 @@ const NONCE_SHAPE = /^[A-Za-z0-9+/]{22}==$/;
 export async function cspNonce(): Promise<string | null> {
   const value = (await headers()).get(NONCE_HEADER);
   return value !== null && NONCE_SHAPE.test(value) ? value : null;
-}
-
-export interface SignInPageModel {
-  readonly error: SignInError | null;
-  /** The request id to report (the redirects add it only where there is something to report). */
-  readonly code: string | null;
-  readonly loggedOut: 'here' | 'everywhere' | null;
-  /** After any sign-out, also a failed one: Entra's session outlives ours (risk 12). */
-  readonly sharedComputerHint: boolean;
-  readonly loginHref: string;
-  readonly switchHref: string;
 }
 
 const GALLERY_FAIL_COOKIE = 'vzornik_vyjimka';
@@ -66,25 +51,4 @@ export async function galleryPage(params: SearchParams): Promise<GalleryModel | 
   const cookie = (await cookies()).get(GALLERY_FAIL_COOKIE)?.value === '1';
   const state = first(params['stav']);
   return { fail: state === 'vyjimka' || cookie, unavailable: state === 'nedostupne' };
-}
-
-/** The sign-in page from its query string; anything unexpected is ignored. */
-export function signInPage(params: SearchParams): SignInPageModel {
-  const error = first(params['chyba']);
-  const code = first(params['kod']);
-  const loggedOut = first(params['odhlaseno']);
-  const returnTo = encodeURIComponent(safeReturnTo(first(params['returnTo'])));
-  const switchHref = `/auth/login?returnTo=${returnTo}&account=select`;
-  const signedOut = loggedOut === 'vsude' ? 'everywhere' : loggedOut === '1' ? 'here' : null;
-  return {
-    error: isSignInError(error) ? error : null,
-    code: code && REQUEST_ID.test(code) ? code : null,
-    loggedOut: signedOut,
-    sharedComputerHint: signedOut !== null || error === 'signout-failed',
-    // After signing out, Entra still knows the browser (a shared PC): even
-    // the main button lets the next person choose the account (risk 12).
-    loginHref:
-      signedOut || error === 'signout-failed' ? switchHref : `/auth/login?returnTo=${returnTo}`,
-    switchHref,
-  };
 }

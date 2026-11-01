@@ -17,16 +17,24 @@ test('the home page sends an anonymous visitor to the sign-in page, in Czech', a
   await expectAccessible();
 });
 
-test('the sign-in page names only known errors, with the code to report', async ({
+test('the sign-in page names only known errors, never a code beyond an AADSTS number', async ({
   page,
   expectAccessible,
 }) => {
-  await page.goto('/prihlaseni?chyba=failed&kod=abcdef12-3456');
-  await expect(page.getByRole('main').getByRole('alert')).toContainText(cs.signIn.errors.failed);
-  await expect(page.getByRole('main').getByRole('alert')).toContainText('abcdef12-3456');
+  const alert = page.getByRole('main').getByRole('alert');
+  await page.goto('/prihlaseni?chyba=idp-refused&aadsts=AADSTS50011&kod=abcdef12-3456');
+  await expect(alert).toContainText(cs.signIn.refusedWithCode('AADSTS50011'));
+  await expect(alert).not.toContainText('abcdef12-3456');
   await expectAccessible();
+  await page.goto('/prihlaseni?chyba=idp-refused&aadsts=%3Cb%3Ex%3C%2Fb%3E');
+  await expect(alert).toContainText(cs.signIn.errors['idp-refused']);
+  await expect(alert).not.toContainText('<b>');
+  await page.goto('/prihlaseni?chyba=database-down');
+  await expect(alert).toContainText(cs.signIn.errors['database-down']);
+  await page.goto('/prihlaseni?chyba=failed');
+  await expect(alert).toHaveCount(0);
   await page.goto('/prihlaseni?chyba=%3Cscript%3E&kod=%3Cb%3E');
-  await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
+  await expect(alert).toHaveCount(0);
 });
 
 test('the signed-out notice page passes axe', async ({ page, expectAccessible }) => {

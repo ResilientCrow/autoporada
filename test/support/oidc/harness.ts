@@ -23,12 +23,13 @@ export const APP_ORIGIN = 'https://autoporada.ssps.cz';
 export const SIGN_IN_CLEARED =
   '__Host-ap_signin=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0';
 
-/** A callback that ended on the sign-in page with `error`, its sign-in cookie cleared. */
-export function expectSignInFailed(response: Response, error: string, withCode = false): void {
+/**
+ * A callback that ended on the sign-in page with `error` (and `more`, e.g. `&aadsts=…`), its
+ * sign-in cookie cleared. Never a request id: that stays in the log (ADR 0044).
+ */
+export function expectSignInFailed(response: Response, error: string, more = ''): void {
   expect(response.status).toBe(303);
-  expect(response.headers.get('location')).toBe(
-    `${APP_ORIGIN}/prihlaseni?chyba=${error}${withCode ? '&kod=req-test-0001' : ''}`,
-  );
+  expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/prihlaseni?chyba=${error}${more}`);
   expect(response.headers.getSetCookie()).toEqual([SIGN_IN_CLEARED]);
 }
 const TENANT = '00000000-0000-0000-0000-000000000001';

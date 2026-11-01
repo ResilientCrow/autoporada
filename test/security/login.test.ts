@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { system } from '@/application/ports';
+import { LockTimeout, system } from '@/application/ports';
 import { digest, newToken } from '@/server/auth';
 
 import { APP_ORIGIN, setupSignInHarness } from '../support/oidc/harness';
@@ -62,44 +62,67 @@ describe('GET /auth/login', () => {
     );
   });
 
-  it('says Entra is unavailable, with a code to report, and stores nothing', async () => {
+  it('says Entra is unavailable, without any code, and stores nothing', async () => {
     const { idp, routes, browser } = harness.h;
     idp.down();
     const b = browser();
     const response = await b.send(routes.login, '/auth/login');
-    expect(response.headers.get('location')).toBe(
-      `${APP_ORIGIN}/prihlaseni?chyba=unavailable&kod=req-test-0001`,
-    );
+    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/prihlaseni?chyba=unavailable`);
     expect(response.headers.getSetCookie()).toEqual([]);
     expect(harness.h.world.fake?.state().signIns.size ?? 0).toBe(0);
+    expect(harness.h.lines).toContainEqual(
+      expect.objectContaining({
+        level: 'warn',
+        fields: expect.objectContaining({ reqId: 'req-test-0001', failure: 'unavailable' }),
+      }),
+    );
   });
 });
 
 describe('when the database fails', () => {
-  const failed = `${APP_ORIGIN}/prihlaseni?chyba=failed&kod=req-test-0001`;
-
-  it('login still redirects with a code, and sets no sign-in cookie', async () => {
-    const b = harness.h.browser();
-    harness.h.failTransaction(1);
-    const response = await b.send(harness.h.routes.login, '/auth/login');
-    expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toBe(failed);
-    expect(response.headers.getSetCookie()).toEqual([]);
-  });
+  const failed = (cause: string) => `${APP_ORIGIN}/prihlaseni?chyba=${cause}`;
+  const setupMissing = () =>
+    Object.assign(new Error('relation "sign_ins" does not exist'), {
+      code: '42P01',
+      severity: 'ERROR',
+    });
 
   it.each([
-    ['looking up the session', 1],
-    ['storing the sign-in', 2],
-  ])('step-up still redirects with a code when it fails %s', async (_name, n) => {
+    ['lost', undefined, 'database-down'],
+    ['busy', new LockTimeout(), 'timeout'],
+    ['not set up', setupMissing(), 'database-setup'],
+  ])(
+    'login names the cause when the database is %s, and sets no sign-in cookie',
+    async (_name, error, cause) => {
+      const b = harness.h.browser();
+      harness.h.failTransaction(1, error);
+      const response = await b.send(harness.h.routes.login, '/auth/login');
+      expect(response.status).toBe(303);
+      expect(response.headers.get('location')).toBe(failed(cause));
+      expect(response.headers.getSetCookie()).toEqual([]);
+      expect(JSON.stringify(harness.h.lines)).not.toContain('sign_ins');
+      expect(harness.h.lines).toContainEqual(
+        expect.objectContaining({
+          fields: expect.objectContaining({ reqId: 'req-test-0001', cause }),
+        }),
+      );
+    },
+  );
+
+  it.each([
+    ['looking up the session', 1, undefined, 'database-down'],
+    ['storing the sign-in', 2, undefined, 'database-down'],
+    ['storing the sign-in, busy', 2, new LockTimeout(), 'timeout'],
+  ])('step-up names the cause when it fails %s', async (_name, n, error, cause) => {
     const { world, routes, browser } = harness.h;
     const user = await world.seed.user({ role: 'headmaster' });
     const token = newToken();
     await signedIn(world, user.id, token);
     const b = browser();
     b.cookies.set('__Host-ap_session', token);
-    harness.h.failTransaction(n);
+    harness.h.failTransaction(n, error);
     const response = await b.send(routes.stepUp, '/auth/step-up?returnTo=%2F');
-    expect(response.headers.get('location')).toBe(failed);
+    expect(response.headers.get('location')).toBe(failed(cause));
     expect(response.headers.getSetCookie()).toEqual([]);
   });
 });

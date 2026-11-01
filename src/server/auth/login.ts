@@ -6,7 +6,7 @@ import type { RouteContext } from '../pipeline';
 import type { AuthDeps } from './deps';
 import { digest, newToken } from './tokens';
 import { signInCookie } from './cookies';
-import { seeOther, signInFailed } from './outcome';
+import { causeOfRefusal, seeOther, signInError, signInFailed } from './outcome';
 
 type Purpose = 'login' | 'step_up';
 
@@ -25,18 +25,21 @@ async function start(
   const protocol = { state: newToken(), nonce: newToken(), codeVerifier: newToken() };
   const authorization = await deps.idp.authorizationUrl({ ...protocol, ...(prompt && { prompt }) });
   if (!authorization.ok) {
-    deps.log.warn(
-      { reqId: ctx.requestId, failure: authorization.failure, ...authorization.detail },
-      'sign-in unavailable',
-    );
-    return seeOther(signInFailed(deps.appOrigin, 'unavailable', ctx.requestId));
+    const { failure, detail } = authorization;
+    deps.log.warn({ reqId: ctx.requestId, failure, ...detail }, 'sign-in not started');
+    const error = signInError(failure);
+    return seeOther(signInFailed(deps.appOrigin, error, { aadsts: detail.aadsts }));
   }
   const input = { cookieSha256: digest(cookie), ...protocol, returnTo };
   const begun =
     purpose === 'login'
       ? await ctx.run(beginLogin, input, system('auth.login'))
       : await ctx.run(beginStepUp, input);
-  if (!begun.ok) return seeOther(signInFailed(deps.appOrigin, 'failed', ctx.requestId));
+  if (!begun.ok) {
+    const cause = causeOfRefusal(begun.error);
+    deps.log.warn({ reqId: ctx.requestId, code: begun.error.code, cause }, 'sign-in not started');
+    return seeOther(signInFailed(deps.appOrigin, cause));
+  }
   return seeOther(authorization.value, [signInCookie(cookie)]);
 }
 

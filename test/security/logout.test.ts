@@ -49,13 +49,13 @@ describe('POST /auth/logout', () => {
   });
 
   it.each([
-    ['looking up the session', 1, undefined],
-    ['looking up the session, busy', 1, new LockTimeout()],
-    ['ending it', 2, undefined],
-    ['ending it, busy', 2, new LockTimeout()],
+    ['looking up the session', 1, undefined, 'database-down'],
+    ['looking up the session, busy', 1, new LockTimeout(), 'bug'],
+    ['ending it', 2, undefined, 'database-down'],
+    ['ending it, busy', 2, new LockTimeout(), 'timeout'],
   ])(
-    'still clears the cookie, and says so, when the database fails while %s',
-    async (_name, n, error) => {
+    'still clears the cookie, and says why, when the database fails while %s',
+    async (_name, n, error, cause) => {
       const { b, laptop } = await twoDevices();
       harness.h.failTransaction(n, error);
       const response = await b.send(harness.h.routes.logout, '/auth/logout', {
@@ -64,7 +64,7 @@ describe('POST /auth/logout', () => {
       });
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
-        `${APP_ORIGIN}/prihlaseni?chyba=signout-failed&kod=req-test-0001`,
+        `${APP_ORIGIN}/prihlaseni?chyba=signout-failed&pricina=${cause}`,
       );
       expect(response.headers.getSetCookie()).toEqual([CLEARED]);
       expect(await live(laptop)).toBe(true);

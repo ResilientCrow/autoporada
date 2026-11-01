@@ -1,7 +1,6 @@
 export const app = {
   name: 'Autoporada',
   description: 'Podklady pro poradu vedení Smíchovské střední',
-  errorCode: 'Kód chyby:',
   /** Development's technical line under a failure (ADR 0044). */
   technical: 'Technicky:',
 } as const;

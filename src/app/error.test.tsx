@@ -34,7 +34,7 @@ describe('error.tsx', () => {
     );
     expect(html).toContain(cs.appError.title);
     expect(html).toContain(cs.failures[cause]);
-    expect(html).not.toContain(cs.app.errorCode);
+    expect(html).not.toContain('Kód chyby');
   });
 
   it.each([

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import { FAILURE_CAUSES } from '@/contracts';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
@@ -9,7 +10,9 @@ import { SignInPanel } from './index';
 
 const BASE = {
   error: null,
-  code: null,
+  aadsts: null,
+  cause: null,
+  technical: null,
   loggedOut: null,
   sharedComputerHint: false,
   loginHref: '/auth/login?returnTo=%2F',
@@ -50,17 +53,50 @@ describe('SignInPanel', () => {
     expect(html).not.toContain('data-rac');
   });
 
-  it('shows an error as the only alert, with the code to report', () => {
-    const bad = render({ error: 'failed', code: 'abcdef12-3456' });
-    expect(roles(bad)).toEqual(['alert']);
-    expect(bad).toContain(cs.signIn.errors.failed);
-    expect(bad).toContain(`${cs.app.errorCode} <code>abcdef12-3456</code>`);
-  });
-
-  it('shows an error without a code when there is none', () => {
+  it('shows an error as the only alert, and never a code', () => {
     const bad = render({ error: 'cancelled' });
+    expect(roles(bad)).toEqual(['alert']);
     expect(bad).toContain(cs.signIn.errors.cancelled);
     expect(bad).not.toContain('<code>');
+    expect(bad).not.toContain('Kód chyby');
+  });
+
+  it.each(FAILURE_CAUSES)('says the sign-in failed and why for %s', (cause) => {
+    const bad = render({ error: cause });
+    expect(bad).toContain(`Přihlášení se nepodařilo. ${cs.failures[cause]}`);
+  });
+
+  it('names the AADSTS number of a refusal', () => {
+    expect(render({ error: 'idp-refused', aadsts: 'AADSTS50011' })).toContain(
+      'Microsoft přihlášení odmítl (kód AADSTS50011). Dejte to prosím vědět správci.',
+    );
+    expect(render({ error: 'idp-refused' })).toContain(
+      'Microsoft přihlášení odmítl. Dejte to prosím vědět správci.',
+    );
+  });
+
+  it.each([
+    ['idp-invalid', 'Odpověď přihlašovací služby Microsoftu se nedala ověřit.'],
+    ['claims', 'Microsoft neposlal údaje, které aplikace potřebuje (jméno nebo e-mail).'],
+  ] as const)('says what Entra did for %s', (error, text) => {
+    expect(render({ error })).toContain(text);
+  });
+
+  it('adds the cause to a failed sign-out', () => {
+    const out = render({ error: 'signout-failed', cause: 'database-down' });
+    expect(out).toContain(`${cs.signIn.errors['signout-failed']} ${cs.failures['database-down']}`);
+    expect(render({ error: 'signout-failed' })).toContain(cs.signIn.errors['signout-failed']);
+  });
+
+  it('shows the technical line under the error, as a form problem does', () => {
+    const out = render({
+      error: 'unavailable',
+      technical: 'OIDC issuer http://localhost:8080/ssps',
+    });
+    expect(out).toContain(
+      `<p class="font-mono text-sm break-words">${cs.app.technical} OIDC issuer http://localhost:8080/ssps</p>`,
+    );
+    expect(render({ error: 'unavailable' })).not.toContain(cs.app.technical);
   });
 
   it.each([
@@ -80,8 +116,9 @@ describe('SignInPanel', () => {
 
   it('renders markup the CSP accepts', () => {
     const all = render({
-      error: 'failed',
-      code: 'abc',
+      error: 'idp-refused',
+      aadsts: 'AADSTS50011',
+      technical: 'x',
       loggedOut: 'here',
       sharedComputerHint: true,
     });

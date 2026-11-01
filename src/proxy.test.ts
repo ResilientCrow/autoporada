@@ -62,12 +62,14 @@ describe('proxy', () => {
 });
 
 describe('proxy matcher', () => {
-  it.each(['/', '/prihlaseni?chyba=failed', '/auth/callback?code=x&state=y', '/porada/2026-10-19'])(
-    'runs for %s',
-    (path) => {
-      expect(matches({ config, url: path, nextConfig })).toBe(true);
-    },
-  );
+  it.each([
+    '/',
+    '/prihlaseni?chyba=unavailable',
+    '/auth/callback?code=x&state=y',
+    '/porada/2026-10-19',
+  ])('runs for %s', (path) => {
+    expect(matches({ config, url: path, nextConfig })).toBe(true);
+  });
 
   it.each(['/_next/static/chunks/main.js', '/_next/image?url=%2Fa.png&w=64&q=75', '/favicon.ico'])(
     'skips the static file %s',

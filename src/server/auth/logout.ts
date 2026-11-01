@@ -1,9 +1,10 @@
 import { signOut } from '@/application/use-cases';
+import type { FailureCause } from '@/contracts';
 
 import { SESSION_COOKIE, type RouteContext } from '../pipeline';
 import type { AuthDeps } from './deps';
 import { clearCookie } from './cookies';
-import { seeOther, signInFailed } from './outcome';
+import { causeOfRefusal, seeOther, signInFailed } from './outcome';
 
 /**
  * POST /auth/logout with `scope=this|all`. Public, so a stale cookie still
@@ -20,8 +21,9 @@ export async function logout(
   if (ctx.principal) {
     const result = await ctx.run(signOut, { everywhere });
     if (!result.ok) {
-      deps.log.warn({ reqId: ctx.requestId, code: result.error.code }, 'sign-out refused');
-      return signOutFailed(deps, ctx.requestId);
+      const cause = causeOfRefusal(result.error);
+      deps.log.warn({ reqId: ctx.requestId, code: result.error.code, cause }, 'sign-out refused');
+      return signOutFailed(deps, cause);
     }
   }
   const page = new URL('/prihlaseni', deps.appOrigin);
@@ -30,10 +32,11 @@ export async function logout(
 }
 
 /**
- * The database did not record the sign-out. This browser is signed out all
- * the same (its cookie goes), but other devices may still be signed in.
+ * The database did not record the sign-out, for `cause`. This browser is
+ * signed out all the same (its cookie goes), but other devices may still be
+ * signed in.
  */
-export const signOutFailed = (deps: AuthDeps, requestId: string) =>
-  seeOther(signInFailed(deps.appOrigin, 'signout-failed', requestId), [
+export const signOutFailed = (deps: AuthDeps, cause: FailureCause) =>
+  seeOther(signInFailed(deps.appOrigin, 'signout-failed', { cause }), [
     clearCookie(SESSION_COOKIE),
   ]);

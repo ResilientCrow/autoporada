@@ -35,7 +35,7 @@ describe('GlobalError', () => {
 
   it('shows no code and no technical line', () => {
     const html = renderToStaticMarkup(<GlobalError error={new Error('boom')} retry={() => {}} />);
-    expect(html).not.toContain(cs.app.errorCode);
+    expect(html).not.toContain('Kód chyby');
     expect(html).not.toContain(cs.app.technical);
     expect(html).not.toContain('boom');
   });

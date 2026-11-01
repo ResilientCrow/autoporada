@@ -17,6 +17,10 @@ const CAUSE_SET = {
 /** Every cause, for what must cover them all (copy, digests). */
 export const FAILURE_CAUSES = Object.keys(CAUSE_SET) as readonly FailureCause[];
 
+/** Whether `value` names a cause, e.g. a query parameter. */
+export const isFailureCause = (value: unknown): value is FailureCause =>
+  (FAILURE_CAUSES as readonly unknown[]).includes(value);
+
 const DIGEST_PREFIX = 'autoporada:';
 
 /**
@@ -31,8 +35,7 @@ export function failureDigest(cause: FailureCause): string {
 export function causeFromDigest(digest: string | undefined): FailureCause {
   if (digest?.startsWith(DIGEST_PREFIX)) {
     const name = digest.slice(DIGEST_PREFIX.length);
-    const cause = FAILURE_CAUSES.find((known) => known === name);
-    if (cause) return cause;
+    if (isFailureCause(name)) return name;
   }
   return 'bug';
 }

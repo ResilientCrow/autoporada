@@ -1,6 +1,15 @@
-import type { SignInError } from '@/contracts';
+import type { FailureCause, SignInError } from '@/contracts';
 import { cs } from '@/ui/copy';
 import { ArrowLink, buttonStyles, Card, Notice, SlantLabel } from '@/ui/kit';
+
+/** What failed, in words: a refusal names its AADSTS number, a failed sign-out its cause. */
+function errorText(error: SignInError, aadsts: string | null, cause: FailureCause | null): string {
+  if (error === 'idp-refused' && aadsts !== null) return cs.signIn.refusedWithCode(aadsts);
+  if (error === 'signout-failed' && cause !== null) {
+    return `${cs.signIn.errors['signout-failed']} ${cs.failures[cause]}`;
+  }
+  return cs.signIn.errors[error];
+}
 
 /**
  * The sign-in page. Art. 13 wants the privacy notice before the data is taken,
@@ -10,28 +19,27 @@ import { ArrowLink, buttonStyles, Card, Notice, SlantLabel } from '@/ui/kit';
  */
 export function SignInPanel({
   error,
-  code,
+  aadsts,
+  cause,
+  technical,
   loggedOut,
   sharedComputerHint,
   loginHref,
   switchHref,
 }: {
   readonly error: SignInError | null;
-  readonly code: string | null;
+  /** A refusal's AADSTS number, already validated. */
+  readonly aadsts: string | null;
+  /** Why a sign-out was not recorded. */
+  readonly cause: FailureCause | null;
+  /** Development's technical line (ADR 0044). */
+  readonly technical: string | null;
   readonly loggedOut: 'here' | 'everywhere' | null;
   readonly sharedComputerHint: boolean;
   readonly loginHref: string;
   readonly switchHref: string;
 }) {
   const { signIn } = cs;
-  const lead = ` ${cs.app.errorCode} `;
-  const codeLine =
-    code === null ? null : (
-      <>
-        {lead}
-        <code>{code}</code>
-      </>
-    );
   const done =
     loggedOut === null ? null : (
       <Notice tone="info">
@@ -41,8 +49,12 @@ export function SignInPanel({
   const problem =
     error === null ? null : (
       <Notice tone="problem">
-        {signIn.errors[error]}
-        {codeLine}
+        <p>{errorText(error, aadsts, cause)}</p>
+        {technical === null ? null : (
+          <p className="font-mono text-sm break-words">
+            {cs.app.technical} {technical}
+          </p>
+        )}
       </Notice>
     );
   const hint = sharedComputerHint ? (

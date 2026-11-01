@@ -12,6 +12,7 @@ export {
   causeOfError,
   FAILURE_CAUSES,
   failureDigest,
+  isFailureCause,
   type FailureCause,
 } from './failure';
 export { RULE_CODES, type RuleCode } from './rules';
@@ -33,6 +34,7 @@ export {
   beginSignInOutput,
   completeSignInInput,
   completeSignInOutput,
+  isAadstsCode,
   isSignInError,
   meInput,
   meOutput,

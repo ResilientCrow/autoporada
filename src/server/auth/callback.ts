@@ -1,6 +1,6 @@
 import { system } from '@/application/ports';
 import { completeSignIn, recordRejection, takeSignIn } from '@/application/use-cases';
-import type { SignInError } from '@/contracts';
+import type { ActionError, SignInError } from '@/contracts';
 import { checkEntraClaims, safeReturnTo, type ClaimRejection } from '@/domain/identity';
 
 import { errorSummary } from '../log';
@@ -8,7 +8,7 @@ import { cookieValue, sessionTokenFrom, type RouteContext } from '../pipeline';
 import type { AuthDeps } from './deps';
 import { digest, isToken, newToken } from './tokens';
 import { clearCookie, sessionCookie, SIGN_IN_COOKIE } from './cookies';
-import { seeOther, signInFailed } from './outcome';
+import { causeOfRefusal, seeOther, signInError, signInFailed, type SignInExtra } from './outcome';
 
 const MAX_QUERY = 4096;
 const callbackPrincipal = system('auth.callback');
@@ -17,13 +17,14 @@ const REJECTIONS: Readonly<Record<ClaimRejection, SignInError>> = {
   tenant: 'not-member',
   guest: 'not-member',
   'stale-auth': 'step-up-stale',
-  'missing-claim': 'failed',
-  'invalid-claim': 'failed',
+  'missing-claim': 'claims',
+  'invalid-claim': 'claims',
 };
 
 /**
  * GET /auth/callback: Entra's answer (ADR 0002, design §5). Every exit is a
- * 303 that clears the sign-in cookie; the user sees only an error code.
+ * 303 that clears the sign-in cookie; the page names what failed, and of
+ * Entra's answer only its AADSTS number crosses (ADR 0044).
  */
 export async function callback(
   deps: AuthDeps,
@@ -33,8 +34,14 @@ export async function callback(
   const url = new URL(request.url);
   const reqId = ctx.requestId;
   const cleared = clearCookie(SIGN_IN_COOKIE);
-  const fail = (error: SignInError) =>
-    seeOther(signInFailed(deps.appOrigin, error, reqId), [cleared]);
+  const fail = (error: SignInError, extra?: SignInExtra) =>
+    seeOther(signInFailed(deps.appOrigin, error, extra), [cleared]);
+  /** A use case the flow needs answered not ok. */
+  const refused = (error: ActionError, step: string) => {
+    const cause = causeOfRefusal(error);
+    deps.log.warn({ reqId, step, code: error.code, cause }, 'sign-in not completed');
+    return fail(cause);
+  };
   /** A replay, a second tab or a stray request: nothing to finish. */
   const nothingToFinish = (reason: string) => {
     deps.log.info({ reqId, reason }, 'sign-in callback without a sign-in');
@@ -54,7 +61,7 @@ export async function callback(
     { cookieSha256: digest(cookie), state },
     callbackPrincipal,
   );
-  if (!taken.ok) return fail('failed');
+  if (!taken.ok) return refused(taken.error, 'take');
   const signIn = taken.data;
   if (!signIn.found) return nothingToFinish('not-found');
   if (signIn.expired) return fail('expired');
@@ -70,8 +77,7 @@ export async function callback(
       { reqId, failure: redeemed.failure, ...redeemed.detail },
       'sign-in not completed',
     );
-    if (redeemed.failure === 'cancelled') return fail('cancelled');
-    return fail(redeemed.failure === 'unavailable' ? 'unavailable' : 'failed');
+    return fail(signInError(redeemed.failure), { aadsts: redeemed.detail.aadsts });
   }
 
   const stepUp = signIn.purpose === 'step_up';
@@ -120,7 +126,7 @@ export async function callback(
     },
     callbackPrincipal,
   );
-  if (!completed.ok) return fail('failed');
+  if (!completed.ok) return refused(completed.error, 'complete');
   const outcome = completed.data;
   if (outcome.outcome === 'refused') {
     deps.log.warn({ reqId, reason: outcome.reason }, 'sign-in refused');

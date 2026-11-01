@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { ROLES, USER_STATUSES } from '@/domain/actor';
 import { CLAIM_NAMES, CLAIM_REJECTIONS } from '@/domain/identity';
 
+import { FAILURE_CAUSES, type FailureCause } from './failure';
+
 /** Digests travel as 64 lower-case hex characters; raw tokens never reach a use case. */
 const sha256Hex = z
   .string()
@@ -99,21 +101,38 @@ export const meOutput = z.object({
 });
 
 /**
- * Why a sign-in, or a sign-out, did not finish, as /prihlaseni?chyba=…
- * names it; Czech copy in ui/copy.
+ * Why a sign-in, or a sign-out, did not finish, as /prihlaseni?chyba=… names it (ADR 0044);
+ * Czech copy in ui/copy. Entra's answers have their own kinds, and anything that broke in the app
+ * is its failure cause, so a new cause is a sign-in error too.
  */
-export const SIGN_IN_ERRORS = [
+const SIGN_IN_OUTCOMES = [
   'expired',
   'cancelled',
   'not-member',
   'blocked',
   'step-up-mismatch',
   'step-up-stale',
-  'failed',
+  /** Entra is unreachable or says it is down. */
   'unavailable',
+  /** Entra refused the request (an OAuth error); may carry its AADSTS number. */
+  'idp-refused',
+  /** Entra's answer did not verify: a token, a signature or a document. */
+  'idp-invalid',
+  /** The ID token lacks a claim the app needs, or one is malformed. */
+  'claims',
   'signout-failed',
 ] as const;
-export type SignInError = (typeof SIGN_IN_ERRORS)[number];
+
+export type SignInError = (typeof SIGN_IN_OUTCOMES)[number] | FailureCause;
+
+export const SIGN_IN_ERRORS: readonly SignInError[] = [...SIGN_IN_OUTCOMES, ...FAILURE_CAUSES];
 
 export const isSignInError = (value: unknown): value is SignInError =>
   (SIGN_IN_ERRORS as readonly unknown[]).includes(value);
+
+/** Entra's error number, e.g. AADSTS50011: public, and what the administrator looks up. */
+const AADSTS_CODE = /^AADSTS\d{5,7}$/;
+
+/** Whether `value` is an AADSTS number and nothing else, so it may go into a URL and onto the page. */
+export const isAadstsCode = (value: unknown): value is string =>
+  typeof value === 'string' && AADSTS_CODE.test(value);

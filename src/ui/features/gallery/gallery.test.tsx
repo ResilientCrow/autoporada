@@ -74,7 +74,7 @@ describe('Gallery', () => {
     for (const label of Object.values(cs.gallery.problems.code)) expect(html).toContain(label);
     expect(html).toContain(cs.failures['database-down']);
     expect(html).toContain(`${cs.app.technical} ${cs.gallery.problems.detail}`);
-    expect(html).not.toContain(cs.app.errorCode);
+    expect(html).not.toContain('Kód chyby');
     expect(html).toContain('returnTo=%2Fvzornik');
   });
 

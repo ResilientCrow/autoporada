@@ -13,7 +13,7 @@ const SECURITY_HEADERS = {
 };
 
 const NONCED_PAGES = [
-  ['the sign-in page', '/prihlaseni?chyba=failed&kod=abcdef12-3456', null],
+  ['the sign-in page', '/prihlaseni?chyba=idp-refused&aadsts=AADSTS50011', null],
   ['the privacy notice', '/ochrana-osobnich-udaju', null],
   ['the gallery', '/vzornik', null],
   ['the 404 page', '/tato-stranka-neexistuje', null],

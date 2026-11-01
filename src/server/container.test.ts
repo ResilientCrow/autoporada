@@ -117,6 +117,16 @@ describe('web container', () => {
     vi.stubEnv('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY', Buffer.alloc(32, 1).toString('base64'));
     const { getContainer } = await import('./container');
     expect(getContainer().describe).toBeUndefined();
+    expect(getContainer().devServices).toBeUndefined();
+  });
+
+  it('tells the sign-in page in development where the IdP and the database are, never the credentials', async () => {
+    for (const [name, value] of Object.entries(ENV)) vi.stubEnv(name, value);
+    const { getContainer } = await import('./container');
+    expect(getContainer().devServices).toEqual({
+      issuer: 'http://localhost:8080/ssps',
+      database: '127.0.0.1:9',
+    });
   });
 
   it('opens no connection for jobs until startProducer() is called', async () => {

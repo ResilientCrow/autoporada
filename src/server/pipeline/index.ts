@@ -8,4 +8,10 @@ export {
   type RouteSpec,
   type Segment,
 } from './run-route';
-export { databaseAddress, technicalDetail, type DescribeFailure } from './technical-detail';
+export {
+  databaseAddress,
+  signInTechnical,
+  technicalDetail,
+  type DescribeFailure,
+  type DevServices,
+} from './technical-detail';

@@ -153,20 +153,41 @@ describe('GET /auth/callback', () => {
   });
 
   it.each([
-    ['taking the sign-in', 1],
-    ['completing it', 2],
+    ['taking the sign-in', 1, undefined, 'database-down'],
+    ['completing it', 2, undefined, 'database-down'],
+    ['taking the sign-in, busy', 1, new LockTimeout(), 'timeout'],
+    ['completing it, busy', 2, new LockTimeout(), 'timeout'],
   ])(
-    'redirects with a code and clears its cookie when the database fails while %s',
-    async (_name, n) => {
+    'names the cause and clears its cookie when the database fails while %s',
+    async (_name, n, error, cause) => {
       const b = harness.h.browser();
       const start = await b.send(harness.h.routes.login, '/auth/login');
       const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
-      harness.h.failTransaction(n);
+      harness.h.failTransaction(n, error);
       const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
-      expectSignInFailed(response, 'failed', true);
+      expectSignInFailed(response, cause);
       expect(b.cookies.has('__Host-ap_session')).toBe(false);
+      expect(harness.h.lines).toContainEqual(
+        expect.objectContaining({
+          level: expect.stringMatching(/^(warn|error)$/),
+          fields: expect.objectContaining({ reqId: 'req-test-0001', cause }),
+        }),
+      );
     },
   );
+
+  it('names the cause when the session lookup throws before the callback runs', async () => {
+    const b = harness.h.browser();
+    const start = await b.send(harness.h.routes.login, '/auth/login');
+    const search = harness.h.idp.authorize(start.headers.get('location') ?? '');
+    b.cookies.set('__Host-ap_session', newToken());
+    harness.h.failTransaction(
+      1,
+      Object.assign(new Error('relation missing'), { code: '42P01', severity: 'ERROR' }),
+    );
+    const response = await b.send(harness.h.routes.callback, `/auth/callback${search}`);
+    expectSignInFailed(response, 'database-setup');
+  });
 
   it.each([
     ['a second state', (search: string) => `${search}&state=${'A'.repeat(43)}`],
@@ -229,17 +250,17 @@ describe('GET /auth/callback', () => {
     expect(await audit()).toEqual([['auth.rejected', { ...meta, purpose: 'login' }]]);
   });
 
-  it('fails closed when Entra omits an optional claim, with a code to report', async () => {
+  it('fails closed when Entra omits an optional claim, and says the claims are missing', async () => {
     const { response } = await signIn(harness.h.browser(), { claims: { acct: DELETE } });
-    expectSignInFailed(response, 'failed', true);
+    expectSignInFailed(response, 'claims');
     expect(await audit()).toEqual([
       ['auth.rejected', { reason: 'missing-claim', claim: 'acct', signals: [], purpose: 'login' }],
     ]);
   });
 
-  it('refuses a malformed claim with a code to report, and audits it', async () => {
+  it('refuses a malformed claim as unusable claims, and audits it', async () => {
     const { response } = await signIn(harness.h.browser(), { claims: { oid: 'not-a-guid' } });
-    expectSignInFailed(response, 'failed', true);
+    expectSignInFailed(response, 'claims');
     expect(await audit()).toEqual([
       ['auth.rejected', { reason: 'invalid-claim', claim: 'oid', signals: [], purpose: 'login' }],
     ]);

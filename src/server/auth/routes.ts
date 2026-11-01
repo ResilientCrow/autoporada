@@ -1,3 +1,5 @@
+import type { FailureCause } from '@/contracts';
+
 import type { RouteSpec } from '../pipeline';
 import type { AuthDeps } from './deps';
 import { callback } from './callback';
@@ -8,41 +10,42 @@ import { seeOther, signInFailed } from './outcome';
 
 /**
  * The sign-in routes, all limited by client address (plan §4). Whatever
- * throws, the browser still gets a redirect with a code to report.
+ * throws, the browser still gets a redirect to the sign-in page naming the
+ * cause (ADR 0044), and the route's cookie is still cleared.
  */
 export function authRouteSpecs(
   deps: () => AuthDeps,
 ): Readonly<Record<'login' | 'callback' | 'stepUp' | 'logout', RouteSpec>> {
-  const failed = (requestId: string, cookies: readonly string[] = []) =>
-    seeOther(signInFailed(deps().appOrigin, 'failed', requestId), cookies);
+  const failed = (cause: FailureCause, cookies: readonly string[] = []) =>
+    seeOther(signInFailed(deps().appOrigin, cause), cookies);
   return {
     login: {
       name: 'auth.login',
       access: 'public',
       rateLimit: 'auth',
       handle: (request, ctx) => login(deps(), request, ctx),
-      failure: ({ requestId }) => failed(requestId),
+      failure: ({ cause }) => failed(cause),
     },
     callback: {
       name: 'auth.callback',
       access: 'public',
       rateLimit: 'auth',
       handle: (request, ctx) => callback(deps(), request, ctx),
-      failure: ({ requestId }) => failed(requestId, [clearCookie(SIGN_IN_COOKIE)]),
+      failure: ({ cause }) => failed(cause, [clearCookie(SIGN_IN_COOKIE)]),
     },
     logout: {
       name: 'auth.logout',
       access: 'public',
       rateLimit: 'auth',
       handle: (request, ctx) => logout(deps(), request, ctx),
-      failure: ({ requestId }) => signOutFailed(deps(), requestId),
+      failure: ({ cause }) => signOutFailed(deps(), cause),
     },
     stepUp: {
       name: 'auth.stepUp',
       access: 'session',
       rateLimit: 'auth',
       handle: (request, ctx) => stepUp(deps(), request, ctx),
-      failure: ({ requestId }) => failed(requestId),
+      failure: ({ cause }) => failed(cause),
     },
   };
 }
