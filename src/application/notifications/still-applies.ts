@@ -5,10 +5,10 @@ import type { TemplateName } from '@/notify';
 import type { MailSubjects, PointDecision } from './subjects';
 
 import { isReviewer } from './digest';
-import { isMember as member, wantsSoftReminder } from './reminders';
+import { isMember as member } from './reminders';
 import { isHeadmaster } from './summary';
 
-type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'isStudent' | 'remindDeadline'>;
+type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'isStudent'>;
 
 const decided =
   (state: AccessState, recipientFits: (user: UserFacts) => boolean) =>
@@ -55,17 +55,16 @@ const APPLIES: {
     item.reportState === 'none' &&
     item.authorId === recipient.id &&
     member(recipient),
-  /** Staff who still want it, while the soft slot is open for the Monday (the loader says so). */
-  'reminder.soft': (_subject, recipient) => wantsSoftReminder(recipient),
+  /** Whoever still owes the Monday's porada a report from an akce, a student too (ADR 0046). */
+  'reminder.soft': ({ hasWork }, recipient) => hasWork && member(recipient),
   /** Whoever still has a draft or returned point for the Monday, a student too. */
   'reminder.hard': ({ hasWork }, recipient) => hasWork && member(recipient),
   /** A reviewer who can still sign in, while something is new for them; only the headmaster counts access requests. */
   'reviewer.digest': ({ submitted, accessRequests }, recipient) =>
     isReviewer(recipient) &&
     (submitted > 0 || (recipient.role === 'headmaster' && accessRequests > 0)),
-  /** The reminders' audience still: staff who keep the soft reminder, or whoever waits on the slot. */
-  'issue.moved': ({ hasWork }, recipient) =>
-    member(recipient) && (hasWork || wantsSoftReminder(recipient)),
+  /** The reminders' audience still: whoever owes a report or waits on the slot. */
+  'issue.moved': ({ hasWork }, recipient) => member(recipient) && hasWork,
   /** The akce's author, while the akce stands approved with no report written or declined; the loader drops it past the close. */
   'report.ended': ({ authorId, state, expectsReport, reportState }, recipient) =>
     state === 'approved' &&

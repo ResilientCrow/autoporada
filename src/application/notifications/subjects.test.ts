@@ -8,6 +8,7 @@ import { calDate } from '@/domain/time';
 import { TEMPLATE_NAMES, type TemplateName } from '@/notify';
 
 import { futureFixtures } from '../../../test/support/future';
+import { lateReportFixtures } from '../../../test/support/late-reports';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { loadSubject } from './index';
@@ -15,6 +16,7 @@ import { loadSubject } from './index';
 const world = setupWorld();
 const { start, moveTo, snapshot } = pointFixtures(world);
 const { start: futureStart, moveTo: futureMoveTo } = futureFixtures(world);
+const late = lateReportFixtures(world);
 const MISSING = '00000000-0000-7000-8000-00000000dead';
 
 /** Reads as the worker does, in one transaction. */
@@ -125,6 +127,30 @@ describe('loadSubject', () => {
         meetingDate: calDate(2026, 11, 2),
         hasWork: false,
       });
+    });
+
+    it('tells the soft one whether the recipient still owes the report of an akce for the Monday', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const idle = await world.seed.user({ role: 'submitter' });
+      world.clock.set(new Date('2026-10-01T08:00:00Z'));
+      const id = await late.akce(author, { day: '2026-10-20', timeTo: '14:00' });
+      world.clock.set(SOFT);
+      expect(await load('reminder.soft', author.id)).toEqual({
+        monday: MONDAY,
+        meetingDate: MONDAY,
+        hasWork: true,
+      });
+      expect(await load('reminder.soft', idle.id)).toMatchObject({ hasWork: false });
+      // handed in meanwhile: the report is no longer owed
+      const pointId = await late.report(
+        author,
+        { day: '2026-10-20', timeTo: '14:00' },
+        'submitted',
+        MONDAY,
+      );
+      await late.patchAkce(author, id, { reportPointId: pointId, reportState: 'written' });
+      world.clock.set(SOFT);
+      expect(await load('reminder.soft', author.id)).toMatchObject({ hasWork: false });
     });
 
     it('tells the hard one whether the recipient still has a draft for the Monday', async () => {

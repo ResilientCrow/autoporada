@@ -11,8 +11,6 @@ export interface UserRecord {
   readonly role: Role;
   readonly isStudent: boolean;
   readonly status: UserStatus;
-  /** Wants the soft deadline reminder; the user's own choice, not an access fact. */
-  readonly remindDeadline: boolean;
   readonly version: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -59,11 +57,5 @@ export interface UserRepo {
    * (`test.seed`, `cli:*`) are not affected.
    */
   changeAccess(id: string, expectedVersion: number, patch: AccessPatch): Promise<UserRecord>;
-  /**
-   * Sets the principal's own deadline-reminder choice and returns the row. It is no access
-   * change: the version, `updatedAt` and the sessions stay. Any other row, and any system
-   * principal, is a ScopeViolation.
-   */
-  setReminders(id: string, on: boolean): Promise<UserRecord>;
   countActiveHeadmasters(): Promise<number>;
 }

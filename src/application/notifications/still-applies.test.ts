@@ -37,7 +37,6 @@ const user = (role: Role, status: UserStatus = 'active', id = 'user'): UserRecor
   role,
   isStudent: false,
   status,
-  remindDeadline: true,
   version: 1,
   createdAt: AT,
   updatedAt: AT,
@@ -252,24 +251,17 @@ describe('stillApplies', () => {
     const MONDAY = calDate(2026, 10, 26);
     const facts = (hasWork: boolean) => ({ monday: MONDAY, meetingDate: MONDAY, hasWork });
 
-    it('sends the soft one to staff who still want it', () => {
-      expect(stillApplies('reminder.soft', facts(false), MEMBER)).toBe(true);
-      expect(
-        stillApplies('reminder.soft', facts(false), { ...MEMBER, remindDeadline: false }),
-      ).toBe(false);
-      expect(stillApplies('reminder.soft', facts(false), { ...MEMBER, isStudent: true })).toBe(
-        false,
-      );
-      expect(stillApplies('reminder.soft', facts(false), user('submitter', 'blocked'))).toBe(false);
-      expect(stillApplies('reminder.soft', facts(false), user('pending'))).toBe(false);
+    it('sends the soft one only to someone who still owes an akce report, a student too', () => {
+      expect(stillApplies('reminder.soft', facts(true), MEMBER)).toBe(true);
+      expect(stillApplies('reminder.soft', facts(false), MEMBER)).toBe(false);
+      expect(stillApplies('reminder.soft', facts(true), { ...MEMBER, isStudent: true })).toBe(true);
+      expect(stillApplies('reminder.soft', facts(true), user('submitter', 'blocked'))).toBe(false);
+      expect(stillApplies('reminder.soft', facts(true), user('pending'))).toBe(false);
     });
 
-    it('sends the hard one only to someone who still has a draft or returned point, switch or no switch', () => {
+    it('sends the hard one only to someone who still has a draft or returned point', () => {
       expect(stillApplies('reminder.hard', facts(true), MEMBER)).toBe(true);
       expect(stillApplies('reminder.hard', facts(false), MEMBER)).toBe(false);
-      expect(stillApplies('reminder.hard', facts(true), { ...MEMBER, remindDeadline: false })).toBe(
-        true,
-      );
       expect(stillApplies('reminder.hard', facts(true), { ...MEMBER, isStudent: true })).toBe(true);
       expect(stillApplies('reminder.hard', facts(true), user('submitter', 'deactivated'))).toBe(
         false,

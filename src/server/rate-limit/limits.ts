@@ -21,8 +21,8 @@ export const LIMITS = {
    */
   autosave: { max: 120, windowMs: MINUTE, key: 'user' },
   /**
-   * Creating, submitting, proposing and an author's retract, withdraw or cancel, and the
-   * profile's reminder box; never autosave.
+   * Creating, submitting, proposing and an author's retract, withdraw or cancel; never
+   * autosave.
    */
   submission: { max: 30, windowMs: HOUR, key: 'user' },
   /**

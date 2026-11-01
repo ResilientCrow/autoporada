@@ -872,35 +872,9 @@ describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
     expect(await waiting()).toEqual([]);
   });
 
-  it('lists the authors who handed in something since a day, once, and not those who retracted', async () => {
-    const [recent, old, retracted, none] = [
-      await world.seed.user({ role: 'submitter' }),
-      await world.seed.user({ role: 'submitter' }),
-      await world.seed.user({ role: 'submitter' }),
-      await world.seed.user({ role: 'submitter' }),
-    ];
-    const handIn = async (author: UserRecord, at: string) => {
-      const point = await pointIn(author, 'draft');
-      return update(world.as(author), point, { ...SUBMIT, submittedAt: new Date(at) });
-    };
-    await handIn(recent, '2026-10-06T08:00:00Z');
-    await handIn(recent, '2026-10-07T08:00:00Z');
-    await handIn(old, '2026-10-04T23:59:59Z');
-    const gone = await handIn(retracted, '2026-10-08T08:00:00Z');
-    await update(world.as(retracted), gone, {
-      state: 'draft',
-      submittedAt: null,
-      handInMonday: null,
-    });
-    await pointIn(none, 'draft');
-    expect(await asWorker((tx) => tx.points.submitterIds(SINCE))).toEqual([recent.id]);
-  });
-
   it('refuses a user: only the system reads them', async () => {
     const author = await world.seed.user({ role: 'submitter' });
-    const refused = read(world.as(author), (tx) => tx.points.submitterIds(SINCE));
-    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
-    const other = read(world.as(author), (tx) =>
+    const refused = read(world.as(author), (tx) =>
       tx.points.reminderAuthors({
         draftsSince: SINCE,
         monday: MONDAY,
@@ -908,7 +882,7 @@ describe('PointRepo reminders (what the worker reads, migration 0024)', () => {
         deadlineAt: DEADLINE,
       }),
     );
-    expect(await failure(other)).toBeInstanceOf(ScopeViolation);
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
 });
 

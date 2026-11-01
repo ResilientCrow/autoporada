@@ -23,9 +23,9 @@ record that supersedes it.
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
 | [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
 | [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted; items 5 and 7 superseded in part by 0024 |
-| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030; item 1 refined by 0032 and 0034 |
+| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030; item 1 refined by 0032 and 0034; item 10 superseded by 0046 |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
-| [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted; item 4 (digest and headmaster summary) superseded in part by 0037 |
+| [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted; item 4 (digest and headmaster summary) superseded in part by 0037; items 3 and 5 (soft audience, opt-out) superseded in part by 0046 |
 | [0021](0021-web-access-to-graph.md) | Web access to Graph: a registration of its own, the `ap-edge` bridge | Accepted |
 | [0022](0022-database-errors-by-constraint-name.md) | Database errors by constraint name | Accepted |
 | [0023](0023-zod-jitless-in-the-browser.md) | Zod runs jitless in the browser | Accepted |
@@ -37,7 +37,7 @@ record that supersedes it.
 | [0029](0029-points-go-to-an-issue-by-their-due-monday.md) | Points go to an issue by their due Monday | Accepted |
 | [0030](0030-the-issue-outline.md) | The issue outline | Accepted; item 5 (a write forgets a returned proposal's placement) superseded in part by 0036 |
 | [0031](0031-rich-text-editor-under-the-nonce-csp.md) | Rich-text editor under the nonce CSP | Accepted |
-| [0032](0032-settings-and-the-meeting-relative-deadline.md) | Settings and the meeting-relative deadline | Accepted |
+| [0032](0032-settings-and-the-meeting-relative-deadline.md) | Settings and the meeting-relative deadline | Accepted; the user's opt-out sentence of item 3 superseded by 0046 |
 | [0033](0033-registry-without-people-ids.md) | Registry without people ids | Accepted |
 | [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted; item 6 (the moved mail) superseded by 0037 |
 | [0035](0035-late-event-reports.md) | Late-event reports | Accepted; item 9 (the headmaster's late summary) superseded by 0037 |
@@ -51,3 +51,4 @@ record that supersedes it.
 | [0043](0043-ui-layout-primitives-link-kinds-and-one-frame.md) | UI layout primitives, link kinds and one frame | Accepted; supersedes 0012 items 4, 6 and 9 in part |
 | [0044](0044-errors-name-what-failed.md) | Errors name what failed | Accepted; supersedes 0011's error bullet and 0013's `unavailable` text in part; amended by 0045 |
 | [0045](0045-error-kinds-amendments.md) | Error kinds and surfaces: amendments to 0044 | Accepted; amends 0044 |
+| [0046](0046-the-soft-reminder-asks-for-owed-reports.md) | The soft reminder asks for owed reports, and no one opts out | Accepted; supersedes 0018 item 10, 0020 items 3 and 5 and 0032 item 3 in part |

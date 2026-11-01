@@ -4,11 +4,14 @@ import { calDate, parseIsoDate } from '@/domain/time';
 
 import {
   REMINDER_STAGGER_MS,
-  activeSince,
+  REPORT_LOOKBACK_WEEKS,
   deadline,
   reminderDue,
   reminderSlot,
   reminderStagger,
+  reportLookback,
+  reportsSince,
+  type IssueRow,
 } from './index';
 
 /** Saturday 24 October 2026 20.00 Prague (the night before the clocks go back): the default deadline of Monday 26 October. */
@@ -99,11 +102,54 @@ describe('reminderStagger', () => {
   });
 });
 
-describe('activeSince', () => {
-  it('is 1 September, Prague midnight, of the school year of the day', () => {
-    expect(activeSince(calDate(2026, 10, 25))).toEqual(new Date('2026-08-31T22:00:00Z'));
-    expect(activeSince(calDate(2027, 3, 1))).toEqual(new Date('2026-08-31T22:00:00Z'));
-    expect(activeSince(calDate(2026, 9, 1))).toEqual(new Date('2026-08-31T22:00:00Z'));
-    expect(activeSince(calDate(2026, 8, 31))).toEqual(new Date('2025-08-31T22:00:00Z'));
+describe('reportsSince (the akce whose report goes to a porada)', () => {
+  const MONDAY = calDate(2026, 10, 26);
+  const row = (
+    monday: string,
+    status: IssueRow['status'] = 'open',
+    meeting = monday,
+  ): IssueRow => ({
+    monday: parseIsoDate(monday),
+    meetingDate: parseIsoDate(meeting),
+    deadlineAt: new Date(`${monday}T00:00:00Z`),
+    status,
+  });
+
+  it('looks back over the Mondays before the porada, the week before included', () => {
+    expect(reportLookback(MONDAY)).toEqual({
+      from: calDate(2026, 8, 3),
+      to: calDate(2026, 10, 19),
+    });
+    expect(REPORT_LOOKBACK_WEEKS).toBe(12);
+  });
+
+  it('starts on the meeting day of the porada a week before, which has no row', () => {
+    expect(reportsSince(MONDAY, [])).toEqual(calDate(2026, 10, 19));
+  });
+
+  it('starts on that porada’s own meeting day when it was moved, and whatever its status but skipped', () => {
+    expect(reportsSince(MONDAY, [row('2026-10-19', 'open', '2026-10-21')])).toEqual(
+      calDate(2026, 10, 21),
+    );
+    expect(reportsSince(MONDAY, [row('2026-10-19', 'generated')])).toEqual(calDate(2026, 10, 19));
+  });
+
+  it('steps over skipped Mondays to the porada held before them', () => {
+    const rows = [row('2026-10-12', 'skipped'), row('2026-10-19', 'skipped')];
+    expect(reportsSince(MONDAY, rows)).toEqual(calDate(2026, 10, 5));
+    expect(reportsSince(MONDAY, [...rows, row('2026-10-05', 'generated', '2026-10-06')])).toEqual(
+      calDate(2026, 10, 6),
+    );
+  });
+
+  it('ignores rows outside the look-back, and stops at its first Monday when all of it is skipped', () => {
+    expect(reportsSince(MONDAY, [row('2026-10-26', 'open', '2026-10-27')])).toEqual(
+      calDate(2026, 10, 19),
+    );
+    const all = Array.from({ length: REPORT_LOOKBACK_WEEKS }, (_, i) => {
+      const day = new Date(Date.UTC(2026, 9, 19 - 7 * i));
+      return row(day.toISOString().slice(0, 10), 'skipped');
+    });
+    expect(reportsSince(MONDAY, all)).toEqual(calDate(2026, 8, 3));
   });
 });

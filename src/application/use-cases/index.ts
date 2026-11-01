@@ -58,7 +58,7 @@ import {
   withdrawPoint,
 } from './points';
 import { listPointTypes, savePointType } from './point-types';
-import { me, setReminders } from './profile';
+import { me } from './profile';
 import {
   addEntries,
   moveList,
@@ -130,7 +130,7 @@ export {
   withdrawPoint,
 } from './points';
 export { listPointTypes, savePointType } from './point-types';
-export { me, setReminders } from './profile';
+export { me } from './profile';
 export {
   addEntries,
   moveList,
@@ -209,7 +209,6 @@ export const USE_CASES: readonly AnyUseCase[] = [
   savePointType,
   saveSettings,
   searchGate,
-  setReminders,
   setIssueAnnex2,
   setIssueDetails,
   setSkipped,

@@ -1,7 +1,13 @@
 import type { JobCatalog, Tx } from '@/application/ports';
 import { toIsoDate, type CalDate } from '@/domain/time';
 
-import { authorsWaiting, activeSubmitters, reminderIssue, waitingAuthors } from './reminders';
+import {
+  authorsOwing,
+  authorsWaiting,
+  owingAuthors,
+  reminderIssue,
+  waitingAuthors,
+} from './reminders';
 
 /** The deadline as the keys count it: whole minutes, so one deadline has one key. */
 const deadlineMinute = (deadlineAt: Date) => Math.floor(deadlineAt.getTime() / 60_000);
@@ -38,8 +44,8 @@ export function movedNoticeJob(monday: CalDate, deadlineAt: Date): NoticeJob {
 }
 
 /**
- * Whom the moved mail is for: the reminders' audience of the slot being collected now, staff who
- * keep the soft reminder and every author of a draft or returned point. Empty when the job's slot
+ * Whom the moved mail is for: the reminders' audience of the slot being collected now, everyone who
+ * owes its porada a report and every author of a draft or returned point (ADR 0046). Empty when the job's slot
  * is no longer the one collected or its deadline is no longer the one the move set.
  */
 export async function movedRecipients(
@@ -52,11 +58,11 @@ export async function movedRecipients(
     toIsoDate(issue.monday) === notice.monday &&
     deadlineMinute(issue.deadlineAt) === deadlineMinute(new Date(notice.deadlineAt));
   if (!current) return null;
-  const [submitters, waiting] = await Promise.all([
-    activeSubmitters(tx, now),
+  const [owing, waiting] = await Promise.all([
+    authorsOwing(tx, issue, now),
     authorsWaiting(tx, issue, now),
   ]);
-  return { monday: issue.monday, userIds: [...new Set([...submitters, ...waiting])] };
+  return { monday: issue.monday, userIds: [...new Set([...owing, ...waiting])] };
 }
 
 /** What the moved mail is about at send time: the slot being collected now, with its new deadline. */
@@ -64,17 +70,21 @@ export interface MovedFacts {
   readonly monday: CalDate;
   readonly meetingDate: CalDate;
   readonly deadlineAt: Date;
-  /** The recipient has a draft or returned point for it. */
+  /** The recipient has a draft or returned point for it, or owes its porada a report. */
   readonly hasWork: boolean;
 }
 
-/** Read again when the mail goes: the slot open now and whether the recipient waits on it. */
+/** Read again when the mail goes: the slot open now and whether the recipient still has work for it. */
 export async function loadMoved(
-  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
+  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'futureItems' | 'settings'>,
   userId: string,
 ): Promise<MovedFacts> {
   const { now } = tx.ctx;
   const issue = await reminderIssue(tx, now);
-  const hasWork = (await waitingAuthors(tx, issue, now)).includes(userId);
+  const [waiting, owing] = await Promise.all([
+    waitingAuthors(tx, issue, now),
+    owingAuthors(tx, issue, now),
+  ]);
+  const hasWork = waiting.includes(userId) || owing.includes(userId);
   return { ...issue, hasWork };
 }

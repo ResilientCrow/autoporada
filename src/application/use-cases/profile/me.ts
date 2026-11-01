@@ -15,7 +15,6 @@ export const me = defineUseCase({
       displayName: user.displayName,
       role: user.role,
       isStudent: user.isStudent,
-      remindDeadline: user.remindDeadline,
     });
   },
 });

@@ -247,8 +247,9 @@ now; the handler works from the clock and the data, so it sends only what is due
 31. **Deadline reminders.** Near the deadline (two days before it at 13.00, and on its
     day at 12.00 Prague time) the worker mails on its own every 15 minutes; or use
     `jobs:run reminders.deadline` inside that window.
-    - [ ] An active submitter gets „Autoporada: uzávěrka porady se blíží“ two days ahead, once,
-          and not when they switched „Posílat mi připomínky uzávěrky“ off in `/profil`.
+    - [ ] The organiser of an approved akce that has ended and whose report is not handed in
+          gets „Autoporada: odevzdejte zprávu z akce“ two days ahead, once; someone with
+          nothing owed gets nothing.
     - [ ] An author with a draft or returned point gets „Autoporada: dnes je uzávěrka porady“
           on the deadline day, a student too.
     - [ ] The mails leave spread over about half an hour, not in one burst.

@@ -11,7 +11,6 @@ export { people } from './people';
 export { pointTypes } from './pointTypes';
 export { points } from './points';
 export { porada } from './porada';
-export { profile } from './profile';
 export { registry } from './registry';
 export { review } from './review';
 export { richtext } from './richtext';

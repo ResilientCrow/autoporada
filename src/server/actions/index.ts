@@ -22,7 +22,6 @@ export {
   withdrawPoint,
 } from './points';
 export { savePointType } from './point-types';
-export { setReminders } from './profile';
 export {
   addEntries,
   moveList,

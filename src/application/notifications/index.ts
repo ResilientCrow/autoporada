@@ -6,12 +6,11 @@ export { movedNoticeJob, movedRecipients } from './moved';
 export { isHeadmaster, summaryIssue } from './summary';
 export { POINT_MAIL } from './point-mails';
 export {
-  activeSubmitters,
+  authorsOwing,
   authorsWaiting,
   isMember,
   reminderIssue,
   waitingAuthors,
-  wantsSoftReminder,
   type ReminderFacts,
 } from './reminders';
 export { stillApplies } from './still-applies';

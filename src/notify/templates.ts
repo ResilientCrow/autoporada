@@ -167,15 +167,14 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       link: '/body',
     },
   }),
-  // The soft one can be switched off in the profile (D8); the hard one cannot, as it is about the reader's own work.
+  // Neither can be switched off by the reader (ADR 0046): each is about the reader's own work, a report owed or a point.
   'reminder.soft': ({ meetingDate }) => ({
-    subject: 'Autoporada: uzávěrka porady se blíží',
+    subject: 'Autoporada: odevzdejte zprávu z\u00A0akce',
     body: {
       paragraphs: [
-        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} je za dva dny.`,
+        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} je za dva dny a\u00A0porada čeká na vaši zprávu z\u00A0akce, která proběhla. Odevzdejte ji v\u00A0aplikaci:`,
       ],
       link: '/body',
-      after: ['Připomínky můžete vypnout v\u00A0profilu.'],
     },
   }),
   'reminder.hard': ({ meetingDate }) => ({

@@ -17,7 +17,7 @@ import { parseResponsible } from '@/contracts';
 import { admits, type Scope } from '@/domain/policy';
 import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
-import { codePoints, distinctSorted, newestFirst } from './events';
+import { codePoints, newestFirst } from './events';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
 
@@ -115,6 +115,18 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
           (a.id < b.id ? -1 : 1),
       )
       .map(record);
+  /** An approved akce whose report is not started, or still a draft or returned (ADR 0046). */
+  const reportNotHandedIn = (
+    item: Pick<FakeFutureItem, 'state' | 'content' | 'reportPointId' | 'reportState'>,
+  ) => {
+    const linked =
+      item.reportPointId === null ? undefined : tx.draft.points.get(item.reportPointId);
+    const notStarted =
+      (item.reportState === 'none' || item.reportState === 'prompted') &&
+      item.reportPointId === null;
+    const unfinished = linked?.state === 'draft' || linked?.state === 'returned';
+    return item.state === 'approved' && item.content.expectsReport && (notStarted || unfinished);
+  };
   const find = (id: string, mayUse: (item: FakeFutureItem) => boolean) => {
     const item = futureItems.get(id);
     return item && mayUse(item) ? record(item) : null;
@@ -263,13 +275,20 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         ? { id: item.id, authorId: item.authorId, state: item.state, reportState: item.reportState }
         : null;
     },
-    async submitterIds(since) {
+    async reportsOwed({ from, to }) {
       guard(tx, false);
       if (principal.kind !== 'system') throw new ScopeViolation();
-      const handedIn = [...futureItems.values()].filter(
-        (item) => item.submittedAt && item.submittedAt >= since,
-      );
-      return distinctSorted(handedIn.map((item) => item.authorId));
+      return [...futureItems.values()]
+        .flatMap((item) => {
+          const ending = endingOf(item);
+          return reportNotHandedIn(item) &&
+            ending &&
+            compareDates(ending.lastDay, from) >= 0 &&
+            compareDates(ending.lastDay, to) <= 0
+            ? [ending]
+            : [];
+        })
+        .sort((a, b) => (a.id < b.id ? -1 : 1));
     },
     async countSubmittedSince({ since, notBy }) {
       guard(tx, false);
@@ -294,18 +313,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, false);
       return reaching('approved', from).filter((item) => {
         const last = item.content.endDate ?? item.content.startDate;
-        const linked =
-          item.reportPointId === null ? undefined : tx.draft.points.get(item.reportPointId);
-        const notStarted =
-          (item.reportState === 'none' || item.reportState === 'prompted') &&
-          item.reportPointId === null;
-        const unfinished = linked?.state === 'draft' || linked?.state === 'returned';
-        return (
-          item.content.expectsReport &&
-          (notStarted || unfinished) &&
-          last !== null &&
-          compareDates(last, to) <= 0
-        );
+        return reportNotHandedIn(item) && last !== null && compareDates(last, to) <= 0;
       });
     },
   };

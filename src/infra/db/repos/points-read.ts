@@ -1,6 +1,5 @@
 import {
   and,
-  asc,
   count,
   desc,
   eq,
@@ -161,7 +160,6 @@ export function createPointReads(
   | 'queue'
   | 'ownRecent'
   | 'mailFacts'
-  | 'submitterIds'
   | 'countSubmittedSince'
   | 'handedInFor'
 > {
@@ -222,15 +220,6 @@ export function createPointReads(
         .from(points)
         .where(eq(points.id, id));
       return row ?? null;
-    },
-    async submitterIds(since) {
-      if (ctx.principal.kind !== 'system') throw new ScopeViolation();
-      const rows = await db
-        .selectDistinct({ authorId: points.authorId })
-        .from(points)
-        .where(gte(points.submittedAt, since))
-        .orderBy(asc(points.authorId));
-      return rows.map((row) => row.authorId);
     },
     async handedInFor(monday) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();

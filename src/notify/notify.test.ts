@@ -109,9 +109,9 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
     ),
   },
   'reminder.soft': {
-    subject: 'Autoporada: uzávěrka porady se blíží',
+    subject: `Autoporada: odevzdejte zprávu z${NB}akce`,
     text: letter(
-      `uzávěrka porady z${NB}26.${NB}října 2026 je za dva dny.\n\n${POINTS}\n\nPřipomínky můžete vypnout v${NB}profilu.`,
+      `uzávěrka porady z${NB}26.${NB}října 2026 je za dva dny a${NB}porada čeká na vaši zprávu z${NB}akce, která proběhla. Odevzdejte ji v${NB}aplikaci:\n\n${POINTS}`,
     ),
   },
   'reminder.hard': {

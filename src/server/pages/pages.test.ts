@@ -262,7 +262,7 @@ describe('signed-in pages', () => {
     resolvePrincipal.mockResolvedValue(principal(role));
     runRegistered.mockResolvedValue({
       ok: true,
-      value: { displayName: 'Jana', role, remindDeadline: false },
+      value: { displayName: 'Jana', role },
     });
   };
 
@@ -294,7 +294,6 @@ describe('signed-in pages', () => {
       actor: principal(role).actor,
       pending,
       freshAuth: true,
-      remindDeadline: false,
     };
     expect(await requireSignedIn('/')).toEqual(expected);
     expect(await optionalSignedIn()).toEqual(expected);

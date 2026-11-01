@@ -156,7 +156,7 @@ export function createFutureItemRepo(
   ctx: TxContext,
 ): Omit<
   FutureItemRepo,
-  'forIssue' | 'waitingFor' | 'awaitingReport' | 'reportsEnding' | 'reportEnding'
+  'forIssue' | 'waitingFor' | 'awaitingReport' | 'reportsEnding' | 'reportEnding' | 'reportsOwed'
 > {
   const { principal, now } = ctx;
   const byId = (id: string, where: SQL | undefined) =>
@@ -288,15 +288,6 @@ export function createFutureItemRepo(
         .from(futureItems)
         .where(eq(futureItems.id, id));
       return row ?? null;
-    },
-    async submitterIds(since) {
-      if (principal.kind !== 'system') throw new ScopeViolation();
-      const rows = await db
-        .selectDistinct({ authorId: futureItems.authorId })
-        .from(futureItems)
-        .where(gte(futureItems.submittedAt, since))
-        .orderBy(asc(futureItems.authorId));
-      return rows.map((row) => row.authorId);
     },
     async countSubmittedSince({ since, notBy }) {
       if (principal.kind !== 'system') throw new ScopeViolation();

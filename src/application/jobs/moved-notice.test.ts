@@ -14,10 +14,11 @@ import {
   type UserRecord,
   type WorkerDeps,
 } from '@/application/ports';
-import { moveIssue, setReminders, setSkipped } from '@/application/use-cases';
+import { moveIssue, setSkipped } from '@/application/use-cases';
 import { calDate, toIsoDate } from '@/domain/time';
 
 import { createFakeMail } from '../../../test/support/fake-mail';
+import { lateReportFixtures } from '../../../test/support/late-reports';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { JOB_HANDLERS } from './index';
@@ -25,6 +26,7 @@ import { unusedConverter } from '../../../test/support/fake-converter';
 
 const world = setupWorld();
 const points = pointFixtures(world);
+const late = lateReportFixtures(world);
 
 /** Monday 2 November 2026: the rule's deadline is Saturday 31 October 20.00 Prague (19.00Z). */
 const MONDAY = calDate(2026, 11, 2);
@@ -85,10 +87,16 @@ const mailTo = async () =>
 const movedKey = (user: UserRecord, deadlineAt: Date) =>
   `issue.moved:${ISO}:${user.id}:${Math.floor(deadlineAt.getTime() / MINUTE)}`;
 
-/** The author handed in a point last month: an active submitter of the school year. */
+/** The author handed in a point last month: that alone puts nobody in the audience. */
 async function handedIn(author: UserRecord) {
   world.clock.set(new Date('2026-10-12T08:00:00Z'));
   await points.moveTo(author, await points.start(author, 'pokyn'), 'submitted');
+  world.clock.set(WEDNESDAY);
+}
+/** The author's akce ended on Monday 26 October, after that porada: its report goes to 2 November. */
+async function owes(author: UserRecord) {
+  world.clock.set(new Date('2026-10-01T08:00:00Z'));
+  await late.akce(author, { day: '2026-10-26', timeTo: '14:00' });
   world.clock.set(WEDNESDAY);
 }
 async function draft(author: UserRecord) {
@@ -120,23 +128,21 @@ describe('the notice job', () => {
 });
 
 describe('the audience', () => {
-  it('mails active staff and everyone with a draft, once each, and nobody else', async () => {
+  it('mails whoever owes an akce report or has a draft, once each, and nobody else', async () => {
     const head = await headmaster();
-    const active = await submitter();
-    await handedIn(active);
-    const optedOut = await submitter();
-    await handedIn(optedOut);
-    expect((await world.run(setReminders, world.as(optedOut), { on: false })).ok).toBe(true);
+    const owing = await submitter();
+    await owes(owing);
     const student = await submitter({ isStudent: true });
-    await handedIn(student); // a student keeps no soft reminder
+    await owes(student); // a student owes the report of their akce too
     const writer = await submitter({ isStudent: true });
-    await draft(writer); // but a draft puts them in the audience
+    await draft(writer);
     const both = await submitter();
-    await handedIn(both);
+    await owes(both);
     await draft(both);
-    const idle = await submitter(); // never handed in anything
+    const idle = await submitter();
+    await handedIn(idle); // handed in a point, owes nothing
     const blocked = await submitter();
-    await handedIn(blocked);
+    await owes(blocked);
     await world.tx(system('test.seed'), async (tx) => {
       const current = await tx.users.lock(blocked.id);
       await tx.users.changeAccess(blocked.id, current!.version, { status: 'blocked' });
@@ -146,9 +152,9 @@ describe('the audience', () => {
     await moveDeadline(head, '2026-10-30');
     const data = noticeFor(FRIDAY_8PM);
     expect(await runNotice(data)).toEqual({ kind: 'done', code: 'notified' });
-    expect(await mailTo()).toEqual([active.id, writer.id, both.id].sort());
+    expect(await mailTo()).toEqual([owing.id, student.id, writer.id, both.id].sort());
     expect(await mailKeys()).toEqual(
-      [active, writer, both].map((u) => movedKey(u, FRIDAY_8PM)).sort(),
+      [owing, student, writer, both].map((u) => movedKey(u, FRIDAY_8PM)).sort(),
     );
     for (const job of await jobs('mail.send')) {
       expect(job.data).toMatchObject({ template: 'issue.moved' });
@@ -173,8 +179,8 @@ describe('the audience', () => {
     const head = await headmaster();
     const done = await submitter();
     const fresh = await submitter();
-    await handedIn(done);
-    await handedIn(fresh);
+    await owes(done);
+    await owes(fresh);
     await moveDeadline(head, '2026-10-30');
     await world.workerDb.transaction(
       { principal: system('job:test'), now: world.clock.now(), requestId: 'seed' },
@@ -196,7 +202,7 @@ describe('the audience', () => {
   it('mails again for a second earlier deadline, under its own key', async () => {
     const head = await headmaster();
     const user = await submitter();
-    await handedIn(user);
+    await owes(user);
     await moveDeadline(head, '2026-10-30');
     await world.run(moveIssue, world.as(head), {
       monday: ISO,
@@ -217,7 +223,7 @@ describe('a stale job is dropped', () => {
   async function moved() {
     const head = await headmaster();
     const user = await submitter();
-    await handedIn(user);
+    await owes(user);
     await moveDeadline(head, '2026-10-30');
     const data = noticeFor(FRIDAY_8PM);
     return { head, user, data };
@@ -274,19 +280,21 @@ describe('at send time', () => {
       (tx) => tx.mailLedger.get(key),
     );
 
-  it('sends to a member with work, and nothing to one without work who opted out of the reminder', async () => {
+  it('sends to a member with a draft or an owed report, and nothing to one who owes nothing', async () => {
     const head = await headmaster();
     const worker = await submitter({ email: 'jana@ssps.cz' });
+    const owing = await submitter({ email: 'eva@ssps.cz' });
     const quiet = await submitter({ email: 'petr@ssps.cz' });
     await draft(worker);
+    await owes(owing);
     await handedIn(quiet);
-    await world.run(setReminders, world.as(quiet), { on: false });
     await moveDeadline(head, '2026-10-30');
     const mail = createFakeMail();
     expect(await mailSend(mail, worker)).toMatchObject({ kind: 'done', code: 'sent' });
-    expect(mail.calls).toHaveLength(1);
+    expect(await mailSend(mail, owing)).toMatchObject({ kind: 'done', code: 'sent' });
+    expect(mail.calls).toHaveLength(2);
     expect(await mailSend(mail, quiet)).toEqual({ kind: 'done', code: 'skipped.stale' });
-    expect(mail.calls).toHaveLength(1);
+    expect(mail.calls).toHaveLength(2);
   });
 
   it('sends nothing to a user who is gone, and nothing to a pending or blocked one', async () => {

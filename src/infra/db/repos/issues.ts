@@ -1,4 +1,4 @@
-import { and, asc, between, eq, gte, or, sql } from 'drizzle-orm';
+import { and, asc, between, eq, gte, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   ScopeViolation,
@@ -33,6 +33,24 @@ const toRecord = (row: IssueRow): IssueRecord => ({
 
 export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
   const { principal } = ctx;
+  /** The calendar's rows by the columns migrations 0024 and 0025 grant the worker, and no other. */
+  const calendarRows = async (where: SQL | undefined) => {
+    const rows = await db
+      .select({
+        monday: issues.monday,
+        meetingDate: issues.meetingDate,
+        deadlineAt: issues.deadlineAt,
+        status: issues.status,
+      })
+      .from(issues)
+      .where(where)
+      .orderBy(asc(issues.monday));
+    return rows.map((row) => ({
+      ...row,
+      monday: parseIsoDate(row.monday),
+      meetingDate: parseIsoDate(row.meetingDate),
+    }));
+  };
   const byMonday = async (monday: string) => {
     const [row] = await db.select(ISSUE_ROW).from(issues).where(eq(issues.monday, monday));
     if (!row) throw new Error('ensure: the issue is missing after its insert');
@@ -92,27 +110,15 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
       return rows.map(toRecord);
     },
     async calendar(today) {
-      // The columns migrations 0024 and 0025 grant the worker, and no other.
-      const rows = await db
-        .select({
-          monday: issues.monday,
-          meetingDate: issues.meetingDate,
-          deadlineAt: issues.deadlineAt,
-          status: issues.status,
-        })
-        .from(issues)
-        .where(
-          or(
-            gte(issues.monday, toIsoDate(mondayOf(today))),
-            gte(issues.meetingDate, toIsoDate(today)),
-          ),
-        )
-        .orderBy(asc(issues.monday));
-      return rows.map((row) => ({
-        ...row,
-        monday: parseIsoDate(row.monday),
-        meetingDate: parseIsoDate(row.meetingDate),
-      }));
+      return calendarRows(
+        or(
+          gte(issues.monday, toIsoDate(mondayOf(today))),
+          gte(issues.meetingDate, toIsoDate(today)),
+        ),
+      );
+    },
+    async calendarBetween(from, to) {
+      return calendarRows(between(issues.monday, toIsoDate(from), toIsoDate(to)));
     },
     touch: (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
     setTexts: (id, expectedVersion, texts) =>

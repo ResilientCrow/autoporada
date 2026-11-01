@@ -11,5 +11,4 @@ export const nav = {
   archive: 'Archiv',
   access: 'Žádost o\u00A0přístup',
   settings: 'Nastavení',
-  profile: 'Profil',
 } as const;

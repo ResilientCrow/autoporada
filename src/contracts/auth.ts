@@ -97,7 +97,6 @@ export const meOutput = z.object({
   displayName: z.string(),
   role: z.enum(ROLES),
   isStudent: z.boolean(),
-  remindDeadline: z.boolean(),
 });
 
 /**

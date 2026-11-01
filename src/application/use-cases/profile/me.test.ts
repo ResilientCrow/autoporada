@@ -14,7 +14,6 @@ describe('profile.me', () => {
         displayName: 'Jana Nováková',
         role: 'pending',
         isStudent: false,
-        remindDeadline: true,
       },
     });
   });

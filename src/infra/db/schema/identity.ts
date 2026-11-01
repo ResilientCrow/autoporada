@@ -42,8 +42,6 @@ export const users = pgTable(
     role: role().notNull().default('pending'),
     isStudent: boolean().notNull().default(false),
     status: userStatus().notNull().default('active'),
-    /** The user's own choice to get the soft deadline reminder; it is not an access fact. */
-    remindDeadline: boolean().notNull().default(true),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
     updatedAt: at()

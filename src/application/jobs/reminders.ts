@@ -1,10 +1,5 @@
 import { readSettingValue } from '@/application/core';
-import {
-  activeSubmitters,
-  authorsWaiting,
-  mailJob,
-  reminderIssue,
-} from '@/application/notifications';
+import { authorsOwing, authorsWaiting, mailJob, reminderIssue } from '@/application/notifications';
 import { JOB_TX_TIMEOUT_MS, system, type JobHandler } from '@/application/ports';
 import { reminderDue, reminderSlot, reminderStagger, type ReminderKind } from '@/domain/calendar';
 
@@ -16,7 +11,9 @@ const TEMPLATE = { soft: 'reminder.soft', hard: 'reminder.hard' } as const;
  * it is for and has not been mailed (design section 13, D7). It reconciles to the clock and the
  * data, so a rerun enqueues nothing new: the ledger key is per Monday and person, and the start is
  * the slot plus a fixed offset from the recipient's id, so recipients are spread over half an hour.
- * A kind the headmaster switched off (the `reminders` setting) is skipped whole.
+ * The soft one goes to whoever owes the porada a report from an akce, the hard one to whoever has
+ * a draft or returned point for it (ADR 0046). A kind the headmaster switched off (the `reminders`
+ * setting) is skipped whole.
  */
 export const deadlineReminders: JobHandler<'reminders.deadline'> = async ({ db, clock }, job) => {
   const enqueued = await db.transaction(
@@ -30,7 +27,9 @@ export const deadlineReminders: JobHandler<'reminders.deadline'> = async ({ db, 
       for (const kind of ['soft', 'hard'] as const satisfies readonly ReminderKind[]) {
         if (!switches[kind] || !reminderDue(kind, issue.deadlineAt, now)) continue;
         const recipients =
-          kind === 'soft' ? await activeSubmitters(tx, now) : await authorsWaiting(tx, issue, now);
+          kind === 'soft'
+            ? await authorsOwing(tx, issue, now)
+            : await authorsWaiting(tx, issue, now);
         const slot = reminderSlot(kind, issue.deadlineAt).getTime();
         for (const userId of recipients) {
           const { data, dedupeKey } = mailJob(TEMPLATE[kind], { userId, monday: issue.monday });

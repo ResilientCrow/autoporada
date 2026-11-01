@@ -84,9 +84,11 @@ in v1 unless the [plan of record](plan.md) changes first.
   saving. A deadline already shown to an author never moves: saving freezes the
   porady shown so far with the old rule and applies the new one to those nobody
   has seen, and never to a deadline set by hand.
-- Deadline reminders by e-mail: two days before the deadline at 13:00 to
-  staff who handed in something this school year (switched off in the
-  profile), and on its day at 12:00 to authors with a draft or returned point.
+- Deadline reminders by e-mail, which nobody can switch off for themselves:
+  two days before the deadline at 13:00 to the organiser of every approved
+  akce that has ended and whose report (souhrn z akce) this porada is owed and
+  nobody has handed in yet (the porada after the akce's last day; students
+  too), and on its day at 12:00 to authors with a draft or returned point.
   The headmaster can switch either reminder off for everyone. Saturday's
   reminder leaves out late reports, which have their own mails: one when the
   akce ends (with the exact deadline) and one an hour before it, to the author

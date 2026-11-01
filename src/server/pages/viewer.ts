@@ -37,8 +37,6 @@ interface SignedInModel {
   readonly pending: boolean;
   /** Signed in at Entra recently enough for a step-up action (ADR 0002). */
   readonly freshAuth: boolean;
-  /** Wants the soft deadline reminder (the profile page's box). */
-  readonly remindDeadline: boolean;
 }
 
 /** The viewer with their profile, or null for a visitor (no database call without a session). */
@@ -53,13 +51,12 @@ const currentSignedIn = cache(async (): Promise<SignedInModel | null> => {
     if (isRefusal(code)) logPageFailure('profile.me', id, causeOfFault(code), { name: code });
     throw pageFailureOf(`profile.me: ${code}`, code);
   }
-  const { displayName, role, remindDeadline } = result.value;
+  const { displayName, role } = result.value;
   return {
     displayName,
     actor: viewer.actor,
     pending: role === 'pending',
     freshAuth: isFreshAuth(viewer.authTime, getContainer().app.clock.now()),
-    remindDeadline,
   };
 });
 

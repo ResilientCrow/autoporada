@@ -24,7 +24,7 @@ export const settings = {
   reminders: {
     title: 'Připomínky',
     intro: 'E-maily autorům před uzávěrkou. Vypnutý druh se nepošle nikomu.',
-    soft: 'Připomínka dva dny před uzávěrkou',
+    soft: 'Připomínka zprávy z\u00a0akce dva dny před uzávěrkou',
     hard: 'Upozornění v\u00a0den uzávěrky',
   },
   annex1: {

@@ -846,41 +846,24 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
     const refused = read(world.as(author), (tx) => tx.futureItems.mailFacts(item.id));
     expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
-});
 
-describe('FutureItemRepo submitterIds (what the reminders read, migration 0024)', () => {
-  const asWorker = <T>(work: (tx: Tx) => Promise<T>) =>
-    world.workerDb.transaction(
-      { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
-      { mode: 'read' },
-      work,
-    );
-  const SINCE = new Date('2026-10-05T00:00:00Z');
-
-  it('lists the authors who handed in an akce since a day, once, and not those who did not', async () => {
-    const [recent, old, draft] = [
-      await world.seed.user({ role: 'submitter' }),
-      await world.seed.user({ role: 'submitter' }),
-      await world.seed.user({ role: 'submitter' }),
-    ];
-    const handIn = async (author: UserRecord, at: string) => {
-      const { item } = await create(world.as(author), { content: FULL });
-      await update(world.as(author), item, {
-        ...SUBMIT,
-        content: FULL,
-        submittedAt: new Date(at),
-      });
-    };
-    await handIn(recent, '2026-10-06T08:00:00Z');
-    await handIn(recent, '2026-10-07T08:00:00Z');
-    await handIn(old, '2026-10-04T23:59:59Z');
-    await create(world.as(draft), { content: FULL });
-    expect(await asWorker((tx) => tx.futureItems.submitterIds(SINCE))).toEqual([recent.id]);
-  });
-
-  it('refuses a user', async () => {
+  it('lists the reports owed in a window, not one written or declined, to the worker only (ADR 0046)', async () => {
     const author = await world.seed.user({ role: 'submitter' });
-    const refused = read(world.as(author), (tx) => tx.futureItems.submitterIds(SINCE));
+    const day = (d: number) => ({ startDate: calDate(2026, 11, d), endDate: null });
+    const first = await akce(author, day(1));
+    const prompted = await akce(author, day(20), { reportState: 'prompted' });
+    await akce(author, { startDate: calDate(2026, 10, 31), endDate: null });
+    await akce(author, day(21));
+    await akce(author, day(5), { reportState: 'written' });
+    await akce(author, day(6), { reportState: 'declined' });
+    await akce(author, { ...day(7), expectsReport: false });
+    const rows = await asWorker((tx) => tx.futureItems.reportsOwed(WINDOW));
+    expect(ids(rows)).toEqual([first.id, prompted.id].sort());
+    expect(rows.find((row) => row.id === first.id)).toMatchObject({
+      authorId: author.id,
+      lastDay: calDate(2026, 11, 1),
+    });
+    const refused = read(world.as(author), (tx) => tx.futureItems.reportsOwed(WINDOW));
     expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
 });

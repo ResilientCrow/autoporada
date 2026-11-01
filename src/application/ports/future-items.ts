@@ -177,8 +177,16 @@ export interface FutureItemRepo {
   reportEnding(id: string): Promise<EndingAkce | null>;
   /** The worker's read at send time: null for an unknown item. ScopeViolation for a user. */
   mailFacts(id: string): Promise<FutureMailFacts | null>;
-  /** The authors with an akce or jednání handed in since `since`, each once, ordered by id. ScopeViolation for a user. */
-  submitterIds(since: Date): Promise<readonly string[]>;
+  /**
+   * The soft reminder's read (ADR 0046): the approved akce that expect a report nobody has handed
+   * in, as `awaitingReport` counts them, whose last day falls from `from` to `to`, both included,
+   * ordered by id. Only the columns migrations 0017, 0022 and 0035 grant the worker. ScopeViolation
+   * for a user.
+   */
+  reportsOwed(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly EndingAkce[]>;
   /**
    * How many items wait for review (`submitted`) that were handed in after `since` by anyone but
    * `notBy`: what the reviewer digest counts. ScopeViolation for a user.

@@ -178,6 +178,29 @@ describe('IssueRepo (port contract)', () => {
     ]);
   });
 
+  it('gives the worker the calendar facts of a range of Mondays, both ends included (ADR 0046)', async () => {
+    for (const monday of [calDate(2026, 10, 12), calDate(2026, 10, 19), calDate(2026, 10, 26)]) {
+      await ensure(issueOf(monday));
+    }
+    const moved = await ensure({
+      ...issueOf(calDate(2026, 11, 2)),
+      meetingDate: calDate(2026, 11, 4),
+    });
+    await setStatus(moved.issue, 'skipped');
+    const asWorker = world.workerDb.transaction(
+      { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
+      { mode: 'read' },
+      (tx) => tx.issues.calendarBetween(calDate(2026, 10, 19), calDate(2026, 11, 2)),
+    );
+    expect(
+      (await asWorker).map(({ monday, meetingDate, status }) => ({ monday, meetingDate, status })),
+    ).toEqual([
+      { monday: calDate(2026, 10, 19), meetingDate: calDate(2026, 10, 19), status: 'open' },
+      { monday: calDate(2026, 10, 26), meetingDate: calDate(2026, 10, 26), status: 'open' },
+      { monday: calDate(2026, 11, 2), meetingDate: calDate(2026, 11, 4), status: 'skipped' },
+    ]);
+  });
+
   it('changes the status against the expected version and raises it by one', async () => {
     const { issue } = await ensure(issueOf(MONDAY));
     const skipped = await setStatus(issue, 'skipped');

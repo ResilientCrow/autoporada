@@ -182,7 +182,6 @@ export {
   savePointTypeInput,
   savePointTypeOutput,
 } from './point-type';
-export { setRemindersInput, setRemindersOutput } from './profile';
 export {
   addEntriesInput,
   addEntriesOutput,

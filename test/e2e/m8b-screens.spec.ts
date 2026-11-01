@@ -109,10 +109,5 @@ test.describe('the akce, proposal and settings screens', () => {
       page.getByRole('heading', { level: 1, name: points.proposal.title }),
     ).toBeVisible();
     await expectAccessible();
-
-    await page.goto('/profil');
-    await hydrated();
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expectAccessible();
   });
 });

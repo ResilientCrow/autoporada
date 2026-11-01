@@ -11,7 +11,6 @@ import { people } from './people';
 import { pointTypes } from './pointTypes';
 import { points } from './points';
 import { porada } from './porada';
-import { profile } from './profile';
 import { registry } from './registry';
 import { privacy } from './privacy';
 import { review } from './review';
@@ -39,7 +38,6 @@ export const cs = {
   gallery,
   issues,
   points,
-  profile,
   future,
   pointTypes,
   porada,

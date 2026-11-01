@@ -200,11 +200,6 @@ export interface PointRepo {
     readonly deadlineAt: Date;
   }): Promise<readonly string[]>;
   /**
-   * The authors with a point handed in since `since` (`submitted_at`, which a retract clears),
-   * each once, ordered by id. ScopeViolation for a user.
-   */
-  submitterIds(since: Date): Promise<readonly string[]>;
-  /**
    * How many points wait for review (`submitted`) that were handed in after `since` by anyone but
    * `notBy`: what the reviewer digest counts. Only the columns migrations 0017 and 0024 grant the worker.
    * ScopeViolation for a user.

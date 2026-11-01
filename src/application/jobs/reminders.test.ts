@@ -1,9 +1,8 @@
-/** The deadline reminders (design section 13, D7 (a)): which slot, which recipients, which key, how staggered. */
+/** The deadline reminders (design section 13, ADR 0046): which slot, which recipients, which key, how staggered. */
 import { randomUUID } from 'node:crypto';
 
 import { describe, expect, it } from 'vitest';
 
-import { setReminders } from '@/application/use-cases';
 import {
   system,
   type JobInput,
@@ -71,10 +70,31 @@ const hard = (user: UserRecord) => `reminder.hard:${KEY_DAY}:${user.id}`;
 const submitter = (over: Parameters<typeof world.seed.user>[0] = {}) =>
   world.seed.user({ role: 'submitter', ...over });
 
-/** The author handed in a point at `when`, which makes them an active submitter of that school year. */
+/** The author handed in a point at `when`: that alone asks for no reminder. */
 async function handedIn(author: UserRecord, when = new Date('2026-10-12T08:00:00Z')) {
   world.clock.set(when);
   await points.moveTo(author, await points.start(author, 'pokyn'), 'submitted');
+}
+
+/**
+ * An approved akce of the author's that expects a report, last day `day` (ISO), ending at `timeTo`
+ * (20.00 without one). Monday 19 October is the porada before 26 October, so an akce from that
+ * day on reports to 26 October.
+ */
+async function owed(author: UserRecord, day = '2026-10-20', timeTo: string | null = '14:00') {
+  world.clock.set(new Date('2026-10-01T08:00:00Z'));
+  return late.akce(author, { day, timeTo });
+}
+
+/** The author started the akce's report and left it in `state`. */
+async function reported(author: UserRecord, akceId: string, state: PointRecord['state']) {
+  world.clock.set(new Date('2026-10-21T08:00:00Z'));
+  const pointId = await late.report(author, { day: '2026-10-20', timeTo: '14:00' }, state, MONDAY);
+  const handed = state !== 'draft' && state !== 'returned';
+  await late.patchAkce(author, akceId, {
+    reportPointId: pointId,
+    ...(handed && { reportState: 'written' as const }),
+  });
 }
 
 /** A point of the author's left in `state` at `when`; a returned one is first handed in for `earliest`. */
@@ -97,17 +117,17 @@ const afterwards = (user: UserRecord, patch: Parameters<typeof world.seed.user>[
     await tx.users.changeAccess(user.id, current!.version, patch ?? {});
   });
 
-const optOut = async (user: UserRecord) => {
-  const result = await world.run(setReminders, world.as(user), { on: false });
-  if (!result.ok) throw new Error('opt-out refused');
-};
-
 /** An issue row as it was frozen, for a deadline other than the rule's. */
-const frozen = (monday: CalDate, deadlineAt: Date, status: 'open' | 'skipped' = 'open') =>
+const frozen = (
+  monday: CalDate,
+  deadlineAt: Date,
+  status: 'open' | 'skipped' = 'open',
+  meetingDate = monday,
+) =>
   world.tx(system('test.seed'), async (tx) => {
     const { issue } = await tx.issues.ensure({
       monday,
-      meetingDate: monday,
+      meetingDate,
       schoolYear: schoolYear(monday),
       deadlineAt,
     });
@@ -133,9 +153,9 @@ const inLedger = (
   );
 
 describe('the soft reminder (two days before, 13.00 Prague)', () => {
-  it('asks an active submitter from the slot on, with ids only and a start inside the half hour', async () => {
+  it('asks the author of an akce whose report is owed from the slot on, with ids only and a start inside the half hour', async () => {
     const user = await submitter();
-    await handedIn(user);
+    await owed(user);
     expect(await runAt(new Date(SOFT.getTime() - 1))).toEqual({ kind: 'done', code: 'none' });
     expect(await queued()).toEqual([]);
 
@@ -154,7 +174,7 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
 
   it('keeps the same start however late in the window the run is', async () => {
     const user = await submitter();
-    await handedIn(user);
+    await owed(user);
     await runAt(SOFT);
     const first = await queued();
     await runAt(new Date(SOFT.getTime() + 3 * HOUR));
@@ -165,7 +185,7 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
 
   it('spreads recipients, each at a fixed offset of their own', async () => {
     const users = await Promise.all(Array.from({ length: 6 }, () => submitter()));
-    for (const user of users) await handedIn(user);
+    for (const user of users) await owed(user);
     await runAt(SOFT);
     const offsets = (await queued()).map((q) => q.startAfter!.getTime() - SOFT.getTime());
     expect(offsets).toHaveLength(6);
@@ -174,7 +194,7 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
 
   it('stops six hours after the slot', async () => {
     const user = await submitter();
-    await handedIn(user);
+    await owed(user);
     expect(await runAt(new Date(SOFT.getTime() + 6 * HOUR))).toEqual({
       kind: 'done',
       code: 'none',
@@ -182,8 +202,9 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
     expect(await queued()).toEqual([]);
   });
 
-  it('asks submitters of a point or of an akce this school year, active, not students, not opted out', async () => {
-    const [pointAuthor, akceAuthor, student, optedOut, blocked, lastYear, pending] = [
+  it('asks whoever owes a report not handed in, a student too, and nobody for having handed something in', async () => {
+    const [notStarted, draft, returned, student, submitted, approved, onlyPoints, blocked] = [
+      await submitter(),
       await submitter(),
       await submitter(),
       await submitter({ isStudent: true }),
@@ -192,23 +213,76 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
       await submitter(),
       await submitter(),
     ];
-    await handedIn(pointAuthor);
-    world.clock.set(new Date('2026-10-12T08:00:00Z'));
-    const id = await akce.start(akceAuthor);
-    await akce.moveTo(akceAuthor, id, 'submitted');
-    for (const user of [student, optedOut, blocked, pending]) await handedIn(user);
-    await optOut(optedOut);
+    await owed(notStarted);
+    await reported(draft, await owed(draft), 'draft');
+    await reported(returned, await owed(returned), 'returned');
+    await owed(student);
+    await reported(submitted, await owed(submitted), 'submitted');
+    await reported(approved, await owed(approved), 'approved');
+    await handedIn(onlyPoints);
+    await owed(blocked);
     await afterwards(blocked, { status: 'blocked' });
-    await afterwards(pending, { role: 'pending' });
-    await handedIn(lastYear, new Date('2026-08-20T08:00:00Z'));
-    await submitter(); // never handed in anything
     await runAt(SOFT);
-    expect(await keys()).toEqual([soft(pointAuthor), soft(akceAuthor)].sort());
+    expect(await keys()).toEqual(
+      [soft(notStarted), soft(draft), soft(returned), soft(student)].sort(),
+    );
+  });
+
+  it('asks only for akce over by the slot that report to this porada: from the meeting day of the one before', async () => {
+    const [before, meetingDay, endsAtSlot, endsAfterSlot, tomorrow] = [
+      await submitter(),
+      await submitter(),
+      await submitter(),
+      await submitter(),
+      await submitter(),
+    ];
+    await owed(before, '2026-10-18', null); // reported to 19 October
+    await owed(meetingDay, '2026-10-19', '10:00'); // the day of the porada before: too late for it
+    await owed(endsAtSlot, '2026-10-22', '13:00');
+    await owed(endsAfterSlot, '2026-10-22', '13:15');
+    await owed(tomorrow, '2026-10-23', '10:00');
+    await runAt(SOFT);
+    expect(await keys()).toEqual([soft(meetingDay), soft(endsAtSlot)].sort());
+  });
+
+  it('counts from the meeting day the porada before really has', async () => {
+    const [moved, beforeMove] = [await submitter(), await submitter()];
+    // 19 October held on Wednesday 21st: an akce on the 20th went to it, one on the 21st did not.
+    await frozen(
+      calDate(2026, 10, 19),
+      new Date('2026-10-18T18:00:00Z'),
+      'open',
+      calDate(2026, 10, 21),
+    );
+    await owed(beforeMove, '2026-10-20');
+    await owed(moved, '2026-10-21', '15:00');
+    await runAt(SOFT);
+    expect(await keys()).toEqual([soft(moved)]);
+  });
+
+  it('steps over a skipped porada before to the one held before it', async () => {
+    const [afterSkip, beforeSkip] = [await submitter(), await submitter()];
+    await frozen(calDate(2026, 10, 19), new Date('2026-10-17T18:00:00Z'), 'skipped');
+    await owed(afterSkip, '2026-10-12');
+    await owed(beforeSkip, '2026-10-11');
+    await runAt(SOFT);
+    expect(await keys()).toEqual([soft(afterSkip)]);
+  });
+
+  it('leaves out an akce not approved, one that expects no report and one whose report was declined', async () => {
+    const [waiting, noReport, declined] = [await submitter(), await submitter(), await submitter()];
+    world.clock.set(new Date('2026-10-01T08:00:00Z'));
+    const id = await akce.start(waiting);
+    await akce.moveTo(waiting, id, 'submitted');
+    await late.akce(noReport, { day: '2026-10-20', timeTo: null }, { expectsReport: false });
+    await late.patchAkce(declined, await owed(declined), { reportState: 'declined' });
+    await runAt(SOFT);
+    expect(await keys()).toEqual([]);
   });
 
   it('asks nobody when the ledger holds the key already', async () => {
     const user = await submitter();
-    await handedIn(user);
+    await owed(user);
     world.clock.set(SOFT);
     await inLedger(user, soft(user), 'reminder.soft');
     expect(await runAt(SOFT)).toEqual({ kind: 'done', code: 'none' });
@@ -217,23 +291,18 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
 });
 
 describe('the hard reminder (the deadline day, 12.00 Prague)', () => {
-  it('asks authors of a recent draft or a returned point for this Monday, students and opted-out included', async () => {
-    const [drafter, returned, student, optedOut] = [
+  it('asks authors of a recent draft or a returned point for this Monday, students included', async () => {
+    const [drafter, returned, student] = [
       await submitter(),
       await submitter(),
       await submitter({ isStudent: true }),
-      await submitter(),
     ];
     await pointAt(drafter, 'draft', '2026-10-20T08:00:00Z');
     await pointAt(returned, 'returned', '2026-10-20T08:00:00Z');
     await pointAt(student, 'draft', '2026-10-20T08:00:00Z');
-    await pointAt(optedOut, 'draft', '2026-10-20T08:00:00Z');
-    await optOut(optedOut);
     expect(await runAt(new Date(HARD.getTime() - 1))).toEqual({ kind: 'done', code: 'none' });
     expect(await runAt(HARD)).toEqual({ kind: 'done', code: 'reminded' });
-    expect(await keys()).toEqual(
-      [hard(drafter), hard(returned), hard(student), hard(optedOut)].sort(),
-    );
+    expect(await keys()).toEqual([hard(drafter), hard(returned), hard(student)].sort());
     const [one] = await queued();
     expect(one?.data.template).toBe('reminder.hard');
     expect(one?.data.subjectId).toBe(one?.data.recipientId);
@@ -259,12 +328,12 @@ describe('the hard reminder (the deadline day, 12.00 Prague)', () => {
     expect(await keys()).toEqual([hard(fresh)]);
   });
 
-  it('keeps the author’s soft and hard reminders apart: a submitter with a draft gets both on their own days', async () => {
+  it('keeps the author’s soft and hard reminders apart: a draft and an owed report get both on their own days', async () => {
     const user = await submitter();
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
     await runAt(SOFT);
     expect(await keys()).toEqual([]);
-    await handedIn(user);
+    await owed(user);
     await runAt(SOFT);
     expect(await keys()).toEqual([soft(user)]);
     await runAt(HARD);
@@ -317,11 +386,11 @@ describe('the hard reminder leaves late reports alone (ADR 0035)', () => {
 describe('the headmaster’s switches (the reminders setting)', () => {
   const switches = (value: { soft: boolean; hard: boolean }) =>
     world.seed.setting('reminders', value);
-  /** One person who gets either kind: they handed in a point and have a draft for the Monday. */
+  /** One person who gets either kind: they owe an akce's report and have a draft for the Monday. */
   async function both() {
     const user = await submitter();
+    await owed(user);
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
-    await handedIn(user);
     return user;
   }
 
@@ -359,21 +428,13 @@ describe('the headmaster’s switches (the reminders setting)', () => {
     await runAt(new Date(SOFT.getTime() + HOUR));
     expect(await keys()).toEqual([soft(user)]);
   });
-
-  it('keeps the users’ own opt-out apart: a switch on does not mail someone who opted out', async () => {
-    const user = await both();
-    await optOut(user);
-    await switches({ soft: true, hard: true });
-    await runAt(SOFT);
-    expect(await keys()).toEqual([]);
-  });
 });
 
 describe('which Monday, and when nothing is due', () => {
   it('reminds nobody after the deadline, nor for the week after', async () => {
     const user = await submitter();
+    await owed(user);
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
-    await handedIn(user);
     expect(await runAt(new Date('2026-10-24T18:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
     expect(await runAt(new Date('2026-10-26T11:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
     expect(await runAt(new Date('2026-10-28T11:00:00Z'))).toEqual({ kind: 'done', code: 'none' });
@@ -428,7 +489,7 @@ describe('which Monday, and when nothing is due', () => {
 
   it('speaks for the Monday after a skipped one at its own slots, not a week early', async () => {
     const user = await submitter();
-    await handedIn(user);
+    await owed(user); // 26 October is skipped, so the report goes to 2 November
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
     await frozen(MONDAY, deadline(MONDAY, DEFAULT_DEADLINE), 'skipped');
     const next = (kind: 'soft' | 'hard') => `reminder.${kind}:2026-11-02:${user.id}`;

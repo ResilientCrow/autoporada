@@ -28,7 +28,7 @@ describe('navFor', () => {
   });
 
   it('shows the access request page to a pending user only', () => {
-    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/', '/pristup', '/profil']);
+    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/', '/pristup']);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/pristup');
     expect(navFor(actor('headmaster')).map((i) => i.href)).not.toContain('/pristup');
   });
@@ -43,7 +43,6 @@ describe('navFor', () => {
       'Porada',
       'Archiv',
       'Nastavení',
-      'Profil',
     ]);
   });
 
@@ -56,19 +55,17 @@ describe('navFor', () => {
       '/registr',
       '/porada',
       '/porada/archiv',
-      '/profil',
     ]);
   });
 
   it.each([
     ['submitter', actor('submitter')],
     ['student submitter', actor('submitter', { isStudent: true })],
-  ])('gives a %s the current and future events and the profile', (_name, who) => {
+  ])('gives a %s the current and future events', (_name, who) => {
     expect(navFor(who).map((i) => i.label)).toEqual([
       'Přehled',
       'Současné události',
       'Budoucí události',
-      'Profil',
     ]);
   });
 
@@ -151,22 +148,8 @@ describe('navFor', () => {
     expect(navFor(who).map((i) => i.href)).not.toContain('/kontrola/akce');
   });
 
-  it.each([
-    ['pending user', actor('pending')],
-    ['student submitter', actor('submitter', { isStudent: true })],
-    ['submitter', actor('submitter')],
-    ['reviewer', actor('reviewer')],
-    ['headmaster', actor('headmaster')],
-  ])('shows „Profil“ to a %s, last', (_name, who) => {
-    const items = navFor(who);
-    expect(items.at(-1)).toMatchObject({ href: '/profil', label: 'Profil' });
-  });
-
-  it.each([
-    ['a blocked submitter', actor('submitter', { status: 'blocked' })],
-    ['a deactivated reviewer', actor('reviewer', { status: 'deactivated' })],
-  ])('hides „Profil“ from %s', (_name, who) => {
-    expect(navFor(who).map((i) => i.href)).not.toContain('/profil');
+  it('lists no „Profil“: the reminders cannot be switched off (ADR 0046)', () => {
+    expect(NAV.map((i) => i.href)).not.toContain('/profil');
   });
 
   it('lists „Současné události“ right after the Přehled', () => {

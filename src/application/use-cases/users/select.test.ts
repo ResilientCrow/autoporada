@@ -19,7 +19,6 @@ const user = (over: Partial<UserRecord> = {}): UserRecord => {
     role: 'submitter',
     isStudent: false,
     status: 'active',
-    remindDeadline: true,
     version: 1,
     createdAt: new Date(0),
     updatedAt: new Date(0),

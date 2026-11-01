@@ -1,11 +1,13 @@
 import {
   addDays,
-  calDate,
   instantToWallClock,
   parseWallTime,
+  toIsoDate,
   wallClockToInstant,
   type CalDate,
 } from '@/domain/time';
+
+import type { IssueRow } from './slots';
 
 /** The soft reminder comes two days before the deadline, the hard one on its day (design section 13). */
 export type ReminderKind = 'soft' | 'hard';
@@ -43,8 +45,28 @@ export function reminderStagger(recipientId: string): number {
   return (hash % (REMINDER_STAGGER_MS / 1000)) * 1000;
 }
 
-/** The start of the school year of `day`: 1 September, Prague midnight. A submitter is active if they handed in something since. */
-export function activeSince(day: CalDate): Date {
-  const year = day.month >= 9 ? day.year : day.year - 1;
-  return wallClockToInstant(calDate(year, 9, 1), parseWallTime('00:00'));
+/** How many Mondays back the soft reminder looks for the porada before: a summer of skipped Mondays fits. */
+export const REPORT_LOOKBACK_WEEKS = 12;
+
+/** The Mondays whose rows `reportsSince` reads for the porada on `monday`: the look-back, the week before included. */
+export function reportLookback(monday: CalDate): { readonly from: CalDate; readonly to: CalDate } {
+  return { from: addDays(monday, -7 * REPORT_LOOKBACK_WEEKS), to: addDays(monday, -7) };
+}
+
+/**
+ * The first last day of an akce whose report goes to the porada on `monday` (ADR 0046): an akce's
+ * report goes to the first porada not skipped whose meeting is after its last day, so this is the
+ * meeting day of the porada held before, found by stepping back over skipped Mondays. A Monday with
+ * no row is a porada on that Monday; `earlier` are the stored rows of the look-back, in any order.
+ * With every Monday of the look-back skipped, its first Monday.
+ */
+export function reportsSince(monday: CalDate, earlier: readonly IssueRow[]): CalDate {
+  const rows = new Map(earlier.map((row) => [toIsoDate(row.monday), row]));
+  for (let week = 1; week <= REPORT_LOOKBACK_WEEKS; week++) {
+    const before = addDays(monday, -7 * week);
+    const row = rows.get(toIsoDate(before));
+    if (!row) return before;
+    if (row.status !== 'skipped') return row.meetingDate;
+  }
+  return reportLookback(monday).from;
 }

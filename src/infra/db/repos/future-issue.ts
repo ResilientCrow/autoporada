@@ -1,11 +1,12 @@
-import { and, asc, eq, exists, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import type { FutureItemRepo, TxContext } from '@/application/ports';
 import { toIsoDate, type CalDate } from '@/domain/time';
 
-import { futureItems, points } from '../schema';
+import { futureItems } from '../schema';
 import type { TxDatabase } from './database';
 import { ITEM_ROW, toRecord, visibleFutureItems } from './future-items';
+import { reportNotHandedIn } from './future-reports';
 
 /** An item's last day: the end date, or else the start date. */
 const lastDay = sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`;
@@ -41,26 +42,7 @@ export function createFutureIssueReads(
         .where(
           and(
             visibleFutureItems(ctx),
-            eq(futureItems.state, 'approved'),
-            eq(futureItems.expectsReport, true),
-            or(
-              and(
-                inArray(futureItems.reportState, ['none', 'prompted']),
-                isNull(futureItems.reportPointId),
-              ),
-              // Started but not handed in: the point's state is all this reads of it.
-              exists(
-                db
-                  .select({ one: sql`1` })
-                  .from(points)
-                  .where(
-                    and(
-                      eq(points.id, futureItems.reportPointId),
-                      inArray(points.state, ['draft', 'returned']),
-                    ),
-                  ),
-              ),
-            ),
+            reportNotHandedIn(db),
             gte(lastDay, toIsoDate(from)),
             lte(lastDay, toIsoDate(to)),
           ),

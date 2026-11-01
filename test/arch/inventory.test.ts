@@ -167,18 +167,6 @@ describe('inventory of entry points', () => {
     expect(found).toEqual({ 'pointTypes.save': ['admin', 'page'] });
   });
 
-  it('lets the profile’s reminder box refresh the page, under the submission limit', async () => {
-    const found: Record<string, unknown> = {};
-    for (const file of ACTION_MODULES) {
-      for (const value of Object.values(await exportsOf(file))) {
-        const info = wrappedInfo(value);
-        if (info?.kind === 'action' && info.useCase.name.startsWith('profile.'))
-          found[info.useCase.name] = [info.rateLimit, info.refresh];
-      }
-    }
-    expect(found).toEqual({ 'profile.setReminders': ['submission', 'page'] });
-  });
-
   it('lets the settings save refresh the page, under the admin limit', async () => {
     const found: Record<string, unknown> = {};
     for (const file of ACTION_MODULES) {

@@ -35,6 +35,17 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
     if (!issue || issue.version !== expectedVersion) throw new StaleVersion();
     return save({ ...issue, ...set, version: issue.version + 1 });
   };
+  /** The calendar's rows that `keep`, by the columns the worker is granted, earliest Monday first. */
+  const calendarRows = (keep: (issue: IssueRecord) => boolean) =>
+    [...issues.values()]
+      .filter(keep)
+      .sort((a, b) => compareDates(a.monday, b.monday))
+      .map(({ monday, meetingDate, deadlineAt, status }) => ({
+        monday,
+        meetingDate,
+        deadlineAt,
+        status,
+      }));
 
   return {
     async ensure(issue) {
@@ -54,15 +65,15 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
     async calendar(today) {
       guard(tx, false);
       const week = mondayOf(today);
-      return [...issues.values()]
-        .filter((i) => compareDates(i.monday, week) >= 0 || compareDates(i.meetingDate, today) >= 0)
-        .sort((a, b) => compareDates(a.monday, b.monday))
-        .map(({ monday, meetingDate, deadlineAt, status }) => ({
-          monday,
-          meetingDate,
-          deadlineAt,
-          status,
-        }));
+      return calendarRows(
+        (i) => compareDates(i.monday, week) >= 0 || compareDates(i.meetingDate, today) >= 0,
+      );
+    },
+    async calendarBetween(from, to) {
+      guard(tx, false);
+      return calendarRows(
+        (i) => compareDates(i.monday, from) >= 0 && compareDates(i.monday, to) <= 0,
+      );
     },
     touch: async (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
     setTexts: async (id, expectedVersion, texts) => {

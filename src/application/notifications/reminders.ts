@@ -1,10 +1,12 @@
 import { readSettingValue, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
 import {
-  activeSince,
+  eventEnd,
   handInSlot,
   REMINDER_DRAFT_DAYS,
   reminderDue,
+  reportLookback,
+  reportsSince,
   type ReminderKind,
 } from '@/domain/calendar';
 import { instantToWallClock, toIsoDate, type CalDate } from '@/domain/time';
@@ -13,11 +15,6 @@ type Member = Pick<UserRecord, 'role' | 'status'>;
 
 /** Someone who can sign in and read what the mail says. */
 export const isMember = (user: Member) => user.role !== 'pending' && user.status === 'active';
-
-/** The soft reminder is for staff who have not switched it off; students get only the hard one (D7 (a)). */
-export const wantsSoftReminder = (
-  user: Member & Pick<UserRecord, 'isStudent' | 'remindDeadline'>,
-) => isMember(user) && !user.isStudent && user.remindDeadline;
 
 /** What the caller knows when it enqueues a reminder: the recipient and the meeting Monday it is about. */
 export interface ReminderIds {
@@ -65,18 +62,32 @@ export function waitingAuthors(tx: Pick<Tx, 'points'>, issue: ReminderIssue, now
   return tx.points.reminderAuthors({ draftsSince, monday, meetingDate, deadlineAt });
 }
 
-/** Staff who handed in a point or an akce this school year (D7 (a)), by granted columns only. */
-export async function activeSubmitters(
-  tx: Pick<Tx, 'points' | 'futureItems' | 'users'>,
+/**
+ * Authors of an approved akce that has ended and whose report is not handed in yet, for the issue's
+ * porada (ADR 0046): its last day is on or after the meeting day of the porada before, so a report
+ * an earlier porada was owed is late (`reports.late`), not reminded here.
+ */
+export async function owingAuthors(
+  tx: Pick<Tx, 'issues' | 'futureItems'>,
+  issue: ReminderIssue,
   now: Date,
 ): Promise<readonly string[]> {
-  const since = activeSince(instantToWallClock(now).date);
-  const [authors, organisers] = await Promise.all([
-    tx.points.submitterIds(since),
-    tx.futureItems.submitterIds(since),
-  ]);
-  const users = await tx.users.getMany([...new Set([...authors, ...organisers])]);
-  return users.filter(wantsSoftReminder).map((user) => user.id);
+  const { from, to } = reportLookback(issue.monday);
+  const since = reportsSince(issue.monday, await tx.issues.calendarBetween(from, to));
+  const today = instantToWallClock(now).date;
+  const owed = await tx.futureItems.reportsOwed({ from: since, to: today });
+  const ended = owed.filter((item) => eventEnd(item).getTime() <= now.getTime());
+  return [...new Set(ended.map((item) => item.authorId))];
+}
+
+/** Everyone who owes the issue's porada a report, students too: the soft reminder's audience. */
+export async function authorsOwing(
+  tx: Pick<Tx, 'issues' | 'futureItems' | 'users'>,
+  issue: ReminderIssue,
+  now: Date,
+): Promise<readonly string[]> {
+  const users = await tx.users.getMany(await owingAuthors(tx, issue, now));
+  return users.filter(isMember).map((user) => user.id);
 }
 
 /** Everyone with a draft or returned point for the Monday, students too: it is about their own work. */
@@ -95,18 +106,21 @@ export interface ReminderFacts {
   readonly monday: CalDate;
   /** The day it is held. */
   readonly meetingDate: CalDate;
-  /** The recipient has a draft or returned point for it; read for the hard reminder only. */
+  /**
+   * The recipient still has the work this kind is about: a report owed for the soft one, a draft
+   * or returned point for the hard one.
+   */
   readonly hasWork: boolean;
 }
 
 /**
  * Read again when the mail is about to go: the slot of this kind must still be open for the Monday
- * collected now (a mail held up past its window says something false), and the hard reminder needs
- * the recipient still to have a draft or returned point. A kind the headmaster switched off after
- * the mail was queued is dropped too; the user's own opt-out is checked where the mail is queued.
+ * collected now (a mail held up past its window says something false), and the recipient must
+ * still have the work (`hasWork`). A kind the headmaster switched off after the mail was queued is
+ * dropped too. No one can switch the reminders off for themselves (ADR 0046).
  */
 export async function loadReminder(
-  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'settings'>,
+  tx: Pick<Tx, 'ctx' | 'issues' | 'points' | 'futureItems' | 'settings'>,
   kind: ReminderKind,
   userId: string,
 ): Promise<ReminderFacts | null> {
@@ -114,6 +128,8 @@ export async function loadReminder(
   if (!(await readSettingValue(tx, 'reminders'))[kind]) return null;
   const issue = await reminderIssue(tx, now);
   if (!reminderDue(kind, issue.deadlineAt, now)) return null;
-  const hasWork = kind === 'hard' && (await waitingAuthors(tx, issue, now)).includes(userId);
+  const authors =
+    kind === 'soft' ? await owingAuthors(tx, issue, now) : await waitingAuthors(tx, issue, now);
+  const hasWork = authors.includes(userId);
   return { monday: issue.monday, meetingDate: issue.meetingDate, hasWork };
 }

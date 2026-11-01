@@ -32,6 +32,11 @@ export interface IssueRepo {
    */
   calendar(today: CalDate): Promise<readonly IssueRow[]>;
   /**
+   * The rows of the Mondays from `from` to `to`, both included, earliest first, by the columns
+   * `calendar` reads: what the soft reminder reads of the poradas before (ADR 0046).
+   */
+  calendarBetween(from: CalDate, to: CalDate): Promise<readonly IssueRow[]>;
+  /**
    * Version-checked (StaleVersion, also for an unknown id); the version rises
    * by one. ScopeViolation for a user who may not `issue.generate`. The
    * caller checks the move against ISSUE_MACHINE.

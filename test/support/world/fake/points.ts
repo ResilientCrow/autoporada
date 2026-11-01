@@ -341,12 +341,6 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
       );
       return distinctSorted(waiting.map((p) => p.authorId));
     },
-    async submitterIds(since) {
-      guard(tx, false);
-      if (principal.kind !== 'system') throw new ScopeViolation();
-      const handedIn = [...points.values()].filter((p) => p.submittedAt && p.submittedAt >= since);
-      return distinctSorted(handedIn.map((p) => p.authorId));
-    },
     async handedInFor(monday) {
       guard(tx, false);
       if (principal.kind !== 'system') throw new ScopeViolation();

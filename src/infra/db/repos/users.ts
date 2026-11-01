@@ -25,7 +25,6 @@ export const USER_RECORD = {
   role: users.role,
   isStudent: users.isStudent,
   status: users.status,
-  remindDeadline: users.remindDeadline,
   version: users.version,
   createdAt: users.createdAt,
   updatedAt: users.updatedAt,
@@ -109,17 +108,6 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
         .where(and(eq(users.id, id), eq(users.version, expectedVersion), visible()))
         .returning(USER_RECORD);
       if (!row) throw new StaleVersion();
-      return row;
-    },
-    async setReminders(id, on) {
-      if (principal.kind !== 'user' || principal.actor.id !== id) throw new ScopeViolation();
-      const [row] = await db
-        .update(users)
-        // updatedAt keeps its value: $onUpdate would stamp it, and this is not an access change.
-        .set({ remindDeadline: on, updatedAt: users.updatedAt })
-        .where(and(eq(users.id, id), visible()))
-        .returning(USER_RECORD);
-      if (!row) throw new ScopeViolation();
       return row;
     },
     async countActiveHeadmasters() {

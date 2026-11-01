@@ -158,23 +158,40 @@ const submitter = (over: Parameters<typeof world.seed.user>[0] = {}) =>
 const headmaster = () => world.seed.user({ role: 'headmaster', email: 'reditel@ssps.cz' });
 const reviewer = () => world.seed.user({ role: 'reviewer', email: 'kontrola@ssps.cz' });
 
+/** An approved akce that ended on `day` and expects a report. */
+async function ended(author: UserRecord, day: string) {
+  const id = await akce.start(author, 'akce');
+  const content = readyAkce({ startDate: day, endDate: null });
+  const saved = await world.run(saveFuture, world.as(author), {
+    id,
+    expectedVersion: 1,
+    content,
+  });
+  if (!saved.ok) throw new Error(`save refused: ${saved.error.code}`);
+  await akce.moveTo(author, id, 'approved');
+  return id;
+}
+
 /**
- * Staff who handed in a point (soft), a draft and a student's draft (hard), and a returned point
- * for the week's Monday (soft and hard), all worked on three days before the soft slot.
+ * The organiser of an akce that ended on the Tuesday before the soft slot, with no report yet
+ * (soft, ADR 0046); staff who handed in a point (neither); a draft and a student's draft (hard);
+ * and a returned point for the week's Monday (hard), all worked on three days before the soft slot.
  */
 async function reminderPeople(week: Week) {
   world.clock.set(plus(week.soft, -3 * DAY));
-  const [handedIn, drafter, student, returned] = [
+  const [organiser, handedIn, drafter, student, returned] = [
+    await submitter(),
     await submitter(),
     await submitter(),
     await submitter({ isStudent: true }),
     await submitter(),
   ];
+  await ended(organiser, shiftDay(toIsoDate(week.monday), -6));
   await points.moveTo(handedIn, await points.start(handedIn, 'pokyn'), 'submitted');
   await points.start(drafter, 'pokyn');
   await points.start(student, 'pokyn');
   await points.moveTo(returned, await points.start(returned, 'pokyn'), 'returned', week.monday);
-  return { handedIn, drafter, student, returned };
+  return { organiser, drafter, student, returned };
 }
 const mondayKey = (week: Week) => toIsoDate(week.monday);
 const soft = (week: Week, user: UserRecord) => `reminder.soft:${mondayKey(week)}:${user.id}`;
@@ -186,14 +203,13 @@ describe.each(WEEKS)('deadline reminders, $name', (week) => {
   it(
     'sends each reminder once, from its own slot and with a start inside the half hour after it',
     async () => {
-      const { handedIn, drafter, student, returned } = await reminderPeople(week);
+      const { organiser, drafter, student, returned } = await reminderPeople(week);
       const seen = await firstSeen('reminders.deadline', [
         ...grid(plus(week.soft, -30 * MIN), plus(week.soft, 6 * HOUR + 30 * MIN)),
         ...grid(plus(week.hard, -30 * MIN), plus(week.deadline, 30 * MIN)),
       ]);
       expect(seen).toEqual({
-        [soft(week, handedIn)]: iso(week.soft),
-        [soft(week, returned)]: iso(week.soft),
+        [soft(week, organiser)]: iso(week.soft),
         [hard(week, drafter)]: iso(week.hard),
         [hard(week, student)]: iso(week.hard),
         [hard(week, returned)]: iso(week.hard),
@@ -208,19 +224,18 @@ describe.each(WEEKS)('deadline reminders, $name', (week) => {
   );
 
   it('catches up after three hours down: the first tick back reminds once, a later one adds nothing', async () => {
-    const { handedIn, drafter, student, returned } = await reminderPeople(week);
+    const { organiser, drafter, student, returned } = await reminderPeople(week);
     await run('reminders.deadline', plus(week.soft, -15 * MIN));
     expect(await keys()).toEqual([]);
     // Down from the soft slot for three hours: the tick back finds the slot still open.
     await run('reminders.deadline', plus(week.soft, 2 * HOUR + 45 * MIN));
-    expect(await keys()).toEqual(sorted([soft(week, handedIn), soft(week, returned)]));
+    expect(await keys()).toEqual([soft(week, organiser)]);
     await run('reminders.deadline', plus(week.soft, 3 * HOUR));
     await run('reminders.deadline', plus(week.hard, 2 * HOUR + 45 * MIN));
     await run('reminders.deadline', plus(week.hard, 3 * HOUR));
     expect(await keys()).toEqual(
       sorted([
-        soft(week, handedIn),
-        soft(week, returned),
+        soft(week, organiser),
         hard(week, drafter),
         hard(week, student),
         hard(week, returned),
@@ -229,20 +244,19 @@ describe.each(WEEKS)('deadline reminders, $name', (week) => {
   });
 
   it('follows a frozen deadline, and a window the worker sleeps through is not made up', async () => {
-    const { handedIn, drafter, student, returned } = await reminderPeople(week);
+    const { organiser, drafter, student, returned } = await reminderPeople(week);
     await issueAt(week.monday, new Date(week.frozen.deadline));
     // The rule's hard slot comes after the frozen deadline: that week is closed, the next not open.
     await run('reminders.deadline', week.hard);
     expect(await keys()).toEqual([]);
     await run('reminders.deadline', week.frozen.soft);
-    expect(await keys()).toEqual(sorted([soft(week, handedIn), soft(week, returned)]));
+    expect(await keys()).toEqual([soft(week, organiser)]);
     // The hard window is the four hours before the frozen deadline; down for three, back 14.45.
     await run('reminders.deadline', plus(week.frozen.hard, 2 * HOUR + 45 * MIN));
     await run('reminders.deadline', plus(week.frozen.deadline, 15 * MIN));
     expect(await keys()).toEqual(
       sorted([
-        soft(week, handedIn),
-        soft(week, returned),
+        soft(week, organiser),
         hard(week, drafter),
         hard(week, student),
         hard(week, returned),
@@ -353,19 +367,6 @@ describe.each(WEEKS)('reviewer digest, $name', (week) => {
 });
 
 describe.each(WEEKS)('report prompt, $name', (week) => {
-  /** An approved akce that ended on `day` and expects a report. */
-  async function ended(author: UserRecord, day: string) {
-    const id = await akce.start(author, 'akce');
-    const content = readyAkce({ startDate: day, endDate: null });
-    const saved = await world.run(saveFuture, world.as(author), {
-      id,
-      expectedVersion: 1,
-      content,
-    });
-    if (!saved.ok) throw new Error(`save refused: ${saved.error.code}`);
-    await akce.moveTo(author, id, 'approved');
-    return id;
-  }
   const prompt = (id: string, stage: 1 | 2) => `report.prompt:${id}:${stage}`;
 
   /** Akce that ended 21 days before the Sunday, 7 days before it and on it: each changes stage at the Monday midnight. */

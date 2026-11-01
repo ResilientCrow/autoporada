@@ -34,7 +34,6 @@ export const NAV: readonly NavItem[] = [
     check: { action: 'settings.manage' },
     also: ['/uzivatele'],
   },
-  { href: '/profil', label: cs.nav.profile, check: { action: 'profile.manage' } },
 ];
 
 /** The entries this actor may use. */

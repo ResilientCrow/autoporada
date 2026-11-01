@@ -73,7 +73,6 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
         role: 'pending',
         isStudent: false,
         status: 'active',
-        remindDeadline: true,
         version: 1,
         createdAt: ctx.now,
       });
@@ -116,14 +115,6 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
         version: user.version + 1,
         updatedAt: ctx.now,
       });
-    },
-    async setReminders(id, on) {
-      guard(tx, true);
-      if (principal.kind !== 'user' || principal.actor.id !== id) throw new ScopeViolation();
-      const user = find(id);
-      if (!user) throw new ScopeViolation();
-      // As the column: no version bump, no updatedAt, no trigger.
-      return save({ ...user, remindDeadline: on });
     },
     async countActiveHeadmasters() {
       guard(tx, false);

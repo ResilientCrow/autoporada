@@ -17,12 +17,14 @@ export {
 export { orderConflicts, type OrderConflict } from './order';
 export { DIGEST_FALLBACK_MS, digestSince, digestSlot, type DigestSlot } from './digest';
 export {
-  activeSince,
   REMINDER_DRAFT_DAYS,
   REMINDER_STAGGER_MS,
+  REPORT_LOOKBACK_WEEKS,
   reminderDue,
   reminderSlot,
   reminderStagger,
+  reportLookback,
+  reportsSince,
   type ReminderKind,
 } from './reminders';
 export {
