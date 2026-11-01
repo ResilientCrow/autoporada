@@ -20,9 +20,11 @@ export const metadata: Metadata = {
  */
 export default async function RootLayout({ children }: { children: ReactNode }) {
   await connection();
+  // Browser extensions add classes and attributes to <html> and <body> before hydration; the
+  // server never sends them. This tolerates only the two elements' own attributes.
   return (
-    <html lang="cs">
-      <body>
+    <html lang="cs" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         {/* React Aria reads this nonce for the <style> it inserts at run time (ADR 0012). */}
         <CspNonce nonce={await cspNonce()} />
         {children}

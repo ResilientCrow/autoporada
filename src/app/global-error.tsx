@@ -27,9 +27,10 @@ export default function GlobalError({
   readonly retry: () => void;
 }) {
   const cause = causeOfError(error);
+  // As in the root layout: extensions write onto <html> and <body> before hydration.
   return (
-    <html lang="cs">
-      <body>
+    <html lang="cs" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <title>{pageTitle(appError.title)}</title>
         <main id="obsah" className="frame flex flex-col items-start gap-8 py-8">
           <SlantLabel level={1}>{appError.title}</SlantLabel>
