@@ -65,3 +65,36 @@ export async function seedHandedIn(
     return made.id;
   });
 }
+
+/**
+ * A generated porada for `monday`, as the archive lists it: an issue with a document whose PDF is
+ * pending (so only the DOCX link shows). Nothing reads its snapshot or bytes here. Undo it with
+ * `forgetDocument`, which the archive and the download link then both miss.
+ */
+export async function seedDocument(monday: string): Promise<void> {
+  await withClient(async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO issues (monday, meeting_date, school_year, deadline_at, status)
+       VALUES ($1::date, $1::date, '2026/2027', now(), 'generated') RETURNING id`,
+      [monday],
+    );
+    const issue = rows[0];
+    if (!issue) throw new Error('no issue was made');
+    await client.query(
+      `INSERT INTO generated_documents (issue_id, snapshot, docx, docx_sha256)
+       VALUES ($1, '{}'::jsonb, '\\x00', repeat('0', 64))`,
+      [issue.id],
+    );
+  });
+}
+
+/** Deletes the generated document of this Monday and its issue. */
+export async function forgetDocument(monday: string): Promise<void> {
+  await withClient(async (client) => {
+    await client.query(
+      'DELETE FROM generated_documents WHERE issue_id IN (SELECT id FROM issues WHERE monday = $1::date)',
+      [monday],
+    );
+  });
+  await forgetIssues([monday]);
+}

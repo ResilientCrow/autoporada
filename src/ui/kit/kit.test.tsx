@@ -306,7 +306,9 @@ describe('link kinds', () => {
   it('ArrowLink and DownloadLink end in their icon after a no-break space', () => {
     expect(html(<ArrowLink href="/vzornik">{TEXT}</ArrowLink>)).toContain(`${TEXT}\u00a0<svg`);
     const download = html(<DownloadLink href="/porada/x/dokument/docx">{TEXT}</DownloadLink>);
-    expect(download).toContain('download=""');
+    // No `download` attribute: a failed download answers 303 to the archive, and a download link
+    // would save that page as a file instead of showing its notice.
+    expect(download).not.toMatch(/\sdownload[=\s>]/);
     expect(download).toContain('w-fit font-bold');
     expect(download).toContain(`${TEXT}\u00a0<svg`);
     expect(download).not.toContain('underline');
