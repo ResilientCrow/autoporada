@@ -31,6 +31,7 @@ export interface SettingsView {
 /**
  * The host of „Nastavení“: three forms, each with its own „Uložit“ and its own version. Each form
  * is keyed by its version, so the refresh after a save starts it again from the saved values.
+ * Below them, the way to „Uživatelé“ and „Typy bodů“.
  */
 export function Settings({
   view,
@@ -74,6 +75,9 @@ export function Settings({
             onSaved={saved}
           />
         </Card>
+        <p>
+          <ArrowLink href="/uzivatele">{settings.usersLink}</ArrowLink>
+        </p>
         <p>
           <ArrowLink href="/nastaveni/typy-bodu">{settings.typesLink}</ArrowLink>
         </p>

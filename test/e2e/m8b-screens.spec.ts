@@ -83,9 +83,9 @@ test.describe('the akce, proposal and settings screens', () => {
     const TITLE = `Akce ve frontě (${project})`;
     await seedFuture(emailOf('obraz', project), TITLE, 'submitted');
     await signInAs(signInAsRe('revizor', project));
-    await page.goto('/kontrola');
+    await page.goto('/kontrola/akce');
     await hydrated();
-    await expect(page.getByRole('heading', { name: review.future.title })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: review.future.title })).toBeVisible();
     await expect(page.getByRole('link', { name: TITLE })).toBeVisible();
     await expectAccessible();
   });

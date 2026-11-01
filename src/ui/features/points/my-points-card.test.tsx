@@ -26,9 +26,9 @@ const items = (html: string) =>
   [...html.matchAll(/<li[ >](.*?)<\/li>/gs)].map((m) => (m[1] ?? '').replace(/<[^>]+>/g, ''));
 
 describe('MyPointsCard', () => {
-  it('is a card titled „Moje body“ that links to the list', () => {
+  it('is a card titled „Současné události“ that links to the list', () => {
     const html = render(counts({ draft: 1 }));
-    expect(html).toContain('>Moje body</h2>');
+    expect(html).toContain('>Současné události</h2>');
     expect(html).toMatch(/<a[^>]*href="\/body"[^>]*>Všechny moje body/);
   });
 

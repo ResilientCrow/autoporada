@@ -18,13 +18,11 @@ import { pointView, type LoadedPoint, type PointViewModel } from './point-view';
 import { recentsOf } from './recents';
 import { getViewer, requestId } from './viewer';
 
-/**
- * „Kontrola“: the queue as `points.queue` answers, with the handed-in akce and jednání as
- * `future.queue` answers; the page writes the dates out.
- */
-export type QueuePageModel = z.output<typeof queuePointsOutput> & {
-  readonly future: z.output<typeof queueFutureOutput>;
-};
+/** „Schválení bodů“: the queue as `points.queue` answers; the page writes the dates out. */
+export type QueuePageModel = z.output<typeof queuePointsOutput>;
+
+/** „Schválení budoucích akcí“: the handed-in akce and jednání as `future.queue` answers. */
+export type FutureQueuePageModel = z.output<typeof queueFutureOutput>;
 
 /** What the decision bar may offer this viewer, worked out here so the page only renders it. */
 interface ReviewBarModel {
@@ -63,19 +61,20 @@ export interface ReviewPointPageModel extends PointViewModel {
   readonly edit: ReviewEditModel | null;
 }
 
-/** The queue, or null for a visitor or a viewer who may not review (404). */
+/** The points queue, or null for a visitor or a viewer who may not review (404). */
 export async function queuePage(): Promise<QueuePageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
   const ask = { principal: viewer, requestId: await requestId(), input: {} };
-  // Independent reads behind the same gate: one refusal is the other's.
-  const [points, future] = await Promise.all([
-    runPage(queuePoints, ask),
-    runPage(queueFuture, ask),
-  ]);
-  const queue = orNotFound('points.queue', points);
-  const akce = orNotFound('future.queue', future);
-  return queue && akce && { ...queue, future: akce };
+  return orNotFound('points.queue', await runPage(queuePoints, ask));
+}
+
+/** The akce and jednání queue, or null for a visitor or a viewer who may not review (404). */
+export async function futureQueuePage(): Promise<FutureQueuePageModel | null> {
+  const viewer = await getViewer();
+  if (!viewer) return null;
+  const ask = { principal: viewer, requestId: await requestId(), input: {} };
+  return orNotFound('future.queue', await runPage(queueFuture, ask));
 }
 
 /** The bar's choices for this actor; `points.get` names no author, only whether it is the viewer. */

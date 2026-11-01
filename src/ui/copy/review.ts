@@ -1,9 +1,9 @@
 import { POINT_LIMITS, type PointKind } from '@/domain/report';
 import type { ReviewDecision } from '@/domain/review';
 
-/** „Kontrola“: the review queue, its card on the Přehled and a point under review (design section 10). */
+/** „Schválení bodů“ (/kontrola): the review queue, its card on the Přehled and a point under review (design section 10). */
 export const review = {
-  title: 'Kontrola',
+  title: 'Schválení bodů',
   /** The tab title of a point under review; never its own title, which can name people. */
   point: 'Kontrola bodu',
   /** A Monday of the queue; `date` is day and month, „16.\u00a03.“. */
@@ -25,9 +25,11 @@ export const review = {
   empty: 'Ve frontě už nic nečeká.',
   /** More points wait than the queue lists; `n` is its limit. */
   capped: (n: number) => `Zobrazeno je jen ${n}\u00a0nejstarších bodů.`,
-  /** The akce and jednání section of the queue (design section 12). */
+  /** „Schválení budoucích akcí“ (/kontrola/akce): the akce and jednání queue (design section 12). */
   future: {
-    title: 'Akce a\u00A0jednání',
+    title: 'Schválení budoucích akcí',
+    /** No akce or jednání waits for a decision. */
+    empty: 'Žádná akce ani jednání nečeká na schválení.',
     /** An approved akce its author changed: it waits for a new decision. */
     revised: 'Změna schválené akce',
     /** More items wait than the section lists; `n` is its limit. */
@@ -75,7 +77,7 @@ export const review = {
   },
   /** The card on the Přehled, for reviewers. */
   card: {
-    title: 'Kontrola',
+    title: 'Schválení bodů',
     waiting: (n: number) => `Ke kontrole: ${n}`,
   },
 } as const;

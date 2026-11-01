@@ -32,7 +32,7 @@ const ALL: readonly MyPointRow[] = [
 describe('MyPoints', () => {
   it('has the page title, then the groups in order, the closed one folded', () => {
     const html = render(ALL);
-    expect(html).toMatch(/<h1[^>]*>.*Moje body.*<\/h1>/s);
+    expect(html).toMatch(/<h1[^>]*>.*Současné události.*<\/h1>/s);
     const at = (text: string) => html.indexOf(text);
     const order = [
       `Vrácené k${NB}úpravě`,
@@ -50,8 +50,8 @@ describe('MyPoints', () => {
       <MyPoints rows={ALL} next={null} first top={<h2>{SLOT}</h2>} />,
     );
     const at = (text: string) => html.indexOf(text);
-    expect(at('Moje body')).toBeGreaterThan(0);
-    expect(at(SLOT)).toBeGreaterThan(at('Moje body'));
+    expect(at('Současné události')).toBeGreaterThan(0);
+    expect(at(SLOT)).toBeGreaterThan(at('Současné události'));
     expect(at(SLOT)).toBeLessThan(at('Rozpracované'));
   });
 
@@ -69,6 +69,14 @@ describe('MyPoints', () => {
       /<details[^>]*><summary[^>]*><h2[^>]*>Zamítnuté a\u00a0zrušené<\/h2><\/summary>/,
     );
     expect(html).not.toMatch(/<details[^>]* open/);
+  });
+
+  it('is a section under another page’s title at level 2, its groups a level lower', () => {
+    const html = renderToStaticMarkup(<MyPoints rows={ALL} next={null} first level={2} />);
+    expect(html).not.toContain('<h1');
+    expect([...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/gs)]).toHaveLength(1);
+    expect(html).toMatch(/<h2[^>]*>.*Současné události.*<\/h2>/s);
+    expect(html.match(/<h3/g)).toHaveLength(5);
   });
 
   it('links each row to its page, and names an unnamed point „Bez názvu“', () => {

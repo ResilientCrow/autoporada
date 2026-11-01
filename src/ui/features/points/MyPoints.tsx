@@ -35,8 +35,9 @@ function RowList({ rows }: { readonly rows: readonly MyPointRow[] }) {
   );
 }
 
-function Group({ group, rows, collapsed }: MyPointsGroup) {
-  const heading = <h2 className="text-xl">{points.mine.group[group]}</h2>;
+function Group({ group, rows, collapsed, nested }: MyPointsGroup & { readonly nested: boolean }) {
+  const Heading = nested ? 'h3' : 'h2';
+  const heading = <Heading className="text-xl">{points.mine.group[group]}</Heading>;
   if (collapsed) {
     return (
       <details>
@@ -56,12 +57,14 @@ function Group({ group, rows, collapsed }: MyPointsGroup) {
 /**
  * „Moje body“ (design section 9): the author's points by where they stand, last changed first
  * within a group. `top` is a slot under the title. `next` is where „Starší body“ continues, a plain link back to this page.
+ * `level` 2 puts it under another page's title („Přidání akcí“), its groups a level lower.
  */
 export function MyPoints({
   rows,
   next,
   first,
   top,
+  level = 1,
 }: {
   readonly rows: readonly MyPointRow[];
   readonly next: string | null;
@@ -69,10 +72,11 @@ export function MyPoints({
   readonly first: boolean;
   /** What the page puts right under the title (the akce waiting for a report), composed by the app. */
   readonly top?: ReactNode;
+  readonly level?: 1 | 2;
 }) {
   return (
     <div className="space-y-4">
-      <SlantLabel level={1}>{points.mine.title}</SlantLabel>
+      <SlantLabel level={level}>{points.mine.title}</SlantLabel>
       {top}
       {first && rows.length === 0 ? <p>{points.mine.empty}</p> : null}
       <p>
@@ -83,7 +87,7 @@ export function MyPoints({
         </ButtonLink>
       </p>
       {groupMyPoints(rows).map((group) => (
-        <Group key={group.group} {...group} />
+        <Group key={group.group} {...group} nested={level === 2} />
       ))}
       {next === null ? null : (
         <p>

@@ -5,7 +5,7 @@ import type { Actor } from '@/domain/actor';
 import { cs } from '@/ui/copy';
 import { Button, buttonStyles, Icon, TextLink } from '@/ui/kit';
 
-import { navFor } from './nav';
+import { isCurrent, navFor } from './nav';
 import { NavLink } from './NavLink';
 
 /** The gap between the top-level blocks of every page (ADR 0043). */
@@ -34,7 +34,7 @@ export function Shell({
   const items = viewer ? navFor(viewer.actor) : [];
   const links = items.map((item) => (
     <li key={item.href}>
-      <NavLink href={item.href} current={item.href === current}>
+      <NavLink href={item.href} current={isCurrent(item, current)}>
         {item.label}
       </NavLink>
     </li>

@@ -37,10 +37,18 @@ const render = (
 const itemsOf = (html: string) => html.match(/<li[ >].*?<\/li>/gs) ?? [];
 
 describe('FutureList', () => {
-  it('is headed „Akce“ and clean for the CSP', () => {
+  it('is headed „Budoucí události“ and clean for the CSP', () => {
     const html = render([row()]);
-    expect(html).toMatch(/<h1[^>]*>.*Akce.*<\/h1>/s);
+    expect(html).toMatch(/<h1[^>]*>.*Budoucí události.*<\/h1>/s);
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('is a section under another page’s title at level 2', () => {
+    const html = renderToStaticMarkup(
+      <FutureList rows={[row()]} next={null} first canCreate level={2} />,
+    );
+    expect(html).not.toContain('<h1');
+    expect(html).toMatch(/<h2[^>]*>.*Budoucí události.*<\/h2>/s);
   });
 
   it('shows a line with the link, kind, days, place, campus and who is responsible', () => {

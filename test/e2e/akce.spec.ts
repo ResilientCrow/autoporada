@@ -62,9 +62,11 @@ test.describe('the akce journey', () => {
 
     // The reviewer finds it in the queue and approves it.
     const reviewer = await signInElsewhere(newContext, signInAsRe('revizor', project));
-    await reviewer.goto('/kontrola');
+    await reviewer.goto('/kontrola/akce');
     await hydrated(reviewer);
-    await expect(reviewer.getByRole('heading', { name: review.future.title })).toBeVisible();
+    await expect(
+      reviewer.getByRole('heading', { level: 1, name: review.future.title }),
+    ).toBeVisible();
     await reviewer.getByRole('link', { name: TITLE }).click();
     await expect(reviewer).toHaveURL(new RegExp(`/akce/${id}$`));
     await hydrated(reviewer);

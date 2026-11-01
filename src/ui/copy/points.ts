@@ -237,7 +237,7 @@ export const points = {
   },
   /** „Moje body“: the author's own points, grouped by where they stand (design section 9). */
   mine: {
-    title: 'Moje body',
+    title: 'Současné události',
     group: MINE_GROUP,
     /** Under an approved point; `date` is day and month, „16.\u00A03.“. */
     placement: (date: string) => `Půjde do porady z\u00A0${date}`,

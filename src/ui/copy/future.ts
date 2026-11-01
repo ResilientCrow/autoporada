@@ -9,7 +9,7 @@ export type StripSlot = 'meetings' | 'events' | 'later' | 'hidden' | 'skipped';
 
 /** „Akce“: the jednání and akce of the school (design section 12), listed and read here. */
 export const future = {
-  title: 'Akce',
+  title: 'Budoucí události',
   /** The tab title of one item; never its own title, which can name people. */
   item: 'Položka přehledu',
   kind: {

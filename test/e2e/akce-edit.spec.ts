@@ -46,7 +46,7 @@ test.describe('an akce handed in', () => {
 
     // The reviewer finds it flagged as a change of an approved akce.
     const reviewer = await signInElsewhere(newContext, signInAsRe('revizor', project));
-    await reviewer.goto('/kontrola');
+    await reviewer.goto('/kontrola/akce');
     const row = reviewer.getByRole('listitem').filter({ hasText: NEW });
     await expect(row).toContainText(review.future.revised);
     await expectAccessible(reviewer);

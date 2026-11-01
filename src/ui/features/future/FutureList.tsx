@@ -34,13 +34,15 @@ function Row({ row }: { readonly row: FutureRow }) {
 /**
  * „Akce“ (design section 12): what the reader may see, last changed first. Their own items show
  * their state, and so does any other that is not approved (a reviewer's list holds those). `next` is where „Starší akce“ continues, a plain link
- * back to this page. „Nová akce“ is for readers who may start one.
+ * back to this page. „Nová akce“ is for readers who may start one. `level` 2 puts it under another
+ * page's title („Přidání akcí“).
  */
 export function FutureList({
   rows,
   next,
   first,
   canCreate,
+  level = 1,
 }: {
   readonly rows: readonly FutureRow[];
   readonly next: string | null;
@@ -48,10 +50,11 @@ export function FutureList({
   readonly first: boolean;
   /** The reader may start a new item. */
   readonly canCreate: boolean;
+  readonly level?: 1 | 2;
 }) {
   return (
     <div className="space-y-4">
-      <SlantLabel level={1}>{future.title}</SlantLabel>
+      <SlantLabel level={level}>{future.title}</SlantLabel>
       {canCreate ? (
         <p>
           <ButtonLink href="/akce/novy">{future.new}</ButtonLink>

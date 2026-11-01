@@ -1,6 +1,7 @@
 /** „Nastavení“: where the headmaster sets the deadline rule, the reminders and the annex 1 texts. */
 export const settings = {
   title: 'Nastavení',
+  usersLink: 'Uživatelé',
   typesLink: 'Typy bodů',
   said: { changed: 'Nastavení je uloženo.' },
   save: 'Uložit',

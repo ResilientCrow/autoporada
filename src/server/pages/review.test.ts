@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { queuePage, reviewPointPage } from './index';
+import { futureQueuePage, queuePage, reviewPointPage } from './index';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
 const runRegistered = vi.hoisted(() => vi.fn());
@@ -77,41 +77,43 @@ describe('queuePage', () => {
       useCase.name === 'future.queue' ? answers.future : answers.points,
     );
 
-  it('gives the points queue with the akce section, both asked for as the viewer with no input', async () => {
+  it('gives the points queue alone, asked for as the viewer with no input', async () => {
     as('reviewer');
     serve({ points: { ok: true, value: QUEUE }, future: { ok: true, value: FUTURE } });
-    expect(await queuePage()).toEqual({ ...QUEUE, future: FUTURE });
-    expect(asked().sort()).toEqual([
-      ['future.queue', {}],
-      ['points.queue', {}],
-    ]);
+    expect(await queuePage()).toEqual(QUEUE);
+    expect(asked()).toEqual([['points.queue', {}]]);
   });
 
-  it.each([
-    ['points', { points: { ok: false, error: { code: 'forbidden' } } }],
-    ['akce', { future: { ok: false, error: { code: 'forbidden' } } }],
-  ] as const)('is null when the use case of the %s refuses the viewer', async (_name, refused) => {
+  it('gives the akce queue alone on its own page, asked for as the viewer with no input', async () => {
+    as('reviewer');
+    serve({ points: { ok: true, value: QUEUE }, future: { ok: true, value: FUTURE } });
+    expect(await futureQueuePage()).toEqual(FUTURE);
+    expect(asked()).toEqual([['future.queue', {}]]);
+  });
+
+  it('is null for a visitor on the akce queue too', async () => {
+    expect(await futureQueuePage()).toBeNull();
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it('is null when the use case refuses the viewer', async () => {
     as('submitter');
     serve({
-      points: { ok: true, value: QUEUE },
-      future: { ok: true, value: FUTURE },
-      ...refused,
+      points: { ok: false, error: { code: 'forbidden' } },
+      future: { ok: false, error: { code: 'forbidden' } },
     });
     expect(await queuePage()).toBeNull();
+    expect(await futureQueuePage()).toBeNull();
   });
 
   it('fails loudly on any other failure', async () => {
     as('reviewer');
     serve({
       points: { ok: false, error: { code: 'unavailable' } },
-      future: { ok: true, value: FUTURE },
-    });
-    await expect(queuePage()).rejects.toThrow('points.queue: unavailable');
-    serve({
-      points: { ok: true, value: QUEUE },
       future: { ok: false, error: { code: 'unavailable' } },
     });
-    await expect(queuePage()).rejects.toThrow('future.queue: unavailable');
+    await expect(queuePage()).rejects.toThrow('points.queue: unavailable');
+    await expect(futureQueuePage()).rejects.toThrow('future.queue: unavailable');
   });
 });
 

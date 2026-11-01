@@ -3,7 +3,7 @@ import { formatDayMonth, formatNumericDate, formatNumericRange } from '@/domain/
 import type { FutureKind } from '@/domain/calendar';
 import { compareDates, instantToWallClock, parseIsoDate } from '@/domain/time';
 import { future, points, review } from '@/ui/copy';
-import { ItemLink } from '@/ui/kit';
+import { ItemLink, SlantLabel } from '@/ui/kit';
 
 /** A handed-in akce or jednání as the queue lists it; dates are ISO, the page writes them out. */
 interface QueueFutureRow {
@@ -36,16 +36,16 @@ function days({ startDate, endDate }: QueueFutureRow): string | null {
 }
 
 /**
- * The akce and jednání of the queue (design section 12): a flat list, the oldest hand-in first,
- * each linking to its page, where the reviewer decides. An approved akce its author changed
- * carries „Změna schválené akce“. Left out when none waits.
+ * „Schválení budoucích akcí“ (/kontrola/akce, design section 12): the handed-in akce and jednání
+ * in a flat list, the oldest hand-in first, each linking to its page, where the reviewer decides.
+ * An approved akce its author changed carries „Změna schválené akce“.
  */
 export function QueueFuture({ future: waiting }: { readonly future: QueueFutureModel }) {
-  if (waiting.items.length === 0) return null;
   return (
-    <section className="space-y-3">
-      <h2 className="text-xl">{review.future.title}</h2>
+    <div className="space-y-4">
+      <SlantLabel level={1}>{review.future.title}</SlantLabel>
       {waiting.more ? <p>{review.future.capped(QUEUE_LIMIT)}</p> : null}
+      {waiting.items.length === 0 ? <p>{review.future.empty}</p> : null}
       <ul className="space-y-3">
         {waiting.items.map((row) => (
           <li key={row.id} className="space-y-1">
@@ -64,6 +64,6 @@ export function QueueFuture({ future: waiting }: { readonly future: QueueFutureM
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }

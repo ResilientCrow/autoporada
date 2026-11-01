@@ -3,9 +3,9 @@ import { countWord, type PluralForms } from '@/domain/cs';
 const STUDENT: PluralForms = { one: 'student', few: 'studenti', many: 'studentů' };
 const NEW: PluralForms = { one: 'nový', few: 'noví', many: 'nových' };
 
-/** „Registr“: the lists of students the document prints, kept by the headmaster, read by the staff. */
+/** „Seznamy studentů“ (the registry): the lists of students the document prints, kept by the headmaster, read by the staff. */
 export const registry = {
-  title: 'Registr',
+  title: 'Seznamy studentů',
   intro:
     'Seznamy studentů, které se tisknou do zápisu z\u00a0porady. Jména studentů vidí jen vedení školy a\u00a0kontroloři.',
   new: 'NOVÉ',

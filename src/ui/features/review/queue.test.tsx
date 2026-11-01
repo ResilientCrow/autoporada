@@ -6,7 +6,7 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
-import { Queue, QueueCard } from './index';
+import { Queue, QueueCard, QueueFuture } from './index';
 
 const { review, points } = cs;
 const NB = '\u00a0';
@@ -50,7 +50,6 @@ const FULL = {
     { ...row(D, { title: 'Bez porady' }), monday: null, meetingDate: null },
   ],
   more: false,
-  future: { items: [], more: false },
 };
 
 const akce = (id: string, over: Record<string, unknown> = {}) => ({
@@ -64,16 +63,13 @@ const akce = (id: string, over: Record<string, unknown> = {}) => ({
   revised: false,
   ...over,
 });
-const WITH_AKCE = {
-  ...FULL,
-  future: {
-    items: [
-      akce(A),
-      akce(B, { kind: 'jednani', title: 'Porada metodiků', endDate: null, revised: false }),
-      akce(C, { title: '', startDate: null, endDate: null, revised: true }),
-    ],
-    more: false,
-  },
+const FUTURE = {
+  items: [
+    akce(A),
+    akce(B, { kind: 'jednani' as const, title: 'Porada metodiků', endDate: null, revised: false }),
+    akce(C, { title: '', startDate: null, endDate: null, revised: true }),
+  ],
+  more: false,
 };
 
 const text = (html: string) => html.replace(/<[^>]+>/g, '');
@@ -85,7 +81,7 @@ const headings = (html: string, level: number) =>
 describe('Queue', () => {
   const html = renderToStaticMarkup(<Queue queue={FULL} />);
 
-  it('is headed „Kontrola“', () => {
+  it('is headed „Schválení bodů“', () => {
     expect(headings(html, 1)).toEqual([review.title]);
   });
 
@@ -176,16 +172,11 @@ describe('QueueCard', () => {
   });
 });
 
-describe('Queue: the akce and jednání section', () => {
-  const html = renderToStaticMarkup(<Queue queue={WITH_AKCE} />);
+describe('QueueFuture', () => {
+  const html = renderToStaticMarkup(<QueueFuture future={FUTURE} />);
 
-  it('heads the section „Akce a jednání“, after the points’ Mondays and before the approved ones', () => {
-    expect(headings(html, 2)).toEqual([
-      `Porada 26.${NB}10.`,
-      review.unplaced,
-      review.future.title,
-      review.approved,
-    ]);
+  it('is a page of its own, headed „Schválení budoucích akcí“', () => {
+    expect(headings(html, 1)).toEqual([review.future.title]);
   });
 
   it('links every item to its page under /akce, an untitled one by „Bez názvu“', () => {
@@ -212,34 +203,16 @@ describe('Queue: the akce and jednání section', () => {
     expect(text(html).split(review.future.revised)).toHaveLength(2);
   });
 
-  it('is left out when no item waits', () => {
-    const none = renderToStaticMarkup(<Queue queue={FULL} />);
-    expect(headings(none, 2)).not.toContain(review.future.title);
-  });
-
-  it('does not say nothing waits while only akce wait', () => {
-    const only = renderToStaticMarkup(
-      <Queue queue={{ ...WITH_AKCE, mondays: [], approved: [] }} />,
-    );
-    expect(text(only)).not.toContain(review.empty);
-    expect(headings(only, 2)).toEqual([review.future.title]);
-  });
-
-  it('says nothing waits only when neither points nor akce do', () => {
-    const empty = renderToStaticMarkup(
-      <Queue
-        queue={{ mondays: [], approved: [], more: false, future: { items: [], more: false } }}
-      />,
-    );
-    expect(text(empty)).toContain(review.empty);
+  it('says nothing waits only when no item does', () => {
+    expect(text(html)).not.toContain(review.future.empty);
+    const empty = renderToStaticMarkup(<QueueFuture future={{ items: [], more: false }} />);
+    expect(text(empty)).toContain(review.future.empty);
   });
 
   it('says the section is cut short only when more items wait than it shows', () => {
     const capped = review.future.capped(QUEUE_LIMIT);
     expect(text(html)).not.toContain(capped);
-    const more = renderToStaticMarkup(
-      <Queue queue={{ ...WITH_AKCE, future: { ...WITH_AKCE.future, more: true } }} />,
-    );
+    const more = renderToStaticMarkup(<QueueFuture future={{ ...FUTURE, more: true }} />);
     expect(text(more)).toContain(capped);
   });
 

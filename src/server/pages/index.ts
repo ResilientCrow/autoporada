@@ -15,7 +15,7 @@ export { pointTypesPage } from './point-types';
 export { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
 export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points';
 export { newYearPage, registryPage } from './registry';
-export { queuePage, reviewPointPage } from './review';
+export { futureQueuePage, queuePage, reviewPointPage } from './review';
 export { settingsPage } from './settings';
 export { signInPage } from './sign-in';
 export { userPage } from './user';
