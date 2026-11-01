@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ActionResult } from '@/contracts';
-import type { FormState, Problem, SaveAnswer } from '@/ui/form';
+import { NETWORK_FAILED, type FormState, type Problem, type SaveAnswer } from '@/ui/form';
 
 import {
   retractInput,
@@ -22,7 +22,7 @@ const landedAt =
     try {
       return await send(version);
     } catch {
-      return { kind: 'failed' };
+      return NETWORK_FAILED;
     }
   };
 const held: Around = async () => null;

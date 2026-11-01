@@ -1,6 +1,7 @@
 import type { DirectoryCode, DirectoryPort } from '@/application/ports';
 import { searchGate } from '@/application/use-cases';
 import {
+  DIRECTORY_FAILURE_STATUS,
   directorySearchRequest,
   directorySearchResponse,
   type DirectoryNotice,
@@ -111,5 +112,12 @@ export function directoryRouteSpec(deps: () => DirectoryRouteDeps): RouteSpec {
     access: 'session',
     rateLimit: 'directory',
     handle: (request, ctx) => search(deps(), request, ctx),
+    // An exception is a 500 whose body names what broke, so the box says so instead of
+    // „down“. 500, not 503: it may be a bug, and the client reads a body only from this status.
+    failure: ({ cause, detail }) =>
+      Response.json(
+        directorySearchResponse.parse({ hits: [], failure: cause, ...(detail && { detail }) }),
+        { status: DIRECTORY_FAILURE_STATUS },
+      ),
   };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DIRECTORY_LIMITS, PERSON_FIELD_MAX } from '@/domain/report';
 
+import { FAILURE_CAUSES } from './failure';
 import { directorySearchRequest, directorySearchResponse } from './directory';
 
 const hit = {
@@ -40,6 +41,22 @@ describe('directorySearchResponse', () => {
 
   it.each(['off', 'unavailable', 'throttled', 'denied', 'timeout'])('names the %s notice', (n) => {
     expect(answers({ hits: [], notice: n })).toBe(true);
+  });
+
+  it.each(FAILURE_CAUSES)('answers a failure of the route, cause %s, with no hits', (cause) => {
+    expect(answers({ hits: [], failure: cause })).toBe(true);
+    expect(answers({ hits: [], failure: cause, detail: 'Error 08006' })).toBe(true);
+  });
+
+  it.each([
+    ['an unknown cause', { hits: [], failure: 'broken' }],
+    ['a failure beside a notice', { hits: [], failure: 'bug', notice: 'off' }],
+    ['a detail with no failure', { hits: [], detail: 'Error 08006' }],
+    ['a detail past its cap', { hits: [], failure: 'bug', detail: 'x'.repeat(201) }],
+    ['a detail that is no text', { hits: [], failure: 'bug', detail: 5 }],
+    ['hits beside a failure', { hits: [hit], failure: 'bug' }],
+  ])('refuses %s', (_, body) => {
+    expect(answers(body)).toBe(false);
   });
 
   it.each([

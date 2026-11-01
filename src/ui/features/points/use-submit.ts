@@ -5,7 +5,7 @@ import type { z } from 'zod';
 
 import type { ServerAction, submitPointInput, submitPointOutput } from '@/contracts';
 import type { BulletSpec, PointKind } from '@/domain/report';
-import type { SaveAnswer } from '@/ui/form';
+import { NETWORK_FAILED, type SaveAnswer } from '@/ui/form';
 
 import { saveAnswer } from './answers';
 import { pointFormSpec } from './editor-form';
@@ -71,7 +71,7 @@ export function useSubmit({
             result = null;
           }
           show(submitOutcome(result, form));
-          return result === null ? ({ kind: 'failed' } as const) : saveAnswer(result);
+          return result === null ? NETWORK_FAILED : saveAnswer(result);
         }),
     });
   };

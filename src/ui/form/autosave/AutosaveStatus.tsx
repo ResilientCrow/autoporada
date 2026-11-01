@@ -2,10 +2,10 @@ import type { ReactNode } from 'react';
 
 import { formatClock } from '@/domain/cs';
 import type { WallTime } from '@/domain/time';
-import { autosave } from '@/ui/copy';
+import { app, autosave, errors, failures } from '@/ui/copy';
 import { Button, Notice } from '@/ui/kit';
 
-import type { Phase } from './machine';
+import type { FailedWhy, Phase } from './machine';
 
 function lineOf(phase: Phase, savedAt: WallTime | null): string {
   switch (phase) {
@@ -25,10 +25,34 @@ function lineOf(phase: Phase, savedAt: WallTime | null): string {
   }
 }
 
-function Banner({ text, children }: { readonly text: string; readonly children: ReactNode }) {
+/** What broke, in words: never the connection unless the request never got an answer. */
+function reasonOf(why: FailedWhy): string {
+  if (why.kind === 'network') return autosave.failed.network;
+  return why.kind === 'cause' ? failures[why.cause] : errors[why.code];
+}
+
+function failedText(why: FailedWhy | null): string {
+  return why === null ? autosave.failed.lead : `${autosave.failed.lead} ${reasonOf(why)}`;
+}
+
+function Banner({
+  text,
+  detail,
+  children,
+}: {
+  readonly text: string;
+  /** Development's technical line. */
+  readonly detail?: string;
+  readonly children: ReactNode;
+}) {
   return (
     <Notice tone="problem">
       <p>{text}</p>
+      {detail === undefined ? null : (
+        <p className="font-mono text-sm break-words">
+          {app.technical} {detail}
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-2">{children}</div>
     </Notice>
   );
@@ -43,6 +67,7 @@ function Banner({ text, children }: { readonly text: string; readonly children: 
 export function AutosaveStatus({
   phase,
   savedAt,
+  why,
   lockedText = autosave.locked.text,
   onRetry,
   onKeepMine,
@@ -50,6 +75,8 @@ export function AutosaveStatus({
 }: {
   readonly phase: Phase;
   readonly savedAt: WallTime | null;
+  /** Why the last save failed; read in the `failed` phase. */
+  readonly why: FailedWhy | null;
   /** What the locked banner says when the editor is not a point's (its own „už nelze upravovat“). */
   readonly lockedText?: string;
   readonly onRetry: () => void;
@@ -60,7 +87,7 @@ export function AutosaveStatus({
     <div className="flex flex-col gap-2">
       <p aria-live="off">{lineOf(phase, savedAt)}</p>
       {phase === 'failed' ? (
-        <Banner text={autosave.failed.text}>
+        <Banner text={failedText(why)} detail={why?.kind === 'cause' ? why.detail : undefined}>
           <Button variant="secondary" onPress={onRetry}>
             {autosave.failed.retry}
           </Button>

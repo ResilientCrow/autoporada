@@ -1,28 +1,33 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import { FAILURE_CAUSES } from '@/contracts';
 import { wallTime } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
 import { AutosaveStatus } from './AutosaveStatus';
-import type { Phase } from './machine';
+import type { FailedWhy, Phase } from './machine';
 
 const noop = () => undefined;
 
-const render = (phase: Phase, rest: { savedAt?: ReturnType<typeof wallTime> } = {}) =>
+const render = (
+  phase: Phase,
+  rest: { savedAt?: ReturnType<typeof wallTime>; why?: FailedWhy } = {},
+) =>
   renderToStaticMarkup(
     <AutosaveStatus
       phase={phase}
       savedAt={rest.savedAt ?? null}
+      why={rest.why ?? null}
       onRetry={noop}
       onKeepMine={noop}
       onReload={noop}
     />,
   );
 
-const { autosave } = cs;
+const { autosave, errors, failures } = cs;
 const statusLine = (html: string) => /<p [^>]*aria-live="off"[^>]*>(.*?)<\/p>/.exec(html)?.[1];
 const alerts = (html: string) => html.match(/role="alert"/g) ?? [];
 const buttons = (html: string) =>
@@ -56,11 +61,44 @@ describe('the banners', () => {
     expect(buttons(render(phase))).toEqual([]);
   });
 
-  it('failed: the text and "Zkusit znovu"', () => {
-    const html = render('failed');
+  it('failed: the lead, the reason and "Zkusit znovu"', () => {
+    const html = render('failed', { why: { kind: 'network' } });
     expect(alerts(html)).toHaveLength(1);
     expect(html).toContain('Změny se nepodařilo uložit. Zkontrolujte připojení.');
     expect(buttons(html)).toEqual(['Zkusit znovu']);
+  });
+
+  it.each(FAILURE_CAUSES)('failed by %s: names the cause, and never the connection', (cause) => {
+    const html = render('failed', { why: { kind: 'cause', cause } });
+    expect(html).toContain(`${autosave.failed.lead} ${failures[cause]}`);
+    expect(html).not.toContain('připojení');
+  });
+
+  it.each([
+    ['busy', errors.busy],
+    ['forbidden', errors.forbidden],
+    ['rule', errors.rule],
+    ['rate-limited', errors['rate-limited']],
+  ] as const)('failed by the code %s: its own text, and never the connection', (code, text) => {
+    const html = render('failed', { why: { kind: 'code', code } });
+    expect(html).toContain(`${autosave.failed.lead} ${text}`);
+    expect(html).not.toContain('připojení');
+  });
+
+  it('failed with no known reason: the lead alone, not a guess about the connection', () => {
+    const html = render('failed');
+    expect(html).toContain(autosave.failed.lead);
+    expect(html).not.toContain('připojení');
+  });
+
+  it('failed: shows the development detail in monospace below the text, only when there is one', () => {
+    const detail = 'Error 57P01 · pnpm dev:services';
+    const html = render('failed', { why: { kind: 'cause', cause: 'database-down', detail } });
+    expect(html).toContain(`${cs.app.technical} ${detail}`);
+    expect(html).toMatch(/<p class="[^"]*font-mono[^"]*">/);
+    expect(render('failed', { why: { kind: 'cause', cause: 'bug' } })).not.toContain(
+      cs.app.technical,
+    );
   });
 
   it('conflict: the text, "Načíst aktuální stav" and "Ponechat moji verzi"', () => {
@@ -82,6 +120,7 @@ describe('the banners', () => {
       <AutosaveStatus
         phase="locked"
         savedAt={null}
+        why={null}
         lockedText="Položku už nelze upravovat."
         onRetry={noop}
         onKeepMine={noop}
@@ -138,7 +177,7 @@ describe('the announcement', () => {
 
   it('shows each sentence once', () => {
     const texts = {
-      failed: autosave.failed.text,
+      failed: autosave.failed.lead,
       conflict: autosave.conflict.text,
       locked: autosave.locked.text,
       gone: autosave.gone.text,

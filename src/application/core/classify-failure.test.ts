@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { FailureCause } from '@/contracts';
 
-import { DatabaseFailure, TxClosed } from '../ports';
+import { DatabaseFailure, LockTimeout, TransactionConflict, TxClosed } from '../ports';
 import { classifyFailure } from './classify-failure';
 
 /** What the pg driver throws before infra maps it: an Error with `severity` and a 5-character `code`. */
@@ -24,6 +24,8 @@ const ROWS: readonly (readonly [string, unknown, FailureCause])[] = [
   ['too many connections 53300', sqlstate('53300'), 'database-down'],
   ['out of memory 53200', sqlstate('53200'), 'database-down'],
   ['statement timeout 57014', sqlstate('57014'), 'timeout'],
+  ['a lock not granted in time', new LockTimeout(), 'timeout'],
+  ['a conflict that outlasted the retries', new TransactionConflict(), 'bug'],
   ['undefined table 42P01', sqlstate('42P01'), 'database-setup'],
   ['undefined column 42703', sqlstate('42703'), 'database-setup'],
   ['undefined function 42883', sqlstate('42883'), 'database-setup'],

@@ -91,9 +91,21 @@ const reply = (body: unknown, status = 200, retryAfter: string | null = null): R
 const stubDirectory: DirectoryFetcher = (query, signal) => {
   const folded = foldForSearch(query).trim();
   const { triggers } = people;
-  if (folded.includes(triggers.down)) {
+  if (folded.includes(triggers.unavailable)) {
     return later(reply({ hits: [], notice: 'unavailable' }), FAST_MS, signal);
   }
+  if (folded.includes(triggers.timeout)) {
+    return later(reply({ hits: [], notice: 'timeout' }), FAST_MS, signal);
+  }
+  if (folded.includes(triggers.denied)) {
+    return later(reply({ hits: [], notice: 'denied' }), FAST_MS, signal);
+  }
+  // The route's own failure: a 500 that says what broke.
+  if (folded.includes(triggers.failed)) {
+    return later(reply({ hits: [], failure: 'database-down' }, 500), FAST_MS, signal);
+  }
+  // An answer that is not ours, as a proxy's: all the box knows is that nothing came.
+  if (folded.includes(triggers.down)) return later(reply(null, 502), FAST_MS, signal);
   if (folded.includes(triggers.rateLimited)) {
     return later(reply(null, 429, '3'), FAST_MS, signal);
   }

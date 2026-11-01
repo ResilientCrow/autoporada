@@ -105,7 +105,15 @@ export const gallery = {
        */
       sample: ['Lenka Marešová 3.B', 'Zdislav Hruška', 'Hlaváček Radslav', 'Marie', 'Ondřej Pech'],
     },
-    triggers: { down: 'chyba', rateLimited: 'rychle', signedOut: 'odhlasen' },
+    triggers: {
+      unavailable: 'chyba',
+      timeout: 'pomalu',
+      denied: 'zakazano',
+      failed: 'porucha',
+      down: 'proxy',
+      rateLimited: 'rychle',
+      signedOut: 'odhlasen',
+    },
   },
   richtext: {
     title: 'Textový editor',

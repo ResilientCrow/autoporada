@@ -269,7 +269,7 @@ test.describe('autosave in the point editor', () => {
     await expect.poll(() => tries).toBe(LADDER_MS.length + 1);
     const alert = banners(page);
     await expect(alert).toHaveCount(1);
-    await expect(alert).toContainText(autosave.failed.text);
+    await expect(alert).toContainText(`${autosave.failed.lead} ${autosave.failed.network}`);
     await expect(title).toHaveValue('Při výpadku spojení');
     await expect(title).toBeFocused();
 

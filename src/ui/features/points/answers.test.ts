@@ -36,8 +36,12 @@ describe('saveAnswer', () => {
     { code: 'step-up-required' },
     { code: 'unavailable', cause: 'database-down' },
     { code: 'rule', rule: 'draft-cap' },
-  ] as const)('maps %j to a failed save', (error) => {
-    expect(saveAnswer(fail(error))).toEqual({ kind: 'failed' });
+  ] as const)('maps %j to a failed save that keeps why', (error) => {
+    const why =
+      error.code === 'unavailable'
+        ? { kind: 'cause', cause: error.cause }
+        : { kind: 'code', code: error.code };
+    expect(saveAnswer(fail(error))).toEqual({ kind: 'failed', why });
   });
 });
 
@@ -67,7 +71,11 @@ describe('statusAnswer', () => {
     { code: 'forbidden' },
     { code: 'rate-limited', retryAfterSeconds: 3 },
     { code: 'unavailable', cause: 'database-down' },
-  ] as const)('maps %j to failed', (error) => {
-    expect(statusAnswer(fail(error))).toEqual({ kind: 'failed' });
+  ] as const)('maps %j to failed that keeps why', (error) => {
+    const why =
+      error.code === 'unavailable'
+        ? { kind: 'cause', cause: error.cause }
+        : { kind: 'code', code: error.code };
+    expect(statusAnswer(fail(error))).toEqual({ kind: 'failed', why });
   });
 });

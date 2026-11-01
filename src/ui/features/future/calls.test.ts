@@ -77,7 +77,7 @@ describe('reviseEffect', () => {
     expect(reviseEffect(null)).toEqual({
       refresh: false,
       unchanged: false,
-      answer: { kind: 'failed' },
+      answer: { kind: 'failed', why: { kind: 'network' } },
     });
   });
 
@@ -93,7 +93,7 @@ describe('reviseEffect', () => {
 describe('submitAnswer', () => {
   it('hears the server’s answer, and a failed call as a failure', () => {
     expect(submitAnswer({ ok: true, data: { version: 8 } })).toEqual({ kind: 'ok', version: 8 });
-    expect(submitAnswer(null)).toEqual({ kind: 'failed' });
+    expect(submitAnswer(null)).toEqual({ kind: 'failed', why: { kind: 'network' } });
     expect(submitAnswer(fail({ code: 'rule', rule: 'future-not-editable' }))).toEqual({
       kind: 'not-editable',
     });
@@ -117,7 +117,10 @@ describe('editorStatusOf', () => {
 
   it('keeps the other answers as the autosave hears them', () => {
     expect(editorStatusOf(fail({ code: 'not-found' }))).toEqual({ kind: 'gone' });
-    expect(editorStatusOf(fail({ code: 'busy' }))).toEqual({ kind: 'failed' });
+    expect(editorStatusOf(fail({ code: 'busy' }))).toEqual({
+      kind: 'failed',
+      why: { kind: 'code', code: 'busy' },
+    });
   });
 });
 

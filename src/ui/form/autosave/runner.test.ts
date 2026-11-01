@@ -5,6 +5,9 @@ import { wallTime } from '@/domain/time';
 import { DEBOUNCE_MS, type SaveAnswer, type StatusAnswer } from './machine';
 import { createRunner, type Runner } from './runner';
 
+/** What a rejected call is told to the machine as: the request never got an answer. */
+const LOST = { kind: 'failed', why: { kind: 'network' } } as const;
+
 type Request = { content: string; expectedVersion: number };
 
 /** Saves that wait until the test answers them, in order. */
@@ -79,7 +82,7 @@ describe('timers', () => {
     const { runner, calls, answer } = harness();
     change(runner, 'a');
     runner.dispatch({ type: 'blur' });
-    await answer({ kind: 'failed' });
+    await answer(LOST);
     for (const [wait, count] of [
       [5_000, 2],
       [15_000, 3],
@@ -89,7 +92,7 @@ describe('timers', () => {
       expect(calls).toHaveLength(count - 1);
       await vi.advanceTimersByTimeAsync(1);
       expect(calls).toHaveLength(count);
-      await answer({ kind: 'failed' });
+      await answer(LOST);
     }
     expect(runner.state().phase).toBe('failed');
     await vi.advanceTimersByTimeAsync(600_000);
@@ -115,7 +118,25 @@ describe('timers', () => {
     change(runner, 'a');
     runner.dispatch({ type: 'blur' });
     await vi.advanceTimersByTimeAsync(0);
-    expect(runner.state()).toMatchObject({ phase: 'dirty', attempt: 1 });
+    expect(runner.state()).toMatchObject({ phase: 'dirty', attempt: 1, why: { kind: 'network' } });
+  });
+
+  it('a status check that rejects is a lost connection too', async () => {
+    const runner = createRunner<string>(
+      {
+        save: () => Promise.resolve({ kind: 'conflict' }),
+        status: () => Promise.reject(new Error('network')),
+        refresh: () => undefined,
+        now: () => wallTime(9, 5),
+        onState: () => undefined,
+      },
+      1,
+    );
+    runner.start();
+    change(runner, 'a');
+    runner.dispatch({ type: 'blur' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runner.state()).toMatchObject({ phase: 'dirty', attempt: 1, why: { kind: 'network' } });
   });
 });
 
@@ -226,10 +247,8 @@ describe('sending after what is typed has landed', () => {
       await runner.afterLanded(() => {
         throw new Error('boom');
       }),
-    ).toEqual({ kind: 'failed' });
-    expect(await runner.afterLanded(() => Promise.reject(new Error('boom')))).toEqual({
-      kind: 'failed',
-    });
+    ).toEqual(LOST);
+    expect(await runner.afterLanded(() => Promise.reject(new Error('boom')))).toEqual(LOST);
     expect(runner.state().phase).toBe('idle');
   });
 
@@ -280,7 +299,7 @@ describe('leaving', () => {
     runner.dispatch({ type: 'blur' });
     change(runner, 'ab');
     runner.dispatch({ type: 'leave' });
-    await answer({ kind: 'failed' });
+    await answer(LOST);
     expect(calls[1]).toEqual({ content: 'ab', expectedVersion: 3 });
   });
 
@@ -296,7 +315,7 @@ describe('leaving', () => {
     const { runner, calls, answer } = harness();
     change(runner, 'a');
     runner.dispatch({ type: 'blur' });
-    await answer({ kind: 'failed' });
+    await answer(LOST);
     runner.dispatch({ type: 'leave' });
     expect(calls).toHaveLength(2);
     await vi.advanceTimersByTimeAsync(120_000);
@@ -364,7 +383,7 @@ describe('use', () => {
         seen.push(request.content);
         return Promise.resolve({ kind: 'ok', version: 9 });
       },
-      status: () => Promise.resolve({ kind: 'failed' }),
+      status: () => Promise.resolve(LOST),
       refresh: () => undefined,
     });
     change(runner, 'a');

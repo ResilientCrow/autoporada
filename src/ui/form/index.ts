@@ -1,5 +1,6 @@
 export {
   AutosaveStatus,
+  NETWORK_FAILED,
   saveAnswerOf,
   statusAnswerOf,
   useAutosave,

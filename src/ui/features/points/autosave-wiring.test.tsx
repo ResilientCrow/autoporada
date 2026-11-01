@@ -54,6 +54,7 @@ vi.mock('@/ui/form', async (importOriginal) => ({
     status: {
       phase: hook.phase,
       savedAt: null,
+      why: null,
       onRetry: () => undefined,
       onKeepMine: () => undefined,
       onReload: () => undefined,
@@ -237,7 +238,7 @@ describe('the editor while a submit is on its way', () => {
 
 describe('the editor with a banner', () => {
   const texts = {
-    failed: autosave.failed.text,
+    failed: autosave.failed.lead,
     conflict: autosave.conflict.text,
     locked: autosave.locked.text,
     gone: autosave.gone.text,

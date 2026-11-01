@@ -1,13 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  DirectoryCode,
-  DirectoryPerson,
-  DirectoryPort,
-  DirectoryResult,
-  UserPrincipal,
+import {
+  DatabaseFailure,
+  LockTimeout,
+  type DirectoryCode,
+  type DirectoryPerson,
+  type DirectoryPort,
+  type DirectoryResult,
+  type UserPrincipal,
 } from '@/application/ports';
 import { searchGate } from '@/application/use-cases';
+import { directorySearchResponse } from '@/contracts';
 
 import { recordingLog } from '../../../test/support/log';
 import { setupWorld } from '../../../test/support/world';
@@ -30,11 +33,16 @@ const hit: DirectoryPerson = {
 type Answer = DirectoryResult<readonly DirectoryPerson[]>;
 
 /** A route over the fake world, with a spy directory and a log that keeps its lines. */
-function setup(principal: UserPrincipal | null, answer: Answer = { ok: true, value: [hit] }) {
+function setup(
+  principal: UserPrincipal | null,
+  answer: Answer = { ok: true, value: [hit] },
+  describer?: RouteDeps['describe'],
+  app: RouteDeps['app'] = world.deps,
+) {
   const { lines, log } = recordingLog();
   const search = vi.fn<DirectoryPort['search']>(() => Promise.resolve(answer));
   const deps: RouteDeps = {
-    app: world.deps,
+    app,
     useCases: new Set([searchGate]),
     resolvePrincipal: (token) => Promise.resolve(token === 'good' ? principal : null),
     limiter: createRateLimiter({
@@ -44,6 +52,7 @@ function setup(principal: UserPrincipal | null, answer: Answer = { ok: true, val
     log,
     appOrigin: ORIGIN,
     requestIdFrom: () => 'req-1',
+    ...(describer && { describe: describer }),
   };
   const spec = directoryRouteSpec(() => ({ directory: { search }, log }));
   const post = (
@@ -202,6 +211,73 @@ describe('POST /api/adresar/hledat', () => {
     const many = Array.from({ length: 11 }, () => hit);
     const { post } = setup(await as(), { ok: true, value: many });
     expect((await post()).status).toBe(500);
+  });
+
+  describe('when something throws', () => {
+    /** A directory that throws, e.g. the gate's database is down. */
+    const throwing = async (error: unknown, describer?: RouteDeps['describe']) => {
+      const made = setup(await as(), undefined, describer);
+      made.search.mockImplementation(() => Promise.reject(error));
+      return made;
+    };
+
+    it.each([
+      ['a lost database', new DatabaseFailure('08006'), 'database-down'],
+      ['a statement timeout', new DatabaseFailure('57014'), 'timeout'],
+      ['a lock timeout', new LockTimeout(), 'timeout'],
+      ['a missing table', new DatabaseFailure('42P01'), 'database-setup'],
+      ['a stored row that does not parse', new DatabaseFailure('db.parse.points'), 'stored-data'],
+      ['a bug', new TypeError('x is undefined'), 'bug'],
+    ])('answers 500 with the cause of %s and no hits', async (_what, error, cause) => {
+      const { post } = await throwing(error);
+      const response = await post();
+      expect(response.status).toBe(500);
+      expect(response.headers.get('content-type')).toContain('application/json');
+      expect(response.headers.get('cache-control')).toBe('no-store');
+      expect(response.headers.get('x-request-id')).toBe('req-1');
+      expect(await response.json()).toEqual({ hits: [], failure: cause });
+    });
+
+    it('answers a body its own contract accepts', async () => {
+      const { post } = await throwing(new DatabaseFailure('08006'));
+      expect(directorySearchResponse.safeParse(await (await post()).json()).success).toBe(true);
+    });
+
+    it('adds the technical line where the pipeline describes failures (development)', async () => {
+      const { post } = await throwing(new DatabaseFailure('08006'), () => 'DatabaseFailure 08006');
+      expect(await (await post()).json()).toEqual({
+        hits: [],
+        failure: 'database-down',
+        detail: 'DatabaseFailure 08006',
+      });
+    });
+
+    it('sends no detail at all without a describer (production)', async () => {
+      const { post } = await throwing(new DatabaseFailure('08006'));
+      const body = (await (await post()).json()) as Record<string, unknown>;
+      expect(Object.keys(body)).toEqual(['hits', 'failure']);
+    });
+
+    it('logs the failure with its cause and never the query', async () => {
+      const { post, lines } = await throwing(new DatabaseFailure('08006'));
+      await post();
+      const errors = lines.filter((l) => l.level === 'error');
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.fields).toMatchObject({ cause: 'database-down' });
+      expect(JSON.stringify(lines)).not.toContain(QUERY);
+    });
+
+    it('still answers 500 with the cause when the gate itself fails', async () => {
+      const down = {
+        ...world.deps,
+        db: { transaction: () => Promise.reject(new DatabaseFailure('08006')) },
+      };
+      const { post, search } = setup(await as(), undefined, undefined, down);
+      const response = await post();
+      expect(response.status).toBe(500);
+      expect(await response.json()).toEqual({ hits: [], failure: 'database-down' });
+      expect(search).not.toHaveBeenCalled();
+    });
   });
 
   it('never logs the query: hits, a failure, a bad answer or a refused body', async () => {

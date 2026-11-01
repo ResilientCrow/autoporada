@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import { FAILURE_CAUSES } from '@/contracts';
 import type { RecentPerson } from '@/domain/people';
-import { people } from '@/ui/copy';
+import { failures, people } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
@@ -84,6 +85,13 @@ describe('SearchNotice', () => {
   const COPY: readonly (readonly [Notice, string])[] = [
     ['off', people.search.notice.off],
     ['down', people.search.notice.down],
+    ['unavailable', people.search.notice.unavailable],
+    ['timeout', people.search.notice.timeout],
+    ['denied', people.search.notice.denied],
+    ...FAILURE_CAUSES.map((cause): readonly [Notice, string] => [
+      `failure-${cause}`,
+      `${failures[cause]} ${people.search.notice.manual}`,
+    ]),
     ['rate-limited', people.search.notice.rateLimited],
     ['signed-out', people.search.notice.signedOut],
   ];
@@ -100,8 +108,8 @@ describe('SearchNotice', () => {
     );
   });
 
-  it('has four different texts, none of them a listbox empty state', () => {
-    expect(new Set(COPY.map(([, copy]) => copy)).size).toBe(4);
+  it('has a different text for each notice, none of them a listbox empty state', () => {
+    expect(new Set(COPY.map(([, copy]) => copy)).size).toBe(COPY.length);
     for (const [notice] of COPY) {
       expect(renderToStaticMarkup(<SearchNotice notice={notice} />)).not.toMatch(/listbox|option/);
     }
@@ -115,6 +123,16 @@ describe('SearchNotice', () => {
     expect(people.search.notice.down).toBe(
       'Adresář školy teď neodpovídá. Osobu můžete zadat ručně.',
     );
+    expect(people.search.notice.unavailable).toBe(
+      'Adresář školy (Microsoft) teď neodpovídá. Osobu můžete zadat ručně.',
+    );
+    expect(people.search.notice.timeout).toBe(
+      'Adresář školy neodpověděl včas. Osobu můžete zadat ručně.',
+    );
+    expect(people.search.notice.denied).toBe(
+      `Aplikace nemá v${nbsp}Microsoftu oprávnění hledat osoby. Dejte to prosím vědět správci. Osobu můžete zadat ručně.`,
+    );
+    expect(people.search.notice.manual).toBe('Osobu můžete zadat ručně.');
     expect(people.search.notice.rateLimited).toBe(
       'Hledáte příliš rychle. Zkuste to za chvíli, nebo osobu zadejte ručně.',
     );

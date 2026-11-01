@@ -1,4 +1,9 @@
-import { directorySearchResponse, type DirectoryHit } from '@/contracts';
+import {
+  DIRECTORY_FAILURE_STATUS,
+  directorySearchResponse,
+  type DirectoryHit,
+  type FailureCause,
+} from '@/contracts';
 import {
   foldForSearch,
   formatName,
@@ -13,8 +18,32 @@ import { people } from '@/ui/copy';
 /** Whether the school directory is searched at all (`DIRECTORY=off` is `off`). */
 export type Directory = 'on' | 'off';
 
-/** What the notice beside the box says; one at a time. */
-export type Notice = 'off' | 'down' | 'rate-limited' | 'signed-out';
+/** The route itself failed (an exception, not the directory), and said what broke. */
+export type FailureNotice = `failure-${FailureCause}`;
+
+/**
+ * What the notice beside the box says; one at a time. `unavailable`, `timeout` and `denied`
+ * are the directory's own words for why it could not answer, and each is a different thing to
+ * do about it. `down` is an answer that is not ours (a proxy's, junk): nothing else is known.
+ */
+export type Notice =
+  | 'off'
+  | 'down'
+  | 'unavailable'
+  | 'timeout'
+  | 'denied'
+  | 'rate-limited'
+  | 'signed-out'
+  | FailureNotice;
+
+const FAILURE_PREFIX = 'failure-';
+
+export const isFailureNotice = (notice: Notice): notice is FailureNotice =>
+  notice.startsWith(FAILURE_PREFIX);
+
+/** The cause a failure notice names. */
+export const causeOfNotice = (notice: FailureNotice): FailureCause =>
+  notice.slice(FAILURE_PREFIX.length) as FailureCause;
 
 /** The recents an empty box lists. */
 const RECENTS_SHOWN = 8;
@@ -100,11 +129,12 @@ function waitOf(retryAfter: string | null): number {
 
 /**
  * The route's HTTP answer as hits and a notice (design section 4): 401 is
- * signed out, 429 is rate-limited for the `Retry-After` seconds, any other
- * status or a body the contract refuses is down. A 200 carries the hits, or
- * the directory's own notice: off stays off, throttled is rate-limited, and
- * unavailable, timeout and denied are all down (the reader can do nothing
- * about which).
+ * signed out, 429 is rate-limited for the `Retry-After` seconds. A 500 whose body
+ * names a failure says what broke (ADR 0044); any other status, or a body the
+ * contract refuses, is down, since a status or body that is not ours says nothing
+ * of the cause. A 200 carries the hits, or the directory's own notice: off stays
+ * off, throttled is rate-limited, and unavailable, timeout and denied each keep
+ * their own.
  */
 export function answerOf(response: {
   readonly status: number;
@@ -113,14 +143,19 @@ export function answerOf(response: {
 }): Answer {
   if (response.status === 401) return answer('signed-out');
   if (response.status === 429) return answer('rate-limited', [], waitOf(response.retryAfter));
-  if (response.status !== 200) return answer('down');
+  if (response.status !== 200 && response.status !== DIRECTORY_FAILURE_STATUS)
+    return answer('down');
   const parsed = directorySearchResponse.safeParse(response.body);
   if (!parsed.success) return answer('down');
-  const { hits, notice } = parsed.data;
+  const { hits, notice, failure } = parsed.data;
+  // A failure is a 500 and nothing else; a 500 without one, or a 200 with one, is not ours.
+  if ((failure !== undefined) !== (response.status === DIRECTORY_FAILURE_STATUS)) {
+    return answer('down');
+  }
+  if (failure !== undefined) return answer(`failure-${failure}`);
   if (notice === undefined) return answer(null, hits);
-  if (notice === 'off') return answer('off');
   if (notice === 'throttled') return answer('rate-limited', [], DEFAULT_WAIT_MS);
-  return answer('down');
+  return answer(notice);
 }
 
 /**

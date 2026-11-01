@@ -32,11 +32,9 @@ describe('principalResolver', () => {
     expect(world.fake?.history.length ?? 0).toBe(before);
   });
 
-  it('throws when the lookup is refused, so a sign-out never takes it for no session', async () => {
+  it('throws the port error when the lookup is busy, so the failure keeps its kind, and so a sign-out never takes it for no session', async () => {
     const busy = { ...world.deps, db: { transaction: () => Promise.reject(new LockTimeout()) } };
-    await expect(principalResolver(busy)(newToken(), 'req')).rejects.toThrow(
-      'auth.resolveSession: busy',
-    );
+    await expect(principalResolver(busy)(newToken(), 'req')).rejects.toBeInstanceOf(LockTimeout);
   });
 
   it('makes 256-bit tokens and stores only their SHA-256', () => {

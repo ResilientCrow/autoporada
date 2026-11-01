@@ -1,6 +1,13 @@
-import type { ActionResult, RuleCode } from '@/contracts';
+import type { ActionError, ActionResult, RuleCode } from '@/contracts';
 
-import type { SaveAnswer, StatusAnswer } from './machine';
+import type { FailedWhy, SaveAnswer, StatusAnswer } from './machine';
+
+/** Why a refusal that stops no ladder failed: the cause it names, or else its own code. */
+function whyOf(error: ActionError): FailedWhy {
+  if (error.code !== 'unavailable') return { kind: 'code', code: error.code };
+  const { cause, detail } = error;
+  return { kind: 'cause', cause, ...(detail !== undefined && { detail }) };
+}
 
 /**
  * What the autosave machine hears of a save: the server's answer in its own words. `notEditable`
@@ -22,7 +29,7 @@ export function saveAnswerOf(
     return { kind: 'rate-limited', retryAfterSeconds: error.retryAfterSeconds };
   }
   if (error.code === 'rule' && error.rule === notEditable) return { kind: 'not-editable' };
-  return { kind: 'failed' };
+  return { kind: 'failed', why: whyOf(error) };
 }
 
 /** The same for the check after a conflict: the version and whether the editor may still save. */
@@ -31,7 +38,7 @@ export function statusAnswerOf(
 ): StatusAnswer {
   if (result.ok)
     return { kind: 'ok', version: result.data.version, editable: result.data.editable };
-  const { code } = result.error;
-  if (code === 'unauthenticated') return { kind: 'unauthenticated' };
-  return code === 'not-found' ? { kind: 'gone' } : { kind: 'failed' };
+  const { error } = result;
+  if (error.code === 'unauthenticated') return { kind: 'unauthenticated' };
+  return error.code === 'not-found' ? { kind: 'gone' } : { kind: 'failed', why: whyOf(error) };
 }

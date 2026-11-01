@@ -1,6 +1,6 @@
 import type { FailureCause } from '@/contracts';
 
-import { DatabaseFailure } from '../ports';
+import { DatabaseFailure, LockTimeout } from '../ports';
 
 /**
  * Which of the closed set of causes an unexpected failure is (ADR 0044). Pure: the
@@ -8,6 +8,8 @@ import { DatabaseFailure } from '../ports';
  * Only the SQLSTATE is read, never a message.
  */
 export function classifyFailure(error: unknown): FailureCause {
+  // A lock not granted in time is a wait that ran out, like a statement timeout.
+  if (error instanceof LockTimeout) return 'timeout';
   const code = sqlstateOf(error);
   return code === undefined ? 'bug' : classifyCode(code);
 }

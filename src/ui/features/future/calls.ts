@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { ActionResult, saveFutureOutput } from '@/contracts';
 import type { FutureKind } from '@/domain/calendar';
 import {
+  NETWORK_FAILED,
   saveAnswerOf,
   statusAnswerOf,
   textOf,
@@ -75,7 +76,7 @@ export interface ReviseEffect {
 export function reviseEffect(
   result: ActionResult<z.output<typeof saveFutureOutput>> | null,
 ): ReviseEffect {
-  if (result === null) return { refresh: false, unchanged: false, answer: { kind: 'failed' } };
+  if (result === null) return { refresh: false, unchanged: false, answer: NETWORK_FAILED };
   const answer = saveAnswerOf(result, 'future-not-editable');
   // An unchanged akce stays approved: the page is as it was, and the send must end here.
   if (result.ok && result.data.state === 'approved') {
@@ -87,8 +88,7 @@ export function reviseEffect(
 /** The send's answer for a submit: the server's, or a failure where the call itself failed. */
 export const submitAnswer = (
   result: ActionResult<{ readonly version: number }> | null,
-): SaveAnswer =>
-  result === null ? { kind: 'failed' } : saveAnswerOf(result, 'future-not-editable');
+): SaveAnswer => (result === null ? NETWORK_FAILED : saveAnswerOf(result, 'future-not-editable'));
 
 /**
  * The check after a conflict. `future.get` says an approved item is editable for its author, but

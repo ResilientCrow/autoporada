@@ -326,6 +326,10 @@ test('notices stay beside the box as status text, and the box still adds by hand
   const notice = (text: string) => page.getByRole('status').filter({ hasText: text });
   await expect(notice(search.notice.off)).toHaveCount(1); // the off box, on load
   for (const [trigger, text] of [
+    [people.triggers.unavailable, search.notice.unavailable],
+    [people.triggers.timeout, search.notice.timeout],
+    [people.triggers.denied, search.notice.denied],
+    [people.triggers.failed, search.notice.failed(cs.failures['database-down'])],
     [people.triggers.down, search.notice.down],
     [people.triggers.rateLimited, search.notice.rateLimited],
     [people.triggers.signedOut, search.notice.signedOut],
@@ -940,6 +944,7 @@ test.describe('without JavaScript', () => {
 
 const { autosave: demo } = cs.gallery;
 const { autosave: words } = cs;
+const failedText = `${words.failed.lead} ${words.failed.network}`;
 const SEEN = '**/vzornik/ulozeni';
 
 /** Answers the demo's pretend saves and records what was sent. */
@@ -1068,9 +1073,9 @@ test('after the retry ladder "Zkusit znovu" saves again and puts focus back in t
   await note(page).blur();
   // The first save and the retries after 5, 15 and 60 seconds all fail (each answer takes 300 ms).
   for (const wait of [300, 5_300, 15_300, 60_300]) await page.clock.runFor(wait);
-  const banner = page.getByRole('alert').filter({ hasText: words.failed.text });
+  const banner = page.getByRole('alert').filter({ hasText: failedText });
   await expect(banner).toBeVisible();
-  await expect(page.getByText(words.failed.text, { exact: true })).toHaveCount(1);
+  await expect(page.getByText(failedText, { exact: true })).toHaveCount(1);
   await arm(page, demo.arm.ok);
   await banner.getByRole('button', { name: words.failed.retry, exact: true }).click();
   await expect(note(page)).toBeFocused();
@@ -1078,6 +1083,6 @@ test('after the retry ladder "Zkusit znovu" saves again and puts focus back in t
   await expect(page.getByText(/^Uloženo v/)).toBeVisible();
   await expect(banner).toHaveCount(0);
   await expect(note(page)).toBeFocused();
-  await expect(page.getByText(words.failed.text, { exact: true })).toHaveCount(0);
+  await expect(page.getByText(failedText, { exact: true })).toHaveCount(0);
   expect(seen.length).toBe(5);
 });

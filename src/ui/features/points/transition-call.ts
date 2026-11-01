@@ -9,7 +9,7 @@ import type {
   withdrawPointOutput,
 } from '@/contracts';
 import type { AuthorMove } from '@/domain/review';
-import { flagOf, type FormState, type SaveAnswer } from '@/ui/form';
+import { flagOf, NETWORK_FAILED, type FormState, type SaveAnswer } from '@/ui/form';
 
 import { saveAnswer } from './answers';
 import { bannerOwns } from './submit-outcome';
@@ -66,7 +66,7 @@ export async function sentAfterFlush<Out extends { readonly version: number }>(
       box.result = await call(expectedVersion);
     } catch {
       box.thrown = true;
-      return { kind: 'failed' };
+      return NETWORK_FAILED;
     }
     return saveAnswer(box.result);
   });

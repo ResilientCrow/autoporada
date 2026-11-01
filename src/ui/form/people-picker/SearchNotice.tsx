@@ -1,15 +1,22 @@
-import { people } from '@/ui/copy';
+import { failures, people } from '@/ui/copy';
 
-import type { Notice } from './directory-state';
+import { causeOfNotice, isFailureNotice, type FailureNotice, type Notice } from './directory-state';
 
 const { notice: text } = people.search;
 
-const TEXT: Readonly<Record<Notice, string>> = {
+const TEXT: Readonly<Record<Exclude<Notice, FailureNotice>, string>> = {
   off: text.off,
   down: text.down,
+  unavailable: text.unavailable,
+  timeout: text.timeout,
+  denied: text.denied,
   'rate-limited': text.rateLimited,
   'signed-out': text.signedOut,
 };
+
+function textOf(notice: Notice): string {
+  return isFailureNotice(notice) ? text.failed(failures[causeOfNotice(notice)]) : TEXT[notice];
+}
 
 /**
  * What the directory search says beside the box. The status region is always
@@ -29,7 +36,7 @@ export function SearchNotice({
 }) {
   return (
     <p id={id} role="status" data-live-announcer="true">
-      {notice === null ? null : TEXT[notice]}
+      {notice === null ? null : textOf(notice)}
     </p>
   );
 }

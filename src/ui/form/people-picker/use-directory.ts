@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
+import { DIRECTORY_FAILURE_STATUS } from '@/contracts';
 import { DIRECTORY_LIMITS } from '@/domain/report';
 
 import {
@@ -43,7 +44,9 @@ const searchRoute: DirectoryFetcher = async (query, signal) => {
     body: JSON.stringify({ q: query.slice(0, DIRECTORY_LIMITS.query) }),
     signal,
   });
-  const body: unknown = response.status === 200 ? await response.json().catch(() => null) : null;
+  // Only these two statuses carry a body of ours: the hits, or the route's own failure.
+  const readable = response.status === 200 || response.status === DIRECTORY_FAILURE_STATUS;
+  const body: unknown = readable ? await response.json().catch(() => null) : null;
   return { status: response.status, retryAfter: response.headers.get('retry-after'), body };
 };
 

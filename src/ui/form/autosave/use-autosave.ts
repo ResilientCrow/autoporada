@@ -107,6 +107,7 @@ export function useAutosave<C>({ initialVersion, save, status, onRefresh }: Auto
     status: {
       phase: state.phase,
       savedAt: state.savedAt,
+      why: state.why,
       onRetry: () => {
         runner.dispatch({ type: 'retry' });
         refocus();

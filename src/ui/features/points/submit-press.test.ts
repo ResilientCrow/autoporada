@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { SaveAnswer } from '@/ui/form';
+import { NETWORK_FAILED, type SaveAnswer } from '@/ui/form';
 
 import { NO_OUTCOME, type SubmitOutcome } from './submit-outcome';
 import {
@@ -115,7 +115,7 @@ describe('runPress', () => {
 
   it.each<[string, SaveAnswer | null]>([
     ['a conflict', { kind: 'conflict' }],
-    ['a failed call', { kind: 'failed' }],
+    ['a failed call', NETWORK_FAILED],
     ['a locked point', { kind: 'not-editable' }],
     ['a banner that refused it', null],
   ])('ends pending after %s', async (_name, answer) => {

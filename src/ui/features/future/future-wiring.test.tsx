@@ -37,6 +37,7 @@ vi.mock('@/ui/form', async (importOriginal) => ({
     status: {
       phase: hook.phase,
       savedAt: null,
+      why: null,
       onRetry: () => undefined,
       onKeepMine: () => undefined,
       onReload: () => undefined,

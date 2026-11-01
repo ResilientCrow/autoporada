@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { DirectoryHit } from '@/contracts';
+import { FAILURE_CAUSES, type DirectoryHit } from '@/contracts';
 import type { RecentPerson } from '@/domain/people';
 import { DIRECTORY_LIMITS } from '@/domain/report';
 
@@ -171,9 +171,12 @@ describe('answerOf', () => {
     expect(ok({ hits: [], notice: 'off' })).toEqual({ hits: [], notice: 'off', waitMs: 0 });
   });
 
-  it.each(['unavailable', 'timeout', 'denied'])('maps the route notice %s to down', (notice) => {
-    expect(ok({ hits: [], notice }).notice).toBe('down');
-  });
+  it.each(['unavailable', 'timeout', 'denied'] as const)(
+    'gives the route notice %s its own notice, since each says something else to the reader',
+    (notice) => {
+      expect(ok({ hits: [], notice })).toEqual({ hits: [], notice, waitMs: 0 });
+    },
+  );
 
   it('maps the throttled notice to rate-limited, with the default wait', () => {
     expect(ok({ hits: [], notice: 'throttled' })).toEqual({
@@ -214,6 +217,37 @@ describe('answerOf', () => {
       hits: [],
       notice: 'down',
       waitMs: 0,
+    });
+  });
+
+  describe('a failure of the route', () => {
+    const failed = (status: number, body: unknown) => answerOf({ status, retryAfter: null, body });
+
+    it.each(FAILURE_CAUSES)('names the cause %s when the route answers 500 with it', (cause) => {
+      expect(failed(500, { hits: [], failure: cause })).toEqual({
+        hits: [],
+        notice: `failure-${cause}`,
+        waitMs: 0,
+      });
+    });
+
+    it('takes the development detail along without showing it as another notice', () => {
+      expect(failed(500, { hits: [], failure: 'bug', detail: 'Error 08006' }).notice).toBe(
+        'failure-bug',
+      );
+    });
+
+    it.each([
+      ['a proxy 502 that carries our body', 502, { hits: [], failure: 'bug' }],
+      ['a 503', 503, { hits: [], failure: 'database-down' }],
+      ['a 200', 200, { hits: [], failure: 'database-down' }],
+      ['a 500 with an unknown cause', 500, { hits: [], failure: 'broken' }],
+      ['a 500 with junk', 500, '<html>Internal Server Error</html>'],
+      ['a 500 with no body', 500, null],
+      ['a 500 whose body names no failure', 500, { hits: [] }],
+      ['a 500 with hits', 500, { hits: [HIT], failure: 'bug' }],
+    ])('keeps the old down for %s: it is not ours to name', (_why, status, body) => {
+      expect(failed(status, body)).toEqual({ hits: [], notice: 'down', waitMs: 0 });
     });
   });
 

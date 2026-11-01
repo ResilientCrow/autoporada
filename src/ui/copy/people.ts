@@ -3,6 +3,9 @@ import { countWord, PASTE_MAX_CHARS, PASTE_MAX_LINES, type PluralForms } from '@
 /** „osoba“, „osoby“, „osob“: the count in the announcements. */
 const PERSON: PluralForms = { one: 'osoba', few: 'osoby', many: 'osob' };
 
+/** What every directory notice ends with: the box still takes a typed name. */
+const MANUAL = 'Osobu můžete zadat ručně.';
+
 /** „Osoby“: the people picker (design section 5): the search box, and the chips below it. */
 export const people = {
   /** „1 osoba“, „3 osoby“, „5 osob“: a count under a row's legend. */
@@ -16,7 +19,14 @@ export const people = {
       `Přidáno: ${name}. Celkem: ${countWord(total, PERSON)}.`,
     notice: {
       off: 'Hledání v\u00A0adresáři školy zatím není zapnuté. Osobu vyberte z\u00A0dříve použitých nebo ji zadejte ručně.',
-      down: 'Adresář školy teď neodpovídá. Osobu můžete zadat ručně.',
+      manual: MANUAL,
+      /** An answer that is not ours (a proxy's, junk): all that is known is that it did not come. */
+      down: `Adresář školy teď neodpovídá. ${MANUAL}`,
+      unavailable: `Adresář školy (Microsoft) teď neodpovídá. ${MANUAL}`,
+      timeout: `Adresář školy neodpověděl včas. ${MANUAL}`,
+      denied: `Aplikace nemá v\u00A0Microsoftu oprávnění hledat osoby. Dejte to prosím vědět správci. ${MANUAL}`,
+      /** The route itself failed: what broke (`failures`), then the way round it. */
+      failed: (what: string) => `${what} ${MANUAL}`,
       rateLimited: 'Hledáte příliš rychle. Zkuste to za chvíli, nebo osobu zadejte ručně.',
       signedOut: 'Byli jste odhlášeni. Hledání v\u00A0adresáři bude fungovat po novém přihlášení.',
     },

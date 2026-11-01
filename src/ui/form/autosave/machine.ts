@@ -1,3 +1,4 @@
+import type { ErrorCode, FailureCause } from '@/contracts';
 import type { WallTime } from '@/domain/time';
 
 export const DEBOUNCE_MS = 1_500;
@@ -5,6 +6,21 @@ export const RETRY_STEPS = [5, 15, 60] as const;
 
 export type Phase =
   'idle' | 'dirty' | 'saving' | 'saved' | 'conflict' | 'locked' | 'gone' | 'failed' | 'signedOut';
+
+/**
+ * Why a save did not land, for the banner that says so (ADR 0044): what broke on the server,
+ * a request that never got an answer, or the refusal's own code (`busy`, `forbidden`, a rule
+ * …). The three never read alike: only a lost connection tells the author to check theirs.
+ */
+export type FailedWhy =
+  /** An unexpected failure, classified where it was caught; `detail` is development's line. */
+  | { readonly kind: 'cause'; readonly cause: FailureCause; readonly detail?: string }
+  /** The action's promise rejected: the request did not reach the server, or no answer came back. */
+  | { readonly kind: 'network' }
+  | { readonly kind: 'code'; readonly code: Exclude<ErrorCode, 'unavailable'> };
+
+/** A rejected call, as the answer to a save or a status check. */
+export const NETWORK_FAILED = { kind: 'failed', why: { kind: 'network' } } as const;
 
 export interface AutosaveState<C> {
   readonly phase: Phase;
@@ -16,6 +32,8 @@ export interface AutosaveState<C> {
   readonly attempt: number;
   readonly serverVersion: number | null;
   readonly savedAt: WallTime | null;
+  /** Why the last save failed; read while the phase is `failed`. */
+  readonly why: FailedWhy | null;
 }
 
 export type SaveAnswer =
@@ -28,12 +46,12 @@ export type SaveAnswer =
   | { readonly kind: 'rate-limited'; readonly retryAfterSeconds: number }
   /** The server refused the content itself: a retry of the same text would fail the same way. */
   | { readonly kind: 'invalid' }
-  | { readonly kind: 'failed' };
+  | { readonly kind: 'failed'; readonly why: FailedWhy };
 export type StatusAnswer =
   | { readonly kind: 'ok'; readonly version: number; readonly editable: boolean }
   | { readonly kind: 'gone' }
   | { readonly kind: 'unauthenticated' }
-  | { readonly kind: 'failed' };
+  | { readonly kind: 'failed'; readonly why: FailedWhy };
 
 export type Effect<C> =
   | { readonly type: 'timer'; readonly name: 'debounce' | 'retry'; readonly ms: number }
@@ -72,6 +90,7 @@ export function initialState<C>(version: number): AutosaveState<C> {
     attempt: 0,
     serverVersion: null,
     savedAt: null,
+    why: null,
   };
 }
 
@@ -123,9 +142,9 @@ function halt<C>(
   };
 }
 
-/** A failed save: wait and retry down the ladder, then stop at failed. */
-function lose<C>(s: AutosaveState<C>, seconds: number | null): Step<C> {
-  const base = { ...s, unsent: true, due: false, checking: false, serverVersion: null };
+/** A failed save: wait and retry down the ladder, then stop at failed, saying why the last one failed. */
+function lose<C>(s: AutosaveState<C>, seconds: number | null, why: FailedWhy): Step<C> {
+  const base = { ...s, unsent: true, due: false, checking: false, serverVersion: null, why };
   if (s.unsent && !s.checking) {
     // Typed on during the flight: the ladder starts over and the pause owns the next save.
     const next: AutosaveState<C> = { ...base, phase: 'dirty', attempt: 0 };
@@ -167,18 +186,19 @@ function answered<C>(s: AutosaveState<C>, a: SaveAnswer, at: WallTime): Step<C> 
       return halt(s, 'signedOut');
     case 'rate-limited': {
       const sec = a.retryAfterSeconds;
-      return lose(s, Number.isFinite(sec) && sec > 0 ? Math.min(sec, MAX_WAIT_S) : null);
+      const wait = Number.isFinite(sec) && sec > 0 ? Math.min(sec, MAX_WAIT_S) : null;
+      return lose(s, wait, { kind: 'code', code: 'rate-limited' });
     }
     case 'invalid':
       return park(s);
     case 'failed':
-      return lose(s, null);
+      return lose(s, null, a.why);
   }
 }
 
 function statused<C>(s: AutosaveState<C>, a: StatusAnswer): Step<C> {
   if (a.kind === 'unauthenticated') return halt(s, 'signedOut');
-  if (a.kind === 'failed') return lose(s, null);
+  if (a.kind === 'failed') return lose(s, null, a.why);
   if (a.kind === 'gone') return halt(s, 'gone');
   // Editable: a newer version of the same point; otherwise its state moved on.
   return a.editable ? halt(s, 'conflict', a.version) : halt(s, 'locked');

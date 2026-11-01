@@ -9,7 +9,10 @@ export const autosave = {
   saved: (time: string) => `Uloženo v\u00A0${time}`,
   unsaved: 'Neuložené změny',
   failed: {
-    text: 'Změny se nepodařilo uložit. Zkontrolujte připojení.',
+    /** Followed by what broke (`failures`), the code's own text (`errors`), or `network`. */
+    lead: 'Změny se nepodařilo uložit.',
+    /** Only for a request that never got an answer. */
+    network: 'Zkontrolujte připojení.',
     retry: 'Zkusit znovu',
   },
   conflict: {

@@ -3,6 +3,7 @@ import type { WallTime } from '@/domain/time';
 import {
   initialState,
   isReadOnly,
+  NETWORK_FAILED,
   step,
   type AutosaveEvent,
   type AutosaveState,
@@ -36,8 +37,6 @@ export interface Runner<C> {
   ) => Promise<SaveAnswer | null>;
 }
 
-const FAILED: SaveAnswer = { kind: 'failed' };
-
 /**
  * Runs the machine's effects: timers, the calls to `save` and `status`, the flush
  * and the refresh. No React in it, so it is tested with fake timers; the hook only
@@ -57,12 +56,12 @@ export function createRunner<C>(initialPorts: Ports<C>, version: number): Runner
     timers.delete(name);
   };
 
-  /** A call that never throws: a rejected action is a failed save. */
+  /** A call that never throws: a rejected action never got an answer, which is a lost connection. */
   const call = (content: C, expectedVersion: number): Promise<SaveAnswer> => {
     try {
-      return ports.save({ content, expectedVersion }).catch(() => FAILED);
+      return ports.save({ content, expectedVersion }).catch(() => NETWORK_FAILED);
     } catch {
-      return Promise.resolve(FAILED);
+      return Promise.resolve(NETWORK_FAILED);
     }
   };
 
@@ -76,7 +75,7 @@ export function createRunner<C>(initialPorts: Ports<C>, version: number): Runner
   }
 
   function askStatus(): void {
-    const asked = (async () => ports.status())().catch((): StatusAnswer => ({ kind: 'failed' }));
+    const asked = (async () => ports.status())().catch((): StatusAnswer => NETWORK_FAILED);
     void asked.then((answer) => dispatch({ type: 'statused', answer }));
   }
 
@@ -117,7 +116,7 @@ export function createRunner<C>(initialPorts: Ports<C>, version: number): Runner
     try {
       answer = await send(state.version);
     } catch {
-      answer = FAILED;
+      answer = NETWORK_FAILED;
     }
     dispatch({ type: 'submitted', answer, at: ports.now() });
     return answer;

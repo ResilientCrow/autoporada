@@ -3,7 +3,13 @@
 import { useRef, useState } from 'react';
 
 import { gallery } from '@/ui/copy';
-import { AutosaveStatus, useAutosave, type SaveAnswer, type StatusAnswer } from '@/ui/form';
+import {
+  AutosaveStatus,
+  NETWORK_FAILED,
+  useAutosave,
+  type SaveAnswer,
+  type StatusAnswer,
+} from '@/ui/form';
 import { buttonStyles, TextLink } from '@/ui/kit';
 
 const { autosave } = gallery;
@@ -37,7 +43,7 @@ export function AutosaveDemo() {
       body: JSON.stringify(request),
     }).catch(() => undefined);
     const { mode } = world.current;
-    if (mode === 'failed') return later({ kind: 'failed' });
+    if (mode === 'failed') return later(NETWORK_FAILED);
     world.current.mode = 'ok';
     setArmed('ok');
     if (mode === 'locked') return later({ kind: 'not-editable' });

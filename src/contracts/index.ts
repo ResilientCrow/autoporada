@@ -51,6 +51,7 @@ export {
 } from './auth';
 export {
   directoryHit,
+  DIRECTORY_FAILURE_STATUS,
   directorySearchRequest,
   directorySearchResponse,
   searchGateInput,

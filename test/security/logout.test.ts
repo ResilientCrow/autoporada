@@ -50,7 +50,7 @@ describe('POST /auth/logout', () => {
 
   it.each([
     ['looking up the session', 1, undefined, 'database-down'],
-    ['looking up the session, busy', 1, new LockTimeout(), 'bug'],
+    ['looking up the session, busy', 1, new LockTimeout(), 'timeout'],
     ['ending it', 2, undefined, 'database-down'],
     ['ending it, busy', 2, new LockTimeout(), 'timeout'],
   ])(

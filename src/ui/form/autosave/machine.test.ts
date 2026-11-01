@@ -12,6 +12,7 @@ import {
   type AutosaveEvent,
   type AutosaveState,
   type Effect,
+  type FailedWhy,
   type Phase,
   type SaveAnswer,
   type StatusAnswer,
@@ -35,7 +36,9 @@ const retryIn = (seconds: number): F => ({ type: 'timer', name: 'retry', ms: sec
 const change = (content: string): E => ({ type: 'change', content });
 const answer = (a: SaveAnswer): E => ({ type: 'answered', answer: a, at: AT });
 const ok = (version: number): E => answer({ kind: 'ok', version });
-const failure: E = answer({ kind: 'failed' });
+const failWith = (why: FailedWhy): E => answer({ kind: 'failed', why });
+const network: FailedWhy = { kind: 'network' };
+const failure: E = failWith(network);
 const status = (a: StatusAnswer): E => ({ type: 'statused', answer: a });
 const ev = (
   type:
@@ -195,6 +198,58 @@ describe('one save in flight', () => {
     expect(run([status({ kind: 'ok', version: 9, editable: true })], at('saving')).state).toEqual(
       at('saving'),
     );
+  });
+});
+
+describe('why the last save failed', () => {
+  const busy: FailedWhy = { kind: 'code', code: 'busy' };
+  const down: FailedWhy = { kind: 'cause', cause: 'database-down', detail: 'ECONNREFUSED' };
+  const exhaust = (whys: readonly FailedWhy[]) =>
+    run(
+      whys.flatMap((why, index) =>
+        index === 0 ? [failWith(why)] : [ev('retryElapsed'), failWith(why)],
+      ),
+      at('saving'),
+    );
+
+  it('is kept when the ladder runs out: a cause, with its development detail', () => {
+    expect(exhaust([down, down, down, down]).state).toMatchObject({ phase: 'failed', why: down });
+  });
+
+  it('is the last one, not the first: a lost connection that became a database outage says so', () => {
+    expect(exhaust([network, network, busy, down]).state.why).toEqual(down);
+    expect(exhaust([down, down, down, busy]).state.why).toEqual(busy);
+  });
+
+  it('is kept for a refusal that has no cause, by its code', () => {
+    expect(exhaust([busy, busy, busy, busy]).state.why).toEqual(busy);
+  });
+
+  it('is a rate limit by its code when the ladder runs out on one', () => {
+    const limited = answer({ kind: 'rate-limited', retryAfterSeconds: 5 });
+    const { state } = run(
+      [
+        limited,
+        ev('retryElapsed'),
+        limited,
+        ev('retryElapsed'),
+        limited,
+        ev('retryElapsed'),
+        limited,
+      ],
+      at('saving'),
+    );
+    expect(state).toMatchObject({ phase: 'failed', why: { kind: 'code', code: 'rate-limited' } });
+  });
+
+  it('is the status check that failed, when that is what ran the ladder out', () => {
+    const asked = run([answer({ kind: 'conflict' })], at('saving')).state;
+    const { state } = run([status({ kind: 'failed', why: down })], asked);
+    expect(state.why).toEqual(down);
+  });
+
+  it('is nothing before any save has failed', () => {
+    expect(initialState<string>(3).why).toBeNull();
   });
 });
 
@@ -404,7 +459,7 @@ describe('conflict, status and locked', () => {
   it('a status that is unauthenticated gives signedOut; one that fails goes down the ladder', () => {
     const asked = run([answer({ kind: 'conflict' })], at('saving')).state;
     expect(run([status({ kind: 'unauthenticated' })], asked).state.phase).toBe('signedOut');
-    const failed = run([status({ kind: 'failed' })], asked);
+    const failed = run([status({ kind: 'failed', why: network })], asked);
     expect(failed.state).toMatchObject({ phase: 'dirty', checking: false, attempt: 1 });
     expect(failed.last).toEqual([retryIn(5)]);
     // The retry saves again with the old version and meets the conflict again.
@@ -491,13 +546,14 @@ describe('conflict, status and locked', () => {
     expect(state.phase).toBe(phase);
   });
 
-  it.each([{ kind: 'ok', version: 5 }, { kind: 'invalid' }, { kind: 'failed' }] as const)(
-    'a submit answered %o changes nothing here (the panel shows it)',
-    (answer) => {
-      const before = at('saved');
-      expect(run([{ type: 'submitted', answer, at: AT }], before).state).toEqual(before);
-    },
-  );
+  it.each([
+    { kind: 'ok', version: 5 },
+    { kind: 'invalid' },
+    { kind: 'failed', why: network },
+  ] as const)('a submit answered %o changes nothing here (the panel shows it)', (answer) => {
+    const before = at('saved');
+    expect(run([{ type: 'submitted', answer, at: AT }], before).state).toEqual(before);
+  });
 
   it('keep mine and reload mean nothing outside their states', () => {
     for (const phase of [
@@ -758,7 +814,7 @@ describe('the answer to a flush while the page lives on', () => {
 
   it.each([
     ['conflict', { kind: 'conflict' }],
-    ['failed', { kind: 'failed' }],
+    ['failed', { kind: 'failed', why: network }],
     ['rate-limited', { kind: 'rate-limited', retryAfterSeconds: 30 }],
     ['not-editable', { kind: 'not-editable' }],
     ['unauthenticated', { kind: 'unauthenticated' }],
@@ -771,14 +827,17 @@ describe('the answer to a flush while the page lives on', () => {
 
   it('a failed flush after a retry wait starts the save path from the first step', () => {
     const waiting = run([failure], at('saving')).state;
-    const { state, last } = run([ev('leave'), flushedAnswer({ kind: 'failed' })], waiting);
+    const { state, last } = run(
+      [ev('leave'), flushedAnswer({ kind: 'failed', why: network })],
+      waiting,
+    );
     expect(state).toMatchObject({ phase: 'dirty', attempt: 0, unsent: true });
     expect(last).toEqual([debounce]);
   });
 
   it('a failed flush from saved goes back to dirty', () => {
     // Nothing was flushed from saved, but a restored page may answer a flush sent before a save.
-    const { state, last } = run([flushedAnswer({ kind: 'failed' })], at('saved'));
+    const { state, last } = run([flushedAnswer({ kind: 'failed', why: network })], at('saved'));
     expect(state).toMatchObject({ phase: 'dirty', unsent: true });
     expect(last).toEqual([debounce]);
   });
@@ -786,7 +845,7 @@ describe('the answer to a flush while the page lives on', () => {
   it.each(['failed', 'conflict', 'locked', 'gone', 'signedOut'] as const)(
     'a failed flush in %s only keeps the text marked unsent',
     (phase) => {
-      const { state, last } = run([flushedAnswer({ kind: 'failed' })], left(phase));
+      const { state, last } = run([flushedAnswer({ kind: 'failed', why: network })], left(phase));
       expect(state).toMatchObject({ phase, unsent: true });
       expect(last).toEqual([]);
     },
@@ -795,7 +854,10 @@ describe('the answer to a flush while the page lives on', () => {
   it('a failed flush while a newer save is out changes nothing: that save carries the newest text', () => {
     const mid = run([ev('leave'), change('b'), ev('blur')], at('dirty')).state;
     expect(mid).toMatchObject({ phase: 'saving', content: 'b', unsent: false });
-    expect(run([flushedAnswer({ kind: 'failed' })], mid)).toMatchObject({ state: mid, last: [] });
+    expect(run([flushedAnswer({ kind: 'failed', why: network })], mid)).toMatchObject({
+      state: mid,
+      last: [],
+    });
   });
 
   it('a failed flush with newer text already unsent changes nothing', () => {
