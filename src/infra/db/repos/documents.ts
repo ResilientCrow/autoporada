@@ -2,7 +2,12 @@ import { createHash } from 'node:crypto';
 
 import { and, desc, eq } from 'drizzle-orm';
 
-import { ScopeViolation, type DocumentRepo, type TxContext } from '@/application/ports';
+import {
+  DatabaseFailure,
+  ScopeViolation,
+  type DocumentRepo,
+  type TxContext,
+} from '@/application/ports';
 import { can } from '@/domain/policy';
 import { parseIsoDate } from '@/domain/time';
 import { parseIssueSnapshot } from '@/snapshot';
@@ -11,6 +16,9 @@ import { generatedDocuments, issues, pdfSources } from '../schema';
 import type { TxDatabase } from './database';
 
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
+
+/** The failure code of a snapshot the schema refuses; it never carries the payload (ADR 0015). */
+const PARSE_FAILURE = 'db.parse.generated_documents';
 
 const DOCUMENT_ROW = {
   id: generatedDocuments.id,
@@ -82,8 +90,8 @@ export function createDocumentRepo(db: TxDatabase, ctx: TxContext): DocumentRepo
         .where(eq(generatedDocuments.id, id));
       if (!row) return null;
       const parsed = parseIssueSnapshot(row.snapshot);
-      // It was parsed before it was stored: a refusal now is a fault, not a finding.
-      if (!parsed.ok) throw new Error('documents.snapshot: the stored snapshot fails its schema');
+      // It was parsed before it was stored: a refusal now is unreadable stored data (ADR 0044).
+      if (!parsed.ok) throw new DatabaseFailure(PARSE_FAILURE);
       return parsed.snapshot;
     },
     async file(id, format) {
