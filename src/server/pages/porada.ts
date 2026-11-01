@@ -2,7 +2,13 @@ import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
 import { documentArchive, issuePreview, issueWorkspace } from '@/application/use-cases';
-import type { documentInfo, issuePreviewOutput, issueWorkspaceOutput } from '@/contracts';
+import {
+  isDownloadError,
+  type documentInfo,
+  type DownloadError,
+  type issuePreviewOutput,
+  type issueWorkspaceOutput,
+} from '@/contracts';
 import { composeDocument, type DocumentModel } from '@/document';
 import {
   formatDayMonth,
@@ -21,6 +27,7 @@ import { getContainer } from '../container';
 import { runPage } from './run-page';
 
 import { orNotFound } from './not-found';
+import { first, type SearchParams } from './params';
 import { readWindow, standingFrom, type StandingModel } from './standing';
 import { getViewer, requestId } from './viewer';
 
@@ -235,14 +242,19 @@ export async function previewPage(datum: string): Promise<PreviewPageModel | nul
 
 /** /porada/archiv: every generated porada, the latest meeting first, with its files. */
 export interface ArchivePageModel {
+  /** Why the download that sent the reader here gave no file; null when none did. */
+  readonly problem: DownloadError | null;
   readonly documents: readonly (GeneratedModel & {
     /** „pondělí 9. listopadu 2026“: the day it was held. */
     readonly meeting: string;
   })[];
 }
 
-/** The archive, or null (404) for anyone but the headmaster and the staff reviewers. */
-export async function archivePage(): Promise<ArchivePageModel | null> {
+/**
+ * The archive, or null (404) for anyone but the headmaster and the staff reviewers. `chyba` is
+ * what a download that gave no file wrote; a value outside its set is ignored.
+ */
+export async function archivePage(params: SearchParams): Promise<ArchivePageModel | null> {
   const viewer = await getViewer();
   if (!viewer || !can(viewer.actor, { action: 'archive.view' })) return null;
   const read = orNotFound(
@@ -254,7 +266,9 @@ export async function archivePage(): Promise<ArchivePageModel | null> {
     }),
   );
   if (read === null) return null;
+  const chyba = first(params['chyba']);
   return {
+    problem: isDownloadError(chyba) ? chyba : null,
     documents: read.documents.map((document) => ({
       ...generatedOf(document.monday, document),
       meeting: formatTitleDate(parseIsoDate(document.meetingDate)),

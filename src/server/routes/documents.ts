@@ -1,5 +1,6 @@
 import { downloadDocument } from '@/application/use-cases';
-import type { ErrorCode } from '@/contracts';
+import type { ActionError, DownloadError } from '@/contracts';
+import { safeReturnTo } from '@/domain/identity';
 
 import type { RouteContext, RouteSpec } from '../pipeline';
 
@@ -11,18 +12,47 @@ const TYPES = {
 const isFormat = (value: unknown): value is keyof typeof TYPES =>
   value === 'docx' || value === 'pdf';
 
-const status = (code: number) => new Response(null, { status: code });
-
-/** Where a download another site started lands instead: the archive, one click from the file. */
+/** Where a download that gave no file lands: the archive, which names the reason (ADR 0044). */
 const ARCHIVE = '/porada/archiv';
+const SIGN_IN = '/prihlaseni';
 
-/** A refusal as a status: a wrong date or a missing file is just not there. */
-function refusal(code: ErrorCode): Response {
-  if (code === 'unauthenticated') return status(401);
-  if (code === 'forbidden') return status(403);
-  if (code === 'not-found' || code === 'invalid-input') return status(404);
-  if (code === 'rate-limited') return status(429);
-  return status(500);
+/**
+ * A 303 with no file. The archive is the target for every reader: `archive.view` is also what
+ * `/porada/[datum]` asks, but that page sends a reviewer on to the preview (the parameter would be
+ * lost) and is not found for a Monday outside the calendar, while a download from another site
+ * already lands here.
+ */
+const see = (location: string) =>
+  new Response(null, { status: 303, headers: { Location: location } });
+const archiveWith = (chyba: DownloadError) => see(`${ARCHIVE}?chyba=${chyba}`);
+
+/** A session that ended signs in again and comes back to the archive. */
+const signIn = () => see(`${SIGN_IN}?returnTo=${encodeURIComponent(safeReturnTo(ARCHIVE))}`);
+
+/**
+ * A refusal as the page that says why. A wrong date, a missing file and a reader who may not read
+ * the archive are all just not there; a lock timeout is a timeout.
+ */
+function refusal(error: ActionError): Response {
+  switch (error.code) {
+    case 'unauthenticated':
+      return signIn();
+    case 'forbidden':
+    case 'not-found':
+    case 'invalid-input':
+      return archiveWith('not-found');
+    case 'rate-limited':
+      return archiveWith('rate-limited');
+    case 'busy':
+      return archiveWith('timeout');
+    case 'unavailable':
+      return archiveWith(error.cause);
+    case 'conflict':
+    case 'step-up-required':
+    case 'rule':
+      // None of these can come from a read of one file: if one does, the code is wrong.
+      return archiveWith('bug');
+  }
 }
 
 async function download(request: Request, ctx: RouteContext): Promise<Response> {
@@ -32,12 +62,12 @@ async function download(request: Request, ctx: RouteContext): Promise<Response> 
   // The session cookie is SameSite=Lax: a link on another site would download, and audit, in the
   // reader's name (ADR 0039). The return from the sign-in also comes cross-site, hence a redirect.
   if (request.headers.get('sec-fetch-site') === 'cross-site') {
-    return new Response(null, { status: 303, headers: { Location: ARCHIVE } });
+    return see(ARCHIVE);
   }
   const { datum, format } = await ctx.params;
-  if (typeof datum !== 'string' || !isFormat(format)) return status(404);
+  if (typeof datum !== 'string' || !isFormat(format)) return archiveWith('not-found');
   const result = await ctx.run(downloadDocument, { monday: datum, format });
-  if (!result.ok) return refusal(result.error.code);
+  if (!result.ok) return refusal(result.error);
   const { bytes, fileName } = result.data;
   // A copy on an ArrayBuffer of its own: the driver's Buffer may be a view into a shared pool.
   return new Response(new Uint8Array(bytes), {
@@ -59,4 +89,6 @@ export const documentRouteSpec: RouteSpec = {
   access: 'session',
   rateLimit: 'admin',
   handle: (request, ctx) => download(request, ctx),
+  failure: ({ cause }) => archiveWith(cause),
+  rateLimited: () => archiveWith('rate-limited'),
 };

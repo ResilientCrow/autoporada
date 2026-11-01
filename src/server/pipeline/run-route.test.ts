@@ -182,6 +182,23 @@ describe('runRoute', () => {
     expect((await from('198.51.100.1')).status).toBe(200);
   });
 
+  it('answers a limited request with the route’s own response when it has one', async () => {
+    const { routeDeps } = deps();
+    const spec = route({
+      access: 'public',
+      rateLimit: 'auth',
+      rateLimited: (retryAfterSeconds) =>
+        new Response(null, { status: 303, headers: { Location: `/x?wait=${retryAfterSeconds}` } }),
+    });
+    const from = () => runRoute(routeDeps, spec, request('/x', { ip: '203.0.113.7' }), segment);
+    await from();
+    const limited = await from();
+    expect(limited.status).toBe(303);
+    expect(limited.headers.get('location')).toBe('/x?wait=60');
+    expect(limited.headers.get('cache-control')).toBe('no-store');
+    expect(limited.headers.get('x-request-id')).toBe(REQUEST_ID);
+  });
+
   it('runs use cases as the session user, as a named system principal, or not at all', async () => {
     const user = await world.seed.user({ role: 'reviewer' });
     const seen: unknown[] = [];

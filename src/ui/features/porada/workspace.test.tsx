@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { FAILURE_CAUSES, type DownloadError } from '@/contracts';
 import { DEFAULT_DEADLINE, deadline } from '@/domain/calendar';
 import type { DocumentModel } from '@/document';
 import { instantToWallClock, parseIsoDate, toIsoDate, toIsoTime } from '@/domain/time';
@@ -140,6 +141,7 @@ describe('ArchivePage', () => {
     const html = renderToStaticMarkup(
       <ArchivePage
         view={{
+          problem: null,
           documents: [
             { ...GENERATED, meeting: 'pondělí 9. listopadu 2026' },
             {
@@ -159,9 +161,41 @@ describe('ArchivePage', () => {
     expect(html).toContain(porada.document.pending);
     expect(cspMarkupProblems(html)).toEqual([]);
 
-    const empty = renderToStaticMarkup(<ArchivePage view={{ documents: [] }} />);
+    const empty = renderToStaticMarkup(<ArchivePage view={{ problem: null, documents: [] }} />);
     expect(empty).toContain(porada.archive.empty);
     expect(empty).not.toContain('/dokument/');
+    expect(empty).not.toContain('role="alert"');
+  });
+
+  describe('when a download gave no file', () => {
+    const shown = (problem: DownloadError) =>
+      renderToStaticMarkup(
+        <ArchivePage
+          view={{ problem, documents: [{ ...GENERATED, meeting: 'pondělí 9. listopadu 2026' }] }}
+        />,
+      );
+
+    it.each(FAILURE_CAUSES)('names %s after the lead', (cause) => {
+      const html = shown(cause);
+      expect(html).toContain('role="alert"');
+      expect(html).toContain(`${porada.download.failed} ${cs.failures[cause]}`);
+    });
+
+    it('says a document is not there, or not the reader’s', () => {
+      expect(shown('not-found')).toContain(porada.download['not-found']);
+    });
+
+    it('says there were too many tries', () => {
+      expect(shown('rate-limited')).toContain(cs.errors['rate-limited']);
+    });
+
+    it('keeps the list of files below the notice', () => {
+      const html = shown('timeout');
+      expect(html.indexOf('role="alert"')).toBeLessThan(
+        html.indexOf(porada.archive.meeting('pondělí 9. listopadu 2026')),
+      );
+      expect(cspMarkupProblems(html)).toEqual([]);
+    });
   });
 });
 

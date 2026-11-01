@@ -1,5 +1,23 @@
 import { z } from 'zod';
 
+import { FAILURE_CAUSES, type FailureCause } from './failure';
+
+/**
+ * Why a download answered with the archive page instead of a file (ADR 0044): the `chyba`
+ * parameter the route writes and the page reads. A closed set, so a page shows only a sentence
+ * of its own for it, whoever wrote the URL.
+ */
+export type DownloadError = FailureCause | 'not-found' | 'rate-limited';
+
+export const DOWNLOAD_ERRORS: readonly DownloadError[] = [
+  ...FAILURE_CAUSES,
+  'not-found',
+  'rate-limited',
+];
+
+export const isDownloadError = (value: unknown): value is DownloadError =>
+  (DOWNLOAD_ERRORS as readonly unknown[]).includes(value);
+
 /** Where a generated document stands, for the workspace, the preview and the archive (ADR 0038). */
 export const documentInfo = z.strictObject({
   generatedAt: z.iso.datetime(),

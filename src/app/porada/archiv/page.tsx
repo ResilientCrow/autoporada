@@ -8,10 +8,14 @@ import { Shell } from '@/ui/shell';
 
 export const metadata: Metadata = { title: pageTitle(porada.archive.title) };
 
-/** „Archiv porad“: every generated porada with its DOCX and PDF; for the staff. */
-export default async function PoradaArchivePage() {
+/** „Archiv porad“: every generated porada with its DOCX and PDF; for the staff. A failed download lands here with `chyba`. */
+export default async function PoradaArchivePage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const viewer = await requireSignedIn('/porada/archiv');
-  const model = await archivePage();
+  const model = await archivePage(await searchParams);
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/porada/archiv">

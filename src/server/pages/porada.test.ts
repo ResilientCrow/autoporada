@@ -299,10 +299,10 @@ describe('previewPage', () => {
 
 describe('archivePage', () => {
   it('is null for a student reviewer, a submitter and a visitor without asking a use case', async () => {
-    expect(await archivePage()).toBeNull();
+    expect(await archivePage({})).toBeNull();
     for (const who of ['student', 'submitter'] as const) {
       as(who);
-      expect(await archivePage()).toBeNull();
+      expect(await archivePage({})).toBeNull();
     }
     expect(runRegistered).not.toHaveBeenCalled();
   });
@@ -322,7 +322,8 @@ describe('archivePage', () => {
     });
     for (const who of ['headmaster', 'staff'] as const) {
       as(who);
-      expect(await archivePage()).toEqual({
+      expect(await archivePage({})).toEqual({
+        problem: null,
         documents: [
           {
             monday: '2026-11-09',
@@ -334,6 +335,46 @@ describe('archivePage', () => {
         ],
       });
     }
+  });
+
+  describe('the reason a download gave no file (chyba)', () => {
+    const problem = async (params: Record<string, string | string[] | undefined>) => {
+      as('headmaster');
+      answer({ 'documents.archive': { documents: [] } });
+      return (await archivePage(params))?.problem;
+    };
+
+    it.each([
+      'database-down',
+      'timeout',
+      'database-setup',
+      'stored-data',
+      'bug',
+      'not-found',
+      'rate-limited',
+    ])('reads %s', async (chyba) => {
+      expect(await problem({ chyba })).toBe(chyba);
+    });
+
+    it('reads the first of a repeated parameter', async () => {
+      expect(await problem({ chyba: ['timeout', 'bug'] })).toBe('timeout');
+    });
+
+    it.each([undefined, '', 'forbidden', 'unauthenticated', 'Timeout', 'x'.repeat(5000), ['x']])(
+      'ignores %j',
+      async (chyba) => {
+        expect(await problem({ chyba })).toBeNull();
+      },
+    );
+
+    it('shows the list under the reason', async () => {
+      as('staff');
+      answer({ 'documents.archive': { documents: [] } });
+      expect(await archivePage({ chyba: 'timeout' })).toEqual({
+        problem: 'timeout',
+        documents: [],
+      });
+    });
   });
 });
 

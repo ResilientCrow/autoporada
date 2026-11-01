@@ -102,12 +102,15 @@ export {
   issueTextsWriteOutput,
 } from './issue-texts';
 export {
+  DOWNLOAD_ERRORS,
   documentArchiveInput,
   documentArchiveOutput,
   documentInfo,
   downloadDocumentInput,
   downloadDocumentOutput,
   fileBytes,
+  isDownloadError,
+  type DownloadError,
 } from './documents';
 export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
 export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';

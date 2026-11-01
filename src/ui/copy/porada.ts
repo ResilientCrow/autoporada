@@ -85,6 +85,11 @@ export const porada = {
     pending: 'PDF se ještě připravuje. Načtěte stránku za chvíli.',
     failed: 'PDF se nepodařilo vytvořit. Stáhněte DOCX a\u00a0uložte ho jako PDF ve Wordu.',
   },
+  /** A download that gave no file; `failures` adds the reason (ADR 0044). */
+  download: {
+    failed: 'Dokument se nepodařilo stáhnout.',
+    'not-found': 'Dokument neexistuje, nebo k\u00a0němu nemáte přístup.',
+  },
   archive: {
     title: 'Archiv porad',
     open: 'Archiv porad',

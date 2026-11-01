@@ -40,6 +40,11 @@ export interface RouteSpec {
    * the sign-in page and still clear their cookies.
    */
   failure?(failure: RouteFailure): Response;
+  /**
+   * The answer to a request over the route's rate limit; without one, an empty 429 with
+   * `Retry-After`. A route a reader opens in the browser sends them to a page that says so.
+   */
+  rateLimited?(retryAfterSeconds: number): Response;
 }
 
 /** What a route's `failure` hears of an exception (ADR 0044). */
@@ -95,12 +100,13 @@ export async function runRoute(
       spec.rateLimit === 'none' ? undefined : { name: spec.rateLimit, ...LIMITS[spec.rateLimit] };
     const limited = (key: string) => {
       const decision = limit ? deps.limiter.take(limit.name, key) : { ok: true as const };
-      return decision.ok
-        ? undefined
-        : refuse(
-            'rate-limited',
-            status(429, { 'Retry-After': String(Math.ceil(decision.retryAfterMs / 1000)) }),
-          );
+      if (decision.ok) return undefined;
+      const retryAfterSeconds = Math.ceil(decision.retryAfterMs / 1000);
+      return refuse(
+        'rate-limited',
+        spec.rateLimited?.(retryAfterSeconds) ??
+          status(429, { 'Retry-After': String(retryAfterSeconds) }),
+      );
     };
     if (limit?.key === 'ip') {
       const refused = limited(clientIp(request.headers.get('x-forwarded-for')));
