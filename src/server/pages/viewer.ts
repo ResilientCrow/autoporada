@@ -11,8 +11,9 @@ import { isFreshAuth } from '@/domain/policy';
 
 import { getContainer } from '../container';
 import { sessionTokenFrom } from '../pipeline';
-import { pageFailureOf } from './page-failure';
-import { guardPage, runPage } from './run-page';
+import { isRefusal } from './not-found';
+import { causeOfFault, pageFailureOf } from './page-failure';
+import { guardPage, logPageFailure, runPage } from './run-page';
 
 export async function requestId(): Promise<string> {
   return getContainer().requestIdFrom((await headers()).get('x-request-id'));
@@ -44,12 +45,14 @@ interface SignedInModel {
 const currentSignedIn = cache(async (): Promise<SignedInModel | null> => {
   const viewer = await getViewer();
   if (!viewer) return null;
-  const result = await runPage(me, {
-    principal: viewer,
-    requestId: await requestId(),
-    input: {},
-  });
-  if (!result.ok) throw pageFailureOf(`profile.me: ${result.error.code}`, result.error.code);
+  const id = await requestId();
+  const result = await runPage(me, { principal: viewer, requestId: id, input: {} });
+  if (!result.ok) {
+    const { code } = result.error;
+    // A fault was logged by `runPage`; a refusal (the user is gone) is a failure here, so log it.
+    if (isRefusal(code)) logPageFailure('profile.me', id, causeOfFault(code), { name: code });
+    throw pageFailureOf(`profile.me: ${code}`, code);
+  }
   const { displayName, role, remindDeadline } = result.value;
   return {
     displayName,

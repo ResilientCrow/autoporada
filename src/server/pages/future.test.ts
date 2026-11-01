@@ -13,6 +13,7 @@ vi.mock('../container', () => ({
   getContainer: () => ({
     resolvePrincipal,
     requestIdFrom: () => 'req-1',
+    log: { error: () => undefined },
     directoryMode: 'off',
     app: { clock: { now: () => new Date('2026-11-04T10:00:00Z') } },
   }),

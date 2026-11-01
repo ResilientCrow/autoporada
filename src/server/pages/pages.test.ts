@@ -332,6 +332,21 @@ describe('signed-in pages', () => {
     await expect(optionalSignedIn()).rejects.toMatchObject({ digest: 'autoporada:timeout' });
   });
 
+  it.each([
+    ['unavailable', 'bug'],
+    ['busy', 'timeout'],
+    ['not-found', 'bug'],
+  ] as const)('logs a %s profile once with the request id, as cause %s', async (code, cause) => {
+    resolvePrincipal.mockResolvedValue(principal('pending'));
+    runRegistered.mockResolvedValue({ ok: false, error: { code } });
+    await expect(optionalSignedIn()).rejects.toMatchObject({ digest: `autoporada:${cause}` });
+    expect(logged.error).toHaveBeenCalledTimes(1);
+    expect(logged.error).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'page', reqId: 'req-1', name: 'profile.me', cause }),
+      'page failed',
+    );
+  });
+
   it('names a lost database when the profile call throws', async () => {
     resolvePrincipal.mockResolvedValue(principal('pending'));
     runRegistered.mockRejectedValue(new DatabaseFailure('08006'));

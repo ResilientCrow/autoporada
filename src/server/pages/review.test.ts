@@ -13,6 +13,7 @@ vi.mock('../container', () => ({
   getContainer: () => ({
     resolvePrincipal,
     requestIdFrom: () => 'req-1',
+    log: { error: () => undefined },
     app: { clock: { now: () => NOW } },
     directoryMode: 'off',
   }),
@@ -101,7 +102,10 @@ describe('queuePage', () => {
 
   it('fails loudly on any other failure', async () => {
     as('reviewer');
-    serve({ points: { ok: false, error: { code: 'unavailable' } } });
+    serve({
+      points: { ok: false, error: { code: 'unavailable' } },
+      future: { ok: true, value: FUTURE },
+    });
     await expect(queuePage()).rejects.toThrow('points.queue: unavailable');
     serve({
       points: { ok: true, value: QUEUE },

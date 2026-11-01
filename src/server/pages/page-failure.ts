@@ -19,7 +19,11 @@ export class PageFailure extends Error {
   }
 }
 
-/** The failure for a use case that answered a fault instead of a page: busy rows time out, the rest are bugs. */
+/** What a use case's fault answer means for the page: busy rows time out, the rest are bugs. */
+export const causeOfFault = (code: PipelineFailure['code']): FailureCause =>
+  code === 'busy' ? 'timeout' : 'bug';
+
+/** The failure for a use case that answered a fault instead of a page. */
 export function pageFailureOf(message: string, code: PipelineFailure['code']): PageFailure {
-  return new PageFailure(code === 'busy' ? 'timeout' : 'bug', message);
+  return new PageFailure(causeOfFault(code), message);
 }

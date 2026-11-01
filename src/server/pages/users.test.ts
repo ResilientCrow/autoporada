@@ -10,7 +10,11 @@ vi.mock('../pipeline', async () => ({
   runRegistered,
 }));
 vi.mock('../container', () => ({
-  getContainer: () => ({ resolvePrincipal, requestIdFrom: () => 'req-1' }),
+  getContainer: () => ({
+    resolvePrincipal,
+    requestIdFrom: () => 'req-1',
+    log: { error: () => undefined },
+  }),
 }));
 
 const LIST = { users: [], total: 0 };

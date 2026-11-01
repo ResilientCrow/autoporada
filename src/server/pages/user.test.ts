@@ -10,7 +10,11 @@ vi.mock('../pipeline', async () => ({
   runRegistered,
 }));
 vi.mock('../container', () => ({
-  getContainer: () => ({ resolvePrincipal, requestIdFrom: () => 'req-1' }),
+  getContainer: () => ({
+    resolvePrincipal,
+    requestIdFrom: () => 'req-1',
+    log: { error: () => undefined },
+  }),
 }));
 
 const ID = '0b0c1d2e-3f40-4152-8364-758697a8b9ca';

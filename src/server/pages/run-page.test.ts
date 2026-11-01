@@ -52,6 +52,24 @@ describe('runPage', () => {
     expect(lines).toEqual([]);
   });
 
+  it.each([
+    ['busy', 'timeout'],
+    ['unavailable', 'bug'],
+    ['conflict', 'bug'],
+    ['rule', 'bug'],
+  ] as const)(
+    'logs a %s result, which the page will throw as a failure, once with request id and cause %s',
+    async (code, cause) => {
+      runRegistered.mockResolvedValue({ ok: false, error: { code } });
+      expect(await runPage(echo, call)).toEqual({ ok: false, error: { code } });
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toMatchObject({
+        level: 'error',
+        fields: { kind: 'page', name: 'test.echo', reqId: 'req-1', cause },
+      });
+    },
+  );
+
   it('turns a lost database into a page failure of that cause, logged with the request id', async () => {
     runRegistered.mockRejectedValue(new DatabaseFailure('08000'));
     const error = await failureOf(() => runPage(echo, call));

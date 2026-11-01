@@ -15,6 +15,7 @@ vi.mock('../container', () => ({
   getContainer: () => ({
     resolvePrincipal,
     requestIdFrom: () => 'req-1',
+    log: { error: () => undefined },
     app: { clock: { now: () => NOW } },
   }),
 }));
