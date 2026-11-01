@@ -40,6 +40,10 @@ const SLOT = {
   status: 'open',
   version: 3,
   next: '2026-11-16',
+  heldNext: [
+    { monday: '2026-11-16', meetingDate: '2026-11-16' },
+    { monday: '2026-11-23', meetingDate: '2026-11-24' },
+  ],
   counts: { waiting: 1, returned: 2, approved: 3, later: 0 },
   document: null,
 };
@@ -101,7 +105,7 @@ describe('poradaPage', () => {
     expect(await poradaPage('2030-01-07')).toBeNull();
   });
 
-  it('writes the dates out for the headmaster, a moved porada with its Monday', async () => {
+  it('writes the dates out for the headmaster, a moved porada with its Monday, the next ones by their meeting dates', async () => {
     as('headmaster');
     answer({ 'issues.workspace': { working: '2026-11-09', slot: SLOT } });
     expect(await poradaPage('2026-11-09')).toEqual({
@@ -116,6 +120,10 @@ describe('poradaPage', () => {
         status: 'open',
         version: 3,
         nextLabel: '16. 11. 2026',
+        heldNext: [
+          { monday: '2026-11-16', label: 'pondělí 16. listopadu 2026' },
+          { monday: '2026-11-23', label: 'úterý 24. listopadu 2026' },
+        ],
         counts: SLOT.counts,
         generated: null,
       },

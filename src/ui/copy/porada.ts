@@ -110,13 +110,22 @@ export const porada = {
     /** `meeting` arrives written, „pondělí 9. listopadu 2026“. */
     meeting: (meeting: string) => `Porada ${meeting}`,
   },
+  /** The dialogs of the status card that skip a porada and bring it back (ADR 0047). */
   skip: {
     title: 'Porada se nekoná',
+    unskipTitle: 'Porada se koná',
+    /** `meeting` arrives written, „pondělí 9. listopadu 2026“. */
+    lead: (meeting: string) => `Porada ${meeting} se nekoná.`,
+    until: 'Další porada se koná',
+    untilHint: 'Porady před tímto datem se také nekonají.',
+    untilInvalid: 'Tuto poradu už nelze vybrat. Načtěte prosím stránku.',
+    afterDeadline: 'Uzávěrka už proběhla; schválené body se přesunou na vybranou poradu.',
+    noNext: 'Po této poradě žádná další není v\u00a0kalendáři.',
     /** `next` arrives written, „10. 11. 2026“. */
-    afterDeadline: (next: string) =>
-      `Uzávěrka už proběhla; schválené body se přesunou na poradu ${next}.`,
-    noNext: 'Uzávěrka už proběhla a\u00a0po této poradě žádná další není v\u00a0kalendáři.',
     kept: (next: string) => `Body odevzdané během zrušení zůstávají na poradě ${next}.`,
+    cancel: 'Zrušit',
+    /** What the status line says after a skip; `next` arrives as the select wrote it. */
+    said: (label: string, next: string) => `Porada ${label} se nekoná. Další porada: ${next}.`,
   },
   /** „Pokyny a hospodaření“: the items of the two sections (/porada/[datum]/pokyny). */
   outline: {

@@ -470,4 +470,90 @@ describe('issues.setSkipped', () => {
       expect(jobs).toEqual([]);
     });
   });
+
+  describe('until a chosen porada', () => {
+    const invalidUntil = { code: 'invalid-input', fields: { until: 'invalid' } };
+    const statuses = async (mondays: readonly CalDate[]) => {
+      const { issues } = await snapshot();
+      return mondays.map(
+        (m) => issues.find((i) => toIsoDate(i.monday) === toIsoDate(m))?.status ?? 'untouched',
+      );
+    };
+
+    it('skips this porada and every one before the chosen one, which stays open', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      const until = weeks(SUBMIT, 3);
+      expect(await act(head, 'skip', SUBMIT, { until: toIsoDate(until) })).toEqual({
+        ok: true,
+        value: { status: 'skipped', version: 2 },
+      });
+      expect(
+        await statuses([SUBMIT, weeks(SUBMIT, 1), weeks(SUBMIT, 2), until, weeks(SUBMIT, 4)]),
+      ).toEqual(['skipped', 'skipped', 'skipped', 'untouched', 'untouched']);
+      const { audit } = await snapshot();
+      expect(audit.map((a) => [a.action, (a.data as { meta: unknown }).meta])).toEqual([
+        ['issue.skipped', { monday: '2026-11-09' }],
+        ['issue.skipped', { monday: '2026-11-16' }],
+        ['issue.skipped', { monday: '2026-11-23' }],
+      ]);
+    });
+
+    it('is the plain skip when the chosen porada is the next one', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      expect((await act(head, 'skip', SUBMIT, { until: toIsoDate(weeks(SUBMIT, 1)) })).ok).toBe(
+        true,
+      );
+      expect(await statuses([SUBMIT, weeks(SUBMIT, 1)])).toEqual(['skipped', 'untouched']);
+    });
+
+    it('leaves a porada between that is already skipped as it is', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      const between = await seedIssue(weeks(SUBMIT, 1), { status: 'skipped' });
+      expect((await act(head, 'skip', SUBMIT, { until: toIsoDate(weeks(SUBMIT, 2)) })).ok).toBe(
+        true,
+      );
+      expect(await rowOf(weeks(SUBMIT, 1))).toMatchObject({
+        status: 'skipped',
+        version: between.version,
+      });
+    });
+
+    it.each([
+      ['this porada itself', () => SUBMIT],
+      ['an earlier porada', () => CURRENT],
+      ['a day that is no Monday', () => addDays(weeks(SUBMIT, 2), 2)],
+      ['a Monday past the calendar', () => weeks(lastSlotMonday(instantToWallClock(NOW).date), 1)],
+    ])('refuses %s as the next porada and writes nothing', async (_name, until) => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      await refuses(() => act(head, 'skip', SUBMIT, { until: toIsoDate(until()) }), invalidUntil);
+    });
+
+    it('refuses a next porada that does not take place itself', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      await seedIssue(weeks(SUBMIT, 2), { status: 'skipped' });
+      await refuses(
+        () => act(head, 'skip', SUBMIT, { until: toIsoDate(weeks(SUBMIT, 2)) }),
+        invalidUntil,
+      );
+    });
+
+    it('refuses a next porada with the undo', async () => {
+      world.clock.set(NOW);
+      const head = await headmaster();
+      const issue = await seedIssue(SUBMIT, { status: 'skipped' });
+      await refuses(
+        () =>
+          act(head, 'unskip', SUBMIT, {
+            expectedVersion: issue.version,
+            until: toIsoDate(weeks(SUBMIT, 2)),
+          }),
+        invalidUntil,
+      );
+    });
+  });
 });

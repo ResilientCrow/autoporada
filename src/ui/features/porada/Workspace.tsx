@@ -23,6 +23,8 @@ export interface WorkspaceView {
   readonly version: number | null;
   /** The porada the approved points move to without this one; null when none follows. */
   readonly nextLabel: string | null;
+  /** The poradas a skip may name as the one held next, earliest first, written out. */
+  readonly heldNext: readonly { readonly monday: string; readonly label: string }[];
   readonly counts: {
     readonly waiting: number;
     readonly returned: number;
@@ -34,7 +36,8 @@ export interface WorkspaceView {
 }
 
 /**
- * The headmaster's page of one porada: where and when it is held, its deadline and status, what
+ * The headmaster's page of one porada: where and when it is held, its deadline and status (with
+ * „Porada se nekoná“ beside them while it is not generated), what
  * waits for it, and the steps of preparing the document. The document is generated on the
  * preview; a generated porada shows its files here.
  */
@@ -47,19 +50,41 @@ export function Workspace({
 }) {
   const { deadline, counts } = view;
   const when = porada.deadline[view.deadlinePassed ? 'passed' : 'ahead'];
+  const status = (
+    <div className="space-y-3">
+      <p className="flex flex-wrap items-center gap-2">
+        <Chip look={ISSUE_LOOK[view.status]} />
+        {view.movedFrom !== null && <span>{porada.moved(view.movedFrom)}</span>}
+      </p>
+      <p>{when(deadline.weekday, deadline.date, deadline.time)}</p>
+    </div>
+  );
   return (
     <>
       <SlantLabel level={1}>{porada.title}</SlantLabel>
       <div className="mt-4 space-y-8">
-        <Card level={2} title={porada.meeting(view.meeting)}>
-          <div className="space-y-3">
-            <p className="flex flex-wrap items-center gap-2">
-              <Chip look={ISSUE_LOOK[view.status]} />
-              {view.movedFrom !== null && <span>{porada.moved(view.movedFrom)}</span>}
-            </p>
-            <p>{when(deadline.weekday, deadline.date, deadline.time)}</p>
-          </div>
-        </Card>
+        {view.status === 'generated' ? (
+          <Card level={2} title={porada.meeting(view.meeting)}>
+            {status}
+          </Card>
+        ) : (
+          <SkipControl
+            action={setSkipped}
+            title={porada.meeting(view.meeting)}
+            view={{
+              monday: view.monday,
+              label: view.meetingLabel,
+              meeting: view.meeting,
+              status: view.status,
+              version: view.version,
+              deadlinePassed: view.deadlinePassed,
+              next: view.nextLabel,
+              heldNext: view.heldNext,
+            }}
+          >
+            {status}
+          </SkipControl>
+        )}
         <Card level={2} title={porada.counts.title}>
           <ul className="space-y-1">
             <li>{porada.counts.waiting(counts.waiting)}</li>
@@ -70,19 +95,6 @@ export function Workspace({
         </Card>
         {view.status === 'open' && (
           <ArrowLink href={`/porada/${view.monday}/presunout`}>{porada.move.open}</ArrowLink>
-        )}
-        {view.status !== 'generated' && (
-          <SkipControl
-            action={setSkipped}
-            view={{
-              monday: view.monday,
-              label: view.meetingLabel,
-              status: view.status,
-              version: view.version,
-              deadlinePassed: view.deadlinePassed,
-              next: view.nextLabel,
-            }}
-          />
         )}
         {view.generated !== null && <DocumentCard view={view.generated} />}
         <Steps monday={view.monday} />

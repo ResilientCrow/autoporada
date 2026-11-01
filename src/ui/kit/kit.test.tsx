@@ -15,6 +15,7 @@ import {
   Card,
   Cluster,
   Columns,
+  Dialog,
   Disclosure,
   DownloadLink,
   FactList,
@@ -69,6 +70,39 @@ describe('Card', () => {
 
   it('has no heading without a title', () => {
     expect(html(<Card>{TEXT}</Card>)).not.toMatch(/<h\d/);
+  });
+
+  it('puts the aside after its content, in a row from sm up', () => {
+    const out = html(
+      <Card title={TEXT} aside={<Button>{cs.porada.skip.title}</Button>}>
+        {cs.gallery.intro}
+      </Card>,
+    );
+    expect(out.indexOf(cs.gallery.intro)).toBeLessThan(
+      out.indexOf(`${cs.porada.skip.title}</button>`),
+    );
+    expect(out).toContain('sm:flex-row');
+    expect(html(<Card title={TEXT}>{TEXT}</Card>)).not.toContain('sm:flex-row');
+    expect(cspMarkupProblems(out)).toEqual([]);
+  });
+});
+
+describe('Dialog', () => {
+  it('renders only its trigger while closed', () => {
+    const out = html(
+      <Dialog
+        title={TEXT}
+        isOpen={false}
+        onOpenChange={() => undefined}
+        trigger={<Button>{cs.porada.skip.title}</Button>}
+      >
+        {cs.gallery.intro}
+      </Dialog>,
+    );
+    expect(out).toContain(`${cs.porada.skip.title}</button>`);
+    expect(out).not.toContain(TEXT);
+    expect(out).not.toContain(cs.gallery.intro);
+    expect(cspMarkupProblems(out)).toEqual([]);
   });
 });
 

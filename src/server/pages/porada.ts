@@ -101,6 +101,8 @@ interface PoradaPageModel {
   readonly version: number | null;
   /** „10. 11. 2026“: the porada the approved points move to if this one is skipped. */
   readonly nextLabel: string | null;
+  /** The poradas a skip may name as the one held next, earliest first (ADR 0047). */
+  readonly heldNext: readonly { readonly monday: string; readonly label: string }[];
   readonly counts: NonNullable<Workspace['slot']>['counts'];
   /** The document of a generated porada; null before. */
   readonly generated: GeneratedModel | null;
@@ -135,6 +137,10 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
       status: slot.status,
       version: slot.version,
       nextLabel: slot.next === null ? null : formatNumericDate(parseIsoDate(slot.next)),
+      heldNext: slot.heldNext.map((held) => ({
+        monday: held.monday,
+        label: formatTitleDate(parseIsoDate(held.meetingDate)),
+      })),
       counts: slot.counts,
       generated: generatedModel(slot.monday, slot.document),
     },

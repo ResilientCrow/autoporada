@@ -5,7 +5,7 @@ import { FAILURE_CAUSES, PDF_FAILURES, type DownloadError, type PdfFailure } fro
 import { DEFAULT_DEADLINE, deadline } from '@/domain/calendar';
 import type { DocumentModel } from '@/document';
 import { instantToWallClock, parseIsoDate, toIsoDate, toIsoTime } from '@/domain/time';
-import { cs, porada } from '@/ui/copy';
+import { cs, issues, porada } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
@@ -19,7 +19,9 @@ import { ArchivePage, MovePage, NoPorada, PreviewPage, Workspace } from './index
 import type { FindingView } from './Preflight';
 import type { MoveView } from './move';
 import { moveEffect, moveInput, ruleDeadline, skipList } from './move';
+import { SkipForm, type SkipView } from './SkipControl';
 import { Steps } from './Steps';
+import { skipInput } from './skip';
 import type { WorkspaceView } from './Workspace';
 
 const MONDAY = '2026-11-09';
@@ -49,6 +51,10 @@ const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   status: 'open',
   version: 3,
   nextLabel: '16. 11. 2026',
+  heldNext: [
+    { monday: '2026-11-16', label: 'pondělí 16. listopadu 2026' },
+    { monday: '2026-11-23', label: 'úterý 24. listopadu 2026' },
+  ],
   counts: { waiting: 2, returned: 0, approved: 1, later: 0 },
   generated: null,
   ...over,
@@ -95,24 +101,31 @@ describe('Workspace', () => {
     expect(render({ status: 'generated' })).not.toContain(link);
   });
 
-  it('offers the skip control unless the porada is generated', () => {
-    expect(render({ status: 'open' })).toContain(porada.skip.title);
-    expect(render({ status: 'skipped' })).toContain(porada.skip.title);
-    expect(render({ status: 'generated' })).not.toContain(porada.skip.title);
+  it('puts „Porada se nekoná“ at the right of the status card, and no separate skip card', () => {
+    const html = render({ status: 'open' });
+    expect(html).toContain(`${porada.skip.title}</button>`);
+    expect(html.indexOf(porada.meeting('pondělí 9. listopadu 2026'))).toBeLessThan(
+      html.indexOf(`${porada.skip.title}</button>`),
+    );
+    expect(html.indexOf(`${porada.skip.title}</button>`)).toBeLessThan(
+      html.indexOf(porada.counts.title),
+    );
+    // The dialog renders nothing until it opens.
+    expect(html).not.toContain(issues.strip.skip.confirm);
+    expect(html).not.toContain('name="confirmed"');
   });
 
-  it('warns after the deadline where the approved points go, or that no porada follows', () => {
-    expect(render({ deadlinePassed: true })).toContain(porada.skip.afterDeadline('16. 11. 2026'));
-    expect(render({ deadlinePassed: true, nextLabel: null })).toContain(porada.skip.noNext);
-    expect(render({ deadlinePassed: false })).not.toContain(porada.skip.noNext);
-  });
-
-  it('says where the points stay when a skipped porada is held again', () => {
-    expect(render({ status: 'skipped' })).toContain(porada.skip.kept('16. 11. 2026'));
+  it('offers „Porada se koná“ for a skipped porada, and neither once it is generated', () => {
+    expect(render({ status: 'skipped' })).toContain(`${porada.skip.unskipTitle}</button>`);
+    expect(render({ status: 'skipped' })).not.toContain(`${porada.skip.title}</button>`);
+    const generated = render({ status: 'generated' });
+    expect(generated).toContain(porada.meeting('pondělí 9. listopadu 2026'));
+    expect(generated).not.toContain(`${porada.skip.title}</button>`);
+    expect(generated).not.toContain(`${porada.skip.unskipTitle}</button>`);
   });
 
   it('works for a Monday without a row yet (no version)', () => {
-    expect(render({ version: null })).toContain(porada.skip.title);
+    expect(render({ version: null })).toContain(`${porada.skip.title}</button>`);
   });
 
   it('sends an open porada to the preview to generate it, and links the archive', () => {
@@ -177,6 +190,89 @@ describe('Workspace', () => {
       expect(html).toContain(porada.document.failed['too-large']);
       expect(html).not.toContain(porada.document.failed.timeout);
     });
+  });
+});
+
+describe('SkipForm (the dialog of the status card)', () => {
+  const skipView = (over: Partial<SkipView> = {}): SkipView => ({
+    monday: MONDAY,
+    label: '9. 11. 2026',
+    meeting: 'pondělí 9. listopadu 2026',
+    status: 'open',
+    version: 3,
+    deadlinePassed: false,
+    next: '16. 11. 2026',
+    heldNext: view().heldNext,
+    ...over,
+  });
+  const form = (over: Partial<SkipView> = {}) =>
+    renderToStaticMarkup(
+      <SkipForm action={setSkipped} view={skipView(over)} onCancel={vi.fn()} onDone={vi.fn()} />,
+    );
+
+  it('names the porada, offers the next ones with the first chosen, then the box and the buttons', () => {
+    const html = form();
+    expect(html).toContain(porada.skip.lead('pondělí 9. listopadu 2026'));
+    expect(html).toContain(porada.skip.until);
+    expect(html).toContain(porada.skip.untilHint);
+    expect(html).toMatch(/<select[^>]*name="until"[^>]*aria-required="true"/);
+    expect(html).not.toContain(`${porada.skip.until} (`);
+    expect(html).toMatch(/<option value="2026-11-16" selected="">pondělí 16. listopadu 2026/);
+    expect(html).toContain('<option value="2026-11-23">úterý 24. listopadu 2026');
+    expect(html).toContain(issues.strip.skip.confirm);
+    const at = (text: string) => html.indexOf(text);
+    expect(at('name="until"')).toBeLessThan(at('name="confirmed"'));
+    expect(at(`${issues.strip.skip.submit}</button>`)).toBeLessThan(
+      at(`${porada.skip.cancel}</button>`),
+    );
+    expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('leaves out the hint with one porada to choose, and the select with none', () => {
+    expect(form({ heldNext: view().heldNext.slice(0, 1) })).not.toContain(porada.skip.untilHint);
+    const none = form({ heldNext: [], next: null });
+    expect(none).not.toContain('name="until"');
+    expect(none).toContain(porada.skip.noNext);
+  });
+
+  it('warns after the deadline that the approved points move to the chosen porada', () => {
+    expect(form({ deadlinePassed: true })).toContain(porada.skip.afterDeadline);
+    expect(form({ deadlinePassed: false })).not.toContain(porada.skip.afterDeadline);
+    expect(form({ deadlinePassed: true, heldNext: [] })).not.toContain(porada.skip.afterDeadline);
+  });
+
+  it('brings a skipped porada back with its own box, saying where points stay, and no select', () => {
+    const html = form({ status: 'skipped' });
+    expect(html).toContain(issues.strip.unskip.confirm);
+    expect(html).toContain(`${issues.strip.unskip.submit}</button>`);
+    expect(html).toContain(porada.skip.kept('16. 11. 2026'));
+    expect(html).not.toContain('name="until"');
+    expect(html).not.toContain(porada.skip.lead('pondělí 9. listopadu 2026'));
+  });
+});
+
+describe('skipInput', () => {
+  const data = (entries: Record<string, string>) => {
+    const out = new FormData();
+    for (const [k, v] of Object.entries(entries)) out.set(k, v);
+    return out;
+  };
+
+  it('sends the chosen porada with a skip, and never with an unskip', () => {
+    expect(skipInput(MONDAY, 'skip', 3, data({ until: '2026-11-23', confirmed: 'on' }))).toEqual({
+      monday: MONDAY,
+      event: 'skip',
+      expectedVersion: 3,
+      confirmed: true,
+      until: '2026-11-23',
+    });
+    expect(skipInput(MONDAY, 'unskip', 3, data({ until: '2026-11-23' }))).not.toHaveProperty(
+      'until',
+    );
+  });
+
+  it('leaves out an empty choice, the version of a Monday without a row and an unticked box', () => {
+    expect(skipInput(MONDAY, 'skip', null, data({}))).toEqual({ monday: MONDAY, event: 'skip' });
   });
 });
 

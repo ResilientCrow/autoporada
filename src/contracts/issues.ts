@@ -8,13 +8,16 @@ import { deadlineSchema } from './settings';
 /**
  * „Porada se nekoná“ and its undo. `expectedVersion` is the version of the row
  * the page showed; a Monday without a row has none, which reads as an
- * untouched issue. `confirmed` is the checkbox (ADR 0013 item 10).
+ * untouched issue. `confirmed` is the checkbox (ADR 0013 item 10). `until`, with
+ * a skip only, is the Monday of the porada held next: every one before it is
+ * skipped too (ADR 0047).
  */
 export const setSkippedInput = z.strictObject({
   monday: z.iso.date().max(10),
   event: z.enum(['skip', 'unskip']),
   expectedVersion: z.number().int().positive().optional(),
   confirmed: z.literal(true).optional(),
+  until: z.iso.date().max(10).optional(),
 });
 export const setSkippedOutput = z.object({
   status: z.enum(['open', 'generated', 'skipped']),

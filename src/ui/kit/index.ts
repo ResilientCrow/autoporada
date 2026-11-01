@@ -6,6 +6,7 @@ export { buttonStyles, type ButtonVariant } from './button-styles';
 export { Card } from './Card';
 export { Cluster } from './Cluster';
 export { Columns } from './Columns';
+export { Dialog } from './Dialog';
 export { Disclosure } from './Disclosure';
 export { DownloadLink } from './DownloadLink';
 export { FactList } from './FactList';

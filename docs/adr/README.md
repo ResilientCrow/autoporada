@@ -52,3 +52,4 @@ record that supersedes it.
 | [0044](0044-errors-name-what-failed.md) | Errors name what failed | Accepted; supersedes 0011's error bullet and 0013's `unavailable` text in part; amended by 0045 |
 | [0045](0045-error-kinds-amendments.md) | Error kinds and surfaces: amendments to 0044 | Accepted; amends 0044 |
 | [0046](0046-the-soft-reminder-asks-for-owed-reports.md) | The soft reminder asks for owed reports, and no one opts out | Accepted; supersedes 0018 item 10, 0020 items 3 and 5 and 0032 item 3 in part |
+| [0047](0047-skip-until-a-chosen-porada.md) | Skip until a chosen porada, from a dialog | Accepted; adds to 0018, 0034 and 0041; adds `Dialog` to the kit |

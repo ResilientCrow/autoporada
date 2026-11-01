@@ -2,7 +2,8 @@ import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import { setSkippedInput, setSkippedOutput } from '@/contracts';
 import { ISSUE_MACHINE, transition } from '@/domain/review';
 import { orderConflicts } from '@/domain/calendar';
-import { compareDates, toIsoDate } from '@/domain/time';
+import type { IssueSlot } from '@/domain/calendar';
+import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
 import { mondayOfText, readWindow } from './calendar';
 import { ensureIssue } from './ensure';
@@ -21,6 +22,10 @@ const UNTOUCHED_VERSION = 1;
  * codes only, so the conflicting slots are not named), and so is one after a later porada was
  * generated (`later-generated`, ADR 0041). A missing row is made first (ADR 0018). Skipping writes no point and sends no mail: placement
  * is computed on read.
+ *
+ * A skip with `until` names the porada held next (ADR 0047): an open slot after this one. Every
+ * open slot between them is skipped in the same transaction, each audited; one already skipped
+ * stays as it is.
  */
 export const setSkipped = defineUseCase({
   name: 'issues.setSkipped',
@@ -37,6 +42,9 @@ export const setSkipped = defineUseCase({
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     if (slot.status === 'generated') return fail({ code: 'rule', rule: 'issue-not-open' });
+    const between = input.until === undefined ? [] : skippedBefore(slots, monday, input.until);
+    if (between === null || (input.until !== undefined && input.event !== 'skip'))
+      return fail({ code: 'invalid-input', fields: { until: 'invalid' } });
     // A porada that takes place again must still fit the order of the others (ADR 0034).
     if (input.event === 'unskip' && slot.status === 'skipped') {
       // Poradas are generated in order (ADR 0040): none comes back behind a generated one.
@@ -62,6 +70,34 @@ export const setSkipped = defineUseCase({
     await tx.audit.record(
       issueEvent(ACTIONS[input.event], issue, after, { monday: toIsoDate(monday) }),
     );
+    for (const later of between) {
+      const { issue: row } = await ensureIssue(tx, later.monday, rule);
+      const skipped = await tx.issues.setStatus(row.id, row.version, 'skipped');
+      await tx.audit.record(
+        issueEvent(ACTIONS.skip, row, skipped, { monday: toIsoDate(later.monday) }),
+      );
+    }
     return ok({ status: after.status, version: after.version });
   },
 });
+
+/**
+ * The open slots after `monday` and before the porada held next, which `until` names; null when
+ * `until` is no open slot after `monday`. A slot in between is open or skipped: poradas are
+ * generated in order (ADR 0040), and this one is not generated.
+ */
+function skippedBefore(
+  slots: readonly IssueSlot[],
+  monday: CalDate,
+  until: string,
+): readonly IssueSlot[] | null {
+  const next = mondayOfText(until);
+  const held = next && slots.find((s) => compareDates(s.monday, next) === 0);
+  if (!held || held.status !== 'open' || compareDates(held.monday, monday) <= 0) return null;
+  return slots.filter(
+    (s) =>
+      s.status === 'open' &&
+      compareDates(s.monday, monday) > 0 &&
+      compareDates(s.monday, held.monday) < 0,
+  );
+}
