@@ -31,15 +31,7 @@ const TYPES = [
 const render = (
   items: readonly ReportDueItem[] = [item('a'), item('b')],
   types: readonly { id: string; name: string }[] = TYPES,
-) =>
-  renderToStaticMarkup(
-    <ReportDueCard
-      items={items}
-      types={types}
-      startFutureReport={never}
-      declineFutureReport={never}
-    />,
-  );
+) => renderToStaticMarkup(<ReportDueCard items={items} types={types} startFutureReport={never} />);
 
 /** The list items of the card, one per akce. */
 const itemsOf = (html: string) => html.match(/<li[ >].*?<\/li>/gs) ?? [];
@@ -52,13 +44,13 @@ describe('ReportDueCard', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
-  it('lists each akce with a link to it, its days and both buttons', () => {
+  it('lists each akce with a link to it, its days and „Napsat zprávu“', () => {
     const [first, second] = itemsOf(render());
     expect(first).toContain('href="/akce/a"');
     expect(first).toContain('Akce a');
     expect(first).toContain('10.–11. 11. 2026');
     expect(first).toContain(report.start);
-    expect(first).toContain(report.decline);
+    expect(first).not.toContain('Zprávu psát nebudu');
     expect(second).toContain('href="/akce/b"');
   });
 
@@ -81,10 +73,10 @@ describe('ReportDueCard', () => {
     expect(html).toContain(report.start);
   });
 
-  it('can only decline when there is no type to write a report on', () => {
+  it('still lists the akce, with no button, when there is no type to write a report on', () => {
     const html = render([item('a')], []);
-    expect(html).not.toContain(report.start);
-    expect(html).toContain(report.decline);
+    expect(html).toContain('Akce a');
+    expect(html).not.toContain('<button');
   });
 
   it('gives every control an id of its own across the akce', () => {
@@ -96,7 +88,7 @@ describe('ReportDueCard', () => {
     const [first] = itemsOf(render());
     const titleId = first!.match(/<a[^>]*id="([^"]+)"/)?.[1];
     expect(titleId).toBeDefined();
-    expect(first!.match(new RegExp(`aria-describedby="${titleId}"`, 'g'))).toHaveLength(2);
+    expect(first!.match(new RegExp(`aria-describedby="${titleId}"`, 'g'))).toHaveLength(1);
   });
 
   it('says once that the buttons need JavaScript, and not on an empty card', () => {
@@ -104,9 +96,7 @@ describe('ReportDueCard', () => {
     expect(render([])).not.toContain('<noscript');
   });
 
-  it('keeps only its status region when nothing is waiting, so a decision can still be said', () => {
-    const html = render([]);
-    expect(html).toContain('role="status"');
-    expect(html).not.toContain(report.title);
+  it('renders nothing when nothing is waiting', () => {
+    expect(render([])).toBe('');
   });
 });

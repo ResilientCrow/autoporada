@@ -1,13 +1,7 @@
 import { MAX_FIELDS } from '@/application/core';
 import type { FutureContent } from '@/application/ports';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
-import type { FutureKind } from '@/domain/calendar';
 import { compareDates, compareTimes } from '@/domain/time';
-
-/** What the content may hold for the item's kind, checked by the save and the submit: only an akce expects a report. */
-export function kindIssues(kind: FutureKind, content: FutureContent): FieldIssues {
-  return kind === 'jednani' && content.expectsReport ? { 'content.expectsReport': 'invalid' } : {};
-}
 
 const blank = (text: string | undefined) => text !== undefined && text.trim() === '';
 
@@ -37,9 +31,8 @@ function readinessIssues(content: FutureContent): FieldIssues {
 }
 
 /** The issues of a submit, and of a change to an approved item, which goes back to review: at most MAX_FIELDS. */
-export function submitIssues(kind: FutureKind, content: FutureContent): FieldIssues {
-  const all = { ...kindIssues(kind, content), ...readinessIssues(content) };
-  return Object.fromEntries(Object.entries(all).slice(0, MAX_FIELDS));
+export function submitIssues(content: FutureContent): FieldIssues {
+  return Object.fromEntries(Object.entries(readinessIssues(content)).slice(0, MAX_FIELDS));
 }
 
 export const hasIssues = (issues: FieldIssues): boolean => Object.keys(issues).length > 0;

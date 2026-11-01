@@ -12,7 +12,7 @@ import { Button } from '@/ui/kit';
 
 import type { SaveFutureAction } from './actions';
 import { reviseEffect, reviseInput } from './calls';
-import { FUTURE_FORM_ID, futureSpec, type FutureContentWire } from './edit';
+import { FUTURE_FORM_ID, FUTURE_SPEC, type FutureContentWire } from './edit';
 import { FutureFields } from './FutureFields';
 import { formStateOf } from './outcome';
 import { PlacementStrip } from './PlacementStrip';
@@ -53,11 +53,10 @@ export function FutureRevise({
   readonly saveFuture: SaveFutureAction;
 }) {
   const router = useRouter();
-  const editing = useFutureEdit({ initial, kind, onChange: NO_CHANGE });
+  const editing = useFutureEdit({ initial, onChange: NO_CHANGE });
   // The count rises with each press that found nothing to change, so a second one is announced again.
   const [said, setSaid] = useState({ message: '', count: 0 });
   const send = useSend({
-    kind,
     banners: false,
     content: () => editing.latest.current.content,
     call: async (settled) => {
@@ -82,20 +81,18 @@ export function FutureRevise({
 
   return (
     <div className="bar-room space-y-4">
-      <Form id={FUTURE_FORM_ID} spec={futureSpec(kind)} state={formStateOf(send.shown)}>
+      <Form id={FUTURE_FORM_ID} spec={FUTURE_SPEC} state={formStateOf(send.shown)}>
         <dl>
           <dt className="font-bold">{future.editor.type}</dt>
           <dd>{future.kind[kind]}</dd>
         </dl>
         <FutureFields
-          kind={kind}
           edit={edit}
           issues={editing.messages}
           readOnly={send.sending}
           picker={{ today, recents, directory }}
           onPatch={editing.patch}
           onResponsible={editing.setResponsible}
-          onExpectsReport={editing.setExpectsReport}
           onBlur={NO_CHANGE}
         />
         <p id={NOTICE_ID}>{future.editor.reviseNotice}</p>

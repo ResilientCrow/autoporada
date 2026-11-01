@@ -5,7 +5,7 @@ import type { FieldIssues } from '@/contracts';
 import { fieldIssues, future } from '@/ui/copy';
 import { Form, type FormState } from '@/ui/form';
 
-import { FUTURE_FORM_ID, futureSpec } from './edit';
+import { FUTURE_FORM_ID, FUTURE_SPEC } from './edit';
 import { ResponsibleFields } from './ResponsibleFields';
 
 vi.mock('next/navigation', () => ({
@@ -24,7 +24,7 @@ const state = (issues: FieldIssues | null): FormState => ({
 
 function render(issues: FieldIssues | null, own: Record<string, string> = {}): string {
   return renderToStaticMarkup(
-    <Form id={FUTURE_FORM_ID} spec={futureSpec('akce')} state={state(issues)}>
+    <Form id={FUTURE_FORM_ID} spec={FUTURE_SPEC} state={state(issues)}>
       <ResponsibleFields
         value={{ verb: 'vede', behalfOf: '', people: [] }}
         issues={own}

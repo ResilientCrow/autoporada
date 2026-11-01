@@ -10,7 +10,6 @@ const view = (over: Partial<FutureView> = {}): FutureView => ({
   timeTo: null,
   campus: null,
   place: null,
-  expectsReport: false,
   responsible: null,
   ...over,
 });

@@ -53,3 +53,4 @@ record that supersedes it.
 | [0045](0045-error-kinds-amendments.md) | Error kinds and surfaces: amendments to 0044 | Accepted; amends 0044 |
 | [0046](0046-the-soft-reminder-asks-for-owed-reports.md) | The soft reminder asks for owed reports, and no one opts out | Accepted; supersedes 0018 item 10, 0020 items 3 and 5 and 0032 item 3 in part |
 | [0047](0047-skip-until-a-chosen-porada.md) | Skip until a chosen porada, from a dialog | Accepted; adds to 0018, 0034 and 0041; adds `Dialog` to the kit |
+| [0048](0048-every-approved-akce-owes-a-report.md) | Every approved akce owes a report, and nobody declines it | Accepted; supersedes 0020 item 4, 0027 items 2 and 3, 0035 item 6 and 0046 items 1 and 3 in part |

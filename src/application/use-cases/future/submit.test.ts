@@ -38,7 +38,7 @@ describe('future.submit', () => {
       state: 'submitted',
       version: 2,
       submittedAt: world.clock.now(),
-      content: { title: 'Výlet do Prahy', expectsReport: true },
+      content: { title: 'Výlet do Prahy' },
     });
     const { events, audit } = await snapshot(id);
     expect(events).toEqual([
@@ -144,18 +144,6 @@ describe('future.submit', () => {
         timeTo: '08:00',
       });
       expect(await submit(author, id, content)).toMatchObject({ ok: true });
-    });
-
-    it('refuses a jednání that expects a report', async () => {
-      const author = await user();
-      const id = await start(author, 'jednani');
-      await refuses(
-        id,
-        () => submit(author, id, readyJednani({ expectsReport: true })),
-        invalid({
-          'content.expectsReport': 'invalid',
-        }),
-      );
     });
   });
 

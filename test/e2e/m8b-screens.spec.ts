@@ -61,7 +61,6 @@ test.describe('the akce, proposal and settings screens', () => {
     const project = testInfo.project.name;
     await seedFuture(emailOf('obraz', project), `Akce bez zprávy (${project})`, 'approved', {
       startInDays: -4,
-      expectsReport: true,
     });
     await signInAs(signInAsRe('obraz', project));
     for (const path of ['/', '/body']) {

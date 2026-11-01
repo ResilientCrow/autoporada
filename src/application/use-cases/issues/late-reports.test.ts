@@ -34,16 +34,14 @@ describe('lateReportsExpected', () => {
     ]);
   });
 
-  it('leaves out what is not late, not approved, not expecting a report, or already written', async () => {
+  it('leaves out what is not late, not approved, a jednání, or already written', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const author = await world.seed.user({ role: 'submitter' });
     await late.akce(author, { day: '2026-10-30', timeTo: '15:00' }); // closes with the deadline
     await late.akce(author, { day: '2026-11-02', timeTo: '10:00' }); // ends on the meeting day
-    await late.akce(author, SUNDAY_21, { expectsReport: false });
+    await late.jednani(author, SUNDAY_21);
     const written = await late.akce(author, SUNDAY_21);
     await late.patchAkce(author, written, { reportState: 'written' });
-    const declined = await late.akce(author, SUNDAY_21);
-    await late.patchAkce(author, declined, { reportState: 'declined' });
     const cancelled = await late.akce(author, SUNDAY_21);
     await late.patchAkce(author, cancelled, { state: 'cancelled' });
     const kept = await late.akce(author, SUNDAY_21);

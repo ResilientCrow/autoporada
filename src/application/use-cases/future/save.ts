@@ -4,7 +4,7 @@ import { can } from '@/domain/policy';
 import { futureEditNeedsReview } from '@/domain/review';
 
 import { futureView, futureWriteAccess } from './access';
-import { hasIssues, kindIssues, sameContent, submitIssues } from './checks';
+import { hasIssues, sameContent, submitIssues } from './checks';
 import { move } from './events';
 
 const notEditable = fail({ code: 'rule', rule: 'future-not-editable' });
@@ -38,18 +38,11 @@ export const saveFuture = defineUseCase({
       isAuthor: true,
     });
     if (revises !== (intent === 'revise')) return notEditable;
-    const shape = kindIssues(item.kind, content);
-    if (hasIssues(shape)) return fail({ code: 'invalid-input', fields: shape });
-    // A report that was prompted, written or declined settles the akce: it cannot stop expecting one
-    // (`future_items_report_needs_expect`), so the editor says so instead of the database.
-    if (item.reportState !== 'none' && !content.expectsReport) {
-      return fail({ code: 'invalid-input', fields: { 'content.expectsReport': 'invalid' } });
-    }
 
     if (revises) {
       if (sameContent(item.content, content))
         return ok({ version: item.version, state: item.state });
-      const fields = submitIssues(item.kind, content);
+      const fields = submitIssues(content);
       if (hasIssues(fields)) return fail({ code: 'invalid-input', fields });
       const revised = await move(tx, item, 'revise', { content, submittedAt: now });
       return ok({ version: revised.version, state: revised.state });

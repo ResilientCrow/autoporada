@@ -20,7 +20,7 @@ const queue = async (by: UserRecord) => {
 /** An item handed in through the use case (version 2), then a minute passes. */
 async function submit(author: UserRecord, kind: FutureKind = 'akce', title = 'Výlet do Prahy') {
   const id = await start(author, kind);
-  const content = readyAkce({ title, ...(kind === 'jednani' && { expectsReport: false }) });
+  const content = readyAkce({ title });
   const sent = await world.run(submitFuture, world.as(author), { id, expectedVersion: 1, content });
   if (!sent.ok) throw new Error(`submit refused: ${sent.error.code}`);
   world.clock.advance(60_000);

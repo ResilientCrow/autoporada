@@ -8,7 +8,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures, readyAkce, readyJednani, staffer } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { declineFutureReport, listFuture, saveFuture } from './index';
+import { listFuture, saveFuture } from './index';
 
 const world = setupWorld();
 
@@ -21,7 +21,6 @@ const EMPTY_CONTENT: FutureContent = {
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
 };
 const { start, moveTo } = futureFixtures(world);
 
@@ -180,9 +179,12 @@ describe('future.list report state', () => {
     expect(await stateOf(author, id)).toBe('none');
     expect(await stateOf(reader, id)).toBe('none');
 
-    world.clock.advance(30 * 86_400_000);
-    await world.run(declineFutureReport, world.as(author), { id });
-    expect(await stateOf(author, id)).toBe('declined');
-    expect(await stateOf(reader, id)).toBe('declined');
+    await world.tx(world.as(author), async (tx) => {
+      const before = (await tx.futureItems.loadForWrite(id))!;
+      await tx.futureItems.update(id, before.version, { reportState: 'written' });
+      await tx.audit.record({ action: 'future.test', target: { type: 'future_item', id } });
+    });
+    expect(await stateOf(author, id)).toBe('written');
+    expect(await stateOf(reader, id)).toBe('written');
   });
 });

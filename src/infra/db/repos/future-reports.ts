@@ -16,14 +16,14 @@ import { timeOrNull } from './wall-columns';
 const lastDay = sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`;
 
 /**
- * An approved akce that expects a report nobody has handed in: none started (`report_state` none
+ * An approved akce (every one owes a report, ADR 0048) whose report nobody has handed in: none started (`report_state` none
  * or prompted, no report point), or its report point still `draft` or `returned`. The point's state
  * is all this reads of it, a column migration 0017 grants the worker.
  */
 export const reportNotHandedIn = (db: TxDatabase) =>
   and(
     eq(futureItems.state, 'approved'),
-    eq(futureItems.expectsReport, true),
+    eq(futureItems.kind, 'akce'),
     or(
       and(
         inArray(futureItems.reportState, ['none', 'prompted']),
@@ -43,12 +43,11 @@ export const reportNotHandedIn = (db: TxDatabase) =>
     ),
   );
 
-/** What the late-report mails read of an akce: the columns migrations 0022 and 0035 grant the worker. */
+/** What the late-report mails read of an akce: columns migrations 0022, 0035 and 0046 grant the worker. */
 const ENDING_ROW = {
   id: futureItems.id,
   authorId: futureItems.authorId,
   state: futureItems.state,
-  expectsReport: futureItems.expectsReport,
   reportState: futureItems.reportState,
   timeTo: futureItems.timeTo,
   lastDay: sql<string | null>`${lastDay}::text`,
@@ -58,7 +57,6 @@ function toEnding(row: {
   id: string;
   authorId: string;
   state: EndingAkce['state'];
-  expectsReport: boolean;
   reportState: EndingAkce['reportState'];
   timeTo: string | null;
   lastDay: string;
@@ -90,7 +88,7 @@ export function createFutureReportReads(
       return endingRows(
         and(
           eq(futureItems.state, 'approved'),
-          eq(futureItems.expectsReport, true),
+          eq(futureItems.kind, 'akce'),
           inArray(futureItems.reportState, ['none', 'prompted']),
           isNull(futureItems.reportPointId),
           lastDayIn(from, to),
@@ -103,7 +101,10 @@ export function createFutureReportReads(
     },
     async reportEnding(id) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();
-      const [row] = await db.select(ENDING_ROW).from(futureItems).where(eq(futureItems.id, id));
+      const [row] = await db
+        .select(ENDING_ROW)
+        .from(futureItems)
+        .where(and(eq(futureItems.id, id), eq(futureItems.kind, 'akce')));
       return row && row.lastDay !== null ? toEnding({ ...row, lastDay: row.lastDay }) : null;
     },
   };

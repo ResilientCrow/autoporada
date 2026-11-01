@@ -134,7 +134,6 @@ describe('inventory of entry points', () => {
       'future.decide': ['admin', 'page'],
       'future.cancel': ['submission', 'page'],
       'future.startReport': ['submission', 'page'],
-      'future.declineReport': ['submission', 'page'],
     });
   });
 

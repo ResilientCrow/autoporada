@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { declineFutureReport, startFutureReport } from '@/server/actions';
+import { startFutureReport } from '@/server/actions';
 import { futureListPage, myPointsPage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
 import { FutureList, ReportDueCard } from '@/ui/features/future';
@@ -33,7 +33,6 @@ export default async function AddPage() {
               items={mine.reportDue.items}
               types={mine.reportDue.types}
               startFutureReport={startFutureReport}
-              declineFutureReport={declineFutureReport}
             />
           )
         }

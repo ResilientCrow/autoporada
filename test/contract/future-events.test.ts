@@ -38,7 +38,6 @@ const CONTENT: FutureContent = {
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
 };
 
 /** A submitted akce, so a reviewer may see it; or a draft, which only its author and the system see. */

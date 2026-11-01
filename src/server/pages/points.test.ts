@@ -708,6 +708,7 @@ describe('myPointsPage', () => {
             items: [
               {
                 id: 'a',
+                kind: 'akce',
                 state: 'approved',
                 isAuthor: true,
                 title: 'Výlet',
@@ -715,7 +716,6 @@ describe('myPointsPage', () => {
                 endDate: null,
                 timeFrom: null,
                 timeTo: null,
-                expectsReport: true,
                 reportState: 'none',
               },
             ],

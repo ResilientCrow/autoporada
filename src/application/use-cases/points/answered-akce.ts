@@ -22,12 +22,9 @@ export const akceTarget = (item: FutureItemRecord): AuditTarget => ({
 
 /**
  * Hands the akce's report in: `report_state = 'written'`, audited by its states only. An akce
- * whose report is already written or declined stays as it is (a resubmit after a return), and so does
- * one that no longer expects a report (revised since the report was started): the CHECK
- * `future_items_report_needs_expect` would refuse the move, and the submit must not.
+ * whose report is already written stays as it is (a resubmit after a return).
  */
 export async function writeReport(tx: Tx, item: FutureItemRecord): Promise<void> {
-  if (!item.content.expectsReport) return;
   const moved = transition(REPORT_MACHINE, item.reportState, 'write', {
     kind: 'user',
     role: 'submitter',

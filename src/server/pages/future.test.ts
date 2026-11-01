@@ -29,7 +29,6 @@ const view = (over: object = {}) => ({
   timeTo: null,
   campus: null,
   place: null,
-  expectsReport: false,
   responsible: null,
   ...over,
 });

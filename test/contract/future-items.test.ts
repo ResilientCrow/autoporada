@@ -34,10 +34,9 @@ const EMPTY: FutureContent = {
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
 };
 
-/** Every field filled: an akce that expects a report. */
+/** Every field filled. */
 const FULL: FutureContent = {
   title: 'Výlet do Prahy',
   startDate: calDate(2026, 11, 10),
@@ -54,11 +53,7 @@ const FULL: FutureContent = {
       { salutation: null, givenName: 'Eva', familyName: 'Malá', affiliation: '3.B' },
     ],
   },
-  expectsReport: true,
 };
-
-/** A jednání cannot expect a report. */
-const JEDNANI: FutureContent = { ...FULL, expectsReport: false };
 
 const SUBMIT: FutureItemPatch = {
   content: FULL,
@@ -168,14 +163,14 @@ describe('FutureItemRepo (port contract)', () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author), { content: FULL });
     world.clock.advance(60_000);
-    const declined = await update(world.as(author), item, { reportState: 'declined' });
-    expect(declined).toEqual({
+    const written = await update(world.as(author), item, { reportState: 'written' });
+    expect(written).toEqual({
       ...item,
-      reportState: 'declined',
+      reportState: 'written',
       version: 2,
       updatedAt: world.clock.now(),
     });
-    expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(declined);
+    expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(written);
   });
 
   it('clears an optional field when the content says null', async () => {
@@ -299,7 +294,6 @@ describe('FutureItemRepo (port contract)', () => {
         { ...EMPTY, startDate: calDate(2026, 11, 2), endDate: calDate(2026, 11, 1) },
         {},
       ],
-      ['future_items_expects_akce', { ...EMPTY, expectsReport: true }, { kind: 'jednani' }],
       ['future_items_lengths', { ...EMPTY, title: 'x'.repeat(201) }, {}],
       ['future_items_lengths', { ...EMPTY, place: 'x'.repeat(121) }, {}],
     ])('%s', async (constraint, content, over) => {
@@ -309,14 +303,12 @@ describe('FutureItemRepo (port contract)', () => {
       expect(await read(cli, (tx) => tx.futureItems.list(10))).toEqual([]);
     });
 
-    it('future_items_report_needs_expect: a report state on an item that expects none', async () => {
+    it('future_items_report_akce: a report state on a jednání', async () => {
       const author = await world.seed.user({ role: 'submitter' });
-      const { item } = await create(world.as(author), {
-        content: { ...FULL, expectsReport: false },
-      });
+      const { item } = await create(world.as(author), { kind: 'jednani', content: FULL });
       const refused = update(world.as(author), item, { reportState: 'written' });
       expect(await failure(refused)).toEqual(
-        new DatabaseFailure('db.constraint.future_items_report_needs_expect'),
+        new DatabaseFailure('db.constraint.future_items_report_akce'),
       );
       expect(await read(cli, (tx) => tx.futureItems.get(item.id))).toEqual(item);
     });
@@ -414,11 +406,11 @@ describe('FutureItemRepo scope', () => {
   const items = async (author: UserRecord) => {
     const as = world.as(author);
     const made = async (kind: NewFutureItem['kind'], ...patches: FutureItemPatch[]) => {
-      let { item } = await create(as, { kind, content: kind === 'akce' ? FULL : JEDNANI });
+      let { item } = await create(as, { kind, content: FULL });
       for (const patch of patches) item = await update(as, item, patch);
       return item;
     };
-    const handedIn = { ...SUBMIT, content: JEDNANI };
+    const handedIn = SUBMIT;
     return {
       draft: await made('akce'),
       retracted: await made('akce', SUBMIT, { state: 'draft', submittedAt: null }),
@@ -756,13 +748,17 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
   const WINDOW = { from: calDate(2026, 11, 1), to: calDate(2026, 11, 20) };
 
   /** An approved akce of `author`, its content over FULL, then more patches. */
-  const akce = async (
+  const akce = (author: UserRecord, content: Partial<FutureContent>, ...more: FutureItemPatch[]) =>
+    approved('akce', author, content, ...more);
+  /** An approved item of the kind, as `akce`. */
+  const approved = async (
+    kind: NewFutureItem['kind'],
     author: UserRecord,
     content: Partial<FutureContent>,
     ...more: FutureItemPatch[]
   ) => {
     const as = world.as(author);
-    const { item } = await create(as, { content: { ...FULL, ...content } });
+    const { item } = await create(as, { kind, content: { ...FULL, ...content } });
     let current = await update(as, item, {
       ...SUBMIT,
       content: { ...FULL, ...content },
@@ -773,7 +769,7 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
   };
   const ids = (rows: readonly { id: string }[]) => rows.map((row) => row.id).sort();
 
-  it('lists the approved akce that expect a report and have none, with their last day', async () => {
+  it('lists the approved akce that have no report, with their last day', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const ended = await akce(author, {
       startDate: calDate(2026, 11, 5),
@@ -803,14 +799,13 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
     expect(ids(rows)).toEqual(ids([first, last]));
   });
 
-  it('leaves out what is not an approved akce that expects a report with none written', async () => {
+  it('leaves out what is not an approved akce with no report written', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const day = { startDate: calDate(2026, 11, 5), endDate: null };
     const wanted = await akce(author, day);
-    await akce(author, { ...day, expectsReport: false });
+    await approved('jednani', author, day);
     await akce(author, day, { state: 'cancelled' });
     await akce(author, day, { reportState: 'written' });
-    await akce(author, day, { reportState: 'declined' });
     const { item } = await create(world.as(author), { content: { ...FULL, ...day } });
     await update(world.as(author), item, { ...SUBMIT, content: { ...FULL, ...day } });
     expect(ids(await asWorker((tx) => tx.futureItems.reportPromptDue(WINDOW)))).toEqual([
@@ -833,9 +828,9 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
       state: 'approved',
       reportState: 'none',
     });
-    await update(world.as(author), item, { reportState: 'declined' });
+    await update(world.as(author), item, { reportState: 'written' });
     expect(await asWorker((tx) => tx.futureItems.mailFacts(item.id))).toMatchObject({
-      reportState: 'declined',
+      reportState: 'written',
     });
   });
 
@@ -847,7 +842,7 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
     expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
 
-  it('lists the reports owed in a window, not one written or declined, to the worker only (ADR 0046)', async () => {
+  it('lists the reports owed in a window, not one written nor a jednání, to the worker only (ADR 0046, 0048)', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const day = (d: number) => ({ startDate: calDate(2026, 11, d), endDate: null });
     const first = await akce(author, day(1));
@@ -855,8 +850,7 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
     await akce(author, { startDate: calDate(2026, 10, 31), endDate: null });
     await akce(author, day(21));
     await akce(author, day(5), { reportState: 'written' });
-    await akce(author, day(6), { reportState: 'declined' });
-    await akce(author, { ...day(7), expectsReport: false });
+    await approved('jednani', author, day(7));
     const rows = await asWorker((tx) => tx.futureItems.reportsOwed(WINDOW));
     expect(ids(rows)).toEqual([first.id, prompted.id].sort());
     expect(rows.find((row) => row.id === first.id)).toMatchObject({
@@ -864,6 +858,25 @@ describe('FutureItemRepo report prompts (what the worker reads, migration 0022)'
       lastDay: calDate(2026, 11, 1),
     });
     const refused = read(world.as(author), (tx) => tx.futureItems.reportsOwed(WINDOW));
+    expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
+  });
+
+  it('reads an akce ending and its report, gives null for a jednání or an unknown item (ADR 0048)', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const day = { startDate: calDate(2026, 11, 5), endDate: null };
+    const item = await akce(author, day, { reportState: 'prompted' });
+    expect(await asWorker((tx) => tx.futureItems.reportEnding(item.id))).toEqual({
+      id: item.id,
+      authorId: author.id,
+      state: 'approved',
+      reportState: 'prompted',
+      lastDay: calDate(2026, 11, 5),
+      timeTo: FULL.timeTo,
+    });
+    const meeting = await approved('jednani', author, day);
+    expect(await asWorker((tx) => tx.futureItems.reportEnding(meeting.id))).toBeNull();
+    expect(await asWorker((tx) => tx.futureItems.reportEnding(UNKNOWN_ID))).toBeNull();
+    const refused = read(world.as(author), (tx) => tx.futureItems.reportEnding(item.id));
     expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
 });

@@ -42,7 +42,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   user, students included, with the people who run it. An approved akce is
   changed only by „Uložit změny“, which sends it for review again. After the
   event, the author is asked to write the report by e-mail and gets a draft
-  prefilled from the akce (or can decline).
+  prefilled from the akce. Every approved akce owes a report; it cannot be
+  declined (ADR 0048).
 - Proposals for HOSPODAŘENÍ items and for extra POKYNY points.
 - Autosave with conflict detection, a status timeline, „Stáhnout“ (back to a
   draft) and „Zrušit bod“. A late hand-in goes to the next meeting whose

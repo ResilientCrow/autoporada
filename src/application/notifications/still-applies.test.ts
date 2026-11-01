@@ -217,12 +217,12 @@ describe('stillApplies', () => {
       reportState,
     });
 
-    it('applies while the akce is approved and no report was written or declined', () => {
+    it('applies while the akce is approved and no report was written', () => {
       expect(stillApplies('report.prompt', item('approved', 'none'), MEMBER)).toBe(true);
     });
 
-    it.each(['written', 'declined'] as const)('drops once the report is %s', (reportState) => {
-      expect(stillApplies('report.prompt', item('approved', reportState), MEMBER)).toBe(false);
+    it('drops once the report is written', () => {
+      expect(stillApplies('report.prompt', item('approved', 'written'), MEMBER)).toBe(false);
     });
 
     it.each(['draft', 'submitted', 'returned', 'rejected', 'withdrawn', 'cancelled'] as const)(

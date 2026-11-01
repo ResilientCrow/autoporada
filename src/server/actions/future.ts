@@ -4,7 +4,6 @@ import {
   cancelFuture as cancelFutureUseCase,
   createFuture as createFutureUseCase,
   decideFuture as decideFutureUseCase,
-  declineFutureReport as declineFutureReportUseCase,
   getFuture as getFutureUseCase,
   retractFuture as retractFutureUseCase,
   saveFuture as saveFutureUseCase,
@@ -72,12 +71,6 @@ export const cancelFuture = defineAction(cancelFutureUseCase, {
  * the draft itself, and the refresh keeps the page it leaves behind current.
  */
 export const startFutureReport = defineAction(startFutureReportUseCase, {
-  rateLimit: 'submission',
-  refresh: 'page',
-});
-
-/** „Zprávu psát nebudu“: the akce leaves the card, so the page refreshes. */
-export const declineFutureReport = defineAction(declineFutureReportUseCase, {
   rateLimit: 'submission',
   refresh: 'page',
 });

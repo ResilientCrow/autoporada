@@ -49,7 +49,6 @@ export async function fillAkce(
   await field(page, future.editor.responsible.behalfOf).fill('8. A');
   await addTeacher(page, 'Novák', 'Jana Nováková');
   await page.getByRole('button', { name: people.chips.bulk.setLabel('paní'), exact: true }).click();
-  await page.getByRole('checkbox', { name: future.editor.expectsReport }).check();
   await field(page, points.facts.place).fill('v učebně S206');
   await expect(page.getByText(/^Uloženo v/)).toBeVisible();
 }

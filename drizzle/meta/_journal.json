@@ -309,6 +309,27 @@
       "when": 1793561444630,
       "tag": "0043_drop_remind_deadline",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793562496669,
+      "tag": "0044_declined_reports_owed",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793562515955,
+      "tag": "0045_report_owed_by_every_akce",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1793562522439,
+      "tag": "0046_report_kind_grants",
+      "breakpoints": true
     }
   ]
 }

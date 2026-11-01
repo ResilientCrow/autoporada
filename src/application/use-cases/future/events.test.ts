@@ -24,7 +24,6 @@ const item = (state: FutureState): FutureItemRecord => ({
     campus: null,
     place: null,
     responsible: null,
-    expectsReport: false,
   },
   reportState: 'none',
   reportPointId: null,

@@ -235,15 +235,15 @@ Mail steps use `docker compose run --rm cli jobs:run <job> [key]` to start a run
 now; the handler works from the clock and the data, so it sends only what is due
 (`jobs:run` with no arguments prints the jobs).
 
-30. **The report prompt.** An author writes an akce that expects a report and
-    the reviewer approves it. The prompt is due the day after
+30. **The report prompt.** An author writes an akce (every approved akce owes a
+    report) and the reviewer approves it. The prompt is due the day after
     its last day, so use an akce whose last day was yesterday, or wait a day. Then
     `docker compose run --rm cli jobs:run future.report-prompt`.
     - [ ] The author gets one mail with the subject „Autoporada: napište zprávu z akce“ and the
           `/body` link; it does not name the akce. A second `jobs:run` sends nothing.
     - [ ] On the home page and in „Moje body“ the card „Akce čekající na zprávu“ offers
-          „Napsat zprávu“, which opens a draft prefilled from the akce, and
-          „Zprávu psát nebudu“, which drops the card.
+          „Napsat zprávu“, which opens a draft prefilled from the akce, and no way to
+          decline it.
 31. **Deadline reminders.** Near the deadline (two days before it at 13.00, and on its
     day at 12.00 Prague time) the worker mails on its own every 15 minutes; or use
     `jobs:run reminders.deadline` inside that window.

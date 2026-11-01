@@ -30,7 +30,6 @@ const REPORT_STATES: Readonly<Record<ReportState, ReportState>> = {
   none: 'none',
   prompted: 'prompted',
   written: 'written',
-  declined: 'declined',
 };
 const reportStateSchema = z.enum(REPORT_STATES);
 
@@ -91,7 +90,6 @@ const futureContentSchema = z
     campus: campusSchema.nullable(),
     place: capped(POINT_LIMITS.place).nullable(),
     responsible: responsibleSchema.nullable(),
-    expectsReport: z.boolean(),
   })
   .superRefine(({ startDate, endDate }, ctx) => {
     if (endDate && (!startDate || compareDates(endDate, startDate) < 0)) {
@@ -109,7 +107,6 @@ const futureContentWire = z.strictObject({
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
   responsible: responsibleSchema.nullable(),
-  expectsReport: z.boolean(),
 });
 
 /** What the stored content is made of, as the domain has it. */
@@ -122,7 +119,6 @@ export interface FutureContentValue {
   readonly campus: Campus | null;
   readonly place: string | null;
   readonly responsible: Responsible | null;
-  readonly expectsReport: boolean;
 }
 
 const dateText = (date: CalDate | null) => date && toIsoDate(date);
@@ -155,7 +151,6 @@ export const futureView = z.strictObject({
   timeTo: z.iso.time({ precision: -1 }).nullable(),
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
-  expectsReport: z.boolean(),
   responsible: z
     .strictObject({
       verb: z.enum(VERBS),

@@ -17,7 +17,7 @@ export const submitFuture = defineUseCase({
   output: submitFutureOutput,
   access: futureWriteAccess(moveCheck('submit')),
   async execute({ tx, now }, { content }, item) {
-    const fields = submitIssues(item.kind, content);
+    const fields = submitIssues(content);
     if (hasIssues(fields)) return fail({ code: 'invalid-input', fields });
     const after = await move(tx, item, 'submit', { content, submittedAt: now });
     return ok({ version: after.version });

@@ -1,5 +1,4 @@
 import type { ActionError, ActionResult, FieldIssues } from '@/contracts';
-import type { FutureKind } from '@/domain/calendar';
 import type { FormState, Problem } from '@/ui/form';
 
 import { issuesOf, type FutureContentWire } from './edit';
@@ -44,7 +43,6 @@ function missingFirst(known: FieldIssues, content: FutureContentWire): FieldIssu
  */
 export function outcomeOf(
   result: ActionResult<{ readonly version: number }> | null,
-  kind: FutureKind,
   banners: boolean,
   content: FutureContentWire,
 ): Outcome {
@@ -53,7 +51,7 @@ export function outcomeOf(
   const { error } = result;
   if (banners && bannerOwns(error)) return NO_OUTCOME;
   if (error.code !== 'invalid-input') return { issues: null, problem: error };
-  const { known } = issuesOf(error.fields, kind);
+  const { known } = issuesOf(error.fields);
   // Fields to point at beat the generic notice, which only says that something was refused.
   if (Object.keys(known).length === 0) return { issues: null, problem: { code: 'invalid-input' } };
   return { issues: missingFirst(known, content), problem: null };

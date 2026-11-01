@@ -4,7 +4,7 @@ import type { ActionError } from '@/contracts';
 import { cs } from '@/ui/copy';
 
 import {
-  futureSpec,
+  FUTURE_SPEC,
   issuesOf,
   messagesOf,
   patchFor,
@@ -28,7 +28,6 @@ const content = (patch: Partial<FutureContentWire> = {}): FutureContentWire => (
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
   ...patch,
 });
 
@@ -114,44 +113,35 @@ describe('changes', () => {
   });
 });
 
-describe('futureSpec', () => {
-  it('asks for a title and a start date, and for the report box only on an akce', () => {
-    expect(futureSpec('akce')['title']?.required).toBe(true);
-    expect(futureSpec('akce')['startDate']?.required).toBe(true);
-    expect(Object.keys(futureSpec('akce'))).toContain('expectsReport');
-    expect(Object.keys(futureSpec('jednani'))).not.toContain('expectsReport');
-  });
-});
-
-describe('futureSpec', () => {
-  it('words the refusal of an expectsReport that was cleared too late', () => {
-    expect(futureSpec('akce')['expectsReport']?.messages?.invalid).toBe(
-      cs.future.editor.expectsReportSettled,
-    );
+describe('FUTURE_SPEC', () => {
+  it('asks for a title and a start date, and has no report box: every akce owes one', () => {
+    expect(FUTURE_SPEC['title']?.required).toBe(true);
+    expect(FUTURE_SPEC['startDate']?.required).toBe(true);
+    expect(Object.keys(FUTURE_SPEC)).not.toContain('expectsReport');
   });
 });
 
 describe('issuesOf', () => {
   it('names the fields the editor has, without the content prefix', () => {
-    expect(issuesOf({ 'content.title': 'required', 'content.timeTo': 'invalid' }, 'akce')).toEqual({
+    expect(issuesOf({ 'content.title': 'required', 'content.timeTo': 'invalid' })).toEqual({
       known: { title: 'required', timeTo: 'invalid' },
       unknown: false,
     });
   });
 
   it('folds a person’s missing part into the people field', () => {
-    expect(issuesOf({ 'content.responsible.people.1.salutation': 'required' }, 'akce')).toEqual({
+    expect(issuesOf({ 'content.responsible.people.1.salutation': 'required' })).toEqual({
       known: { 'responsible.people': 'required' },
       unknown: false,
     });
   });
 
   it('reports a path no field of this editor carries', () => {
-    expect(issuesOf({ 'content.expectsReport': 'invalid' }, 'jednani')).toEqual({
+    expect(issuesOf({ 'content.expectsReport': 'invalid' })).toEqual({
       known: {},
       unknown: true,
     });
-    expect(issuesOf({ content: 'too-long' }, 'akce')).toEqual({ known: {}, unknown: true });
+    expect(issuesOf({ content: 'too-long' })).toEqual({ known: {}, unknown: true });
   });
 });
 
@@ -169,12 +159,6 @@ describe('messagesOf', () => {
     expect(messagesOf({ timeTo: 'invalid', title: 'too-long' }, content())).toEqual({
       timeTo: cs.future.editor.timeTo,
       title: cs.fieldIssues['too-long'],
-    });
-  });
-
-  it('says a settled report cannot stop being expected', () => {
-    expect(messagesOf({ expectsReport: 'invalid' }, content())).toEqual({
-      expectsReport: cs.future.editor.expectsReportSettled,
     });
   });
 
@@ -207,7 +191,6 @@ describe('sameContent', () => {
 
   it('is false for any changed field', () => {
     expect(sameContent(content(), content({ place: 'S206' }))).toBe(false);
-    expect(sameContent(content(), content({ expectsReport: true }))).toBe(false);
   });
 
   it('ignores a verb picked while nobody is responsible: nothing is saved for it', () => {

@@ -91,7 +91,6 @@ describe('homePage', () => {
       endDate: null,
       timeFrom: null,
       timeTo: null,
-      expectsReport: true,
       reportState: 'none',
     };
 

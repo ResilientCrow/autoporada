@@ -36,7 +36,6 @@ const row = (id: string, over: object = {}) => ({
   timeTo: null,
   campus: null,
   place: null,
-  expectsReport: true,
   reportState: 'none',
   responsible: null,
   updatedAt: '2026-11-01T08:00:00.000Z',
@@ -117,27 +116,26 @@ describe('reportDueOf', () => {
     expect(await idsOf()).toEqual(['ended', 'endsnow']);
   });
 
-  it('keeps a prompted akce and drops the ones whose report is written or declined', async () => {
+  it('keeps a prompted akce and drops one whose report is written', async () => {
     serve([
       row('prompted', { reportState: 'prompted' }),
       row('written', { reportState: 'written' }),
-      row('declined', { reportState: 'declined' }),
     ]);
     expect(await idsOf()).toEqual(['prompted']);
   });
 
-  it('drops what is not the viewer’s own approved akce that expects a report', async () => {
+  it('drops what is not the viewer’s own approved akce', async () => {
     serve([
       row('others', { isAuthor: false }),
       row('submitted', { state: 'submitted' }),
       row('cancelled', { state: 'cancelled' }),
-      row('none', { expectsReport: false }),
+      row('jednani', { kind: 'jednani' }),
       row('undated', { startDate: null, endDate: null }),
     ]);
     expect(await idsOf()).toEqual([]);
   });
 
-  it('keeps the card with no items so that it can say a decision went through', async () => {
+  it('gives no items when nothing is waiting', async () => {
     serve([]);
     expect(await reportDueOf(viewer('submitter'))).toEqual({
       items: [],

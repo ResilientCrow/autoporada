@@ -29,9 +29,8 @@ export interface ReportDueModel {
 
 /**
  * The card of the home page and „Moje body“, or null for whoever may not start items and where a
- * read is refused (the page goes on without it). The card has no items once the last is dealt
- * with and is still given, since the client that says the decision went through must outlive the
- * refresh. Only the newest page of the list is read: an akce the author has not touched for as
+ * read is refused (the page goes on without it). Every approved akce of the author that has ended
+ * waits here until its report is written (ADR 0048). Only the newest page of the list is read: an akce the author has not touched for as
  * long as two hundred changes of the school fall off it.
  */
 export async function reportDueOf(viewer: UserPrincipal): Promise<ReportDueModel | null> {

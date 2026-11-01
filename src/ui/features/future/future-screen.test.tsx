@@ -44,7 +44,6 @@ const content = (over: Partial<FutureContentWire> = {}): FutureContentWire => ({
     behalfOf: '8.A',
     people: [{ salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' }],
   },
-  expectsReport: true,
   ...over,
 });
 const editorOf = (over: Partial<FutureContentWire> = {}) => ({
@@ -70,7 +69,6 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
     timeTo: null,
     campus: 'radlice',
     place: 'Špindlerův Mlýn',
-    expectsReport: true,
     responsible: { verb: 'koordinuje', behalfOf: '8.A', names: ['Jana Nováková'] },
   },
   window: null,
@@ -108,9 +106,9 @@ describe('the editor of a draft', () => {
     expect(html).toContain('Jana Nováková');
   });
 
-  it('asks whether a report follows, for an akce', () => {
-    expect(html).toContain(future.editor.expectsReport);
-    expect(html).toMatch(/<input [^>]*type="checkbox"[^>]*checked/);
+  it('does not ask whether a report follows: every akce owes one (ADR 0048)', () => {
+    expect(html).not.toContain('zpráva do porady');
+    expect(html).not.toMatch(/<input [^>]*name="expectsReport"/);
   });
 
   it('has one button, „Odeslat ke kontrole“, and no revise notice', () => {
@@ -124,10 +122,8 @@ describe('the editor of a draft', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
-  it('leaves the report question out for a jednání', () => {
-    const jednani = render({ kind: 'jednani' });
-    expect(jednani).not.toContain(future.editor.expectsReport);
-    expect(jednani).toContain(future.kind.jednani);
+  it('names the kind of a jednání', () => {
+    expect(render({ kind: 'jednani' })).toContain(future.kind.jednani);
   });
 
   it('shows the strip from the dates being edited when a calendar came', () => {

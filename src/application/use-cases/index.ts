@@ -13,7 +13,6 @@ import {
 import {
   cancelFuture,
   createFuture,
-  declineFutureReport,
   decideFuture,
   getFuture,
   listFuture,
@@ -85,7 +84,6 @@ export {
 export {
   cancelFuture,
   createFuture,
-  declineFutureReport,
   decideFuture,
   getFuture,
   listFuture,
@@ -161,7 +159,6 @@ export const USE_CASES: readonly AnyUseCase[] = [
   createPoint,
   decideAccess,
   decideFuture,
-  declineFutureReport,
   decidePoint,
   documentArchive,
   downloadDocument,

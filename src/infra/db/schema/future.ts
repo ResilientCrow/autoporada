@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
 import {
-  boolean,
   check,
   date,
   index,
@@ -36,7 +35,7 @@ export const futureState = pgEnum('future_state', [
   'cancelled',
 ]);
 /** The values of `ReportState` (domain/review); `prompted` is never stored (design §2). */
-export const reportState = pgEnum('report_state', ['none', 'prompted', 'written', 'declined']);
+export const reportState = pgEnum('report_state', ['none', 'prompted', 'written']);
 
 const CAMPUSES = ['smichov', 'radlice', 'na-vidouli', 'jinde'] as const satisfies readonly Campus[];
 const campusList = sql.raw(CAMPUSES.map((campus) => `'${campus}'`).join(','));
@@ -67,8 +66,6 @@ export const futureItems = pgTable(
     campus: text().$type<Campus>(),
     place: text(),
     responsible: jsonb().$type<Responsible>(),
-    /** Only an akce; the author is asked for a report after its last day. */
-    expectsReport: boolean().notNull().default(false),
     reportState: reportState().$type<ReportState>().notNull().default('none'),
     /** The report written for this akce; the point's `future_item_id` points back. */
     reportPointId: uuid().references(() => points.id),
@@ -82,8 +79,8 @@ export const futureItems = pgTable(
     unique('future_items_author_client_ref_key').on(t.authorId, t.clientRef),
     index('future_items_author_idx').on(t.authorId, t.updatedAt.desc()),
     index('future_items_state_idx').on(t.state, t.startDate),
-    check('future_items_expects_akce', sql`NOT ${t.expectsReport} OR ${t.kind} = 'akce'`),
-    check('future_items_report_needs_expect', sql`${t.reportState} = 'none' OR ${t.expectsReport}`),
+    /** Every approved akce owes a report after its last day, and only an akce (ADR 0048). */
+    check('future_items_report_akce', sql`${t.reportState} = 'none' OR ${t.kind} = 'akce'`),
     check(
       'future_items_dates',
       sql`${t.endDate} IS NULL OR (${t.startDate} IS NOT NULL AND ${t.endDate} >= ${t.startDate})`,

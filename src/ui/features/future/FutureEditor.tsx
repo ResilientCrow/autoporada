@@ -12,7 +12,7 @@ import { Button } from '@/ui/kit';
 
 import type { FutureStatusAction, SaveFutureAction, SubmitFutureAction } from './actions';
 import { editorStatusOf, submitAnswer, submitInput } from './calls';
-import { FUTURE_FORM_ID, futureSpec, type FutureContentWire } from './edit';
+import { FUTURE_FORM_ID, FUTURE_SPEC, type FutureContentWire } from './edit';
 import { FutureFields } from './FutureFields';
 import { formStateOf } from './outcome';
 import { PlacementStrip } from './PlacementStrip';
@@ -58,7 +58,6 @@ export function FutureEditor({
   // `autosave` is read when a change comes, after this render has made it.
   const editing = useFutureEdit({
     initial,
-    kind,
     onChange: (next) => autosave.onChange(next),
   });
   const { afterSave, latest } = editing;
@@ -90,7 +89,6 @@ export function FutureEditor({
   // „Odeslat ke kontrole“ is never disabled for what is missing: the server says what is, and
   // its answer leads the form. The form holds still while a send is on its way.
   const send = useSend({
-    kind,
     banners: true,
     content: () => latest.current.content,
     call: (settled) =>
@@ -111,21 +109,19 @@ export function FutureEditor({
 
   return (
     <div className="bar-room space-y-4">
-      <Form id={FUTURE_FORM_ID} spec={futureSpec(kind)} state={formStateOf(send.shown)}>
+      <Form id={FUTURE_FORM_ID} spec={FUTURE_SPEC} state={formStateOf(send.shown)}>
         <AutosaveStatus {...autosave.status} lockedText={future.editor.locked} />
         <dl>
           <dt className="font-bold">{future.editor.type}</dt>
           <dd>{future.kind[kind]}</dd>
         </dl>
         <FutureFields
-          kind={kind}
           edit={edit}
           issues={editing.messages}
           readOnly={readOnly}
           picker={picker}
           onPatch={editing.patch}
           onResponsible={editing.setResponsible}
-          onExpectsReport={editing.setExpectsReport}
           onBlur={autosave.onBlur}
         />
         <div>

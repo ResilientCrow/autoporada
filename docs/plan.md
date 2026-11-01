@@ -269,7 +269,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
   - `earliest_monday` is set at first submit and kept across returns, which gives deterministic late roll-over.
 - `point_bullets`, `point_people` (frozen copy plus `person_id`), `point_statements(speaker_genitive, affiliation, quote)`
 - `point_events(point_id, at, actor_id, from_state, to_state, note)`: the user-facing timeline, independent of audit retention.
-- `future_items(kind jednani|akce, author_id, state, version, title, start_date, end_date, time_from, time_to, campus, place, expects_report, report_state none|prompted|written|declined, report_point_id?)`
+- `future_items(kind jednani|akce, author_id, state, version, title, start_date, end_date, time_from, time_to, campus, place, report_state none|prompted|written, report_point_id?)` (every approved akce owes a report, ADR 0048)
 
 **Issues and output**
 - `issues(monday UNIQUE, meeting_date?, school_year, status open|generated|skipped, deadline_at, present_text, guests_text, annex2 jsonb?, current_version)`
@@ -299,7 +299,7 @@ Points:
 Future items:
 - Reviewed the same way, plus `cancelled`.
 - If the author edits an approved item, it goes back to `submitted`.
-- After the end date, `report_state` goes none → prompted → written or declined.
+- After the end date, `report_state` goes none → prompted → written; it cannot be declined (ADR 0048).
 
 Issues:
 - open → generated (in order) → reopened while the next issue is not generated → v+1.

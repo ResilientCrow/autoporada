@@ -79,12 +79,7 @@ export {
   submitFutureOutput,
   type FutureContentValue,
 } from './future';
-export {
-  declineFutureReportInput,
-  declineFutureReportOutput,
-  startFutureReportInput,
-  startFutureReportOutput,
-} from './future-report';
+export { startFutureReportInput, startFutureReportOutput } from './future-report';
 export {
   cancelFutureInput,
   cancelFutureOutput,

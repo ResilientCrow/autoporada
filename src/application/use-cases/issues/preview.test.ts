@@ -507,7 +507,7 @@ describe('issues.preview', () => {
         author,
         title: 'Víkendová akce',
         startDate: d('2026-10-25'),
-        content: { expectsReport: true, timeTo: { hour: 21, minute: 0 } as never },
+        content: { timeTo: { hour: 21, minute: 0 } as never },
       });
       const found = (await preview(head)).findings.find((f) => f.code === 'late-reports-expected');
       expect(found?.refs).toEqual([

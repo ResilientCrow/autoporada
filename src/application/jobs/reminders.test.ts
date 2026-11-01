@@ -269,13 +269,12 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
     expect(await keys()).toEqual([soft(afterSkip)]);
   });
 
-  it('leaves out an akce not approved, one that expects no report and one whose report was declined', async () => {
-    const [waiting, noReport, declined] = [await submitter(), await submitter(), await submitter()];
+  it('leaves out an akce not approved and a jednání', async () => {
+    const [waiting, jednani] = [await submitter(), await submitter()];
     world.clock.set(new Date('2026-10-01T08:00:00Z'));
     const id = await akce.start(waiting);
     await akce.moveTo(waiting, id, 'submitted');
-    await late.akce(noReport, { day: '2026-10-20', timeTo: null }, { expectsReport: false });
-    await late.patchAkce(declined, await owed(declined), { reportState: 'declined' });
+    await late.jednani(jednani, { day: '2026-10-20', timeTo: null });
     await runAt(SOFT);
     expect(await keys()).toEqual([]);
   });

@@ -171,15 +171,13 @@ describe('the mail at the end of a late akce', () => {
     expect(await queued()).toEqual([]);
   });
 
-  it('leaves out an akce that expects no report, is not approved, has its report or is linked to one', async () => {
+  it('leaves out a jednání and an akce that is not approved, has its report or is linked to one', async () => {
     const author = await submitter();
-    await akce(author, '2026-11-01', '21:00', { expectsReport: false });
+    await fixtures.jednani(author, { day: '2026-11-01', timeTo: '21:00' });
     const cancelled = await akce(author, '2026-11-01', '21:00');
     await patch(author, cancelled, { state: 'cancelled' });
     const written = await akce(author, '2026-11-01', '21:00');
     await patch(author, written, { reportState: 'written' });
-    const declined = await akce(author, '2026-11-01', '21:00');
-    await patch(author, declined, { reportState: 'declined' });
     const linked = await akce(author, '2026-11-01', '21:00');
     await patch(author, linked, { reportPointId: await report(author, '2026-11-01', '21:00') });
     await runAt(at('20:30'));
@@ -284,7 +282,7 @@ describe('what goes at send time', () => {
     expect(mail.calls).toHaveLength(1);
   });
 
-  it('drops the mail when the report was written or declined meanwhile', async () => {
+  it('drops the mail when the report was written meanwhile', async () => {
     const author = await world.seed.user({ role: 'submitter', email: 'jana@ssps.cz' });
     const id = await akce(author, '2026-11-01', '21:00');
     await patch(author, id, { reportState: 'written' });

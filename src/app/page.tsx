@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { declineFutureReport, setSkipped, startFutureReport } from '@/server/actions';
+import { setSkipped, startFutureReport } from '@/server/actions';
 import { homePage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
 import { ReportDueCard } from '@/ui/features/future';
@@ -30,7 +30,6 @@ export default async function HomePage() {
           items={model.reportDue.items}
           types={model.reportDue.types}
           startFutureReport={startFutureReport}
-          declineFutureReport={declineFutureReport}
         />
       )}
       {model.kind === 'member' && model.queue !== null && <QueueCard count={model.queue} />}

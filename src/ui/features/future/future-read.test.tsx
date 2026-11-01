@@ -16,7 +16,6 @@ const view = (over: Partial<FutureView> = {}): FutureView => ({
   timeTo: null,
   campus: 'radlice',
   place: 'Špindlerův Mlýn',
-  expectsReport: true,
   responsible: { verb: 'koordinuje', behalfOf: '8.A', names: ['Jana Nováková'] },
   ...over,
 });
@@ -48,18 +47,17 @@ describe('FutureRead', () => {
     expect(html).toContain(points.campus.radlice);
     expect(html).toContain('Špindlerův Mlýn');
     expect(html).toContain('za 8.A koordinuje Jana Nováková');
-    expect(html).toContain(future.facts.expectsReportYes);
+    expect(html).not.toContain('zpráva do porady');
   });
 
-  it('leaves out the rows that are not set, and the report line of a jednání', () => {
+  it('leaves out the rows that are not set', () => {
     const html = render({
       kind: 'jednani',
-      view: view({ place: null, campus: null, responsible: null, expectsReport: false }),
+      view: view({ place: null, campus: null, responsible: null }),
     });
     expect(html).not.toContain(points.facts.place);
     expect(html).not.toContain(points.facts.campus);
     expect(html).not.toContain(future.facts.responsible);
-    expect(html).not.toContain(future.facts.expectsReport);
   });
 
   it('calls an item with no title „Bez názvu“', () => {

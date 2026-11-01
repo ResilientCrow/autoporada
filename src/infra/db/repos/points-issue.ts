@@ -19,7 +19,7 @@ const HANDED_IN_FIRST = [asc(points.submittedAt), asc(points.id)];
 
 /**
  * Report drafts (`draft` or `returned`) about an event ending from `from` to `to`, that no approved
- * akce expecting a report is linked to: the akce speaks for those (`FutureItemRepo.awaitingReport`).
+ * akce is linked to (every one owes its report): the akce speaks for those (`FutureItemRepo.awaitingReport`).
  */
 const draftReportsIn = (from: CalDate, to: CalDate) =>
   and(
@@ -32,7 +32,7 @@ const draftReportsIn = (from: CalDate, to: CalDate) =>
       SELECT 1 FROM ${futureItems}
       WHERE ${futureItems.reportPointId} = ${points.id}
         AND ${futureItems.state} = 'approved'
-        AND ${futureItems.expectsReport})`,
+        AND ${futureItems.kind} = 'akce')`,
   );
 
 /**

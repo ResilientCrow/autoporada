@@ -11,6 +11,7 @@ import {
   type WorkerDeps,
 } from '@/application/ports';
 import { saveFuture } from '@/application/use-cases';
+import type { FutureKind } from '@/domain/calendar';
 
 import { futureFixtures, readyAkce } from '../../../test/support/future';
 import { setupWorld } from '../../../test/support/world';
@@ -45,8 +46,9 @@ async function approved(
   author: UserRecord,
   dates: { startDate: string; endDate?: string | null },
   over: Record<string, unknown> = {},
+  kind: FutureKind = 'akce',
 ): Promise<string> {
-  const id = await start(author, 'akce');
+  const id = await start(author, kind);
   const content = readyAkce({ endDate: null, ...dates, ...over });
   const saved = await world.run(saveFuture, world.as(author), { id, expectedVersion: 1, content });
   if (!saved.ok) throw new Error(`save refused: ${saved.error.code}`);
@@ -188,14 +190,12 @@ describe('the future.report-prompt handler', () => {
     );
   });
 
-  it('leaves out an akce that expects no report, and one whose report is written or declined', async () => {
+  it('leaves out a jednání and an akce whose report is written', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const wanted = await approved(author, { startDate: '2026-11-11' });
-    await approved(author, { startDate: '2026-11-11' }, { expectsReport: false });
+    await approved(author, { startDate: '2026-11-11' }, {}, 'jednani');
     const written = await approved(author, { startDate: '2026-11-11' });
     await patch(author, written, { reportState: 'written' });
-    const declined = await approved(author, { startDate: '2026-11-11' });
-    await patch(author, declined, { reportState: 'declined' });
     const cancelled = await approved(author, { startDate: '2026-11-11' });
     await patch(author, cancelled, { state: 'cancelled' });
     world.clock.set(at('2026-11-12'));

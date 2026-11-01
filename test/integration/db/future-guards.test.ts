@@ -100,7 +100,7 @@ describe('future item guards (migrations 0019 and 0020)', () => {
     await insertItem();
     await insertItem(SUBMITTED);
     await insertItem({ ...SUBMITTED, kind: 'jednani', state: 'approved' });
-    await insertItem({ ...SUBMITTED, state: 'cancelled', expects_report: true });
+    await insertItem({ ...SUBMITTED, state: 'cancelled', report_state: 'written' });
   });
 
   // The defaults leave title and start empty: only an author's states allow that.
@@ -111,17 +111,14 @@ describe('future item guards (migrations 0019 and 0020)', () => {
     [{ state: 'returned' }],
     [{ state: 'rejected' }],
     [{ state: 'withdrawn' }],
-    [{ expects_report: true }],
-    [{ expects_report: true, report_state: 'declined' }],
+    [{ report_state: 'written' }],
     [{ responsible: '{"verb":"organizuje","people":[]}' }],
   ])('accepts %o', async (row) => {
     await insertItem(row);
   });
 
   it.each([
-    [{ kind: 'jednani', expects_report: true }, 'future_items_expects_akce'],
-    [{ report_state: 'written' }, 'future_items_report_needs_expect'],
-    [{ report_state: 'declined' }, 'future_items_report_needs_expect'],
+    [{ kind: 'jednani', report_state: 'written' }, 'future_items_report_akce'],
     [{ end_date: '2026-11-12' }, 'future_items_dates'],
     [{ start_date: '2026-11-12', end_date: '2026-11-11' }, 'future_items_dates'],
     [{ campus: 'karlin' }, 'future_items_campus'],
@@ -135,6 +132,18 @@ describe('future item guards (migrations 0019 and 0020)', () => {
     [{ ...SUBMITTED, state: 'cancelled', submitted_at: null }, 'future_items_submitted_complete'],
   ])('refuses %o by %s', async (row, constraint) => {
     expect(await pgErrorOf(insertItem(row))).toMatchObject({ code: CHECK, constraint });
+  });
+
+  it('has no declined report and no switch for one: every approved akce owes it (ADR 0048)', async () => {
+    // 22P02: not a value of the enum
+    expect(await pgErrorOf(insertItem({ report_state: 'declined' }))).toMatchObject({
+      code: '22P02',
+    });
+    const [column] = await database.owner<{ n: number }>(
+      `SELECT count(*)::int AS n FROM information_schema.columns
+        WHERE table_name = 'future_items' AND column_name = 'expects_report'`,
+    );
+    expect(column).toEqual({ n: 0 });
   });
 
   it('accepts every length at its cap, counted in characters, not bytes', async () => {
@@ -254,7 +263,7 @@ describe('future item guards (migrations 0019 and 0020)', () => {
   });
 
   it('ties a report to the akce it answers, and an akce to the report it got', async () => {
-    const itemId = await insertItem({ expects_report: true });
+    const itemId = await insertItem();
     const reportId = ((await insertReport({ future_item_id: itemId })).rows[0] as { id: string })
       .id;
     await database.db.execute(sql`

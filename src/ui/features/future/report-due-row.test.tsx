@@ -28,7 +28,6 @@ vi.mock('@/ui/form/use-action-form', () => ({
 
 const { report } = cs.future;
 const start = () => Promise.reject(new Error('not called while rendering'));
-const decline = () => Promise.reject(new Error('not called while rendering'));
 const item = {
   id: 'a',
   title: 'Akce a',
@@ -43,15 +42,7 @@ const TYPES = [
 ];
 
 const render = (types = TYPES) =>
-  renderToStaticMarkup(
-    <ReportDueRow
-      item={item}
-      types={types}
-      startFutureReport={start}
-      declineFutureReport={decline}
-      onDeclined={() => undefined}
-    />,
-  );
+  renderToStaticMarkup(<ReportDueRow item={item} types={types} startFutureReport={start} />);
 
 /** The opening tag of the button with this label. */
 const buttonOf = (html: string, label: string) =>
@@ -59,27 +50,12 @@ const buttonOf = (html: string, label: string) =>
 const disabled = (tag: string) => /\sdisabled(=|\s|>)/.test(tag);
 
 describe('ReportDueRow', () => {
-  it('leaves both buttons pressable while nothing is sent', () => {
+  it('has one button, „Napsat zprávu“, and no way to decline the report (ADR 0048)', () => {
     states.clear();
     const html = render();
+    expect(html.match(/<button/g)).toHaveLength(1);
     expect(disabled(buttonOf(html, report.start))).toBe(false);
-    expect(disabled(buttonOf(html, report.decline))).toBe(false);
-  });
-
-  it('disables „Zprávu psát nebudu“ while „Napsat zprávu“ is being sent', () => {
-    states.clear();
-    states.set(start, { submitting: '' });
-    const html = render();
-    expect(disabled(buttonOf(html, report.decline))).toBe(true);
-    expect(disabled(buttonOf(html, report.start))).toBe(false);
-  });
-
-  it('disables „Napsat zprávu“ while „Zprávu psát nebudu“ is being sent', () => {
-    states.clear();
-    states.set(decline, { submitting: '' });
-    const html = render();
-    expect(disabled(buttonOf(html, report.start))).toBe(true);
-    expect(disabled(buttonOf(html, report.decline))).toBe(false);
+    expect(html).not.toContain('Zprávu psát nebudu');
   });
 
   it('shows a refused start as the akce being gone, with the reload', () => {

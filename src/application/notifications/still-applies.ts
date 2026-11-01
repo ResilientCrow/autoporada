@@ -49,7 +49,7 @@ const APPLIES: {
   'point.returned': pointDecided('return', ['returned']),
   'point.approved': pointDecided('approve', ['approved', 'published']),
   'point.rejected': pointDecided('reject', ['rejected']),
-  /** The author is asked while the akce stands approved and its report is neither written nor declined. */
+  /** The author is asked while the akce stands approved and its report is not written. */
   'report.prompt': (item, recipient) =>
     item.state === 'approved' &&
     item.reportState === 'none' &&
@@ -65,10 +65,9 @@ const APPLIES: {
     (submitted > 0 || (recipient.role === 'headmaster' && accessRequests > 0)),
   /** The reminders' audience still: whoever owes a report or waits on the slot. */
   'issue.moved': ({ hasWork }, recipient) => member(recipient) && hasWork,
-  /** The akce's author, while the akce stands approved with no report written or declined; the loader drops it past the close. */
-  'report.ended': ({ authorId, state, expectsReport, reportState }, recipient) =>
+  /** The akce's author, while the akce stands approved with no report written; the loader drops it past the close. */
+  'report.ended': ({ authorId, state, reportState }, recipient) =>
     state === 'approved' &&
-    expectsReport &&
     (reportState === 'none' || reportState === 'prompted') &&
     authorId === recipient.id &&
     member(recipient),

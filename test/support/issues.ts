@@ -182,7 +182,6 @@ export function issueFixtures(world: World) {
       campus: null,
       place: null,
       responsible: null,
-      expectsReport: false,
       ...seed.content,
     };
     return world.tx(world.as(seed.author), async (tx) => {

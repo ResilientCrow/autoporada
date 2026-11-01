@@ -155,7 +155,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         compareDates(last, to) <= 0 &&
         ![...tx.draft.futureItems.values()].some(
           (item) =>
-            item.reportPointId === p.id && item.state === 'approved' && item.content.expectsReport,
+            item.reportPointId === p.id && item.state === 'approved' && item.kind === 'akce',
         )
       );
     });

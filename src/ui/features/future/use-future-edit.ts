@@ -3,7 +3,6 @@
 import { useCallback, useRef, useState } from 'react';
 
 import type { ActionResult, FieldIssues } from '@/contracts';
-import type { FutureKind } from '@/domain/calendar';
 
 import {
   issuesOf,
@@ -30,11 +29,9 @@ import {
  */
 export function useFutureEdit({
   initial,
-  kind,
   onChange,
 }: {
   readonly initial: FutureContentWire;
-  readonly kind: FutureKind;
   readonly onChange: (content: FutureContentWire) => void;
 }) {
   const [edit, setEdit] = useState<FutureEdit>(() => startEdit(initial));
@@ -56,7 +53,7 @@ export function useFutureEdit({
   );
 
   // Inline only: the form's own issues would lead with the error summary and take focus.
-  const found = refused === null ? null : issuesOf(refused, kind);
+  const found = refused === null ? null : issuesOf(refused);
   return {
     edit,
     latest,
@@ -67,8 +64,6 @@ export function useFutureEdit({
       const { content } = latest.current;
       apply(withPatch(latest.current, patchFor(name, value, content)));
     },
-    setExpectsReport: (checked: boolean) =>
-      apply(withPatch(latest.current, { expectsReport: checked })),
     setResponsible: (change: Partial<ResponsibleDraft>) =>
       apply(withResponsible(latest.current, change)),
   };

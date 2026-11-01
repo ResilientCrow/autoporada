@@ -42,7 +42,7 @@ export type Check =
   | { readonly action: 'future.view'; readonly item: FutureView }
   | { readonly action: 'future.edit'; readonly item: FutureRef }
   | { readonly action: 'future.transition'; readonly item: FutureRef; readonly event: FutureEvent }
-  /** „Napsat zprávu“ and „Zprávu psát nebudu“ on an akce: the author's, once it is approved. */
+  /** „Napsat zprávu“ on an akce: the author's, once it is approved (no decline, ADR 0048). */
   | { readonly action: 'future.report'; readonly item: FutureRef }
   | { readonly action: 'review.queue' }
   | { readonly action: 'issue.preview' }
@@ -67,7 +67,7 @@ function reviewActor(actor: Actor, owner: Owner): ReviewActor {
   return { kind: 'user', role: actor.role, isAuthor };
 }
 
-/** Writing the report is the author's; declining it too (a reviewer's decline is not offered). */
+/** Writing the report is the author's; nobody can decline it (ADR 0048). */
 const canReport = (a: ReviewActor) => REPORT_MACHINE.write.allowed(a);
 
 const has = (actor: Actor, minimum: Role) => atLeast(actor.role, minimum);

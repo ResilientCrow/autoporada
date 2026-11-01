@@ -29,7 +29,6 @@ function endingOf(item: FakeFutureItem): EndingAkce | null {
     id: item.id,
     authorId: item.authorId,
     state: item.state,
-    expectsReport: item.content.expectsReport,
     reportState: item.reportState,
     lastDay,
     timeTo: item.content.timeTo,
@@ -46,13 +45,11 @@ function refuse(state: FakeState, row: FakeFutureItem): void {
   if (c.endDate && (!c.startDate || toIsoDate(c.endDate) < toIsoDate(c.startDate))) {
     throw refusedBy('future_items_dates');
   }
-  if (c.expectsReport && row.kind !== 'akce') throw refusedBy('future_items_expects_akce');
   if (codePoints(c.title) > 200 || codePoints(c.place ?? '') > 120) {
     throw refusedBy('future_items_lengths');
   }
-  if (row.reportState !== 'none' && !c.expectsReport) {
-    throw refusedBy('future_items_report_needs_expect');
-  }
+  if (row.reportState !== 'none' && row.kind !== 'akce')
+    throw refusedBy('future_items_report_akce');
   const complete = c.title !== '' && c.startDate !== null && row.submittedAt !== null;
   if (['submitted', 'approved', 'cancelled'].includes(row.state) && !complete) {
     throw refusedBy('future_items_submitted_complete');
@@ -115,9 +112,9 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
           (a.id < b.id ? -1 : 1),
       )
       .map(record);
-  /** An approved akce whose report is not started, or still a draft or returned (ADR 0046). */
+  /** An approved akce whose report is not started, or still a draft or returned (ADR 0046, 0048). */
   const reportNotHandedIn = (
-    item: Pick<FakeFutureItem, 'state' | 'content' | 'reportPointId' | 'reportState'>,
+    item: Pick<FakeFutureItem, 'kind' | 'state' | 'reportPointId' | 'reportState'>,
   ) => {
     const linked =
       item.reportPointId === null ? undefined : tx.draft.points.get(item.reportPointId);
@@ -125,7 +122,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       (item.reportState === 'none' || item.reportState === 'prompted') &&
       item.reportPointId === null;
     const unfinished = linked?.state === 'draft' || linked?.state === 'returned';
-    return item.state === 'approved' && item.content.expectsReport && (notStarted || unfinished);
+    return item.state === 'approved' && item.kind === 'akce' && (notStarted || unfinished);
   };
   const find = (id: string, mayUse: (item: FakeFutureItem) => boolean) => {
     const item = futureItems.get(id);
@@ -234,7 +231,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
           const lastDay = item.content.endDate ?? item.content.startDate;
           const due =
             item.state === 'approved' &&
-            item.content.expectsReport &&
+            item.kind === 'akce' &&
             item.reportState === 'none' &&
             lastDay !== null &&
             compareDates(lastDay, from) >= 0 &&
@@ -250,7 +247,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         .flatMap((item) => {
           const ending = endingOf(item);
           return item.state === 'approved' &&
-            item.content.expectsReport &&
+            item.kind === 'akce' &&
             (item.reportState === 'none' || item.reportState === 'prompted') &&
             item.reportPointId === null &&
             ending &&
@@ -265,7 +262,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       guard(tx, false);
       if (principal.kind !== 'system') throw new ScopeViolation();
       const item = futureItems.get(id);
-      return (item && endingOf(item)) ?? null;
+      return (item?.kind === 'akce' && endingOf(item)) || null;
     },
     async mailFacts(id) {
       guard(tx, false);

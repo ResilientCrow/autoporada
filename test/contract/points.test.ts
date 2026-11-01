@@ -166,7 +166,6 @@ describe('PointRepo (port contract)', () => {
           campus: null,
           place: null,
           responsible: null,
-          expectsReport: true,
         },
       });
       await tx.audit.record({

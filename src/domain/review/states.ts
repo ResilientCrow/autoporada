@@ -119,21 +119,20 @@ export function futureEditNeedsReview(state: FutureState, actor: ReviewActor): b
   return state === 'approved' && author(actor);
 }
 
-export type ReportState = 'none' | 'prompted' | 'written' | 'declined';
-export type ReportEvent = 'prompt' | 'write' | 'decline';
+export type ReportState = 'none' | 'prompted' | 'written';
+export type ReportEvent = 'prompt' | 'write';
 
-/** After an akce ends, its author is asked for the report point. */
+/** After an akce ends, its author is asked for the report point; nobody can decline it (ADR 0048). */
 export const REPORT_MACHINE: Machine<ReportState, ReportEvent, ReviewActor> = {
   prompt: { from: ['none', 'prompted'], to: 'prompted', allowed: system },
   write: { from: ['none', 'prompted'], to: 'written', allowed: author },
-  /** „Zpráva nebude“ */
-  decline: { from: ['none', 'prompted'], to: 'declined', allowed: (a) => author(a) || reviewer(a) },
 };
 
 /** What decides whether an akce is waiting for its report. */
 interface ReportFacts {
   readonly state: FutureState;
-  readonly expectsReport: boolean;
+  /** Only an akce owes a report (ADR 0048); spelled out because this module cannot import `FutureKind`. */
+  readonly kind: 'jednani' | 'akce';
   readonly reportState: ReportState;
   /**
    * When the akce ends: its last day at its end time, or at 20.00 without one. The caller gets it
@@ -144,14 +143,14 @@ interface ReportFacts {
 }
 
 /**
- * True when the author is owed a report: an approved akce that expects one, whose report is neither
- * written nor declined, from the moment the akce ends (ADR 0035) — not from the next day, so a
+ * True when the author is owed a report: every approved akce (ADR 0048) whose report is not
+ * written yet, from the moment the akce ends (ADR 0035) — not from the next day, so a
  * report on an evening event can be started before its close.
  */
 export function reportDue(akce: ReportFacts, now: Date): boolean {
   return (
     akce.state === 'approved' &&
-    akce.expectsReport &&
+    akce.kind === 'akce' &&
     REPORT_MACHINE.write.from.includes(akce.reportState) &&
     akce.endsAt.getTime() <= now.getTime()
   );

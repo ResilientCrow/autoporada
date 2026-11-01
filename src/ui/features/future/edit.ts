@@ -2,7 +2,6 @@ import type { z } from 'zod';
 
 import type { ActionResult, FieldIssueCode, FieldIssues, saveFutureInput } from '@/contracts';
 import type { Campus, ResponsibleVerb } from '@/domain/cs';
-import type { FutureKind } from '@/domain/calendar';
 import { fieldIssues, future, points } from '@/ui/copy';
 import { pickedTime, typedDate, type Chip, type FormSpec } from '@/ui/form';
 
@@ -118,28 +117,20 @@ export function withResponsible(edit: FutureEdit, change: Partial<ResponsibleDra
   return { responsible, content: { ...edit.content, responsible: responsibleWire(responsible) } };
 }
 
-/** The editor's fields in page order. A draft may be unfinished: the submit asks for the title and the start. */
-export function futureSpec(kind: FutureKind): FormSpec {
-  const { responsible: who } = future.editor;
-  return {
-    title: { label: points.editor.title, required: true },
-    startDate: { label: points.facts.eventDate, required: true },
-    endDate: { label: points.facts.endDate, messages: { invalid: future.editor.endBeforeStart } },
-    timeFrom: { label: points.facts.timeFrom },
-    timeTo: { label: points.facts.timeTo, messages: { invalid: future.editor.timeTo } },
-    campus: { label: points.facts.campus },
-    place: { label: points.facts.place },
-    'responsible.verb': { label: who.verb, required: true },
-    'responsible.behalfOf': { label: who.behalfOf },
-    'responsible.people': { label: who.people },
-    ...(kind === 'akce' && {
-      expectsReport: {
-        label: future.editor.expectsReport,
-        messages: { invalid: future.editor.expectsReportSettled },
-      },
-    }),
-  };
-}
+const who = future.editor.responsible;
+/** The editor's fields in page order, the same for both kinds. A draft may be unfinished: the submit asks for the title and the start. */
+export const FUTURE_SPEC: FormSpec = {
+  title: { label: points.editor.title, required: true },
+  startDate: { label: points.facts.eventDate, required: true },
+  endDate: { label: points.facts.endDate, messages: { invalid: future.editor.endBeforeStart } },
+  timeFrom: { label: points.facts.timeFrom },
+  timeTo: { label: points.facts.timeTo, messages: { invalid: future.editor.timeTo } },
+  campus: { label: points.facts.campus },
+  place: { label: points.facts.place },
+  'responsible.verb': { label: who.verb, required: true },
+  'responsible.behalfOf': { label: who.behalfOf },
+  'responsible.people': { label: who.people },
+};
 
 const PREFIX = 'content.';
 /** A path into one person of the responsible list. */
@@ -148,21 +139,20 @@ const PERSON = /^responsible\.people\.\d+\./;
 /**
  * The issues of a refused save or submit as the editor's fields carry them: the contract's paths
  * lose `content.`, and a person's missing part is the people field's. `unknown` is set for a path
- * with no field here (the content over its size cap, a field of another kind), which becomes the
- * generic problem.
+ * with no field here (the content over its size cap, a field the editor does not have), which
+ * becomes the generic problem.
  */
-export function issuesOf(
-  fields: FieldIssues,
-  kind: FutureKind,
-): { readonly known: FieldIssues; readonly unknown: boolean } {
-  const spec = futureSpec(kind);
+export function issuesOf(fields: FieldIssues): {
+  readonly known: FieldIssues;
+  readonly unknown: boolean;
+} {
   const known: Record<string, FieldIssueCode> = {};
   let unknown = Object.keys(fields).length === 0;
   for (const [path, code] of Object.entries(fields)) {
     const name = path.startsWith(PREFIX) ? path.slice(PREFIX.length) : '';
     const person = PERSON.test(name);
     const field = person ? 'responsible.people' : name;
-    if (Object.hasOwn(spec, field)) known[field] = person ? 'required' : code;
+    if (Object.hasOwn(FUTURE_SPEC, field)) known[field] = person ? 'required' : code;
     else unknown = true;
   }
   return { known, unknown };
@@ -180,7 +170,6 @@ export function messagesOf(
         return [name, missing ? future.editor.endWithoutStart : future.editor.endBeforeStart];
       }
       if (name === 'timeTo') return [name, future.editor.timeTo];
-      if (name === 'expectsReport') return [name, future.editor.expectsReportSettled];
       if (name === 'responsible.people' && code === 'too-long')
         return [name, future.editor.tooMany];
       return [name, fieldIssues[code]];

@@ -20,16 +20,12 @@ export interface FutureReadItem {
 }
 
 /** The facts that are set, as term and value. */
-function factRows(kind: FutureKind, view: FutureView): readonly (readonly [string, string])[] {
+function factRows(view: FutureView): readonly (readonly [string, string])[] {
   const rows: readonly (readonly [string, string | null])[] = [
     [future.facts.when, whenText(view)],
     [points.facts.campus, view.campus && points.campus[view.campus]],
     [points.facts.place, view.place?.trim() || null],
     [future.facts.responsible, responsibleText(view)],
-    [
-      future.facts.expectsReport,
-      kind === 'akce' && view.expectsReport ? future.facts.expectsReportYes : null,
-    ],
   ];
   return rows.filter((row): row is readonly [string, string] => row[1] !== null);
 }
@@ -48,7 +44,7 @@ export function FutureRead({
   readonly children?: ReactNode;
 }) {
   const { kind, state, view, window } = item;
-  const rows = factRows(kind, view);
+  const rows = factRows(view);
   return (
     <div className="space-y-4">
       <FutureHeader kind={kind} state={state} title={view.title} />

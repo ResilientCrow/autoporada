@@ -49,7 +49,6 @@ describe('future.create', () => {
         campus: null,
         place: null,
         responsible: null,
-        expectsReport: false,
       },
     });
   });

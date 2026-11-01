@@ -25,7 +25,6 @@ export const futureWire = (over: Record<string, unknown> = {}) => ({
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
   ...over,
 });
 
@@ -40,7 +39,6 @@ export const readyAkce = (over: Record<string, unknown> = {}) =>
     campus: 'radlice',
     place: 'v Národním muzeu',
     responsible: { verb: 'zajišťuje', behalfOf: '2.A', people: [staffer] },
-    expectsReport: true,
     ...over,
   });
 

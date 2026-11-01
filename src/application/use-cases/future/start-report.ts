@@ -1,11 +1,6 @@
 import { defineUseCase, fail, ok, type ResourceAccess } from '@/application/core';
 import type { FutureItemRecord } from '@/application/ports';
-import {
-  declineFutureReportInput,
-  declineFutureReportOutput,
-  startFutureReportInput,
-  startFutureReportOutput,
-} from '@/contracts';
+import { startFutureReportInput, startFutureReportOutput } from '@/contracts';
 import { eventEnd, lateFacts } from '@/domain/calendar';
 import type { Check } from '@/domain/policy';
 import { DRAFT_CAP } from '@/domain/report';
@@ -16,15 +11,12 @@ import { futureEvent } from './events';
 import { prefilledReport } from './prefill';
 
 /**
- * The access of both report actions (ADR 0011): the item under its row lock through the author's write
+ * The access of „Napsat zprávu“ (ADR 0011): the item under its row lock through the author's write
  * scope, so anyone else's is not-found, then the policy: the author's, once the akce is approved. No
  * version is compared: the list the button sits on has none, and what the action checks (is a report
  * due) is read from the locked row.
  */
-const reportAccess = <I extends { readonly id: string }>(): ResourceAccess<
-  I,
-  FutureItemRecord
-> => ({
+const reportAccess: ResourceAccess<{ readonly id: string }, FutureItemRecord> = {
   kind: 'resource',
   load: (tx, { id }) => tx.futureItems.loadForWrite(id),
   expectedVersion: 'unversioned',
@@ -32,16 +24,21 @@ const reportAccess = <I extends { readonly id: string }>(): ResourceAccess<
     action: 'future.report',
     item: { authorId: item.authorId, state: item.state, kind: item.kind },
   }),
-});
+};
 
-/** Whether a report is owed for the akce at `now`: from the end of its last day (ADR 0035). */
+/** Whether a report is owed for the akce at `now`: from the end of its last day (ADR 0035, 0048). */
 function owed(item: FutureItemRecord, now: Date): boolean {
-  const { startDate, endDate, timeTo, expectsReport } = item.content;
+  const { startDate, endDate, timeTo } = item.content;
   const facts = lateFacts({ eventDate: startDate, endDate, timeTo });
   return (
     facts !== undefined &&
     reportDue(
-      { state: item.state, expectsReport, reportState: item.reportState, endsAt: eventEnd(facts) },
+      {
+        state: item.state,
+        kind: item.kind,
+        reportState: item.reportState,
+        endsAt: eventEnd(facts),
+      },
       now,
     )
   );
@@ -59,7 +56,7 @@ export const startFutureReport = defineUseCase({
   mode: 'write',
   input: startFutureReportInput,
   output: startFutureReportOutput,
-  access: reportAccess(),
+  access: reportAccess,
   async execute({ tx, now }, { typeId }, item) {
     if (!owed(item, now)) return fail({ code: 'rule', rule: 'report-not-due' });
     const linked = item.reportPointId === null ? null : await tx.points.get(item.reportPointId);
@@ -82,20 +79,5 @@ export const startFutureReport = defineUseCase({
     const after = await tx.futureItems.update(item.id, item.version, { reportPointId: point.id });
     await tx.audit.record(futureEvent('future.report-started', item, after));
     return ok({ pointId: point.id });
-  },
-});
-
-/** „Zprávu psát nebudu“: the akce is done with, and no report is asked for. */
-export const declineFutureReport = defineUseCase({
-  name: 'future.declineReport',
-  mode: 'write',
-  input: declineFutureReportInput,
-  output: declineFutureReportOutput,
-  access: reportAccess(),
-  async execute({ tx, now }, _input, item) {
-    if (!owed(item, now)) return fail({ code: 'rule', rule: 'report-not-due' });
-    const after = await tx.futureItems.update(item.id, item.version, { reportState: 'declined' });
-    await tx.audit.record(futureEvent('future.report-declined', item, after));
-    return ok({ version: after.version });
   },
 });

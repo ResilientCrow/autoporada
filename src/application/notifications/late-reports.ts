@@ -109,7 +109,6 @@ export async function endedMailSent(tx: Pick<Tx, 'mailLedger'>, item: { id: stri
 export interface ReportEndedFacts {
   readonly authorId: string;
   readonly state: EndingAkce['state'];
-  readonly expectsReport: boolean;
   readonly reportState: EndingAkce['reportState'];
   readonly meetingDate: CalDate;
   readonly due: Date;
@@ -123,11 +122,10 @@ export async function loadReportEnded(tx: Reads, itemId: string): Promise<Report
   const { slots, rule } = await readSlots(tx, now);
   const close = lateClose(slots, rule, now, item);
   if (!close || !stillDue('ended', item, close, now)) return null;
-  const { authorId, state, expectsReport, reportState } = item;
+  const { authorId, state, reportState } = item;
   return {
     authorId,
     state,
-    expectsReport,
     reportState,
     meetingDate: close.slot.meetingDate,
     due: close.due,
@@ -179,7 +177,6 @@ export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, id: string) {
         facts: item,
         open:
           item.state === 'approved' &&
-          item.expectsReport &&
           (item.reportState === 'none' || item.reportState === 'prompted'),
       }
     : point && { facts: point, open: point.state === 'draft' || point.state === 'returned' };

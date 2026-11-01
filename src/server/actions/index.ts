@@ -4,7 +4,6 @@ export {
   cancelFuture,
   createFuture,
   decideFuture,
-  declineFutureReport,
   getFuture,
   retractFuture,
   saveFuture,

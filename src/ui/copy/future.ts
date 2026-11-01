@@ -36,8 +36,6 @@ export const future = {
   facts: {
     when: 'Kdy',
     responsible: 'Zajišťují',
-    expectsReport: 'Zpráva do porady',
-    expectsReportYes: 'Po akci bude následovat zpráva do porady.',
   },
   /** /akce/novy: what to start. */
   chooser: {
@@ -65,9 +63,6 @@ export const future = {
         vede: 'Vedou',
       } as const satisfies Record<ResponsibleVerb, string>,
     },
-    expectsReport: 'Po akci bude následovat zpráva do porady',
-    /** The field message when the box is cleared after the report was written or declined. */
-    expectsReportSettled: 'Zpráva už je vyřízená, proto ji nelze přestat očekávat.',
     submit: 'Odeslat ke kontrole',
     /** An approved akce is not autosaved: one press hands the change in. */
     revise: 'Uložit změny',
@@ -86,13 +81,10 @@ export const future = {
   report: {
     title: 'Akce čekající na zprávu',
     start: 'Napsat zprávu',
-    decline: 'Zprávu psát nebudu',
     /** The legend of the choice of the type the report is written on. */
     type: 'Druh zprávy',
     typeRequired: 'Vyberte druh zprávy.',
     typeInvalid: 'Tento druh nelze použít. Vyberte jiný.',
-    /** Said once an akce was declined; the title is the author's own. */
-    declined: (title: string) => `Zpráva k\u00A0akci „${title}“ se psát nebude.`,
   },
   /** The reviewer's bar and the cancel on an item's page (design section 12). */
   review: {

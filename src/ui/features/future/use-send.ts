@@ -3,7 +3,6 @@
 import { useRef, useState } from 'react';
 
 import type { ActionResult } from '@/contracts';
-import type { FutureKind } from '@/domain/calendar';
 import type { SaveAnswer } from '@/ui/form';
 
 import type { FutureContentWire } from './edit';
@@ -20,12 +19,10 @@ export type Settled = (result: ActionResult<{ readonly version: number }> | null
  * answers (the submit); a revise has none and shows everything.
  */
 export function useSend({
-  kind,
   banners,
   content,
   call,
 }: {
-  readonly kind: FutureKind;
   readonly banners: boolean;
   /** The content as it stands, which an answer is read against. */
   readonly content: () => FutureContentWire;
@@ -41,7 +38,7 @@ export function useSend({
     setPending(value);
   };
   const settled: Settled = (result) =>
-    setShown((previous) => withOutcome(previous, outcomeOf(result, kind, banners, content())));
+    setShown((previous) => withOutcome(previous, outcomeOf(result, banners, content())));
 
   const press = async () => {
     if (busy.current) return;

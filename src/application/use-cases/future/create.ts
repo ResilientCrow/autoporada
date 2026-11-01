@@ -27,7 +27,6 @@ export const createFuture = defineUseCase({
         campus: null,
         place: null,
         responsible: null,
-        expectsReport: false,
       },
     });
     if (inserted) await tx.audit.record(futureEvent('future.created', null, item));

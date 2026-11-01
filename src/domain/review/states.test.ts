@@ -202,7 +202,7 @@ describe('future items', () => {
     expect(transition(FUTURE_MACHINE, 'approved', 'cancel', user('submitter')).ok).toBe(false);
   });
 
-  it('prompts for a report, then records it as written or declined', () => {
+  it('prompts for a report, then records it as written, and offers no way out of it', () => {
     expect(transition(REPORT_MACHINE, 'none', 'prompt', SYSTEM)).toEqual({
       ok: true,
       to: 'prompted',
@@ -215,7 +215,7 @@ describe('future items', () => {
       ok: true,
       to: 'written',
     });
-    expect(transition(REPORT_MACHINE, 'written', 'decline', author).ok).toBe(false);
+    expect(Object.keys(REPORT_MACHINE).sort()).toEqual(['prompt', 'write']);
   });
 });
 
@@ -252,7 +252,7 @@ describe('access requests', () => {
 });
 
 describe('reportDue', () => {
-  const akce = { state: 'approved', expectsReport: true, reportState: 'none' } as const;
+  const akce = { kind: 'akce', state: 'approved', reportState: 'none' } as const;
   const lastDay = calDate(2026, 11, 11);
   const endsAt = (time = '20:00') => wallClockToInstant(lastDay, parseWallTime(time));
   /** A Prague wall-clock instant, 11 November (CET). */
@@ -283,8 +283,7 @@ describe('reportDue', () => {
 
   it.each([
     ['written', { reportState: 'written' }],
-    ['declined', { reportState: 'declined' }],
-    ['not expected', { expectsReport: false }],
+    ['a jednání', { kind: 'jednani' }],
     ['draft', { state: 'draft' }],
     ['submitted', { state: 'submitted' }],
     ['cancelled', { state: 'cancelled' }],

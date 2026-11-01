@@ -12,8 +12,6 @@ interface SeedFutureOptions {
   readonly kind?: 'akce' | 'jednani';
   /** Days from today to the first day; negative is the past. */
   readonly startInDays?: number;
-  /** An ended akce has a last day before today and, when it expects a report, none written yet. */
-  readonly expectsReport?: boolean;
 }
 
 const RESPONSIBLE = {
@@ -27,18 +25,18 @@ export async function seedFuture(
   email: string,
   title: string,
   state: SeedFutureState,
-  { kind = 'akce', startInDays = 30, expectsReport = false }: SeedFutureOptions = {},
+  { kind = 'akce', startInDays = 30 }: SeedFutureOptions = {},
 ): Promise<string> {
   return withClient(async (client) => {
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO future_items (kind, author_id, client_ref, state, title, start_date, end_date, responsible,
-                                expects_report, submitted_at)
+                                submitted_at)
        SELECT $2::future_kind, u.id, gen_random_uuid(), $3::future_state, $4, current_date + $5::int,
-              current_date + $5::int, $6::jsonb, $7 AND $2 = 'akce',
+              current_date + $5::int, $6::jsonb,
               CASE WHEN $3 = 'draft' THEN NULL ELSE now() END
          FROM users u WHERE u.email = $1
        RETURNING id`,
-      [email, kind, state, title, startInDays, JSON.stringify(RESPONSIBLE), expectsReport],
+      [email, kind, state, title, startInDays, JSON.stringify(RESPONSIBLE)],
     );
     const made = rows[0];
     if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);

@@ -3,8 +3,6 @@ import type { z } from 'zod';
 import type {
   createFutureInput,
   createFutureOutput,
-  declineFutureReportInput,
-  declineFutureReportOutput,
   getFutureInput,
   getFutureOutput,
   retractFutureInput,
@@ -39,10 +37,6 @@ export type RetractFutureAction = ServerAction<
 export type StartFutureReportAction = ServerAction<
   z.input<typeof startFutureReportInput>,
   z.output<typeof startFutureReportOutput>
->;
-export type DeclineFutureReportAction = ServerAction<
-  z.input<typeof declineFutureReportInput>,
-  z.output<typeof declineFutureReportOutput>
 >;
 /** What the editor asks after a conflict: the item's version and whether it may still be saved. */
 export type FutureStatusAction = ServerAction<

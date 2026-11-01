@@ -6,7 +6,7 @@ import { newDraft } from '@/domain/report';
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
 import { BULLETS, pointFixtures, readyReport } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
-import { declineFutureReport, saveFuture, startFutureReport } from '../future';
+import { saveFuture, startFutureReport } from '../future';
 import { submitPoint } from './index';
 
 const world = setupWorld();
@@ -70,33 +70,6 @@ describe('points.submit for a report that answers an akce', () => {
     const before = await akce.snapshot(itemId);
     expect((await submit(author, pointId, 3)).ok).toBe(true);
     expect((await akce.snapshot(itemId)).item).toEqual(before.item);
-  });
-
-  it('leaves a declined akce as it is', async () => {
-    const author = await user();
-    const { itemId, pointId } = await startedReport(author);
-    await world.run(declineFutureReport, world.as(author), { id: itemId });
-    const before = await akce.snapshot(itemId);
-    expect((await submit(author, pointId)).ok).toBe(true);
-    expect((await akce.snapshot(itemId)).item).toEqual(before.item);
-  });
-
-  it('hands the report in and leaves the akce alone when the akce no longer expects one', async () => {
-    const author = await user();
-    const { itemId, pointId } = await startedReport(author);
-    const { item } = await akce.snapshot(itemId);
-    const revised = await world.run(saveFuture, world.as(author), {
-      id: itemId,
-      expectedVersion: item!.version,
-      content: readyAkce({ expectsReport: false }),
-      intent: 'revise',
-    });
-    expect(revised.ok).toBe(true);
-    const before = await akce.snapshot(itemId);
-
-    expect((await submit(author, pointId)).ok).toBe(true);
-    expect((await akce.snapshot(itemId)).item).toEqual(before.item);
-    expect(before.item).toMatchObject({ reportState: 'none' });
   });
 
   it('still marks the report written when the akce went back to review with a report expected', async () => {

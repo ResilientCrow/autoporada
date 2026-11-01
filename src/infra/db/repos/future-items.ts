@@ -52,7 +52,6 @@ export const ITEM_ROW = {
   campus: futureItems.campus,
   place: futureItems.place,
   responsible: futureItems.responsible,
-  expectsReport: futureItems.expectsReport,
   reportState: futureItems.reportState,
   reportPointId: futureItems.reportPointId,
   submittedAt: futureItems.submittedAt,
@@ -88,7 +87,6 @@ export function toRecord(row: ItemRow): FutureItemRecord {
       campus: row.campus,
       place: row.place,
       responsible: parsedResponsible(row.responsible),
-      expectsReport: row.expectsReport,
     },
     reportState,
     reportPointId,
@@ -108,7 +106,6 @@ const contentColumns = (content: FutureContent) => ({
   campus: content.campus,
   place: content.place,
   responsible: parsedResponsible(content.responsible),
-  expectsReport: content.expectsReport,
 });
 
 const ITEM_SCOPE = {
@@ -255,7 +252,7 @@ export function createFutureItemRepo(
     },
     async reportPromptDue({ from, to }) {
       if (principal.kind !== 'system') throw new ScopeViolation();
-      // The columns migration 0022 grants the worker, and no other.
+      // The columns migrations 0022 and 0046 grant the worker, and no other.
       const lastDay = sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`;
       const rows = await db
         .select({
@@ -267,7 +264,7 @@ export function createFutureItemRepo(
         .where(
           and(
             eq(futureItems.state, 'approved'),
-            eq(futureItems.expectsReport, true),
+            eq(futureItems.kind, 'akce'),
             eq(futureItems.reportState, 'none'),
             gte(lastDay, toIsoDate(from)),
             lte(lastDay, toIsoDate(to)),

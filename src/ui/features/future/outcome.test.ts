@@ -17,18 +17,15 @@ const CONTENT: FutureContentWire = {
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
 };
 
 describe('outcomeOf', () => {
   it('shows nothing for a call that went through', () => {
-    expect(outcomeOf({ ok: true, data: { version: 3 } }, 'akce', true, CONTENT)).toEqual(
-      NO_OUTCOME,
-    );
+    expect(outcomeOf({ ok: true, data: { version: 3 } }, true, CONTENT)).toEqual(NO_OUTCOME);
   });
 
   it('shows a network problem when the call itself failed', () => {
-    expect(outcomeOf(null, 'akce', true, CONTENT)).toEqual({
+    expect(outcomeOf(null, true, CONTENT)).toEqual({
       issues: null,
       problem: { code: 'network' },
     });
@@ -39,7 +36,7 @@ describe('outcomeOf', () => {
       code: 'invalid-input',
       fields: { 'content.title': 'required', 'content.startDate': 'required' },
     });
-    expect(outcomeOf(result, 'akce', true, CONTENT)).toEqual({
+    expect(outcomeOf(result, true, CONTENT)).toEqual({
       issues: { title: 'required', startDate: 'required' },
       problem: null,
     });
@@ -47,7 +44,7 @@ describe('outcomeOf', () => {
 
   it('shows the generic problem for a refusal no field here carries', () => {
     const result = fail({ code: 'invalid-input', fields: { content: 'too-long' } });
-    expect(outcomeOf(result, 'akce', true, CONTENT)).toEqual({
+    expect(outcomeOf(result, true, CONTENT)).toEqual({
       issues: null,
       problem: { code: 'invalid-input' },
     });
@@ -60,11 +57,11 @@ describe('outcomeOf', () => {
     [{ code: 'rule', rule: 'future-not-editable' }],
   ] as const)('%j', (error) => {
     it('is left to the autosave banner where one holds the editor', () => {
-      expect(outcomeOf(fail(error), 'akce', true, CONTENT)).toEqual(NO_OUTCOME);
+      expect(outcomeOf(fail(error), true, CONTENT)).toEqual(NO_OUTCOME);
     });
 
     it('is shown as a problem where no banner exists', () => {
-      expect(outcomeOf(fail(error), 'akce', false, CONTENT)).toEqual({
+      expect(outcomeOf(fail(error), false, CONTENT)).toEqual({
         issues: null,
         problem: error,
       });
@@ -74,34 +71,32 @@ describe('outcomeOf', () => {
   it('asks for the start date when an end date came without one, not the order of the dates', () => {
     const result = fail({ code: 'invalid-input', fields: { 'content.endDate': 'invalid' } });
     const content = { ...CONTENT, startDate: null, endDate: '2026-11-12' };
-    expect(outcomeOf(result, 'akce', true, content).issues).toEqual({ startDate: 'required' });
+    expect(outcomeOf(result, true, content).issues).toEqual({ startDate: 'required' });
   });
 
   it('keeps the order-of-dates refusal where both dates are there', () => {
     const result = fail({ code: 'invalid-input', fields: { 'content.endDate': 'invalid' } });
     const content = { ...CONTENT, endDate: '2026-11-09' };
-    expect(outcomeOf(result, 'akce', true, content).issues).toEqual({ endDate: 'invalid' });
+    expect(outcomeOf(result, true, content).issues).toEqual({ endDate: 'invalid' });
   });
 
   it('asks for the start time when an end time came without one', () => {
     const result = fail({ code: 'invalid-input', fields: { 'content.timeTo': 'invalid' } });
     const content = { ...CONTENT, timeTo: '10:00' };
-    expect(outcomeOf(result, 'akce', true, content).issues).toEqual({ timeFrom: 'required' });
+    expect(outcomeOf(result, true, content).issues).toEqual({ timeFrom: 'required' });
   });
 
   it('keeps the order-of-times refusal where both times are there', () => {
     const result = fail({ code: 'invalid-input', fields: { 'content.timeTo': 'invalid' } });
     const content = { ...CONTENT, timeFrom: '10:00', timeTo: '09:00' };
-    expect(outcomeOf(result, 'akce', true, content).issues).toEqual({ timeTo: 'invalid' });
+    expect(outcomeOf(result, true, content).issues).toEqual({ timeTo: 'invalid' });
   });
 
   it('shows every other refusal as a problem', () => {
-    expect(outcomeOf(fail({ code: 'busy' }), 'akce', true, CONTENT).problem).toEqual({
+    expect(outcomeOf(fail({ code: 'busy' }), true, CONTENT).problem).toEqual({
       code: 'busy',
     });
-    expect(
-      outcomeOf(fail({ code: 'rule', rule: 'draft-cap' }), 'akce', true, CONTENT).problem,
-    ).toEqual({
+    expect(outcomeOf(fail({ code: 'rule', rule: 'draft-cap' }), true, CONTENT).problem).toEqual({
       code: 'rule',
       rule: 'draft-cap',
     });

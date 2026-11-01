@@ -4,7 +4,6 @@ import type { ActionError } from '@/contracts';
 
 import {
   createInput,
-  declineReportInput,
   editorStatusOf,
   retractInput,
   reviseEffect,
@@ -26,7 +25,6 @@ const CONTENT: FutureContentWire = {
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
 };
 const fail = (error: ActionError) => ({ ok: false, error }) as const;
 
@@ -148,10 +146,6 @@ describe('the report calls', () => {
       id: ID,
       typeId: undefined,
     });
-  });
-
-  it('declines by the akce alone', () => {
-    expect(declineReportInput(ID)).toEqual({ id: ID });
   });
 
   it('opens the draft the report was started as', () => {

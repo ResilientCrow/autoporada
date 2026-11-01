@@ -57,9 +57,6 @@ export function startReportInput(
   return { id, typeId: (only?.id ?? (ticked === '' ? undefined : ticked)) as string };
 }
 
-/** „Zprávu psát nebudu“: the akce alone. */
-export const declineReportInput = (id: string) => ({ id });
-
 /** Where the report started for an akce is written. */
 export const reportHref = (pointId: string) => `/body/${pointId}`;
 

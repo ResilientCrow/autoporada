@@ -8,7 +8,7 @@ import { futureFixtures, readyAkce, staffer } from '../../../../test/support/fut
 import { BULLETS, pointFixtures } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { withdrawPoint } from '../points';
-import { declineFutureReport, saveFuture, startFutureReport } from './index';
+import { saveFuture, startFutureReport } from './index';
 
 const world = setupWorld();
 const { start, moveTo, snapshot } = futureFixtures(world);
@@ -20,8 +20,6 @@ const type = (over: Record<string, unknown> = {}) =>
   world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS, ...over });
 const startReport = (by: UserRecord, id: string, typeId: string) =>
   world.run(startFutureReport, world.as(by), { id, typeId });
-const decline = (by: UserRecord, id: string) =>
-  world.run(declineFutureReport, world.as(by), { id });
 const patch = (author: UserRecord, id: string, over: FutureItemPatch) =>
   world.tx(world.as(author), async (tx) => {
     const item = (await tx.futureItems.loadForWrite(id))!;
@@ -29,9 +27,13 @@ const patch = (author: UserRecord, id: string, over: FutureItemPatch) =>
     await tx.audit.record({ action: 'future.test', target: { type: 'future_item', id } });
   });
 
-/** An approved akce that expects a report, whose last day (11 November) is past. */
-async function dueAkce(author: UserRecord, content = readyAkce()): Promise<string> {
-  const id = await start(author, 'akce');
+/** An approved akce, whose last day (11 November) is past: it owes a report. */
+async function dueAkce(
+  author: UserRecord,
+  content = readyAkce(),
+  kind: 'akce' | 'jednani' = 'akce',
+): Promise<string> {
+  const id = await start(author, kind);
   await world.run(saveFuture, world.as(author), { id, expectedVersion: 1, content });
   await moveTo(author, id, 'approved');
   world.clock.advance(30 * DAY);
@@ -275,15 +277,6 @@ describe('future.startReport', () => {
     expect((await startReport(author, id, typeId)).ok).toBe(true);
   });
 
-  it('declines on the same rule: not before the end, allowed from it', async () => {
-    const author = await user();
-    const id = await dueAkce(author);
-    world.clock.set(new Date('2026-11-11T13:29:00Z'));
-    await refuses(id, () => decline(author, id), rule);
-    world.clock.set(new Date('2026-11-11T13:30:00Z'));
-    expect((await decline(author, id)).ok).toBe(true);
-  });
-
   it.each([
     ['a draft', 'draft'],
     ['submitted', 'submitted'],
@@ -302,17 +295,17 @@ describe('future.startReport', () => {
     await refuses(id, () => startReport(author, id, typeId), { code: 'forbidden' });
   });
 
-  it('refuses an akce that expects no report', async () => {
+  it('refuses a jednání: only an akce owes a report', async () => {
     const author = await user();
-    const id = await dueAkce(author, readyAkce({ expectsReport: false }));
+    const id = await dueAkce(author, readyAkce(), 'jednani');
     const { id: typeId } = await type();
     await refuses(id, () => startReport(author, id, typeId), rule);
   });
 
-  it.each(['written', 'declined'] as const)('refuses an akce whose report is %s', async (state) => {
+  it('refuses an akce whose report is written', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    await patch(author, id, { reportState: state });
+    await patch(author, id, { reportState: 'written' });
     const { id: typeId } = await type();
     await refuses(id, () => startReport(author, id, typeId), rule);
   });
@@ -323,52 +316,5 @@ describe('future.startReport', () => {
     const { id: typeId } = await type();
     for (let i = 0; i < DRAFT_CAP; i++) await points.start(author, 'pokyn');
     await refuses(id, () => startReport(author, id, typeId), { code: 'rule', rule: 'draft-cap' });
-  });
-});
-
-describe('future.declineReport', () => {
-  it('records that no report will be written, in the audit by its states only', async () => {
-    const author = await user();
-    const id = await dueAkce(author);
-    expect(await decline(author, id)).toMatchObject({ ok: true, value: { version: 4 } });
-    const { item, audit } = await snapshot(id);
-    expect(item).toMatchObject({ reportState: 'declined', state: 'approved', version: 4 });
-    expect(audit.at(-1)).toMatchObject({
-      action: 'future.report-declined',
-      targetType: 'future_item',
-      targetId: id,
-      data: { diff: { reportState: { from: 'none', to: 'declined' } }, meta: { kind: 'akce' } },
-    });
-  });
-
-  it('takes a report that was prompted', async () => {
-    const author = await user();
-    const id = await dueAkce(author);
-    await patch(author, id, { reportState: 'prompted' });
-    expect((await decline(author, id)).ok).toBe(true);
-  });
-
-  it('does not offer the report afterwards', async () => {
-    const author = await user();
-    const id = await dueAkce(author);
-    await decline(author, id);
-    const { id: typeId } = await type();
-    await refuses(id, () => decline(author, id), rule);
-    await refuses(id, () => startReport(author, id, typeId), rule);
-  });
-
-  it('finds nothing for anyone but the author', async () => {
-    const id = await dueAkce(await user());
-    for (const other of [await user(), await user('reviewer')]) {
-      await refuses(id, () => decline(other, id), { code: 'not-found' });
-    }
-  });
-
-  it('refuses an akce that is not approved or expects no report', async () => {
-    const author = await user();
-    const draft = await start(author, 'akce');
-    await refuses(draft, () => decline(author, draft), { code: 'forbidden' });
-    const none = await dueAkce(author, readyAkce({ expectsReport: false }));
-    await refuses(none, () => decline(author, none), rule);
   });
 });

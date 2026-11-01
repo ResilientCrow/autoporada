@@ -20,7 +20,6 @@ const wire = (over: Record<string, unknown> = {}) => ({
   campus: null,
   place: null,
   responsible: null,
-  expectsReport: false,
   ...over,
 });
 const save = (over: Record<string, unknown> = {}) =>
@@ -41,6 +40,11 @@ describe('createFutureInput', () => {
 });
 
 describe('saveFutureInput', () => {
+  it('has no switch for the report: every approved akce owes one (ADR 0048)', () => {
+    expect(save().success).toBe(true);
+    expect(save({ expectsReport: false }).success).toBe(false);
+  });
+
   it('reads dates and times from ISO text into domain values', () => {
     const result = save({ endDate: '2026-11-11', timeFrom: '08:00', timeTo: '14:30' });
     expect(result.success && result.data.content).toMatchObject({
@@ -100,7 +104,6 @@ describe('futureContentToWire', () => {
       campus: 'radlice',
       place: 'v muzeu',
       responsible: { verb: 'vede', people: [{ ...person, salutation: 'pan' }] },
-      expectsReport: true,
     };
     const out = futureContentToWire(content);
     expect(out).toMatchObject({ startDate: '2026-11-10', endDate: null, timeFrom: '08:00' });

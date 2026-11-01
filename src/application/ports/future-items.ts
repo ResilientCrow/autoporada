@@ -16,8 +16,6 @@ export interface FutureContent {
   /** A locative phrase: „v učebně S206“. */
   readonly place: string | null;
   readonly responsible: Responsible | null;
-  /** Only an akce; the author is asked for a report after its last day. */
-  readonly expectsReport: boolean;
 }
 
 /** A future item as its author wrote it, with where it stands in review. */
@@ -61,14 +59,13 @@ export interface ReportPromptItem {
 }
 
 /**
- * An akce as the late-report mails read it (migrations 0022 and 0035): who wrote it, where its
+ * An akce as the late-report mails read it (migrations 0022, 0035 and 0046): who wrote it, where its
  * report stands and when it ends, never what is in it.
  */
 export interface EndingAkce {
   readonly id: string;
   readonly authorId: string;
   readonly state: FutureState;
-  readonly expectsReport: boolean;
   readonly reportState: ReportState;
   /** The end date, or the start date of a one-day akce. */
   readonly lastDay: CalDate;
@@ -93,7 +90,7 @@ export interface FutureItemPatch {
   readonly state?: FutureState;
   /** Null takes the hand-in back (a retract). */
   readonly submittedAt?: Date | null;
-  /** Where the report stands; `future_items_report_needs_expect` refuses one on an item that expects none. */
+  /** Where the report stands; `future_items_report_akce` refuses one on a jednání. */
   readonly reportState?: ReportState;
   /** The draft report started for the akce. */
   readonly reportPointId?: string;
@@ -155,32 +152,31 @@ export interface FutureItemRepo {
    */
   list(limit: number, before?: FutureCursor): Promise<readonly FutureItemRecord[]>;
   /**
-   * The daily run's read: the approved akce that expect a report and whose `report_state` is still
-   * `none`, whose last day (the end date, or else the start date) falls from `from` to `to`, both
-   * included, ordered by id. Only the columns migration 0022 grants the worker. ScopeViolation for a user.
+   * The daily run's read: the approved akce (each owes a report, ADR 0048) whose `report_state` is
+   * still `none`, whose last day (the end date, or else the start date) falls from `from` to `to`,
+   * both included, ordered by id. Only the columns migrations 0022 and 0046 grant the worker. ScopeViolation for a user.
    */
   reportPromptDue(window: {
     readonly from: CalDate;
     readonly to: CalDate;
   }): Promise<readonly ReportPromptItem[]>;
   /**
-   * The late-report job's read: the approved akce that expect a report, whose `report_state` is
-   * `none` or `prompted` and that have no report point yet, whose last day falls from `from` to
-   * `to`, both included, ordered by id. Only the columns migrations 0022 and 0035 grant the
-   * worker. ScopeViolation for a user.
+   * The late-report job's read: the approved akce whose `report_state` is `none` or `prompted` and
+   * that have no report point yet, whose last day falls from `from` to `to`, both included, ordered
+   * by id. Only the columns migrations 0022, 0035 and 0046 grant the worker. ScopeViolation for a user.
    */
   reportsEnding(window: {
     readonly from: CalDate;
     readonly to: CalDate;
   }): Promise<readonly EndingAkce[]>;
-  /** The same akce at send time, whatever its state: null for an unknown item. ScopeViolation for a user. */
+  /** The same akce at send time, whatever its state: null for an unknown item or a jednání. ScopeViolation for a user. */
   reportEnding(id: string): Promise<EndingAkce | null>;
   /** The worker's read at send time: null for an unknown item. ScopeViolation for a user. */
   mailFacts(id: string): Promise<FutureMailFacts | null>;
   /**
-   * The soft reminder's read (ADR 0046): the approved akce that expect a report nobody has handed
-   * in, as `awaitingReport` counts them, whose last day falls from `from` to `to`, both included,
-   * ordered by id. Only the columns migrations 0017, 0022 and 0035 grant the worker. ScopeViolation
+   * The soft reminder's read (ADR 0046): the approved akce whose report nobody has handed in, as
+   * `awaitingReport` counts them, whose last day falls from `from` to `to`, both included, ordered
+   * by id. Only the columns migrations 0017, 0022, 0035 and 0046 grant the worker. ScopeViolation
    * for a user.
    */
   reportsOwed(window: {
@@ -205,7 +201,7 @@ export interface FutureItemRepo {
    */
   waitingFor(meetingDate: CalDate): Promise<readonly FutureItemRecord[]>;
   /**
-   * The approved akce that expect a report nobody has handed in and whose last day is from `from`
+   * The approved akce whose report nobody has handed in and whose last day is from `from`
    * to `to`, both included: those with no report started (`reportState` none or prompted, no
    * report point) and those whose report point is still `draft` or `returned`, whatever its
    * author's scope (the akce is shown by its own title, never the draft's): the preflight's late

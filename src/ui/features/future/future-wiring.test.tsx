@@ -76,7 +76,6 @@ function page(phase: string, readOnly: boolean, sending = false): string {
         campus: null,
         place: null,
         responsible: { verb: 'vede', people: [PERSON] },
-        expectsReport: false,
       }}
       today={calDate(2026, 11, 4)}
       recents={[]}

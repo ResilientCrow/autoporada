@@ -1,11 +1,12 @@
 /**
  * Reports and akce for the tests of the late-report mails and queries (ADR 0035): a report point
- * about an event on given days, an approved akce that expects a report, a link between them.
+ * about an event on given days, an approved akce (which owes one) or jednání, a link between them.
  */
 import { randomUUID } from 'node:crypto';
 
 import type { FutureItemPatch, PointRecord, UserRecord } from '@/application/ports';
 import { createPoint, saveFuture } from '@/application/use-cases';
+import type { FutureKind } from '@/domain/calendar';
 import { calDate, parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { futureFixtures, readyAkce } from './future';
@@ -64,13 +65,14 @@ export function lateReportFixtures(world: World) {
     return id;
   }
 
-  /** An approved akce of the author's that expects a report, on the days given. */
-  async function akce(
+  /** An approved item of the author's, on the days given. */
+  async function approved(
+    kind: FutureKind,
     author: UserRecord,
     { day, endDay = null, timeTo }: EventDays,
     over: Record<string, unknown> = {},
   ): Promise<string> {
-    const id = await futures.start(author, 'akce');
+    const id = await futures.start(author, kind);
     const content = readyAkce({ startDate: day, endDate: endDay, timeTo, ...over });
     const saved = await world.run(saveFuture, world.as(author), {
       id,
@@ -82,6 +84,12 @@ export function lateReportFixtures(world: World) {
     return id;
   }
 
+  /** An approved akce of the author's, on the days given: it owes a report once it ends. */
+  const akce = (author: UserRecord, days: EventDays, over: Record<string, unknown> = {}) =>
+    approved('akce', author, days, over);
+  /** An approved jednání of the author's, on the days given: it owes no report. */
+  const jednani = (author: UserRecord, days: EventDays) => approved('jednani', author, days);
+
   const patchAkce = (author: UserRecord, id: string, over: FutureItemPatch) =>
     world.tx(world.as(author), async (tx) => {
       const item = (await tx.futureItems.loadForWrite(id))!;
@@ -89,5 +97,5 @@ export function lateReportFixtures(world: World) {
       await tx.audit.record({ action: 'future.test', target: { type: 'future_item', id } });
     });
 
-  return { startReport, report, akce, patchAkce };
+  return { startReport, report, akce, jednani, patchAkce };
 }

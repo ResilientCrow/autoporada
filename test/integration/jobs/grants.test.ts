@@ -350,8 +350,9 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     future_items: [
       'author_id',
       'end_date',
-      'expects_report',
       'id',
+      // 0048: which items owe a report, now that every approved akce does (ADR 0048)
+      'kind',
       'report_point_id',
       'report_state',
       'start_date',
@@ -368,7 +369,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
     point_events: ['note', 'before', 'edited_fields'],
-    future_items: ['title', 'responsible', 'place', 'client_ref', 'kind', 'campus', 'time_from'],
+    future_items: ['title', 'responsible', 'place', 'client_ref', 'campus', 'time_from'],
     issues: ['school_year', 'version', 'created_at', 'updated_at'],
     settings: ['version', 'updated_at'],
     generated_documents: [
