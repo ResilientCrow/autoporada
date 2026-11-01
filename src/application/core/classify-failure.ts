@@ -26,11 +26,13 @@ export function sqlstateOf(error: unknown): string | undefined {
 }
 
 const DOWN = new Set(['57P01', '57P02', '57P03']);
+/** Statement, idle-in-transaction and transaction timeouts: all a wait that ran out (ADR 0045). */
+const TIMEOUT = new Set(['57014', '25P03', '25P04']);
 const SETUP = new Set(['42P01', '42703', '42883', '42501', '3D000']);
 
 function classifyCode(code: string): FailureCause {
   if (code.startsWith('db.parse.') || code.startsWith('settings.invalid.')) return 'stored-data';
-  if (code === '57014') return 'timeout';
+  if (TIMEOUT.has(code)) return 'timeout';
   if (code.startsWith('08') || code.startsWith('53') || DOWN.has(code)) return 'database-down';
   if (code.startsWith('28') || SETUP.has(code)) return 'database-setup';
   return 'bug';

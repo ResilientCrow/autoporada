@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { LockTimeout } from '@/application/ports';
+import { classifyFailure } from '@/application/core';
+import { LockTimeout, TransactionConflict } from '@/application/ports';
 
 import { signedIn } from '../../../test/support/sessions';
 import { setupWorld } from '../../../test/support/world';
@@ -35,6 +36,19 @@ describe('principalResolver', () => {
   it('throws the port error when the lookup is busy, so the failure keeps its kind, and so a sign-out never takes it for no session', async () => {
     const busy = { ...world.deps, db: { transaction: () => Promise.reject(new LockTimeout()) } };
     await expect(principalResolver(busy)(newToken(), 'req')).rejects.toBeInstanceOf(LockTimeout);
+  });
+
+  it('throws a plain error for a conflict, which is a bug like the port error it stands for', async () => {
+    const conflicting = {
+      ...world.deps,
+      db: { transaction: () => Promise.reject(new TransactionConflict()) },
+    };
+    const failure = await principalResolver(conflicting)(newToken(), 'req').catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toEqual(new Error('auth.resolveSession: conflict'));
+    expect(failure).not.toBeInstanceOf(TransactionConflict);
+    expect(classifyFailure(failure)).toBe('bug');
   });
 
   it('makes 256-bit tokens and stores only their SHA-256', () => {

@@ -24,6 +24,8 @@ const ROWS: readonly (readonly [string, unknown, FailureCause])[] = [
   ['too many connections 53300', sqlstate('53300'), 'database-down'],
   ['out of memory 53200', sqlstate('53200'), 'database-down'],
   ['statement timeout 57014', sqlstate('57014'), 'timeout'],
+  ['idle in transaction timeout 25P03', sqlstate('25P03'), 'timeout'],
+  ['transaction timeout 25P04', sqlstate('25P04'), 'timeout'],
   ['a lock not granted in time', new LockTimeout(), 'timeout'],
   ['a conflict that outlasted the retries', new TransactionConflict(), 'bug'],
   ['undefined table 42P01', sqlstate('42P01'), 'database-setup'],

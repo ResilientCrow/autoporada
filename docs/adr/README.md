@@ -49,4 +49,5 @@ record that supersedes it.
 | [0041](0041-no-unskip-behind-a-generated-porada.md) | No unskip behind a generated porada | Accepted |
 | [0042](0042-development-allows-inline-style-elements.md) | Development allows inline style elements | Accepted |
 | [0043](0043-ui-layout-primitives-link-kinds-and-one-frame.md) | UI layout primitives, link kinds and one frame | Accepted; supersedes 0012 items 4, 6 and 9 in part |
-| [0044](0044-errors-name-what-failed.md) | Errors name what failed | Accepted; supersedes 0011's error bullet and 0013's `unavailable` text in part |
+| [0044](0044-errors-name-what-failed.md) | Errors name what failed | Accepted; supersedes 0011's error bullet and 0013's `unavailable` text in part; amended by 0045 |
+| [0045](0045-error-kinds-amendments.md) | Error kinds and surfaces: amendments to 0044 | Accepted; amends 0044 |
