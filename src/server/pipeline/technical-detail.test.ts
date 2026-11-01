@@ -60,6 +60,22 @@ describe('technicalDetail', () => {
     expect(detail).not.toContain('Jana');
   });
 
+  it.each([
+    ['a query', { query: 'select * from users where email = $1' }],
+    ['params', { params: ['jana@ssps.cz'] }],
+    ['a severity', { severity: 'ERROR' }],
+  ])('never quotes the message of an error with %s but no code', (_name, shape) => {
+    const failing = Object.assign(
+      new Error('Failed query: select * from users where email = $1 params: jana@ssps.cz'),
+      { name: 'DrizzleQueryError' },
+      shape,
+    );
+    const detail = describeError(failing, 'bug');
+    expect(detail).toBe('DrizzleQueryError');
+    expect(detail).not.toContain('select');
+    expect(detail).not.toContain('jana');
+  });
+
   it('shows name and message of any other error', () => {
     expect(describeError(new TypeError('x is undefined'), 'bug')).toBe('TypeError: x is undefined');
     expect(describeError(new TxClosed('closed'), 'bug')).toBe('TxClosed: closed');

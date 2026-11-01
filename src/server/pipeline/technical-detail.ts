@@ -29,6 +29,10 @@ export function databaseAddress(databaseUrl: string): string | undefined {
   }
 }
 
+/** An error from the database layer, whose message can quote a statement or a stored value. */
+const isQueryShaped = (error: Error): boolean =>
+  'query' in error || 'params' in error || 'severity' in error;
+
 /**
  * Development's technical line (ADR 0044): the error's name and SQLSTATE, and for a lost database
  * where it is and how to start it. Production gets no function at all, so nothing technical can be
@@ -48,7 +52,11 @@ export function technicalDetail(
         cause === 'database-down' && address ? ` (databáze na ${address}, ${START_SERVICES})` : '';
       return `${name} ${code}${where}`.slice(0, MAX_DETAIL);
     }
-    if (error instanceof Error) return `${error.name}: ${error.message}`.slice(0, MAX_DETAIL);
+    if (error instanceof Error) {
+      // A query error (Drizzle's has no code) carries the SQL and its parameters in its message.
+      if (isQueryShaped(error)) return error.name.slice(0, MAX_DETAIL);
+      return `${error.name}: ${error.message}`.slice(0, MAX_DETAIL);
+    }
     return typeof error;
   };
 }
