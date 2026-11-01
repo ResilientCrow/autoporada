@@ -373,7 +373,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
     settings: ['version', 'updated_at'],
     generated_documents: [
       ...['docx', 'snapshot', 'pdf', 'issue_id', 'version', 'docx_sha256', 'pdf_sha256'],
-      ...['generated_at', 'pdf_at'],
+      ...['generated_at', 'pdf_at', 'pdf_failure'],
     ],
   };
 
@@ -618,7 +618,9 @@ describe('the generated documents’ grants (ADR 0038: the worker never reads an
           AND has_column_privilege('autoporada_jobs', a.attrelid, a.attnum, 'UPDATE')
         ORDER BY 1`,
     );
-    expect(rows.map((row) => row.column)).toEqual(['pdf', 'pdf_at', 'pdf_sha256', 'pdf_status']);
+    expect(rows.map((row) => row.column)).toEqual([
+      ...['pdf', 'pdf_at', 'pdf_failure', 'pdf_sha256', 'pdf_status'],
+    ]);
     const [table] = await database.owner<{ held: boolean }>(
       `SELECT has_table_privilege('autoporada_jobs', 'generated_documents', 'INSERT, DELETE, TRUNCATE, REFERENCES, TRIGGER') AS held`,
     );
@@ -675,6 +677,30 @@ describe('the generated documents’ grants (ADR 0038: the worker never reads an
   ])('the worker cannot %s', async (_what, statement) => {
     await seedDocument();
     expect(await sqlstateAs('autoporada_worker', statement)).toBe(DENIED);
+  });
+
+  it('lets the worker mark a pending document failed with its reason', async () => {
+    await seedDocument();
+    const worker = await connectAs('autoporada_worker');
+    try {
+      await worker.query('BEGIN');
+      const settled = await worker.query(
+        `UPDATE generated_documents SET pdf_status = 'failed', pdf_failure = 'unavailable'
+          WHERE id = $1 AND pdf_status = 'pending' RETURNING id`,
+        [DOC],
+      );
+      expect(settled.rowCount).toBe(1);
+      await worker.query('ROLLBACK');
+    } finally {
+      await worker.end();
+    }
+  });
+
+  it('keeps the reason out of the worker’s sight: it writes it, never reads it', async () => {
+    await seedDocument();
+    expect(
+      await sqlstateAs('autoporada_worker', `SELECT pdf_failure FROM generated_documents`),
+    ).toBe(DENIED);
   });
 
   it('lets the worker settle a pending document and delete its source', async () => {

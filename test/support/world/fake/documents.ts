@@ -57,6 +57,7 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
         docxSha256: sha256(docx),
         pdfStatus: 'pending',
         pdfSha256: null,
+        pdfFailure: null,
         generatedAt: ctx.now,
         snapshot,
         docx,
@@ -117,8 +118,8 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
       if (!row || row.pdfStatus !== 'pending') return false;
       documents.set(
         id,
-        result === 'failed'
-          ? { ...row, pdfStatus: 'failed', source: null }
+        'failure' in result
+          ? { ...row, pdfStatus: 'failed', pdfFailure: result.failure, source: null }
           : {
               ...row,
               pdf: result.pdf,

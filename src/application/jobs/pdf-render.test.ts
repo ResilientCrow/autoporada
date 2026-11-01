@@ -113,7 +113,33 @@ describe('the pdf.render handler', () => {
     });
     const { record, pdf } = await stored(document.id);
     expect(record?.pdfStatus).toBe('failed');
+    expect(record?.pdfFailure).toBe('unavailable');
     expect(pdf).toBeNull();
+  });
+
+  it.each([
+    ['convert.timeout', 'timeout'],
+    ['convert.http.422', 'refused'],
+    ['convert.not-pdf', 'not-pdf'],
+    ['convert.too-large', 'too-large'],
+  ] as const)('stores why the last attempt failed: %s is %s', async (code, reason) => {
+    const { converter, deps } = setup();
+    const document = await generated();
+    converter.script({ ok: false, code });
+
+    await JOB_HANDLERS['pdf.render'](deps, job(document.id, PDF_RENDER_ATTEMPTS));
+
+    expect((await stored(document.id)).record).toMatchObject({
+      pdfStatus: 'failed',
+      pdfFailure: reason,
+    });
+  });
+
+  it('stores no reason for a PDF that was made', async () => {
+    const { deps } = setup();
+    const document = await generated();
+    await JOB_HANDLERS['pdf.render'](deps, job(document.id));
+    expect((await stored(document.id)).record?.pdfFailure).toBeNull();
   });
 
   it('skips a document that is not there', async () => {
@@ -172,6 +198,7 @@ describe('the pdf.render handler', () => {
       expect(outcome).toEqual({ kind: 'done', code: 'failed.error' });
       const { record, pdf } = await stored(document.id);
       expect(record?.pdfStatus).toBe('failed');
+      expect(record?.pdfFailure).toBe('error');
       expect(pdf).toBeNull();
     });
 

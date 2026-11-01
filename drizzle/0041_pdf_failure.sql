@@ -1,0 +1,2 @@
+ALTER TABLE "generated_documents" ADD COLUMN "pdf_failure" text;--> statement-breakpoint
+ALTER TABLE "generated_documents" ADD CONSTRAINT "generated_documents_pdf_failure" CHECK ("generated_documents"."pdf_failure" IS NULL OR ("generated_documents"."pdf_status" = 'failed' AND "generated_documents"."pdf_failure" IN ('timeout', 'unavailable', 'refused', 'not-pdf', 'too-large', 'error')));

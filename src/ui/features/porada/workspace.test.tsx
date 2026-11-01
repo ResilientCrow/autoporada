@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { FAILURE_CAUSES, type DownloadError } from '@/contracts';
+import { FAILURE_CAUSES, PDF_FAILURES, type DownloadError, type PdfFailure } from '@/contracts';
 import { DEFAULT_DEADLINE, deadline } from '@/domain/calendar';
 import type { DocumentModel } from '@/document';
 import { instantToWallClock, parseIsoDate, toIsoDate, toIsoTime } from '@/domain/time';
@@ -31,7 +31,13 @@ const generate = vi.fn(async () => ({
   ok: true as const,
   data: { documentId: '00000000-0000-4000-8000-000000000001', version: 4 },
 }));
-const GENERATED = { monday: MONDAY, date: '9. 11. 2026', time: '14:05', pdf: 'ready' } as const;
+const GENERATED = {
+  monday: MONDAY,
+  date: '9. 11. 2026',
+  time: '14:05',
+  pdf: 'ready',
+  pdfFailure: null,
+} as const;
 
 const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   monday: MONDAY,
@@ -127,12 +133,50 @@ describe('Workspace', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
-  it('says where a PDF stands until it can be downloaded', () => {
-    for (const pdf of ['pending', 'failed'] as const) {
-      const html = render({ status: 'generated', generated: { ...GENERATED, pdf } });
-      expect(html).toContain(porada.document[pdf]);
+  it('says a PDF is still being made, and links no PDF', () => {
+    const html = render({ status: 'generated', generated: { ...GENERATED, pdf: 'pending' } });
+    expect(html).toContain(porada.document.pending);
+    expect(html).not.toContain('/dokument/pdf');
+  });
+
+  describe('a PDF that failed', () => {
+    const failed = (pdfFailure: PdfFailure | null) =>
+      render({ status: 'generated', generated: { ...GENERATED, pdf: 'failed', pdfFailure } });
+
+    it.each(PDF_FAILURES)('says why, for %s, then falls back to the DOCX', (reason) => {
+      const html = failed(reason);
+      expect(html).toContain(`${porada.document.failed[reason]} ${porada.document.fallback}`);
+      expect(html).toContain(`href="/porada/${MONDAY}/dokument/docx"`);
       expect(html).not.toContain('/dokument/pdf');
-    }
+      expect(cspMarkupProblems(html)).toEqual([]);
+    });
+
+    it('reads a failure stored before the reason existed as an error', () => {
+      expect(failed(null)).toContain(`${porada.document.failed.error} ${porada.document.fallback}`);
+    });
+
+    it('words each reason differently, and the same in the archive', () => {
+      expect(new Set(PDF_FAILURES.map((reason) => porada.document.failed[reason])).size).toBe(
+        PDF_FAILURES.length,
+      );
+      const html = renderToStaticMarkup(
+        <ArchivePage
+          view={{
+            problem: null,
+            documents: [
+              {
+                ...GENERATED,
+                pdf: 'failed',
+                pdfFailure: 'too-large',
+                meeting: 'pondělí 9. listopadu 2026',
+              },
+            ],
+          }}
+        />,
+      );
+      expect(html).toContain(porada.document.failed['too-large']);
+      expect(html).not.toContain(porada.document.failed.timeout);
+    });
   });
 });
 

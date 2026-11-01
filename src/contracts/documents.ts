@@ -18,10 +18,29 @@ export const DOWNLOAD_ERRORS: readonly DownloadError[] = [
 export const isDownloadError = (value: unknown): value is DownloadError =>
   (DOWNLOAD_ERRORS as readonly unknown[]).includes(value);
 
+/**
+ * Why a PDF could not be made (ADR 0044): the converter did not answer in time, was not there,
+ * refused the document, answered with something that is no PDF, answered with too much, or
+ * anything else. Stored with a failed PDF; a failure from before the column has none, which the
+ * page reads as `error`.
+ */
+export const PDF_FAILURES = [
+  'timeout',
+  'unavailable',
+  'refused',
+  'not-pdf',
+  'too-large',
+  'error',
+] as const;
+
+export type PdfFailure = (typeof PDF_FAILURES)[number];
+
 /** Where a generated document stands, for the workspace, the preview and the archive (ADR 0038). */
 export const documentInfo = z.strictObject({
   generatedAt: z.iso.datetime(),
   pdfStatus: z.enum(['pending', 'ready', 'failed']),
+  /** Why the PDF failed; null unless it did, and for a failure from before the reason was kept. */
+  pdfFailure: z.enum(PDF_FAILURES).nullable(),
 });
 
 /** One file of the porada's document, by the porada's Monday. */

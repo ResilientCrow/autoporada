@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
 import { check, integer, jsonb, pgEnum, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
 
+import { PDF_FAILURES } from '@/contracts';
+
 import { at, bytea, id } from './columns';
 import { issues } from './issues';
 
@@ -27,6 +29,8 @@ export const generatedDocuments = pgTable(
     pdf: bytea(),
     pdfSha256: text(),
     pdfStatus: pdfStatus().notNull().default('pending'),
+    /** Why the conversion failed (ADR 0044); null unless it did, and for a failure from before the column. */
+    pdfFailure: text({ enum: PDF_FAILURES }),
     generatedAt: at().notNull().defaultNow(),
     pdfAt: at(),
   },
@@ -40,6 +44,12 @@ export const generatedDocuments = pgTable(
     check(
       'generated_documents_pdf',
       sql`(${t.pdfStatus} = 'ready') = (${t.pdf} IS NOT NULL AND ${t.pdfSha256} IS NOT NULL AND ${t.pdfAt} IS NOT NULL)`,
+    ),
+    check(
+      'generated_documents_pdf_failure',
+      sql`${t.pdfFailure} IS NULL OR (${t.pdfStatus} = 'failed' AND ${t.pdfFailure} IN (${sql.raw(
+        PDF_FAILURES.map((reason) => `'${reason}'`).join(', '),
+      )}))`,
     ),
   ],
 );

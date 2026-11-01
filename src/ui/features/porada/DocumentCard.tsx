@@ -1,3 +1,4 @@
+import type { PdfFailure } from '@/contracts';
 import { porada } from '@/ui/copy';
 import { Card, DownloadLink } from '@/ui/kit';
 
@@ -8,6 +9,16 @@ export interface GeneratedView {
   readonly date: string;
   readonly time: string;
   readonly pdf: 'pending' | 'ready' | 'failed';
+  /** Why the PDF failed; null unless it did, and for a failure from before the reason was kept. */
+  readonly pdfFailure: PdfFailure | null;
+}
+
+/** The PDF's place while there is no file: still being made, or why not, then the DOCX to fall back on. */
+function pdfNote(view: GeneratedView): string {
+  if (view.pdf === 'failed') {
+    return `${porada.document.failed[view.pdfFailure ?? 'error']} ${porada.document.fallback}`;
+  }
+  return porada.document.pending;
 }
 
 const href = (monday: string, format: 'docx' | 'pdf') =>
@@ -24,7 +35,7 @@ export function DocumentLinks({ view }: { readonly view: GeneratedView }) {
         {view.pdf === 'ready' ? (
           <DownloadLink href={href(view.monday, 'pdf')}>{porada.document.pdf}</DownloadLink>
         ) : (
-          porada.document[view.pdf]
+          pdfNote(view)
         )}
       </li>
     </ul>

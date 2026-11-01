@@ -1,8 +1,19 @@
+import type { PdfFailure } from '@/contracts';
 import { countWord, type PluralForms } from '@/domain/cs';
 
 const POINT: PluralForms = { one: 'bod', few: 'body', many: 'bodů' };
 const DRAFT: PluralForms = { one: 'zpráva', few: 'zprávy', many: 'zpráv' };
 const NAME: PluralForms = { one: 'jméno', few: 'jména', many: 'jmen' };
+
+/** Why a PDF could not be made (ADR 0044); one sentence per reason, and a failure from before the reason is `error`. */
+const PDF_FAILED = {
+  timeout: 'Převod do\u00a0PDF trval příliš dlouho.',
+  unavailable: 'Převodník PDF neběží nebo je nedostupný.',
+  refused: 'Převodník PDF dokument odmítl. Dejte to prosím vědět správci.',
+  'not-pdf': 'Převodník PDF nevrátil platné PDF. Dejte to prosím vědět správci.',
+  'too-large': 'PDF by bylo příliš velké.',
+  error: 'Převod do\u00a0PDF selhal. Dejte to prosím vědět správci.',
+} as const satisfies Record<PdfFailure, string>;
 
 /** „Porada“: where the headmaster prepares the weekly meeting and its document. */
 export const porada = {
@@ -83,7 +94,9 @@ export const porada = {
     docx: 'Stáhnout DOCX',
     pdf: 'Stáhnout PDF',
     pending: 'PDF se ještě připravuje. Načtěte stránku za chvíli.',
-    failed: 'PDF se nepodařilo vytvořit. Stáhněte DOCX a\u00a0uložte ho jako PDF ve Wordu.',
+    /** Why the PDF could not be made (ADR 0044); `fallback` follows. A failure from before the reason is `error`. */
+    failed: PDF_FAILED,
+    fallback: 'Stáhněte DOCX a\u00a0uložte ho jako PDF ve Wordu.',
   },
   /** A download that gave no file; `failures` adds the reason (ADR 0044). */
   download: {

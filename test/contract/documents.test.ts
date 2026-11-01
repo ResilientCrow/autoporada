@@ -10,6 +10,7 @@ import {
   type Principal,
   type Tx,
 } from '@/application/ports';
+import { PDF_FAILURES } from '@/contracts';
 import { addDays, calDate } from '@/domain/time';
 
 import { issueFixtures } from '../support/issues';
@@ -70,6 +71,7 @@ describe('DocumentRepo (port contract)', () => {
       docxSha256: DOCX_SHA256,
       pdfStatus: 'pending',
       pdfSha256: null,
+      pdfFailure: null,
       generatedAt: world.clock.now(),
     });
   });
@@ -157,7 +159,9 @@ describe('DocumentRepo (port contract)', () => {
         pdfSha256: createHash('sha256').update(PDF).digest('hex'),
       });
       // only from pending: neither another PDF nor a failure changes it
-      expect(await asWorker((tx) => tx.documents.settlePdf(document.id, 'failed'))).toBe(false);
+      expect(
+        await asWorker((tx) => tx.documents.settlePdf(document.id, { failure: 'error' })),
+      ).toBe(false);
       expect(
         await asWorker((tx) =>
           tx.documents.settlePdf(document.id, { pdf: new TextEncoder().encode('%PDF-other') }),
@@ -170,7 +174,9 @@ describe('DocumentRepo (port contract)', () => {
 
     it('marks a document failed, drops the source, and the DOCX stays', async () => {
       const document = await generated();
-      expect(await asWorker((tx) => tx.documents.settlePdf(document.id, 'failed'))).toBe(true);
+      expect(
+        await asWorker((tx) => tx.documents.settlePdf(document.id, { failure: 'error' })),
+      ).toBe(true);
 
       expect(await asWorker((tx) => tx.documents.toConvert(document.id), 'read')).toEqual({
         pdfStatus: 'failed',
@@ -183,8 +189,47 @@ describe('DocumentRepo (port contract)', () => {
       });
     });
 
+    it('keeps why the conversion failed, for every reason, and none for a pending or a ready one', async () => {
+      const pending = await generated();
+      expect(pending.pdfFailure).toBeNull();
+      const ready = await generated();
+      await asWorker((tx) => tx.documents.settlePdf(ready.id, { pdf: PDF }));
+      expect(await read((tx) => tx.documents.forIssue(ready.issueId))).toMatchObject({
+        pdfStatus: 'ready',
+        pdfFailure: null,
+      });
+      for (const failure of PDF_FAILURES) {
+        const document = await generated();
+        expect(
+          await asWorker((tx) => tx.documents.settlePdf(document.id, { failure })),
+          failure,
+        ).toBe(true);
+        expect(await read((tx) => tx.documents.forIssue(document.issueId))).toMatchObject({
+          pdfStatus: 'failed',
+          pdfFailure: failure,
+        });
+        const archived = (await read((tx) => tx.documents.archive())).find(
+          (d) => d.id === document.id,
+        );
+        expect(archived).toMatchObject({ pdfStatus: 'failed', pdfFailure: failure });
+      }
+    });
+
+    it('does not change the reason of a settled document', async () => {
+      const document = await generated();
+      await asWorker((tx) => tx.documents.settlePdf(document.id, { failure: 'timeout' }));
+      expect(
+        await asWorker((tx) => tx.documents.settlePdf(document.id, { failure: 'refused' })),
+      ).toBe(false);
+      expect(await read((tx) => tx.documents.forIssue(document.issueId))).toMatchObject({
+        pdfFailure: 'timeout',
+      });
+    });
+
     it('does not settle an unknown document', async () => {
-      expect(await asWorker((tx) => tx.documents.settlePdf(UNKNOWN_ID, 'failed'))).toBe(false);
+      expect(await asWorker((tx) => tx.documents.settlePdf(UNKNOWN_ID, { failure: 'error' }))).toBe(
+        false,
+      );
     });
   });
 
@@ -227,7 +272,7 @@ describe('DocumentRepo (port contract)', () => {
           role,
         ).rejects.toBeInstanceOf(ScopeViolation);
         await expect(
-          world.tx(user, (tx) => tx.documents.settlePdf(document.id, 'failed')),
+          world.tx(user, (tx) => tx.documents.settlePdf(document.id, { failure: 'error' })),
           role,
         ).rejects.toBeInstanceOf(ScopeViolation);
       }

@@ -6,6 +6,7 @@ import {
   isDownloadError,
   type documentInfo,
   type DownloadError,
+  type PdfFailure,
   type issuePreviewOutput,
   type issueWorkspaceOutput,
 } from '@/contracts';
@@ -39,11 +40,19 @@ interface GeneratedModel {
   readonly date: string;
   readonly time: string;
   readonly pdf: z.output<typeof documentInfo>['pdfStatus'];
+  /** Why the PDF failed; null unless it did, and for a failure from before the reason was kept. */
+  readonly pdfFailure: PdfFailure | null;
 }
 
 function generatedOf(monday: string, info: z.output<typeof documentInfo>): GeneratedModel {
   const { date, time } = instantToWallClock(new Date(info.generatedAt));
-  return { monday, date: formatNumericDate(date), time: formatClock(time), pdf: info.pdfStatus };
+  return {
+    monday,
+    date: formatNumericDate(date),
+    time: formatClock(time),
+    pdf: info.pdfStatus,
+    pdfFailure: info.pdfFailure,
+  };
 }
 
 const generatedModel = (monday: string, info: z.output<typeof documentInfo> | null) =>

@@ -19,6 +19,7 @@ const DOCUMENT_ROW = {
   docxSha256: generatedDocuments.docxSha256,
   pdfStatus: generatedDocuments.pdfStatus,
   pdfSha256: generatedDocuments.pdfSha256,
+  pdfFailure: generatedDocuments.pdfFailure,
   generatedAt: generatedDocuments.generatedAt,
 };
 
@@ -112,8 +113,8 @@ export function createDocumentRepo(db: TxDatabase, ctx: TxContext): DocumentRepo
     async settlePdf(id, result) {
       systemOnly();
       const set =
-        result === 'failed'
-          ? { pdfStatus: 'failed' as const }
+        'failure' in result
+          ? { pdfStatus: 'failed' as const, pdfFailure: result.failure }
           : {
               pdf: result.pdf,
               pdfSha256: sha256(result.pdf),

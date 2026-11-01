@@ -64,6 +64,66 @@ describe('generated_documents guard, in PostgreSQL (migration 0039)', () => {
     ).toBe('allowed');
   });
 
+  it('allows the reason in the settle that marks the PDF failed, and nowhere else afterwards', async () => {
+    const id = await pendingDocument();
+    expect(
+      await ownerOutcome(
+        `UPDATE generated_documents SET pdf_status = 'failed', pdf_failure = 'timeout' WHERE id = $1`,
+        [id],
+      ),
+    ).toBe('allowed');
+    for (const change of [`pdf_failure = 'refused'`, `pdf_failure = NULL`]) {
+      expect(
+        await ownerOutcome(`UPDATE generated_documents SET ${change} WHERE id = $1`, [id]),
+        change,
+      ).toBe(DENIED);
+    }
+    const rows = await world.pg?.owner<{ pdf_failure: string }>(
+      `SELECT pdf_failure FROM generated_documents WHERE id = $1`,
+      [id],
+    );
+    expect(rows).toEqual([{ pdf_failure: 'timeout' }]);
+  });
+
+  it('refuses a reason on a ready document, and on one still pending', async () => {
+    const CHECK = '23514';
+    const ready = await pendingDocument();
+    expect(
+      await ownerOutcome(
+        `UPDATE generated_documents
+            SET pdf = '\\x255044462d', pdf_sha256 = $2, pdf_status = 'ready', pdf_at = now(),
+                pdf_failure = 'error'
+          WHERE id = $1`,
+        [ready, PDF_SHA],
+      ),
+    ).toBe(CHECK);
+    const pending = await pendingDocument();
+    expect(
+      await ownerOutcome(`UPDATE generated_documents SET pdf_failure = 'error' WHERE id = $1`, [
+        pending,
+      ]),
+    ).toBe(CHECK);
+  });
+
+  it.each(['fire', '', 'Timeout'])('refuses the reason %j', async (reason) => {
+    const id = await pendingDocument();
+    expect(
+      await ownerOutcome(
+        `UPDATE generated_documents SET pdf_status = 'failed', pdf_failure = $2 WHERE id = $1`,
+        [id, reason],
+      ),
+    ).toBe('23514');
+  });
+
+  it('accepts a failed document with no reason, as the ones before the column are', async () => {
+    const id = await pendingDocument();
+    expect(
+      await ownerOutcome(`UPDATE generated_documents SET pdf_status = 'failed' WHERE id = $1`, [
+        id,
+      ]),
+    ).toBe('allowed');
+  });
+
   it.each([
     ['docx', `docx = '\\x00'`],
     ['docx_sha256', `docx_sha256 = '${'c'.repeat(64)}'`],

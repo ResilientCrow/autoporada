@@ -5,6 +5,9 @@ import {
   type JobHandler,
   type JobOutcome,
 } from '@/application/ports';
+import type { PdfFailure } from '@/contracts';
+
+import { pdfFailureOf } from './pdf-failure';
 
 /**
  * Converts a generated document's DOCX to its PDF (ADR 0038): a read transaction loads the staged
@@ -21,7 +24,7 @@ export const pdfRender: JobHandler<'pdf.render'> = async ({ db, clock, converter
     now: clock.now(),
     requestId: job.id,
   });
-  const settle = (result: { readonly pdf: Uint8Array } | 'failed') =>
+  const settle = (result: { readonly pdf: Uint8Array } | { readonly failure: PdfFailure }) =>
     db.transaction(context(), { mode: 'write', transactionTimeoutMs: JOB_TX_TIMEOUT_MS }, (tx) =>
       tx.documents.settlePdf(documentId, result),
     );
@@ -41,7 +44,9 @@ export const pdfRender: JobHandler<'pdf.render'> = async ({ db, clock, converter
     if (!result.ok && job.attempt < PDF_RENDER_ATTEMPTS) {
       return { kind: 'retry', code: result.code };
     }
-    const settled = await settle(result.ok ? { pdf: result.pdf } : 'failed');
+    const settled = await settle(
+      result.ok ? { pdf: result.pdf } : { failure: pdfFailureOf(result.code) },
+    );
     if (!settled) return { kind: 'done', code: 'already.settled' };
     return result.ok
       ? { kind: 'done', code: 'rendered' }
@@ -54,7 +59,7 @@ export const pdfRender: JobHandler<'pdf.render'> = async ({ db, clock, converter
     if (job.attempt < PDF_RENDER_ATTEMPTS) throw error;
     // The last attempt: give the PDF a final state. If even that cannot be written, the fault stands.
     try {
-      if (!(await settle('failed'))) return { kind: 'done', code: 'already.settled' };
+      if (!(await settle({ failure: 'error' }))) return { kind: 'done', code: 'already.settled' };
     } catch {
       throw error;
     }

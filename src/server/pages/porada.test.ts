@@ -135,6 +135,23 @@ describe('poradaPage', () => {
     });
   });
 
+  it('carries why a PDF failed, or none for a failure from before the reason', async () => {
+    as('headmaster');
+    for (const pdfFailure of ['too-large', null]) {
+      const document = {
+        generatedAt: '2026-11-09T13:05:00.000Z',
+        pdfStatus: 'failed',
+        pdfFailure,
+      };
+      answer({
+        'issues.workspace': { working: null, slot: { ...SLOT, status: 'generated', document } },
+      });
+      expect(await poradaPage('2026-11-09')).toMatchObject({
+        model: { generated: { pdf: 'failed', pdfFailure } },
+      });
+    }
+  });
+
   it('has no movedFrom when held on its Monday, and knows when the deadline has passed', async () => {
     as('headmaster');
     answer({
@@ -316,6 +333,7 @@ describe('archivePage', () => {
             meetingDate: '2026-11-11',
             generatedAt: '2026-11-09T13:05:00.000Z',
             pdfStatus: 'failed',
+            pdfFailure: 'refused',
           },
         ],
       },
@@ -331,6 +349,7 @@ describe('archivePage', () => {
             date: '9. 11. 2026',
             time: '14:05',
             pdf: 'failed',
+            pdfFailure: 'refused',
           },
         ],
       });

@@ -110,7 +110,9 @@ export {
   downloadDocumentOutput,
   fileBytes,
   isDownloadError,
+  PDF_FAILURES,
   type DownloadError,
+  type PdfFailure,
 } from './documents';
 export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
 export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';

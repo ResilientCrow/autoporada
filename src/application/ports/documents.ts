@@ -1,3 +1,4 @@
+import type { PdfFailure } from '@/contracts';
 import type { CalDate } from '@/domain/time';
 import type { IssueSnapshot } from '@/snapshot';
 
@@ -12,6 +13,8 @@ export interface DocumentRecord {
   readonly docxSha256: string;
   readonly pdfStatus: PdfStatus;
   readonly pdfSha256: string | null;
+  /** Why the PDF failed; null unless it did, and for a failure from before the reason was kept. */
+  readonly pdfFailure: PdfFailure | null;
   readonly generatedAt: Date;
 }
 
@@ -63,10 +66,14 @@ export interface DocumentRepo {
     id: string,
   ): Promise<{ readonly pdfStatus: PdfStatus; readonly docx: Uint8Array | null } | null>;
   /**
-   * Stores the PDF (hashed here) or marks it failed, and drops the staged DOCX, only while the PDF
-   * is pending; false, with nothing changed, otherwise. System only.
+   * Stores the PDF (hashed here) or marks it failed with its reason, in the same update, and drops
+   * the staged DOCX, only while the PDF is pending; false, with nothing changed, otherwise. System
+   * only.
    */
-  settlePdf(id: string, result: { readonly pdf: Uint8Array } | 'failed'): Promise<boolean>;
+  settlePdf(
+    id: string,
+    result: { readonly pdf: Uint8Array } | { readonly failure: PdfFailure },
+  ): Promise<boolean>;
 }
 
 /** The `pdf.render` runs before a PDF is marked failed (the queue retries the ones before). */
