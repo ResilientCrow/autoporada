@@ -27,6 +27,20 @@ export interface PointRecord {
   readonly updatedAt: Date;
 }
 
+/** Where a point stands, as a fact about it alone. */
+export interface PointStanding {
+  readonly id: string;
+  readonly state: PointState;
+  readonly version: number;
+}
+
+/** A point `close` moved: its previous state, and the version after. */
+export interface ClosedPoint {
+  readonly id: string;
+  readonly from: PointState;
+  readonly version: number;
+}
+
 /** What `create` writes; the author is the transaction's user. */
 export interface NewPoint {
   /** The draft's id in the author's browser: a retried create finds the row it made. */
@@ -227,15 +241,33 @@ export interface PointRepo {
    * The points that belong to the issue of `monday` whose meeting is on `meetingDate` (ADR 0029,
    * `inIssue`): approved, due by `monday` (`greatest(earliest_monday, hand_in_monday)`), and for a
    * report only when its last day is before `meetingDate`. Cumulative: a point stays in every
-   * issue from its due Monday on. Within the principal's read scope, in the order handed in
+   * issue from its due Monday on. The report of an approved akce (the point an approved akce's
+   * `report_point_id` names) goes by the akce instead (ADR 0049): it belongs to the issue when
+   * the akce's last day is from `since` (`reportsSince`) to the day before `meetingDate`, whatever
+   * its hand-in Monday. Within the principal's read scope, in the order handed in
    * (`submitted_at`, ties to the lower id). With `lock` it holds the rows (SELECT … FOR UPDATE)
    * until the transaction ends; generation takes it, a preview does not.
    */
   eligibleFor(
     monday: CalDate,
     meetingDate: CalDate,
-    options?: { readonly lock?: boolean },
+    options: { readonly since: CalDate; readonly lock?: boolean },
   ): Promise<readonly PointRecord[]>;
+  /**
+   * Where each of these points stands, whoever wrote it and whatever the read scope, as facts: no
+   * title, no text, no author (SSU-5: drafts stay with their author). Unknown ids are left out.
+   * What the generation reads of the report points of the akce owed to a porada (ADR 0049).
+   */
+  statesOf(ids: readonly string[]): Promise<readonly PointStanding[]>;
+  /**
+   * Closes a point that generation prints a placeholder for (ADR 0049): `draft`, `returned` or
+   * `submitted` becomes `withdrawn` (the `close` of POINT_MACHINE) and the point event is appended,
+   * version-checked, whoever wrote the point and whatever the read scope: the scoped event
+   * repository would refuse another's draft. StaleVersion when the version moved, the point is
+   * unknown or it is not in one of those three states. ScopeViolation for a user who may not
+   * `issue.generate`. The caller audits it.
+   */
+  close(id: string, expectedVersion: number): Promise<ClosedPoint>;
   /** What waits for that issue, within the read scope; each list in the order of `eligibleFor`. */
   waitingFor(monday: CalDate, meetingDate: CalDate): Promise<WaitingPoints>;
   /**

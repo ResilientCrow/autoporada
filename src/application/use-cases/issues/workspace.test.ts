@@ -80,7 +80,7 @@ describe('issues.workspace', () => {
         version: null,
         next: '2026-11-02',
         heldNext: slot.heldNext,
-        counts: { waiting: 0, returned: 0, approved: 0, later: 0 },
+        counts: { waiting: 0, returned: 0, approved: 0, later: 0, missing: 0 },
         document: null,
       });
     });
@@ -136,8 +136,37 @@ describe('issues.workspace', () => {
       await fixtures.point({ author, state: 'approved', earliest: W2 });
       await fixtures.point({ author, kind: 'report', eventDate: d('2026-10-22'), earliest: W1 });
       await fixtures.point({ author, kind: 'report', eventDate: d('2026-10-27'), earliest: W1 });
-      expect((await slotOf(W1)).counts).toEqual({ waiting: 2, returned: 1, approved: 2, later: 1 });
+      expect((await slotOf(W1)).counts).toEqual({
+        waiting: 2,
+        returned: 1,
+        approved: 2,
+        later: 1,
+        missing: 0,
+      });
       expect((await slotOf(W2)).counts).toMatchObject({ approved: 4 });
+    });
+
+    it('counts the akce the porada owes a report for and has none, not those with an approved one', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      await fixtures.future({ author, startDate: d('2026-10-21') });
+      await fixtures.future({ author, startDate: d('2026-10-22') });
+      const done = await fixtures.future({ author, startDate: d('2026-10-23') });
+      await fixtures.point({
+        author,
+        kind: 'report',
+        eventDate: d('2026-10-23'),
+        futureItemId: done,
+      });
+      expect((await slotOf(W1)).counts).toMatchObject({ missing: 2, approved: 1 });
+      // The next porada owes none of them.
+      expect((await slotOf(W2)).counts).toMatchObject({ missing: 0 });
+    });
+
+    it('counts no missing report in a generated porada, which has nothing to edit', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      await fixtures.future({ author, startDate: d('2026-10-21') });
+      await fixtures.issue(W1, { status: 'generated' });
+      expect((await slotOf(W1)).counts).toMatchObject({ missing: 0 });
     });
 
     it('counts against the meeting date of a moved slot', async () => {

@@ -66,3 +66,4 @@ export {
   TITLE_GENDERS,
   type TitleGender,
 } from './sentence/opening';
+export { placeholderParagraph, type PlaceholderInput } from './sentence/placeholder';

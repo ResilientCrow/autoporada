@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { calDate, parseIsoDate } from '@/domain/time';
+import { calDate, compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import {
   REMINDER_STAGGER_MS,
   REPORT_LOOKBACK_WEEKS,
   deadline,
+  owedPorada,
   reminderDue,
   reminderSlot,
   reminderStagger,
@@ -151,5 +152,114 @@ describe('reportsSince (the akce whose report goes to a porada)', () => {
       return row(day.toISOString().slice(0, 10), 'skipped');
     });
     expect(reportsSince(MONDAY, all)).toEqual(calDate(2026, 8, 3));
+  });
+});
+
+describe('owedPorada (the porada an akce’s report goes to, ADR 0049)', () => {
+  const row = (
+    monday: string,
+    status: IssueRow['status'] = 'open',
+    meeting = monday,
+  ): IssueRow => ({
+    monday: parseIsoDate(monday),
+    meetingDate: parseIsoDate(meeting),
+    deadlineAt: new Date(`${monday}T00:00:00Z`),
+    status,
+  });
+
+  it('is the next Monday for an akce in the middle of a week, with no rows', () => {
+    // Wednesday 14 October 2026
+    expect(owedPorada(calDate(2026, 10, 14), [])).toEqual(calDate(2026, 10, 19));
+  });
+
+  it('is the next Monday for an akce on a Monday, because the meeting must be after the last day', () => {
+    expect(owedPorada(calDate(2026, 10, 12), [])).toEqual(calDate(2026, 10, 19));
+  });
+
+  it('is the next Monday for an akce on a Sunday', () => {
+    expect(owedPorada(calDate(2026, 10, 18), [])).toEqual(calDate(2026, 10, 19));
+  });
+
+  it('keeps the porada held earlier in the akce’s own week when the akce ends after its meeting', () => {
+    // 12 October's porada was moved to Wednesday 14; an akce ending Tuesday 13 still goes to it
+    expect(owedPorada(calDate(2026, 10, 13), [row('2026-10-12', 'open', '2026-10-14')])).toEqual(
+      calDate(2026, 10, 12),
+    );
+    expect(owedPorada(calDate(2026, 10, 14), [row('2026-10-12', 'open', '2026-10-14')])).toEqual(
+      calDate(2026, 10, 19),
+    );
+  });
+
+  it('steps over skipped Mondays and whatever status the porada has', () => {
+    const rows = [row('2026-10-19', 'skipped'), row('2026-10-26', 'skipped')];
+    expect(owedPorada(calDate(2026, 10, 14), rows)).toEqual(calDate(2026, 11, 2));
+    expect(owedPorada(calDate(2026, 10, 14), [row('2026-10-19', 'generated')])).toEqual(
+      calDate(2026, 10, 19),
+    );
+  });
+
+  it('names a porada by its Monday even when it was moved', () => {
+    expect(owedPorada(calDate(2026, 10, 21), [row('2026-10-19', 'open', '2026-10-22')])).toEqual(
+      calDate(2026, 10, 19),
+    );
+  });
+
+  it('finds a porada moved weeks past its Monday, as reportsSince does', () => {
+    // 12 October's porada moved to 2 November: an akce ending 28 October still goes to it
+    const moved = [row('2026-10-12', 'open', '2026-11-02')];
+    expect(owedPorada(calDate(2026, 10, 28), moved)).toEqual(calDate(2026, 10, 12));
+    expect(owedPorada(calDate(2026, 11, 2), moved)).toEqual(calDate(2026, 11, 9));
+  });
+
+  it.each([1, 2, 3, 5, REPORT_LOOKBACK_WEEKS - 1])(
+    'names the first porada whose reportsSince window holds the last day, with a porada moved %i weeks',
+    (weeks) => {
+      const day = (offset: number) => {
+        const d = new Date(Date.UTC(2026, 9, 12 + offset));
+        return calDate(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+      };
+      const rows = [row('2026-10-12', 'open', toIsoDate(day(7 * weeks)))];
+      const mondays = Array.from({ length: 2 * weeks + 30 }, (_, i) => day(7 * (i - 15)));
+      for (let offset = -3; offset < 7 * (weeks + 3); offset++) {
+        const lastDay = day(offset);
+        const claiming = mondays.filter((monday) => {
+          const porada = rows.find((r) => compareDates(r.monday, monday) === 0);
+          if (porada?.status === 'skipped') return false;
+          const since = reportsSince(
+            monday,
+            rows.filter((r) => compareDates(r.monday, monday) < 0),
+          );
+          return (
+            compareDates(lastDay, since) >= 0 &&
+            compareDates(lastDay, porada?.meetingDate ?? monday) < 0
+          );
+        });
+        expect(claiming[0], toIsoDate(lastDay)).toEqual(owedPorada(lastDay, rows));
+      }
+    },
+  );
+
+  it('is the inverse of reportsSince: the akce of [since, meeting) go to that porada', () => {
+    const rows = [
+      row('2026-10-05', 'generated', '2026-10-06'),
+      row('2026-10-12', 'skipped'),
+      row('2026-10-19', 'open', '2026-10-21'),
+      row('2026-10-26', 'skipped'),
+      row('2026-11-02', 'open'),
+    ];
+    for (let offset = 0; offset < 40; offset++) {
+      const day = new Date(Date.UTC(2026, 9, 1 + offset));
+      const lastDay = calDate(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate());
+      const owed = owedPorada(lastDay, rows);
+      const porada = rows.find((r) => compareDates(r.monday, owed) === 0);
+      expect(porada?.status).not.toBe('skipped');
+      const meeting = porada?.meetingDate ?? owed;
+      const since = reportsSince(
+        owed,
+        rows.filter((r) => compareDates(r.monday, owed) < 0),
+      );
+      expect(compareDates(lastDay, since)).toBeGreaterThanOrEqual(0);
+      expect(compareDates(lastDay, meeting)).toBeLessThan(0);
+    }
   });
 });

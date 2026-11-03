@@ -30,6 +30,7 @@ const POINT_EVENTS: Readonly<Record<PointEvent | 'edit', PointEvent | 'edit'>> =
   reject: 'reject',
   publish: 'publish',
   unpublish: 'unpublish',
+  close: 'close',
   edit: 'edit',
 };
 

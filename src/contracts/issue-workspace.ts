@@ -27,6 +27,8 @@ const slot = z.strictObject({
     approved: z.int().min(0),
     /** Approved reports whose event does not end before the meeting. */
     later: z.int().min(0),
+    /** Akce the porada owes a report for and has no approved one (ADR 0049); 0 unless it is open. */
+    missing: z.int().min(0),
   }),
   /** The generated document; null until the porada is generated. */
   document: documentInfo.nullable(),

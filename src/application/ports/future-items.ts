@@ -211,4 +211,22 @@ export interface FutureItemRepo {
     readonly from: CalDate;
     readonly to: CalDate;
   }): Promise<readonly FutureItemRecord[]>;
+  /**
+   * The akce an issue owes (ADR 0049): approved ones, and ones back in review (`submitted` or
+   * `returned`) after their author's revise of an approved akce, which a revise never takes out of
+   * its porada. Their last day is from `from` to `to`, both
+   * included, and their report is not `missed`, whatever else it says. Within the read scope, in
+   * the order of `forIssue`.
+   */
+  owedTo(window: {
+    readonly from: CalDate;
+    readonly to: CalDate;
+  }): Promise<readonly FutureItemRecord[]>;
+  /**
+   * Closes the report of an owed akce (see `owedTo`) as `missed` (the `miss` of REPORT_MACHINE):
+   * version-checked, the version rises by one, whoever wrote the akce. StaleVersion when the version
+   * moved, the item is unknown, not an owed akce, or its report is already missed. ScopeViolation for a user who
+   * may not `issue.generate`. The caller audits it.
+   */
+  markMissed(id: string, expectedVersion: number): Promise<FutureItemRecord>;
 }

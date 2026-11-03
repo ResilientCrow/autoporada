@@ -7,7 +7,10 @@ import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
 import { addDays, calDate, parseIsoDate, toIsoDate } from '@/domain/time';
 
+import { futureFixtures, readyAkce } from '../../../../test/support/future';
+import { issueFixtures } from '../../../../test/support/issues';
 import {
+  BULLETS,
   doc,
   FIRST_MONDAY,
   START,
@@ -19,10 +22,13 @@ import {
   wire,
 } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
+import { saveFuture, startFutureReport } from '../future';
 import { savePoint, submitPoint } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = pointFixtures(world);
+const akceFixtures = futureFixtures(world);
+const issues = issueFixtures(world);
 
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
 const submit = (by: UserRecord, id: string, content: unknown, expectedVersion = 1) =>
@@ -217,6 +223,113 @@ describe('points.submit', () => {
       const id = await start(author, kind);
       expect((await submit(author, id, content)).ok).toBe(true);
       expect(await get(author, id)).toMatchObject({ handInMonday: addDays(NEXT, 7) });
+    });
+  });
+
+  describe('a report that answers an akce (ADR 0049)', () => {
+    // The akce ends Wednesday 2026-11-11, so it is owed to the porada of Monday 2026-11-16, whose
+    // deadline passes Saturday the 14th at 20.00. The clock is Sunday the 15th: after it.
+    const OWED = calDate(2026, 11, 16);
+    const content = readyReport({ eventDate: '2026-11-10', endDate: '2026-11-11' });
+
+    /** An approved akce that owes a report, and the draft report started for it. */
+    async function answering(akceDates: Record<string, unknown> = {}) {
+      const author = await user();
+      const akce = await akceFixtures.start(author);
+      await world.run(saveFuture, world.as(author), {
+        id: akce,
+        expectedVersion: 1,
+        content: readyAkce(akceDates),
+      });
+      await akceFixtures.moveTo(author, akce, 'approved');
+      world.clock.set(new Date('2026-11-15T10:00:00Z'));
+      const type = await world.seed.pointType({
+        name: 'Seminář',
+        position: 1,
+        defaultBullets: BULLETS,
+      });
+      const started = await world.run(startFutureReport, world.as(author), {
+        id: akce,
+        typeId: type.id,
+      });
+      if (!started.ok) throw new Error(`startReport refused: ${started.error.code}`);
+      return { author, akce, id: started.value.pointId };
+    }
+
+    it('is handed in for the porada the akce is owed to, not the next open slot', async () => {
+      const { author, id } = await answering();
+      expect((await submit(author, id, content)).ok).toBe(true);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: OWED, handInMonday: OWED });
+      expect((await snapshot(id)).issues.map((issue) => toIsoDate(issue.monday))).toContain(
+        '2026-11-16',
+      );
+    });
+
+    it('is placed by the same porada again when it is handed in after a return', async () => {
+      const { author, id } = await answering();
+      await submit(author, id, content);
+      await moveTo(author, id, 'returned');
+      world.clock.set(new Date('2026-11-15T12:00:00Z'));
+      expect((await submit(author, id, content, 3)).ok).toBe(true);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: OWED, handInMonday: OWED });
+    });
+
+    it('steps over a skipped porada to the next one that is held', async () => {
+      const { author, id } = await answering();
+      await issues.issue(OWED, { status: 'skipped' });
+      expect((await submit(author, id, content)).ok).toBe(true);
+      const next = addDays(OWED, 7);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: next, handInMonday: next });
+    });
+
+    it('refuses when the porada it is owed to is already generated, and writes nothing', async () => {
+      const { author, id } = await answering();
+      await issues.issue(OWED, { status: 'generated' });
+      await refuses(id, () => submit(author, id, content), {
+        code: 'rule',
+        rule: 'report-not-due',
+      });
+    });
+
+    it('refuses when the porada it is owed to is a past Monday with no row, and makes no issue', async () => {
+      // Ended Wednesday 2026-10-07: owed to Monday 2026-10-12, five weeks gone, never held.
+      const { author, id } = await answering({ startDate: '2026-10-06', endDate: '2026-10-07' });
+      const before = await world.tx(
+        system('test.seed'),
+        (tx) => tx.issues.calendarBetween(calDate(2026, 9, 1), calDate(2027, 3, 1)),
+        'read',
+      );
+      await refuses(id, () => submit(author, id, content), {
+        code: 'rule',
+        rule: 'report-not-due',
+      });
+      const after = await world.tx(
+        system('test.seed'),
+        (tx) => tx.issues.calendarBetween(calDate(2026, 9, 1), calDate(2027, 3, 1)),
+        'read',
+      );
+      expect(after).toEqual(before);
+    });
+
+    it('goes to a porada moved weeks past its Monday, found beyond one week back', async () => {
+      // 2026-10-26's porada was moved to Monday 2026-11-16; an akce ended Wednesday 2026-11-11 is
+      // still before it, so it is owed to the Monday 2026-10-26 (open, stored).
+      const { author, id } = await answering();
+      await issues.issue(calDate(2026, 10, 26), {
+        status: 'open',
+        meetingDate: calDate(2026, 11, 16),
+      });
+      expect((await submit(author, id, content)).ok).toBe(true);
+      const monday = calDate(2026, 10, 26);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: monday, handInMonday: monday });
+    });
+
+    it('leaves a report with no akce to the first open Monday as before', async () => {
+      world.clock.set(new Date('2026-11-15T10:00:00Z'));
+      const author = await user();
+      const id = await start(author);
+      expect((await submit(author, id, content)).ok).toBe(true);
+      expect(await get(author, id)).toMatchObject({ handInMonday: addDays(OWED, 7) });
     });
   });
 

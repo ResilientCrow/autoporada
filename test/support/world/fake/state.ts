@@ -17,6 +17,7 @@ import {
   type PointTypeRecord,
   type RegistryEntryRecord,
   type RegistryListRecord,
+  type StoredPlaceholder,
   type SessionRecord,
   type StoredSetting,
   type UserRecord,
@@ -58,6 +59,8 @@ export interface FakeState {
   readonly futureItems: Map<string, FakeFutureItem>;
   /** future_events, by id. */
   readonly futureEvents: Map<string, FutureEventRecord>;
+  /** report_placeholders, by future item id. */
+  readonly reportPlaceholders: Map<string, StoredPlaceholder>;
   /** mail_ledger, by dedupe key. */
   readonly mailLedger: Map<string, LedgerRow>;
   /** generated_documents, by id. */
@@ -114,6 +117,7 @@ export const emptyState = (): FakeState => ({
   pointEvents: new Map(),
   futureItems: new Map(),
   futureEvents: new Map(),
+  reportPlaceholders: new Map(),
   mailLedger: new Map(),
   documents: new Map(),
   mailGate: { notBefore: null, code: null },

@@ -18,9 +18,11 @@ import { createMailLedgerRepo } from './repos/mail-ledger';
 import { createPointTypeRepo } from './repos/point-types';
 import { createPointIssueReads } from './repos/points-issue';
 import { createPointReads } from './repos/points-read';
+import { createPointCloseRepo } from './repos/points-close';
 import { createPointReportReads } from './repos/points-reports';
 import { createPointWrites } from './repos/points-write';
 import { createRegistryRepo } from './repos/registry';
+import { createReportPlaceholderRepo } from './repos/report-placeholders';
 import { createSessionRepo } from './repos/sessions';
 import { createSettingsRepo } from './repos/settings';
 import { createSignInRepo } from './repos/sign-ins';
@@ -53,6 +55,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
       ...createPointReads(db, ctx),
       ...createPointIssueReads(db, ctx),
       ...createPointReportReads(db, ctx),
+      ...createPointCloseRepo(db, ctx),
       ...createPointWrites(db, ctx),
     }),
     pointEvents: guard(createPointEventRepo(db, ctx)),
@@ -62,6 +65,7 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
       ...createFutureReportReads(db, ctx),
     }),
     futureEvents: guard(createFutureEventRepo(db, ctx)),
+    reportPlaceholders: guard(createReportPlaceholderRepo(db, ctx)),
     audit: guard(createAuditWriter(db, ctx)),
     jobs: guard(jobsOn(guarded)),
     mailLedger: guard(createMailLedgerRepo(db, ctx)),

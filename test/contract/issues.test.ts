@@ -271,6 +271,30 @@ describe('IssueRepo (port contract)', () => {
     });
   });
 
+  describe('lock (the row of a generation)', () => {
+    const lock = (id: string, by: Principal = cli) => world.tx(by, (tx) => tx.issues.lock(id));
+
+    it('returns the row as it stands and changes nothing', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      expect(await lock(issue.id)).toEqual(issue);
+      expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toEqual([issue]);
+    });
+
+    it('is StaleVersion for an unknown id', async () => {
+      await expect(lock('00000000-0000-7000-8000-999999999999')).rejects.toBeInstanceOf(
+        StaleVersion,
+      );
+    });
+
+    it('refuses a write in a read transaction', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      // As SELECT ... FOR UPDATE: PostgreSQL refuses a row lock in READ ONLY.
+      await expect(world.tx(cli, (tx) => tx.issues.lock(issue.id), 'read')).rejects.toBeInstanceOf(
+        DatabaseFailure,
+      );
+    });
+  });
+
   describe('touch (the version of an outline write)', () => {
     const touch = (row: IssueRecord, version = row.version, by: Principal = cli) =>
       world.tx(by, async (tx) => {

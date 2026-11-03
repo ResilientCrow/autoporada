@@ -1,4 +1,4 @@
-import { fail, ok, type Outcome } from '@/application/core';
+import { eligiblePoints, fail, ok, type Outcome } from '@/application/core';
 import type { Json, Tx } from '@/application/ports';
 import { toIsoDate } from '@/domain/time';
 import { restoreHeld, type Outline, type OutlineResult } from '@/domain/outline';
@@ -50,7 +50,7 @@ export async function editOutline(
   const { issue } = await ensureIssue(tx, monday, rule);
   if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
   const expected = edit.expectedVersion ?? UNTOUCHED_VERSION;
-  const proposals = await tx.points.eligibleFor(monday, issue.meetingDate);
+  const proposals = await eligiblePoints(tx, monday, issue.meetingDate);
   if (edit.alreadyDone) {
     // A look before the version is taken; nothing is written on this path.
     const peek = await loadEditable(tx, { id: issue.id, monday }, proposals);

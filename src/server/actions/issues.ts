@@ -5,6 +5,7 @@ import {
   moveIssue as moveIssueUseCase,
   setIssueAnnex2 as setIssueAnnex2UseCase,
   setIssueDetails as setIssueDetailsUseCase,
+  setPlaceholder as setPlaceholderUseCase,
   setSkipped as setSkippedUseCase,
 } from '@/application/use-cases';
 
@@ -18,6 +19,12 @@ export const setIssueDetails = defineAction(setIssueDetailsUseCase, { rateLimit:
 
 /** „Uložit“ and „Odebrat přílohu“ on Příloha 2; removing sends an empty document. */
 export const setIssueAnnex2 = defineAction(setIssueAnnex2UseCase, { rateLimit: 'admin' });
+
+/**
+ * „Uložit“ and „Obnovit původní text“ on Chybějící zprávy: the paragraph printed for an akce whose
+ * report is missing (ADR 0049). Not an autosave, so it refreshes the page.
+ */
+export const setPlaceholder = defineAction(setPlaceholderUseCase, { rateLimit: 'admin' });
 
 /** „Přesunout poradu“: a new meeting date with its deadline; the slots in the way are cancelled with it. */
 export const moveIssue = defineAction(moveIssueUseCase, { rateLimit: 'admin' });

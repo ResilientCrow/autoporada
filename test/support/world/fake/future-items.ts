@@ -14,10 +14,12 @@ import {
   type TxContext,
 } from '@/application/ports';
 import { parseResponsible } from '@/contracts';
-import { admits, type Scope } from '@/domain/policy';
+import { admits, can, type Scope } from '@/domain/policy';
+import { REPORT_MACHINE } from '@/domain/review';
 import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
 import { codePoints, newestFirst } from './events';
+import { isOwedAkce } from './future-owed';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
 
@@ -102,6 +104,24 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         return (
           visible(item) &&
           item.state === state &&
+          last !== null &&
+          compareDates(last, meetingDate) >= 0
+        );
+      })
+      .sort(
+        (a, b) =>
+          compareDates(a.content.startDate ?? meetingDate, b.content.startDate ?? meetingDate) ||
+          (a.id < b.id ? -1 : 1),
+      )
+      .map(record);
+  /** `forIssue`'s order over the owed akce (approved, or revised back into review) reaching `meetingDate`. */
+  const owedReaching = (meetingDate: CalDate) =>
+    [...futureItems.values()]
+      .filter((item) => {
+        const last = item.content.endDate ?? item.content.startDate;
+        return (
+          visible(item) &&
+          isOwedAkce(tx.draft, item) &&
           last !== null &&
           compareDates(last, meetingDate) >= 0
         );
@@ -305,6 +325,34 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
     async waitingFor(meetingDate) {
       guard(tx, false);
       return reaching('submitted', meetingDate);
+    },
+    async owedTo({ from, to }) {
+      guard(tx, false);
+      return owedReaching(from).filter((item) => {
+        const last = item.content.endDate ?? item.content.startDate;
+        return item.reportState !== 'missed' && last !== null && compareDates(last, to) <= 0;
+      });
+    },
+    async markMissed(id, expectedVersion) {
+      guard(tx, true);
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+        throw new ScopeViolation();
+      }
+      const before = futureItems.get(id);
+      if (
+        !before ||
+        before.version !== expectedVersion ||
+        !isOwedAkce(tx.draft, before) ||
+        !REPORT_MACHINE.miss.from.includes(before.reportState)
+      ) {
+        throw new StaleVersion();
+      }
+      return save({
+        ...before,
+        reportState: REPORT_MACHINE.miss.to,
+        version: before.version + 1,
+        updatedAt: now,
+      });
     },
     async awaitingReport({ from, to }) {
       guard(tx, false);

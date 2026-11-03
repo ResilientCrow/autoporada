@@ -1,12 +1,10 @@
-import { readSettingValue, readSlots } from '@/application/core';
+import { readReportsSince, readSettingValue, readSlots } from '@/application/core';
 import type { Tx, UserRecord } from '@/application/ports';
 import {
   eventEnd,
   handInSlot,
   REMINDER_DRAFT_DAYS,
   reminderDue,
-  reportLookback,
-  reportsSince,
   type ReminderKind,
 } from '@/domain/calendar';
 import { instantToWallClock, toIsoDate, type CalDate } from '@/domain/time';
@@ -72,8 +70,7 @@ export async function owingAuthors(
   issue: ReminderIssue,
   now: Date,
 ): Promise<readonly string[]> {
-  const { from, to } = reportLookback(issue.monday);
-  const since = reportsSince(issue.monday, await tx.issues.calendarBetween(from, to));
+  const since = await readReportsSince(tx, issue.monday);
   const today = instantToWallClock(now).date;
   const owed = await tx.futureItems.reportsOwed({ from: since, to: today });
   const ended = owed.filter((item) => eventEnd(item).getTime() <= now.getTime());

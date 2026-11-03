@@ -107,6 +107,8 @@ const report = z.strictObject({
   body: richDoc('paragraphs'),
   bullets: z.array(bullet),
   statements: z.array(statement),
+  /** A placeholder for a report nobody delivered (ADR 0049): the document says so in two fixed lines. */
+  missing: z.literal(true).optional(),
 });
 
 const campus = z.enum(['smichov', 'radlice', 'na-vidouli', 'jinde']);

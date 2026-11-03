@@ -38,6 +38,8 @@ function lineOf({ event, note, editedFields, createdAt }: TimelineEntry): string
       return copy.publish;
     case 'unpublish':
       return copy.unpublish;
+    case 'close':
+      return copy.close;
     case 'edit':
       return copy.edit(
         (editedFields ?? []).flatMap((name) => {

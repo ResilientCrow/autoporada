@@ -20,7 +20,15 @@ export type PointState =
   'draft' | 'submitted' | 'returned' | 'approved' | 'rejected' | 'withdrawn' | 'published';
 
 export type PointEvent =
-  'submit' | 'retract' | 'withdraw' | 'approve' | 'return' | 'reject' | 'publish' | 'unpublish';
+  | 'submit'
+  | 'retract'
+  | 'withdraw'
+  | 'approve'
+  | 'return'
+  | 'reject'
+  | 'publish'
+  | 'unpublish'
+  | 'close';
 
 /** The author's moves on their own point besides the submit: „Stáhnout“ and „Zrušit bod“. */
 export type AuthorMove = Extract<PointEvent, 'retract' | 'withdraw'>;
@@ -60,6 +68,8 @@ export const POINT_MACHINE: Machine<PointState, PointEvent, ReviewActor> = {
   publish: { from: ['approved'], to: 'published', allowed: system },
   /** „Odebrat z čísla“ — only while that issue is reopened (checked by the use case). */
   unpublish: { from: ['published'], to: 'approved', allowed: headmaster },
+  /** Generation closes the report of a porada that prints a placeholder for it (ADR 0049). */
+  close: { from: ['draft', 'returned', 'submitted'], to: 'withdrawn', allowed: system },
 };
 
 /**
@@ -119,13 +129,17 @@ export function futureEditNeedsReview(state: FutureState, actor: ReviewActor): b
   return state === 'approved' && author(actor);
 }
 
-export type ReportState = 'none' | 'prompted' | 'written';
-export type ReportEvent = 'prompt' | 'write';
+export type ReportState = 'none' | 'prompted' | 'written' | 'missed';
+export type ReportEvent = 'prompt' | 'write' | 'miss';
 
-/** After an akce ends, its author is asked for the report point; nobody can decline it (ADR 0048). */
+/**
+ * After an akce ends, its author is asked for the report point; nobody can decline it (ADR 0048).
+ * Generation closes a report that was not approved in time as `missed` (ADR 0049); nothing leaves it.
+ */
 export const REPORT_MACHINE: Machine<ReportState, ReportEvent, ReviewActor> = {
   prompt: { from: ['none', 'prompted'], to: 'prompted', allowed: system },
   write: { from: ['none', 'prompted'], to: 'written', allowed: author },
+  miss: { from: ['none', 'prompted', 'written'], to: 'missed', allowed: system },
 };
 
 /** What decides whether an akce is waiting for its report. */

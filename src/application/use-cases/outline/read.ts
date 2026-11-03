@@ -1,4 +1,4 @@
-import { defineUseCase, fail, ok } from '@/application/core';
+import { defineUseCase, eligiblePoints, fail, ok } from '@/application/core';
 import { outlineReadInput, outlineReadOutput } from '@/contracts';
 import { compareDates, toIsoDate } from '@/domain/time';
 import { SECTIONS, type OutlineRow } from '@/domain/outline';
@@ -26,7 +26,7 @@ export const readOutline = defineUseCase({
     if (!slot) return fail({ code: 'not-found' });
 
     const [issue] = await tx.issues.between(monday, monday);
-    const proposals = await tx.points.eligibleFor(monday, slot.meetingDate);
+    const proposals = await eligiblePoints(tx, monday, slot.meetingDate);
     const titles = new Map(proposals.map((p) => [p.id, singleLine(p.content.title)]));
     const { outline, origin } = await loadEditable(
       tx,

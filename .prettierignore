@@ -6,6 +6,7 @@ coverage/
 playwright-report/
 test-results/
 test/golden/
+.claude/
 # Clipboard HTML kept as the office apps write it.
 test/e2e/fixtures/*.html
 

@@ -11,6 +11,7 @@ type FindingCode =
   | 'points-returned'
   | 'akce-waiting'
   | 'late-reports-expected'
+  | 'reports-missing'
   | 'proposal-dropped'
   | 'deadline-ahead'
   | 'source-not-generated'
@@ -84,6 +85,13 @@ export function preflight(
         refs: facts.lateExpected.map(({ id, of, title, due }) => ({ id, of, title, due })),
       }),
       ...(facts.lateDraftsHidden > 0 && { count: facts.lateDraftsHidden }),
+    });
+  }
+  if (facts.missingReports.length > 0) {
+    add({
+      code: 'reports-missing',
+      level: 'warn',
+      refs: facts.missingReports.map(({ id, title }) => ({ id, title, of: 'akce' as const })),
     });
   }
   if (facts.dropped.length > 0)

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { outlineItemPage, outlinePage, newOutlineItemPage } from './outline';
 import { issueTextsPage } from './issue-texts';
+import { missingReportsPage } from './missing-reports';
 import { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
@@ -44,7 +45,7 @@ const SLOT = {
     { monday: '2026-11-16', meetingDate: '2026-11-16' },
     { monday: '2026-11-23', meetingDate: '2026-11-24' },
   ],
-  counts: { waiting: 1, returned: 2, approved: 3, later: 0 },
+  counts: { waiting: 1, returned: 2, approved: 3, later: 0, missing: 0 },
   document: null,
 };
 
@@ -544,5 +545,90 @@ describe('issueTextsPage', () => {
     as('headmaster');
     answer({ 'issues.texts': { error: { code: 'not-found' } } });
     expect(await issueTextsPage('2030-01-07')).toBeNull();
+  });
+});
+
+describe('missingReportsPage', () => {
+  const listing = {
+    monday: '2026-11-09',
+    meetingDate: '2026-11-11',
+    open: true,
+    reports: [
+      {
+        id: 'a-1',
+        title: 'Seminář',
+        startDate: '2026-11-04',
+        endDate: null,
+        state: 'none',
+        paragraph: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
+        original: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
+        own: false,
+        version: 0,
+      },
+      {
+        id: 'a-2',
+        title: 'Výlet',
+        startDate: '2026-11-05',
+        endDate: '2026-11-06',
+        state: 'draft',
+        paragraph: 'Vlastní věta.',
+        original: 'Dne 5. 11. 2026 proběhla akce s názvem Výlet.',
+        own: true,
+        version: 2,
+      },
+    ],
+  };
+
+  it('is null for anyone but the headmaster, without asking a use case', async () => {
+    for (const who of ['staff', 'student', 'submitter'] as const) {
+      as(who);
+      expect(await missingReportsPage('2026-11-09')).toBeNull();
+    }
+    expect(runRegistered).not.toHaveBeenCalled();
+  });
+
+  it('writes the meeting and each akce’s dates out, and carries the rest as read', async () => {
+    as('headmaster');
+    answer({ 'issues.missingReports': listing });
+    expect(await missingReportsPage('2026-11-09')).toEqual({
+      meeting: 'středa 11. listopadu 2026',
+      monday: '2026-11-09',
+      open: true,
+      lines: ['Seznam účastníků nebyl dodán.', 'Vyjádření organizátora nebylo dodáno.'],
+      reports: [
+        {
+          id: 'a-1',
+          title: 'Seminář',
+          dates: '4. 11. 2026',
+          state: 'none',
+          paragraph: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
+          original: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
+          own: false,
+          version: 0,
+        },
+        {
+          id: 'a-2',
+          title: 'Výlet',
+          dates: '5.–6. 11. 2026',
+          state: 'draft',
+          paragraph: 'Vlastní věta.',
+          original: 'Dne 5. 11. 2026 proběhla akce s názvem Výlet.',
+          own: true,
+          version: 2,
+        },
+      ],
+    });
+  });
+
+  it('keeps the closed porada, which has no form', async () => {
+    as('headmaster');
+    answer({ 'issues.missingReports': { ...listing, open: false, reports: [] } });
+    expect(await missingReportsPage('2026-11-09')).toMatchObject({ open: false, reports: [] });
+  });
+
+  it('is null where the Monday is not found', async () => {
+    as('headmaster');
+    answer({ 'issues.missingReports': { error: { code: 'not-found' } } });
+    expect(await missingReportsPage('2030-01-07')).toBeNull();
   });
 });

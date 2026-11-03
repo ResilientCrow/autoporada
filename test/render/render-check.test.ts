@@ -35,10 +35,29 @@ const longPoint10 = (sentences: number) => () =>
     };
   });
 
+const PLACEHOLDER = 'Dne 9. 10. 2026 proběhla akce s názvem Vesmírný seminář.';
+
+/** The replica with its second report a placeholder for a report nobody delivered (ADR 0049). */
+const missingReport = () =>
+  snapshotFixture('template-replica', (raw) => {
+    const reports = raw['reports'] as Record<string, unknown>[];
+    reports[1] = {
+      ...reports[1],
+      body: {
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: PLACEHOLDER }] }],
+      },
+      bullets: [],
+      statements: [],
+      missing: true,
+    };
+  });
+
 const SNAPSHOTS: Record<string, () => ReturnType<NonNullable<(typeof VARIANTS)[string]>>> = {
   ...VARIANTS,
   'long-point-10-a': longPoint10(4),
   'long-point-10-b': longPoint10(12),
+  'missing-report': missingReport,
 };
 
 async function renderPdf(variant: string): Promise<string> {
@@ -75,6 +94,7 @@ describe('PDF render check', () => {
       'annex2',
       'long-point-10-a',
       'long-point-10-b',
+      'missing-report',
     ];
     for (const variant of variants) pdfs[variant] = await renderPdf(variant);
   }, 180_000);
@@ -164,6 +184,24 @@ describe('PDF render check', () => {
     }
     // 150 students fill both columns of at least two pages.
     expect(checkedColumns).toBeGreaterThanOrEqual(3);
+  });
+
+  it('prints a missing report as its sentence and the two fixed lines, under its heading', () => {
+    const text = pages(pdfs['missing-report']!).join('\n').replace(/\s+/g, ' ');
+    const at = text.indexOf('Vesmírný seminář');
+    expect(at).toBeGreaterThan(-1);
+    const rest = text.slice(at);
+    expect(rest).toContain(PLACEHOLDER);
+    expect(rest.indexOf('Seznam účastníků nebyl dodán.')).toBeGreaterThan(
+      rest.indexOf(PLACEHOLDER),
+    );
+    expect(rest.indexOf('Vyjádření organizátora nebylo dodáno.')).toBeGreaterThan(
+      rest.indexOf('Seznam účastníků nebyl dodán.'),
+    );
+    // Nothing else sits between the placeholder's heading and the next point.
+    const point = rest.slice(0, rest.indexOf('Další doposud známé akce školy'));
+    expect(point).not.toContain('účast studentů');
+    expect(point).not.toContain('vyjádření');
   });
 
   it('puts Příloha 2 on a page of its own', () => {

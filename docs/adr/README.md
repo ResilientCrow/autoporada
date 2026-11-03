@@ -54,4 +54,5 @@ record that supersedes it.
 | [0046](0046-the-soft-reminder-asks-for-owed-reports.md) | The soft reminder asks for owed reports, and no one opts out | Accepted; supersedes 0018 item 10, 0020 items 3 and 5 and 0032 item 3 in part |
 | [0047](0047-skip-until-a-chosen-porada.md) | Skip until a chosen porada, from a dialog | Accepted; adds to 0018, 0034 and 0041; adds `Dialog` to the kit |
 | [0048](0048-every-approved-akce-owes-a-report.md) | Every approved akce owes a report, and nobody declines it | Accepted; supersedes 0020 item 4, 0027 items 2 and 3, 0035 item 6 and 0046 items 1 and 3 in part |
+| [0049](0049-an-akce-report-goes-to-its-porada-or-a-placeholder-does.md) | An akce's report goes to its porada, or a placeholder does | Accepted; supersedes 0029 and 0035 item 4 in part (akce reports only); adds to 0038 |
 | [0050](0050-development-clamps-a-negative-measure-end.md) | Development clamps a negative measure end | Accepted; adds to 0023 |

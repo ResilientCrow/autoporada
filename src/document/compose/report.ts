@@ -37,6 +37,12 @@ function bulletLine(bullet: SnapshotBullet, groupOrder?: readonly Salutation[]):
   };
 }
 
+/** What a placeholder report says besides its paragraph (ADR 0049); the page of the paragraph shows them too. */
+export const MISSING_REPORT_LINES: readonly string[] = [
+  'Seznam účastníků nebyl dodán.',
+  'Vyjádření organizátora nebylo dodáno.',
+];
+
 /**
  * One report as a numbered point: body, labelled bullets, then statements. The provoz section
  * and the single-point preview (fed by reportFromContent) both build on it.
@@ -47,6 +53,12 @@ export function reportBlocks(
 ): Block[] {
   return point(report.title, [
     ...richBlocks(report.body, opts.tokens),
+    ...(report.missing
+      ? MISSING_REPORT_LINES.map((line): Block => ({
+          kind: 'body',
+          runs: finalRuns([{ text: line }], opts.tokens),
+        }))
+      : []),
     ...report.bullets.map((b) => bulletLine(b, opts.groupOrder)),
     ...report.statements.map((s) => ({
       kind: 'reportLine' as const,

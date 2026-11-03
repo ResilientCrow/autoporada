@@ -25,6 +25,7 @@ import {
 import { documentArchive, downloadDocument } from './documents';
 import {
   generateIssue,
+  issueMissingReports,
   issuePreview,
   issueWindow,
   issueWorkspace,
@@ -32,6 +33,7 @@ import {
   readIssueTexts,
   setIssueAnnex2,
   setIssueDetails,
+  setPlaceholder,
   setSkipped,
 } from './issues';
 import {
@@ -96,6 +98,7 @@ export {
 export { documentArchive, downloadDocument } from './documents';
 export {
   generateIssue,
+  issueMissingReports,
   issuePreview,
   issueWindow,
   issueWorkspace,
@@ -103,6 +106,7 @@ export {
   readIssueTexts,
   setIssueAnnex2,
   setIssueDetails,
+  setPlaceholder,
   setSkipped,
 } from './issues';
 export {
@@ -166,6 +170,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   getPoint,
   generateIssue,
   getUser,
+  issueMissingReports,
   issuePreview,
   issueWindow,
   issueWorkspace,
@@ -208,6 +213,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   searchGate,
   setIssueAnnex2,
   setIssueDetails,
+  setPlaceholder,
   setSkipped,
   signOut,
   startFutureReport,

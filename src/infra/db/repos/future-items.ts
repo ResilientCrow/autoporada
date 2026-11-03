@@ -153,7 +153,14 @@ export function createFutureItemRepo(
   ctx: TxContext,
 ): Omit<
   FutureItemRepo,
-  'forIssue' | 'waitingFor' | 'awaitingReport' | 'reportsEnding' | 'reportEnding' | 'reportsOwed'
+  | 'forIssue'
+  | 'waitingFor'
+  | 'awaitingReport'
+  | 'owedTo'
+  | 'markMissed'
+  | 'reportsEnding'
+  | 'reportEnding'
+  | 'reportsOwed'
 > {
   const { principal, now } = ctx;
   const byId = (id: string, where: SQL | undefined) =>

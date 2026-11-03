@@ -61,6 +61,7 @@ const POINT_EVENTS = Object.keys({
   reject: 0,
   publish: 0,
   unpublish: 0,
+  close: 0,
   edit: 0,
 } satisfies Record<PointEventName, 0>) as PointEventName[];
 

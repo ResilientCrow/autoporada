@@ -75,6 +75,13 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
         (i) => compareDates(i.monday, from) >= 0 && compareDates(i.monday, to) <= 0,
       );
     },
+    async lock(id) {
+      // The fake runs one transaction at a time, which stands in for the row lock.
+      guard(tx, true);
+      const issue = [...issues.values()].find((i) => i.id === id);
+      if (!issue) throw new StaleVersion();
+      return issue;
+    },
     touch: async (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
     setTexts: async (id, expectedVersion, texts) => {
       const done = versioned(id, expectedVersion, {}, 'issue.edit');

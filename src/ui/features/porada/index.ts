@@ -7,3 +7,4 @@ export { ItemEditor } from './ItemEditor';
 export { DetailsPage } from './DetailsPage';
 export { Annex2Page } from './Annex2Page';
 export { ArchivePage } from './ArchivePage';
+export { MissingReportsPage } from './MissingReportsPage';

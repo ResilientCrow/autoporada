@@ -120,6 +120,11 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
     async calendarBetween(from, to) {
       return calendarRows(between(issues.monday, toIsoDate(from), toIsoDate(to)));
     },
+    async lock(id) {
+      const [row] = await db.select(ISSUE_ROW).from(issues).where(eq(issues.id, id)).for('update');
+      if (!row) throw new StaleVersion();
+      return toRecord(row);
+    },
     touch: (id, expectedVersion) => versioned(id, expectedVersion, {}, 'issue.edit'),
     setTexts: (id, expectedVersion, texts) =>
       versioned(

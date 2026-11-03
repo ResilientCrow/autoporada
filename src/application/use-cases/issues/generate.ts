@@ -1,5 +1,6 @@
 import { defineUseCase, fail, fromTransition, ok } from '@/application/core';
 import type { AuditTarget, PointRecord, Tx } from '@/application/ports';
+import type { MissingReport } from './assemble-types';
 import { generateIssueInput, generateIssueOutput } from '@/contracts';
 import { composeDocument } from '@/document';
 import { renderDocx } from '@/document/render-docx';
@@ -7,6 +8,7 @@ import { restoreHeld } from '@/domain/outline';
 import { ISSUE_MACHINE, POINT_MACHINE, transition } from '@/domain/review';
 import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
+import { futureEvent } from '../future/events';
 import { pointEvent } from '../points/events';
 import { assembleIssueSnapshot } from './assemble';
 import { mondayOfText, readWindow } from './calendar';
@@ -48,12 +50,33 @@ async function materialize(
 }
 
 /**
+ * Closes the report of every akce the document prints a placeholder for (ADR 0049): the akce's
+ * report becomes `missed`, and its report point, if it is still with the author or in review,
+ * is withdrawn. Audited by id and state, never by text.
+ */
+async function closeMissing(tx: Tx, missing: readonly MissingReport[]) {
+  for (const { akce, report } of missing) {
+    const missed = await tx.futureItems.markMissed(akce.id, akce.version);
+    await tx.audit.record(futureEvent('future.report-missed', akce, missed));
+    if (report === null || !POINT_MACHINE.close.from.some((from) => from === report.state))
+      continue;
+    const closed = await tx.points.close(report.id, report.version);
+    await tx.audit.record({
+      action: 'point.closed',
+      target: { type: 'point', id: closed.id },
+      diff: { state: { from: closed.from, to: POINT_MACHINE.close.to } },
+    });
+  }
+}
+
+/**
  * „Vygenerovat“ (ADR 0038): the headmaster turns an open porada into its document. In one
- * transaction: the rule is read first (lock order), the snapshot is assembled with the points
- * locked, a blocking finding refuses it (`issue-blocked`), and the issue row is taken at the
+ * transaction: the rule is read first (lock order), the issue row is locked, the snapshot is
+ * assembled with the points locked, a blocking finding refuses it (`issue-blocked`), and the issue row is taken at the
  * version the preview showed (a second click or an edit since is `conflict`). Then the outline is
  * written if it was derived, the DOCX rendered and stored, every point in it published, the
- * registry entries it printed first marked, and the PDF queued for the worker.
+ * registry entries it printed first marked, the report of every akce it printed a placeholder
+ * for closed, and the PDF queued for the worker.
  */
 export const generateIssue = defineUseCase({
   name: 'issues.generate',
@@ -71,7 +94,10 @@ export const generateIssue = defineUseCase({
     if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     if (slot.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
-    const { issue } = await ensureIssue(tx, monday, rule);
+    // The issue row is taken before anything is read, so a placeholder save (which takes it too)
+    // is either committed and read here, or waits for this generation and finds the porada closed.
+    const { issue: ensured } = await ensureIssue(tx, monday, rule);
+    const issue = await tx.issues.lock(ensured.id);
     if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
     const step = transition(ISSUE_MACHINE, issue.status, 'generate', {
       kind: 'user',
@@ -109,6 +135,7 @@ export const generateIssue = defineUseCase({
       });
       await tx.audit.record(pointEvent('point.published', point, moved));
     }
+    await closeMissing(tx, publish.missing);
     const stamped = await tx.registry.stampPublished(issue.id, entryIds);
 
     await tx.jobs.enqueue(
@@ -126,6 +153,7 @@ export const generateIssue = defineUseCase({
         documentId: document.id,
         docxSha256: document.docxSha256,
         points: points.length,
+        missing: publish.missing.length,
         entries: stamped.length,
       }),
       related,

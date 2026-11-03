@@ -1,6 +1,8 @@
 import {
   addDays,
+  compareDates,
   instantToWallClock,
+  mondayOf,
   parseWallTime,
   toIsoDate,
   wallClockToInstant,
@@ -69,4 +71,24 @@ export function reportsSince(monday: CalDate, earlier: readonly IssueRow[]): Cal
     if (row.status !== 'skipped') return row.meetingDate;
   }
   return reportLookback(monday).from;
+}
+
+/**
+ * The Monday of the porada an akce's report goes to (ADR 0049), the inverse of `reportsSince`: the
+ * first porada not skipped, in Monday order from `REPORT_LOOKBACK_WEEKS` before the akce's last day
+ * (as far back as `reportsSince` looks, so a porada moved weeks past its Monday is found), whose
+ * meeting day is after that day. A Monday with no row is a porada held on its Monday; `rows` are
+ * the stored rows around the day, in any order.
+ */
+export function owedPorada(lastDay: CalDate, rows: readonly IssueRow[]): CalDate {
+  const byMonday = new Map(rows.map((row) => [toIsoDate(row.monday), row]));
+  for (
+    let monday = addDays(mondayOf(lastDay), -7 * REPORT_LOOKBACK_WEEKS);
+    ;
+    monday = addDays(monday, 7)
+  ) {
+    const row = byMonday.get(toIsoDate(monday));
+    if (row?.status === 'skipped') continue;
+    if (compareDates(row?.meetingDate ?? monday, lastDay) > 0) return monday;
+  }
 }

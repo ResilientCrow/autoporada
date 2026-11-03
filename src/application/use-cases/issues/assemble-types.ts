@@ -1,4 +1,4 @@
-import type { PointRecord, PointRef } from '@/application/ports';
+import type { FutureItemRecord, PointRecord, PointRef, PointStanding } from '@/application/ports';
 import type { OutlineOrigin } from '@/domain/outline';
 import type { IssueStatus, PointState } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
@@ -16,6 +16,13 @@ export interface DroppedRef {
   readonly id: string;
   readonly title: string;
   readonly state: PointState;
+}
+
+/** An approved akce whose report the porada does not have, and where that report stands (ADR 0049). */
+export interface MissingReport {
+  readonly akce: FutureItemRecord;
+  /** The report point the akce names; null when none was started. */
+  readonly report: PointStanding | null;
 }
 
 /** What the preflight reads besides the snapshot (design §4, §11). */
@@ -46,6 +53,15 @@ export interface AssemblyFacts {
   /** Late drafts of other authors no akce answers for: only counted (SSU-5). */
   readonly lateDraftsHidden: number;
   readonly dropped: readonly DroppedRef[];
+  /**
+   * The akce the porada prints a placeholder for, by their date: `id` and `title` are the akce's,
+   * `state` is where its report point stands (`none` when nobody started one).
+   */
+  readonly missingReports: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly state: 'none' | PointState;
+  }[];
   readonly annex1Entries: number;
   readonly newEntries: number;
   /** Media and partners both have nothing in them. */
@@ -55,6 +71,8 @@ export interface AssemblyFacts {
 /** What a generation publishes with the snapshot: the eligible points, the entries printed first. */
 interface AssemblyPublish {
   readonly points: readonly PointRecord[];
+  /** The akce a generation closes as `missed`, with their unfinished report points to close. */
+  readonly missing: readonly MissingReport[];
   readonly entryIds: readonly string[];
 }
 

@@ -8,7 +8,7 @@ import { system, type FutureContent, type IssueRecord, type UserRecord } from '@
 import { deadline, DEFAULT_DEADLINE, type FutureKind } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
 import type { PointContent, PointKind } from '@/domain/report';
-import type { FutureState, IssueStatus, PointState } from '@/domain/review';
+import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import { emptyRichDoc, richDocFromText } from '@/domain/richtext';
 import { calDate, wallTime, type CalDate } from '@/domain/time';
 
@@ -73,6 +73,8 @@ export interface PointSeed {
   readonly eventDate?: CalDate;
   readonly endDate?: CalDate | null;
   readonly content?: Partial<PointContent>;
+  /** Report only: the akce it answers, which then names this point as its report (ADR 0049). */
+  readonly futureItemId?: string;
 }
 
 export interface FutureSeed {
@@ -84,6 +86,13 @@ export interface FutureSeed {
   readonly endDate?: CalDate | null;
   readonly submittedAt?: Date;
   readonly content?: Partial<FutureContent>;
+  /** Where the report stands; an akce only. */
+  readonly reportState?: ReportState;
+  /**
+   * Approved earlier, then changed by its author (`revise`, approved to submitted) and so in
+   * review with `state` now: what ADR 0049 still owes a report for. Not for state `approved`.
+   */
+  readonly approvedBefore?: boolean;
 }
 
 export function issueFixtures(world: World) {
@@ -151,8 +160,17 @@ export function issueFixtures(world: World) {
         kind,
         typeId,
         content,
+        ...(seed.futureItemId !== undefined && { futureItemId: seed.futureItemId }),
       });
       await tx.audit.record({ action: 'point.save', target: { type: 'point', id: point.id } });
+      if (seed.futureItemId !== undefined) {
+        const akce = (await tx.futureItems.loadForWrite(seed.futureItemId))!;
+        await tx.futureItems.update(akce.id, akce.version, { reportPointId: point.id });
+        await tx.audit.record({
+          action: 'future.report-started',
+          target: { type: 'future_item', id: akce.id },
+        });
+      }
       const state = seed.state ?? 'approved';
       if (state !== 'draft') {
         await tx.points.update(point.id, point.version, {
@@ -170,6 +188,18 @@ export function issueFixtures(world: World) {
     });
   }
 
+  /** The history of an item its author revised after it was approved: one `revise` event. */
+  const wasApproved = (id: string) =>
+    world.tx(seeder, async (tx) => {
+      await tx.futureEvents.append({
+        futureItemId: id,
+        event: 'revise',
+        fromState: 'approved',
+        toState: 'submitted',
+      });
+      await tx.audit.record({ action: 'test.seed', target: { type: 'future_item', id } });
+    });
+
   /** A jednání or akce of the author's put into `state` (approved by default). */
   async function future(seed: FutureSeed): Promise<string> {
     counter += 1;
@@ -184,7 +214,7 @@ export function issueFixtures(world: World) {
       responsible: null,
       ...seed.content,
     };
-    return world.tx(world.as(seed.author), async (tx) => {
+    const id = await world.tx(world.as(seed.author), async (tx) => {
       const { item } = await tx.futureItems.create({
         clientRef: randomUUID(),
         kind: seed.kind ?? 'akce',
@@ -198,6 +228,7 @@ export function issueFixtures(world: World) {
       if (state !== 'draft') {
         await tx.futureItems.update(item.id, item.version, {
           state,
+          ...(seed.reportState !== undefined && { reportState: seed.reportState }),
           submittedAt: seed.submittedAt ?? new Date(world.clock.now().getTime() + counter * 1000),
         });
         await tx.audit.record({
@@ -207,6 +238,8 @@ export function issueFixtures(world: World) {
       }
       return item.id;
     });
+    if (seed.approvedBefore) await wasApproved(id);
+    return id;
   }
 
   return { issue, point, future };

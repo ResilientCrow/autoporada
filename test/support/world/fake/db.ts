@@ -16,6 +16,7 @@ import { fakePointRepo } from './points';
 import { emptyState, type FakeState, type FakeTxState } from './state';
 import { fakeRegistryRepo } from './registry';
 import { fakeSessionRepo } from './sessions';
+import { fakeReportPlaceholderRepo } from './report-placeholders';
 import { fakeSettingsRepo } from './settings';
 import { fakeSignInRepo } from './sign-ins';
 import { fakeUserRepo } from './users';
@@ -72,6 +73,7 @@ export function createFakeDb(): FakeDb {
       pointEvents: fakePointEventRepo(tx, ctx),
       futureItems: fakeFutureItemRepo(tx, ctx),
       futureEvents: fakeFutureEventRepo(tx, ctx),
+      reportPlaceholders: fakeReportPlaceholderRepo(tx, ctx),
       audit: fakeAudit(tx, ctx),
       jobs: fakeJobs(tx),
       mailLedger: fakeMailLedger(tx, ctx),

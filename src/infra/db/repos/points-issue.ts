@@ -1,10 +1,25 @@
-import { and, asc, eq, gte, inArray, isNotNull, lt, lte, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  lte,
+  ne,
+  not,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
 import type { PointRef, PointRepo, TxContext } from '@/application/ports';
 import { parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { futureItems, points } from '../schema';
 import type { TxDatabase } from './database';
+import { owedAkce } from './future-owed';
 import { POINT_ROW, toRecord, visiblePoints } from './points-read';
 import { timeOrNull } from './wall-columns';
 
@@ -13,6 +28,18 @@ const dueMonday = sql`greatest(${points.earliestMonday}, ${points.handInMonday})
 
 /** An event's last day: the end date, or else the day itself; null when a report has no event date. */
 const lastDay = sql`coalesce(${points.endDate}, ${points.eventDate})`;
+
+/** An akce's last day: the end date, or else the start date. */
+const akceLastDay = sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`;
+
+/**
+ * True when an owed akce (`owedAkce`: approved, or back in review after a revise) names the point as
+ * its report (ADR 0049) and meets `extra`: the akce,
+ * not the point, decides the porada. Without `extra` it tells only that the point is bound.
+ */
+const answersAkce = (...extra: (SQL | undefined)[]) => sql`EXISTS (
+  SELECT 1 FROM ${futureItems}
+  WHERE ${and(eq(futureItems.reportPointId, points.id), owedAkce, ...extra)})`;
 
 /** The order handed in, as `queue`: oldest submission first, ties to the lower id. */
 const HANDED_IN_FIRST = [asc(points.submittedAt), asc(points.id)];
@@ -52,12 +79,22 @@ export function createPointIssueReads(
           and(
             visiblePoints(ctx),
             eq(points.state, 'approved'),
-            lte(dueMonday, toIsoDate(monday)),
-            or(ne(points.kind, 'report'), lt(lastDay, toIsoDate(meetingDate))),
+            or(
+              // A report of an approved akce goes by the akce, whatever its hand-in Monday (ADR 0049).
+              answersAkce(
+                gte(akceLastDay, toIsoDate(options.since)),
+                lt(akceLastDay, toIsoDate(meetingDate)),
+              ),
+              and(
+                not(answersAkce()),
+                lte(dueMonday, toIsoDate(monday)),
+                or(ne(points.kind, 'report'), lt(lastDay, toIsoDate(meetingDate))),
+              ),
+            ),
           ),
         )
         .orderBy(...HANDED_IN_FIRST);
-      const rows = await (options?.lock ? query.for('update') : query);
+      const rows = await (options.lock ? query.for('update') : query);
       return rows.map(toRecord);
     },
     async waitingFor(monday, meetingDate) {
@@ -74,7 +111,14 @@ export function createPointIssueReads(
               and(
                 eq(points.state, 'approved'),
                 eq(points.kind, 'report'),
-                or(sql`${lastDay} IS NULL`, sql`${lastDay} >= ${toIsoDate(meetingDate)}`),
+                or(
+                  // The akce decides when it is bound (ADR 0049); else the report's own last day.
+                  answersAkce(gte(akceLastDay, toIsoDate(meetingDate))),
+                  and(
+                    not(answersAkce()),
+                    or(sql`${lastDay} IS NULL`, sql`${lastDay} >= ${toIsoDate(meetingDate)}`),
+                  ),
+                ),
               ),
             ),
           ),

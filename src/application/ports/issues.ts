@@ -37,6 +37,14 @@ export interface IssueRepo {
    */
   calendarBetween(from: CalDate, to: CalDate): Promise<readonly IssueRow[]>;
   /**
+   * Takes the issue row's lock (SELECT ... FOR UPDATE) until the transaction ends and returns the
+   * row as it stands then, version unchanged. Whoever reads what a generation prints (the
+   * placeholders) or writes it takes this first, so a write is never acknowledged after the
+   * generation has read what it replaced. StaleVersion for an unknown id. The caller has read the
+   * deadline rule first (lock order, row 12b).
+   */
+  lock(id: string): Promise<IssueRecord>;
+  /**
    * Version-checked (StaleVersion, also for an unknown id); the version rises
    * by one. ScopeViolation for a user who may not `issue.generate`. The
    * caller checks the move against ISSUE_MACHINE.

@@ -55,7 +55,7 @@ const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
     { monday: '2026-11-16', label: 'pondělí 16. listopadu 2026' },
     { monday: '2026-11-23', label: 'úterý 24. listopadu 2026' },
   ],
-  counts: { waiting: 2, returned: 0, approved: 1, later: 0 },
+  counts: { waiting: 2, returned: 0, approved: 1, later: 0, missing: 0 },
   generated: null,
   ...over,
 });
@@ -84,14 +84,14 @@ describe('Workspace', () => {
   });
 
   it('counts what waits, and the later reports only when there are some', () => {
-    const html = render({ counts: { waiting: 2, returned: 1, approved: 0, later: 0 } });
+    const html = render({ counts: { waiting: 2, returned: 1, approved: 0, later: 0, missing: 0 } });
     expect(html).toContain(porada.counts.waiting(2));
     expect(html).toContain(porada.counts.returned(1));
     expect(html).toContain(porada.counts.approved(0));
     expect(html).not.toContain(porada.counts.later(0));
-    expect(render({ counts: { waiting: 0, returned: 0, approved: 0, later: 3 } })).toContain(
-      porada.counts.later(3),
-    );
+    expect(
+      render({ counts: { waiting: 0, returned: 0, approved: 0, later: 3, missing: 0 } }),
+    ).toContain(porada.counts.later(3));
   });
 
   it('offers the move only while the porada is open', () => {
@@ -340,13 +340,24 @@ describe('ArchivePage', () => {
 });
 
 describe('Steps', () => {
-  it('links the four steps of the Monday in order', () => {
-    const html = renderToStaticMarkup(<Steps monday={MONDAY} />);
-    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
-    expect(hrefs).toEqual(
-      ['udaje', 'pokyny', 'priloha-2', 'nahled'].map((step) => `/porada/${MONDAY}/${step}`),
+  const hrefs = (html: string) => [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+
+  it('links the five steps of the Monday in order, „Chybějící zprávy“ before the preview', () => {
+    const html = renderToStaticMarkup(<Steps monday={MONDAY} missing={0} />);
+    expect(hrefs(html)).toEqual(
+      ['udaje', 'pokyny', 'priloha-2', 'zpravy', 'nahled'].map(
+        (step) => `/porada/${MONDAY}/${step}`,
+      ),
     );
     expect(html).toContain(porada.steps.title);
+    expect(html).toMatch(new RegExp(`>${porada.steps.missing}\\s<svg`));
+  });
+
+  it('counts the akce that lack a report on their step, and only when there are some', () => {
+    expect(renderToStaticMarkup(<Steps monday={MONDAY} missing={2} />)).toContain(
+      porada.missing.step(2),
+    );
+    expect(renderToStaticMarkup(<Steps monday={MONDAY} missing={0} />)).not.toContain('(0)');
   });
 });
 
@@ -472,6 +483,35 @@ describe('PreviewPage and Preflight', () => {
     expect(html).toContain(porada.preflight.code['earlier-open']);
     expect(html).toContain('href="/porada/2026-11-02"');
     expect(html).toContain(porada.preflight.earlier('4. 11. 2026'));
+  });
+
+  it('names the akce whose report is missing and links each to the page of the missing reports', () => {
+    const html = preview([
+      finding({
+        code: 'reports-missing',
+        level: 'warn',
+        refs: [{ id: 'm-1', title: 'Seminář bez zprávy', of: 'akce' }],
+      }),
+    ]);
+    expect(html).toContain(porada.preflight.code['reports-missing']);
+    expect(html).toContain('Seminář bez zprávy');
+    expect(html).toContain(`href="/porada/${MONDAY}/zpravy"`);
+    expect(html).not.toContain('href="/akce/m-1"');
+  });
+
+  it('names the akce whose report is missing without a link for a reader who cannot edit', () => {
+    const html = preview(
+      [
+        finding({
+          code: 'reports-missing',
+          level: 'warn',
+          refs: [{ id: 'm-1', title: 'Seminář bez zprávy', of: 'akce' }],
+        }),
+      ],
+      { canEdit: false },
+    );
+    expect(html).toContain('Seminář bez zprávy');
+    expect(html).not.toContain('href=');
   });
 
   it('writes the close of a late report after its title', () => {

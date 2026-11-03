@@ -1,5 +1,6 @@
 import type { PdfFailure } from '@/contracts';
 import { countWord, type PluralForms } from '@/domain/cs';
+import type { PointState } from '@/domain/review';
 
 const POINT: PluralForms = { one: 'bod', few: 'body', many: 'bodů' };
 const DRAFT: PluralForms = { one: 'zpráva', few: 'zprávy', many: 'zpráv' };
@@ -72,6 +73,7 @@ export const porada = {
     details: 'Údaje',
     outline: 'Pokyny a\u00a0hospodaření',
     annex2: 'Příloha\u00a02',
+    missing: 'Chybějící zprávy',
     preview: 'Náhled',
   },
   generate: {
@@ -216,6 +218,39 @@ export const porada = {
     carried: 'Text je převzatý z\u00a0minulé porady. Uloží se při prvním uložení.',
     stale: 'Porada se mezitím změnila. Načtěte stránku znovu.',
   },
+  /** „Chybějící zprávy“: the paragraph printed for an akce without an approved report (/porada/[datum]/zpravy, ADR 0049). */
+  missing: {
+    title: 'Chybějící zprávy',
+    /** The step's link on the porada page when akce lack a report; `count` is above zero. */
+    step: (count: number) => `Chybějící zprávy (${count})`,
+    back: 'Zpět na přípravu porady',
+    intro:
+      'U\u00a0těchto akcí nemá porada schválenou zprávu. Při vygenerování dokument vytiskne místo ní odstavec níže a\u00a0dvě pevné věty pod ním. Zprávu schválenou před vygenerováním dokument vytiskne celou a\u00a0tento odstavec nepoužije.',
+    empty: 'Žádné zprávy nechybí.',
+    closed:
+      'Porada se nekoná nebo už je vygenerovaná. Chybějící zprávy v\u00a0ní už nejde upravit.',
+    /** `dates` arrives written, „5.–6. 11. 2026“. */
+    when: (dates: string) => `Konání: ${dates}`,
+    state: {
+      none: 'Zpráva nebyla založena',
+      draft: 'Zpráva je rozepsaná',
+      submitted: 'Zpráva čeká na kontrolu',
+      returned: 'Zpráva je vrácená autorovi',
+      approved: 'Zpráva je schválená',
+      rejected: 'Zpráva je zamítnutá',
+      withdrawn: 'Zpráva je stažená',
+      published: 'Zpráva je zařazená do porady',
+    } as const satisfies Record<'none' | PointState, string>,
+    paragraph: 'Odstavec v\u00a0dokumentu',
+    own: 'Odstavec jste upravili vy.',
+    original: 'Odstavec napsal systém.',
+    fixed: 'Pod odstavcem dokument vždy vytiskne:',
+    save: 'Uložit',
+    saved: 'Odstavec je uložen.',
+    reset: 'Obnovit původní text',
+    resetDone: 'Je zpět původní odstavec.',
+    stale: 'Porada nebo odstavec se mezitím změnily. Načtěte stránku znovu.',
+  },
   origin: {
     /** `meeting` arrives written, „9. 11. 2026“. */
     derived: (meeting: string) =>
@@ -247,6 +282,8 @@ export const porada = {
       'akce-waiting': 'Akce čekají na kontrolu a\u00a0v\u00a0dokumentu zatím nejsou:',
       'late-reports-expected':
         'Zprávy z\u00a0již skončených akcí se ještě mohou odevzdat po uzávěrce a\u00a0v\u00a0dokumentu zatím nejsou:',
+      'reports-missing':
+        'Zprávy z\u00a0těchto akcí nejsou schválené. V\u00a0dokumentu bude místo nich jen věta o\u00a0akci a\u00a0poznámka, že zpráva nebyla dodána. Po vygenerování už se zpráva odevzdat nedá:',
       'proposal-dropped':
         'Návrhy zařazené v\u00a0pokynech už nejsou schválené, a\u00a0proto se z\u00a0dokumentu vynechaly:',
       'deadline-ahead': 'Uzávěrka ještě neproběhla, body mohou ještě přibýt.',

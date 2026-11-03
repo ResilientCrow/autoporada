@@ -121,6 +121,30 @@ describe('point lifecycle', () => {
   });
 });
 
+describe('closing a point at generation (ADR 0049)', () => {
+  it.each(['draft', 'returned', 'submitted'] as const)(
+    'withdraws a %s point, by the system only',
+    (from) => {
+      expect(transition(POINT_MACHINE, from, 'close', SYSTEM)).toEqual({
+        ok: true,
+        to: 'withdrawn',
+      });
+      expect(transition(POINT_MACHINE, from, 'close', author).ok).toBe(false);
+      expect(transition(POINT_MACHINE, from, 'close', headmaster).ok).toBe(false);
+    },
+  );
+
+  it.each(['approved', 'published', 'rejected', 'withdrawn'] as const)(
+    'does not close a %s point',
+    (from) => {
+      expect(transition(POINT_MACHINE, from, 'close', SYSTEM)).toEqual({
+        ok: false,
+        reason: 'wrong-state',
+      });
+    },
+  );
+});
+
 describe('rejecting approved work (plan §5)', () => {
   it.each([POINT_MACHINE, FUTURE_MACHINE] as const)(
     'rejects an approved, unpublished item with a note',
@@ -215,7 +239,22 @@ describe('future items', () => {
       ok: true,
       to: 'written',
     });
-    expect(Object.keys(REPORT_MACHINE).sort()).toEqual(['prompt', 'write']);
+    expect(Object.keys(REPORT_MACHINE).sort()).toEqual(['miss', 'prompt', 'write']);
+  });
+
+  it.each(['none', 'prompted', 'written'] as const)(
+    'lets only the system close a %s report as missed, and nobody reopens it (ADR 0049)',
+    (from) => {
+      expect(transition(REPORT_MACHINE, from, 'miss', SYSTEM)).toEqual({ ok: true, to: 'missed' });
+      expect(transition(REPORT_MACHINE, from, 'miss', author).ok).toBe(false);
+      expect(transition(REPORT_MACHINE, from, 'miss', headmaster).ok).toBe(false);
+    },
+  );
+
+  it('offers no event from missed', () => {
+    for (const actor of [SYSTEM, author, reviewer, headmaster]) {
+      expect(availableEvents(REPORT_MACHINE, 'missed', actor)).toEqual([]);
+    }
   });
 });
 
@@ -283,6 +322,7 @@ describe('reportDue', () => {
 
   it.each([
     ['written', { reportState: 'written' }],
+    ['missed', { reportState: 'missed' }],
     ['a jednání', { kind: 'jednani' }],
     ['draft', { state: 'draft' }],
     ['submitted', { state: 'submitted' }],

@@ -30,6 +30,7 @@ export interface WorkspaceView {
     readonly returned: number;
     readonly approved: number;
     readonly later: number;
+    readonly missing: number;
   };
   /** The document of a generated porada; null before. */
   readonly generated: GeneratedView | null;
@@ -97,7 +98,7 @@ export function Workspace({
           <ArrowLink href={`/porada/${view.monday}/presunout`}>{porada.move.open}</ArrowLink>
         )}
         {view.generated !== null && <DocumentCard view={view.generated} />}
-        <Steps monday={view.monday} />
+        <Steps monday={view.monday} missing={counts.missing} />
         {view.status === 'open' && (
           <div className="space-y-2">
             <p id="generovani-pozn">{porada.generate.where}</p>

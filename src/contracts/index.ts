@@ -89,6 +89,12 @@ export {
   queueFutureOutput,
 } from './future-review';
 export {
+  missingReportsInput,
+  missingReportsOutput,
+  setPlaceholderInput,
+  setPlaceholderOutput,
+} from './issue-placeholders';
+export {
   ISSUE_TEXT_MAX,
   issueAnnex2Input,
   issueDetailsInput,

@@ -4,6 +4,7 @@ export {
   composeDocument,
   composeItemPreview,
   composePointPreview,
+  MISSING_REPORT_LINES,
   reportFromContent,
   snapshotPerson,
   type Omitted,

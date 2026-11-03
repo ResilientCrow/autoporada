@@ -32,6 +32,7 @@ const finding = z.strictObject({
     'points-returned',
     'akce-waiting',
     'late-reports-expected',
+    'reports-missing',
     'proposal-dropped',
     'deadline-ahead',
     'source-not-generated',
@@ -51,7 +52,7 @@ const finding = z.strictObject({
         title: z.string(),
         /** `late-reports-expected`: when the report closes. */
         due: z.iso.datetime().optional(),
-        /** `late-reports-expected`: an akce or a report draft. */
+        /** `late-reports-expected`: an akce or a report draft; `reports-missing`: always an akce. */
         of: z.enum(['akce', 'point']).optional(),
       }),
     )

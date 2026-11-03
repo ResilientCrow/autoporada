@@ -55,6 +55,10 @@ in v1 unless the [plan of record](plan.md) changes first.
   porada. The editor and the detail say „Zprávu odevzdejte do …; půjde na
   poradu …“. A report is owed from the end of its akce, so it can be started
   on the akce's last evening.
+- The report of an akce goes to the akce's porada (the first porada not
+  skipped whose meeting day is after the akce's last day) and to no other,
+  even when it is handed in after the deadline, as long as that porada is not
+  generated yet (ADR 0049).
 
 ### Reviewing
 
@@ -132,8 +136,17 @@ in v1 unless the [plan of record](plan.md) changes first.
 - Full preview and a preflight check before generating. The preflight blocks on
   an invalid snapshot and on an earlier porada neither generated nor skipped
   (named, with a link; ADR 0040), and warns about points and akce still waiting, returned
-  points, late reports still expected, placed proposals no longer eligible, an
-  empty Příloha 1 and a deadline still ahead.
+  points, late reports still expected, akce whose report is missing, placed
+  proposals no longer eligible, an empty Příloha 1 and a deadline still ahead.
+- A missing report: every akce owed to the porada whose report is not approved
+  at generation is printed among the reports as its title, a paragraph the
+  system writes from the akce („Dne 18. 9. 2027 proběhla akce s názvem
+  Testovní akce, kterou organizoval pan Jan Novák (1.A).“, with the akce's
+  people and verb), „Seznam účastníků nebyl dodán.“ and „Vyjádření
+  organizátora nebylo dodáno.“ The headmaster can rewrite the paragraph on
+  „Chybějící zprávy“ (`/porada/[datum]/zpravy`) and restore the system's text.
+  Generation closes such a report: an unfinished draft or a report still in
+  review is withdrawn, and the akce is no longer asked about (ADR 0049).
 - Generation: „Vygenerovat dokument“ on the Náhled (headmaster, after a
   confirmation tick; held off while the preflight blocks) stores a DOCX in the
   exact template look and publishes the points it prints. The worker then makes

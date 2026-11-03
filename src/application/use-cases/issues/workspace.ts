@@ -1,9 +1,10 @@
-import { defineUseCase, fail, ok } from '@/application/core';
+import { defineUseCase, fail, ok, readReportsSince } from '@/application/core';
 import { issueWorkspaceInput, issueWorkspaceOutput } from '@/contracts';
 import { lastSlotMonday, placementSlot, workingSlot } from '@/domain/calendar';
 import { compareDates, instantToWallClock, toIsoDate } from '@/domain/time';
 
 import { documentInfoOf } from '../documents/info';
+import { missingReports, owedAkce } from './assemble-missing';
 import { mondayOfText, readWindow } from './calendar';
 
 /**
@@ -35,7 +36,12 @@ export const issueWorkspace = defineUseCase({
     const next = placementSlot(slot.monday, today, without);
     const [row] = await tx.issues.between(monday, monday);
     const waiting = await tx.points.waitingFor(monday, slot.meetingDate);
-    const approved = await tx.points.eligibleFor(monday, slot.meetingDate);
+    const since = await readReportsSince(tx, monday);
+    const approved = await tx.points.eligibleFor(monday, slot.meetingDate, { since });
+    const missing =
+      slot.status === 'open'
+        ? await missingReports(tx, await owedAkce(tx, since, slot.meetingDate), approved)
+        : [];
     const document = row && (await tx.documents.forIssue(row.id));
     return ok({
       working: workingMonday,
@@ -59,6 +65,7 @@ export const issueWorkspace = defineUseCase({
           returned: waiting.returned.length,
           approved: approved.length,
           later: waiting.later.length,
+          missing: missing.length,
         },
         document: document ? documentInfoOf(document) : null,
       },

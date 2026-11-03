@@ -465,6 +465,61 @@ describe('issues.preview', () => {
     });
   });
 
+  describe('missing reports (ADR 0049)', () => {
+    it('warns, after the late reports, and names each akce whose report the porada does not have', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      const late = await fixtures.future({
+        author,
+        title: 'Víkendová akce',
+        startDate: d('2026-10-25'),
+        content: { timeTo: { hour: 21, minute: 0 } as never },
+      });
+      const early = await fixtures.future({ author, title: 'Seminář', startDate: d('2026-10-21') });
+      await fixtures.issue(calDate(2026, 10, 19), { status: 'skipped' });
+      const { findings, snapshot } = await preview(head);
+      expect(codes(findings)).toEqual([
+        'late-reports-expected',
+        'reports-missing',
+        'deadline-ahead',
+        'annex1-empty',
+        'ohlasy-empty',
+      ]);
+      expect(findings.find((f) => f.code === 'reports-missing')).toEqual({
+        code: 'reports-missing',
+        level: 'warn',
+        refs: [
+          { id: early, title: 'Seminář', of: 'akce' },
+          { id: late, title: 'Víkendová akce', of: 'akce' },
+        ],
+      });
+      expect(snapshot?.reports.map((r) => r.id)).toEqual([early, late]);
+    });
+
+    it('says nothing when every owed akce has an approved report', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      const akce = await fixtures.future({ author, startDate: d('2026-10-22') });
+      await fixtures.point({
+        author,
+        kind: 'report',
+        eventDate: d('2026-10-22'),
+        futureItemId: akce,
+      });
+      expect(codes((await preview(head)).findings)).not.toContain('reports-missing');
+    });
+
+    it('never blocks: a placeholder is a finished report', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      await fixtures.future({ author, startDate: d('2026-10-22') });
+      await fixtures.issue(calDate(2026, 10, 19), { status: 'skipped' });
+      const { findings, problems } = await preview(head);
+      expect(problems).toEqual([]);
+      expect(findings.filter((f) => f.level === 'block')).toEqual([]);
+    });
+  });
+
   describe('future items', () => {
     it('prints an approved akce that reaches the meeting date and warns about a submitted one', async () => {
       const head = await headmaster();

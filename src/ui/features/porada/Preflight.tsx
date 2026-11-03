@@ -26,8 +26,19 @@ const LEVELS = ['block', 'warn', 'info'] as const;
 
 type RefView = NonNullable<FindingView['refs']>[number];
 
-/** Where a ref leads: an akce has its own page, a late report draft its editor, a point the review. */
-const refHref = (code: FindingView['code'], ref: RefView): `/${string}` => {
+/**
+ * Where a ref leads: an akce has its own page, a late report draft its editor, a point the review.
+ * An akce whose report is missing leads to the porada's „Chybějící zprávy“, which only the
+ * headmaster (`editMonday`) may open; for a reader who cannot, there is no link (null).
+ */
+const refHref = (
+  code: FindingView['code'],
+  ref: RefView,
+  editMonday: string | null,
+): `/${string}` | null => {
+  if (code === 'reports-missing') {
+    return editMonday === null ? null : `/porada/${editMonday}/zpravy`;
+  }
   if (code === 'akce-waiting' || ref.of === 'akce') return `/akce/${ref.id}`;
   return ref.of === 'point' ? `/body/${ref.id}` : `/kontrola/${ref.id}`;
 };
@@ -50,7 +61,13 @@ function EarlierLink({ earlier }: { readonly earlier: NonNullable<FindingView['e
   );
 }
 
-function Finding({ finding }: { readonly finding: FindingView }) {
+function Finding({
+  finding,
+  editMonday,
+}: {
+  readonly finding: FindingView;
+  readonly editMonday: string | null;
+}) {
   const text =
     finding.code === 'registry-new'
       ? porada.preflight.newEntries(finding.count ?? 0)
@@ -61,12 +78,15 @@ function Finding({ finding }: { readonly finding: FindingView }) {
       {finding.earlier !== undefined && <EarlierLink earlier={finding.earlier} />}
       {finding.refs !== undefined && (
         <ul className="list-disc space-y-1 pl-6">
-          {finding.refs.map((ref) => (
-            <li key={ref.id}>
-              <ItemLink href={refHref(finding.code, ref)}>{ref.title}</ItemLink>
-              {dueText(ref)}
-            </li>
-          ))}
+          {finding.refs.map((ref) => {
+            const href = refHref(finding.code, ref, editMonday);
+            return (
+              <li key={ref.id}>
+                {href === null ? ref.title : <ItemLink href={href}>{ref.title}</ItemLink>}
+                {dueText(ref)}
+              </li>
+            );
+          })}
         </ul>
       )}
       {finding.code === 'late-reports-expected' && (finding.count ?? 0) > 0 && (
@@ -87,9 +107,16 @@ function Finding({ finding }: { readonly finding: FindingView }) {
 
 /**
  * „Před vygenerováním“: what the headmaster should know about the document, blockers first.
- * Findings with refs link to the point or akce they are about.
+ * Findings with refs link to the point or akce they are about; the missing reports, to their page.
  */
-export function Preflight({ findings }: { readonly findings: readonly FindingView[] }) {
+export function Preflight({
+  findings,
+  editMonday,
+}: {
+  readonly findings: readonly FindingView[];
+  /** The Monday of the porada when the reader may edit it: the missing reports then link to its page. */
+  readonly editMonday: string | null;
+}) {
   return (
     <section aria-labelledby="predgenerovanim" className="space-y-4">
       <h2 id="predgenerovanim" className="text-xl">
@@ -102,7 +129,7 @@ export function Preflight({ findings }: { readonly findings: readonly FindingVie
         const list = (
           <ul className="space-y-3">
             {group.map((finding) => (
-              <Finding key={finding.code} finding={finding} />
+              <Finding key={finding.code} finding={finding} editMonday={editMonday} />
             ))}
           </ul>
         );

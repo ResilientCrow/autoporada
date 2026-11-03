@@ -4,6 +4,7 @@ import {
   ScopeViolation,
   StaleVersion,
   type PointCursor,
+  type PointEventRecord,
   type PointRecord,
   type PointRepo,
   type ReportPoint,
@@ -12,11 +13,13 @@ import {
 } from '@/application/ports';
 import { parsePointJsonb } from '@/contracts';
 import { dueMonday, inIssue, isLateReport, lateFacts, type PoradaClose } from '@/domain/calendar';
-import { admits } from '@/domain/policy';
+import { admits, can } from '@/domain/policy';
 import type { PointContent } from '@/domain/report';
+import { POINT_MACHINE } from '@/domain/review';
 import { compareDates, isoWeekday, toIsoDate, type CalDate } from '@/domain/time';
 
 import { distinctSorted } from './events';
+import { isOwedAkce } from './future-owed';
 import { guard, refusedBy } from './guards';
 import { newId, type FakePoint, type FakeState, type FakeTxState } from './state';
 
@@ -159,6 +162,25 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         )
       );
     });
+  /** The owed akce (approved, or revised back into review) that names the point as its report (ADR 0049): the akce decides its porada. */
+  const owedAkceOf = (p: FakePoint) =>
+    [...tx.draft.futureItems.values()].find(
+      (item) => item.reportPointId === p.id && isOwedAkce(tx.draft, item),
+    );
+  const akceLastDay = (item: {
+    readonly content: { endDate: CalDate | null; startDate: CalDate | null };
+  }) => item.content.endDate ?? item.content.startDate;
+  /** Whoever previews an issue reads where a point stands; so does the system. */
+  const mayPreview = () => {
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.preview' })) {
+      throw new ScopeViolation();
+    }
+  };
+  const mayGenerate = () => {
+    if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+      throw new ScopeViolation();
+    }
+  };
   /** The user's own points, whatever the read scope; the system has none. */
   const own = () => {
     guard(tx, false);
@@ -361,11 +383,23 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           p.state === 'submitted' && p.submittedAt && p.submittedAt > since && p.authorId !== notBy,
       ).length;
     },
-    async eligibleFor(monday, meetingDate) {
+    async eligibleFor(monday, meetingDate, { since }) {
       guard(tx, false);
       return handedIn()
-        .filter(
-          (p) =>
+        .filter((p) => {
+          const akce = owedAkceOf(p);
+          if (akce) {
+            // ADR 0049: the akce decides the porada, whatever the hand-in Monday.
+            const last = akceLastDay(akce);
+            return (
+              visible(p) &&
+              p.state === 'approved' &&
+              last !== null &&
+              compareDates(last, since) >= 0 &&
+              compareDates(last, meetingDate) < 0
+            );
+          }
+          return (
             visible(p) &&
             inIssue(
               {
@@ -378,9 +412,50 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
               { monday, meetingDate },
             ) &&
             p.earliestMonday !== null &&
-            p.handInMonday !== null,
-        )
+            p.handInMonday !== null
+          );
+        })
         .map(record);
+    },
+    async statesOf(ids) {
+      guard(tx, false);
+      mayPreview();
+      return ids.flatMap((id) => {
+        const p = points.get(id);
+        return p ? [{ id: p.id, state: p.state, version: p.version }] : [];
+      });
+    },
+    async close(id, expectedVersion) {
+      guard(tx, true);
+      mayGenerate();
+      const before = points.get(id);
+      if (
+        !before ||
+        before.version !== expectedVersion ||
+        !POINT_MACHINE.close.from.includes(before.state)
+      ) {
+        throw new StaleVersion();
+      }
+      const moved = save({
+        ...before,
+        state: POINT_MACHINE.close.to,
+        version: before.version + 1,
+        updatedAt: now,
+      });
+      const event: PointEventRecord = {
+        id: newId(tx.draft),
+        pointId: id,
+        actorId: principal.kind === 'user' ? principal.actor.id : null,
+        event: 'close',
+        fromState: before.state,
+        toState: moved.state,
+        note: null,
+        editedFields: null,
+        before: null,
+        createdAt: now,
+      };
+      tx.draft.pointEvents.set(event.id, event);
+      return { id, from: before.state, version: moved.version };
     },
     async draftReports({ from, to }) {
       guard(tx, false);
@@ -414,7 +489,8 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         submitted: refs((p) => p.state === 'submitted'),
         returned: refs((p) => p.state === 'returned'),
         later: refs((p) => {
-          const last = lastDay(p);
+          const akce = owedAkceOf(p);
+          const last = akce ? akceLastDay(akce) : lastDay(p);
           return (
             p.state === 'approved' &&
             p.kind === 'report' &&

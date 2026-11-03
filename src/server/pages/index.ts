@@ -10,6 +10,7 @@ export { accessPage } from './access';
 export { futureListPage, futurePage, newFuturePage } from './future';
 export { homePage } from './home';
 export { issueTextsPage } from './issue-texts';
+export { missingReportsPage } from './missing-reports';
 export { newOutlineItemPage, outlineItemPage, outlinePage } from './outline';
 export { pointTypesPage } from './point-types';
 export { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';

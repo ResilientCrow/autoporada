@@ -264,6 +264,7 @@ export const points = {
     withdraw: 'Bod byl zrušen',
     publish: 'Zařazeno do porady',
     unpublish: 'Vyřazeno z\u00A0porady',
+    close: 'Bod byl uzavřen: zpráva nebyla včas schválena',
     original: 'Původní znění',
     /** A previous value that was empty. */
     empty: '(nevyplněno)',

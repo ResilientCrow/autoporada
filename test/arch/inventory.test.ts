@@ -185,6 +185,7 @@ describe('inventory of entry points', () => {
       'issues.move',
       'issues.setDetails',
       'issues.setAnnex2',
+      'issues.setPlaceholder',
       'issues.setSkipped',
       'issues.generate',
     ];
@@ -215,6 +216,7 @@ describe('inventory of entry points', () => {
       'issues.move': admin,
       'issues.setDetails': admin,
       'issues.setAnnex2': admin,
+      'issues.setPlaceholder': admin,
       'issues.setSkipped': admin,
       'issues.generate': admin,
     });

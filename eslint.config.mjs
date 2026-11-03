@@ -128,6 +128,8 @@ export default defineConfig([
     'playwright-report/**',
     'test-results/**',
     'next-env.d.ts',
+    // Other sessions' git worktrees (Claude Code), each a full checkout.
+    '.claude/**',
   ]),
   {
     files: ['**/*.{ts,tsx,mts}'],

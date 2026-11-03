@@ -1,4 +1,4 @@
-import { defineUseCase, fail, ok } from '@/application/core';
+import { defineUseCase, eligiblePoints, fail, ok } from '@/application/core';
 import { bodyWire, outlineItemInput, outlineItemOutput } from '@/contracts';
 import { SECTIONS, type OutlineRow } from '@/domain/outline';
 import { emptyRichDoc, singleLine } from '@/domain/richtext';
@@ -26,7 +26,7 @@ export const readOutlineItem = defineUseCase({
     if (!slot) return fail({ code: 'not-found' });
 
     const [issue] = await tx.issues.between(monday, monday);
-    const proposals = await tx.points.eligibleFor(monday, slot.meetingDate);
+    const proposals = await eligiblePoints(tx, monday, slot.meetingDate);
     const { outline } = await loadEditable(tx, { id: issue?.id ?? null, monday }, proposals);
     const found = SECTIONS.flatMap((section) =>
       outline[section]

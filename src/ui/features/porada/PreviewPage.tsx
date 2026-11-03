@@ -45,7 +45,7 @@ export function PreviewPage({
           </p>
         )}
         {view.generated === null ? (
-          <Preflight findings={view.findings} />
+          <Preflight findings={view.findings} editMonday={view.canEdit ? view.monday : null} />
         ) : (
           <DocumentCard view={view.generated} />
         )}

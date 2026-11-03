@@ -15,7 +15,7 @@ import {
 
 import type { FutureEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
-import type { Responsible } from '@/domain/report';
+import { POINT_LIMITS, type Responsible } from '@/domain/report';
 import type { FutureState, ReportState } from '@/domain/review';
 
 import { at, atMs, createdAt, id } from './columns';
@@ -35,7 +35,7 @@ export const futureState = pgEnum('future_state', [
   'cancelled',
 ]);
 /** The values of `ReportState` (domain/review); `prompted` is never stored (design §2). */
-export const reportState = pgEnum('report_state', ['none', 'prompted', 'written']);
+export const reportState = pgEnum('report_state', ['none', 'prompted', 'written', 'missed']);
 
 const CAMPUSES = ['smichov', 'radlice', 'na-vidouli', 'jinde'] as const satisfies readonly Campus[];
 const campusList = sql.raw(CAMPUSES.map((campus) => `'${campus}'`).join(','));
@@ -135,6 +135,30 @@ export const futureEvents = pgTable(
     check(
       'future_events_note_required',
       sql`${t.event} NOT IN ('return','reject') OR ${t.note} IS NOT NULL`,
+    ),
+  ],
+);
+
+/**
+ * The headmaster's replacement for the paragraph a missing report prints (ADR 0049), one row per
+ * akce so it follows the akce across a skip or a move. No row means the paragraph the system
+ * writes. Plain text people wrote, so it is never logged or audited; the worker has no grant on
+ * it. Migration 0048 attaches the `version_bump` trigger.
+ */
+export const reportPlaceholders = pgTable(
+  'report_placeholders',
+  {
+    futureItemId: uuid()
+      .primaryKey()
+      .references(() => futureItems.id, { onDelete: 'cascade' }),
+    paragraph: text().notNull(),
+    version: integer().notNull().default(1),
+    updatedAt: at().notNull().defaultNow(),
+  },
+  (t) => [
+    check(
+      'report_placeholders_paragraph',
+      sql`char_length(${t.paragraph}) BETWEEN 1 AND ${sql.raw(String(POINT_LIMITS.opening))}`,
     ),
   ],
 );

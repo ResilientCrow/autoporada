@@ -98,6 +98,7 @@ export type {
 } from './point-events';
 export type { PointTypeRecord, PointTypeRepo, PointTypeValues } from './point-types';
 export type {
+  ClosedPoint,
   NewPoint,
   PointCursor,
   PointMailFacts,
@@ -105,6 +106,7 @@ export type {
   PointRecord,
   PointRef,
   PointRepo,
+  PointStanding,
   PointSummary,
   QueuedPoint,
   ReportPoint,
@@ -128,6 +130,7 @@ export type {
   RegistryListValues,
   RegistryRepo,
 } from './registry';
+export type { ReportPlaceholderRepo, StoredPlaceholder } from './report-placeholders';
 export type { NewSession, SessionRecord, SessionRepo, SessionSelector } from './sessions';
 export type { SettingsRepo, StoredSetting } from './settings';
 export type { PendingSignIn, SignInRepo } from './sign-ins';

@@ -306,6 +306,46 @@ describe('report eligibility', () => {
   });
 });
 
+describe('a placeholder report (ADR 0049)', () => {
+  const placeholder = (change?: (report: Record<string, unknown>) => void) =>
+    composeDocument(
+      snapshotFixture('template-replica', (raw) => {
+        const reports = raw['reports'] as Record<string, unknown>[];
+        const next: Record<string, unknown> = {
+          ...reports[1],
+          missing: true,
+          bullets: [],
+          statements: [],
+        };
+        change?.(next);
+        reports[1] = next;
+      }),
+    );
+  const titleOf = () => {
+    const reports = snapshotFixture('template-replica').reports;
+    return reports[1]?.title ?? '';
+  };
+
+  it('prints the stored paragraph, then the two fixed lines that say what was not delivered', () => {
+    const model = placeholder();
+    const blocks = allBlocks(model);
+    const at = blocks.findIndex((b) => b.kind === 'point' && b.text === titleOf());
+    expect(at).toBeGreaterThan(-1);
+    const lines = blocks.slice(at + 1, at + 4).map((b) => text(b).replaceAll(NB, ' '));
+    expect(lines[1]).toBe('Seznam účastníků nebyl dodán.');
+    expect(lines[2]).toBe('Vyjádření organizátora nebylo dodáno.');
+  });
+
+  it('leaves a report without the flag as it was', () => {
+    expect(allBlocks(replica).map(text).join('\n')).not.toContain('nebyl dodán');
+  });
+
+  it('keeps the placeholder in its place by date, with the other reports', () => {
+    const titles = allBlocks(placeholder()).flatMap((b) => (b.kind === 'point' ? [b.text] : []));
+    expect(titles).toEqual(allBlocks(replica).flatMap((b) => (b.kind === 'point' ? [b.text] : [])));
+  });
+});
+
 describe('a meeting that is not on the Monday', () => {
   const wednesday = (change?: (raw: Record<string, unknown>) => void) =>
     composeDocument(

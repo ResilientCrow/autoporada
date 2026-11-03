@@ -178,6 +178,15 @@ describe('IssueSnapshot v1', () => {
     expect(errorsOf(variant(['futureItems', 5, 'timeFrom'], '18:00'))).toEqual([]);
   });
 
+  it('accepts a placeholder report (missing: true) and still parses a report without the flag', () => {
+    expect(errorsOf(variant(['reports', 0, 'missing'], true))).toEqual([]);
+    expect(errorsOf(replica)).toEqual([]);
+  });
+
+  it.each([false, 'yes', 1])('rejects missing: %j on a report (only true is stored)', (value) => {
+    expect(errorsOf(variant(['reports', 0, 'missing'], value))).not.toEqual([]);
+  });
+
   it('rejects a future schema version', () => {
     expect(errorsOf(variant(['schema'], 2))).toContainEqual(expect.stringMatching(/^schema:/));
   });

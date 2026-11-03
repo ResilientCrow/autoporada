@@ -30,6 +30,7 @@ const REPORT_STATES: Readonly<Record<ReportState, ReportState>> = {
   none: 'none',
   prompted: 'prompted',
   written: 'written',
+  missed: 'missed',
 };
 const reportStateSchema = z.enum(REPORT_STATES);
 

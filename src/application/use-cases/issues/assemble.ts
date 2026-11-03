@@ -1,4 +1,4 @@
-import { readSettingValue, readSlots } from '@/application/core';
+import { readSettingValue, readSlots, readReportsSince } from '@/application/core';
 import type { Tx } from '@/application/ports';
 import { deadline } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
@@ -7,6 +7,7 @@ import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 import { parseIssueSnapshot } from '@/snapshot';
 
 import { futureItemOf, inAgendaWindow } from './assemble-future';
+import { missingReports, owedAkce, placeholderReports } from './assemble-missing';
 import { assembleOutline } from './assemble-outline';
 import { assembleRegistry } from './assemble-registry';
 import { assembleReports } from './assemble-reports';
@@ -44,7 +45,13 @@ export async function assembleIssueSnapshot(
   const meeting = issue.meetingDate;
   const outlineIssue = { id: issue.id, monday };
 
-  const points = await tx.points.eligibleFor(monday, meeting, { lock: options.lock ?? false });
+  const since = await readReportsSince(tx, monday);
+  const points = await tx.points.eligibleFor(monday, meeting, {
+    since,
+    lock: options.lock ?? false,
+  });
+  const owed = await owedAkce(tx, since, meeting);
+  const missing = await missingReports(tx, owed, points);
   const texts = await loadTexts(tx, outlineIssue);
   const outline = await assembleOutline(tx, outlineIssue, points);
   const registry = await assembleRegistry(tx, issue.id ?? virtualId(monday));
@@ -56,7 +63,12 @@ export async function assembleIssueSnapshot(
     meetingDate: meeting,
     deadlineAt: issue.deadlineAt,
   });
-  const { reports, problems } = assembleReports(points);
+  const answered = new Map(
+    owed.flatMap((a) => (a.reportPointId ? [[a.reportPointId, a] as const] : [])),
+  );
+  const assembled = assembleReports(points, answered);
+  const reports = [...assembled.reports, ...(await placeholderReports(tx, missing))];
+  const { problems } = assembled;
 
   const candidate = {
     schema: 1,
@@ -108,10 +120,15 @@ export async function assembleIssueSnapshot(
       lateExpected: late.expected,
       lateDraftsHidden: late.hiddenDrafts,
       dropped: outline.dropped,
+      missingReports: missing.map(({ akce, report }) => ({
+        id: akce.id,
+        title: singleLine(akce.content.title),
+        state: report?.state ?? ('none' as const),
+      })),
       annex1Entries: registry.annex1Entries,
       newEntries: registry.newEntries,
       ohlasyEmpty: outline.ohlasyEmpty,
     },
-    publish: { points, entryIds: registry.unstamped },
+    publish: { points, missing, entryIds: registry.unstamped },
   };
 }

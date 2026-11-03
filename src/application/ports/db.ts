@@ -13,6 +13,7 @@ import type { PointTypeRepo } from './point-types';
 import type { PointRepo } from './points';
 import type { Principal } from './principal';
 import type { RegistryRepo } from './registry';
+import type { ReportPlaceholderRepo } from './report-placeholders';
 import type { SessionRepo } from './sessions';
 import type { SettingsRepo } from './settings';
 import type { SignInRepo } from './sign-ins';
@@ -54,6 +55,7 @@ export interface Tx {
   readonly pointEvents: PointEventRepo;
   readonly futureItems: FutureItemRepo;
   readonly futureEvents: FutureEventRepo;
+  readonly reportPlaceholders: ReportPlaceholderRepo;
   readonly audit: AuditPort;
   readonly jobs: JobPort;
   /** The worker's delivery state; refuses every principal but jobs and the CLI. */
