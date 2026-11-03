@@ -14,10 +14,11 @@ import {
   type UserRecord,
   type WorkerDeps,
 } from '@/application/ports';
-import { moveIssue, setSkipped } from '@/application/use-cases';
-import { calDate, toIsoDate } from '@/domain/time';
+import { setSkipped } from '@/application/use-cases';
+import { calDate, parseIsoDate, parseWallTime, toIsoDate, wallClockToInstant } from '@/domain/time';
 
 import { createFakeMail } from '../../../test/support/fake-mail';
+import { issueFixtures } from '../../../test/support/issues';
 import { lateReportFixtures } from '../../../test/support/late-reports';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
@@ -27,6 +28,7 @@ import { unusedConverter } from '../../../test/support/fake-converter';
 const world = setupWorld();
 const points = pointFixtures(world);
 const late = lateReportFixtures(world);
+const issues = issueFixtures(world);
 
 /** Monday 2 November 2026: the rule's deadline is Saturday 31 October 20.00 Prague (19.00Z). */
 const MONDAY = calDate(2026, 11, 2);
@@ -62,16 +64,11 @@ const headmaster = () => world.seed.user({ role: 'headmaster', email: 'reditel@s
 const submitter = (over: Parameters<typeof world.seed.user>[0] = {}) =>
   world.seed.user({ role: 'submitter', ...over });
 
-/** The headmaster moves the Monday's deadline (meeting stays on the Monday). */
-async function moveDeadline(head: UserRecord, date: string, time = '20:00') {
-  const result = await world.run(moveIssue, world.as(head), {
-    monday: ISO,
-    meetingDate: ISO,
-    deadlineDate: date,
-    deadlineTime: time,
-    skip: [],
+/** The Monday's deadline moved (the meeting stays on the Monday), as a move left it before ADR 0051. */
+async function moveDeadline(date: string, time = '20:00') {
+  await issues.reschedule(MONDAY, {
+    deadlineAt: wallClockToInstant(parseIsoDate(date), parseWallTime(time)),
   });
-  if (!result.ok) throw new Error(`move refused: ${JSON.stringify(result.error)}`);
 }
 
 async function jobs(name: string) {
@@ -120,16 +117,14 @@ describe('the notice job', () => {
   });
 
   it('is not queued by a move: the mail is switched off (ADR 0037)', async () => {
-    const head = await headmaster();
     world.clock.set(WEDNESDAY);
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     expect(await jobs('issues.moved-notice')).toEqual([]);
   });
 });
 
 describe('the audience', () => {
   it('mails whoever owes an akce report or has a draft, once each, and nobody else', async () => {
-    const head = await headmaster();
     const owing = await submitter();
     await owes(owing);
     const student = await submitter({ isStudent: true });
@@ -149,7 +144,7 @@ describe('the audience', () => {
     });
     void idle;
 
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     const data = noticeFor(FRIDAY_8PM);
     expect(await runNotice(data)).toEqual({ kind: 'done', code: 'notified' });
     expect(await mailTo()).toEqual([owing.id, student.id, writer.id, both.id].sort());
@@ -167,21 +162,19 @@ describe('the audience', () => {
   });
 
   it('says none when nobody is in the audience', async () => {
-    const head = await headmaster();
     world.clock.set(WEDNESDAY);
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     const data = noticeFor(FRIDAY_8PM);
     expect(await runNotice(data)).toEqual({ kind: 'done', code: 'none' });
     expect(await jobs('mail.send')).toEqual([]);
   });
 
   it('skips a person whose mail for this deadline is already in the ledger', async () => {
-    const head = await headmaster();
     const done = await submitter();
     const fresh = await submitter();
     await owes(done);
     await owes(fresh);
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     await world.workerDb.transaction(
       { principal: system('job:test'), now: world.clock.now(), requestId: 'seed' },
       { mode: 'write' },
@@ -200,18 +193,10 @@ describe('the audience', () => {
   });
 
   it('mails again for a second earlier deadline, under its own key', async () => {
-    const head = await headmaster();
     const user = await submitter();
     await owes(user);
-    await moveDeadline(head, '2026-10-30');
-    await world.run(moveIssue, world.as(head), {
-      monday: ISO,
-      meetingDate: ISO,
-      deadlineDate: '2026-10-29',
-      deadlineTime: '20:00',
-      skip: [],
-      expectedVersion: 2,
-    });
+    await moveDeadline('2026-10-30');
+    await moveDeadline('2026-10-29', '20:00');
     // the first notice is stale once the second move happened; only the second mails
     expect(await runNotice(noticeFor(FRIDAY_8PM))).toEqual({ kind: 'done', code: 'none' });
     expect(await runNotice(noticeFor(THURSDAY_8PM))).toEqual({ kind: 'done', code: 'notified' });
@@ -224,21 +209,14 @@ describe('a stale job is dropped', () => {
     const head = await headmaster();
     const user = await submitter();
     await owes(user);
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     const data = noticeFor(FRIDAY_8PM);
     return { head, user, data };
   }
 
   it('when the deadline was moved again since', async () => {
-    const { head, data } = await moved();
-    await world.run(moveIssue, world.as(head), {
-      monday: ISO,
-      meetingDate: ISO,
-      deadlineDate: '2026-11-01',
-      deadlineTime: '12:00',
-      skip: [],
-      expectedVersion: 2,
-    });
+    const { data } = await moved();
+    await moveDeadline('2026-11-01', '12:00');
     expect(await runNotice(data)).toEqual({ kind: 'done', code: 'none' });
     expect(await jobs('mail.send')).toEqual([]);
   });
@@ -281,14 +259,13 @@ describe('at send time', () => {
     );
 
   it('sends to a member with a draft or an owed report, and nothing to one who owes nothing', async () => {
-    const head = await headmaster();
     const worker = await submitter({ email: 'jana@ssps.cz' });
     const owing = await submitter({ email: 'eva@ssps.cz' });
     const quiet = await submitter({ email: 'petr@ssps.cz' });
     await draft(worker);
     await owes(owing);
     await handedIn(quiet);
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     const mail = createFakeMail();
     expect(await mailSend(mail, worker)).toMatchObject({ kind: 'done', code: 'sent' });
     expect(await mailSend(mail, owing)).toMatchObject({ kind: 'done', code: 'sent' });
@@ -298,8 +275,7 @@ describe('at send time', () => {
   });
 
   it('sends nothing to a user who is gone, and nothing to a pending or blocked one', async () => {
-    const head = await headmaster();
-    await moveDeadline(head, '2026-10-30');
+    await moveDeadline('2026-10-30');
     const mail = createFakeMail();
     const gone = { id: '00000000-0000-7000-8000-00000000dead' } as UserRecord;
     expect(await mailSend(mail, gone)).toEqual({ kind: 'done', code: 'skipped.recipient-gone' });

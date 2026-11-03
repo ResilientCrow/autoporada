@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PLACEMENT_WEEKS, type IssueRow } from '@/domain/calendar';
+import type { IssueRow } from '@/domain/calendar';
 import { parseIsoDate } from '@/domain/time';
 
 import { deadlineSchema } from './settings';
@@ -8,16 +8,17 @@ import { deadlineSchema } from './settings';
 /**
  * „Porada se nekoná“ and its undo. `expectedVersion` is the version of the row
  * the page showed; a Monday without a row has none, which reads as an
- * untouched issue. `confirmed` is the checkbox (ADR 0013 item 10). `until`, with
- * a skip only, is the Monday of the porada held next: every one before it is
- * skipped too (ADR 0047).
+ * untouched issue. `confirmed` is the checkbox (ADR 0013 item 10). `nextMeeting`,
+ * with a skip only, is the day the next porada is held, any weekday: the porada
+ * of its nearest Monday is held on it, and every one before it is skipped
+ * (ADR 0051).
  */
 export const setSkippedInput = z.strictObject({
   monday: z.iso.date().max(10),
   event: z.enum(['skip', 'unskip']),
   expectedVersion: z.number().int().positive().optional(),
   confirmed: z.literal(true).optional(),
-  until: z.iso.date().max(10).optional(),
+  nextMeeting: z.iso.date().max(10).optional(),
 });
 export const setSkippedOutput = z.object({
   status: z.enum(['open', 'generated', 'skipped']),
@@ -38,28 +39,6 @@ export const generateIssueOutput = z.object({
   version: z.number().int().positive(),
 });
 
-/**
- * Moving a porada to another meeting date (ADR 0034). The deadline is a date and a time of day
- * the form pre-fills from the rule. `skip` lists the Mondays of the slots in the way that the
- * move cancels; they must be exactly the conflicts, and `confirmed` is the checkbox that says so.
- */
-export const moveIssueInput = z.strictObject({
-  monday: z.iso.date().max(10),
-  meetingDate: z.iso.date().max(10),
-  deadlineDate: z.iso.date().max(10),
-  deadlineTime: z
-    .string()
-    .max(5)
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-  skip: z.array(z.iso.date().max(10)).max(PLACEMENT_WEEKS),
-  expectedVersion: z.number().int().positive().optional(),
-  confirmed: z.literal(true).optional(),
-});
-export const moveIssueOutput = z.object({
-  version: z.number().int().positive(),
-  skipped: z.int().min(0),
-});
-
 /** The calendar the Přehled, the standing line and the lists read: no input. */
 export const issuesWindowInput = z.strictObject({});
 export const issuesWindowOutput = z.object({
@@ -71,7 +50,7 @@ export const issuesWindowOutput = z.object({
   issues: z.array(
     z.object({
       monday: z.iso.date(),
-      /** The day the porada is held: the Monday until it is moved (`issues.move`). */
+      /** The day the porada is held: the Monday until it is moved (ADR 0051). */
       meetingDate: z.iso.date(),
       deadlineAt: z.iso.datetime(),
       status: z.enum(['open', 'generated', 'skipped']),

@@ -1,6 +1,6 @@
 import { defineUseCase, fail, ok, readReportsSince } from '@/application/core';
 import { issueWorkspaceInput, issueWorkspaceOutput } from '@/contracts';
-import { lastSlotMonday, placementSlot, workingSlot } from '@/domain/calendar';
+import { placementSlot, workingSlot } from '@/domain/calendar';
 import { compareDates, instantToWallClock, toIsoDate } from '@/domain/time';
 
 import { documentInfoOf } from '../documents/info';
@@ -52,14 +52,6 @@ export const issueWorkspace = defineUseCase({
         status: slot.status,
         version: row?.version ?? null,
         next: next && toIsoDate(next.meetingDate),
-        heldNext: slots
-          .filter(
-            (s) =>
-              s.status === 'open' &&
-              compareDates(s.monday, monday) > 0 &&
-              compareDates(s.monday, lastSlotMonday(today)) <= 0,
-          )
-          .map((s) => ({ monday: toIsoDate(s.monday), meetingDate: toIsoDate(s.meetingDate) })),
         counts: {
           waiting: waiting.submitted.length,
           returned: waiting.returned.length,

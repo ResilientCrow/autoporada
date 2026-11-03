@@ -87,7 +87,6 @@ test.describe('the porada, registry and settings screens', () => {
 
     for (const [path, name, editor] of [
       ['', 'the porada page'],
-      ['/presunout', 'the move form', true],
       ['/udaje', 'Údaje'],
       ['/pokyny/nova?cast=pokyny', 'the new item form', true],
       ['/priloha-2', 'Příloha 2', true],

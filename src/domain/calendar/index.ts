@@ -15,6 +15,13 @@ export {
   type IssuePhase,
 } from './issue-calendar';
 export { orderConflicts, type OrderConflict } from './order';
+export {
+  nextMeetingBounds,
+  planNextMeeting,
+  slotMondayOf,
+  type NextMeetingPlan,
+  type NextMeetingRefusal,
+} from './next-meeting';
 export { DIGEST_FALLBACK_MS, digestSince, digestSlot, type DigestSlot } from './digest';
 export {
   REMINDER_DRAFT_DAYS,

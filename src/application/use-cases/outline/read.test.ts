@@ -3,13 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { SEED_OUTLINE } from '@/domain/outline';
 import { calDate } from '@/domain/time';
 
+import { issueFixtures } from '../../../../test/support/issues';
 import { monday, outlineFixtures, WEEK_1, WEEK_2 } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
-import { moveIssue } from '../issues';
 import { readOutline } from './index';
 
 const world = setupWorld();
 const fx = outlineFixtures(world);
+const issues = issueFixtures(world);
 
 const read = async (day: Parameters<typeof fx.readAs>[1], by?: Parameters<typeof fx.readAs>[0]) => {
   const result = await fx.readAs(by ?? (await fx.headmaster()), day);
@@ -84,14 +85,10 @@ describe('outline.read', () => {
 
   it('prints the meeting date of a moved porada beside its Monday', async () => {
     const head = await fx.headmaster();
-    const moved = await world.run(moveIssue, world.as(head), {
-      monday: monday(WEEK_2),
-      meetingDate: monday(calDate(2026, 11, 4)),
-      deadlineDate: monday(calDate(2026, 11, 2)),
-      deadlineTime: '20:00',
-      skip: [],
+    await issues.reschedule(WEEK_2, {
+      meetingDate: calDate(2026, 11, 4),
+      deadlineAt: new Date('2026-11-02T19:00:00Z'),
     });
-    expect(moved.ok).toBe(true);
     expect(await read(WEEK_2, head)).toMatchObject({
       monday: monday(WEEK_2),
       meetingDate: '2026-11-04',

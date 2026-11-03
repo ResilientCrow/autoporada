@@ -2,9 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FAILURE_CAUSES, PDF_FAILURES, type DownloadError, type PdfFailure } from '@/contracts';
-import { DEFAULT_DEADLINE, deadline } from '@/domain/calendar';
+import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import type { DocumentModel } from '@/document';
-import { instantToWallClock, parseIsoDate, toIsoDate, toIsoTime } from '@/domain/time';
 import { cs, issues, porada } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
@@ -15,13 +14,11 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import { ArchivePage, MovePage, NoPorada, PreviewPage, Workspace } from './index';
+import { ArchivePage, NoPorada, PreviewPage, Workspace } from './index';
 import type { FindingView } from './Preflight';
-import type { MoveView } from './move';
-import { moveEffect, moveInput, ruleDeadline, skipList } from './move';
 import { SkipForm, type SkipView } from './SkipControl';
 import { Steps } from './Steps';
-import { skipInput } from './skip';
+import { firstHeld, nextMeetingNote, skipInput, type SkipCalendar } from './skip';
 import type { WorkspaceView } from './Workspace';
 
 const MONDAY = '2026-11-09';
@@ -41,6 +38,13 @@ const GENERATED = {
   pdfFailure: null,
 } as const;
 
+/** Tuesday 3 November 2026, 11.00 in Prague, with every porada untouched. */
+const CALENDAR: SkipCalendar = {
+  issues: [],
+  now: '2026-11-03T10:00:00.000Z',
+  rule: DEFAULT_DEADLINE,
+};
+
 const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   monday: MONDAY,
   meeting: 'pondělí 9. listopadu 2026',
@@ -51,10 +55,7 @@ const view = (over: Partial<WorkspaceView> = {}): WorkspaceView => ({
   status: 'open',
   version: 3,
   nextLabel: '16. 11. 2026',
-  heldNext: [
-    { monday: '2026-11-16', label: 'pondělí 16. listopadu 2026' },
-    { monday: '2026-11-23', label: 'úterý 24. listopadu 2026' },
-  ],
+  calendar: CALENDAR,
   counts: { waiting: 2, returned: 0, approved: 1, later: 0, missing: 0 },
   generated: null,
   ...over,
@@ -94,11 +95,8 @@ describe('Workspace', () => {
     ).toContain(porada.counts.later(3));
   });
 
-  it('offers the move only while the porada is open', () => {
-    const link = `href="/porada/${MONDAY}/presunout"`;
-    expect(render({ status: 'open' })).toContain(link);
-    expect(render({ status: 'skipped' })).not.toContain(link);
-    expect(render({ status: 'generated' })).not.toContain(link);
+  it('has no move page to link to: the skip dialog moves a porada (ADR 0051)', () => {
+    expect(render()).not.toContain('/presunout');
   });
 
   it('puts „Porada se nekoná“ at the right of the status card, and no separate skip card', () => {
@@ -202,7 +200,7 @@ describe('SkipForm (the dialog of the status card)', () => {
     version: 3,
     deadlinePassed: false,
     next: '16. 11. 2026',
-    heldNext: view().heldNext,
+    calendar: CALENDAR,
     ...over,
   });
   const form = (over: Partial<SkipView> = {}) =>
@@ -210,44 +208,141 @@ describe('SkipForm (the dialog of the status card)', () => {
       <SkipForm action={setSkipped} view={skipView(over)} onCancel={vi.fn()} onDone={vi.fn()} />,
     );
 
-  it('names the porada, offers the next ones with the first chosen, then the box and the buttons', () => {
+  it('names the porada, asks for the day of the next one pre-filled with it, then the box and the buttons', () => {
     const html = form();
     expect(html).toContain(porada.skip.lead('pondělí 9. listopadu 2026'));
-    expect(html).toContain(porada.skip.until);
-    expect(html).toContain(porada.skip.untilHint);
-    expect(html).toMatch(/<select[^>]*name="until"[^>]*aria-required="true"/);
-    expect(html).not.toContain(`${porada.skip.until} (`);
-    expect(html).toMatch(/<option value="2026-11-16" selected="">pondělí 16. listopadu 2026/);
-    expect(html).toContain('<option value="2026-11-23">úterý 24. listopadu 2026');
+    expect(html).toContain(porada.skip.nextMeeting);
+    expect(html).toContain(porada.skip.nextHint);
+    expect(html).toMatch(
+      /<input[^>]*type="date"[^>]*name="nextMeeting"|name="nextMeeting"[^>]*type="date"/,
+    );
+    expect(html).toMatch(
+      /name="nextMeeting"[^>]*value="2026-11-16"|value="2026-11-16"[^>]*name="nextMeeting"/,
+    );
+    expect(html).not.toContain('<select');
     expect(html).toContain(issues.strip.skip.confirm);
     const at = (text: string) => html.indexOf(text);
-    expect(at('name="until"')).toBeLessThan(at('name="confirmed"'));
+    expect(at('name="nextMeeting"')).toBeLessThan(at('name="confirmed"'));
     expect(at(`${issues.strip.skip.submit}</button>`)).toBeLessThan(
       at(`${porada.skip.cancel}</button>`),
     );
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 
-  it('leaves out the hint with one porada to choose, and the select with none', () => {
-    expect(form({ heldNext: view().heldNext.slice(0, 1) })).not.toContain(porada.skip.untilHint);
-    const none = form({ heldNext: [], next: null });
-    expect(none).not.toContain('name="until"');
-    expect(none).toContain(porada.skip.noNext);
+  it('says what the pre-filled day does: the next porada and its deadline', () => {
+    const html = form();
+    expect(html).toContain(
+      porada.skip.plan.next('pondělí 16. listopadu 2026', 'sobota 14.\u00a011. v\u00a020:00'),
+    );
   });
 
-  it('warns after the deadline that the approved points move to the chosen porada', () => {
+  it('leaves the field empty with a note when no porada follows', () => {
+    // 26 April 2027 is the calendar's last Monday on 3 November 2026.
+    const html = form({ monday: '2027-04-26', next: null });
+    expect(html).toContain(porada.skip.noNext);
+    expect(html).toMatch(/name="nextMeeting"/);
+    expect(html).not.toMatch(/name="nextMeeting"[^>]*value="2/);
+  });
+
+  it('warns after the deadline that the approved points move to the next porada', () => {
     expect(form({ deadlinePassed: true })).toContain(porada.skip.afterDeadline);
     expect(form({ deadlinePassed: false })).not.toContain(porada.skip.afterDeadline);
-    expect(form({ deadlinePassed: true, heldNext: [] })).not.toContain(porada.skip.afterDeadline);
   });
 
-  it('brings a skipped porada back with its own box, saying where points stay, and no select', () => {
-    const html = form({ status: 'skipped' });
+  it('brings a skipped porada back with its own box, saying where points stay, and no date', () => {
+    const html = form({ status: 'skipped', calendar: null });
     expect(html).toContain(issues.strip.unskip.confirm);
     expect(html).toContain(`${issues.strip.unskip.submit}</button>`);
     expect(html).toContain(porada.skip.kept('16. 11. 2026'));
-    expect(html).not.toContain('name="until"');
+    expect(html).not.toContain('name="nextMeeting"');
     expect(html).not.toContain(porada.skip.lead('pondělí 9. listopadu 2026'));
+  });
+});
+
+describe('firstHeld and nextMeetingNote', () => {
+  it('pre-fills the meeting date of the next porada that takes place', () => {
+    expect(firstHeld(CALENDAR, MONDAY)).toBe('2026-11-16');
+    const skipped = {
+      ...CALENDAR,
+      issues: [
+        {
+          monday: '2026-11-16',
+          meetingDate: '2026-11-16',
+          deadlineAt: '2026-11-14T19:00:00.000Z',
+          status: 'skipped' as const,
+        },
+        {
+          monday: '2026-11-23',
+          meetingDate: '2026-11-24',
+          deadlineAt: '2026-11-22T19:00:00.000Z',
+          status: 'open' as const,
+        },
+      ],
+    };
+    expect(firstHeld(skipped, MONDAY)).toBe('2026-11-24');
+    expect(firstHeld(CALENDAR, '2030-01-07')).toBe('');
+  });
+
+  it('names the poradas skipped on the way and the next one with its deadline', () => {
+    expect(nextMeetingNote(CALENDAR, MONDAY, '2026-11-27')).toEqual({
+      refused: false,
+      self: false,
+      lines: [
+        porada.skip.plan.skipped('16. 11. 2026, 23. 11. 2026'),
+        porada.skip.plan.next('pátek 27. listopadu 2026', 'středa 25.\u00a011. v\u00a020:00'),
+      ],
+    });
+  });
+
+  it('holds this porada on another day of its week', () => {
+    expect(nextMeetingNote(CALENDAR, MONDAY, '2026-11-10')).toEqual({
+      refused: false,
+      self: true,
+      lines: [porada.skip.plan.next('úterý 10. listopadu 2026', 'neděle 8.\u00a011. v\u00a020:00')],
+    });
+  });
+
+  it('says why a day cannot be the next porada’s', () => {
+    const refused = (typed: string) => nextMeetingNote(CALENDAR, MONDAY, typed);
+    expect(refused('2026-11-05')).toEqual({
+      refused: true,
+      self: false,
+      lines: [porada.skip.refused.early('6. 11. 2026')],
+    });
+    expect(refused('2030-01-07')?.lines[0]).toMatch(/^Zvolte den nejpozději /);
+    expect(refused(MONDAY)).toEqual({
+      refused: true,
+      self: false,
+      lines: [porada.skip.refused.same],
+    });
+    const skipped = {
+      ...CALENDAR,
+      issues: [
+        {
+          monday: '2026-11-16',
+          meetingDate: '2026-11-16',
+          deadlineAt: '2026-11-14T19:00:00.000Z',
+          status: 'skipped' as const,
+        },
+      ],
+    };
+    expect(nextMeetingNote(skipped, MONDAY, '2026-11-17')).toEqual({
+      refused: true,
+      self: false,
+      lines: [porada.skip.refused.skipped('16. 11. 2026')],
+    });
+    const late = { ...CALENDAR, now: '2026-11-04T20:30:00.000Z' };
+    expect(nextMeetingNote(late, MONDAY, '2026-11-06')).toEqual({
+      refused: true,
+      self: false,
+      lines: [porada.skip.refused['deadline-past']],
+    });
+  });
+
+  it('says nothing while the field holds no date, or the porada is not in the calendar', () => {
+    expect(nextMeetingNote(CALENDAR, MONDAY, '')).toBeNull();
+    expect(nextMeetingNote(CALENDAR, MONDAY, '2026-02-30')).toBeNull();
+    expect(nextMeetingNote(CALENDAR, '2030-01-07', '2026-11-16')).toBeNull();
   });
 });
 
@@ -258,21 +353,26 @@ describe('skipInput', () => {
     return out;
   };
 
-  it('sends the chosen porada with a skip, and never with an unskip', () => {
-    expect(skipInput(MONDAY, 'skip', 3, data({ until: '2026-11-23', confirmed: 'on' }))).toEqual({
+  it('sends the day of the next porada with a skip, and never with an unskip', () => {
+    expect(
+      skipInput(MONDAY, 'skip', 3, data({ nextMeeting: '2026-11-24', confirmed: 'on' })),
+    ).toEqual({
       monday: MONDAY,
       event: 'skip',
       expectedVersion: 3,
       confirmed: true,
-      until: '2026-11-23',
+      nextMeeting: '2026-11-24',
     });
-    expect(skipInput(MONDAY, 'unskip', 3, data({ until: '2026-11-23' }))).not.toHaveProperty(
-      'until',
+    expect(skipInput(MONDAY, 'unskip', 3, data({ nextMeeting: '2026-11-24' }))).not.toHaveProperty(
+      'nextMeeting',
     );
   });
 
-  it('leaves out an empty choice, the version of a Monday without a row and an unticked box', () => {
-    expect(skipInput(MONDAY, 'skip', null, data({}))).toEqual({ monday: MONDAY, event: 'skip' });
+  it('leaves out an empty day, the version of a Monday without a row and an unticked box', () => {
+    expect(skipInput(MONDAY, 'skip', null, data({ nextMeeting: '' }))).toEqual({
+      monday: MONDAY,
+      event: 'skip',
+    });
   });
 });
 
@@ -573,149 +673,5 @@ describe('PreviewPage and Preflight', () => {
     const html = preview([], { document: null });
     expect(html).toContain(porada.preview.invalid);
     expect(html).not.toContain('Bod náhledu');
-  });
-});
-
-const MOVE_RULE = DEFAULT_DEADLINE;
-const NOW = '2026-10-19T08:00:00.000Z';
-const slot = (monday: string, status: 'open' | 'generated' | 'skipped' = 'open') => ({
-  monday,
-  meetingDate: monday,
-  deadlineAt: deadline(parseIsoDate(monday), MOVE_RULE).toISOString(),
-  status,
-});
-const moveView = (over: Partial<MoveView> = {}): MoveView => ({
-  monday: '2026-11-02',
-  version: 4,
-  meetingDate: '2026-11-02',
-  deadlineAt: slot('2026-11-02').deadlineAt,
-  today: '2026-10-19',
-  last: '2027-06-30',
-  issues: [slot('2026-10-26'), slot('2026-11-02'), slot('2026-11-09')],
-  now: NOW,
-  rule: MOVE_RULE,
-  ...over,
-});
-const move = (v: MoveView) =>
-  renderToStaticMarkup(
-    <MovePage
-      model={{ monday: v.monday, meeting: 'pondělí 2. listopadu 2026', view: v }}
-      moveIssue={vi.fn()}
-    />,
-  );
-const fieldValue = (html: string, name: string) =>
-  new RegExp(`name="${name}"[^>]*?value="([^"]*)"|value="([^"]*)"[^>]*?name="${name}"`).exec(html);
-
-describe('MovePage', () => {
-  it('pre-fills the deadline the rule gives for the current meeting date', () => {
-    const html = move(moveView());
-    expect(ruleDeadline('2026-11-02', MOVE_RULE, NOW)).not.toBeNull();
-    expect(html).toContain('name="meetingDate"');
-    expect(html).toContain(porada.move.current('2. 11. 2026'));
-    expect(html).not.toContain(porada.move.deadlinePast);
-    expect(fieldValue(html, 'deadlineTime')?.[1] ?? fieldValue(html, 'deadlineTime')?.[2]).toBe(
-      ruleDeadline('2026-11-02', MOVE_RULE, NOW)!.time,
-    );
-  });
-
-  it('leaves the deadline empty with a note when the rule gives a past one', () => {
-    const html = move(moveView({ now: '2026-12-01T08:00:00.000Z' }));
-    expect(html).toContain(porada.move.deadlinePast);
-  });
-
-  it('links back to the porada and does not ask for the confirm box when nothing is crossed', () => {
-    const html = move(moveView());
-    expect(html).toContain(`href="/porada/2026-11-02"`);
-    expect(html).not.toContain('name="confirmed"');
-    expect(cspMarkupProblems(html)).toEqual([]);
-  });
-});
-
-describe('move helpers', () => {
-  const typedFor = (meeting: string, at: Date) => {
-    const { date, time } = instantToWallClock(at);
-    return { meeting, date: toIsoDate(date), time: toIsoTime(time) };
-  };
-
-  it('gives no rule deadline for an unreadable date or a deadline already past', () => {
-    expect(ruleDeadline('nonsense', MOVE_RULE, NOW)).toBeNull();
-    expect(ruleDeadline('2026-10-19', MOVE_RULE, '2026-12-01T00:00:00.000Z')).toBeNull();
-    expect(ruleDeadline('2026-11-02', MOVE_RULE, NOW)).toEqual(
-      expect.objectContaining({ date: expect.stringMatching(/^2026-1\d-\d\d$/) }),
-    );
-  });
-
-  it('gives no effect while a value is missing or the Monday has no slot', () => {
-    const v = moveView();
-    expect(moveEffect(v, { meeting: '', date: '2026-10-30', time: '20:00' })).toBeNull();
-    expect(moveEffect(v, { meeting: '2026-11-02', date: '', time: '20:00' })).toBeNull();
-    expect(moveEffect(v, { meeting: '2026-11-02', date: '2026-10-30', time: '' })).toBeNull();
-    expect(
-      moveEffect(
-        { ...v, monday: '2030-01-07' },
-        { meeting: '2026-11-02', date: '2026-10-30', time: '20:00' },
-      ),
-    ).toBeNull();
-  });
-
-  it('compares the typed deadline with the current one: same, earlier, later', () => {
-    const v = moveView();
-    const current = new Date(v.deadlineAt);
-    const hour = 3_600_000;
-    expect(moveEffect(v, typedFor('2026-11-02', current))?.change).toBe('same');
-    expect(
-      moveEffect(v, typedFor('2026-11-02', new Date(current.getTime() - 24 * hour)))?.change,
-    ).toBe('earlier');
-    expect(
-      moveEffect(v, typedFor('2026-11-02', new Date(current.getTime() + 24 * hour)))?.change,
-    ).toBe('later');
-  });
-
-  it('finds the porady a later meeting date would cross, and lists them as Mondays', () => {
-    const v = moveView();
-    const effect = moveEffect(
-      v,
-      typedFor('2026-11-10', new Date(new Date(v.deadlineAt).getTime() + 7 * 24 * 3_600_000)),
-    );
-    expect(skipList(effect!.conflicts)).toEqual(['2026-11-09']);
-    expect(effect!.conflicts[0]).toMatchObject({ status: 'open' });
-  });
-
-  it('shows the conflicts with the confirm box and the effect line', () => {
-    const v = moveView({ meetingDate: '2026-11-10' });
-    // The form starts from the view; a crossed Monday asks for the confirm box.
-    const html = move(v);
-    expect(html).toContain(porada.move.conflicts('9. 11. 2026'));
-    expect(html).toContain('name="confirmed"');
-    expect(html).toContain(porada.move.fields.confirmed);
-  });
-
-  it('refuses to move over a generated porada: no confirm box, a fixed text', () => {
-    const v = moveView({
-      meetingDate: '2026-11-10',
-      issues: [slot('2026-10-26'), slot('2026-11-02'), slot('2026-11-09', 'generated')],
-    });
-    const html = move(v);
-    expect(html).toContain(porada.move.conflictsFixed);
-    expect(html).not.toContain('name="confirmed"');
-  });
-
-  it('sends the version only for a slot with a row and confirmed only when ticked', () => {
-    const form = (entries: Record<string, string>) => {
-      const data = new FormData();
-      for (const [k, val] of Object.entries(entries)) data.set(k, val);
-      return data;
-    };
-    const base = { meetingDate: '2026-11-10', deadlineDate: '2026-11-06', deadlineTime: '20:00' };
-    expect(moveInput(moveView(), ['2026-11-09'], form({ ...base, confirmed: 'on' }))).toEqual({
-      monday: '2026-11-02',
-      ...base,
-      skip: ['2026-11-09'],
-      expectedVersion: 4,
-      confirmed: true,
-    });
-    const bare = moveInput(moveView({ version: null }), [], form(base));
-    expect(bare).not.toHaveProperty('expectedVersion');
-    expect(bare).not.toHaveProperty('confirmed');
   });
 });

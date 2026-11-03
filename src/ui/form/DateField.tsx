@@ -16,6 +16,7 @@ import { TextField } from './TextField';
  */
 export function DateField({
   name,
+  description,
   initial,
   onChange,
   issue,
@@ -23,6 +24,7 @@ export function DateField({
   onBlur,
 }: {
   readonly name: string;
+  readonly description?: string;
   readonly initial: string | null;
   readonly onChange: (value: string) => void;
   readonly issue: string | undefined;
@@ -37,6 +39,7 @@ export function DateField({
   return (
     <TextField
       name={name}
+      description={description}
       type="date"
       value={shown}
       onChange={(value) => {

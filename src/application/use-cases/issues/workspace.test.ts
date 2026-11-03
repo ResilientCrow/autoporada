@@ -79,23 +79,9 @@ describe('issues.workspace', () => {
         status: 'open',
         version: null,
         next: '2026-11-02',
-        heldNext: slot.heldNext,
         counts: { waiting: 0, returned: 0, approved: 0, later: 0, missing: 0 },
         document: null,
       });
-    });
-
-    it('offers every open porada after it as the one held next, by Monday and meeting date', async () => {
-      await fixtures.issue(W2, { status: 'skipped' });
-      await fixtures.issue(W3, { meetingDate: d('2026-11-11') });
-      const { heldNext } = await slotOf(W1);
-      expect(heldNext.slice(0, 2)).toEqual([
-        { monday: '2026-11-09', meetingDate: '2026-11-11' },
-        { monday: '2026-11-16', meetingDate: '2026-11-16' },
-      ]);
-      // To the end of the calendar: TODAY's 26 Mondays less TODAY, W1 and the skipped W2.
-      expect(heldNext).toHaveLength(23);
-      expect((await slotOf(addDays(TODAY, 7 * 25))).heldNext).toEqual([]);
     });
 
     it('describes a stored row by its own meeting date, deadline, status and version', async () => {

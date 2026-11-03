@@ -128,8 +128,6 @@ export {
   generateIssueInput,
   generateIssueOutput,
   issuesWindowInput,
-  moveIssueInput,
-  moveIssueOutput,
   issuesWindowOutput,
   setSkippedInput,
   setSkippedOutput,

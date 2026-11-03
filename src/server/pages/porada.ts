@@ -20,8 +20,7 @@ import {
 } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus } from '@/domain/review';
-import { lastSlotMonday } from '@/domain/calendar';
-import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
+import { compareDates, instantToWallClock, parseIsoDate } from '@/domain/time';
 import { parseIssueSnapshot } from '@/snapshot';
 
 import { getContainer } from '../container';
@@ -101,8 +100,11 @@ interface PoradaPageModel {
   readonly version: number | null;
   /** „10. 11. 2026“: the porada the approved points move to if this one is skipped. */
   readonly nextLabel: string | null;
-  /** The poradas a skip may name as the one held next, earliest first (ADR 0047). */
-  readonly heldNext: readonly { readonly monday: string; readonly label: string }[];
+  /**
+   * The calendar the skip dialog plans the next porada on (ADR 0051): `issues.window`, the instant
+   * it was read and the rule. Null unless the porada is open, and where the use case refuses it.
+   */
+  readonly calendar: Pick<StandingModel, 'issues' | 'now' | 'rule'> | null;
   readonly counts: NonNullable<Workspace['slot']>['counts'];
   /** The document of a generated porada; null before. */
   readonly generated: GeneratedModel | null;
@@ -125,6 +127,9 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
   const meeting = parseIsoDate(slot.meetingDate);
   const deadlineAt = new Date(slot.deadlineAt);
   const { date, time } = instantToWallClock(deadlineAt);
+  const now = getContainer().app.clock.now();
+  const window = slot.status === 'open' ? await readWindow(viewer) : null;
+  const standing = window && standingFrom(window, now);
   return {
     kind: 'workspace',
     model: {
@@ -133,63 +138,13 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
       meetingLabel: formatNumericDate(meeting),
       movedFrom: compareDates(monday, meeting) === 0 ? null : formatDayMonth(monday),
       deadline: { weekday: weekdayName(date), date: formatDayMonth(date), time: formatClock(time) },
-      deadlinePassed: deadlineAt.getTime() <= getContainer().app.clock.now().getTime(),
+      deadlinePassed: deadlineAt.getTime() <= now.getTime(),
       status: slot.status,
       version: slot.version,
       nextLabel: slot.next === null ? null : formatNumericDate(parseIsoDate(slot.next)),
-      heldNext: slot.heldNext.map((held) => ({
-        monday: held.monday,
-        label: formatTitleDate(parseIsoDate(held.meetingDate)),
-      })),
+      calendar: standing && { issues: standing.issues, now: standing.now, rule: standing.rule },
       counts: slot.counts,
       generated: generatedModel(slot.monday, slot.document),
-    },
-  };
-}
-
-/** /porada/[datum]/presunout: what the move form needs of the slot and the calendar around it. */
-export interface MovePageModel {
-  readonly monday: string;
-  readonly view: {
-    readonly monday: string;
-    readonly version: number | null;
-    readonly meetingDate: string;
-    readonly deadlineAt: string;
-    readonly today: string;
-    readonly last: string;
-    readonly issues: StandingModel['issues'];
-    readonly now: string;
-    readonly rule: StandingModel['rule'];
-  };
-  /** „pondělí 9. listopadu 2026“, for the heading. */
-  readonly meeting: string;
-}
-
-/** The move page of one slot, or null (404) for anyone but the headmaster and for a slot that is not open (unskip it first). */
-export async function poradaMovePage(datum: string): Promise<MovePageModel | null> {
-  const viewer = await getViewer();
-  if (!viewer || !can(viewer.actor, { action: 'issue.generate' })) return null;
-  const [read, window] = await Promise.all([readWorkspace(viewer, datum), readWindow(viewer)]);
-  if (read === null || read.slot === null || window === null) return null;
-  const { slot } = read;
-  if (slot.status !== 'open') return null;
-  const now = getContainer().app.clock.now();
-  const today = instantToWallClock(now).date;
-  const standing = standingFrom(window, now);
-  return {
-    monday: slot.monday,
-    meeting: formatTitleDate(parseIsoDate(slot.meetingDate)),
-    view: {
-      monday: slot.monday,
-      version: slot.version,
-      meetingDate: slot.meetingDate,
-      deadlineAt: slot.deadlineAt,
-      today: toIsoDate(today),
-      // The horizon of the calendar (`issues.move` accepts the same).
-      last: toIsoDate(addDays(lastSlotMonday(today), 6)),
-      issues: standing.issues,
-      now: standing.now,
-      rule: standing.rule,
     },
   };
 }

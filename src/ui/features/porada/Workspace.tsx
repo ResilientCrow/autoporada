@@ -5,6 +5,7 @@ import { Chip, ISSUE_LOOK } from '@/ui/status';
 
 import { DocumentCard, type GeneratedView } from './DocumentCard';
 import { SkipControl, type SkipAction } from './SkipControl';
+import type { SkipCalendar } from './skip';
 import { Steps } from './Steps';
 
 /** One porada as /porada/[datum] shows it; the dates arrive written out. */
@@ -23,8 +24,8 @@ export interface WorkspaceView {
   readonly version: number | null;
   /** The porada the approved points move to without this one; null when none follows. */
   readonly nextLabel: string | null;
-  /** The poradas a skip may name as the one held next, earliest first, written out. */
-  readonly heldNext: readonly { readonly monday: string; readonly label: string }[];
+  /** The calendar the skip dialog plans the next porada on; null unless the porada is open. */
+  readonly calendar: SkipCalendar | null;
   readonly counts: {
     readonly waiting: number;
     readonly returned: number;
@@ -80,7 +81,7 @@ export function Workspace({
               version: view.version,
               deadlinePassed: view.deadlinePassed,
               next: view.nextLabel,
-              heldNext: view.heldNext,
+              calendar: view.calendar,
             }}
           >
             {status}
@@ -94,9 +95,6 @@ export function Workspace({
             {counts.later > 0 && <li>{porada.counts.later(counts.later)}</li>}
           </ul>
         </Card>
-        {view.status === 'open' && (
-          <ArrowLink href={`/porada/${view.monday}/presunout`}>{porada.move.open}</ArrowLink>
-        )}
         {view.generated !== null && <DocumentCard view={view.generated} />}
         <Steps monday={view.monday} missing={counts.missing} />
         {view.status === 'open' && (

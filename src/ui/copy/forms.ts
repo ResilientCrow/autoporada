@@ -58,7 +58,7 @@ export const rules = {
     'Tuto poradu už nelze obnovit, protože pozdější porada je vygenerovaná. Porady se generují v\u00A0pořadí kalendáře.',
   'issue-not-open': 'Tuto poradu už nelze změnit, protože se její stav změnil.',
   'issue-blocked': 'Dokument zatím nelze vygenerovat. Náhled ukazuje, co je potřeba opravit.',
-  'deadline-past': 'Uzávěrka už proběhla. Zvolte pozdější čas.',
+  'deadline-past': 'Uzávěrka by k\u00A0tomu dni už proběhla. Zvolte pozdější den.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {

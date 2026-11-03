@@ -129,6 +129,22 @@ export function issueFixtures(world: World) {
     });
   }
 
+  /** The row of `monday` (made first if missing) moved to `to`, past the use cases' rules: what a move leaves. */
+  async function reschedule(
+    monday: CalDate,
+    to: { meetingDate?: CalDate; deadlineAt: Date },
+  ): Promise<IssueRecord> {
+    const row = await issue(monday);
+    return world.tx(seeder, async (tx) => {
+      const after = await tx.issues.reschedule(row.id, row.version, {
+        meetingDate: to.meetingDate ?? row.meetingDate,
+        deadlineAt: to.deadlineAt,
+      });
+      await tx.audit.record({ action: 'test.seed', target: { type: 'issue', id: after.id } });
+      return after;
+    });
+  }
+
   /** A point of the author's put into `state` (approved by default) with the given Mondays. */
   async function point(seed: PointSeed): Promise<string> {
     const kind = seed.kind ?? 'pokyn';
@@ -242,5 +258,5 @@ export function issueFixtures(world: World) {
     return id;
   }
 
-  return { issue, point, future };
+  return { issue, reschedule, point, future };
 }

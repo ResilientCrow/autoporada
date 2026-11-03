@@ -105,7 +105,7 @@ export const QUEUE_SPECS = {
       deadLetter: DEAD_QUEUE,
     },
   },
-  // Enqueued by issues.move when a deadline comes earlier; it fans the moved mail out to the reminders' audience.
+  // Switched off: nothing enqueues it (ADR 0037, 0051). It fans the moved mail out to the reminders' audience.
   'issues.moved-notice': {
     policy: 'standard',
     options: {

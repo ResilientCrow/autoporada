@@ -30,31 +30,6 @@ export const porada = {
   /** The Přehled line of a moved porada; `meeting` is „9. 11. 2026“. */
   heldOn: (meeting: string, closes: { weekday: string; date: string; time: string }) =>
     `Porada se koná ${meeting}, uzávěrka ${closes.weekday} ${closes.date} v\u00a0${closes.time}.`,
-  move: {
-    title: 'Přesunout poradu',
-    open: 'Přesunout poradu',
-    back: 'Zpět na poradu',
-    /** `meeting` arrives written, „9. 11. 2026“. */
-    current: (meeting: string) => `Porada se teď koná ${meeting}.`,
-    fields: {
-      meetingDate: 'Nové datum porady',
-      deadlineDate: 'Uzávěrka: den',
-      deadlineTime: 'Uzávěrka: čas',
-      confirmed: 'Rozumím, že se tyto porady zruší.',
-      stale: 'Porada se mezitím změnila. Načtěte stránku znovu.',
-      skip: 'Porady v\u00a0cestě se změnily. Zkontrolujte je prosím.',
-    },
-    submit: 'Přesunout poradu',
-    said: (meeting: string) => `Porada je přesunuta na ${meeting}.`,
-    /** `when` arrives written, „sobota 7. 11. v 20:00“. */
-    effectEarlier: (when: string) => `Uzávěrka bude dřív (${when}).`,
-    effectLater: (when: string) =>
-      `Uzávěrka bude později (${when}). Body odevzdané do té doby půjdou na tuto poradu.`,
-    /** `list` arrives written, „9. 11. 2026, 16. 11. 2026“. */
-    conflicts: (list: string) => `Porady v\u00a0cestě se zruší: ${list}.`,
-    conflictsFixed: 'V\u00a0cestě je porada, která už je vygenerovaná. Zvolte jiné datum.',
-    deadlinePast: 'Uzávěrka podle pravidla už proběhla. Zadejte ji ručně.',
-  },
   deadline: {
     ahead: (weekday: string, date: string, time: string) =>
       `Uzávěrka: ${weekday} ${date} v\u00a0${time}`,
@@ -117,17 +92,34 @@ export const porada = {
     title: 'Porada se nekoná',
     unskipTitle: 'Porada se koná',
     /** `meeting` arrives written, „pondělí 9. listopadu 2026“. */
-    lead: (meeting: string) => `Porada ${meeting} se nekoná.`,
-    until: 'Další porada se koná',
-    untilHint: 'Porady před tímto datem se také nekonají.',
-    untilInvalid: 'Tuto poradu už nelze vybrat. Načtěte prosím stránku.',
-    afterDeadline: 'Uzávěrka už proběhla; schválené body se přesunou na vybranou poradu.',
-    noNext: 'Po této poradě žádná další není v\u00a0kalendáři.',
+    lead: (meeting: string) => `Porada ${meeting} se v\u00a0tento den nekoná.`,
+    nextMeeting: 'Další porada se koná',
+    nextHint: 'Může to být kterýkoli den, i\u00a0v\u00a0týdnu této porady.',
+    nextInvalid: 'V\u00a0tento den další porada být nemůže. Zvolte prosím jiný den.',
+    /** What the chosen day does; dates arrive written, `closes` as „sobota 7. 11. v 20:00“. */
+    plan: {
+      /** `list` arrives written, „16. 11. 2026, 23. 11. 2026“. */
+      skipped: (list: string) => `Nekonají se ani porady ${list}.`,
+      next: (meeting: string, closes: string) =>
+        `Další porada bude ${meeting}, uzávěrka ${closes}.`,
+    },
+    /** Why the chosen day cannot be the next porada's (ADR 0051); dates arrive written, „6. 11. 2026“. */
+    refused: {
+      early: (first: string) => `Zvolte den nejdříve ${first}.`,
+      late: (last: string) => `Zvolte den nejpozději ${last}.`,
+      same: 'V\u00a0tento den se porada už koná. Zvolte jiný den.',
+      skipped: (monday: string) =>
+        `Porada z\u00a0pondělí ${monday} se nekoná. Obnovte ji na její stránce, nebo zvolte jiný den.`,
+      'deadline-past': 'Uzávěrka by k\u00a0tomu dni už proběhla. Zvolte pozdější den.',
+      'meeting-order': 'V\u00a0tento den by porady nešly v\u00a0pořadí kalendáře. Zvolte jiný den.',
+    },
+    afterDeadline: 'Uzávěrka už proběhla; schválené body se přesunou na další poradu.',
+    noNext: 'Po této poradě žádná další není v\u00a0kalendáři. Zvolit lze den v\u00a0jejím týdnu.',
     /** `next` arrives written, „10. 11. 2026“. */
     kept: (next: string) => `Body odevzdané během zrušení zůstávají na poradě ${next}.`,
     cancel: 'Zrušit',
-    /** What the status line says after a skip; `next` arrives as the select wrote it. */
-    said: (label: string, next: string) => `Porada ${label} se nekoná. Další porada: ${next}.`,
+    /** What the status line says after a skip; `next` arrives written, „úterý 24. listopadu 2026“. */
+    said: (next: string) => `Další porada bude ${next}.`,
   },
   /** „Pokyny a hospodaření“: the items of the two sections (/porada/[datum]/pokyny). */
   outline: {

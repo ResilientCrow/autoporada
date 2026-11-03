@@ -1,12 +1,13 @@
 /**
- * J6: a porada is moved (with a porada in the way that the move cancels), the Přehled line shows the
- * new meeting date, and a report of a Sunday akce handed in at 22.00 lands in Monday's preview.
+ * J6: „Porada se nekoná“ holds the next porada on any day (ADR 0051): a later porada moved to a
+ * Tuesday, or this one moved within its week, which the Přehled line shows; and a report of a
+ * Sunday akce handed in at 22.00 lands in Monday's preview.
  *
  * Every test works on Mondays of its own, far enough ahead for no seeded point to sit on them, and
  * forgets them afterwards. The Přehled strip holds only the next four Mondays, shared with the
  * other specs, so the strip test moves one of them and runs once, in the desktop project.
  */
-import { porada, status } from '@/ui/copy';
+import { issues, porada, status } from '@/ui/copy';
 
 import { forgetPoints, personaOf } from './db';
 import { expect, freezeClock, test } from './fixtures';
@@ -33,7 +34,7 @@ function pragueInstant(iso: string, time: string): string {
   return `${iso}T${time}:00${offset}`;
 }
 
-test.describe('J6: moving a porada', () => {
+test.describe('J6: the next porada on any day', () => {
   const seeded: string[] = [];
   test.afterEach(async ({}, testInfo) => {
     const project = testInfo.project.name;
@@ -44,10 +45,9 @@ test.describe('J6: moving a porada', () => {
     await forgetIssues([move, addDaysIso(move, 7), late, addDaysIso(late, -7)]);
   });
 
-  test('a porada in the way is cancelled once the headmaster confirms', async ({
+  test('the next porada is held on a Tuesday, and this one does not take place', async ({
     page,
     hydrated,
-    settled,
     signInAs,
     expectAccessible,
   }, testInfo) => {
@@ -57,36 +57,31 @@ test.describe('J6: moving a porada', () => {
     await signInAs(headmaster(project));
     await page.goto(`/porada/${day}`);
     await hydrated();
-    await page.getByRole('link', { name: porada.move.open }).click();
-    await expect(page).toHaveURL(new RegExp(`/porada/${day}/presunout$`));
-    await hydrated();
-    await expect(page.getByRole('heading', { level: 1, name: porada.move.title })).toBeVisible();
+    await page.getByRole('button', { name: porada.skip.title }).click();
+    const dialog = page.getByRole('dialog');
+    const field = dialog.getByLabel(porada.skip.nextMeeting);
+    // Pre-filled with the next porada as it is.
+    await expect(field).toHaveValue(next);
 
-    // A meeting after the next Monday's: that porada is in the way.
-    const confirm = page.getByLabel(porada.move.fields.confirmed);
-    await page.getByLabel(porada.move.fields.meetingDate).fill(addDaysIso(next, 1));
-    await expect(page.getByText(/^Porady v\u00a0cestě se zruší: /)).toBeVisible();
-    await expect(confirm).toBeVisible();
+    // Its own meeting date changes nothing, and the dialog says so.
+    await field.fill(day);
+    await expect(dialog.getByText(porada.skip.refused.same)).toBeVisible();
+
+    // The Tuesday after the next Monday: that porada moves there.
+    await field.fill(addDaysIso(next, 1));
+    await expect(dialog.getByText(/^Další porada bude úterý /)).toBeVisible();
     await expectAccessible();
+    await dialog.getByLabel(issues.strip.skip.confirm).check();
+    await dialog.getByRole('button', { name: issues.strip.skip.submit }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
+    await expect(page.getByText(status.issue.skipped).first()).toBeVisible();
 
-    // Unticked, the move is refused and nothing changes.
-    await page.getByRole('button', { name: porada.move.submit }).click();
-    await settled();
-    await expect(page).toHaveURL(/\/presunout$/);
-    await expect(confirm).not.toBeChecked();
-
-    await confirm.check();
-    await page.getByRole('button', { name: porada.move.submit }).click();
-    await expect(page).toHaveURL(new RegExp(`/porada/${day}$`));
+    await page.goto(`/porada/${next}`);
     await hydrated();
     await expect(page.getByText(/^Přesunuto z\u00a0pondělí /)).toBeVisible();
-
-    // The porada in the way is skipped now.
-    await page.goto(`/porada/${next}`);
-    await expect(page.getByText(status.issue.skipped).first()).toBeVisible();
   });
 
-  test('the Přehled line shows the moved meeting date', async ({
+  test('the Přehled line shows a porada moved within its week', async ({
     page,
     hydrated,
     signInAs,
@@ -96,11 +91,15 @@ test.describe('J6: moving a porada', () => {
     // The other tests clean up their own Mondays only: this one is shared with nobody but the strip.
     try {
       await signInAs(headmaster('desktop'));
-      await page.goto(`/porada/${day}/presunout`);
+      await page.goto(`/porada/${day}`);
       await hydrated();
-      await page.getByLabel(porada.move.fields.meetingDate).fill(addDaysIso(day, 1));
-      await page.getByRole('button', { name: porada.move.submit }).click();
-      await expect(page).toHaveURL(new RegExp(`/porada/${day}$`));
+      await page.getByRole('button', { name: porada.skip.title }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByLabel(porada.skip.nextMeeting).fill(addDaysIso(day, 1));
+      await dialog.getByLabel(issues.strip.skip.confirm).check();
+      await dialog.getByRole('button', { name: issues.strip.skip.submit }).click();
+      await expect(page.getByRole('dialog')).toBeHidden();
+      await expect(page.getByText(/^Přesunuto z\u00a0pondělí /)).toBeVisible();
       await page.goto('/');
       await hydrated();
       await expect(page.getByText(/^Porada se koná .*, uzávěrka /)).toBeVisible();

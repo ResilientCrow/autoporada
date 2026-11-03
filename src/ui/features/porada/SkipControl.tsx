@@ -4,19 +4,29 @@ import { useRef, useState, type ReactNode } from 'react';
 import type { z } from 'zod';
 
 import type { ServerAction, setSkippedInput, setSkippedOutput } from '@/contracts';
+import { formatTitleDate } from '@/domain/cs';
+import { parseIsoDate } from '@/domain/time';
 import { issues, porada } from '@/ui/copy';
 import {
   CheckboxField,
+  DateField,
   Form,
   FormActions,
   LiveStatus,
-  SelectField,
   SubmitButton,
+  typedDate,
   useActionForm,
 } from '@/ui/form';
 import { Button, Card, Dialog } from '@/ui/kit';
 
-import { skipFormId, skipInput, skipSpec } from './skip';
+import {
+  firstHeld,
+  nextMeetingNote,
+  skipFormId,
+  skipInput,
+  skipSpec,
+  type SkipCalendar,
+} from './skip';
 
 export type SkipAction = ServerAction<
   z.input<typeof setSkippedInput>,
@@ -36,20 +46,59 @@ export interface SkipView {
   readonly deadlinePassed: boolean;
   /** Where the approved points go without this porada; null when no slot follows. */
   readonly next: string | null;
-  /** The poradas a skip may name as the one held next, earliest first, written out. */
-  readonly heldNext: readonly { readonly monday: string; readonly label: string }[];
+  /** The calendar the day of the next porada is planned on; null for a skipped porada, or when it could not be read. */
+  readonly calendar: SkipCalendar | null;
 }
 
 const EVENT = { open: 'skip', skipped: 'unskip' } as const;
 
-/** What a skip dialog says above its fields: what is skipped, and what the deadline means now. */
-function SkipNotes({ view }: { readonly view: SkipView }) {
+/**
+ * What a skip dialog says above its fields: what is skipped, and what the deadline means now. A
+ * porada moved within its week keeps its points, so it has no word about them moving on.
+ */
+function SkipNotes({
+  view,
+  hasNext,
+  self,
+}: {
+  readonly view: SkipView;
+  readonly hasNext: boolean;
+  readonly self: boolean;
+}) {
   if (view.status === 'skipped') return view.next !== null && <p>{porada.skip.kept(view.next)}</p>;
   return (
     <>
       <p>{porada.skip.lead(view.meeting)}</p>
-      {view.heldNext.length === 0 && <p>{porada.skip.noNext}</p>}
-      {view.deadlinePassed && view.heldNext.length > 0 && <p>{porada.skip.afterDeadline}</p>}
+      {!hasNext && <p>{porada.skip.noNext}</p>}
+      {view.deadlinePassed && hasNext && !self && <p>{porada.skip.afterDeadline}</p>}
+    </>
+  );
+}
+
+/** The day of the next porada, pre-filled with the next one that takes place, and what that day does under it. */
+function NextMeetingField({
+  initial,
+  note,
+  onTyped,
+}: {
+  readonly initial: string;
+  readonly note: ReturnType<typeof nextMeetingNote>;
+  readonly onTyped: (iso: string) => void;
+}) {
+  return (
+    <>
+      <DateField
+        name="nextMeeting"
+        description={porada.skip.nextHint}
+        initial={initial}
+        onChange={(raw) => onTyped(typedDate(raw, null).value ?? '')}
+        issue={undefined}
+        readOnly={false}
+        onBlur={() => undefined}
+      />
+      {note?.lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
     </>
   );
 }
@@ -67,33 +116,30 @@ export function SkipForm({
   readonly onDone: (message: string) => void;
 }) {
   const event = EVENT[view.status];
+  const initial = view.calendar === null ? '' : firstHeld(view.calendar, view.monday);
+  const hasNext = view.calendar === null ? view.next !== null : initial !== '';
+  const [typed, setTyped] = useState(initial);
+  const note = view.calendar && nextMeetingNote(view.calendar, view.monday, typed);
   const chosen = useRef('');
   const state = useActionForm({
     action,
     toInput: (data) => {
       const input = skipInput(view.monday, event, view.version, data);
-      chosen.current = view.heldNext.find((held) => held.monday === input.until)?.label ?? '';
+      chosen.current = input.nextMeeting ?? '';
       return input;
     },
     onSuccess: () =>
       onDone(
         event === 'skip' && chosen.current !== ''
-          ? porada.skip.said(view.label, chosen.current)
+          ? porada.skip.said(formatTitleDate(parseIsoDate(chosen.current)))
           : issues.strip.said[event](view.label),
       ),
   });
   const COPY = event === 'skip' ? issues.strip.skip : issues.strip.unskip;
-  const offer = event === 'skip' && view.heldNext.length > 0;
   return (
-    <Form id={skipFormId(view.monday)} spec={skipSpec(event, view.label)} state={state}>
-      <SkipNotes view={view} />
-      {offer && (
-        <SelectField
-          name="until"
-          options={view.heldNext.map((held) => ({ value: held.monday, label: held.label }))}
-          description={view.heldNext.length > 1 ? porada.skip.untilHint : undefined}
-        />
-      )}
+    <Form id={skipFormId(view.monday)} spec={skipSpec(event, view.label, hasNext)} state={state}>
+      <SkipNotes view={view} hasNext={hasNext} self={note?.self === true} />
+      {event === 'skip' && <NextMeetingField initial={initial} note={note} onTyped={setTyped} />}
       <CheckboxField name="confirmed" />
       <FormActions>
         <SubmitButton>{COPY.submit}</SubmitButton>
@@ -107,8 +153,10 @@ export function SkipForm({
 
 /**
  * The status card of a slot that is not generated, `children` its lines, with „Porada se nekoná“
- * or „Porada se koná“ at its right: a button that opens a dialog with the confirmation. A skip names the porada held next and skips every one before it
- * too (ADR 0047); after the deadline it warns that the approved points move there (D2). An unskip
+ * or „Porada se koná“ at its right: a button that opens a dialog with the confirmation. A skip names
+ * the day the next porada is held, any day: this porada moved within its week, or a later one, with
+ * every porada before it skipped too (ADR 0051); after the deadline it warns that the approved
+ * points move there (D2). An unskip
  * says that points handed in meanwhile stay where they are (R21). The form starts again when the
  * status or version the page brings changes; the status line outlives the dialog.
  */

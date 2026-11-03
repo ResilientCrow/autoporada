@@ -2,15 +2,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { system } from '@/application/ports';
-import { moveIssue } from '@/application/use-cases';
 import { calDate } from '@/domain/time';
 
+import { issueFixtures } from '../../../test/support/issues';
 import { pointFixtures } from '../../../test/support/points';
 import { setupWorld } from '../../../test/support/world';
 import { loadMoved, movedParts, movedRecipients } from './moved';
 
 const world = setupWorld();
 const points = pointFixtures(world);
+const issues = issueFixtures(world);
 
 const MONDAY = calDate(2026, 11, 2);
 const NOW = new Date('2026-10-28T10:00:00Z');
@@ -42,18 +43,10 @@ describe('movedParts', () => {
 describe('loadMoved and movedRecipients', () => {
   it('speaks for the slot collected now, with the moved meeting date and deadline', async () => {
     world.clock.set(NOW);
-    const head = await world.seed.user({ role: 'headmaster' });
     const author = await world.seed.user({ role: 'submitter' });
     await points.start(author, 'pokyn');
     const other = await world.seed.user({ role: 'submitter' });
-    const moved = await world.run(moveIssue, world.as(head), {
-      monday: '2026-11-02',
-      meetingDate: '2026-11-04',
-      deadlineDate: '2026-10-30',
-      deadlineTime: '20:00',
-      skip: [],
-    });
-    expect(moved.ok).toBe(true);
+    await issues.reschedule(MONDAY, { meetingDate: calDate(2026, 11, 4), deadlineAt: FRIDAY_8PM });
 
     expect(await asWorker((tx) => loadMoved(tx, author.id))).toEqual({
       monday: MONDAY,
@@ -76,16 +69,9 @@ describe('loadMoved and movedRecipients', () => {
 
   it('gives no recipients to a notice for another slot or another deadline', async () => {
     world.clock.set(NOW);
-    const head = await world.seed.user({ role: 'headmaster' });
     const author = await world.seed.user({ role: 'submitter' });
     await points.start(author, 'pokyn');
-    await world.run(moveIssue, world.as(head), {
-      monday: '2026-11-02',
-      meetingDate: '2026-11-02',
-      deadlineDate: '2026-10-30',
-      deadlineTime: '20:00',
-      skip: [],
-    });
+    await issues.reschedule(MONDAY, { deadlineAt: FRIDAY_8PM });
     const other = { monday: '2026-11-09', deadlineAt: FRIDAY_8PM.toISOString() };
     expect(await asWorker((tx) => movedRecipients(tx, other))).toBeNull();
     const later = {

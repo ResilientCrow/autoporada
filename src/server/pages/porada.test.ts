@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { outlineItemPage, outlinePage, newOutlineItemPage } from './outline';
 import { issueTextsPage } from './issue-texts';
 import { missingReportsPage } from './missing-reports';
-import { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
+import { archivePage, poradaIndexPage, poradaPage, previewPage } from './porada';
 
 const resolvePrincipal = vi.hoisted(() => vi.fn<() => Promise<unknown>>(async () => null));
 const runRegistered = vi.hoisted(() => vi.fn());
@@ -34,6 +34,21 @@ const as = (who: keyof typeof WHO) =>
     actor: { id: 'u1', status: 'active', ...WHO[who] },
   });
 
+const WINDOW = {
+  submitMonday: '2026-11-09',
+  stripFrom: '2026-11-09',
+  issues: [
+    {
+      monday: '2026-11-23',
+      meetingDate: '2026-11-24',
+      deadlineAt: '2026-11-22T19:00:00.000Z',
+      status: 'open',
+      version: 2,
+    },
+  ],
+  rule: { dayOffset: -2, time: '20:00' },
+};
+
 const SLOT = {
   monday: '2026-11-09',
   meetingDate: '2026-11-11',
@@ -41,10 +56,6 @@ const SLOT = {
   status: 'open',
   version: 3,
   next: '2026-11-16',
-  heldNext: [
-    { monday: '2026-11-16', meetingDate: '2026-11-16' },
-    { monday: '2026-11-23', meetingDate: '2026-11-24' },
-  ],
   counts: { waiting: 1, returned: 2, approved: 3, later: 0, missing: 0 },
   document: null,
 };
@@ -106,9 +117,9 @@ describe('poradaPage', () => {
     expect(await poradaPage('2030-01-07')).toBeNull();
   });
 
-  it('writes the dates out for the headmaster, a moved porada with its Monday, the next ones by their meeting dates', async () => {
+  it('writes the dates out for the headmaster, a moved porada with its Monday, with the calendar the skip dialog plans on', async () => {
     as('headmaster');
-    answer({ 'issues.workspace': { working: '2026-11-09', slot: SLOT } });
+    answer({ 'issues.workspace': { working: '2026-11-09', slot: SLOT }, 'issues.window': WINDOW });
     expect(await poradaPage('2026-11-09')).toEqual({
       kind: 'workspace',
       model: {
@@ -121,10 +132,11 @@ describe('poradaPage', () => {
         status: 'open',
         version: 3,
         nextLabel: '16. 11. 2026',
-        heldNext: [
-          { monday: '2026-11-16', label: 'pondělí 16. listopadu 2026' },
-          { monday: '2026-11-23', label: 'úterý 24. listopadu 2026' },
-        ],
+        calendar: {
+          issues: WINDOW.issues,
+          now: '2026-11-03T10:00:00.000Z',
+          rule: { dayOffset: -2, time: { hour: 20, minute: 0 } },
+        },
         counts: SLOT.counts,
         generated: null,
       },
@@ -174,6 +186,7 @@ describe('poradaPage', () => {
           next: null,
         },
       },
+      'issues.window': WINDOW,
     });
     const page = await poradaPage('2026-11-02');
     expect(page).toMatchObject({
@@ -182,56 +195,21 @@ describe('poradaPage', () => {
     });
   });
 
+  it('reads no calendar for a porada that is not open, and none the use case refuses', async () => {
+    as('headmaster');
+    answer({ 'issues.workspace': { working: null, slot: { ...SLOT, status: 'skipped' } } });
+    expect(await poradaPage('2026-11-09')).toMatchObject({ model: { calendar: null } });
+    answer({
+      'issues.workspace': { working: null, slot: SLOT },
+      'issues.window': { error: { code: 'forbidden' } },
+    });
+    expect(await poradaPage('2026-11-09')).toMatchObject({ model: { calendar: null } });
+  });
+
   it('sends a staff reviewer to the preview', async () => {
     as('staff');
     answer({ 'issues.workspace': { working: '2026-11-09', slot: SLOT } });
     expect(await poradaPage('2026-11-09')).toEqual({ kind: 'preview', monday: '2026-11-09' });
-  });
-});
-
-describe('poradaMovePage', () => {
-  const window = {
-    submitMonday: '2026-11-09',
-    stripFrom: '2026-11-09',
-    issues: [],
-    rule: { dayOffset: -2, time: '20:00' },
-  };
-
-  it('is null for anyone but the headmaster', async () => {
-    for (const who of ['staff', 'student', 'submitter'] as const) {
-      as(who);
-      expect(await poradaMovePage('2026-11-09')).toBeNull();
-    }
-    expect(runRegistered).not.toHaveBeenCalled();
-  });
-
-  it('is null for a slot that is not open', async () => {
-    as('headmaster');
-    answer({
-      'issues.workspace': { working: null, slot: { ...SLOT, status: 'skipped' } },
-      'issues.window': window,
-    });
-    expect(await poradaMovePage('2026-11-09')).toBeNull();
-  });
-
-  it('carries the slot, today and the calendar the form works from', async () => {
-    as('headmaster');
-    answer({ 'issues.workspace': { working: null, slot: SLOT }, 'issues.window': window });
-    const page = await poradaMovePage('2026-11-09');
-    expect(page).toMatchObject({
-      monday: '2026-11-09',
-      meeting: 'středa 11. listopadu 2026',
-      view: {
-        monday: '2026-11-09',
-        version: 3,
-        meetingDate: '2026-11-11',
-        deadlineAt: SLOT.deadlineAt,
-        today: '2026-11-03',
-        // The Sunday after the last Monday of the 26 weeks (ADR 0034 item 3).
-        last: '2027-05-02',
-        rule: { dayOffset: -2 },
-      },
-    });
   });
 });
 

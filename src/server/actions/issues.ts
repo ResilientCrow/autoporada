@@ -2,7 +2,6 @@
 
 import {
   generateIssue as generateIssueUseCase,
-  moveIssue as moveIssueUseCase,
   setIssueAnnex2 as setIssueAnnex2UseCase,
   setIssueDetails as setIssueDetailsUseCase,
   setPlaceholder as setPlaceholderUseCase,
@@ -25,9 +24,6 @@ export const setIssueAnnex2 = defineAction(setIssueAnnex2UseCase, { rateLimit: '
  * report is missing (ADR 0049). Not an autosave, so it refreshes the page.
  */
 export const setPlaceholder = defineAction(setPlaceholderUseCase, { rateLimit: 'admin' });
-
-/** „Přesunout poradu“: a new meeting date with its deadline; the slots in the way are cancelled with it. */
-export const moveIssue = defineAction(moveIssueUseCase, { rateLimit: 'admin' });
 
 /** „Vygenerovat dokument“ on the Náhled: the DOCX is stored and the PDF queued (ADR 0038). */
 export const generateIssue = defineAction(generateIssueUseCase, { rateLimit: 'admin' });

@@ -28,6 +28,26 @@ const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-
 /** Rules axe reports as "incomplete" (not failed) on gradients, pseudo-content and glyphs. */
 const MUST_COMPLETE = new Set(['color-contrast', 'target-size', 'label-content-name-mismatch']);
 
+/**
+ * Runs `check` with what an open modal made inert hidden. axe lays a modal's text over the page
+ * behind it and compares the layers under each wrapped line, that page included, so a two-line
+ * paragraph in a dialog comes back as color-contrast "incomplete" (`elmPartiallyObscuring`,
+ * axe-core 4.14). Nobody reaches that page while the modal is open; a run without it checks it.
+ */
+async function hidingInert<T>(page: Page, check: () => Promise<T>): Promise<T> {
+  const hide = (hidden: boolean) =>
+    page.evaluate((on) => {
+      for (const el of document.querySelectorAll<HTMLElement>('[inert]'))
+        el.style.visibility = on ? 'hidden' : '';
+    }, hidden);
+  await hide(true);
+  try {
+    return await check();
+  } finally {
+    await hide(false);
+  }
+}
+
 export interface Fixtures {
   /** The violations seen on the app's own origin; the test fails at teardown if any remain. */
   cspViolations: CspViolation[];
@@ -157,11 +177,13 @@ export const test = base.extend<Fixtures>({
 
   expectAccessible: async ({ page }, provide, testInfo) => {
     await provide(async (other = page) => {
-      const result = await new AxeBuilder({ page: other })
-        .withTags(AXE_TAGS)
-        // React Aria's live announcer keeps a hidden copy of a pressed button for 7 s, as an image without a text.
-        .exclude('[data-live-announcer] [role="log"]')
-        .analyze();
+      const result = await hidingInert(other, () =>
+        new AxeBuilder({ page: other })
+          .withTags(AXE_TAGS)
+          // React Aria's live announcer keeps a hidden copy of a pressed button for 7 s, as an image without a text.
+          .exclude('[data-live-announcer] [role="log"]')
+          .analyze(),
+      );
       await testInfo.attach('axe', {
         body: JSON.stringify(result, null, 2),
         contentType: 'application/json',

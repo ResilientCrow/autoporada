@@ -34,7 +34,7 @@ export interface JobCatalog {
   'reviewer.digest': Readonly<Record<string, never>>;
   /** Mails the headmasters how an issue stands once its deadline has passed; cron sends it, never a use case. */
   'headmaster.summary': Readonly<Record<string, never>>;
-  /** Mails the reminders' audience that a porada's deadline came earlier; `issues.move` enqueues it with the slot and the deadline it set. */
+  /** Mails the reminders' audience that a porada's deadline came earlier; switched off, nothing enqueues it (ADR 0037, 0051). */
   'issues.moved-notice': { readonly monday: string; readonly deadlineAt: string };
   /** Mails the author of an akce that has just ended when its report is late; cron sends it, never a use case. */
   'reports.late': Readonly<Record<string, never>>;

@@ -17,7 +17,7 @@ export const issues = pgTable(
   {
     id: id(),
     monday: date({ mode: 'string' }).notNull(),
-    /** The day the meeting is held: the Monday until the headmaster moves the porada to any date (`issues.move`, ADR 0034); the meeting order is checked in TS. */
+    /** The day the meeting is held: the Monday until the headmaster holds it on another day („Porada se nekoná“, ADR 0034, 0051); the meeting order is checked in TS. */
     meetingDate: date({ mode: 'string' }).notNull(),
     /** `schoolYear(monday)`, e.g. `2026/2027`. */
     schoolYear: text().notNull(),

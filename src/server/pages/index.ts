@@ -13,7 +13,7 @@ export { issueTextsPage } from './issue-texts';
 export { missingReportsPage } from './missing-reports';
 export { newOutlineItemPage, outlineItemPage, outlinePage } from './outline';
 export { pointTypesPage } from './point-types';
-export { archivePage, poradaIndexPage, poradaMovePage, poradaPage, previewPage } from './porada';
+export { archivePage, poradaIndexPage, poradaPage, previewPage } from './porada';
 export { myPointsPage, newPointPage, newProposalPage, pointPage } from './points';
 export { newYearPage, registryPage } from './registry';
 export { futureQueuePage, queuePage, reviewPointPage } from './review';

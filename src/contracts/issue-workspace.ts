@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import { PLACEMENT_WEEKS } from '@/domain/calendar';
-
 import { documentInfo } from './documents';
 
 /** The slot to open, by its Monday; without one the answer names the working slot only. */
@@ -17,10 +15,6 @@ const slot = z.strictObject({
   version: z.number().int().positive().nullable(),
   /** The meeting the approved points move to if this porada is skipped; null when no slot follows. */
   next: z.iso.date().nullable(),
-  /** The open poradas after this one, any of which a skip may name as held next (`until`, ADR 0047). */
-  heldNext: z
-    .array(z.strictObject({ monday: z.iso.date(), meetingDate: z.iso.date() }))
-    .max(PLACEMENT_WEEKS),
   counts: z.strictObject({
     waiting: z.int().min(0),
     returned: z.int().min(0),

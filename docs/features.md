@@ -169,14 +169,21 @@ in v1 unless the [plan of record](plan.md) changes first.
   „Archiv porad“ for the headmaster and the staff reviewers, and every download
   is audited. A generated porada cannot be reopened or regenerated yet (ADR
   0038).
-- „Porada se nekoná“ (skip a week), before or after its deadline, and
-  „Přesunout poradu“: a porada can move to any date in the 26-week horizon, for
-  example a holiday Monday to the Friday before. The deadline follows the new
-  date by the rule and can be changed in the same form. Porady in the way are
-  skipped in the same step or the move is refused, so meeting dates and
-  deadlines keep their order. Přehled shows a moved porada; nobody is mailed
-  about a move (switched off, ADR 0037). A skipped porada cannot come back once
-  a later one is generated (ADR 0041).
+- „Porada se nekoná“, before or after its deadline, asks for the day the next
+  porada is held, any day up to the end of the 26-week horizon (ADR 0051). The
+  day belongs to the nearest Monday: Monday to Thursday to their own week,
+  Friday to Sunday to the next. A day in this porada's own week moves it there,
+  for example a holiday Monday to the Tuesday after or the Friday before.
+  A later day skips this porada and every one before that day's, and moves
+  that porada to the day when it is not its meeting date. A moved porada gets
+  the deadline the rule counts back from the new day; there is no hand-set
+  deadline. The dialog says what the day does, or why it is refused: a day
+  that falls on a skipped porada, one whose deadline would already have
+  passed while the current one has not, or one that breaks the order of
+  meeting dates and deadlines. The Přehled strip skips a single week. Přehled
+  shows a moved porada; nobody is mailed about a move (switched off, ADR
+  0037). A skipped porada cannot come back once a later one is generated (ADR
+  0041). There is no separate „Přesunout poradu“ page.
 - Times: screens and mails write „23:59“ (a colon, no leading zero); the
   document keeps the template's „7.00“.
 

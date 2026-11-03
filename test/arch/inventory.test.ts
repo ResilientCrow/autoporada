@@ -182,7 +182,6 @@ describe('inventory of entry points', () => {
     const found: Record<string, unknown> = {};
     const prefixes = ['registry.', 'outline.'];
     const named = [
-      'issues.move',
       'issues.setDetails',
       'issues.setAnnex2',
       'issues.setPlaceholder',
@@ -213,7 +212,6 @@ describe('inventory of entry points', () => {
       'outline.save': admin,
       'outline.move': admin,
       'outline.remove': admin,
-      'issues.move': admin,
       'issues.setDetails': admin,
       'issues.setAnnex2': admin,
       'issues.setPlaceholder': admin,

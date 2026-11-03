@@ -19,13 +19,18 @@ export async function readWindow(tx: Tx, now: Date): Promise<IssueWindow> {
   return { slots, first: submitMonday(now, slots, rule), rule };
 }
 
-/** The Monday the text names, or null when it is no Monday or is out of the calendar's range. */
-export function mondayOfText(text: string): CalDate | null {
+/** The calendar day the text names, or null when it is out of range. */
+export function dayOfText(text: string): CalDate | null {
   try {
-    const date = parseIsoDate(text);
-    return isoWeekday(date) === 1 ? date : null;
+    return parseIsoDate(text);
   } catch (error) {
     if (error instanceof RangeError) return null;
     throw error;
   }
+}
+
+/** The Monday the text names, or null when it is no Monday or is out of the calendar's range. */
+export function mondayOfText(text: string): CalDate | null {
+  const date = dayOfText(text);
+  return date && isoWeekday(date) === 1 ? date : null;
 }
