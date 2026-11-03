@@ -58,11 +58,11 @@ export interface NewProposalPageModel {
   readonly kinds: readonly ProposalKind[];
 }
 
-/** The kinds to choose from, or null for a visitor or a viewer who may not start a point (404). */
+/** The kinds to choose from, or null for a visitor or a viewer who may not propose (404). */
 export async function newProposalPage(): Promise<NewProposalPageModel | null> {
   const viewer = await getViewer();
-  // `point.create` is the gate `points.create` itself applies to every kind.
-  if (!viewer || !can(viewer.actor, { action: 'point.create' })) return null;
+  // `point.propose` is the gate `points.create` itself applies to a finance or pokyn proposal.
+  if (!viewer || !can(viewer.actor, { action: 'point.propose' })) return null;
   return { kinds: PROPOSAL_KINDS };
 }
 
@@ -189,6 +189,8 @@ export interface MyPointsPageModel {
   readonly first: boolean;
   /** „Akce čekající na zprávu“ above the list; null for whoever may not start items. */
   readonly reportDue: ReportDueModel | null;
+  /** Whether the viewer is vedení: only they get „Nový bod“ and „Nový návrh“ buttons (ADR 0052). */
+  readonly canPropose: boolean;
 }
 
 /**
@@ -248,5 +250,6 @@ export async function myPointsPage(params: SearchParams): Promise<MyPointsPageMo
     next: listed.next,
     first: before === undefined,
     reportDue,
+    canPropose: can(viewer.actor, { action: 'point.propose' }),
   };
 }

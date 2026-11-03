@@ -64,6 +64,10 @@ describe('status looks', () => {
     }
   });
 
+  it('reads the reviewer role as Vedení, the school’s word for them (ADR 0052)', () => {
+    expect(ROLE_LOOK.reviewer.label).toBe('Vedení');
+  });
+
   it('take their labels from the copy', () => {
     const labels = [
       ...Object.values(ACCESS_LOOK),

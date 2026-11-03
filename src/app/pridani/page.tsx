@@ -27,9 +27,11 @@ export default async function AddPage() {
         rows={mine.rows}
         next={mine.next}
         first={mine.first}
+        canPropose={mine.canPropose}
         top={
           mine.reportDue !== null && (
             <ReportDueCard
+              showEmpty
               items={mine.reportDue.items}
               types={mine.reportDue.types}
               startFutureReport={startFutureReport}

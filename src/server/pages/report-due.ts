@@ -1,9 +1,9 @@
+import type { z } from 'zod';
+
 import type { UserPrincipal } from '@/application/ports';
-import { listFuture, listPointTypes } from '@/application/use-cases';
-import { eventEnd, lateFacts } from '@/domain/calendar';
+import { listPointTypes, owedReports } from '@/application/use-cases';
+import type { owedReportsOutput } from '@/contracts';
 import { can } from '@/domain/policy';
-import { reportDue } from '@/domain/review';
-import { parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runPage } from './run-page';
@@ -11,15 +11,13 @@ import { runPage } from './run-page';
 import { orNotFound } from './not-found';
 import { requestId } from './viewer';
 
-/** An akce that has ended and waits for its report, as much of it as the card shows. */
-interface ReportDueItem {
-  readonly id: string;
-  readonly title: string;
-  readonly startDate: string | null;
-  readonly endDate: string | null;
-  readonly timeFrom: string | null;
-  readonly timeTo: string | null;
-}
+/**
+ * An akce that has ended and whose porada waits for its report, as the card shows it: the porada,
+ * the close, whether the close has passed, and the draft or returned report to go on with.
+ */
+type ReportDueItem = z.output<typeof owedReportsOutput>['items'][number] & {
+  readonly overdue: boolean;
+};
 
 /** „Akce čekající na zprávu“: the akce to write a report on, and the types a report can be on. */
 export interface ReportDueModel {
@@ -29,14 +27,13 @@ export interface ReportDueModel {
 
 /**
  * The card of the home page and „Moje body“, or null for whoever may not start items and where a
- * read is refused (the page goes on without it). Every approved akce of the author that has ended
- * waits here until its report is written (ADR 0048). Only the newest page of the list is read: an akce the author has not touched for as
- * long as two hundred changes of the school fall off it.
+ * read is refused (the page goes on without it). The author's ended akce whose open porada still
+ * prints their report, until it is handed in (`future.owedReports`, ADR 0052).
  */
 export async function reportDueOf(viewer: UserPrincipal): Promise<ReportDueModel | null> {
   if (!can(viewer.actor, { action: 'future.create' })) return null;
-  const [future, listed] = await Promise.all([
-    runPage(listFuture, {
+  const [owed, listed] = await Promise.all([
+    runPage(owedReports, {
       principal: viewer,
       requestId: await requestId(),
       input: {},
@@ -47,22 +44,15 @@ export async function reportDueOf(viewer: UserPrincipal): Promise<ReportDueModel
       input: {},
     }),
   ]);
-  const rows = orNotFound('future.list', future);
+  const read = orNotFound('future.owedReports', owed);
   const types = orNotFound('pointTypes.list', listed);
-  if (rows === null || types === null) return null;
-  const now = getContainer().app.clock.now();
+  if (read === null || types === null) return null;
+  const now = getContainer().app.clock.now().getTime();
   return {
-    items: rows.items.flatMap((row) => {
-      const { id, title, startDate, endDate, timeFrom, timeTo } = row;
-      const facts = lateFacts({
-        eventDate: startDate === null ? null : parseIsoDate(startDate),
-        endDate: endDate === null ? null : parseIsoDate(endDate),
-        timeTo: timeTo === null ? null : parseWallTime(timeTo),
-      });
-      const owed =
-        row.isAuthor && facts !== undefined && reportDue({ ...row, endsAt: eventEnd(facts) }, now);
-      return owed ? [{ id, title, startDate, endDate, timeFrom, timeTo }] : [];
-    }),
+    items: read.items.map((item) => ({
+      ...item,
+      overdue: new Date(item.closesAt).getTime() <= now,
+    })),
     types: types.types.map(({ id, name }) => ({ id, name })),
   };
 }

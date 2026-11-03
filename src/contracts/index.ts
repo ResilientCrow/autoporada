@@ -79,7 +79,12 @@ export {
   submitFutureOutput,
   type FutureContentValue,
 } from './future';
-export { startFutureReportInput, startFutureReportOutput } from './future-report';
+export {
+  owedReportsInput,
+  owedReportsOutput,
+  startFutureReportInput,
+  startFutureReportOutput,
+} from './future-report';
 export {
   cancelFutureInput,
   cancelFutureOutput,
@@ -91,6 +96,8 @@ export {
 export {
   missingReportsInput,
   missingReportsOutput,
+  reportTallyInput,
+  reportTallyOutput,
   setPlaceholderInput,
   setPlaceholderOutput,
 } from './issue-placeholders';

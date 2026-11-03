@@ -4,6 +4,7 @@ export { generateIssue } from './generate';
 export { moveIssue } from './move';
 export { issueMissingReports } from './missing-reports';
 export { issuePreview } from './preview';
+export { reportTally } from './report-tally';
 export { setIssueAnnex2 } from './set-annex2';
 export { setPlaceholder } from './set-placeholder';
 export { setIssueDetails } from './set-details';

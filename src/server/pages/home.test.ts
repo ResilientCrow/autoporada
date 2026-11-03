@@ -46,11 +46,15 @@ const serve = (answers: {
   queue?: unknown;
   future?: unknown;
   types?: unknown;
+  tally?: unknown;
 }) =>
   runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
     if (useCase.name === 'points.queue') return answers.queue ?? emptyQueue;
-    if (useCase.name === 'future.list') {
-      return answers.future ?? { ok: true, value: { items: [], next: null } };
+    if (useCase.name === 'future.owedReports') {
+      return answers.future ?? { ok: true, value: { items: [] } };
+    }
+    if (useCase.name === 'issues.reportTally') {
+      return answers.tally ?? { ok: true, value: { porada: null } };
     }
     if (useCase.name === 'pointTypes.list') {
       return answers.types ?? { ok: true, value: { types: [] } };
@@ -83,15 +87,15 @@ describe('homePage', () => {
   describe('the card of akce waiting for a report', () => {
     const due = {
       id: 'a',
-      kind: 'akce',
-      state: 'approved',
-      isAuthor: true,
       title: 'Výlet',
       startDate: '2026-11-01',
       endDate: null,
       timeFrom: null,
       timeTo: null,
-      reportState: 'none',
+      monday: '2026-11-09',
+      meetingDate: '2026-11-09',
+      closesAt: '2026-11-07T19:00:00.000Z',
+      report: null,
     };
 
     it('lists the akce of an author that wait for it, with the types to choose from', async () => {
@@ -101,7 +105,7 @@ describe('homePage', () => {
           ok: true,
           value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
         },
-        future: { ok: true, value: { items: [due], next: null } },
+        future: { ok: true, value: { items: [due] } },
         types: { ok: true, value: { types: [{ id: 't1', name: 'Seminář', detail: null }] } },
       });
       const model = await homePage();
@@ -274,7 +278,7 @@ describe('homePage', () => {
       serve({ window: WINDOW, list: list([]) });
       await homePage();
       expect(askedFor().sort()).toEqual([
-        'future.list',
+        'future.owedReports',
         'issues.window',
         'pointTypes.list',
         'points.listMine',
@@ -326,6 +330,7 @@ describe('homePage', () => {
           mine: null,
           queue: null,
           reportDue: { items: [], types: [] },
+          reportTally: null,
         });
       },
     );
@@ -438,5 +443,35 @@ describe('homePage', () => {
     as('pending');
     runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
     await expect(homePage()).rejects.toThrow('access.mine: unavailable');
+  });
+
+  describe('the headmaster’s count of missing akce reports', () => {
+    const window = {
+      ok: true,
+      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
+    };
+    const porada = { monday: '2026-11-09', meetingDate: '2026-11-09', owed: 3, missing: 2 };
+
+    it('carries the working porada’s count for the headmaster', async () => {
+      as('headmaster');
+      serve({ window, tally: { ok: true, value: { porada } } });
+      expect(await homePage()).toMatchObject({ kind: 'member', reportTally: porada });
+    });
+
+    it.each(['reviewer', 'submitter'])('does not ask for a %s', async (role) => {
+      as(role);
+      serve({ window, tally: { ok: true, value: { porada } } });
+      expect(await homePage()).toMatchObject({ reportTally: null });
+      expect(askedFor()).not.toContain('issues.reportTally');
+    });
+
+    it.each(['forbidden', 'not-found'])(
+      'is left out when the read is refused (%s)',
+      async (code) => {
+        as('headmaster');
+        serve({ window, tally: { ok: false, error: { code } } });
+        expect(await homePage()).toMatchObject({ kind: 'member', reportTally: null });
+      },
+    );
   });
 });

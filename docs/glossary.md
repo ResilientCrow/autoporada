@@ -39,7 +39,7 @@ same word.
 | dříve použité osoby | `people.recent` | People the author already put into their own recent points, offered again with their salutation, class and genitive. Nobody else sees them, and there is no separate list. |
 | školní rok | `schoolYear` | School year, e.g. „2026/2027“. Switches on 1 September. |
 | ředitel | `headmaster` role | Full administrator. The only role that generates the document. |
-| kontrolor | `reviewer` role | Approves, edits, returns or rejects submitted points. |
+| vedení | `reviewer` role | A member of the school's leadership: approves, edits, returns or rejects submitted points, and may propose HOSPODAŘENÍ and POKYNY items. Shown as „Vedení“ (once „kontrolor“; ADR 0052). |
 | přispěvatel | `submitter` role | An allow-listed user who may file points. |
 | žádost o přístup | `accessRequest` | A signed-in user's request for the submitter role, with a free-text reason that only the headmaster sees. |
 | student | `isStudent` | Flag on a user. A student may only be `pending` or `submitter`. |

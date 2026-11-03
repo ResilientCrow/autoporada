@@ -24,22 +24,17 @@ const viewer = (role: string): UserPrincipal =>
     actor: { id: 'u1', role, status: 'active', isStudent: false },
   }) as UserPrincipal;
 
-const row = (id: string, over: object = {}) => ({
+const item = (id: string, closesAt: string) => ({
   id,
-  kind: 'akce',
-  state: 'approved',
-  isAuthor: true,
   title: `Akce ${id}`,
   startDate: '2026-11-10',
   endDate: '2026-11-11',
   timeFrom: null,
   timeTo: null,
-  campus: null,
-  place: null,
-  reportState: 'none',
-  responsible: null,
-  updatedAt: '2026-11-01T08:00:00.000Z',
-  ...over,
+  monday: '2026-11-16',
+  meetingDate: '2026-11-16',
+  closesAt,
+  report: null,
 });
 const TYPES = [
   { id: 't1', name: 'Seminář', detail: null },
@@ -49,27 +44,20 @@ const TYPES = [
 /** Answers the two use cases the loader asks for. */
 const serve = (items: unknown[], types: unknown = { ok: true, value: { types: TYPES } }) =>
   runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
-    useCase.name === 'future.list' ? { ok: true, value: { items, next: null } } : types,
+    useCase.name === 'future.owedReports' ? { ok: true, value: { items } } : types,
   );
-const idsOf = async () => (await reportDueOf(viewer('submitter')))?.items.map((i) => i.id);
 
 describe('reportDueOf', () => {
   beforeEach(() => {
     runRegistered.mockReset();
   });
 
-  it('lists the author’s approved akce that wait for a report, with the types to write it on', async () => {
-    serve([row('a')]);
+  it('gives the owed akce as read, each saying whether its close has passed, with the types', async () => {
+    serve([item('a', '2026-11-12T10:00:00.000Z'), item('b', '2026-11-14T19:00:00.000Z')]);
     expect(await reportDueOf(viewer('submitter'))).toEqual({
       items: [
-        {
-          id: 'a',
-          title: 'Akce a',
-          startDate: '2026-11-10',
-          endDate: '2026-11-11',
-          timeFrom: null,
-          timeTo: null,
-        },
+        { ...item('a', '2026-11-12T10:00:00.000Z'), overdue: true },
+        { ...item('b', '2026-11-14T19:00:00.000Z'), overdue: false },
       ],
       types: [
         { id: 't1', name: 'Seminář' },
@@ -78,7 +66,7 @@ describe('reportDueOf', () => {
     });
   });
 
-  it('asks for the first page of the list and the active types, as the viewer', async () => {
+  it('asks for the owed reports and the active types, as the viewer', async () => {
     serve([]);
     const who = viewer('submitter');
     await reportDueOf(who);
@@ -88,62 +76,11 @@ describe('reportDueOf', () => {
       { input: unknown; principal: unknown },
     ][];
     expect(calls.map(([, useCase]) => useCase.name).sort()).toEqual([
-      'future.list',
+      'future.owedReports',
       'pointTypes.list',
     ]);
     expect(calls.map(([, , call]) => call.input)).toEqual([{}, {}]);
     expect(calls.every(([, , call]) => call.principal === who)).toBe(true);
-  });
-
-  it('is due from the end of the last day, counting a one-day akce by its start', async () => {
-    serve([
-      row('over'),
-      row('today', { endDate: '2026-11-12' }),
-      row('tomorrow', { endDate: '2026-11-13' }),
-      row('oneday', { startDate: '2026-11-11', endDate: null }),
-      row('onedaytoday', { startDate: '2026-11-12', endDate: null }),
-    ]);
-    expect(await idsOf()).toEqual(['over', 'oneday']);
-  });
-
-  it('is due on the last day once its end time has passed (11.00 in Prague), 20.00 without one', async () => {
-    serve([
-      row('ended', { endDate: '2026-11-12', timeTo: '10:59' }),
-      row('endsnow', { endDate: '2026-11-12', timeTo: '11:00' }),
-      row('later', { endDate: '2026-11-12', timeTo: '11:01' }),
-      row('evening', { endDate: '2026-11-12', timeTo: null }),
-    ]);
-    expect(await idsOf()).toEqual(['ended', 'endsnow']);
-  });
-
-  it('keeps a prompted akce and drops one whose report is written', async () => {
-    serve([
-      row('prompted', { reportState: 'prompted' }),
-      row('written', { reportState: 'written' }),
-    ]);
-    expect(await idsOf()).toEqual(['prompted']);
-  });
-
-  it('drops what is not the viewer’s own approved akce', async () => {
-    serve([
-      row('others', { isAuthor: false }),
-      row('submitted', { state: 'submitted' }),
-      row('cancelled', { state: 'cancelled' }),
-      row('jednani', { kind: 'jednani' }),
-      row('undated', { startDate: null, endDate: null }),
-    ]);
-    expect(await idsOf()).toEqual([]);
-  });
-
-  it('gives no items when nothing is waiting', async () => {
-    serve([]);
-    expect(await reportDueOf(viewer('submitter'))).toEqual({
-      items: [],
-      types: [
-        { id: 't1', name: 'Seminář' },
-        { id: 't2', name: 'Exkurze' },
-      ],
-    });
   });
 
   it('is null for whoever may not start items, without asking', async () => {
@@ -154,7 +91,7 @@ describe('reportDueOf', () => {
   it.each(['forbidden', 'not-found', 'invalid-input'])(
     'is null when a read is refused (%s)',
     async (code) => {
-      serve([row('a')], { ok: false, error: { code } });
+      serve([item('a', '2026-11-12T10:00:00.000Z')], { ok: false, error: { code } });
       expect(await reportDueOf(viewer('submitter'))).toBeNull();
     },
   );

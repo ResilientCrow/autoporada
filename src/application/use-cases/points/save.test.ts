@@ -7,6 +7,7 @@ import { POINT_LIMITS, type BulletSpec, type PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
+import { startingAs } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { createPoint, savePoint } from './index';
 
@@ -55,7 +56,7 @@ async function start(author: UserRecord, kind: PointKind = 'report'): Promise<st
     kind === 'report'
       ? (await world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS })).id
       : null;
-  const result = await world.run(createPoint, world.as(author), {
+  const result = await world.run(createPoint, startingAs(world, author, kind), {
     clientRef: randomUUID(),
     kind,
     typeId,

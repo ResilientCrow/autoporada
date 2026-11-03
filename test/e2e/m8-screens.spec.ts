@@ -8,7 +8,7 @@
  */
 import { formatDayMonth } from '@/domain/cs';
 import { parseIsoDate } from '@/domain/time';
-import { issues, points, review } from '@/ui/copy';
+import { future, issues, points, review } from '@/ui/copy';
 
 import {
   earliestMondayOf,
@@ -73,7 +73,9 @@ test.describe('the author’s and the reviewer’s screens', () => {
     await page.goto('/body');
     const { group } = points.mine;
     const headings = page.getByRole('main').getByRole('heading', { level: 2 });
+    // The empty „Akce čekající na zprávu“ card is above the groups (ADR 0052).
     await expect(headings).toHaveText([
+      future.report.title,
       group.returned,
       group.draft,
       group.submitted,
@@ -258,22 +260,23 @@ test.describe('the author’s and the reviewer’s screens', () => {
     // Read after the page: the line is as of the page's load, on the same clock.
     const line = standingLines(new Date());
     await expect(page.getByText(line.before).or(page.getByText(line.closed))).toBeVisible();
+    // Checked before the menu opens: on a phone the open menu lies over the first card (ADR 0052).
+    await expectAccessible();
     await openNav(page);
     const navigation = page.getByRole('navigation');
     await expect(navigation.getByRole('link', { name: points.mine.title })).toBeVisible();
     await expect(navigation.getByRole('link', { name: review.title })).toHaveCount(0);
-    await expectAccessible();
     // The queue is not theirs to see.
     expect((await page.goto('/kontrola'))?.status()).toBe(404);
 
     const other = await signInElsewhere(newContext, new RegExp(`^Test – ${reviewer.subject}`));
     await hydrated(other);
     await expect(other.getByRole('link', { name: /^Ke kontrole: \d+$/ })).toBeVisible();
+    await expectAccessible(other);
     await openNav(other);
     await expect(
       other.getByRole('navigation').getByRole('link', { name: review.title }),
     ).toBeVisible();
-    await expectAccessible(other);
   });
 
   // The same author seeds the queue, so these take their turn in the same serial run.

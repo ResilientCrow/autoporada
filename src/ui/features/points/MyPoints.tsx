@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { formatDayMonth } from '@/domain/cs';
 import { parseIsoDate } from '@/domain/time';
 import { points } from '@/ui/copy';
-import { ArrowLink, ButtonLink, ItemLink, SlantLabel } from '@/ui/kit';
+import { ArrowLink, ButtonLink, ItemLink, SlantLabel, TextLink } from '@/ui/kit';
 import { Chip, POINT_LOOK } from '@/ui/status';
 
 import { groupMyPoints, type MyPointRow, type MyPointsGroup } from './my-points';
@@ -63,6 +63,7 @@ export function MyPoints({
   rows,
   next,
   first,
+  canPropose,
   top,
   level = 1,
 }: {
@@ -70,6 +71,11 @@ export function MyPoints({
   readonly next: string | null;
   /** False on a page after a cursor, where no rows do not mean no points. */
   readonly first: boolean;
+  /**
+   * Vedení may propose (ADR 0052): they get „Nový bod“ and „Nový návrh“. Everyone else gets one
+   * quiet link to a report with no akce.
+   */
+  readonly canPropose: boolean;
   /** What the page puts right under the title (the akce waiting for a report), composed by the app. */
   readonly top?: ReactNode;
   readonly level?: 1 | 2;
@@ -78,14 +84,20 @@ export function MyPoints({
     <div className="space-y-4">
       <SlantLabel level={level}>{points.mine.title}</SlantLabel>
       {top}
+      {canPropose ? (
+        <p>
+          <ButtonLink href="/body/novy">{points.title.new}</ButtonLink>
+          {/* A finance or pokyn proposal: the vedení's second way to start a point (ADR 0052). */}{' '}
+          <ButtonLink href="/navrhy/novy" variant="secondary">
+            {points.proposal.title}
+          </ButtonLink>
+        </p>
+      ) : (
+        <p>
+          <TextLink href="/body/novy">{points.mine.withoutAkce}</TextLink>
+        </p>
+      )}
       {first && rows.length === 0 ? <p>{points.mine.empty}</p> : null}
-      <p>
-        <ButtonLink href="/body/novy">{points.title.new}</ButtonLink>
-        {/* A finance or pokyn proposal: the second way to start a point (design section 11). */}{' '}
-        <ButtonLink href="/navrhy/novy" variant="secondary">
-          {points.proposal.title}
-        </ButtonLink>
-      </p>
       {groupMyPoints(rows).map((group) => (
         <Group key={group.group} {...group} nested={level === 2} />
       ))}

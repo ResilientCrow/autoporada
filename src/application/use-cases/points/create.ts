@@ -26,7 +26,8 @@ async function startingBullets(
 }
 
 /**
- * Starts an empty draft (design section 6). A retry with a ref the author
+ * Starts an empty draft (design section 6). Any submitter may start a report; a finance or
+ * pokyn proposal is the vedení's (ADR 0052). A retry with a ref the author
  * already used answers with that point as it is, whatever else it names and
  * even at the cap, and writes nothing: the create is audited once. An author
  * holds at most DRAFT_CAP drafts; `beginCreate` serialises their creates, so
@@ -37,7 +38,10 @@ export const createPoint = defineUseCase({
   mode: 'write',
   input: createPointInput,
   output: createPointOutput,
-  access: { kind: 'gate', check: () => ({ action: 'point.create' }) },
+  access: {
+    kind: 'gate',
+    check: ({ kind }) => ({ action: kind === 'report' ? 'point.create' : 'point.propose' }),
+  },
   async execute({ tx }, { clientRef, kind, typeId }) {
     const { existing, drafts } = await tx.points.beginCreate(clientRef);
     if (existing) return ok({ id: existing.id });

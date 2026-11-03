@@ -80,7 +80,7 @@ describe('newProposalPage', () => {
     expect(runRegistered).not.toHaveBeenCalled();
   });
 
-  it.each(['submitter', 'reviewer', 'headmaster'] as const)(
+  it.each(['reviewer', 'headmaster'] as const)(
     'offers finance and pokyn, in that order, to a %s',
     async (role) => {
       resolvePrincipal.mockResolvedValue({
@@ -95,13 +95,16 @@ describe('newProposalPage', () => {
 
   it.each([
     ['a viewer who may not start a point', { role: 'pending', status: 'active' }],
-    ['an inactive account', { role: 'submitter', status: 'inactive' }],
+    ['an inactive account', { role: 'reviewer', status: 'inactive' }],
+    ['a submitter, who only writes reports', { role: 'submitter', status: 'active' }],
+    ['a student marked reviewer', { role: 'reviewer', status: 'active', isStudent: true }],
   ] as const)('is null for %s', async (_name, who) => {
     resolvePrincipal.mockResolvedValue({
       kind: 'user',
       actor: { id: 'u1', isStudent: false, ...who },
     });
     expect(await newProposalPage()).toBeNull();
+    expect(runRegistered).not.toHaveBeenCalled();
   });
 });
 
@@ -648,7 +651,7 @@ describe('myPointsPage', () => {
   ) =>
     runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
       if (useCase.name === 'issues.window') return window;
-      if (useCase.name === 'future.list') return { ok: true, value: { items: [], next: null } };
+      if (useCase.name === 'future.owedReports') return { ok: true, value: { items: [] } };
       if (useCase.name === 'pointTypes.list') return { ok: true, value: { types: [] } };
       return { ok: true, value: { points: rows, next } };
     });
@@ -696,30 +699,30 @@ describe('myPointsPage', () => {
       next: CURSOR,
       first: true,
       reportDue: { items: [], types: [] },
+      canPropose: false,
     });
   });
 
-  it('carries the akce waiting for a report, from the akce list and the point types', async () => {
+  it('carries the akce waiting for a report, from the owed reports and the point types', async () => {
     runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
-      if (useCase.name === 'future.list') {
+      if (useCase.name === 'future.owedReports') {
         return {
           ok: true,
           value: {
             items: [
               {
                 id: 'a',
-                kind: 'akce',
-                state: 'approved',
-                isAuthor: true,
                 title: 'Výlet',
                 startDate: '2020-01-01',
                 endDate: null,
                 timeFrom: null,
                 timeTo: null,
-                reportState: 'none',
+                monday: '2020-01-06',
+                meetingDate: '2020-01-06',
+                closesAt: '2020-01-04T19:00:00.000Z',
+                report: null,
               },
             ],
-            next: null,
           },
         };
       }
@@ -732,6 +735,19 @@ describe('myPointsPage', () => {
       items: [{ id: 'a', title: 'Výlet' }],
       types: [{ id: TYPE_ID, name: 'Seminář' }],
     });
+  });
+
+  it.each([
+    ['submitter', false],
+    ['reviewer', true],
+    ['headmaster', true],
+  ] as const)('says whether a %s may propose: %s', async (role, canPropose) => {
+    resolvePrincipal.mockResolvedValue({
+      kind: 'user',
+      actor: { id: 'u1', role, status: 'active', isStudent: false },
+    });
+    serve([]);
+    expect((await myPointsPage({}))?.canPropose).toBe(canPropose);
   });
 
   it('knows a page after a cursor is not the first', async () => {
@@ -747,6 +763,7 @@ describe('myPointsPage', () => {
       next: null,
       first: true,
       reportDue: { items: [], types: [] },
+      canPropose: false,
     });
   });
 

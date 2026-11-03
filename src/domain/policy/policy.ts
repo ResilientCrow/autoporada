@@ -35,6 +35,8 @@ export type Check =
   | { readonly action: 'profile.manage' }
   | { readonly action: 'directory.search' }
   | { readonly action: 'point.create' }
+  /** A finance or pokyn proposal: the vedení's (ADR 0052). */
+  | { readonly action: 'point.propose' }
   | { readonly action: 'point.view'; readonly point: PointView }
   | { readonly action: 'point.edit'; readonly point: PointRef }
   | { readonly action: 'point.transition'; readonly point: PointRef; readonly event: PointEvent }
@@ -133,6 +135,7 @@ export function can(subject: Actor, check: Check): boolean {
       return check.item.state === 'approved' && canReport(reviewActor(actor, check.item));
     case 'review.queue':
       return has(actor, 'reviewer');
+    case 'point.propose':
     case 'issue.preview':
     case 'archive.view':
     case 'registry.view':

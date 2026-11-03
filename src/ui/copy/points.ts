@@ -241,12 +241,13 @@ export const points = {
     group: MINE_GROUP,
     /** Under an approved point; `date` is day and month, „16.\u00A03.“. */
     placement: (date: string) => `Půjde do porady z\u00A0${date}`,
-    empty: 'Zatím tu nemáte žádný bod. Začněte tlačítkem Nový bod.',
+    empty: 'Zatím tu nemáte žádný bod.',
+    /** The quiet link of everyone but vedení to a report with no akce behind it (ADR 0052). */
+    withoutAkce: 'Akce nebyla předem zadaná? Napsat zprávu bez akce',
     older: 'Starší body',
     /** A line of the Přehled card: the group, a colon and how many points, „Rozpracované: 2 body“. */
     line: (group: keyof typeof MINE_GROUP, n: number) =>
       `${MINE_GROUP[group]}: ${countWord(n, POINT)}`,
-    cardEmpty: 'Zatím tu nemáte žádný bod.',
     all: 'Všechny moje body',
   },
   /** What happened to a point, newest first. Names no one. */

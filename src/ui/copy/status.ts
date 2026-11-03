@@ -10,7 +10,7 @@ export const status = {
   role: {
     pending: 'Bez přístupu',
     submitter: 'Přispěvatel',
-    reviewer: 'Kontrolor',
+    reviewer: 'Vedení',
     headmaster: 'Ředitel',
   },
   account: {

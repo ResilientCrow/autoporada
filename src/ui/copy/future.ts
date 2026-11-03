@@ -81,6 +81,16 @@ export const future = {
   report: {
     title: 'Akce čekající na zprávu',
     start: 'Napsat zprávu',
+    /** A draft or returned report of the akce, in place of „Napsat zprávu“ (ADR 0052). */
+    resume: 'Pokračovat ve zprávě',
+    /** Where the report goes and by when (ADR 0052); dates arrive written, „16.\u00a011.“. */
+    goes: (porada: string, closeDate: string, closeTime: string) =>
+      `Půjde na poradu ${porada}; odevzdejte do ${closeDate} v\u00a0${closeTime}.`,
+    /** Past the close, while the porada is not generated yet. */
+    overdue: (closeDate: string, closeTime: string) =>
+      `Termín uplynul ${closeDate} v\u00a0${closeTime}; porada na zprávu ještě čeká.`,
+    /** The card on „Moje body“ and „Přidání akcí“ when no akce waits for a report (ADR 0052). */
+    empty: 'Teď nemáte žádnou zprávu z\u00a0akce k\u00a0napsání.',
     /** The legend of the choice of the type the report is written on. */
     type: 'Druh zprávy',
     typeRequired: 'Vyberte druh zprávy.',
@@ -89,7 +99,7 @@ export const future = {
   /** The reviewer's bar and the cancel on an item's page (design section 12). */
   review: {
     /** A reviewer's own handed-in item, in place of „Schválit“. */
-    ownItem: 'Vlastní položku schvaluje jiný kontrolor nebo ředitel.',
+    ownItem: 'Vlastní položku schvaluje jiný člen vedení nebo ředitel.',
     /** Each press adds its sentence to the note. */
     phrases: [
       'Doplňte prosím termín a\u00A0místo.',

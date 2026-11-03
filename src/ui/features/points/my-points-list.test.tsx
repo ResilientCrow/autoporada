@@ -18,8 +18,14 @@ const row = (id: string, state: PointState, over: Partial<MyPointRow> = {}): MyP
   placement: null,
   ...over,
 });
-const render = (rows: readonly MyPointRow[], next: string | null = null, first = true) =>
-  renderToStaticMarkup(<MyPoints rows={rows} next={next} first={first} />);
+const render = (
+  rows: readonly MyPointRow[],
+  next: string | null = null,
+  first = true,
+  canPropose = true,
+) =>
+  renderToStaticMarkup(<MyPoints rows={rows} next={next} first={first} canPropose={canPropose} />);
+const QUIET = `Akce nebyla předem zadaná? Napsat zprávu bez akce`;
 
 const ALL: readonly MyPointRow[] = [
   row('z', 'rejected'),
@@ -47,7 +53,7 @@ describe('MyPoints', () => {
 
   it('puts the slot after the page title and before the groups', () => {
     const html = renderToStaticMarkup(
-      <MyPoints rows={ALL} next={null} first top={<h2>{SLOT}</h2>} />,
+      <MyPoints rows={ALL} next={null} first canPropose top={<h2>{SLOT}</h2>} />,
     );
     const at = (text: string) => html.indexOf(text);
     expect(at('Současné události')).toBeGreaterThan(0);
@@ -72,7 +78,9 @@ describe('MyPoints', () => {
   });
 
   it('is a section under another page’s title at level 2, its groups a level lower', () => {
-    const html = renderToStaticMarkup(<MyPoints rows={ALL} next={null} first level={2} />);
+    const html = renderToStaticMarkup(
+      <MyPoints rows={ALL} next={null} first canPropose level={2} />,
+    );
     expect(html).not.toContain('<h1');
     expect([...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/gs)]).toHaveLength(1);
     expect(html).toMatch(/<h2[^>]*>.*Současné události.*<\/h2>/s);
@@ -114,17 +122,12 @@ describe('MyPoints', () => {
   });
 
   describe('with no points', () => {
-    it('says so and offers „Nový bod“', () => {
-      const html = render([]);
-      expect(html).toContain(`Zatím tu nemáte žádný bod. Začněte tlačítkem Nový bod.`);
-      expect(html).toMatch(/<a[^>]*href="\/body\/novy"[^>]*>Nový bod<\/a>/);
-      expect(html).not.toContain('<h2');
-    });
-
-    it('offers „Nový návrh“ beside it, to /navrhy/novy, with or without points', () => {
-      for (const html of [render([]), render(ALL), render([], null, false)]) {
-        expect(html).toMatch(/<a[^>]*href="\/navrhy\/novy"[^>]*>Nový návrh<\/a>/);
-        expect(html.indexOf('href="/body/novy"')).toBeLessThan(html.indexOf('href="/navrhy/novy"'));
+    it('says so, for vedení and for others, and points nowhere', () => {
+      for (const canPropose of [true, false]) {
+        const html = render([], null, true, canPropose);
+        expect(html).toContain('Zatím tu nemáte žádný bod.');
+        expect(html).not.toContain('Začněte tlačítkem');
+        expect(html).not.toContain('<h2');
       }
     });
 
@@ -136,7 +139,49 @@ describe('MyPoints', () => {
 
     it('does not show the empty text when there are points', () => {
       expect(render(ALL)).not.toContain('Zatím tu nemáte');
-      expect(render(ALL)).toMatch(/href="\/body\/novy"/);
+    });
+  });
+
+  describe('for vedení (may propose)', () => {
+    it('offers „Nový bod“ and „Nový návrh“ beside it, with or without points', () => {
+      for (const html of [render([]), render(ALL), render([], null, false)]) {
+        expect(html).toMatch(/<a[^>]*href="\/body\/novy"[^>]*>Nový bod<\/a>/);
+        expect(html).toMatch(/<a[^>]*href="\/navrhy\/novy"[^>]*>Nový návrh<\/a>/);
+        expect(html.indexOf('href="/body/novy"')).toBeLessThan(html.indexOf('href="/navrhy/novy"'));
+      }
+    });
+
+    it('has no quiet link', () => {
+      expect(render(ALL)).not.toContain(QUIET);
+    });
+  });
+
+  describe('for everyone else (may not propose)', () => {
+    it('has no button and no way to /navrhy/novy, with or without points', () => {
+      for (const html of [
+        render([], null, true, false),
+        render(ALL, null, true, false),
+        render([], null, false, false),
+      ]) {
+        expect(html).not.toContain('Nový bod');
+        expect(html).not.toContain('Nový návrh');
+        expect(html).not.toContain('/navrhy/novy');
+      }
+    });
+
+    it('has one quiet link to /body/novy', () => {
+      for (const html of [render([], null, true, false), render(ALL, null, true, false)]) {
+        expect(html.split(QUIET)).toHaveLength(2);
+        expect(html).toContain(`<a href="/body/novy">${QUIET}</a>`);
+      }
+    });
+
+    it('puts the quiet link after the slot and before the groups', () => {
+      const html = renderToStaticMarkup(
+        <MyPoints rows={ALL} next={null} first canPropose={false} top={<h2>{SLOT}</h2>} />,
+      );
+      expect(html.indexOf(QUIET)).toBeGreaterThan(html.indexOf(SLOT));
+      expect(html.indexOf(QUIET)).toBeLessThan(html.indexOf('Rozpracované'));
     });
   });
 

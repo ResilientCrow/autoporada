@@ -39,6 +39,7 @@ const MATRIX: Readonly<Record<Simple, readonly Role[]>> = {
   'profile.manage': ['pending', 'submitter', 'reviewer', 'headmaster'],
   'directory.search': ['submitter', 'reviewer', 'headmaster'],
   'point.create': ['submitter', 'reviewer', 'headmaster'],
+  'point.propose': ['reviewer', 'headmaster'],
   'future.create': ['submitter', 'reviewer', 'headmaster'],
   'review.queue': ['reviewer', 'headmaster'],
   'issue.preview': ['reviewer', 'headmaster'],
@@ -76,6 +77,13 @@ describe('permission matrix', () => {
     expect(can(student, { action: 'archive.view' })).toBe(false);
     expect(can(actor('headmaster', { isStudent: true }), { action: 'users.view' })).toBe(false);
     expect(can(actor('headmaster', { isStudent: true }), { action: 'users.manage' })).toBe(false);
+  });
+
+  it('never lets a student propose, whatever the role says', () => {
+    for (const role of ['reviewer', 'headmaster'] as const) {
+      expect(can(actor(role, { isStudent: true }), { action: 'point.propose' })).toBe(false);
+    }
+    expect(can(actor('reviewer', { isStudent: true }), { action: 'point.create' })).toBe(true);
   });
 
   it.each(ROLES)('refuses an action it does not know, as %s', (role) => {

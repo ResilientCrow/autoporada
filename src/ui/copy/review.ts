@@ -43,7 +43,7 @@ export const review = {
     return: 'Vrátit k\u00a0úpravě',
     reject: 'Zamítnout',
     /** A reviewer's own submitted point, in place of „Schválit“. */
-    ownPoint: 'Vlastní bod schvaluje jiný kontrolor nebo ředitel.',
+    ownPoint: 'Vlastní bod schvaluje jiný člen vedení nebo ředitel.',
     note: 'Poznámka pro autora',
     noteRequired: 'Napište prosím autorovi, co je potřeba.',
     noteTooLong: `Poznámka může mít nejvýše ${POINT_LIMITS.note}\u00a0znaků.`,

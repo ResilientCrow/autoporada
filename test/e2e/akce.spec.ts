@@ -134,6 +134,8 @@ test.describe('the akce journey', () => {
     expect(await readFuture(id)).toMatchObject({ reportState: 'written', reportPointId: reportId });
     await page.goto('/body');
     await hydrated();
-    await expect(page.getByRole('heading', { name: future.report.title })).toHaveCount(0);
+    // The card stays at the top of „Současné události“ and says nothing is owed (ADR 0052).
+    await expect(page.getByText(future.report.empty, { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: future.report.start })).toHaveCount(0);
   });
 });

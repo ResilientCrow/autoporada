@@ -46,6 +46,18 @@ test.describe('the report card', () => {
     await hydrated();
     await expect(field(page, points.editor.title)).toHaveValue('Exkurze do Terezína');
     await expect(page.getByRole('listitem').filter({ hasText: 'Jana Nováková' })).toBeVisible();
-    expect((await readFuture(id)).reportPointId).not.toBeNull();
+    const reportId = (await readFuture(id)).reportPointId;
+    expect(reportId).not.toBeNull();
+
+    // The draft keeps the akce on the card, which goes on with it and names the porada (ADR 0052).
+    await page.goto('/');
+    await hydrated();
+    // Which one depends on the weekday the run falls on: three days back may be past its close.
+    await expect(page.getByText(/^(Půjde na poradu |Termín uplynul )/)).toBeVisible();
+    await expect(page.getByRole('link', { name: future.report.resume })).toHaveAttribute(
+      'href',
+      `/body/${reportId}`,
+    );
+    await expect(page.getByRole('button', { name: future.report.start })).toHaveCount(0);
   });
 });

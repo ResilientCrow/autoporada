@@ -25,8 +25,11 @@ function MemberChips({ actor }: { readonly actor: Actor }) {
   );
 }
 
-/** The home page: what state the account is in, and signing out of every device. */
-export function Overview({ actor, home }: { readonly actor: Actor; readonly home: HomeView }) {
+/**
+ * The top of the home page: its title and, for a user still waiting for access, the notice and the
+ * access card. The account card is `AccountCard`, which the page puts last (ADR 0052).
+ */
+export function Overview({ home }: { readonly home: HomeView }) {
   return (
     <>
       <SlantLabel level={1}>{cs.home.title}</SlantLabel>
@@ -49,18 +52,24 @@ export function Overview({ actor, home }: { readonly actor: Actor; readonly home
           </Card>
         </>
       )}
-      <Card title={cs.home.account}>
-        {home.kind === 'member' && (
-          <p className="flex flex-wrap gap-2">
-            <MemberChips actor={actor} />
-          </p>
-        )}
-        <form method="post" action="/auth/logout">
-          <Button variant="secondary" type="submit" name="scope" value="all">
-            {cs.home.signOutEverywhere}
-          </Button>
-        </form>
-      </Card>
     </>
+  );
+}
+
+/** What state the account is in (a member's chips), and signing out of every device. */
+export function AccountCard({ actor, home }: { readonly actor: Actor; readonly home: HomeView }) {
+  return (
+    <Card title={cs.home.account}>
+      {home.kind === 'member' && (
+        <p className="flex flex-wrap gap-2">
+          <MemberChips actor={actor} />
+        </p>
+      )}
+      <form method="post" action="/auth/logout">
+        <Button variant="secondary" type="submit" name="scope" value="all">
+          {cs.home.signOutEverywhere}
+        </Button>
+      </form>
+    </Card>
   );
 }

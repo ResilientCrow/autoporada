@@ -78,6 +78,19 @@ export const START = CLOCK_START;
 /** The first Monday whose deadline is ahead at START. */
 export const FIRST_MONDAY = calDate(2026, 10, 26);
 
+/**
+ * The principal that starts a point of `kind` for `author`. A finance or pokyn proposal is the
+ * vedení's to start (ADR 0052), so a fixture for any other author's proposal starts it with
+ * the vedení's rights: the point is still the author's, as one they went on with after a change
+ * of role is.
+ */
+export function startingAs(world: World, author: UserRecord, kind: PointKind) {
+  const principal = world.as(author);
+  return kind === 'report'
+    ? principal
+    : { ...principal, actor: { ...principal.actor, role: 'reviewer' as const, isStudent: false } };
+}
+
 export function pointFixtures(world: World) {
   /** A new point of the author's, made through the use case. */
   async function start(author: UserRecord, kind: PointKind = 'report'): Promise<string> {
@@ -85,7 +98,7 @@ export function pointFixtures(world: World) {
       kind === 'report'
         ? (await world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS })).id
         : null;
-    const result = await world.run(createPoint, world.as(author), {
+    const result = await world.run(createPoint, startingAs(world, author, kind), {
       clientRef: randomUUID(),
       kind,
       typeId,

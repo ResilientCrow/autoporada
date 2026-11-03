@@ -4,17 +4,20 @@ import { buttonStyles, type ButtonVariant } from './button-styles';
 
 /**
  * A link to another page that looks like a button. `current` marks the page it leads to
- * (`aria-current`) and takes the primary look, for a row of filters.
+ * (`aria-current`) and takes the primary look, for a row of filters. `describedBy` names what the link
+ * is for where several in a list read the same.
  */
 export function ButtonLink({
   href,
   variant = 'primary',
   current = false,
+  describedBy,
   children,
 }: {
   readonly href: `/${string}`;
   readonly variant?: ButtonVariant;
   readonly current?: boolean;
+  readonly describedBy?: string;
   readonly children: string;
 }) {
   return (
@@ -22,6 +25,7 @@ export function ButtonLink({
       href={href}
       prefetch={false}
       aria-current={current ? 'page' : undefined}
+      aria-describedby={describedBy}
       className={buttonStyles(current ? 'primary' : variant)}
     >
       {children}

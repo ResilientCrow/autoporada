@@ -72,7 +72,7 @@ export const users = {
       all: 'Všichni',
       pending: 'Bez přístupu',
       submitter: 'Přispěvatelé',
-      reviewer: 'Kontroloři',
+      reviewer: 'Vedení',
       headmaster: 'Ředitelé',
       inactive: 'Neaktivní',
     },

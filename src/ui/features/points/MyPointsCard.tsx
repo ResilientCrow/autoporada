@@ -28,7 +28,7 @@ export function MyPointsCard({
     <Card title={points.mine.title}>
       <div className="space-y-2">
         {lines.length === 0 ? (
-          <p>{points.mine.cardEmpty}</p>
+          <p>{points.mine.empty}</p>
         ) : (
           <ul>
             {lines.map((group) => (

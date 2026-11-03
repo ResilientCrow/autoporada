@@ -1,7 +1,9 @@
 /**
- * The proposals path (design section 11): anyone who may write a point starts a finance or pokyn
- * proposal on /navrhy/novy, „Začít“ opens its draft on /body/{id}, and a reviewer edits it in place
- * with „Uložit úpravy“. The one author is cleared around each test; the id is found in the address.
+ * The proposals path (design section 11, ADR 0052): a member of vedení (revizor, who authors nothing
+ * else) starts a finance or pokyn proposal on /navrhy/novy, „Začít“ opens its draft on /body/{id},
+ * and another one (rizeni) edits it in place with „Uložit úpravy“. An ordinary submitter finds
+ * neither the page nor the buttons. The one author is cleared around each test; the id is found in
+ * the address.
  */
 import { points, review } from '@/ui/copy';
 
@@ -11,11 +13,11 @@ import { expect, field, signInElsewhere, test } from './fixtures';
 
 test.describe('a proposal', () => {
   test.describe.configure({ mode: 'serial' });
-  const clear = (project: string) => forgetPointsOf(emailOf('navrh', project));
+  const clear = (project: string) => forgetPointsOf(emailOf('revizor', project));
   test.beforeEach(({}, testInfo) => clear(testInfo.project.name));
   test.afterEach(({}, testInfo) => clear(testInfo.project.name));
 
-  test('is started on /navrhy/novy, written as a draft and edited in place by a reviewer', async ({
+  test('is started on /navrhy/novy by vedení, written as a draft and edited in place by another', async ({
     page,
     hydrated,
     signInAs,
@@ -24,7 +26,7 @@ test.describe('a proposal', () => {
   }, testInfo) => {
     const project = testInfo.project.name;
     const TITLE = `Nákup tabulí (${project})`;
-    await signInAs(signInAsRe('navrh', project));
+    await signInAs(signInAsRe('revizor', project));
     await page.goto('/navrhy/novy');
     await hydrated();
     await expect(
@@ -49,7 +51,7 @@ test.describe('a proposal', () => {
     await page.getByRole('button', { name: points.submit.button }).click();
     await expect(page.getByText(points.state.submitted, { exact: true }).first()).toBeVisible();
 
-    const reviewer = await signInElsewhere(newContext, signInAsRe('revizor', project));
+    const reviewer = await signInElsewhere(newContext, signInAsRe('rizeni', project));
     await reviewer.goto(`/kontrola/${id}`);
     await hydrated(reviewer);
     await expect(reviewer.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
@@ -62,5 +64,24 @@ test.describe('a proposal', () => {
       reviewer.getByRole('heading', { level: 1, name: `${TITLE} upravené` }),
     ).toBeVisible();
     expect((await readPoint(id)).title).toBe(`${TITLE} upravené`);
+  });
+
+  test('is not offered to an ordinary submitter, who gets only the quiet link to a report', async ({
+    page,
+    hydrated,
+    signInAs,
+  }, testInfo) => {
+    await signInAs(signInAsRe('navrh', testInfo.project.name));
+    const response = await page.goto('/navrhy/novy');
+    expect(response?.status()).toBe(404);
+
+    await page.goto('/body');
+    await hydrated();
+    await expect(page.getByRole('link', { name: points.mine.withoutAkce })).toHaveAttribute(
+      'href',
+      '/body/novy',
+    );
+    await expect(page.getByRole('link', { name: points.proposal.title })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: points.title.new, exact: true })).toHaveCount(0);
   });
 });

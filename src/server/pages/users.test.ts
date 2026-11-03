@@ -53,7 +53,7 @@ describe('usersPage', () => {
     ['vsichni', 'all'],
     ['cekajici', 'pending'],
     ['prispevatele', 'submitter'],
-    ['kontrolori', 'reviewer'],
+    ['vedeni', 'reviewer'],
     ['reditele', 'headmaster'],
     ['neaktivni', 'inactive'],
     ['jine', 'all'],

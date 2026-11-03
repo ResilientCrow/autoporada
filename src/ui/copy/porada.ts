@@ -221,6 +221,9 @@ export const porada = {
   /** „Chybějící zprávy“: the paragraph printed for an akce without an approved report (/porada/[datum]/zpravy, ADR 0049). */
   missing: {
     title: 'Chybějící zprávy',
+    /** The headmaster's card on Přehled (ADR 0052); `porada` arrives written, „10.\u00a011.“. */
+    tally: (porada: string, missing: number, owed: number) =>
+      `Zprávy z\u00a0akcí pro poradu ${porada}: neodevzdáno ${missing} z\u00a0${owed}`,
     /** The step's link on the porada page when akce lack a report; `count` is above zero. */
     step: (count: number) => `Chybějící zprávy (${count})`,
     back: 'Zpět na přípravu porady',

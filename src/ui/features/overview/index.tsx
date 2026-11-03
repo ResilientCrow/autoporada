@@ -1,2 +1,2 @@
 export { MeetingStrip } from './MeetingStrip';
-export { Overview } from './Overview';
+export { AccountCard, Overview } from './Overview';

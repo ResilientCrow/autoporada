@@ -15,8 +15,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   blocked, and a user gets one when access is granted by hand.
 - After a rejection the person can ask again 30 days later. A blocked request
   is final, but the headmaster can still grant access by hand.
-- Roles: submitter, reviewer, headmaster. A student flag limits students to
-  the submitter role.
+- Roles: submitter, reviewer, headmaster. The UI calls the reviewer role
+  „Vedení“ (ADR 0052). A student flag limits students to the submitter role.
 - The headmaster finds people in the users list by name or e-mail. A
   headmaster cannot change their own role, type or account status; a sole
   headmaster first promotes a deputy.
@@ -44,7 +44,22 @@ in v1 unless the [plan of record](plan.md) changes first.
   event, the author is asked to write the report by e-mail and gets a draft
   prefilled from the akce. Every approved akce owes a report; it cannot be
   declined (ADR 0048).
-- Proposals for HOSPODAŘENÍ items and for extra POKYNY points.
+- Proposals for HOSPODAŘENÍ items and for extra POKYNY points, by vedení only
+  (reviewers and the headmaster, never a student; ADR 0052).
+- „Akce čekající na zprávu“ lists the author's ended akce whose porada is
+  still open, by porada and then by close. Each row says „Půjde na poradu …;
+  odevzdejte do …“, or past the close „Termín uplynul …; porada na zprávu ještě
+  čeká.“ A draft or returned report keeps its row, with its state and
+  „Pokračovat ve zprávě“; the row leaves once the report is handed in. It is
+  the first card on Přehled (hidden when empty) and the top of „Současné
+  události“ (a sentence when none is owed; ADR 0052).
+- Vedení start points with „Nový bod“ and „Nový návrh“. Everyone else gets one
+  quiet link, „Akce nebyla předem zadaná? Napsat zprávu bez akce“, for a report
+  on an event nobody registered.
+- Přehled puts the work first: the owed reports, for the headmaster „Zprávy z
+  akcí pro poradu …: neodevzdáno n z m“ (the working porada, linking
+  „Chybějící zprávy“), the review queue, „Moje body“, the meeting strip, and
+  the account card last (ADR 0052).
 - Autosave with conflict detection, a status timeline, „Stáhnout“ (back to a
   draft) and „Zrušit bod“. A late hand-in goes to the next meeting whose
   deadline is still ahead, and the editor says which one.

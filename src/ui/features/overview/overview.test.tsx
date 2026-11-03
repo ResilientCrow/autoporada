@@ -6,19 +6,17 @@ import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
-import { Overview } from './index';
+import { AccountCard, Overview } from './index';
 
 function actor(over: Partial<Actor>): Actor {
   return { id: 'u1', role: 'submitter', status: 'active', isStudent: false, ...over };
 }
 
 const render = (over: Partial<Actor>) =>
-  renderToStaticMarkup(<Overview actor={actor(over)} home={{ kind: 'member' }} />);
+  renderToStaticMarkup(<AccountCard actor={actor(over)} home={{ kind: 'member' }} />);
 
 const waiting = (standing: 'open' | 'pending' | 'cooldown' | 'blocked') =>
-  renderToStaticMarkup(
-    <Overview actor={actor({ role: 'pending' })} home={{ kind: 'pending', standing }} />,
-  );
+  renderToStaticMarkup(<Overview home={{ kind: 'pending', standing }} />);
 
 const link = (html: string) => /<a [^>]*href="\/pristup"[^>]*>(.*?)<\/a>/.exec(html);
 
@@ -45,12 +43,35 @@ describe('Overview for a waiting user', () => {
     expect(waiting('open')).not.toContain('role=');
   });
 
-  it('still signs out of every device', () => {
-    expect(waiting('open')).toContain(`${cs.home.signOutEverywhere}</button>`);
+  it('leaves the account card to the page, which puts it last', () => {
+    const html = waiting('open');
+    expect(html).not.toContain(cs.home.account);
+    expect(html).not.toContain(cs.home.signOutEverywhere);
+  });
+
+  it('still signs out of every device, in the account card', () => {
+    const html = renderToStaticMarkup(
+      <AccountCard
+        actor={actor({ role: 'pending' })}
+        home={{ kind: 'pending', standing: 'open' }}
+      />,
+    );
+    expect(html).toContain(`${cs.home.signOutEverywhere}</button>`);
+    expect(html).not.toContain(cs.status.role.pending);
   });
 });
 
 describe('Overview for a member', () => {
+  it('is only the page title: the account card comes last on the page', () => {
+    const html = renderToStaticMarkup(<Overview home={{ kind: 'member' }} />);
+    expect(html).toMatch(new RegExp(`<h1 [^>]*>.*${cs.home.title}.*</h1>`));
+    expect(html).not.toContain(cs.home.account);
+    expect(html).not.toContain(cs.status.role.submitter);
+    expect(html).not.toContain(cs.home.signOutEverywhere);
+  });
+});
+
+describe('AccountCard for a member', () => {
   it.each([
     ['submitter', cs.status.role.submitter],
     ['headmaster', cs.status.role.headmaster],

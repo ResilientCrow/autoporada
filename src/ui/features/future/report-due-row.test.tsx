@@ -35,6 +35,10 @@ const item = {
   endDate: null,
   timeFrom: null,
   timeTo: null,
+  meetingDate: '2026-11-16',
+  closesAt: '2026-11-14T19:00:00.000Z',
+  overdue: false,
+  report: null,
 };
 const TYPES = [
   { id: 't1', name: 'Seminář' },

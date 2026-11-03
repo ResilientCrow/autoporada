@@ -25,9 +25,11 @@ export default async function MyPointsPage({
         rows={model.rows}
         next={model.next}
         first={model.first}
+        canPropose={model.canPropose}
         top={
           model.reportDue !== null && (
             <ReportDueCard
+              showEmpty
               items={model.reportDue.items}
               types={model.reportDue.types}
               startFutureReport={startFutureReport}

@@ -1,8 +1,8 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { listMyPoints, queuePoints } from '@/application/use-cases';
-import type { issuesWindowOutput } from '@/contracts';
+import { listMyPoints, queuePoints, reportTally } from '@/application/use-cases';
+import type { issuesWindowOutput, reportTallyOutput } from '@/contracts';
 import { formatDayMonth, formatNumericDate, formatClock, weekdayName } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus, PointState } from '@/domain/review';
@@ -53,8 +53,13 @@ type HomePageModel =
       readonly queue: number | null;
       /** „Akce čekající na zprávu“; null for whoever may not start items, and where the lists are refused. */
       readonly reportDue: ReportDueModel | null;
+      /** The headmaster's „neodevzdáno n z m“ for the working porada; null for everyone else, when it owes nothing, and where the read is refused. */
+      readonly reportTally: ReportTally | null;
     }
   | { readonly kind: 'pending'; readonly standing: 'open' | 'pending' | 'cooldown' | 'blocked' };
+
+/** The working porada and how many of the akce it owes have no report handed in (ADR 0052). */
+type ReportTally = NonNullable<z.output<typeof reportTallyOutput>['porada']>;
 
 /** Where a moved porada is held and when it closes, written out. */
 function held(row: { readonly deadlineAt: string }): NonNullable<MeetingDay['held']> {
@@ -122,25 +127,48 @@ async function waitingCount(viewer: UserPrincipal): Promise<number | null> {
   );
 }
 
+/** The headmaster's count of missing akce reports; null when the working porada owes nothing or the read is refused. */
+async function tallyOf(viewer: UserPrincipal): Promise<ReportTally | null> {
+  const read = orNotFound(
+    'issues.reportTally',
+    await runPage(reportTally, {
+      principal: viewer,
+      requestId: await requestId(),
+      input: {},
+    }),
+  );
+  return read && read.porada;
+}
+
 /**
  * The home page's model, or null for a visitor or a refusal. Whoever may start a point costs the
  * window read (the standing line, and for the one who may skip a meeting the strip, from the same
  * read) and the list of their points; neither refusal takes the page away from them but the
- * strip's, which the headmaster's page cannot do without. A reviewer also costs the queue, for its count.
+ * strip's, which the headmaster's page cannot do without. A reviewer also costs the queue, for its count,
+ * and the headmaster the count of the akce reports the working porada lacks.
  */
 export async function homePage(): Promise<HomePageModel | null> {
   const viewer = await getViewer();
   if (!viewer) return null;
   if (viewer.actor.role !== 'pending') {
     if (!can(viewer.actor, { action: 'point.create' })) {
-      return { kind: 'member', strip: null, mine: null, queue: null, reportDue: null };
+      return {
+        kind: 'member',
+        strip: null,
+        mine: null,
+        queue: null,
+        reportDue: null,
+        reportTally: null,
+      };
     }
     const mayReview = can(viewer.actor, { action: 'review.queue' });
-    const [window, counts, queue, due] = await Promise.all([
+    const mayTally = can(viewer.actor, { action: 'issue.edit' });
+    const [window, counts, queue, due, tally] = await Promise.all([
       readWindow(viewer),
       pointCounts(viewer),
       mayReview ? waitingCount(viewer) : null,
       reportDueOf(viewer),
+      mayTally ? tallyOf(viewer) : null,
     ]);
     const mayStrip = can(viewer.actor, { action: 'issue.generate' });
     if (mayStrip && window === null) return null;
@@ -151,6 +179,7 @@ export async function homePage(): Promise<HomePageModel | null> {
       mine: counts && { counts, standing: window && standingFrom(window, now) },
       queue,
       reportDue: due,
+      reportTally: tally,
     };
   }
   const standing = await myStanding(viewer);

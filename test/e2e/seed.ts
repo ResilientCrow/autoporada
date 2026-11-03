@@ -94,9 +94,9 @@ const PERSONAS: readonly Persona[] = [
   { subject: 'prohlizi-m', role: 'reviewer' },
   // akce.spec.ts and its siblings, proposals.spec.ts, m8b-screens.spec.ts: -d and -m again. zapis writes the J3 akce,
   // uprav is akce-edit only (revise, retract), navrh is shared by akce-decide (its akce, cleared by forgetFutureOf) and
-  // proposals (its points, cleared by forgetPointsOf), safe together as neither clear touches the other's rows;
-  // rizeni is a headmaster who decides their own akce (akce-decide) and is read-only in m8b-screens, revizor reviews,
-  // ctenar only reads and obraz owns what the M8b screens show.
+  // proposals (only refused there: a submitter may not propose, ADR 0052); rizeni is a headmaster who decides their
+  // own akce (akce-decide), edits the proposal and is read-only in m8b-screens; revizor reviews and is the one author
+  // of proposals (cleared by forgetPointsOf), ctenar only reads and obraz owns what the M8b screens show.
   { subject: 'zapis-d', role: 'submitter' },
   { subject: 'zapis-m', role: 'submitter' },
   { subject: 'uprav-d', role: 'submitter' },

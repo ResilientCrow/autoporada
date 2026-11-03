@@ -58,7 +58,7 @@ export function startReportInput(
 }
 
 /** Where the report started for an akce is written. */
-export const reportHref = (pointId: string) => `/body/${pointId}`;
+export const reportHref = (pointId: string): `/${string}` => `/body/${pointId}`;
 
 /** What the revise's press does with the server's answer (`null`: the call itself failed). */
 export interface ReviseEffect {

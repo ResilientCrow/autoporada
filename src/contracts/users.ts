@@ -22,7 +22,7 @@ export const USER_GROUP_SLUGS: Readonly<Record<UserGroup, string>> = {
   all: 'vsichni',
   pending: 'cekajici',
   submitter: 'prispevatele',
-  reviewer: 'kontrolori',
+  reviewer: 'vedeni',
   headmaster: 'reditele',
   inactive: 'neaktivni',
 };
