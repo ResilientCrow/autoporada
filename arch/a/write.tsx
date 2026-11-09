@@ -45,7 +45,8 @@ export function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: Draf
   </div>;
 }
 export function PersonRow({ p, onChange, onRemove }: { p: DraftPerson; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
-  return <li className="pr"><div className="pr-h"><b>{displayName(p)}</b><input className="in cls" aria-label={`Třída nebo organizace: ${displayName(p)}`} placeholder="Třída" value={p.affiliation ?? ''} onChange={(e) => onChange({ ...p, affiliation: e.target.value, affiliationYear: '2026/2027' })} onBlur={(e) => { const c = normalizeClass(e.target.value); if (c) onChange({ ...p, affiliation: c, affiliationYear: '2026/2027' }); }} /><button type="button" className="x" aria-label={`Odebrat: ${displayName(p)}`} onClick={onRemove}><Ic n="x" /></button></div>
+  const { s } = useStore(); const year = Q.yearOf(s);
+  return <li className="pr"><div className="pr-h"><b>{displayName(p)}</b><input className="in cls" aria-label={`Třída nebo organizace: ${displayName(p)}`} placeholder="Třída" value={p.affiliation ?? ''} onChange={(e) => onChange({ ...p, affiliation: e.target.value, affiliationYear: year })} onBlur={(e) => { const c = normalizeClass(e.target.value); if (c) onChange({ ...p, affiliation: c, affiliationYear: year }); }} /><button type="button" className="x" aria-label={`Odebrat: ${displayName(p)}`} onClick={onRemove}><Ic n="x" /></button></div>
     <Seg label={`Oslovení: ${displayName(p)}`} value={p.salutation} options={SAL} onChange={(v) => onChange({ ...p, salutation: v })} /></li>;
 }
 export function Wizard({ id, step }: { id: string; step?: string }) {
@@ -117,7 +118,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     can = !!st0?.quote.trim(); hint = 'Napište, co řekl nebo řekla.';
     if (!st0?.speaker) { body = <Note>Nejdřív vyberte, kdo se vyjádřil. <a href={Hash(`/psat/${id}/kdo${sfx}`)}>Vybrat</a></Note>; can = false; }
     else body = <><label className="l"><span className="vh">Co řekl</span><textarea className="in big" autoFocus maxLength={POINT_LIMITS.quote} value={st0.quote} onChange={(e) => putSt({ ...st0, quote: e.target.value })} placeholder="Například: Robota jsme ladili až do poslední minuty." /></label>
-      {POINT_LIMITS.quote - st0.quote.length < 300 ? <p className="sm" role="status">Zbývá {POINT_LIMITS.quote - st0.quote.length} znaků.</p> : null}
+      {POINT_LIMITS.quote - st0.quote.length < 300 ? <p className="sm" role="status">{Q.charsLeft(POINT_LIMITS.quote - st0.quote.length)}</p> : null}
       {can && c.statements.length < POINT_LIMITS.statements && si === c.statements.length - 1 ? <button type="button" className="btn lg w" onClick={() => { set({ statements: [...c.statements, { speaker: null, speakerGenitive: '', quote: '' }] }); go(`/psat/${id}/kdo-${c.statements.length}`); }}><Ic n="plus" />Přidat další vyjádření</button> : null}</>;
   } else {
     const r = Q.readiness(s, p); const try_ = A.trySubmit(s, id);

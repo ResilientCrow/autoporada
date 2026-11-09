@@ -13,7 +13,11 @@ export const nowOf = (s: State) => new Date(s.now);
 export const todayOf = (s: State): CalDate => instantToWallClock(nowOf(s)).date;
 export const me = (s: State): User | null => s.users.find((u) => u.id === s.userId) ?? null;
 export const userById = (s: State, id: string) => s.users.find((u) => u.id === id);
-export const nameOf = (u?: User | null) => (u ? `${u.givenName} ${u.familyName}` : '');
+export const nameOf = (u?: User | null) => (u ? `${u.givenName} ${u.familyName}`.trim() : '');
+/** Czech count: 1 bod, 2 body, 5 bodů, 0 bodů. */
+export const counts = (n: number, a: string, b: string, c: string) => (n === 1 ? `1 ${a}` : n >= 2 && n <= 4 ? `${n} ${b}` : `${n} ${c}`);
+/** The verb agrees too: „Zbývá 1 znak“, „Zbývají 2 znaky“, „Zbývá 5 znaků“. */
+export const charsLeft = (n: number) => `${n >= 2 && n <= 4 ? 'Zbývají' : 'Zbývá'} ${counts(n, 'znak', 'znaky', 'znaků')}.`;
 export const atLeast = (r: Role | undefined, m: Role) => { const o: Role[] = ['pending', 'submitter', 'reviewer', 'headmaster']; return r ? o.indexOf(r) >= o.indexOf(m) : false; };
 export const ruleOf = (s: State): DeadlineRule => ({ dayOffset: s.settings.dayOffset, time: parseWallTime(s.settings.time) });
 export const yearOf = (s: State) => schoolYear(todayOf(s));

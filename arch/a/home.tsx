@@ -139,7 +139,7 @@ export function Zprava({ id, fresh }: { id: string; fresh?: boolean }) {
       <Back to={mine ? '/' : '/kontrola'} t={mine ? 'Zpět domů' : 'Zpět na kontrolu'} />
       <Top h={head} lead={lead} />
       {p.state !== 'rejected' && p.state !== 'withdrawn' ? <Track on={on} steps={[...STEPS.slice(0, 3), `V poradě ${Q.dm(meet)}`]} /> : null}
-      {edited.map((t, i) => <Note key={i} h={`${Q.nameOf(Q.userById(s, t.who))} text upravil(a)`}>{Object.entries(t.original!).map(([k, v]) => <p key={k} className="diff"><span className="sm">{k}</span><br />{k === 'Text' || k === 'Jak to dopadlo' ? diffWords(v, toText(p.content.body)) : v}</p>)}</Note>)}
+      {edited.map((t, i) => <Note key={i} h={`Úprava: ${Q.nameOf(Q.userById(s, t.who))}`}>{Object.entries(t.original!).map(([k, v]) => <p key={k} className="diff"><span className="sm">{k}</span><br />{k === 'Text' || k === 'Jak to dopadlo' ? diffWords(v, toText(p.content.body)) : v}</p>)}</Note>)}
       {p.state === 'submitted' && mine ? <div className="stack st8">{fresh ? <a className="btn go lg w" href="#/">Hotovo, zpět na přehled</a> : null}<button className="btn lg w" onClick={() => { apply(A.retractPoint(p.id)); go(`/psat/${p.id}/hotovo`); }}>Vzít zpět a upravit</button><button className="q r" onClick={() => setDel(true)}>Smazat zprávu</button></div> : null}
       {p.trail.length ? <Sec h="Co se dělo"><Todo rows={p.trail.map((t) => ({ k: 'd' as const, t: <>{t.what}: {Q.nameOf(Q.userById(s, t.who)) || 'systém'}, {WHEN(t.at)}{t.note ? <><br /><span className="sm">{t.note}</span></> : null}</> }))} /></Sec> : null}
     </>} />;

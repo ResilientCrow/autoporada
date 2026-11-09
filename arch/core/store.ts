@@ -8,8 +8,7 @@ import { working, atLeast, buildDoc, canDecideFuture, canDecidePoint, handInTo, 
 import type { AccessReq, Annex, Future, Issue, Mail, Point, PointType, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
-const YEAR = '2026/2027';
-const person = (salutation: DraftPerson['salutation'], givenName: string, familyName: string, affiliation?: string): DraftPerson => ({ salutation, givenName, familyName, ...(affiliation && { affiliation, affiliationYear: YEAR }) });
+const person = (year: string, salutation: DraftPerson['salutation'], givenName: string, familyName: string, affiliation?: string): DraftPerson => ({ salutation, givenName, familyName, ...(affiliation && { affiliation, affiliationYear: year }) });
 
 
 const id = (s: State, p: string): [State, string] => [{ ...s, seq: s.seq + 1 }, `${p}-${s.seq}`];
@@ -56,7 +55,7 @@ export function createPoint(kind: PointKind, typeId: string | null, akceId: stri
     if (akce) {
       content = { ...content, title: akce.title, eventDate: akce.date, endDate: akce.endDate, timeFrom: akce.timeFrom, timeTo: akce.timeTo, campus: akce.campus, place: akce.place || null, bullets: content.bullets.map((b) => (b.kind === 'people' && (b.key === 'organisers' || b.key === 'speakers') ? { ...b, people: akce.responsible.people } : b)) };
     } else if (kind === 'report' && u) {
-      content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
+      content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
     }
     const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, submittedAt: null, note: null, savedAt: s.now, trail: [] };
     p.content = refreshOpening(s, p, content);
@@ -126,7 +125,7 @@ export function createFuture(kind: Future['kind'], onId?: (id: string) => void):
   return (s0) => {
     const [s, fid] = id(s0, 'f'); const u = me(s)!; onId?.(fid);
     const tomorrow = parseIsoDate(toIsoDate(handInTo(s).monday));
-    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: 'smichov', place: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, note: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
+    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: 'smichov', place: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, note: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
     return { ...s, futures: [...s.futures, f] };
   };
 }

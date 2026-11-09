@@ -46,7 +46,7 @@ export function App({ col, desk, dock, nar, full, over, noNav }: { col: ReactNod
 }
 /** A title may be long: it grows instead of hiding its start, and Enter moves on. */
 export function TitleField({ value, onChange, onEnter, placeholder, autoFocus }: { value: string; onChange: (v: string) => void; onEnter?: () => void; placeholder?: string; autoFocus?: boolean }) {
-  return <><textarea className="in bigi ttl" rows={1} maxLength={200} {...(autoFocus ? { autoFocus } : {})} {...(placeholder ? { placeholder } : {})} value={value} onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }} />{200 - value.length < 40 ? <small role="status">Zbývá {200 - value.length} znaků.</small> : null}</>;
+  return <><textarea className="in bigi ttl" rows={1} maxLength={200} {...(autoFocus ? { autoFocus } : {})} {...(placeholder ? { placeholder } : {})} value={value} onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }} />{200 - value.length < 40 ? <small role="status">{Q.charsLeft(200 - value.length)}</small> : null}</>;
 }
 export function useNarrow() {
   const [n, set] = useState(() => matchMedia('(max-width:900px)').matches);
