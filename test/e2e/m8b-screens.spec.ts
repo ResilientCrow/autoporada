@@ -63,7 +63,7 @@ test.describe('the akce, proposal and settings screens', () => {
       startInDays: -4,
     });
     await signInAs(signInAsRe('obraz', project));
-    for (const path of ['/', '/body']) {
+    for (const path of ['/klasicke', '/body']) {
       await page.goto(path);
       await hydrated();
       await expect(page.getByRole('heading', { name: future.report.title })).toBeVisible();

@@ -5,7 +5,11 @@ import { cx } from './cx';
 type Level = 1 | 2 | 3;
 
 /** Size steps by heading level; a label without one is as small as level 3. */
-const SIZE: Record<Level, string> = { 1: 'text-2xl sm:text-3xl', 2: 'text-2xl', 3: 'text-xl' };
+const SIZE: Record<Level, string> = {
+  1: 'text-4xl leading-tight sm:text-5xl',
+  2: 'text-2xl',
+  3: 'text-xl',
+};
 
 /**
  * A slanted title block. The background is the skewed element itself (never a
@@ -31,13 +35,9 @@ export function SlantLabel({
       ref={focusRef}
       id={focusId}
       tabIndex={focusRef === undefined && focusId === undefined ? undefined : -1}
-      className={cx(
-        'inline-block -skew-x-12 border border-transparent bg-navy-mid px-4 py-1',
-        'font-slab font-bold text-light uppercase',
-        SIZE[level ?? 3],
-      )}
+      className={cx('font-slab font-bold tracking-tight text-ink', SIZE[level ?? 3])}
     >
-      <span className="inline-block skew-x-12">{children}</span>
+      {children}
     </Tag>
   );
 }

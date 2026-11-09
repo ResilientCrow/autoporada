@@ -16,7 +16,15 @@ export interface Body {
   readonly after?: readonly string[];
 }
 
+/** Branch arch-ui: the app's pages live at hash addresses of the Arch UI. */
+const ARCH_ADDRESS = {
+  '/prihlaseni': '/',
+  '/body': '/#/moje',
+  '/kontrola': '/#/kontrola',
+  '/uzivatele': '/#/lide',
+} as const;
+
 export function frame(origin: string, body: Body): string {
-  const link = body.link ? [`${origin}${body.link}`] : [];
+  const link = body.link ? [`${origin}${ARCH_ADDRESS[body.link]}`] : [];
   return [GREETING, ...body.paragraphs, ...link, ...(body.after ?? []), FOOTER].join('\n\n') + '\n';
 }

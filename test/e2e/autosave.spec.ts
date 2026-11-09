@@ -78,8 +78,9 @@ test.describe('autosave in the point editor', () => {
     await page
       .getByRole('navigation')
       .getByRole('link', { name: cs.nav.overview })
+      .first()
       .evaluate((link: HTMLElement) => link.click());
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/klasicke$/);
     await expect.poll(titleOf(id)).toBe('Uloženo při odchodu');
   });
 
@@ -183,7 +184,7 @@ test.describe('autosave in the point editor', () => {
 
     // The banner's link opens the sign-in on a new tab: do the same in this context.
     const tab = await page.context().newPage();
-    await tab.goto('/');
+    await tab.goto('/klasicke');
     await tab.getByRole('link', { name: cs.signIn.button }).click();
     await showAllPersonas(tab);
     await tab.getByRole('button', { name: signInRe(testInfo.project.name) }).click();

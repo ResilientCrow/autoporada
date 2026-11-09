@@ -1,4 +1,4 @@
-import { AlignmentType, HeadingLevel, PageBreak, Paragraph, TextRun } from 'docx';
+import { AlignmentType, HeadingLevel, ImageRun, PageBreak, Paragraph, TextRun } from 'docx';
 
 import type { Block, Run } from '../model';
 import { NUMBERING_REF } from './numbering';
@@ -20,7 +20,9 @@ const boldItalic = (text: string) => new TextRun({ text, bold: true, italics: tr
 const BOLD_ITALIC_MARK = { bold: true, italics: true } as const;
 
 /** One block → its paragraphs. The Příloha 1 table is rendered separately. */
-export function renderBlock(block: Exclude<Block, { kind: 'studentTable' }>): Paragraph[] {
+export function renderBlock(
+  block: Exclude<Block, { kind: 'studentTable' | 'dataTable' }>,
+): Paragraph[] {
   switch (block.kind) {
     case 'title':
       return [
@@ -101,6 +103,27 @@ export function renderBlock(block: Exclude<Block, { kind: 'studentTable' }>): Pa
         new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(block.place)] }),
         new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun(block.signature)] }),
       ];
+    case 'image': {
+      const [head = '', b64 = ''] = block.src.split(',');
+      const data = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const scale = Math.min(1, 600 / block.width);
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              type: head.includes('png') ? 'png' : 'jpg',
+              data,
+              transformation: {
+                width: Math.round(block.width * scale),
+                height: Math.round(block.height * scale),
+              },
+              altText: { name: 'Obrázek', title: block.alt, description: block.alt },
+            }),
+          ],
+        }),
+      ];
+    }
     case 'annex':
       return [
         new Paragraph({

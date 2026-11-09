@@ -87,6 +87,10 @@ export async function assembleIssueSnapshot(
     registry: registry.lists,
     annex1: { heading: annex1.heading, intro: annex1.intro },
     annex2: texts.annex2,
+    // Branch arch-ui: the porada's further annexes, kept in settings until they get a table.
+    annexes: withoutIds(
+      await tx.settings.value(`arch.annexes.${toIsoDate(monday).replaceAll('-', '')}`),
+    ),
   };
   const parsed = parseIssueSnapshot(candidate);
   // Only the path of a refusal is kept: the message may quote what people wrote (ADR 0015).
@@ -131,4 +135,19 @@ export async function assembleIssueSnapshot(
     },
     publish: { points, missing, entryIds: registry.unstamped },
   };
+}
+
+/** Branch arch-ui: the client keys annexes and parts by id; the snapshot keeps the content only. */
+function withoutIds(v: unknown): unknown {
+  if (!Array.isArray(v)) return [];
+  return v.map((a: { id?: unknown; parts?: unknown }) => {
+    const { id: _a, ...annex } = a;
+    const parts = Array.isArray(a.parts)
+      ? a.parts.map((p: { id?: unknown }) => {
+          const { id: _p, ...part } = p;
+          return part;
+        })
+      : a.parts;
+    return { ...annex, parts };
+  });
 }

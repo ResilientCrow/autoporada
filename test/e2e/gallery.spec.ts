@@ -5,14 +5,34 @@ import { cs } from '@/ui/copy';
 import { expect, test } from './fixtures';
 
 /** The seven of the colour manual; Tailwind's preflight adds the transparent #0000. */
+// Branch arch-ui: the Arch palette of src/ui/theme/theme.css.
 const ALLOWED_HEX = new Set([
-  '#22232a',
-  '#000e19',
-  '#00233f',
-  '#0062b3',
-  '#cce8ff',
-  '#f7fbff',
-  '#f5b800',
+  '#161837',
+  '#1618371f',
+  '#16183799',
+  '#292d67',
+  '#e3e3ec',
+  '#fff',
+  '#ffffff',
+  '#f5b400',
+  '#585a75',
+  '#f5f5f9',
+  '#e0a400',
+  '#c99300',
+  '#fff1c4',
+  '#8a0f28',
+  '#ffe7a3',
+  '#6b4a00',
+  '#dce6ff',
+  '#23408e',
+  '#d6f0df',
+  '#1f6338',
+  '#d3eef0',
+  '#155e66',
+  '#e7e0fa',
+  '#4b2f94',
+  '#fbe0e6',
+  '#8a1f3d',
   '#0000',
 ]);
 
@@ -725,7 +745,11 @@ test('an add past the cap is refused with a notice, never as an add', async ({
 const { paste } = cs.people;
 
 /** „Vložit seznam“ of the demo `n` (0 live, 1 directory off, 2 with people in it). */
-const pasteOf = (page: Page, n: number) => page.locator('details').nth(n);
+const pasteOf = (page: Page, n: number) =>
+  page
+    .locator('details')
+    .filter({ has: page.getByLabel(paste.label, { exact: true }) })
+    .nth(n);
 const previewRows = (details: Locator) => details.getByRole('table').locator('tbody > tr');
 /** Opens the paste, types the sample, and reads it. */
 async function checkSample(details: Locator) {

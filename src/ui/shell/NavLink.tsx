@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 /**
- * A link of the header navigation: bold, no underline at rest, a 2 px one on hover. The current
- * page is marked by a thick underline as well as `aria-current`, never colour alone.
+ * A link of the header navigation (arch-ui): a pill, grey text at rest, ink on a grey wash when
+ * it is the current page, which `aria-current` says as well (never colour alone: the weight changes).
  */
 export function NavLink({
   href,
@@ -14,14 +14,14 @@ export function NavLink({
   readonly children: string;
 }) {
   const look = current
-    ? 'underline decoration-4 underline-offset-8'
-    : 'no-underline hover:underline hover:decoration-2';
+    ? 'bg-wash font-bold text-ink'
+    : 'font-medium text-mut hover:bg-wash hover:text-ink';
   return (
     <Link
       href={href}
       prefetch={false}
       aria-current={current ? 'page' : undefined}
-      className={`inline-flex min-h-11 items-center font-bold ${look}`}
+      className={`inline-flex min-h-11 items-center rounded-brand px-3 whitespace-nowrap no-underline ${look}`}
     >
       {children}
     </Link>

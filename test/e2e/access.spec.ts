@@ -152,7 +152,7 @@ test("approving as a student announces it, ends the applicant's session, and sho
   signInAs,
 }) => {
   const applicant = await signInElsewhere(newContext, /^Test – schvalit/);
-  await expect(applicant).toHaveURL(/:\d+\/$/);
+  await expect(applicant).toHaveURL(/:\d+\/klasicke$/);
   await mailpit.forget(APPROVED_ADDRESS);
   await signInAs(/^Ředitel/);
   await page.goto('/uzivatele');
@@ -165,12 +165,12 @@ test("approving as a student announces it, ends the applicant's session, and sho
   await expect(item).toHaveCount(0);
 
   // The approval ended every session of the applicant, so the next request asks to sign in.
-  await applicant.goto('/');
-  await expect(applicant).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
+  await applicant.goto('/klasicke');
+  await expect(applicant).toHaveURL(/\/prihlaseni\?returnTo=%2Fklasicke$/);
   await applicant.getByRole('link', { name: cs.signIn.button }).click();
   await showAllPersonas(applicant);
   await applicant.getByRole('button', { name: /^Test – schvalit/ }).click();
-  await expect(applicant).toHaveURL(/:\d+\/$/);
+  await expect(applicant).toHaveURL(/:\d+\/klasicke$/);
   const main = applicant.getByRole('main');
   await expect(main.getByText(cs.status.role.submitter, { exact: true })).toBeVisible();
   await expect(main.getByText(cs.status.student, { exact: true })).toBeVisible();
@@ -180,7 +180,7 @@ test("approving as a student announces it, ends the applicant's session, and sho
   // One mail, from the worker: the approval, with the way back in.
   const mail = await mailpit.waitFor({ to: APPROVED_ADDRESS });
   expect(mail.subject).toBe(renderMail('access.approved', {}, ORIGIN).subject);
-  expect(mail.text).toContain(`${ORIGIN}/prihlaseni`);
+  expect(mail.text).toMatch(new RegExp(`^${ORIGIN}/\\s*$`, 'm'));
   const raw = await mailpit.raw(mail.id);
   expect(raw).toMatch(/^X-Auto-Response-Suppress: All\r?$/m);
   expect(raw).toMatch(/^X-Autoporada-Dedupe: access\.approved:[0-9a-f-]{36}\r?$/m);
@@ -206,7 +206,7 @@ test('rejecting announces it, and the applicant then sees the cooldown', async (
   await expect(item).toHaveCount(0);
 
   const applicant = await signInElsewhere(newContext, /^Test – zamitnout/);
-  await expect(applicant).toHaveURL(/:\d+\/$/);
+  await expect(applicant).toHaveURL(/:\d+\/klasicke$/);
   await applicant.goto('/pristup');
   const main = applicant.getByRole('main');
   await expect(main.getByRole('heading', { level: 2 })).toHaveText(access.cooldown.title);

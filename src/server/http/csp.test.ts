@@ -26,7 +26,8 @@ describe('contentSecurityPolicy', () => {
       'script-src-attr': ["'none'"],
       'style-src': ["'self'", "'nonce-N0nce'"],
       'style-src-attr': ["'none'"],
-      'img-src': ["'self'"],
+      // Branch arch-ui: annex images read from a file.
+      'img-src': ["'self'", 'data:', 'blob:'],
       'font-src': ["'self'"],
       'connect-src': ["'self'"],
       'object-src': ["'none'"],
@@ -44,7 +45,13 @@ describe('contentSecurityPolicy', () => {
   });
 
   it('never allows inline code in production', () => {
-    expect(contentSecurityPolicy('N', { dev: false })).not.toMatch(/unsafe-inline|\*|data:|http/);
+    const policy = contentSecurityPolicy('N', { dev: false });
+    expect(policy).not.toMatch(/unsafe-inline|\*/);
+    // Branch arch-ui: data: and other hosts only for images and the Google fonts, never for code.
+    const prod = directives(policy);
+    for (const name of ['default-src', 'script-src', 'connect-src', 'object-src', 'frame-src']) {
+      expect(prod.get(name)?.join(' '), name).not.toMatch(/data:|blob:|http/);
+    }
   });
 
   it('lets development inline style elements only, for the Next.js devtools (ADR 0042)', () => {
@@ -54,6 +61,7 @@ describe('contentSecurityPolicy', () => {
     expect(dev.get('style-src')).toEqual(["'self'", "'unsafe-inline'"]);
     expect(dev.get('style-src-attr')).toEqual(["'none'"]);
     expect(dev.get('script-src')).not.toContain("'unsafe-inline'");
-    expect(policy).not.toMatch(/\*|data:|http/);
+    expect(policy).not.toMatch(/\*/);
+    expect(dev.get('script-src')?.join(' ')).not.toMatch(/data:|blob:|http/);
   });
 });

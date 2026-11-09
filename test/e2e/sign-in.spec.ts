@@ -14,6 +14,8 @@ test('a member signs in, waits for approval, and signs out', async ({
 }) => {
   await signInAs(/^Učitelka/);
   await expect(page).toHaveURL(/:\d+\/$/);
+  // Branch arch-ui: the classic home, with the shell this test signs out from.
+  await page.goto('/klasicke');
   // Present at load, so not a live region (nothing is announced as a change).
   await expect(page.getByRole('main').getByText(cs.home.pending)).toBeVisible();
   await expect(page.getByRole('main').getByRole('status')).toHaveCount(0);
@@ -30,16 +32,17 @@ test('a member signs in, waits for approval, and signs out', async ({
 
   await openNav(page);
   await page.getByRole('button', { name: cs.shell.signOut, exact: true }).click();
-  await expect(page).toHaveURL(/\/prihlaseni\?odhlaseno=1$/);
-  await expect(page.getByRole('main').getByRole('status')).toContainText(cs.signIn.loggedOut.here);
+  // Branch arch-ui: signing out returns to the Arch UI, whose signed-out screen is its sign-in.
+  await expect(page).toHaveURL(/:\d+\/\?odhlaseno=1$/);
+  await expect(page.getByRole('link', { name: cs.signIn.button })).toBeVisible();
   expect((await context.cookies()).map((c) => c.name)).not.toContain('__Host-ap_session');
-  await page.goto('/');
-  await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
+  await page.goto('/klasicke');
+  await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2Fklasicke$/);
 });
 
 test('a guest is turned away and gets no session', async ({ page, context, signInAs }) => {
   await signInAs(/^Host/);
-  await expect(page).toHaveURL(/\/prihlaseni\?chyba=not-member$/);
+  await expect(page).toHaveURL(/\/\?chyba=not-member$/);
   await expect(page.getByRole('main').getByRole('alert')).toHaveText(
     cs.signIn.errors['not-member'],
   );

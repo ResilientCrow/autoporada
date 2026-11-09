@@ -48,7 +48,8 @@ function StudentTable({ rows }: { readonly rows: readonly StudentRow[] }): React
   );
 }
 
-function BlockView({ block }: { readonly block: Block }): ReactNode {
+/** @public The Arch client's preview marks and clicks single blocks. */
+export function BlockView({ block }: { readonly block: Block }): ReactNode {
   switch (block.kind) {
     case 'title':
       return <p className={styles['title']}>{block.text}</p>;
@@ -122,6 +123,37 @@ function BlockView({ block }: { readonly block: Block }): ReactNode {
       return <h3 className={styles['annexTitle']}>{block.text}</h3>;
     case 'studentTable':
       return <StudentTable rows={block.rows} />;
+    case 'dataTable':
+      return (
+        <table className={styles['dataTable']}>
+          <thead>
+            <tr>
+              {block.rows[0]?.map((c, i) => (
+                <th key={i}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {block.rows.slice(1).map((r, i) => (
+              <tr key={i}>
+                {r.map((c, j) => (
+                  <td key={j}>{c}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      );
+    case 'image':
+      return (
+        <img
+          className={styles['image']}
+          src={block.src}
+          alt={block.alt}
+          width={block.width}
+          height={block.height}
+        />
+      );
   }
 }
 

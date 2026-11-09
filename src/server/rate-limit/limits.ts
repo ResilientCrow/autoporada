@@ -20,6 +20,8 @@ export const LIMITS = {
    * tabs and a retry ladder, and still stops a script.
    */
   autosave: { max: 120, windowMs: MINUTE, key: 'user' },
+  /** Branch arch-ui: the client reloads its state after each write, so well above autosave. */
+  state: { max: 300, windowMs: MINUTE, key: 'user' },
   /**
    * Creating, submitting, proposing and an author's retract, withdraw or cancel; never
    * autosave.

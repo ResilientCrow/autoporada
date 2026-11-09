@@ -3,14 +3,33 @@ import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(new URL('./theme.css', import.meta.url), 'utf8');
 
+/** Branch arch-ui: the Arch palette, which replaces the school manual's seven web colours. */
 const MANUAL = {
-  ink: '#22232a',
-  'navy-dark': '#000e19',
-  'navy-mid': '#00233f',
-  digital: '#0062b3',
-  sublight: '#cce8ff',
-  light: '#f7fbff',
-  accent: '#f5b800',
+  ink: '#161837',
+  'navy-dark': '#161837',
+  'navy-mid': '#292d67',
+  digital: '#292d67',
+  sublight: '#e3e3ec',
+  light: '#ffffff',
+  accent: '#f5b400',
+  mut: '#585a75',
+  wash: '#f5f5f9',
+  'accent-hover': '#e0a400',
+  'accent-press': '#c99300',
+  cream: '#fff1c4',
+  danger: '#8a0f28',
+  'tile-gold': '#ffe7a3',
+  'tile-gold-ink': '#6b4a00',
+  'tile-blue': '#dce6ff',
+  'tile-blue-ink': '#23408e',
+  'tile-green': '#d6f0df',
+  'tile-green-ink': '#1f6338',
+  'tile-teal': '#d3eef0',
+  'tile-teal-ink': '#155e66',
+  'tile-violet': '#e7e0fa',
+  'tile-violet-ink': '#4b2f94',
+  'tile-rose': '#fbe0e6',
+  'tile-rose-ink': '#8a1f3d',
 };
 
 const tokens = Object.fromEntries(
@@ -54,7 +73,7 @@ const surfaces = [...css.matchAll(/@utility (surface-[\w-]+)\s*\{([^}]*)\}/g)].m
 });
 
 describe('colour manual tokens', () => {
-  it('are exactly the seven web colours of the manual (never the print blue)', () => {
+  it('are exactly the Arch palette', () => {
     expect(tokens).toEqual(MANUAL);
   });
 });

@@ -1,13 +1,16 @@
 import { fileURLToPath } from 'node:url';
 
-export const PORT = 3100;
+/** Another project may hold 3100 on this machine: `E2E_PORT` moves the run (branch arch-ui). */
+export const PORT = Number(process.env['E2E_PORT'] ?? 3100);
 
 /** Same values as .env.example; the server validates them at boot. */
 export const E2E_ENV = {
   APP_ENV: 'test',
   PORT: String(PORT),
   APP_ORIGIN: `http://localhost:${PORT}`,
-  DATABASE_URL: 'postgres://autoporada:autoporada@localhost:5432/autoporada_e2e',
+  DATABASE_URL:
+    process.env['E2E_DATABASE_URL'] ??
+    'postgres://autoporada:autoporada@localhost:5432/autoporada_e2e',
   OIDC_ISSUER: 'http://localhost:8080/ssps',
   OIDC_TENANT_ID: '00000000-0000-0000-0000-000000000001',
   OIDC_CLIENT_ID: 'autoporada-dev',

@@ -74,7 +74,7 @@ describe('PointReview', () => {
   };
 
   it('heads the page with the point’s title, its type and its state', () => {
-    expect(html).toMatch(/<h1[^>]*><span[^>]*>Seminář o vodě<\/span><\/h1>/);
+    expect(html).toMatch(/<h1[^>]*>Seminář o vodě<\/h1>/);
     expect(html).toContain(points.state.submitted);
   });
 

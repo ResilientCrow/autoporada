@@ -1,0 +1,165 @@
+/**
+ * Branch arch-ui only: the reads the Arch UI's state is built from, and its two writes that are not
+ * use cases (a porada's annexes, the type of a draft). Points and future items are read through the
+ * repos' own scope SQL, so the policy decides what a viewer sees.
+ */
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+
+import type { TxContext } from '@/application/ports';
+
+import type { Database } from './client';
+import { ITEM_ROW, toRecord as futureRecord, visibleFutureItems } from './repos/future-items';
+import { POINT_ROW, toRecord as pointRecord, visiblePoints } from './repos/points-read';
+import {
+  accessRequests,
+  archAnnexes,
+  auditEvents,
+  futureEvents,
+  futureItems,
+  generatedDocuments,
+  issueItems,
+  issues,
+  pointEvents,
+  points,
+  pointTypes,
+  registryEntries,
+  registryLists,
+  reportPlaceholders,
+  settings,
+  users,
+} from './schema';
+
+export type ArchStore = ReturnType<typeof createArchStore>;
+
+export function createArchStore(db: Database) {
+  return {
+    settings: () => db.select().from(settings),
+    points: async (ctx: TxContext) =>
+      (await db.select(POINT_ROW).from(points).where(visiblePoints(ctx))).map(pointRecord),
+    futures: async (ctx: TxContext) =>
+      (await db.select(ITEM_ROW).from(futureItems).where(visibleFutureItems(ctx))).map(
+        futureRecord,
+      ),
+    pointEvents: (ids: string[]) =>
+      ids.length
+        ? db
+            .select()
+            .from(pointEvents)
+            .where(inArray(pointEvents.pointId, ids))
+            .orderBy(asc(pointEvents.createdAt))
+        : Promise.resolve([]),
+    futureEvents: (ids: string[]) =>
+      ids.length
+        ? db
+            .select()
+            .from(futureEvents)
+            .where(inArray(futureEvents.futureItemId, ids))
+            .orderBy(asc(futureEvents.createdAt))
+        : Promise.resolve([]),
+    /** Everyone with `null`, else only these. */
+    users: (ids: string[] | null) =>
+      ids === null
+        ? db.select().from(users)
+        : db.select().from(users).where(inArray(users.id, ids)),
+    types: () => db.select().from(pointTypes).orderBy(asc(pointTypes.position)),
+    issues: () => db.select().from(issues).orderBy(asc(issues.monday)),
+    placeholders: (futureIds: string[]) =>
+      futureIds.length
+        ? db
+            .select()
+            .from(reportPlaceholders)
+            .where(inArray(reportPlaceholders.futureItemId, futureIds))
+        : Promise.resolve([]),
+    documents: () =>
+      db
+        .select({
+          issueId: generatedDocuments.issueId,
+          snapshot: generatedDocuments.snapshot,
+          pdfStatus: generatedDocuments.pdfStatus,
+          pdfFailure: generatedDocuments.pdfFailure,
+          generatedAt: generatedDocuments.generatedAt,
+          version: generatedDocuments.version,
+        })
+        .from(generatedDocuments),
+    annexes: () => db.select().from(archAnnexes),
+    issueItems: (issueId: string) =>
+      db
+        .select()
+        .from(issueItems)
+        .where(eq(issueItems.issueId, issueId))
+        .orderBy(asc(issueItems.section), asc(issueItems.position)),
+    registry: async () => ({
+      lists: await db.select().from(registryLists).orderBy(asc(registryLists.position)),
+      entries: await db
+        .select()
+        .from(registryEntries)
+        .where(and(isNull(registryEntries.removedAt), isNull(registryEntries.archivedYear))),
+    }),
+    /** Everyone's with `null`, else this user's. */
+    accessRequests: (userId: string | null) =>
+      userId === null
+        ? db.select().from(accessRequests)
+        : db.select().from(accessRequests).where(eq(accessRequests.userId, userId)),
+
+    /** False once the porada is no longer open: its document already holds its annexes. */
+    async saveAnnexes(monday: string, annexes: unknown[], actorId: string): Promise<boolean> {
+      return db.transaction(async (tx) => {
+        const [issue] = await tx
+          .select({ id: issues.id, status: issues.status })
+          .from(issues)
+          .where(eq(issues.monday, monday))
+          .for('update');
+        if (issue && issue.status !== 'open') return false;
+        await tx
+          .insert(archAnnexes)
+          .values({ monday, annexes })
+          .onConflictDoUpdate({
+            target: archAnnexes.monday,
+            set: { annexes, version: sql`${archAnnexes.version} + 1`, updatedAt: sql`now()` },
+          });
+        await tx.insert(auditEvents).values({
+          actorId,
+          action: 'issue.annexes',
+          targetType: 'issue',
+          ...(issue && { targetId: issue.id }),
+          data: { monday },
+        });
+        return true;
+      });
+    },
+
+    async activeType(id: string): Promise<boolean> {
+      const [type] = await db
+        .select({ id: pointTypes.id })
+        .from(pointTypes)
+        .where(and(eq(pointTypes.id, id), eq(pointTypes.active, true)));
+      return Boolean(type);
+    },
+
+    /** The author's own draft or returned point; the new version, or null on a stale version. */
+    async retype(input: {
+      id: string;
+      authorId: string;
+      expectedVersion: number;
+      patch: { typeId: string } | { kind: 'finance' | 'pokyn' };
+    }): Promise<number | null> {
+      const { id, authorId, expectedVersion, patch } = input;
+      const [row] = await db
+        .update(points)
+        .set({ ...patch, version: sql`${points.version} + 1`, updatedAt: sql`now()` })
+        .where(
+          and(
+            eq(points.id, id),
+            eq(points.authorId, authorId),
+            eq(points.version, expectedVersion),
+            inArray(points.state, ['draft', 'returned']),
+            'kind' in patch
+              ? inArray(points.kind, ['finance', 'pokyn'])
+              : eq(points.kind, 'report'),
+          ),
+        )
+        .returning({ version: points.version });
+      return row ? row.version : null;
+    },
+  };
+}

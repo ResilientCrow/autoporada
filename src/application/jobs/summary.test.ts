@@ -213,7 +213,7 @@ describe('the mail that goes out', () => {
     return JOB_HANDLERS['mail.send']({ ...deps(), mail: fake }, input);
   }
   const textOf = (approved: number, pending: number, returned: number) =>
-    `uzávěrka porady z\u00a02.\u00a0listopadu 2026 proběhla. Schváleno: ${approved}, čeká na kontrolu: ${pending}, vráceno k\u00a0úpravě: ${returned}.\n\n${ORIGIN}/kontrola`;
+    `uzávěrka porady z\u00a02.\u00a0listopadu 2026 proběhla. Schváleno: ${approved}, čeká na kontrolu: ${pending}, vráceno k\u00a0úpravě: ${returned}.\n\n${ORIGIN}/#/kontrola`;
 
   it('counts the approved, waiting and returned points of the Monday as they stand when it goes', async () => {
     const head = await headmaster();

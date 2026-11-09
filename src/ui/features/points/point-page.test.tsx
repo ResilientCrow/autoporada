@@ -20,14 +20,12 @@ describe('PointHeader', () => {
 
   it('shows the title as the heading, with the type name', () => {
     const html = header();
-    expect(html).toMatch(new RegExp(`<h1 [^>]*-skew-x-12[^>]*><span [^>]*>${TITLE}</span></h1>`));
+    expect(html).toMatch(new RegExp(`<h1 [^>]*>${TITLE}</h1>`));
     expect(html).toContain(TYPE_NAME);
   });
 
   it('says „Bez názvu“ for a point nobody has named', () => {
-    expect(header({ title: '' })).toMatch(
-      new RegExp(`<h1 [^>]*-skew-x-12[^>]*><span [^>]*>${points.untitled}</span></h1>`),
-    );
+    expect(header({ title: '' })).toMatch(new RegExp(`<h1 [^>]*>${points.untitled}</h1>`));
   });
 
   it.each([

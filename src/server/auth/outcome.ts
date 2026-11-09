@@ -32,7 +32,9 @@ export function signInFailed(
   error: SignInError,
   extra: SignInExtra = {},
 ): string {
-  const url = new URL('/prihlaseni', appOrigin);
+  // Branch arch-ui: the Arch sign-in screen says it. A failed step-up comes to someone still
+  // signed in, whom `/` would greet with the home page, so that one keeps the classic page.
+  const url = new URL(error.startsWith('step-up') ? '/prihlaseni' : '/', appOrigin);
   url.searchParams.set('chyba', error);
   if (error === 'idp-refused' && isAadstsCode(extra.aadsts)) {
     url.searchParams.set('aadsts', extra.aadsts);

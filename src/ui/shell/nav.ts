@@ -18,7 +18,7 @@ const STAFF: Check = { action: 'review.queue' };
 
 /** Implemented routes only; each entry joins with its page. */
 export const NAV: readonly NavItem[] = [
-  { href: '/', label: cs.nav.overview, check: null },
+  { href: '/klasicke', label: cs.nav.overview, check: null },
   { href: '/body', label: cs.nav.points, check: { action: 'point.create' }, unless: STAFF },
   { href: '/akce', label: cs.nav.future, check: { action: 'future.create' }, unless: STAFF },
   { href: '/kontrola', label: cs.nav.review, check: STAFF },

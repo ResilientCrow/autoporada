@@ -6,7 +6,9 @@ const ORIGIN = 'https://autoporada.ssps.cz';
 const query = (href: string) => {
   const url = new URL(href);
   expect(url.origin).toBe(ORIGIN);
-  expect(url.pathname).toBe('/prihlaseni');
+  // Branch arch-ui: the Arch sign-in screen says it, except a failed step-up (still signed in).
+  const stepUp = url.searchParams.get('chyba')?.startsWith('step-up');
+  expect(url.pathname).toBe(stepUp ? '/prihlaseni' : '/');
   return [...url.searchParams];
 };
 

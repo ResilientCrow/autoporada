@@ -10,11 +10,12 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "pnpm build:arch && next dev",
+    "build": "pnpm build:arch && next build",
+    "build:arch": "node arch/build-real.mjs",
     "build:node": "node scripts/build-node.mjs",
     "start": "node scripts/start-standalone.mjs",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p arch",
     "lint": "eslint .",
     "lint:arch": "depcruise src --config .dependency-cruiser.cjs",
     "lint:palette": "tsx scripts/check-palette.ts",

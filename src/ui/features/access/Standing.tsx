@@ -47,7 +47,7 @@ export function hasForm(view: AccessView): boolean {
 export function Standing({ view }: { readonly view: AccessView }) {
   switch (view.kind) {
     case 'member':
-      return <ArrowLink href="/">{access.member.overview}</ArrowLink>;
+      return <ArrowLink href="/klasicke">{access.member.overview}</ArrowLink>;
     case 'open':
       return (
         <>

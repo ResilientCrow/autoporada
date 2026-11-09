@@ -100,7 +100,7 @@ test.describe('J6: the next porada on any day', () => {
       await dialog.getByRole('button', { name: issues.strip.skip.submit }).click();
       await expect(page.getByRole('dialog')).toBeHidden();
       await expect(page.getByText(/^Přesunuto z\u00a0pondělí /)).toBeVisible();
-      await page.goto('/');
+      await page.goto('/klasicke');
       await hydrated();
       await expect(page.getByText(/^Porada se koná .*, uzávěrka /)).toBeVisible();
     } finally {

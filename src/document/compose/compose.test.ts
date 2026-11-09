@@ -25,6 +25,10 @@ const text = (b: Block): string => {
       return `${b.place} / ${b.signature}`;
     case 'studentTable':
       return b.rows.map((r) => `${r.name}|${r.classCode}${r.isNew ? '*' : ''}`).join(', ');
+    case 'dataTable':
+      return b.rows.map((r) => r.join('|')).join(', ');
+    case 'image':
+      return b.alt;
     case 'spacer':
     case 'pageBreak':
       return '';

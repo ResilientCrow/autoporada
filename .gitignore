@@ -32,3 +32,6 @@ secrets/
 # licensed fonts for the PDF renderer
 docker/gotenberg/fonts/*
 !docker/gotenberg/fonts/README.md
+
+# Built by pnpm build:arch
+public/arch/

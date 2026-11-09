@@ -114,6 +114,9 @@ const PERSONAS: readonly Persona[] = [
   // karta owns the ended akce of the report card.
   { subject: 'karta-d', role: 'submitter' },
   { subject: 'karta-m', role: 'submitter' },
+  // archa writes through the Arch UI (branch arch-ui).
+  { subject: 'archa-d', role: 'submitter' },
+  { subject: 'archa-m', role: 'submitter' },
 ];
 
 interface Mapping {

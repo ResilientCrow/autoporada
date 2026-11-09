@@ -8,11 +8,11 @@ import { renderMail, TEMPLATE_NAMES, type TemplateName } from './index';
 
 const NB = '\u00A0';
 const ORIGIN = 'https://autoporada.example';
-const LINK = `${ORIGIN}/prihlaseni`;
-const POINTS = `${ORIGIN}/body`;
-const REVIEW = `${ORIGIN}/kontrola`;
-const USERS = `${ORIGIN}/uzivatele`;
-const BODY = `${ORIGIN}/body`;
+const LINK = `${ORIGIN}/`;
+const POINTS = `${ORIGIN}/#/moje`;
+const REVIEW = `${ORIGIN}/#/kontrola`;
+const USERS = `${ORIGIN}/#/lide`;
+const BODY = `${ORIGIN}/#/moje`;
 const GREETING = 'Dobrý den,';
 const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovídejte na ni prosím.';
 

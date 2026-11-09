@@ -50,13 +50,14 @@ describe('mails link pages that exist', () => {
     const { text } = renderMail(name, view as never, ORIGIN);
     for (const link of text.match(/https?:\/\/\S*/g) ?? []) {
       const path = link.slice(ORIGIN.length);
+      if (path === '/' || path.startsWith('/#/')) continue; // branch arch-ui: addresses of the Arch UI
       expect(existsSync(join(process.cwd(), 'src/app', path, 'page.tsx')), path).toBe(true);
     }
   });
 
   it('sends the author of a decided point to their points, where the note and the state are', () => {
     for (const name of ['point.returned', 'point.approved', 'point.rejected'] as const) {
-      expect(renderMail(name, {}, ORIGIN).text).toContain(`\n${ORIGIN}/body\n`);
+      expect(renderMail(name, {}, ORIGIN).text).toContain(`\n${ORIGIN}/#/moje\n`);
     }
   });
 });

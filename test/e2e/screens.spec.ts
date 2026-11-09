@@ -24,9 +24,9 @@ const HOME_STANDINGS = [
 const SCREENS = [
   ['the 404 page', '/tato-stranka-neexistuje', 404, null],
   ['the gallery', '/vzornik', 200, null],
-  ['the home page of a waiting teacher', '/', 200, /^Učitelka/],
-  ['the home page of a teacher with a request waiting', '/', 200, /^Test – ceka/],
-  ['the home page of a blocked applicant', '/', 200, /^Test – blokovany/],
+  ['the home page of a waiting teacher', '/klasicke', 200, /^Učitelka/],
+  ['the home page of a teacher with a request waiting', '/klasicke', 200, /^Test – ceka/],
+  ['the home page of a blocked applicant', '/klasicke', 200, /^Test – blokovany/],
   ['the access request page of a waiting teacher', '/pristup', 200, /^Učitelka/],
   ['the users list of an active headmaster', '/uzivatele', 200, HEADMASTER],
   ['the sign-in page', '/prihlaseni', 200, null],
@@ -34,7 +34,7 @@ const SCREENS = [
   ['the sign-in page after signing out', '/prihlaseni?odhlaseno=1', 200, null],
   ['the sign-in page after signing out everywhere', '/prihlaseni?odhlaseno=vsude', 200, null],
   ['the sign-in page for a non-member', '/prihlaseni?chyba=not-member', 200, null],
-  ['the home page of an active headmaster', '/', 200, HEADMASTER],
+  ['the home page of an active headmaster', '/klasicke', 200, HEADMASTER],
   ['the privacy notice for a visitor', '/ochrana-osobnich-udaju', 200, null],
   ['the privacy notice for a signed-in teacher', '/ochrana-osobnich-udaju', 200, /^Učitelka/],
 ] as const;
@@ -57,13 +57,14 @@ for (const [name, url, status, persona] of SCREENS) {
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
     await expect(page).toHaveTitle(TITLE_SUFFIX);
     await hydrated();
-    if (persona === HEADMASTER && url === '/') {
+    if (persona === HEADMASTER && url === '/klasicke') {
       await expect(page.getByText(cs.status.account.active, { exact: true })).toBeVisible();
       await expect(shownNotices(page)).toHaveCount(0);
-      await expect(page.locator('a[aria-current="page"]')).toHaveCount(1);
+      // Branch arch-ui: the phone's bottom bar marks it too; one is shown at a time.
+      await expect(page.locator('a[aria-current="page"]:visible')).toHaveCount(1);
     }
     const standing = HOME_STANDINGS.find(([, who]) => who === persona);
-    if (standing && url === '/') {
+    if (standing && url === '/klasicke') {
       const [, , link, chip] = standing;
       await expect(page.getByRole('main').getByRole('link', { name: link })).toHaveAttribute(
         'href',

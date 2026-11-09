@@ -291,8 +291,8 @@ export const test = base.extend<Fixtures>({
 
   signInAs: async ({ page }, provide) => {
     await provide(async (persona) => {
+      // Branch arch-ui: signed out, `/` is the Arch UI's own sign-in, with the same button.
       await page.goto('/');
-      await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
       await page.getByRole('link', { name: cs.signIn.button }).click();
       await expect(page.getByRole('heading', { name: 'Vývojové přihlášení' })).toBeVisible();
       await showAllPersonas(page);
@@ -386,7 +386,8 @@ export async function signInElsewhere(
   persona: RegExp,
 ): Promise<Page> {
   const other = await (await newContext()).newPage();
-  await other.goto('/');
+  // Branch arch-ui: the classic home, so the callers' next page is a Next page.
+  await other.goto('/klasicke');
   await other.getByRole('link', { name: cs.signIn.button }).click();
   await showAllPersonas(other);
   await other.getByRole('button', { name: persona }).click();

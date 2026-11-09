@@ -63,7 +63,7 @@ test.describe('the review', () => {
     expect(mail.subject).toBe(renderMail('point.returned', {}, ORIGIN).subject);
     expect(mail.text).not.toContain(TITLE);
     expect(mail.text).not.toContain(PHRASE);
-    expect(mail.text).toMatch(new RegExp(`^${ORIGIN}/body\\s*$`, 'm'));
+    expect(mail.text).toMatch(new RegExp(`^${ORIGIN}/#/moje\\s*$`, 'm'));
     expect(mail.text).not.toContain(pointId);
 
     // The author edits and hands it in again.

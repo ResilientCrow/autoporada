@@ -50,7 +50,17 @@ export type Block =
   | { readonly kind: 'annex'; readonly text: string }
   /** The heading under „PŘÍLOHA 1“. */
   | { readonly kind: 'annexTitle'; readonly text: string }
-  | { readonly kind: 'studentTable'; readonly rows: readonly StudentRow[] };
+  | { readonly kind: 'studentTable'; readonly rows: readonly StudentRow[] }
+  /** A table of an extra annex: the first row is the header. */
+  | { readonly kind: 'dataTable'; readonly rows: readonly (readonly string[])[] }
+  /** A picture of an extra annex, as a PNG or JPEG data URL; size in CSS pixels. */
+  | {
+      readonly kind: 'image';
+      readonly src: string;
+      readonly width: number;
+      readonly height: number;
+      readonly alt: string;
+    };
 
 export type BlockKind = Block['kind'];
 

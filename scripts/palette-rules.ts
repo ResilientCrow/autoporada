@@ -9,8 +9,13 @@ const THEME_DIR = 'src/ui/theme/';
 const THEME_CSS = 'src/ui/theme/theme.css';
 /** Its black and white are the printed document (ADR 0005). */
 const PAPER_CSS = 'src/document/render-html/paper.module.css';
-/** ADR 0012: the accent only as a StatusChip background. */
+/** ADR 0012: the accent only as a StatusChip background; branch arch-ui adds the primary button and the tile count. */
 const ACCENT_BACKGROUND_FILE = 'src/ui/kit/StatusChip.tsx';
+const ACCENT_FILES = new Set([
+  ACCENT_BACKGROUND_FILE,
+  'src/ui/kit/button-styles.ts',
+  'src/ui/shell/Tiles.tsx',
+]);
 
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 /** The print blue, any case. */
@@ -80,8 +85,10 @@ export function paletteProblems(file: string, text: string, manual: ReadonlySet<
       if (ARBITRARY_VALUE.test(line)) report('arbitrary value — use a token or a scale step');
       if (ARBITRARY_PROPERTY.test(line)) report('arbitrary property — use a utility');
       if (DEAD_PALETTE.test(line)) report('default palette name — it generates nothing');
-      if (ACCENT_ELSEWHERE.test(line)) report('the accent is a StatusChip background only');
-      if (file !== ACCENT_BACKGROUND_FILE && ACCENT_BACKGROUND.test(line)) {
+      if (file !== 'src/ui/kit/button-styles.ts' && ACCENT_ELSEWHERE.test(line)) {
+        report('the accent is a StatusChip background only');
+      }
+      if (!ACCENT_FILES.has(file) && ACCENT_BACKGROUND.test(line)) {
         report(`bg-accent is for ${ACCENT_BACKGROUND_FILE} only`);
       }
       if (FOCUS_REMOVAL.test(line)) report('do not remove the outline — the base layer owns focus');
