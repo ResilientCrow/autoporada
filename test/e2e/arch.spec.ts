@@ -243,6 +243,122 @@ test.describe('the Arch UI', () => {
     expect(response.status()).toBe(403);
   });
 
+  test('the headmaster adds to any list straight into the porada', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'shared issues');
+    const email = emailOf('rizeni', testInfo.project.name);
+    await forgetFutureOf(email);
+    await signInAs(headmaster(testInfo.project.name));
+
+    // A date with nobody behind it: no place, no person, no report owed.
+    await page.goto('/#/pridat');
+    await page.getByRole('button', { name: /Termín bez organizátora/ }).click();
+    await expect(page.getByRole('heading', { name: 'Co je to za termín?' })).toBeVisible();
+    await page.getByRole('textbox', { name: 'Název' }).fill('podzimní prázdniny');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await page.getByLabel('Den', { exact: true }).fill(isoInDays(40));
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Takhle to vyjde. Zařadíme to?' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Zařadit do porady' }).click();
+    await expect(page.getByRole('heading', { name: 'Hotovo, je to v poradě' })).toBeVisible();
+    await expect
+      .poll(async () => (await futureOf(email, 'podzimní prázdniny'))?.state)
+      .toBe('approved');
+
+    // An akce keeps its whole wizard and needs no second person to approve it.
+    await page.getByRole('link', { name: 'Přidat další' }).click();
+    await page.getByRole('button', { name: /Přidat akci, podle data/ }).click();
+    await page.getByRole('textbox', { name: 'Název' }).fill('Den otevřených dveří');
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await page.getByLabel('Den', { exact: true }).fill(isoInDays(50));
+    for (let i = 0; i < 2; i += 1) await page.getByRole('button', { name: 'Pokračovat' }).click();
+    // Anyone can be named, not only somebody with an account.
+    await page.getByLabel('Jména').fill('Tereza Malá (3.B)');
+    await page.getByLabel('Jména').press('Enter');
+    await page
+      .getByRole('radiogroup', { name: 'Oslovení: Tereza Malá' })
+      .getByRole('radio', { name: 'slečna' })
+      .click();
+    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await page.getByRole('button', { name: 'Zařadit do porady' }).click();
+    await expect
+      .poll(async () => (await futureOf(email, 'Den otevřených dveří'))?.state)
+      .toBe('approved');
+
+    // A partner's words, kept after a reload.
+    await page.goto('/#/pridat');
+    await page.getByRole('link', { name: /Přidat ohlas/ }).click();
+    await page.getByRole('button', { name: 'Přidat ohlas' }).click();
+    await page.getByLabel(/Kdo ho napsal/).fill('pana Jana Nováka');
+    await page.getByLabel(/Text ohlasu/).fill('Děkujeme za spolupráci.');
+    await page.getByRole('button', { name: 'Uložit', exact: true }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.goto('/#/pridat');
+    await page.reload();
+    await page.getByRole('link', { name: /Přidat ohlas, teď 1/ }).click();
+    await expect(page.getByLabel(/Kdo ho napsal/)).toHaveValue('pana Jana Nováka');
+    await page.getByRole('button', { name: 'Odebrat ohlas' }).click();
+    await page.getByRole('button', { name: 'Uložit', exact: true }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+
+    // A new list of students, and its line in the bod o uvolnění renamed.
+    const list = `Němčina ${Date.now()}`;
+    await page.goto('/#/seznamy');
+    await page.getByRole('button', { name: 'Nový seznam' }).click();
+    await page.getByLabel(/^Název/).fill(list);
+    await page.getByLabel(/Text v dokumentu/).fill('seznam studentů uvolněných z Němčiny');
+    await page.getByRole('button', { name: 'Vytvořit seznam' }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.reload();
+    await page.getByRole('link', { name: new RegExp(list) }).click();
+    // A typo in a name is put right without the student counting as new again.
+    await page.getByLabel(/Vložit seznam/).fill('Jana Překlepová (1.A)');
+    await page.getByRole('button', { name: 'Zkontrolovat seznam' }).click();
+    await page.getByRole('button', { name: 'Přidat 1 studenta' }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.reload();
+    await page.getByRole('button', { name: 'Opravit: Jana Překlepová' }).click();
+    await page.getByLabel('Příjmení').fill('Opravená');
+    const saved = page.waitForResponse(
+      (r) => r.url().endsWith('/api/arch/run') && !!r.request().postData()?.includes('saveEntry'),
+    );
+    await page.getByRole('button', { name: 'Uložit opravu' }).click();
+    expect((await saved).ok()).toBe(true);
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Opravit: Jana Opravená' })).toBeVisible();
+    await page.getByText('Přejmenovat seznam').click();
+    await page.getByLabel(/^Název/).fill(`${list} B`);
+    await page.getByRole('button', { name: 'Uložit název' }).click();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    await page.goto('/#/seznamy');
+    await page.reload();
+    await expect(page.getByRole('link', { name: new RegExp(`${list} B`) })).toBeVisible();
+
+    // The same akce on another day keeps everything but the date.
+    const again = (await futureOf(email, 'Den otevřených dveří'))!;
+    await page.goto(`/#/akce/${again.id}`);
+    await page.getByRole('button', { name: 'Stejné na jiný den' }).click();
+    await page.getByLabel('Den', { exact: true }).fill(isoInDays(57));
+    for (let i = 0; i < 3; i += 1) await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await page.getByRole('button', { name: 'Zařadit do porady' }).click();
+    await expect
+      .poll(async () =>
+        withClient(async (c) => {
+          const { rows } = await c.query(
+            `SELECT 1 FROM future_items WHERE title = 'Den otevřených dveří' AND state = 'approved'`,
+          );
+          return rows.length;
+        }),
+      )
+      .toBe(2);
+    await forgetFutureOf(email);
+  });
+
   test('the deadline saves a morning hour', async ({ page, signInAs }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'shared settings and issues');
     await signInAs(signInAsRe('rizeni', testInfo.project.name));

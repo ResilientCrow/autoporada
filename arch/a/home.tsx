@@ -64,7 +64,7 @@ export function Tyden() {
         <Back to="/" t="Domů" /><Top big h="Čeká na vás" lead={lead} />
         {review ? <a className="btn go lg w" href="#/kontrola">Začít kontrolu</a> : null}
         {tasks.length ? <div className="tks">{tasks.map((t, i) => <Task key={t.key} t={t.t} why={t.why} a={t.a} prim={i === 0 && !review} onClick={t.act} />)}</div> : null}
-        <button type="button" className="add" onClick={() => setAdd(true)}><span>{u.role === 'reviewer' ? 'Přidat zprávu, akci nebo návrh' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
+        <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : u.role === 'reviewer' ? 'Přidat zprávu, akci nebo návrh' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
         {draftProposals.length ? <Sec h="Rozepsané návrhy">{draftProposals.map((p) => <Item key={p.id} to={`/navrh/${p.id}`} t={p.content.title || 'Návrh bez názvu'} st="Do pokynů nebo hospodaření" mk="o" />)}</Sec> : null}
         {sent.length ? <Sec h="Už jste poslali" right={<a href="#/moje">Všechny</a>}>{sent.slice(0, 4).map((p) => <Item key={p.id} to={pointTo(p)} t={p.content.title} st={pointLine(s, p)} mk={p.state === 'approved' ? 'c' : 'o'} />)}</Sec> : null}
         {events.length ? <Sec h="Co se chystá ve škole" right={<a href="#/akce">Všechny akce</a>}>{events.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title} st={`${Q.dm(f.date)}, ${f.responsible.people.map((p) => `${p.givenName} ${p.familyName}`).join(', ')}`} />)}</Sec> : null}
@@ -86,7 +86,7 @@ export function Domu() {
   const write: Tile[] = [{ t: 'Napsat zprávu', ic: 'pen', tone: 'act', act: report }, { t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Schůzka s\u00a0partnery', ic: 'talk', tone: 'act', act: () => future('jednani') }];
   const mine: Tile[] = [{ t: 'Moje', ic: 'doc', tone: 'browse', to: '/moje' }, { t: 'Akce školy', ic: 'cal', tone: 'browse', to: '/akce' }];
   const tiles: Tile[] = head
-    ? [{ t: 'Porada', ic: 'book', tone: 'core', to: '/porada' }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }, { t: 'Archiv', ic: 'stack', tone: 'core', to: '/archiv' }, ...write, ...(tasks.length ? [waits] : []), ...mine, { t: 'Lidé', ic: 'ppl', tone: 'browse', to: '/lide', n: req }, { t: 'Seznamy studentů', ic: 'list', tone: 'admin', to: '/seznamy' }, { t: 'Typy zpráv', ic: 'tag', tone: 'admin', to: '/typy' }, { t: 'Nastavení', ic: 'gear', tone: 'admin', to: '/nastaveni' }]
+    ? [{ t: 'Porada', ic: 'book', tone: 'core', to: '/porada' }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }, { t: 'Archiv', ic: 'stack', tone: 'core', to: '/archiv' }, { t: 'Přidat do porady', ic: 'plus', tone: 'act', to: '/pridat' }, ...(tasks.length ? [waits] : []), ...mine, { t: 'Lidé', ic: 'ppl', tone: 'browse', to: '/lide', n: req }, { t: 'Seznamy studentů', ic: 'list', tone: 'admin', to: '/seznamy' }, { t: 'Typy zpráv', ic: 'tag', tone: 'admin', to: '/typy' }, { t: 'Nastavení', ic: 'gear', tone: 'admin', to: '/nastaveni' }]
     : [...write, ...(staff ? [{ t: 'Návrh do pokynů', ic: 'flag', tone: 'act', act: proposal }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }] : []), waits, ...mine, ...(staff ? [{ t: 'Archiv', ic: 'stack', tone: 'browse', to: '/archiv' }] : [])];
   const waiting = q + tasks.length + req;
   const lead = waiting ? <>Na vás {waiting === 1 ? <>čeká <b>1 věc</b></> : waiting < 5 ? <>čekají <b>{waiting} věci</b></> : <>čeká <b>{waiting} věcí</b></>}, poznáte je podle žlutých čísel. Termín je <b>{dl}</b>.</> : <>Teď na vás nic nečeká. Termín příští porady je <b>{dl}</b>.</>;
@@ -114,7 +114,7 @@ export function Moje() {
   const empty = !pts.length && !fs.length;
   return <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={deskFor(s, u.id)} col={<>
     <Top big h="Moje" lead={empty ? 'Zatím tu nic nemáte. Až napíšete první zprávu, uvidíte ji tady i s tím, kde je.' : 'Všechno, co jste napsali, a kde to zrovna je.'} />
-    <button type="button" className="add" onClick={() => setAdd(true)}><span>Přidat zprávu nebo akci</span><b><Ic n="plus" /></b></button>
+    <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
     {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(s, p)} mk={p.state === 'approved' || p.state === 'published' ? 'c' : p.state === 'returned' ? 'n' : p.state === 'rejected' ? 'x' : 'o'} warn={p.state === 'returned'} />)}</Sec> : null}
     {fs.length ? <Sec h="Moje akce a schůzky">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={f.state === 'approved' ? 'c' : f.state === 'returned' ? 'n' : 'o'} />)}</Sec> : null}
     <a className="q" href="#/akce">Všechny akce školy</a>
@@ -131,7 +131,7 @@ export function Zprava({ id, fresh }: { id: string; fresh?: boolean }) {
   const stamp = { submitted: fresh ? 'Odesláno' : 'U vedení', approved: 'Schváleno', published: 'Vyšlo', rejected: 'Zamítnuto', draft: 'Rozepsáno', returned: 'Vráceno', withdrawn: 'Zrušeno' }[p.state];
   const edited = p.trail.filter((t) => t.original);
   const b = focusOn(Q.buildDoc(s, m, { draft: p }), p.id);
-  const head = p.state === 'submitted' ? (fresh ? 'Hotovo, je to u vedení' : p.content.title) : p.content.title;
+  const head = !fresh ? p.content.title : p.state === 'submitted' ? 'Hotovo, je to u vedení' : p.state === 'approved' ? 'Hotovo, je to v poradě' : p.content.title;
   const lead = p.state === 'submitted' ? `Až to přečtou, přijde vám e-mail. Teď už nemusíte nic dělat.` : p.state === 'approved' ? `Vyjde v poradě ${Q.dm(meet)}${edited.length ? ' Vedení text mírně upravilo.' : ''}` : p.state === 'published' ? `Vyšlo v poradě ${Q.dm(meet)}` : p.state === 'rejected' ? (p.note ?? 'Zpráva nevyjde.') : '';
   return <App nar desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch-wrap rise"><Stamp t={stamp} /><Sheet built={b} cls={(x) => (x.key === p.id ? 'me' : '')} /></div></div></Desk>}
     over={confirmDel ? <Dialog title="Smazat zprávu?" onClose={() => setDel(false)}><p>Zpráva z poslaných zmizí a vedení ji už neuvidí. {p.akceId ? 'O zprávu z akce vás znovu požádáme.' : ''}</p><div className="row"><button className="btn lg" onClick={() => setDel(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.withdrawPoint(p.id)); go('/'); }}>Smazat</button></div></Dialog> : null}

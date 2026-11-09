@@ -84,6 +84,7 @@ export const generate = simple('generate', S.generate);
 export const addList = simple('addList', S.addList);
 export const renameList = simple('renameList', S.renameList);
 export const addEntries = simple('addEntries', S.addEntries);
+export const editEntry = simple('editEntry', S.editEntry);
 export const removeEntry = simple('removeEntry', S.removeEntry);
 export const newSchoolYear = simple('newSchoolYear', S.newSchoolYear);
 export const saveType = simple('saveType', S.saveType);
@@ -184,6 +185,7 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'addList': return [{ name: 'registry.saveList', input: { title: a[0], docLabel: a[1], active: true } }];
     case 'renameList': { const l = s.registry.find((x) => x.key === a[0]) as { id?: string } | undefined; return l?.id ? [{ name: 'registry.saveList', key: l.id, input: { id: l.id, version: vers[l.id] ?? 1, title: a[1], docLabel: a[2], active: true } }] : []; }
     case 'addEntries': { const l = s.registry.find((x) => x.key === a[0]) as { id?: string } | undefined; return l?.id ? [{ name: 'registry.addEntries', input: { listId: l.id, rows: a[1] } }] : []; }
+    case 'editEntry': return [{ name: 'registry.saveEntry', input: { id: a[1], version: a[3], ...(a[2] as object) } }];
     case 'removeEntry': return UUID.test(a[1]) ? [{ name: 'registry.removeEntry', input: { id: a[1] } }] : [];
     case 'newSchoolYear': {
       const ids = (a[0] as string[]).map((k) => (s.registry.find((x) => x.key === k) as { id?: string } | undefined)?.id).filter(Boolean);

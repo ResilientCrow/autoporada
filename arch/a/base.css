@@ -32,6 +32,7 @@ h2{font:700 15px/1.3 var(--ui)}
 .grp>h2 a{font-weight:500;color:var(--mut);font-size:14.5px}
 /* položka: celá klikací, jedna akce vpravo */
 .it{display:flex;align-items:center;gap:16px;padding:14px 0;border-top:1px solid var(--line);text-decoration:none;min-height:64px}
+button.it{width:100%;background:none;border-width:1px 0 0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .it:hover .tt{text-decoration:underline;text-underline-offset:3px}
 .it .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .it .tt{font-weight:600;font-size:16.5px;line-height:1.3}

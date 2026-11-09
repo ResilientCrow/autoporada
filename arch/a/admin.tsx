@@ -1,9 +1,9 @@
 import { isAadstsCode, isFailureCause, isSignInError } from '@/contracts';
-import { foldForSearch } from '@/domain/cs';
+import { foldForSearch, normalizeClass } from '@/domain/cs';
 import { failures } from '@/ui/copy/failures';
 import { signIn } from '@/ui/copy/sign-in';
 import { useState } from 'react';
-import { parsePaste, type PasteRow } from '@/domain/registry';
+import { isClassCode, parsePaste, type PasteRow } from '@/domain/registry';
 import { go, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
@@ -39,21 +39,42 @@ export function Clovek({ id }: { id: string }) {
   </Pane>;
 }
 export function Seznamy() {
-  const { s } = useStore(); const u = Q.me(s)!; const staff = u.role === 'headmaster';
+  const { s, apply } = useStore(); const u = Q.me(s)!; const staff = u.role === 'headmaster'; const [adding, setNew] = useState(false); const [nm, setNm] = useState(''); const [lb, setLb] = useState('');
   if (!Q.atLeast(u.role, 'reviewer') ) return <NotFound />;
-  const body = <><Top h="Seznamy studentů" lead="Plní Přílohu 1 a bod o uvolnění z výuky." /><Sec h="Seznamy">{s.registry.filter((l) => !l.archived).map((l) => <Item key={l.key} to={`/seznamy/${l.key}`} t={l.name} st={`${l.entries.length} studentů${l.entries.some((e) => e.isNew) ? `, ${l.entries.filter((e) => e.isNew).length} noví` : ''}`} />)}</Sec>{staff ? <a className="btn" href="#/novy-rok">Nový školní rok</a> : null}</>;
+  const body = <><Top h="Seznamy studentů" lead="Plní Přílohu 1 a bod o uvolnění z výuky." /><Sec h="Seznamy">{s.registry.filter((l) => !l.archived).map((l) => <Item key={l.key} to={`/seznamy/${l.key}`} t={l.name} st={`${l.entries.length} studentů${l.entries.some((e) => e.isNew) ? `, ${l.entries.filter((e) => e.isNew).length} noví` : ''}`} />)}</Sec>{staff ? <div className="row wr"><button type="button" className="btn" onClick={() => setNew(true)}><Ic n="plus" />Nový seznam</button><a className="btn" href="#/novy-rok">Nový školní rok</a></div> : null}{adding ? <Dialog title="Nový seznam" onClose={() => setNew(false)}><ListFields name={nm} label={lb} onName={setNm} onLabel={setLb} /><button type="button" className={`btn lg w ${nm.trim() && lb.trim() ? 'go' : 'off'}`} aria-disabled={!nm.trim() || !lb.trim()} onClick={() => { if (!nm.trim() || !lb.trim()) return; apply(A.addList(nm.trim(), lb.trim())); setNm(''); setLb(''); setNew(false); }}>Vytvořit seznam</button></Dialog> : null}</>;
   return staff ? <Pane on="/seznamy">{body}</Pane> : <div className="work solo"><Bar /><main className="pane">{body}</main><PhoneBar /></div>;
 }
 const PROB: Record<string, string> = { 'name-missing': 'chybí jméno', 'class-missing': 'chybí třída', 'class-unknown': 'neznámá třída', duplicate: 'už v seznamu je' };
+/** The two names of a list: the one in the app and the one its line starts with in the bod o uvolnění. */
+function ListFields({ name, label, onName, onLabel }: { name: string; label: string; onName: (v: string) => void; onLabel: (v: string) => void }) {
+  return <div className="stack"><label className="l">Název<small>Jak se seznam jmenuje v aplikaci</small><input className="in" maxLength={120} autoFocus value={name} onChange={(e) => onName(e.target.value)} /></label><label className="l">Text v dokumentu<small>Vyjde před jmény, například: seznam studentů uvolněných z Němčiny</small><input className="in" maxLength={300} value={label} onChange={(e) => onLabel(e.target.value)} /></label></div>;
+}
 export function Seznam({ id }: { id: string }) {
   const { s, apply } = useStore(); const u = Q.me(s)!; const l = s.registry.find((x) => x.key === id); const edit = u.role === 'headmaster';
-  const [txt, setTxt] = useState(''); const [rows, setRows] = useState<PasteRow[] | null>(null); const [rm, setRm] = useState<string | null>(null); const [q, setQ] = useState('');
+  const [txt, setTxt] = useState(''); const [rows, setRows] = useState<PasteRow[] | null>(null); const [rm, setRm] = useState<string | null>(null); const [q, setQ] = useState(''); const [nm, setNm] = useState(l?.name ?? ''); const [lb, setLb] = useState(l?.docLabel ?? '');
+  const [ed, setEd] = useState<{ id: string; givenName: string; familyName: string; classCode: string } | null>(null); const [edErr, setEdErr] = useState(false);
+  const putEd = (p: Partial<NonNullable<typeof ed>>) => setEd(ed && { ...ed, ...p });
+  const edClass = ed ? (normalizeClass(ed.classCode.trim()) ?? ed.classCode.trim()) : ''; const badClass = !!edClass && !isClassCode(edClass); const [saving, setSaving] = useState(false);
+  const edOk = !!ed && !!ed.givenName.trim() && !!ed.familyName.trim() && !!edClass && !badClass && !saving;
+  // The state carries no version of an entry; the list's own read does.
+  const saveEd = async () => {
+    if (!ed || !edOk) return;
+    setSaving(true);
+    const r = await fetch('/api/arch/run', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'registry.read', input: { key: id } }) }).catch(() => null);
+    const out = (await r?.json().catch(() => null)) as { data?: { current?: { entries: { id: string; version: number }[] } } } | null | undefined;
+    const version = out?.data?.current?.entries.find((x) => x.id === ed.id)?.version;
+    setSaving(false);
+    if (!version) { setEdErr(true); return; }
+    apply(A.editEntry(id, ed.id, { givenName: ed.givenName.trim(), familyName: ed.familyName.trim(), classCode: edClass }, version)); setEd(null); setEdErr(false);
+  };
   if (!l || !Q.atLeast(u.role, 'reviewer')) return <NotFound />;
   const good = rows?.filter((r) => !r.problems.length) ?? [];
   const body = <><Back to="/seznamy" t="Zpět na seznamy" /><Top h={l.name} lead={`${l.entries.length} studentů. Noví od minulého dokumentu jsou tučně.`} />
     {edit ? <section className="stack st8"><label className="l">Vložit seznam<small>Každé jméno na řádek, nebo tak, jak je v dokumentu: Jana Nováková (1.A), Anna Malá (2.B)</small><textarea className="in" value={txt} onChange={(e) => { setTxt(e.target.value); setRows(null); }} /></label>{rows ? <><ul className="todo">{rows.map((r, i) => <li key={i}><span className={`mk ${r.problems.length ? 'x' : ''}`}>{r.problems.length ? <i /> : <Ic n="chk" />}</span><span>{r.givenName} {r.familyName}{r.classCode ? `, ${r.classCode}` : ''}{r.problems.length ? `: ${r.problems.map((p) => PROB[p]).join(', ')}` : ''}</span></li>)}</ul><button className={`btn lg ${good.length ? 'go' : 'off'}`} aria-disabled={!good.length} onClick={() => { if (good.length) { apply(A.addEntries(id, good.map((r) => ({ givenName: r.givenName, familyName: r.familyName, classCode: r.classCode! })))); setTxt(''); setRows(null); } }}>Přidat {good.length} {good.length === 1 ? 'studenta' : good.length < 5 ? 'studenty' : 'studentů'}</button></> : <button className={`btn ${txt.trim() ? '' : 'off'}`} aria-disabled={!txt.trim()} onClick={() => txt.trim() && setRows(parsePaste(txt, 'given-family', l.entries))}>Zkontrolovat seznam</button>}</section> : null}
+    {edit && l.purpose === 'point4' ? <details className="qd"><summary>Přejmenovat seznam</summary><div className="stack st8"><ListFields name={nm} label={lb} onName={setNm} onLabel={setLb} /><button type="button" className={`btn ${nm.trim() && lb.trim() ? 'go' : 'off'}`} aria-disabled={!nm.trim() || !lb.trim()} onClick={() => { if (nm.trim() && lb.trim()) apply(A.renameList(id, nm.trim(), lb.trim())); }}>Uložit název</button></div></details> : null}
     {l.entries.length > 15 ? <label className="l"><span className="vh">Hledat ve seznamu</span><input className="in" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hledat jméno nebo třídu" /></label> : null}
-    <table className="tb"><thead><tr><th>Jméno</th><th>Třída</th>{edit ? <th className="hm"><span className="vh">Akce</span></th> : null}</tr></thead><tbody>{l.entries.filter((e) => !q.trim() || foldForSearch(`${e.givenName} ${e.familyName} ${e.classCode}`).includes(foldForSearch(q.trim()))).map((e) => <tr key={e.id} className={e.isNew ? 'nw-t' : ''}><td>{e.givenName} {e.familyName}</td><td>{e.classCode}</td>{edit ? <td><button className="q r" aria-label={`Odebrat: ${e.givenName} ${e.familyName}`} onClick={() => setRm(e.id)}>Odebrat</button></td> : null}</tr>)}</tbody></table>
+    <table className="tb"><thead><tr><th>Jméno</th><th>Třída</th>{edit ? <th className="hm"><span className="vh">Akce</span></th> : null}</tr></thead><tbody>{l.entries.filter((e) => !q.trim() || foldForSearch(`${e.givenName} ${e.familyName} ${e.classCode}`).includes(foldForSearch(q.trim()))).map((e) => <tr key={e.id} className={e.isNew ? 'nw-t' : ''}><td>{e.givenName} {e.familyName}</td><td>{e.classCode}</td>{edit ? <td><span className="row wr"><button type="button" className="q" aria-label={`Opravit: ${e.givenName} ${e.familyName}`} onClick={() => { setEdErr(false); setEd({ id: e.id, givenName: e.givenName, familyName: e.familyName, classCode: e.classCode }); }}>Opravit</button><button className="q r" aria-label={`Odebrat: ${e.givenName} ${e.familyName}`} onClick={() => setRm(e.id)}>Odebrat</button></span></td> : null}</tr>)}</tbody></table>
+    {ed ? <Dialog title="Opravit studenta" onClose={() => setEd(null)}><div className="stack"><label className="l">Jméno<input className="in" maxLength={60} autoFocus value={ed.givenName} onChange={(e) => putEd({ givenName: e.target.value })} /></label><label className="l">Příjmení<input className="in" maxLength={60} value={ed.familyName} onChange={(e) => putEd({ familyName: e.target.value })} /></label><label className="l">Třída<input className="in" value={ed.classCode} onChange={(e) => putEd({ classCode: e.target.value })} />{badClass ? <small className="w-err">Takovou třídu neznáme, například 1.A</small> : null}</label></div>{edErr ? <p className="sm w-err" role="alert">Teď se to nepodařilo uložit. Zkuste to prosím znovu.</p> : null}<button type="button" className={`btn lg w ${edOk ? 'go' : 'off'}`} aria-disabled={!edOk} onClick={() => void saveEd()}>Uložit opravu</button></Dialog> : null}
     {rm ? <Dialog title="Odebrat ze seznamu?" onClose={() => setRm(null)}><div className="row"><button className="btn lg" onClick={() => setRm(null)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.removeEntry(id, rm)); setRm(null); }}>Odebrat</button></div></Dialog> : null}</>;
   return edit ? <Pane on="/seznamy">{body}</Pane> : <div className="work solo"><Bar /><main className="pane">{body}</main><PhoneBar /></div>;
 }

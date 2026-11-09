@@ -62,8 +62,9 @@ export function Desk({ note, children, cls = '', right, fold }: { note?: ReactNo
 export function Top({ h, lead, big }: { h: ReactNode; lead?: ReactNode; big?: boolean }) { return <div className="top"><h1 className={big ? 'big' : 'big m'}>{h}</h1>{lead ? <p className="lead">{lead}</p> : null}</div>; }
 export const Back = ({ to, t }: { to: string; t: string }) => <a className="back" href={Hash(to)}><Ic n="back" />{t}</a>;
 export const Sec = ({ h, right, children }: { h: string; right?: ReactNode; children: ReactNode }) => <section className="grp"><h2>{h}{right}</h2>{children}</section>;
-export function Item({ to, t, st, mk, end, warn }: { to?: string; t: ReactNode; st?: ReactNode; mk?: 'c' | 'o' | 'n' | 'x'; end?: ReactNode; warn?: boolean }) {
-  const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : <i />}</span> : null}<span className="tx"><span className="tt">{t}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{st}</span> : null}</span>{end ?? (to ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
+export function Item({ to, act, t, st, mk, end, warn }: { to?: string; act?: () => void; t: ReactNode; st?: ReactNode; mk?: 'c' | 'o' | 'n' | 'x'; end?: ReactNode; warn?: boolean }) {
+  const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : <i />}</span> : null}<span className="tx"><span className="tt">{t}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{st}</span> : null}</span>{end ?? (to || act ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
+  if (act) return <button type="button" className="it" onClick={act}>{inner}</button>;
   return to ? <a className="it" href={Hash(to)}>{inner}</a> : <div className="it">{inner}</div>;
 }
 export const Note = ({ h, children, err }: { h?: string; children: ReactNode; err?: boolean }) => <div className={`note${err ? ' err' : ''}`} {...(err ? { role: 'alert' } : {})}>{h ? <b>{h}</b> : null}{children}</div>;

@@ -24,7 +24,7 @@ function stepsFor(p: Point): Step[] {
 }
 function Dots({ n, of }: { n: number; of: number }) { return <div className="steps" role="img" aria-label={`Krok ${n} z ${of}`}>{Array.from({ length: of }, (_, k) => <span key={k} className={k < n ? 'on' : ''} />)}</div>; }
 
-function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson[]; onAdd: (p: DraftPerson[]) => void; placeholder: string; autoFocus?: boolean }) {
+export function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson[]; onAdd: (p: DraftPerson[]) => void; placeholder: string; autoFocus?: boolean }) {
   const { s } = useStore(); const [v, set] = useState(''); const me = Q.me(s)!;
   const year = Q.yearOf(s);
   const known = useMemo(() => {
@@ -44,7 +44,7 @@ function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson
     {parsed?.rejected.length ? <p className="sm w-err" role="alert">Nerozumíme: {parsed.rejected.map((r) => r.source).join(', ')}. Chybí příjmení.</p> : null}
   </div>;
 }
-function PersonRow({ p, onChange, onRemove }: { p: DraftPerson; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
+export function PersonRow({ p, onChange, onRemove }: { p: DraftPerson; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
   return <li className="pr"><div className="pr-h"><b>{displayName(p)}</b><input className="in cls" aria-label={`Třída nebo organizace: ${displayName(p)}`} placeholder="Třída" value={p.affiliation ?? ''} onChange={(e) => onChange({ ...p, affiliation: e.target.value, affiliationYear: '2026/2027' })} onBlur={(e) => { const c = normalizeClass(e.target.value); if (c) onChange({ ...p, affiliation: c, affiliationYear: '2026/2027' }); }} /><button type="button" className="x" aria-label={`Odebrat: ${displayName(p)}`} onClick={onRemove}><Ic n="x" /></button></div>
     <Seg label={`Oslovení: ${displayName(p)}`} value={p.salutation} options={SAL} onChange={(v) => onChange({ ...p, salutation: v })} /></li>;
 }
@@ -122,7 +122,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   } else {
     const r = Q.readiness(s, p); const try_ = A.trySubmit(s, id);
     ask = 'Takhle to vyjde. Můžeme to poslat?'; help = 'Vedení si to přečte a když bude něco chybět, ozve se vám. Do té doby to můžete vzít zpět.';
-    can = try_.ok; nextText = 'Odeslat vedení';
+    can = try_.ok; nextText = Q.me(s)?.role === 'headmaster' ? 'Zařadit do porady' : 'Odeslat vedení';
     const ans = (t: string, v: ReactNode, to: string) => <div className="ans" key={`${t}${to}`}><span className="tx"><span className="st">{t}</span><span className="tt">{v}</span></span><a className="btn" href={Hash(`/psat/${id}/${to}`)} aria-label={`Změnit: ${t}`}>Změnit</a></div>;
     body = <>
       {r.problems.length ? <Note err h="Ještě chybí">{r.problems.map((x, i) => <span key={i} className="pl">{copy.readiness.problem(x.code, x.params)}</span>)}</Note> : null}
@@ -145,7 +145,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
       {body}
       <div className="pv" aria-label="Takhle to vyjde v dokumentu"><p className="pvh">Takhle to vyjde</p><Sheet built={{ ...sheet, segments: sheet.segments.filter((x) => x.key === id) }} empty={null} /></div>
     </>}
-    dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => { if (si && cur.key.startsWith('kdo') && !st0?.speaker) set({ statements: c.statements.filter((_, q) => q !== si) }); toStep(prev); }}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur.key === 'hotovo') { apply(A.submitPoint(id)); goReplace(`/zprava/${id}?fresh=1`); } else toStep(next); }}>{nextText}</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
+    dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => { if (si && cur.key.startsWith('kdo') && !st0?.speaker) set({ statements: c.statements.filter((_, q) => q !== si) }); toStep(prev); }}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur.key === 'hotovo') { apply(A.submitPoint(id)); if (Q.me(s)?.role === 'headmaster') apply(A.approvePoint(id)); goReplace(`/zprava/${id}?fresh=1`); } else toStep(next); }}>{nextText}</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
     desk={<Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn" ref={curRef}><Sheet built={sheet} cls={(x) => (x.key === id ? 'cur live' : '')} empty={<div className="arch"><p className="center">Dokument se objeví, až vyplníte název a datum.</p></div>} /></div></Desk>} />;
 }
 /** A returned report: only what the reviewer asked for, then send again. */

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
-import { go, Sheet, useStore } from '../core/react';
+import { POINT_LIMITS } from '@/domain/report';
+import { createWith, go, Sheet, useStore } from '../core/react';
 import type { DocumentModel } from '@/document/model';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
-import { AddDialog, NotFound } from './home';
+import { NotFound } from './home';
+import type { Row } from '../core/types';
+import { OUTLINE_LIMITS, type Statement } from '@/domain/outline';
 import { AnnexEditor, annexDoc, annexToText, DocNav, OutlineField } from '../core/parts';
 import { App, Back, Desk, Dialog, goReplace, Ic, Item, Note, Saved, Sec, Seg, Stamp, Todo, Toast, Top, useNarrow, WHEN } from './ui';
 
@@ -25,7 +28,7 @@ function WholeDesk({ pending = true, note, focus }: { pending?: boolean; note?: 
 const Jr = ({ n, t, why, to, a, st }: { n: number; t: string; why: string; to: string; a?: string; st: 'c' | 'd' | '' }) => <li className={st}><a href={`#${to}`}><i>{st === 'd' ? <Ic n="chk" /> : n}</i><span className="tx"><b>{t}</b><span>{why}</span></span>{a ? <span className="btn">{a}</span> : null}</a></li>;
 export function Porada({ over: overP }: { over?: boolean }) {
   const { s } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const sl = Q.working(s);
-  const [add, setAdd] = useState(false); const [skip, setSkip] = useState(!!overP);
+  const [skip, setSkip] = useState(!!overP);
   if (!iss) return <PoradaVirtual m={m} />;
   const whole = Q.buildDoc(s, m, { pending: true });
   const q = Q.queuePoints(s).length + Q.queueFutures(s).length;
@@ -43,10 +46,10 @@ export function Porada({ over: overP }: { over?: boolean }) {
   ];
   const first = steps.findIndex((x) => !x.done);
   const reqs = Q.pendingRequests(s);
-  return <App desk={<WholeDesk />} over={add ? <AddDialog onClose={() => setAdd(false)} /> : skip ? <SkipDialog m={m} onClose={() => setSkip(false)} /> : null} col={<>
+  return <App desk={<WholeDesk />} over={skip ? <SkipDialog m={m} onClose={() => setSkip(false)} /> : null} col={<>
     <Top big h={`Porada ${Q.dm(iss.meetingDate)}`} lead={<>Termín pro učitele je <b>{WHEN(iss.deadlineAt)}</b>{new Date(iss.deadlineAt) < new Date(s.now) ? ', už minul' : ''}. V dokumentu je {whole.points} bodů, {Q.pagesText(Q.pagesOf(whole))}{whole.points > Q.buildDoc(s, m).points ? `. Z toho ${notYet(whole.points - Q.buildDoc(s, m).points)}` : ''}.</>} />
     <ol className="jr">{steps.map((x, i) => <Jr key={x.t} n={steps.slice(0, i + 1).filter((y) => !y.done).length} t={x.t} why={x.why} to={x.to} {...(x.a ? { a: x.a } : {})} st={x.done ? 'd' : i === first ? 'c' : ''} />)}</ol>
-    <button type="button" className="add" onClick={() => setAdd(true)}><span>Přidat zprávu, akci nebo návrh</span><b><Ic n="plus" /></b></button>
+    <button type="button" className="add" onClick={() => go('/pridat')}><span>Přidat do porady</span><b><Ic n="plus" /></b></button>
     {reqs.length ? <Sec h="Žádosti o přístup"><Item to="/lide" t={reqs.map((r) => r.name).join(' a ')} st="Čekají na vaše rozhodnutí" mk="o" /></Sec> : null}
     <Sec h="Další porady">{Q.slotsOf(s).filter((x) => Q.toIsoDate(x.monday) > m).slice(0, 3).map((x) => <Item key={Q.toIsoDate(x.monday)} t={Q.dm(x.meetingDate)} st={x.status === 'skipped' ? 'Nekoná se' : `Uzávěrka ${WHEN(x.deadlineAt)}`} />)}</Sec>
     {sl.status === 'open' ? <button type="button" className="q" onClick={() => setSkip(true)}>Tato porada se nekoná</button> : null}
@@ -87,10 +90,36 @@ export function Prilohy({ id }: { id?: string }) {
     {iss.annexes.length ? <Sec h="Další přílohy">{iss.annexes.map((a, i) => <div className="rowi" key={a.id}><div className="updn"><button type="button" aria-label={`Posunout výš: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, -1))}><Ic n="up" /></button><button type="button" aria-label={`Posunout níž: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, 1))}><Ic n="down" /></button></div><a className="tx" href={`#/porada/prilohy/${a.id}`}><span className="tt">Příloha {i + 2}: {a.title || 'bez názvu'}</span><span className="st">{a.parts.map((p) => ({ text: 'text', table: 'tabulka', image: 'obrázek' }[p.kind])).join(', ') || 'Zatím prázdná'}</span></a></div>)}</Sec> : null}
     <button type="button" className="btn lg w" onClick={() => { let n = ''; apply(A.addAnnex(m, (x) => (n = x))); setTimeout(() => go(`/porada/prilohy/${n}`)); }}><Ic n="plus" />Přidat přílohu</button></>} />;
 }
-export function Pokyny({ rowId, adding }: { rowId?: string; adding?: boolean }) {
+/** Every list of the document, in its order: the headmaster's way to put anything in, with no approval step. */
+export function Pridat() {
+  const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const rows = iss?.rows ?? [];
+  const future = (k: 'akce' | 'jednani', term?: boolean) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); if (term) apply(A.saveFuture(id, { campus: 'jinde', responsible: { verb: 'vede', people: [] } })); go(`/nova-akce/${id}`); };
+  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
+  const item = (r: Row) => {
+    if (r.slot === 'meetings') return <Item key={r.id} act={() => future('jednani')} t={r.title} st="Přidat jednání" />;
+    if (r.slot === 'events') return <Item key={r.id} act={() => future('akce')} t={r.title} st="Přidat akci" />;
+    if (r.slot === 'talent' || r.slot === 'exemptions') return <Item key={r.id} to="/seznamy" t={r.title} st="Přidat studenta do seznamu" />;
+    return <Item key={r.id} to={`/porada/pokyny/${r.id}`} t={r.title} st={r.slot === 'partners' ? `Přidat ohlas, teď ${r.quotes.length}` : r.pointId ? 'Schválený návrh' : 'Doplnit odrážku nebo text'} />;
+  };
+  const section = (k: Row['section'], h: string) => <Sec h={h}>{rows.filter((r) => r.section === k).map(item)}<Item to={`/porada/pokyny-novy?sekce=${k}`} t="Nový bod" st="Vlastní nadpis, text a odrážky" />{k === 'pokyny' ? <Item to="/seznamy" t="Nový seznam studentů" st="Vyjde v bodě o uvolnění z výuky" /> : null}</Sec>;
+  return <App {...(iss ? { desk: <WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." /> } : {})} col={<>
+    <Back to="/porada" t="Zpět na poradu" /><Top h="Přidat do porady" lead="Vyberte seznam. Jde to rovnou do porady, bez schvalování." />
+    {iss ? <>{section('pokyny', 'Pokyny')}{section('hospodareni', 'Hospodaření')}</> : <Sec h="Pokyny"><Item act={() => future('jednani')} t="Jednání" st="Přidat jednání" /><Item act={() => future('akce')} t="Akce" st="Přidat akci" /></Sec>}
+    <Sec h="Provoz školy">
+      <Item act={report} t="Zpráva o tom, co proběhlo" st="Vlastní bod s účastníky a vyjádřením" />
+      <Item act={() => future('akce')} t="Další doposud známé akce" st="Přidat akci, podle data se zařadí sama" />
+      <Item act={() => future('jednani', true)} t="Termín bez organizátora" st="Prázdniny a podobně, zprávu po něm nikdo nepíše" />
+    </Sec>
+    {iss ? <Sec h="Záhlaví a přílohy"><Item to="/porada/udaje" t="Přítomní a hosté" /><Item to="/porada/prilohy" t="Přílohy" st="Text, tabulka nebo obrázek" /></Sec> : null}
+  </>} />;
+}
+export function Pokyny({ rowId, adding, section }: { rowId?: string; adding?: boolean; section?: 'pokyny' | 'hospodareni' }) {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!;
   const row = iss.rows.find((r) => r.id === rowId);
-  const [title, setT] = useState(row?.title ?? ''); const [body, setB] = useState(row ? annexToText(row.body) : ''); const [per, setP] = useState<'standing' | 'once'>(row?.persistence ?? 'once'); const [sec, setSec] = useState<'pokyny' | 'hospodareni'>(row?.section ?? 'pokyny');
+  const [title, setT] = useState(row?.title ?? ''); const [body, setB] = useState(row ? annexToText(row.body) : ''); const [per, setP] = useState<'standing' | 'once'>(row?.persistence ?? 'once'); const [sec, setSec] = useState<'pokyny' | 'hospodareni'>(row?.section ?? section ?? 'pokyny');
+  const partners = row?.slot === 'partners'; const [quotes, setQ] = useState<Statement[]>(row?.quotes ?? []); const putQ = (i: number, p: Partial<Statement>) => setQ(quotes.map((x, j) => (j === i ? { ...x, ...p } : x)));
+  const qOk = quotes.every((q) => q.speakerGenitive.trim() && q.quote.trim()); const canSave = !!title.trim() && qOk;
+  const cleanQ = (): Statement[] => quotes.map((q) => ({ speakerGenitive: q.speakerGenitive.trim(), quote: q.quote.trim(), ...(q.affiliation?.trim() ? { affiliation: q.affiliation.trim() } : {}) }));
   const SECT = (k: 'pokyny' | 'hospodareni', h: string) => <Sec h={h}>{iss.rows.filter((r) => r.section === k).map((r) => <div className={`rowi${r.isNew ? ' nw-r' : ''}`} key={r.id}>
     <div className="updn"><button type="button" aria-label={`Posunout výš: ${r.title}`} onClick={() => apply(A.moveRow(m, r.id, -1))}><Ic n="up" /></button><button type="button" aria-label={`Posunout níž: ${r.title}`} onClick={() => apply(A.moveRow(m, r.id, 1))}><Ic n="down" /></button></div>
     <a className="tx" href={`#/porada/pokyny/${r.id}`}><span className="tt">{r.title}</span><span className="st">{r.slot === 'meetings' || r.slot === 'events' ? 'Plní se samo z akcí' : r.slot === 'talent' || r.slot === 'exemptions' ? 'Plní se ze seznamů studentů' : r.isNew ? 'Nově schválený návrh' : r.persistence === 'standing' ? 'Trvalý bod' : 'Jen pro tuto poradu'}</span></a>
@@ -100,13 +129,13 @@ export function Pokyny({ rowId, adding }: { rowId?: string; adding?: boolean }) 
     const proposal = row?.pointId ?? null;
     const gen = row && (proposal || row.slot === 'meetings' || row.slot === 'events' || row.slot === 'talent' || row.slot === 'exemptions');
     const done = () => go('/porada/pokyny');
-    return <App nar desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." {...(row ? { focus: (x: Q.Segment) => x.refId === row.id } : {})} />} dock={gen ? undefined : <div className="dock"><div className="row"><button type="button" className={`btn lg ${title.trim() ? 'go' : 'off'}`} aria-disabled={!title.trim()} onClick={() => { if (!title.trim()) return; if (row) apply(A.saveRow(m, row.id, { title, body: annexDoc(body), persistence: per })); else apply(A.addRow(m, sec, title, annexDoc(body), per)); done(); }}>Uložit</button></div></div>} col={<>
+    return <App nar desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." {...(row ? { focus: (x: Q.Segment) => x.refId === row.id } : {})} />} dock={gen ? undefined : <div className="dock">{!qOk ? <p className="hint a">U každého ohlasu vyplňte, kdo ho napsal, a jeho text.</p> : null}<div className="row"><button type="button" className={`btn lg ${canSave ? 'go' : 'off'}`} aria-disabled={!canSave} onClick={() => { if (!canSave) return; if (row && partners) apply(A.saveRow(m, row.id, { title, quotes: cleanQ(), persistence: per })); else if (row) apply(A.saveRow(m, row.id, { title, body: annexDoc(body), persistence: per })); else apply(A.addRow(m, sec, title, annexDoc(body), per)); done(); }}>Uložit</button></div></div>} col={<>
       <Back to="/porada/pokyny" t="Zpět na pokyny" /><Top h={adding ? 'Nový bod' : row!.title} {...(gen ? { lead: proposal ? 'Text schváleného návrhu se upravuje v kontrole, tady ho lze jen přesunout.' : row!.slot === 'talent' || row!.slot === 'exemptions' ? 'Tento bod se plní ze seznamů studentů.' : 'Tento bod se plní sám ze schválených akcí.' } : {})} />
       {proposal ? <a className="btn lg w" href={`#/navrh/${proposal}`}>Otevřít návrh</a> : gen ? <a className="btn lg w" href={row!.slot === 'talent' || row!.slot === 'exemptions' ? '#/seznamy' : '#/akce'}>{row!.slot === 'talent' || row!.slot === 'exemptions' ? 'Otevřít seznamy' : 'Otevřít akce'}</a> : <div className="stack">
         {adding ? <Seg label="Sekce" value={sec} options={[['pokyny', 'Pokyny'], ['hospodareni', 'Hospodaření']]} onChange={setSec} /> : null}
         <label className="l">Název<input className="in" autoFocus={!!adding} value={title} onChange={(e) => setT(e.target.value)} /></label>
-        {row?.slot === 'partners' ? <Note>Vyjádření partnerů: {row.quotes.length}. Vyjdou v dokumentu tak, jak jsou.</Note> : <OutlineField label="Text" value={body} onChange={setB} />}
-        <div className="stack st6"><span className="lb">Jak dlouho platí</span><Seg label="Jak dlouho platí" value={per} options={[['standing', 'Trvale, přejde do další porady'], ['once', 'Jen pro tuto poradu']]} onChange={setP} /></div>
+        {partners ? <div className="stack">{quotes.map((q, i) => <section className="stack st8 mz" key={i}><h2>Ohlas {i + 1}</h2><label className="l">Kdo ho napsal<small>Ve 2. pádě, například pana Jana Nováka</small><input className="in" maxLength={POINT_LIMITS.speakerGenitive} value={q.speakerGenitive} onChange={(e) => putQ(i, { speakerGenitive: e.target.value })} /></label><label className="l">Funkce a organizace<small>Nepovinné, například ředitele partnerské školy</small><input className="in" maxLength={POINT_LIMITS.statementAffiliation} value={q.affiliation ?? ''} onChange={(e) => putQ(i, { affiliation: e.target.value })} /></label><label className="l">Text ohlasu<textarea className="in" maxLength={POINT_LIMITS.quote} value={q.quote} onChange={(e) => putQ(i, { quote: e.target.value })} /></label><button type="button" className="q r" aria-label={`Odebrat ohlas ${i + 1}`} onClick={() => setQ(quotes.filter((_, j) => j !== i))}>Odebrat ohlas</button></section>)}{quotes.length < OUTLINE_LIMITS.quotes ? <button type="button" className="btn lg w" onClick={() => setQ([...quotes, { speakerGenitive: '', quote: '' }])}><Ic n="plus" />Přidat ohlas</button> : <p className="sm">Víc ohlasů se do jedné porady nevejde.</p>}</div> : <OutlineField label="Text" value={body} onChange={setB} />}
+        {!row?.slot ? <div className="stack st6"><span className="lb">Jak dlouho platí</span><Seg label="Jak dlouho platí" value={per} options={[['standing', 'Trvale, přejde do další porady'], ['once', 'Jen pro tuto poradu']]} onChange={setP} /></div> : null}
         {row && !row.slot && !proposal ? <button className="q r" onClick={() => { apply(A.removeRow(m, row.id)); done(); }}>Odebrat bod</button> : null}
       </div>}
     </>} />;
