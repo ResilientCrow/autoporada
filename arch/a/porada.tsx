@@ -82,15 +82,17 @@ export function Prilohy({ id }: { id?: string }) {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!; const [rm, setRm] = useState(false);
   const annex = iss.annexes.find((a) => a.id === id); const k = annex ? iss.annexes.indexOf(annex) : -1; const first = Q.firstExtraAnnex(iss);
   const talent = s.registry.find((l) => l.purpose === 'annex1');
+  // Both editors save as you type; the button only takes you back to the list.
+  const done = <div className="dock"><div className="row"><button type="button" className="btn lg go" onClick={() => go('/porada/prilohy')}>Hotovo</button></div></div>;
   if (id === ANNEX2) {
-    return <App nar over={rm ? <Dialog title="Odebrat přílohu 2?" onClose={() => setRm(false)}><p>Zmizí z této porady i z dalších. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.setAnnex2(m, null)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
+    return <App nar dock={done} over={rm ? <Dialog title="Odebrat přílohu 2?" onClose={() => setRm(false)}><p>Zmizí z této porady i z dalších. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.setAnnex2(m, null)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
       desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." focus={(x) => x.blocks.some((b) => b.kind === 'annex' && b.text === 'PŘÍLOHA 2')} />} col={<><Back to="/porada/prilohy" t="Zpět na přílohy" /><Top h="Příloha 2" lead="Začne na nové stránce. Ukládá se to samo a přechází i do dalších porad." />
         <TextPart doc={iss.annex2 ?? emptyRichDoc()} onChange={(doc) => apply(A.setAnnex2(m, doc))} /><button type="button" className="q r" onClick={() => setRm(true)}>Odebrat přílohu</button></>} />;
   }
   if (id && !annex) return <NotFound />;
   if (annex) {
     const name = `Příloha ${k + first}`;
-    return <App nar over={rm ? <Dialog title={`Odebrat přílohu ${k + first}?`} onClose={() => setRm(false)}><p>Zmizí z této porady i s textem, tabulkami a obrázky. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.removeAnnex(m, annex.id)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
+    return <App nar dock={done} over={rm ? <Dialog title={`Odebrat přílohu ${k + first}?`} onClose={() => setRm(false)}><p>Zmizí z této porady i s textem, tabulkami a obrázky. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.removeAnnex(m, annex.id)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
       desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." focus={(x) => x.blocks.some((b) => b.kind === 'annex' && b.text === `PŘÍLOHA ${k + first}`)} />} col={<><Back to="/porada/prilohy" t="Zpět na přílohy" /><Top h={annex.title || name} lead="Začne na nové stránce. Ukládá se to samo." />
         <AnnexEditor n={k + first} annex={annex} onChange={(a) => apply(A.saveAnnex(m, a))} /><button type="button" className="q r" onClick={() => setRm(true)}>Odebrat přílohu</button></>} />;
   }

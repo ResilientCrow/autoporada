@@ -156,7 +156,9 @@ function segmentize(model: DocumentModel, snap: IssueSnapshot, refs: Record<stri
   const out: Segment[] = []; let cur: Segment = { key: 'head', kind: 'head', blocks: [] };
   const norm = (x: string) => x.replace(/\s+/g, ' ').trim().toLowerCase();
   const reports = [...snap.reports]; let n = 0;
-  for (const sec of model.sections) for (const b of sec.blocks) {
+  for (const sec of model.sections) for (const [i, b] of sec.blocks.entries()) {
+    // Word starts such a section on a new page; the preview shows the same break, as before Příloha 1.
+    if (i === 0 && sec.layout === 'nextPage') cur.blocks.push({ kind: 'pageBreak' });
     if (b.kind === 'point') {
       out.push(cur); n++;
       const i = reports.findIndex((r) => norm(r.title) === norm(b.text));
