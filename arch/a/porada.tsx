@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 import { POINT_LIMITS } from '@/domain/report';
+import { emptyRichDoc } from '@/domain/richtext';
 import { createWith, go, Sheet, useStore } from '../core/react';
 import type { DocumentModel } from '@/document/model';
 import * as Q from '../core/select';
@@ -8,7 +9,7 @@ import * as A from '../core/ops';
 import { NotFound } from './home';
 import type { Row } from '../core/types';
 import { OUTLINE_LIMITS, type Statement } from '@/domain/outline';
-import { AnnexEditor, annexDoc, annexToText, DocNav, OutlineField } from '../core/parts';
+import { AnnexEditor, annexDoc, annexToText, DocNav, OutlineField, TextPart } from '../core/parts';
 import { App, Back, Desk, Dialog, goReplace, Ic, Item, Note, Saved, Sec, Seg, Stamp, Todo, Toast, Top, useNarrow, WHEN } from './ui';
 
 const notYet = (n: number) => (n === 1 ? '1 zatím nevyjde, protože čeká na schválení' : n < 5 ? `${n} zatím nevyjdou, protože čekají na schválení` : `${n} zatím nevyjde, protože čeká na schválení`);
@@ -35,12 +36,13 @@ export function Porada({ over: overP }: { over?: boolean }) {
   const newRows = iss.rows.filter((r) => r.isNew).length;
   const miss = Q.owedTo(s, m).filter((o) => !o.delivered && !o.notYetOver);
   const talent = s.registry.find((l) => l.purpose === 'annex1');
+  const annexCount = Q.firstExtraAnnex(iss) - 1 + iss.annexes.length;
   const steps = [
     { t: q ? `Zkontrolovat ${counts(q, 'položku', 'položky', 'položek')}` : 'Všechno je zkontrolované', why: 'Co neschválíte, nevyjde.', to: '/kontrola', a: q ? 'Začít' : '', done: !q },
     { t: newRows ? `Zařadit ${counts(newRows, 'schválený návrh', 'schválené návrhy', 'schválených návrhů')}` : 'Pokyny a hospodaření', why: newRows ? iss.rows.filter((r) => r.isNew).map((r) => r.title).join(', ') : 'Převzato z minulé porady.', to: '/porada/pokyny', a: newRows ? 'Zařadit' : '', done: !newRows },
     { t: miss.length ? `Doplnit ${counts(miss.length, 'chybějící zprávu', 'chybějící zprávy', 'chybějících zpráv')}` : 'Zprávy z akcí jsou všechny', why: miss.length ? 'Jinak se vytiskne jen krátký odstavec o akci.' : 'Nic nechybí.', to: '/porada/zpravy', a: miss.length ? 'Doplnit' : '', done: !miss.length },
     { t: 'Přítomní a hosté', why: iss.present ? 'Převzato z minulé porady.' : 'Přítomní nejsou vyplnění.', to: '/porada/udaje', a: iss.present ? '' : 'Vyplnit', done: !!iss.present },
-    { t: iss.annexes.length ? `Přílohy: ${iss.annexes.length + 1}` : 'Přílohy', why: iss.annexes.length ? ['Příloha 1 ze seznamu studentů', ...iss.annexes.map((a) => a.title || 'Bez názvu')].join(', ') : 'Jen Příloha 1 ze seznamu studentů.', to: '/porada/prilohy', a: '', done: true },
+    { t: annexCount > 1 ? `Přílohy: ${annexCount}` : 'Přílohy', why: annexCount > 1 ? ['Příloha 1 ze seznamu studentů', ...(Q.hasAnnex2(iss) ? ['Příloha 2 z minulých porad'] : []), ...iss.annexes.map((a) => a.title || 'Bez názvu')].join(', ') : 'Jen Příloha 1 ze seznamu studentů.', to: '/porada/prilohy', a: '', done: true },
     { t: 'Seznamy studentů', why: talent?.entries.some((e) => e.isNew) ? `Noví studenti v Příloze 1: ${talent.entries.filter((e) => e.isNew).length}.` : 'Beze změny od minulé porady.', to: '/seznamy', a: '', done: true },
     { t: 'Vygenerovat dokument', why: 'Nakonec zkontrolujete celý náhled.', to: '/porada/nahled', a: 'Otevřít náhled', done: false },
   ];
@@ -73,21 +75,28 @@ export function Udaje() {
     <div className="stack"><label className="l">Přítomni<textarea className="in" value={pr} onChange={(e) => setPr(e.target.value)} /></label><label className="l">Hosté<input className="in" value={gu} onChange={(e) => setGu(e.target.value)} /></label></div>
   </>} />;
 }
+/** The address of the older Příloha 2: one text with no title, which later poradas carry until it is removed. */
+const ANNEX2 = 'priloha-2';
 /** Příloha 1 comes from the student list; everything else is written here and starts on its own page. */
 export function Prilohy({ id }: { id?: string }) {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!; const [rm, setRm] = useState(false);
-  const annex = iss.annexes.find((a) => a.id === id); const k = annex ? iss.annexes.indexOf(annex) : -1;
+  const annex = iss.annexes.find((a) => a.id === id); const k = annex ? iss.annexes.indexOf(annex) : -1; const first = Q.firstExtraAnnex(iss);
   const talent = s.registry.find((l) => l.purpose === 'annex1');
+  if (id === ANNEX2) {
+    return <App nar over={rm ? <Dialog title="Odebrat přílohu 2?" onClose={() => setRm(false)}><p>Zmizí z této porady i z dalších. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.setAnnex2(m, null)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
+      desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." focus={(x) => x.blocks.some((b) => b.kind === 'annex' && b.text === 'PŘÍLOHA 2')} />} col={<><Back to="/porada/prilohy" t="Zpět na přílohy" /><Top h="Příloha 2" lead="Začne na nové stránce. Ukládá se to samo a přechází i do dalších porad." />
+        <TextPart doc={iss.annex2 ?? emptyRichDoc()} onChange={(doc) => apply(A.setAnnex2(m, doc))} /><button type="button" className="q r" onClick={() => setRm(true)}>Odebrat přílohu</button></>} />;
+  }
   if (id && !annex) return <NotFound />;
   if (annex) {
-    const name = `Příloha ${k + 2}`;
-    return <App nar over={rm ? <Dialog title={`Odebrat přílohu ${k + 2}?`} onClose={() => setRm(false)}><p>Zmizí z této porady i s textem, tabulkami a obrázky. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.removeAnnex(m, annex.id)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
-      desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." focus={(x) => x.blocks.some((b) => b.kind === 'annex' && b.text === `PŘÍLOHA ${k + 2}`)} />} col={<><Back to="/porada/prilohy" t="Zpět na přílohy" /><Top h={annex.title || name} lead="Začne na nové stránce. Ukládá se to samo." />
-        <AnnexEditor n={k + 2} annex={annex} onChange={(a) => apply(A.saveAnnex(m, a))} /><button type="button" className="q r" onClick={() => setRm(true)}>Odebrat přílohu</button></>} />;
+    const name = `Příloha ${k + first}`;
+    return <App nar over={rm ? <Dialog title={`Odebrat přílohu ${k + first}?`} onClose={() => setRm(false)}><p>Zmizí z této porady i s textem, tabulkami a obrázky. Další přílohy se přečíslují.</p><div className="row"><button className="btn lg" onClick={() => setRm(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.removeAnnex(m, annex.id)); go('/porada/prilohy'); }}>Odebrat</button></div></Dialog> : null}
+      desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." focus={(x) => x.blocks.some((b) => b.kind === 'annex' && b.text === `PŘÍLOHA ${k + first}`)} />} col={<><Back to="/porada/prilohy" t="Zpět na přílohy" /><Top h={annex.title || name} lead="Začne na nové stránce. Ukládá se to samo." />
+        <AnnexEditor n={k + first} annex={annex} onChange={(a) => apply(A.saveAnnex(m, a))} /><button type="button" className="q r" onClick={() => setRm(true)}>Odebrat přílohu</button></>} />;
   }
   return <App nar desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." />} col={<><Back to="/porada" t="Zpět na poradu" /><Top h="Přílohy" lead="Tisknou se za podpisem, v tomto pořadí. Každá začíná na nové stránce." />
     <Sec h="Příloha 1"><Item to={`/seznamy/${talent?.key ?? ''}`} t={talent?.name ?? 'Seznam studentů'} st={`Ze seznamu, ${counts(talent?.entries.length ?? 0, 'student', 'studenti', 'studentů')}`} /></Sec>
-    {iss.annexes.length ? <Sec h="Další přílohy">{iss.annexes.map((a, i) => <div className="rowi" key={a.id}><div className="updn"><button type="button" aria-label={`Posunout výš: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, -1))}><Ic n="up" /></button><button type="button" aria-label={`Posunout níž: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, 1))}><Ic n="down" /></button></div><a className="tx" href={`#/porada/prilohy/${a.id}`}><span className="tt">Příloha {i + 2}: {a.title || 'bez názvu'}</span><span className="st">{a.parts.map((p) => ({ text: 'text', table: 'tabulka', image: 'obrázek' }[p.kind])).join(', ') || 'Zatím prázdná'}</span></a></div>)}</Sec> : null}
+    {Q.hasAnnex2(iss) || iss.annexes.length ? <Sec h="Další přílohy">{Q.hasAnnex2(iss) ? <div className="rowi"><div className="updn" /><a className="tx" href={`#/porada/prilohy/${ANNEX2}`}><span className="tt">Příloha 2</span><span className="st">text, přechází i do dalších porad</span></a></div> : null}{iss.annexes.map((a, i) => <div className="rowi" key={a.id}><div className="updn"><button type="button" aria-label={`Posunout výš: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, -1))}><Ic n="up" /></button><button type="button" aria-label={`Posunout níž: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, 1))}><Ic n="down" /></button></div><a className="tx" href={`#/porada/prilohy/${a.id}`}><span className="tt">Příloha {i + first}: {a.title || 'bez názvu'}</span><span className="st">{a.parts.map((p) => ({ text: 'text', table: 'tabulka', image: 'obrázek' }[p.kind])).join(', ') || 'Zatím prázdná'}</span></a></div>)}</Sec> : null}
     <button type="button" className="btn lg w" onClick={() => { let n = ''; apply(A.addAnnex(m, (x) => (n = x))); setTimeout(() => go(`/porada/prilohy/${n}`)); }}><Ic n="plus" />Přidat přílohu</button></>} />;
 }
 /** Every list of the document, in its order: the headmaster's way to put anything in, with no approval step. */

@@ -27,7 +27,7 @@ const PROBLEM: Record<string, string> = {
   unavailable: 'Server teď neodpovídá. Zkuste to za chvíli.',
 };
 
-const COALESCED = new Set<string>(['savePoint', 'saveFuture', 'saveType', 'annexes']);
+const COALESCED = new Set<string>(['savePoint', 'saveFuture', 'saveType', 'annexes', 'setAnnex2']);
 
 /** The state comes from the server; an action shows at once and goes to the server in order. */
 export function StoreProvider({ children }: { ns?: string; children: ReactNode }) {

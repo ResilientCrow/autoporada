@@ -10,6 +10,9 @@ import { parseIssueSnapshot, type IssueSnapshot } from '@/snapshot';
 import type { Future, Issue, Point, Role, State, User } from './types';
 
 export const nowOf = (s: State) => new Date(s.now);
+/** The older Příloha 2 (one text, carried from porada to porada) prints before the further annexes, as `composeDocument` numbers them. */
+export const hasAnnex2 = (iss: Issue) => !!iss.annex2 && !isRichDocEmpty(iss.annex2);
+export const firstExtraAnnex = (iss: Issue) => (hasAnnex2(iss) ? 3 : 2);
 export const todayOf = (s: State): CalDate => instantToWallClock(nowOf(s)).date;
 export const me = (s: State): User | null => s.users.find((u) => u.id === s.userId) ?? null;
 export const userById = (s: State, id: string) => s.users.find((u) => u.id === id);

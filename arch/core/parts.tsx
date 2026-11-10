@@ -112,7 +112,7 @@ function TablePart({ rows, onChange }: { rows: string[][]; onChange: (r: string[
   </div>;
 }
 /** Keeps what is typed as typed (a trailing space, a blank line); the stored document is the cleaned version of it. */
-function TextPart({ doc, onChange }: { doc: RichDoc; onChange: (d: RichDoc) => void }) {
+export function TextPart({ doc, onChange }: { doc: RichDoc; onChange: (d: RichDoc) => void }) {
   const [v, set] = useState(() => annexToText(doc));
   return <OutlineField label="Text" value={v} onChange={(x) => { set(x); onChange(annexDoc(x)); }} />;
 }
