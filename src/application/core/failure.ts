@@ -28,6 +28,7 @@ export const CONSTRAINT_RULES: Readonly<Record<KnownConstraint, RuleCode>> = {
   users_student_role: 'student-role',
   access_requests_one_pending: 'request-pending',
   point_types_name_key: 'type-name-taken',
+  points_type_id_point_types_id_fk: 'type-in-use',
   registry_entries_active_key: 'registry-duplicate',
   registry_lists_title_key: 'registry-list-taken',
   registry_lists_key_key: 'registry-list-taken',

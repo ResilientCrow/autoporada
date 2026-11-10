@@ -14,6 +14,7 @@ export const RULE_CODES = [
   'report-not-due',
   'type-name-taken',
   'type-locked',
+  'type-in-use',
   'bullet-kind-fixed',
   'registry-duplicate',
   'registry-list-taken',

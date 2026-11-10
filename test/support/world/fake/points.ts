@@ -1,4 +1,5 @@
 import {
+  ConstraintViolation,
   DatabaseFailure,
   scopeOf,
   ScopeViolation,
@@ -68,7 +69,7 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
   }
   if (!state.users.has(row.authorId)) throw refusedBy('points_author_id_users_id_fk');
   if (row.typeId !== null && !state.pointTypes.has(row.typeId)) {
-    throw refusedBy('points_type_id_point_types_id_fk');
+    throw new ConstraintViolation('points_type_id_point_types_id_fk');
   }
   if (row.futureItemId !== null && !state.futureItems.has(row.futureItemId)) {
     throw refusedBy('points_future_item_id_future_items_id_fk');

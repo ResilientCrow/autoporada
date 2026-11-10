@@ -85,5 +85,13 @@ export function createPointTypeRepo(db: TxDatabase, ctx: TxContext): PointTypeRe
       if (!row) throw new StaleVersion();
       return toRecord(row);
     },
+    async remove(id, expectedVersion) {
+      mayManage();
+      const gone = await db
+        .delete(pointTypes)
+        .where(and(eq(pointTypes.id, id), eq(pointTypes.version, expectedVersion)))
+        .returning({ id: pointTypes.id });
+      if (gone.length === 0) throw new StaleVersion();
+    },
   };
 }

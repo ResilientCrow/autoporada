@@ -15,11 +15,15 @@ import { newId, type FakeTxState } from './state';
 export function fakePointTypeRepo(tx: FakeTxState, ctx: TxContext): PointTypeRepo {
   const { principal } = ctx;
   const { pointTypes } = tx.draft;
-  /** The writes' checks: the policy (ADR 0011), then the unique name and the locked CHECK as the database has them. */
-  const checked = (record: PointTypeRecord) => {
+  /** The policy every write re-checks (ADR 0011). */
+  const mayManage = () => {
     if (principal.kind === 'user' && !can(principal.actor, { action: 'pointTypes.manage' })) {
       throw new ScopeViolation();
     }
+  };
+  /** The writes' checks: the policy, then the unique name and the locked CHECK as the database has them. */
+  const checked = (record: PointTypeRecord) => {
+    mayManage();
     const clash = [...pointTypes.values()].some(
       (t) => t.id !== record.id && t.name === record.name,
     );
@@ -49,6 +53,17 @@ export function fakePointTypeRepo(tx: FakeTxState, ctx: TxContext): PointTypeRep
       const current = pointTypes.get(id);
       if (!current || current.version !== expectedVersion) throw new StaleVersion();
       return checked({ ...current, ...values, version: current.version + 1 });
+    },
+    async remove(id, expectedVersion) {
+      guard(tx, true);
+      mayManage();
+      const current = pointTypes.get(id);
+      if (!current || current.version !== expectedVersion) throw new StaleVersion();
+      if ([...tx.draft.points.values()].some((p) => p.typeId === id)) {
+        throw new ConstraintViolation('points_type_id_point_types_id_fk');
+      }
+      pointTypes.delete(id);
+      tx.written.push({ type: 'point_type', id });
     },
   };
 }

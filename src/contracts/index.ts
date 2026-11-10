@@ -183,6 +183,8 @@ export { recentPeopleInput, recentPeopleOutput } from './people';
 export {
   bulletKeySchema,
   defaultBulletsSchema,
+  deletePointTypeInput,
+  deletePointTypeOutput,
   listPointTypesInput,
   listPointTypesOutput,
   savePointTypeInput,

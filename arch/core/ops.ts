@@ -88,6 +88,7 @@ export const editEntry = simple('editEntry', S.editEntry);
 export const removeEntry = simple('removeEntry', S.removeEntry);
 export const newSchoolYear = simple('newSchoolYear', S.newSchoolYear);
 export const saveType = simple('saveType', S.saveType);
+export const deleteType = simple('deleteType', S.deleteType);
 export const saveSettings = simple('saveSettings', S.saveSettings);
 export const requestAccess = simple('requestAccess', S.requestAccess);
 export const cancelRequest = simple('cancelRequest', S.cancelRequest);
@@ -200,6 +201,7 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
       const base = { name: t.name, titleGender: t.titleGender, defaultBullets: t.bullets, active: t.active, ...('name' in patch ? {} : {}) };
       return [{ name: 'pointTypes.save', ...(tid && { key: tid }), input: tid ? { id: tid, expectedVersion: vers[tid] ?? 1, ...base } : base }];
     }
+    case 'deleteType': { const tid = real(a[0]); return [{ name: 'pointTypes.delete', input: { id: tid, expectedVersion: vers[tid] ?? 1 } }]; }
     case 'saveSettings': {
       const p = a[0] as Partial<State['settings']>; const st = s.settings; const out: Call[] = [];
       if ('dayOffset' in p || 'time' in p) out.push({ name: 'settings.save', key: 'settings:deadline', input: { key: 'deadline', value: { dayOffset: st.dayOffset, time: st.time }, version: vers['settings:deadline'] ?? 0 } });

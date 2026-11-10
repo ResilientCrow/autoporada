@@ -214,6 +214,71 @@ describe('PointTypeRepo writes (port contract)', () => {
   });
 });
 
+describe('PointTypeRepo removal (port contract)', () => {
+  /** Removes as `by` and names the row in an audit event, as a use case would. */
+  const remove = (id: string, version: number, by: Principal = cli) =>
+    world.tx(by, async (tx) => {
+      await tx.pointTypes.remove(id, version);
+      await tx.audit.record({ action: 'point_type.deleted', target: { type: 'point_type', id } });
+    });
+
+  it('removes a type at the expected version', async () => {
+    const created = await create();
+    const kept = await create({ ...VALUES, name: 'Workshop', position: 8 });
+    await remove(created.id, created.version);
+    expect(await read((tx) => tx.pointTypes.list())).toEqual([kept]);
+    expect(await read((tx) => tx.pointTypes.get(created.id))).toBeNull();
+  });
+
+  it('refuses a stale version or an unknown id', async () => {
+    const created = await create();
+    await expect(remove(created.id, 2)).rejects.toBeInstanceOf(StaleVersion);
+    await expect(remove('00000000-0000-7000-8000-999999999999', 1)).rejects.toBeInstanceOf(
+      StaleVersion,
+    );
+    expect(await read((tx) => tx.pointTypes.list())).toEqual([created]);
+  });
+
+  it('refuses a type a point uses, by the constraint name', async () => {
+    const created = await create();
+    const author = await world.seed.user({ role: 'submitter' });
+    await world.tx(world.as(author), async (tx) => {
+      const { point } = await tx.points.create({
+        clientRef: crypto.randomUUID(),
+        kind: 'report',
+        typeId: created.id,
+        content: {
+          title: '',
+          eventDate: null,
+          endDate: null,
+          timeFrom: null,
+          timeTo: null,
+          campus: null,
+          place: null,
+          opening: '',
+          openingEdited: false,
+          body: { type: 'doc', content: [] },
+          bullets: [],
+          statements: [],
+        },
+      });
+      await tx.audit.record({ action: 'point.created', target: { type: 'point', id: point.id } });
+    });
+    const failure = await remove(created.id, 1).catch((error: unknown) => error);
+    expect(failure).toEqual(new ConstraintViolation('points_type_id_point_types_id_fk'));
+    expect(await read((tx) => tx.pointTypes.list())).toEqual([created]);
+  });
+
+  it('lets only someone who may manage the types remove them', async () => {
+    const created = await create();
+    for (const role of ['submitter', 'reviewer'] as const) {
+      const user = await world.seed.user({ role });
+      await expect(remove(created.id, 1, world.as(user))).rejects.toBeInstanceOf(ScopeViolation);
+    }
+    expect(await read((tx) => tx.pointTypes.list())).toEqual([created]);
+  });
+});
+
 describe.runIf(inject('world') === 'fake')('point type audit coverage in the fake world', () => {
   it('fails a commit that wrote a type no audit event names', async () => {
     const unaudited = world.tx(cli, (tx) => tx.pointTypes.create(VALUES));

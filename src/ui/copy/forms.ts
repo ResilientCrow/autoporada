@@ -42,6 +42,7 @@ export const rules = {
   'report-not-due': 'Zprávu k\u00A0této akci teď nelze založit.',
   'type-name-taken': 'Typ bodu s\u00A0tímto názvem už existuje.',
   'type-locked': 'Tento typ nelze vypnout.',
+  'type-in-use': 'Tento typ už mají zprávy, proto ho nelze smazat. Můžete ho jen přestat nabízet.',
   'bullet-kind-fixed': 'Druh uložené odrážky nelze změnit. Odeberte ji a\u00A0přidejte novou.',
   'registry-duplicate': 'Student se stejným jménem a\u00A0třídou už na seznamu je.',
   'registry-list-taken': 'Seznam s\u00A0tímto názvem už existuje.',

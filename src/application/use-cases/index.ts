@@ -59,7 +59,7 @@ import {
   submitPoint,
   withdrawPoint,
 } from './points';
-import { listPointTypes, savePointType } from './point-types';
+import { deletePointType, listPointTypes, savePointType } from './point-types';
 import { me } from './profile';
 import {
   addEntries,
@@ -133,7 +133,7 @@ export {
   submitPoint,
   withdrawPoint,
 } from './points';
-export { listPointTypes, savePointType } from './point-types';
+export { deletePointType, listPointTypes, savePointType } from './point-types';
 export { me } from './profile';
 export {
   addEntries,
@@ -166,6 +166,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   decideAccess,
   decideFuture,
   decidePoint,
+  deletePointType,
   documentArchive,
   downloadDocument,
   getFuture,

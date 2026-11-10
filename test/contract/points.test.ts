@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, inject, it } from 'vitest';
 
 import {
+  ConstraintViolation,
   DatabaseFailure,
   ScopeViolation,
   StaleVersion,
@@ -529,7 +530,6 @@ describe('PointRepo (port contract)', () => {
   /** Each case makes a draft from `created`, then applies `patches`; the last write is refused. */
   it.each<[string, Partial<NewPoint>, PointPatch[]]>([
     ['points_kind_type', { typeId: null }, []],
-    ['points_type_id_point_types_id_fk', { typeId: '00000000-0000-7000-8000-999999999999' }, []],
     ['points_dates', { content: { ...FULL, endDate: calDate(2026, 10, 19) } }, []],
     ['points_lengths', { content: { ...FULL, title: 'x'.repeat(201) } }, []],
     ['points_monday', {}, [{ ...SUBMIT, earliestMonday: calDate(2026, 10, 27) }]],
@@ -551,6 +551,14 @@ describe('PointRepo (port contract)', () => {
       for (const patch of patches) point = await update(world.as(author), point, patch);
     };
     expect(await failure(write())).toEqual(new DatabaseFailure(`db.constraint.${constraint}`));
+  });
+
+  it('refuses an unknown type as a known constraint, the one that keeps a used type', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const made = create(world.as(author), { typeId: '00000000-0000-7000-8000-999999999999' });
+    expect(await failure(made)).toEqual(
+      new ConstraintViolation('points_type_id_point_types_id_fk'),
+    );
   });
 
   it('keeps a user who wrote a point: erasing them is refused', async () => {

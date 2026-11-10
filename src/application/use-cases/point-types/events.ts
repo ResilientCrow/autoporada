@@ -63,6 +63,15 @@ function bulletChanges(
   };
 }
 
+/** A point type the headmaster deleted: the settings it had, never its name or bullets. */
+export function pointTypeDeletedEvent(before: PointTypeRecord): AuditEvent {
+  return {
+    action: 'point_type.deleted',
+    target: { type: 'point_type', id: before.id },
+    diff: diffRecords(POINT_TYPE_AUDIT, before, null),
+  };
+}
+
 /** A point type made or changed by the headmaster (past tense, as every M8 action). */
 export function pointTypeEvent(
   action: 'point_type.created' | 'point_type.changed',

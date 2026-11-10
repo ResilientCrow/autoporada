@@ -37,4 +37,10 @@ export interface PointTypeRepo {
    * StaleVersion for another version or an unknown id; the same violations as `create`.
    */
   update(id: string, expectedVersion: number, values: PointTypeValues): Promise<PointTypeRecord>;
+  /**
+   * Deletes the type at the version the admin saw. StaleVersion for another version or an unknown
+   * id; ConstraintViolation(`points_type_id_point_types_id_fk`) while a point uses it;
+   * ScopeViolation as `create`.
+   */
+  remove(id: string, expectedVersion: number): Promise<void>;
 }

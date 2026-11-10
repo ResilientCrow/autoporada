@@ -79,6 +79,13 @@ export const savePointTypeInput = z
       ctx.addIssue({ code: 'custom', path: [missing], params: { code: 'required' } });
     }
   });
+/** „Smazat typ“: the type at the version the form saw. */
+export const deletePointTypeInput = z.strictObject({
+  id: z.uuid(),
+  expectedVersion: z.number().int().positive(),
+});
+export const deletePointTypeOutput = z.object({ id: z.uuid() });
+
 export const savePointTypeOutput = z.object({
   id: z.uuid(),
   version: z.number().int().positive(),

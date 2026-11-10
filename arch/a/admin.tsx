@@ -86,11 +86,12 @@ export function NovyRok() {
 }
 export function Typy() { const { s, apply } = useStore(); return <Pane on="/typy"><Top h="Typy zpráv" lead="Určují úvodní větu a co se při psaní ptáme." /><Sec h="Typy">{s.types.map((t) => <Item key={t.id} to={`/typy/${t.id}`} t={t.name} st={`${t.bullets.map((b) => b.label).join(', ')}${t.active ? '' : ', skrytý'}`} />)}</Sec><button className="btn" onClick={() => { apply(A.saveType(null, {})); }}><Ic n="plus" />Nový typ</button></Pane>; }
 export function Typ({ id }: { id: string }) {
-  const { s, apply } = useStore(); const t = s.types.find((x) => x.id === id); if (!t) return <NotFound />;
+  const { s, apply } = useStore(); const [rm, setRm] = useState(false); const t = s.types.find((x) => x.id === id); if (!t) return <NotFound />;
   const set = (p: Partial<typeof t>) => apply(A.saveType(id, p));
   return <Pane on="/typy"><Back to="/typy" t="Zpět na typy" /><Top h={t.name} {...(t.locked ? { lead: 'Tento typ musí zůstat, aby vždy bylo co vybrat.' } : {})} /><label className="l">Název<input className="in" value={t.name} onChange={(e) => set({ name: e.target.value })} /></label>
     <section className="stack st8"><h2>Co se při psaní ptáme</h2><ul className="prs">{t.bullets.map((b, i) => <li className="pr" key={b.key}><div className="pr-h"><input className="in" aria-label="Název řádku" value={b.label} onChange={(e) => set({ bullets: t.bullets.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)) })} /></div><label className="chk"><input type="checkbox" checked={b.required} onChange={(e) => set({ bullets: t.bullets.map((x, j) => (j === i ? { ...x, required: e.target.checked } : x)) })} />Povinné</label></li>)}</ul></section>
-    {!t.locked ? <label className="chk"><input type="checkbox" checked={t.active} onChange={(e) => set({ active: e.target.checked })} />Nabízet při psaní</label> : null}
+    {!t.locked ? <><label className="chk"><input type="checkbox" checked={t.active} onChange={(e) => set({ active: e.target.checked })} />Nabízet při psaní</label><button type="button" className="q r" onClick={() => setRm(true)}>Smazat typ</button></> : null}
+    {rm ? <Dialog title={`Smazat typ ${t.name}?`} onClose={() => setRm(false)}><p>Smazat jde jen typ, podle kterého ještě nikdo nepsal. Jinak ho stačí přestat nabízet.</p><div className="row"><button type="button" className="btn lg" onClick={() => setRm(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.deleteType(id)); go('/typy'); }}>Smazat</button></div></Dialog> : null}
   </Pane>;
 }
 export function Nastaveni() {

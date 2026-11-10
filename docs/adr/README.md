@@ -59,3 +59,4 @@ record that supersedes it.
 | [0051](0051-the-next-porada-on-any-date.md) | The next porada on any date, and no move page | Accepted; supersedes 0047 items 1 and 2 and 0034 item 3 and part of item 2 |
 | [0052](0052-owed-reports-first-proposals-for-vedeni.md) | Owed reports come first, and only vedení proposes | Accepted; builds on 0049; bounds the report card left open by 0048 |
 | [0053](0053-the-arch-ui-at-the-root.md) | The Arch UI at the root, on the same backend | Accepted; builds on 0004, 0012, 0017 and 0043 |
+| [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Accepted; adds to 0053 |
