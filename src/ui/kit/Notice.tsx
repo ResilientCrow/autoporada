@@ -4,8 +4,12 @@ import { cx } from './cx';
 import { Icon } from './Icon';
 
 const LOOK = {
-  info: { icon: 'info', classes: 'border-l-4 border-digital bg-sublight', role: 'status' },
-  problem: { icon: 'exclamation', classes: 'border-l-8 border-ink bg-light', role: 'alert' },
+  info: { icon: 'info', classes: 'rounded-brand bg-cream', role: 'status' },
+  problem: {
+    icon: 'exclamation',
+    classes: 'rounded-brand border-2 border-danger bg-light',
+    role: 'alert',
+  },
 } as const;
 
 /**

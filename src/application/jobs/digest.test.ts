@@ -263,7 +263,7 @@ describe('the mail that goes out', () => {
     await runAt(MORNING);
     expect(await deliver(head, '07')).toMatchObject({ kind: 'done', code: 'sent' });
     expect(fake.calls.at(-1)?.mail.text).toContain(
-      `nové položky ke kontrole: 1.\n\nNové žádosti o\u00a0přístup: 1.\n\n${ORIGIN}/kontrola`,
+      `nové položky ke kontrole: 1.\n\nNové žádosti o\u00a0přístup: 1.\n\n${ORIGIN}/#/kontrola`,
     );
 
     await handIn(writer, hoursBefore(AFTERNOON, 2));

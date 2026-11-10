@@ -250,7 +250,7 @@ test.describe('the author’s and the reviewer’s screens', () => {
     await seedPoint(author.email, 'Bod k úpravě', 'returned');
     await seedPoint(author.email, 'Bod v práci', 'draft');
     await signInAs(new RegExp(`^Test – ${author.subject}`));
-    await page.goto('/');
+    await page.goto('/klasicke');
     await hydrated();
     const card = page.getByRole('main').getByRole('heading', { name: points.mine.title });
     await expect(card).toBeVisible();
@@ -386,7 +386,7 @@ test.describe('the meeting strip', () => {
     expectAccessible,
   }, testInfo) => {
     await signInAs(/^Test – zastupce/);
-    await page.goto('/');
+    await page.goto('/klasicke');
     await hydrated();
     const heading = page.locator('h3[id^="porada-"]').nth(SLOT[testInfo.project.name as 'desktop']);
     const monday = (await heading.getAttribute('id'))!
@@ -423,7 +423,7 @@ test.describe('the meeting strip', () => {
 
     // A page left open past a deadline: the server refuses the Monday and the form says to reload.
     await page.route(
-      (url) => url.pathname === '/',
+      (url) => url.pathname === '/klasicke',
       async (route) => {
         const request = route.request();
         const body = request.postData();

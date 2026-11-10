@@ -24,10 +24,11 @@ function walk(dir: string): string[] {
 }
 
 describe('manualColours', () => {
-  it('reads the seven tokens of the real theme', () => {
-    expect([...MANUAL].sort()).toEqual(
-      ['#22232a', '#000e19', '#00233f', '#0062b3', '#cce8ff', '#f7fbff', '#f5b800'].sort(),
-    );
+  // Branch arch-ui: the Arch palette replaced the manual's seven web colours.
+  it('reads the tokens of the real theme', () => {
+    expect(MANUAL.has('#161837')).toBe(true);
+    expect(MANUAL.has('#f5b400')).toBe(true);
+    expect(MANUAL.has('#22232a')).toBe(false);
   });
 });
 
@@ -44,7 +45,7 @@ describe('rules a and b: hex colours', () => {
   });
 
   it.each([
-    [THEME_FILE, 'a { color: #22232A; }'],
+    [THEME_FILE, 'a { color: #161837; }'],
     [TSX, 'const issue = "#42 of 10";'],
   ])('%s: %s passes', (file, text) => {
     expect(problems(file, text)).toEqual([]);

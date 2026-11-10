@@ -130,6 +130,8 @@ export default defineConfig([
     'next-env.d.ts',
     // Other sessions' git worktrees (Claude Code), each a full checkout.
     '.claude/**',
+    // Branch arch-ui: the Arch client's build output and its vendored copies of the prototype's modules.
+    'public/arch/**',
   ]),
   {
     files: ['**/*.{ts,tsx,mts}'],

@@ -26,7 +26,8 @@ export async function logout(
       return signOutFailed(deps, cause);
     }
   }
-  const page = new URL('/prihlaseni', deps.appOrigin);
+  // Branch arch-ui: back to the Arch UI, whose signed-out screen is its sign-in, as in the prototype.
+  const page = new URL('/', deps.appOrigin);
   page.searchParams.set('odhlaseno', everywhere ? 'vsude' : '1');
   return seeOther(page.href, [clearCookie(SESSION_COOKIE)]);
 }

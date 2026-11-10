@@ -33,7 +33,7 @@ const HIT_PREFIX = 'hit:';
 const RECENT_PREFIX = 'recent:';
 
 const POPOVER =
-  'popover-fit flex max-h-80 flex-col rounded-brand border-2 border-ink bg-light text-ink';
+  'popover-fit z-50 flex max-h-80 flex-col rounded-brand border-2 border-ink bg-light text-ink';
 const OPTION =
   'flex min-h-11 cursor-pointer items-center px-3 py-2 hover:bg-sublight data-focused:bg-digital data-focused:text-light';
 const HEADER = 'px-3 pt-2 pb-1 font-bold';

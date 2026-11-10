@@ -37,10 +37,11 @@ const TEXT = cs.gallery.title;
 const html = renderToStaticMarkup;
 
 describe('SlantLabel', () => {
-  it.each([1, 2, 3] as const)('is a level %i heading with the text standing upright', (level) => {
+  it.each([1, 2, 3] as const)('is a level %i heading, upright (no slanted edges)', (level) => {
     const out = html(<SlantLabel level={level}>{TEXT}</SlantLabel>);
     expect(out).toMatch(new RegExp(`^<h${level} [^>]*>.*</h${level}>$`));
-    expect(out).toContain(`<span class="inline-block skew-x-12">${TEXT}</span>`);
+    expect(out).toContain(`>${TEXT}</h${level}>`);
+    expect(out).not.toMatch(/skew|rotate/);
     expect(cspMarkupProblems(out)).toEqual([]);
   });
 
@@ -166,8 +167,8 @@ describe('Notice', () => {
 
 describe('buttonStyles', () => {
   it.each([
-    ['primary', 'bg-digital text-light'],
-    ['secondary', 'bg-light text-digital'],
+    ['primary', 'bg-accent text-ink'],
+    ['secondary', 'bg-light text-ink'],
     ['onDark', 'bg-transparent text-light'],
   ] as const)('%s', (variant, look) => {
     const styles = buttonStyles(variant);
@@ -302,8 +303,10 @@ describe('layout primitives', () => {
     expect(cspMarkupProblems(out)).toEqual([]);
   });
 
-  it('SlantLabel level 1 is smaller on phones', () => {
-    expect(html(<SlantLabel level={1}>{TEXT}</SlantLabel>)).toContain('text-2xl sm:text-3xl');
+  it('SlantLabel level 1 is smaller on phones (Arch type scale)', () => {
+    expect(html(<SlantLabel level={1}>{TEXT}</SlantLabel>)).toContain(
+      'text-4xl leading-tight sm:text-5xl',
+    );
   });
 });
 

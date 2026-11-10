@@ -418,5 +418,17 @@
     "givenName": "Kamil",
     "familyName": "Kartový",
     "displayName": "Kamil Kartový"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-00000000003f",
+    "givenName": "Arnošt",
+    "familyName": "Archový",
+    "displayName": "Arnošt Archový"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000040",
+    "givenName": "Arnoštka",
+    "familyName": "Archová",
+    "displayName": "Arnoštka Archová"
   }
 ]

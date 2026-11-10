@@ -25,7 +25,7 @@ export function contentSecurityPolicy(nonce: string, options: { readonly dev: bo
     // A nonce next to 'unsafe-inline' would make browsers ignore it.
     `style-src 'self' ${options.dev ? "'unsafe-inline'" : `'nonce-${nonce}'`}`,
     "style-src-attr 'none'",
-    "img-src 'self'",
+    "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

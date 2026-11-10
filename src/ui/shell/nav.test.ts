@@ -28,14 +28,14 @@ describe('navFor', () => {
   });
 
   it('shows the access request page to a pending user only', () => {
-    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/', '/pristup']);
+    expect(navFor(actor('pending')).map((i) => i.href)).toEqual(['/klasicke', '/pristup']);
     expect(navFor(actor('submitter')).map((i) => i.href)).not.toContain('/pristup');
     expect(navFor(actor('headmaster')).map((i) => i.href)).not.toContain('/pristup');
   });
 
   it('gives a headmaster the staff entries, in order', () => {
     expect(navFor(actor('headmaster')).map((i) => i.label)).toEqual([
-      'Přehled',
+      'Domů',
       'Schválení bodů',
       'Schválení budoucích akcí',
       'Přidání akcí',
@@ -48,7 +48,7 @@ describe('navFor', () => {
 
   it('gives a reviewer the staff entries the policy allows, without „Nastavení“', () => {
     expect(navFor(actor('reviewer')).map((i) => i.href)).toEqual([
-      '/',
+      '/klasicke',
       '/kontrola',
       '/kontrola/akce',
       '/pridani',
@@ -63,7 +63,7 @@ describe('navFor', () => {
     ['student submitter', actor('submitter', { isStudent: true })],
   ])('gives a %s the current and future events', (_name, who) => {
     expect(navFor(who).map((i) => i.label)).toEqual([
-      'Přehled',
+      'Domů',
       'Současné události',
       'Budoucí události',
     ]);
@@ -153,7 +153,7 @@ describe('navFor', () => {
   });
 
   it('lists „Současné události“ right after the Přehled', () => {
-    expect(NAV.slice(0, 2).map((i) => i.href)).toEqual(['/', '/body']);
+    expect(NAV.slice(0, 2).map((i) => i.href)).toEqual(['/klasicke', '/body']);
   });
 
   it('uses the real routes by default', () => {

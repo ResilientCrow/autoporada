@@ -1,6 +1,6 @@
 export const nav = {
   label: 'Hlavní navigace',
-  overview: 'Přehled',
+  overview: 'Domů',
   points: 'Současné události',
   future: 'Budoucí události',
   review: 'Schválení bodů',

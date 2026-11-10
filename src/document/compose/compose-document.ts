@@ -2,7 +2,7 @@ import { formatLongDate, formatTitleDate } from '@/domain/cs';
 import type { IssueSnapshot } from '@/snapshot';
 
 import type { Block, DocumentModel } from '../model';
-import { annex1Intro, annex1Table, annex2 } from './annexes';
+import { annex1Intro, annex1Table, annex2, extraAnnexes } from './annexes';
 import { composeContext } from './context';
 import { assertModelInvariants } from './invariants';
 import { composeHospodareni, composePokyny } from './pokyny';
@@ -50,12 +50,18 @@ export function composeDocument(snapshot: IssueSnapshot): DocumentModel {
     ...spacer(),
     ...annex1Intro(ctx),
   ];
+  const second = annex2(ctx);
   const model: DocumentModel = {
     meta: {
       title: `Porada vedení školy ${formatLongDate(ctx.meeting)}`,
       author: 'Autonomní systém Autoporada',
     },
-    sections: [{ layout: 'single', blocks: numberPoints(main) }, annex1Table(ctx), ...annex2(ctx)],
+    sections: [
+      { layout: 'single', blocks: numberPoints(main) },
+      annex1Table(ctx),
+      ...second,
+      ...extraAnnexes(ctx, 2 + second.length),
+    ],
   };
   assertModelInvariants(model);
   return model;

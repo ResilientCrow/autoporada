@@ -10,7 +10,13 @@ import { wrappedInfo } from '@/server/bind';
 import { exportsOf, ROUTE_FILES } from './entries';
 
 /** The sign-in routes; M11 adds /healthz. */
-const PUBLIC_ROUTES: readonly string[] = ['auth.callback', 'auth.login', 'auth.logout'];
+/** Branch arch-ui adds the Arch UI page, a static shell that reads nothing without a session. */
+const PUBLIC_ROUTES: readonly string[] = [
+  'arch.page',
+  'auth.callback',
+  'auth.login',
+  'auth.logout',
+];
 
 /** Sign-in steps run before anyone is signed in; M7 adds jobs. */
 const SYSTEM_USE_CASES: readonly string[] = [

@@ -12,9 +12,9 @@ const BASE =
  */
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'border-digital bg-digital text-light hover:border-navy-mid hover:bg-navy-mid data-pressed:border-navy-dark data-pressed:bg-navy-dark disabled:border-sublight disabled:bg-sublight disabled:text-navy-mid',
+    'border-accent bg-accent text-ink hover:border-accent-hover hover:bg-accent-hover data-pressed:border-accent-press data-pressed:bg-accent-press disabled:border-sublight disabled:bg-sublight disabled:text-mut',
   secondary:
-    'border-digital bg-light text-digital hover:bg-sublight data-pressed:bg-sublight disabled:border-sublight disabled:text-navy-mid',
+    'border-ink bg-light text-ink hover:bg-wash data-pressed:bg-sublight disabled:border-sublight disabled:text-mut',
   onDark: 'border-light bg-transparent text-light hover:bg-navy-mid data-pressed:bg-navy-mid',
 };
 

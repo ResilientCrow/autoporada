@@ -101,7 +101,7 @@ export function AutosaveDemo() {
       <p>{autosave.armed(autosave.arm[armed])}</p>
       <p>{autosave.refreshed(refreshed)}</p>
       <p>
-        <TextLink href="/">{autosave.leave}</TextLink>
+        <TextLink href="/klasicke">{autosave.leave}</TextLink>
       </p>
     </div>
   );

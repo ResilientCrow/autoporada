@@ -28,7 +28,7 @@ test.describe('the report card', () => {
       startInDays: -3,
     });
     await signInAs(signInAsRe('karta', testInfo.project.name));
-    await page.goto('/');
+    await page.goto('/klasicke');
     await hydrated();
     await expect(page.getByRole('heading', { name: future.report.title })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Exkurze do Terezína' })).toHaveAttribute(
@@ -50,7 +50,7 @@ test.describe('the report card', () => {
     expect(reportId).not.toBeNull();
 
     // The draft keeps the akce on the card, which goes on with it and names the porada (ADR 0052).
-    await page.goto('/');
+    await page.goto('/klasicke');
     await hydrated();
     // Which one depends on the weekday the run falls on: three days back may be past its close.
     await expect(page.getByText(/^(Půjde na poradu |Termín uplynul )/)).toBeVisible();

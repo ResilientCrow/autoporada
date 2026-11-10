@@ -2,17 +2,24 @@ import { cs } from '@/ui/copy';
 
 import { expect, test } from './fixtures';
 
-test('the home page sends an anonymous visitor to the sign-in page, in Czech', async ({
+// Branch arch-ui: `/` is the Arch UI, which signs in on its own page; the classic home is `/klasicke`.
+test('the Arch home shows an anonymous visitor its sign-in, in Czech', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
+  await expect(page.getByRole('link', { name: cs.signIn.button })).toBeVisible();
+});
+
+test('the classic home sends an anonymous visitor to the sign-in page, in Czech', async ({
   page,
   expectAccessible,
 }) => {
-  await page.goto('/');
-  await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2F$/);
+  await page.goto('/klasicke');
+  await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2Fklasicke$/);
   await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.signIn.title);
   await expect(page.getByRole('link', { name: cs.signIn.button })).toHaveAttribute(
     'href',
-    '/auth/login?returnTo=%2F',
+    '/auth/login?returnTo=%2Fklasicke',
   );
   await expectAccessible();
 });

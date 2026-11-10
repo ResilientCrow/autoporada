@@ -735,6 +735,34 @@
         },
         {
           "requestParam": "subject",
+          "match": "archa-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-00000000003f",
+            "name": "Arnošt Archový",
+            "preferred_username": "archa-d@ssps.cz",
+            "upn": "archa-d@ssps.cz",
+            "email": "archa-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "archa-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000040",
+            "name": "Arnoštka Archová",
+            "preferred_username": "archa-m@ssps.cz",
+            "upn": "archa-m@ssps.cz",
+            "email": "archa-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],

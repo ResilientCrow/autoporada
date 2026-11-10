@@ -12,7 +12,8 @@ const html = renderToStaticMarkup(<Shell>{cs.gallery.intro}</Shell>);
 
 describe('Shell', () => {
   it('starts with the skip link to the content', () => {
-    expect(html).toMatch(/^<div [^>]*><a href="#obsah"[^>]*>/);
+    // Branch arch-ui: React hoists the logo's preload link ahead of the frame.
+    expect(html).toMatch(/^(?:<link [^>]*\/>)?<div [^>]*><a href="#obsah"[^>]*>/);
     expect(html).toContain(`${cs.shell.skipLink}</a>`);
     expect(html.indexOf('<a ')).toBeLessThan(html.indexOf('<header'));
   });
@@ -26,7 +27,10 @@ describe('Shell', () => {
   });
 
   it('links the brand to the home page', () => {
-    expect(html).toMatch(new RegExp(`<a [^>]*href="/"[^>]*>${cs.shell.brand}</a>`));
+    // Branch arch-ui: the brand is the school logo, named for screen readers.
+    expect(html).toMatch(
+      new RegExp(`<a [^>]*href="/klasicke"[^>]*><img [^>]*alt="${cs.shell.school}, domů"`),
+    );
   });
 
   it('renders markup the CSP accepts', () => {
@@ -41,15 +45,15 @@ const VIEWER = {
 
 describe('Shell with a viewer', () => {
   const signedIn = renderToStaticMarkup(
-    <Shell viewer={VIEWER} current="/">
+    <Shell viewer={VIEWER} current="/klasicke">
       {cs.gallery.intro}
     </Shell>,
   );
 
   it('has a labelled navigation, marking the current page', () => {
     expect(signedIn.match(new RegExp(`<nav aria-label="${cs.nav.label}"`, 'g'))).toHaveLength(2);
-    // The same href is current in the desktop row and in the phone menu.
-    expect(signedIn.match(/aria-current="page"/g)).toHaveLength(2);
+    // The same href is current in the desktop row, the phone menu and the phone's bottom bar.
+    expect(signedIn.match(/aria-current="page"/g)).toHaveLength(3);
     expect(
       signedIn.match(new RegExp(`aria-current="page"[^>]*>${cs.nav.overview}</a>`, 'g')),
     ).toHaveLength(2);
@@ -99,13 +103,13 @@ describe('Shell frame', () => {
   it('limits only the content column to text width, and spaces its blocks 32 px apart', () => {
     expect(columnOf(html)).toBe('flex flex-col gap-8 max-w-3xl');
     expect(columnOf(wide)).toBe('flex flex-col gap-8');
-    expect(mainOf(html)).toContain('py-6 sm:py-8');
+    expect(mainOf(html)).toContain('py-8 sm:py-10');
   });
 });
 
 describe('Shell menu', () => {
   const signedIn = renderToStaticMarkup(
-    <Shell viewer={VIEWER} current="/">
+    <Shell viewer={VIEWER} current="/klasicke">
       {cs.gallery.intro}
     </Shell>,
   );
@@ -118,7 +122,7 @@ describe('Shell menu', () => {
   });
 
   it('shows the desktop row and the name with sign-out only from lg', () => {
-    expect(signedIn).toContain('class="hidden border-t border-navy-mid lg:block"');
+    expect(signedIn).toContain('class="hidden lg:block"');
     expect(signedIn).toContain('class="hidden items-center gap-4 lg:flex"');
     expect(signedIn.match(new RegExp(`${cs.shell.signOut}</button>`, 'g'))).toHaveLength(2);
   });

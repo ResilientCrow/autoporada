@@ -69,7 +69,9 @@ test.describe('J5: the registry', () => {
     await test.step('an empty list takes a student by hand, marks it new and lets it go', async () => {
       await page
         .getByRole('heading', { name: title })
-        .locator('xpath=ancestor::*[.//a[normalize-space()="' + registry.lists.open + '"]][1]')
+        .locator(
+          'xpath=ancestor::*[.//a[contains(normalize-space(), "' + registry.lists.open + '")]][1]',
+        )
         .getByRole('link', { name: registry.lists.open })
         .click();
       await hydrated();

@@ -221,7 +221,7 @@ test.describe('administration by the deputy headmaster', () => {
     await expectOneOfEach(page);
 
     const other = await signInElsewhere(newContext, /^Test – ucet/);
-    await expect(other).toHaveURL(/\/prihlaseni\?chyba=blocked$/);
+    await expect(other).toHaveURL(/\/\?chyba=blocked$/);
     await expect(main(other).getByRole('alert')).toHaveText(cs.signIn.errors.blocked);
 
     await accountForm(page)

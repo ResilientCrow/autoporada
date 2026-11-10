@@ -12,12 +12,13 @@ import { renderBlock } from './blocks';
 import { pageFooter } from './footer';
 import { NUMBERING } from './numbering';
 import { ANNEX_COLUMNS, COMPATIBILITY_MODE, DEFAULT_TAB_STOP, PAGE, STYLES } from './styles';
-import { studentTable } from './table';
+import { dataTable, studentTable } from './table';
 
 function sectionOptions(section: Section, isFirst: boolean, isLast: boolean): ISectionOptions {
   const children: FileChild[] = [];
   for (const block of section.blocks) {
     if (block.kind === 'studentTable') children.push(studentTable(block.rows));
+    else if (block.kind === 'dataTable') children.push(dataTable(block.rows));
     else children.push(...renderBlock(block));
   }
   // The section break needs a paragraph of its own, as in the template:

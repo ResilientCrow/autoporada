@@ -6,3 +6,4 @@ export {
   type DatabaseHandle,
   type DatabasePool,
 } from './client';
+export { createArchStore, type ArchStore } from './arch';

@@ -45,7 +45,7 @@ function Panel({
   return (
     <div
       className={cx(
-        'flex flex-col rounded-brand bg-sublight p-4 sm:p-6',
+        'flex flex-col rounded-brand border border-sublight bg-light p-4 sm:p-6',
         row ? 'gap-4 sm:flex-row sm:items-center sm:justify-between' : 'gap-3',
       )}
     >

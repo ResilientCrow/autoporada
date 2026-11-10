@@ -12,7 +12,7 @@ import { APP_ORIGIN, expectSignInFailed, setupSignInHarness } from '../support/o
 import type { TestIdp } from '../support/oidc/test-idp';
 
 const harness = setupSignInHarness();
-const failed = (error: string) => `${APP_ORIGIN}/prihlaseni?chyba=${error}`;
+const failed = (error: string) => `${APP_ORIGIN}/?chyba=${error}`;
 
 type Browser = ReturnType<typeof harness.h.browser>;
 

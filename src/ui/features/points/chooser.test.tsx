@@ -25,10 +25,8 @@ const never = () => Promise.reject(new Error('not called while rendering'));
 describe('TypeChooser', () => {
   const html = renderToStaticMarkup(<TypeChooser types={TYPES} createPoint={never} />);
 
-  it('has the page heading „Nový bod“ as a slanted label', () => {
-    expect(html).toMatch(
-      new RegExp(`<h1 [^>]*-skew-x-12[^>]*><span [^>]*>${points.title.new}</span></h1>`),
-    );
+  it('has the page heading „Nový bod“ as an upright heading', () => {
+    expect(html).toMatch(new RegExp(`<h1 [^>]*>${points.title.new}</h1>`));
   });
 
   it('is a group named „Typ bodu“', () => {

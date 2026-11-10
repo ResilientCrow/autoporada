@@ -58,3 +58,4 @@ record that supersedes it.
 | [0050](0050-development-clamps-a-negative-measure-end.md) | Development clamps a negative measure end | Accepted; adds to 0023 |
 | [0051](0051-the-next-porada-on-any-date.md) | The next porada on any date, and no move page | Accepted; supersedes 0047 items 1 and 2 and 0034 item 3 and part of item 2 |
 | [0052](0052-owed-reports-first-proposals-for-vedeni.md) | Owed reports come first, and only vedení proposes | Accepted; builds on 0049; bounds the report card left open by 0048 |
+| [0053](0053-the-arch-ui-at-the-root.md) | The Arch UI at the root, on the same backend | Accepted; builds on 0004, 0012, 0017 and 0043 |

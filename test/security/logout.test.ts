@@ -33,7 +33,7 @@ describe('POST /auth/logout', () => {
       method: 'POST',
       body: 'scope=this',
     });
-    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/prihlaseni?odhlaseno=1`);
+    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/?odhlaseno=1`);
     expect(response.headers.getSetCookie()).toEqual([CLEARED]);
     expect([await live(laptop), await live(phone)]).toEqual([false, true]);
   });
@@ -44,7 +44,7 @@ describe('POST /auth/logout', () => {
       method: 'POST',
       body: 'scope=all',
     });
-    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/prihlaseni?odhlaseno=vsude`);
+    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/?odhlaseno=vsude`);
     expect(await live(phone)).toBe(false);
   });
 
@@ -64,7 +64,7 @@ describe('POST /auth/logout', () => {
       });
       expect(response.status).toBe(303);
       expect(response.headers.get('location')).toBe(
-        `${APP_ORIGIN}/prihlaseni?chyba=signout-failed&pricina=${cause}`,
+        `${APP_ORIGIN}/?chyba=signout-failed&pricina=${cause}`,
       );
       expect(response.headers.getSetCookie()).toEqual([CLEARED]);
       expect(await live(laptop)).toBe(true);

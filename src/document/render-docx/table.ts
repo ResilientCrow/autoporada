@@ -52,6 +52,28 @@ function row(name: string, classCode: string, bold: boolean, header: boolean): T
   });
 }
 
+/** A table of an extra annex: full width, first row repeated on each page. */
+export function dataTable(rows: readonly (readonly string[])[]): Table {
+  const cols = Math.max(1, ...rows.map((r) => r.length));
+  const width = Math.floor(9000 / cols);
+  return new Table({
+    width: { size: width * cols, type: WidthType.DXA },
+    columnWidths: Array.from({ length: cols }, () => width),
+    layout: TableLayoutType.FIXED,
+    margins: { top: 0, bottom: 0, left: 108, right: 108 },
+    rows: rows.map(
+      (r, i) =>
+        new TableRow({
+          tableHeader: i === 0,
+          cantSplit: true,
+          children: Array.from({ length: cols }, (_, j) =>
+            cell(r[j] ?? '', width, i === 0, AlignmentType.LEFT),
+          ),
+        }),
+    ),
+  });
+}
+
 /** Příloha 1: „Jméno a příjmení | Třída“, new students bold in both cells, no padding rows. */
 export function studentTable(rows: readonly StudentRow[]): Table {
   return new Table({

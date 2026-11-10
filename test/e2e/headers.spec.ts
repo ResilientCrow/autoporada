@@ -17,7 +17,7 @@ const NONCED_PAGES = [
   ['the privacy notice', '/ochrana-osobnich-udaju', null],
   ['the gallery', '/vzornik', null],
   ['the 404 page', '/tato-stranka-neexistuje', null],
-  ['the signed-in home page', '/', /^Učitelka/],
+  ['the signed-in home page', '/klasicke', /^Učitelka/],
 ] as const;
 
 for (const [name, url, persona] of NONCED_PAGES) {

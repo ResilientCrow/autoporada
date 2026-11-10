@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { ScopeViolation, type SettingsRepo, type TxContext } from '@/application/ports';
 import { can } from '@/domain/policy';
 
-import { settings } from '../schema';
+import { archAnnexes, settings } from '../schema';
 import type { TxDatabase } from './database';
 
 /**
@@ -23,6 +23,15 @@ export function createSettingsRepo(db: TxDatabase, ctx: TxContext): SettingsRepo
       return row ?? null;
     },
     async value(key) {
+      // Branch arch-ui: the porada's annexes live in their own table (too big for settings).
+      const annex = /^arch\.annexes\.(\d{4})(\d{2})(\d{2})$/.exec(key);
+      if (annex) {
+        const [a] = await db
+          .select({ annexes: archAnnexes.annexes })
+          .from(archAnnexes)
+          .where(eq(archAnnexes.monday, `${annex[1]}-${annex[2]}-${annex[3]}`));
+        return a ? a.annexes : null;
+      }
       const [row] = await db
         .select({ value: settings.value })
         .from(settings)

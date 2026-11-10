@@ -89,7 +89,7 @@ test.describe('the akce journey', () => {
     const mail = await runJobForMail('future.report-prompt', 'daily', emailOf('zapis', project));
     expect(mail.subject).toBe(renderMail('report.prompt', {}, ORIGIN).subject);
     expect(mail.text).not.toContain(TITLE);
-    expect(mail.text).toMatch(new RegExp(`^${ORIGIN}/body\\s*$`, 'm'));
+    expect(mail.text).toMatch(new RegExp(`^${ORIGIN}/#/moje\\s*$`, 'm'));
 
     // The author follows it: the card on „Moje body“ waits with the akce, and „Napsat zprávu“ opens the draft made from it.
     await page.goto('/body');

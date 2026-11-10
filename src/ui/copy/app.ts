@@ -17,7 +17,7 @@ export const appError = {
 } as const;
 
 export const home = {
-  title: 'Přehled',
+  title: 'Dobrý den.',
   pending: 'Zatím nemáte přístup k\u00A0podkladům porady.',
   access: 'Přístup',
   request: 'Požádat o\u00A0přístup',

@@ -146,6 +146,24 @@ const registryList = z.strictObject({
   ),
 });
 
+/** One further annex of a porada, as text, tables and pictures. */
+export const issueAnnexSchema = z.strictObject({
+  title: text,
+  parts: z.array(
+    z.union([
+      z.strictObject({ kind: z.literal('text'), doc: richDoc('outline') }),
+      z.strictObject({ kind: z.literal('table'), rows: z.array(z.array(z.string())) }),
+      z.strictObject({
+        kind: z.literal('image'),
+        src: z.string(),
+        w: z.number(),
+        h: z.number(),
+        alt: z.string(),
+      }),
+    ]),
+  ),
+});
+
 export const issueSnapshotSchema = z
   .strictObject({
     schema: z.literal(1),
@@ -166,6 +184,7 @@ export const issueSnapshotSchema = z
     registry: z.array(registryList),
     annex1: z.strictObject({ heading: title, intro: richDoc('paragraphs') }),
     annex2: richDoc('outline').nullable(),
+    annexes: z.array(issueAnnexSchema).default([]),
     options: z.strictObject({ groupOrder: z.array(salutation).optional() }).default({}),
   })
   .superRefine((s, ctx) => {

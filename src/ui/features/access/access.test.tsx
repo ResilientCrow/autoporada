@@ -47,7 +47,7 @@ describe('AccessRequest', () => {
     const html = render({ kind: 'member' });
     expect(h2(html)?.[1]).toBe(access.member.title);
     expect(html).toContain(access.member.overview);
-    expect(html).toContain('href="/"');
+    expect(html).toContain('href="/klasicke"');
     expect(html).not.toContain('<noscript>');
     expect(html).not.toContain('<form');
   });

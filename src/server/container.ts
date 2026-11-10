@@ -4,7 +4,13 @@ import type { AnyUseCase } from '@/application/core';
 import type { AppDeps, DirectoryPort, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { getConfig, requireServerActionsKey, type Config } from '@/infra/config';
-import { databaseOn, openPool, type DatabasePool } from '@/infra/db';
+import {
+  createArchStore,
+  databaseOn,
+  openPool,
+  type ArchStore,
+  type DatabasePool,
+} from '@/infra/db';
 import { createDirectory } from '@/infra/directory';
 import { createProducer } from '@/infra/jobs';
 import { createLogger, requestIdFrom, type Logger } from '@/infra/log';
@@ -31,6 +37,8 @@ export interface WebContainer {
   readonly app: AppDeps;
   /** The only use cases actions and routes may run. */
   readonly useCases: ReadonlySet<AnyUseCase>;
+  /** The Arch UI's reads and its two non-use-case writes (branch arch-ui only). */
+  readonly arch: ArchStore;
   /** The signed-in user behind a session cookie, or null (fails closed). */
   readonly resolvePrincipal: (
     token: string | null,
@@ -103,8 +111,9 @@ function buildWeb(config: Config): WebContainer {
   requireServerActionsKey(config);
   const log = createLogger({ service: 'web', level: config.logLevel });
   const { pool, producer, limiter } = shared(config, log);
+  const handle = databaseOn(pool, { jobsOn: producer.jobsOn });
   const app: AppDeps = {
-    db: databaseOn(pool, { jobsOn: producer.jobsOn }).app,
+    db: handle.app,
     clock: systemClock,
   };
   const { oidc } = config;
@@ -153,6 +162,7 @@ function buildWeb(config: Config): WebContainer {
     config.environment === 'production' ? undefined : { issuer: oidc.issuer, database };
   return {
     app,
+    arch: createArchStore(handle.db),
     useCases: new Set(USE_CASES),
     resolvePrincipal: principalResolver(app),
     limiter,

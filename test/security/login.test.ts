@@ -67,7 +67,7 @@ describe('GET /auth/login', () => {
     idp.down();
     const b = browser();
     const response = await b.send(routes.login, '/auth/login');
-    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/prihlaseni?chyba=unavailable`);
+    expect(response.headers.get('location')).toBe(`${APP_ORIGIN}/?chyba=unavailable`);
     expect(response.headers.getSetCookie()).toEqual([]);
     expect(harness.h.world.fake?.state().signIns.size ?? 0).toBe(0);
     expect(harness.h.lines).toContainEqual(
@@ -80,7 +80,7 @@ describe('GET /auth/login', () => {
 });
 
 describe('when the database fails', () => {
-  const failed = (cause: string) => `${APP_ORIGIN}/prihlaseni?chyba=${cause}`;
+  const failed = (cause: string) => `${APP_ORIGIN}/?chyba=${cause}`;
   const setupMissing = () =>
     Object.assign(new Error('relation "sign_ins" does not exist'), {
       code: '42P01',

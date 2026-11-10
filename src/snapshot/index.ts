@@ -1,4 +1,5 @@
 export {
+  issueAnnexSchema,
   issueSnapshotSchema,
   parseIssueSnapshot,
   SNAPSHOT_SCHEMA_VERSION,

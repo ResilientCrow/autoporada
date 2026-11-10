@@ -9,7 +9,7 @@ import { AccountCard, MeetingStrip, Overview } from '@/ui/features/overview';
 import { MyPointsCard, StandingLine } from '@/ui/features/points';
 import { MissingReportsCard } from '@/ui/features/porada';
 import { QueueCard } from '@/ui/features/review';
-import { Shell } from '@/ui/shell';
+import { Shell, Tiles } from '@/ui/shell';
 
 export const metadata: Metadata = { title: pageTitle(cs.home.title) };
 
@@ -20,12 +20,25 @@ export const metadata: Metadata = { title: pageTitle(cs.home.title) };
  * title, the notice and the access card, then the account card.
  */
 export default async function HomePage() {
-  const viewer = await requireSignedIn('/');
+  const viewer = await requireSignedIn('/klasicke');
   const model = await homePage();
   if (model === null) notFound();
   return (
-    <Shell viewer={viewer} current="/">
+    <Shell viewer={viewer} current="/klasicke">
       <Overview home={model} />
+      {model.kind === 'member' && (
+        <Tiles
+          actor={viewer.actor}
+          waiting={model.reportDue?.items.length ?? 0}
+          queue={model.queue}
+        />
+      )}
+      {model.kind === 'member' &&
+      (model.reportDue?.items.length || model.reportTally || model.queue) ? (
+        <h2 id="ceka" className="scroll-mt-6 pt-2 text-2xl">
+          {cs.shell.waiting}
+        </h2>
+      ) : null}
       {model.kind === 'member' && model.reportDue !== null && (
         <ReportDueCard
           items={model.reportDue.items}

@@ -71,7 +71,7 @@ describe('decision mails', () => {
     expect(mail.calls).toHaveLength(1);
     const sent = mail.calls[0]!.mail;
     expect(sent).toMatchObject({ to: EMAIL, ...renderMail(template, {}, ORIGIN) });
-    expect(sent.text).toContain(`\n${ORIGIN}/body\n`);
+    expect(sent.text).toContain(`\n${ORIGIN}/#/moje\n`);
     // Ids only: the note stays in the app.
     expect(sent.text).not.toContain('Doplňte');
   });

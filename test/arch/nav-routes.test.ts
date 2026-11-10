@@ -8,6 +8,10 @@ import { NAV } from '@/ui/shell/nav';
 describe('navigation', () => {
   it.each(NAV.map((item) => item.href))('%s has a page', (href) => {
     const dir = href === '/' ? '' : href;
-    expect(existsSync(join(process.cwd(), 'src/app', dir, 'page.tsx'))).toBe(true);
+    // Branch arch-ui: `/` is the Arch UI's route handler.
+    const page = ['page.tsx', 'route.ts'].some((f) =>
+      existsSync(join(process.cwd(), 'src/app', dir, f)),
+    );
+    expect(page).toBe(true);
   });
 });
