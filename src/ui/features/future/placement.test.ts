@@ -62,19 +62,25 @@ describe('placementLines', () => {
     ]);
   });
 
-  it('says that a skipped Monday has no porada, whatever the item', () => {
-    const skipped = window({
-      issues: [{ monday: '2026-11-16', meetingDate: '2026-11-16', status: 'skipped' }],
+  it('leaves out a Monday with no porada: no row up to plannedThrough', () => {
+    const planned = window({
+      plannedThrough: '2026-11-16',
+      issues: [{ monday: '2026-11-09', meetingDate: '2026-11-09', status: 'open' }],
     });
-    expect(slots(item({ startDate: '2026-11-17' }), skipped)[1]).toEqual(['2026-11-16', 'skipped']);
+    expect(placementLines(item(), planned).map((line) => line.monday)).toEqual([
+      '2026-11-09',
+      '2026-11-23',
+      '2026-11-30',
+    ]);
   });
 
-  it('starts at stripFrom, so a skipped head Monday still shows as skipped', () => {
-    const head = window({
-      stripFrom: '2026-11-09',
-      issues: [{ monday: '2026-11-09', meetingDate: '2026-11-09', status: 'skipped' }],
-    });
-    expect(slots(item(), head)[0]).toEqual(['2026-11-09', 'skipped']);
+  it('keeps a Monday with a row and one after the boundary', () => {
+    const planned = window({ plannedThrough: '2026-11-09', issues: [] });
+    expect(placementLines(item(), planned).map((line) => line.monday)).toEqual([
+      '2026-11-16',
+      '2026-11-23',
+      '2026-11-30',
+    ]);
   });
 
   it('leaves out a Monday whose issue is already made', () => {

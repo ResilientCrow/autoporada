@@ -120,9 +120,9 @@ describe('lateFacts', () => {
 });
 
 describe('handInMonday', () => {
-  const rows = issueSlots([], d('2026-10-28'), RULE);
+  const rows = issueSlots([], d('2026-10-28'), RULE, null);
   const at = (iso: string, report?: ReturnType<typeof ends>) =>
-    toIsoDate(handInMonday(new Date(iso), rows, RULE, report));
+    toIsoDate(handInMonday(new Date(iso), rows, RULE, report, null));
   const sunday = ends('2026-11-01', '21:00'); // due Sunday 23.00 (22:00Z)
 
   it('is the first open slot whose deadline is ahead for a report without late facts', () => {
@@ -143,13 +143,13 @@ describe('handInMonday', () => {
     expect(at('2026-11-01T10:00:00Z', ends('2026-11-02', '10:00'))).toBe('2026-11-09');
   });
 
-  it('steps over a skipped or generated slot whatever its close', () => {
-    const skipped = rows.map((row) =>
+  it('steps over a generated slot whatever its close', () => {
+    const withGenerated = rows.map((row) =>
       row.monday.day === 2 && row.monday.month === 11
-        ? { ...row, status: 'skipped' as const }
+        ? { ...row, status: 'generated' as const }
         : row,
     );
-    const found = handInMonday(new Date('2026-11-01T20:00:00Z'), skipped, RULE, sunday);
+    const found = handInMonday(new Date('2026-11-01T20:00:00Z'), withGenerated, RULE, sunday, null);
     expect(toIsoDate(found)).toBe('2026-11-09');
   });
 });

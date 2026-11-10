@@ -26,17 +26,19 @@ import type { PointContentWire } from './fields';
 
 /** What the line is worked out from: `issues.window` as the wire carries it, now, and the deadline rule. */
 export interface StandingInput {
-  /** The first open Monday whose deadline is still ahead (skipped and generated ones are stepped over). */
+  /** The first open Monday whose deadline is still ahead (generated ones are stepped over). */
   readonly submitMonday: string;
   readonly issues: readonly {
     readonly monday: string;
     readonly meetingDate: string;
     readonly deadlineAt: string;
-    readonly status: 'open' | 'generated' | 'skipped';
+    readonly status: 'open' | 'generated';
   }[];
   /** The instant the page was made at, ISO. */
   readonly now: string;
   readonly rule: DeadlineRule;
+  /** The calendar's effective boundary (ADR 0054), ISO; null reads as none. */
+  readonly plannedThrough: string | null;
 }
 
 /** Where the point stands: the porada it goes to (`placement`), and either its deadline or the one just passed. */
@@ -70,15 +72,13 @@ export type Standing =
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * The latest porada that is not skipped, whose deadline has passed and whose meeting is today or
+ * The latest porada whose deadline has passed and whose meeting is today or
  * later; its meeting date.
  */
 function closedPorada(slots: readonly IssueSlot[], today: CalDate, now: Date): CalDate | null {
   const closed = slots.filter(
     (slot) =>
-      slot.status !== 'skipped' &&
-      slot.deadlineAt.getTime() <= now.getTime() &&
-      compareDates(slot.meetingDate, today) >= 0,
+      slot.deadlineAt.getTime() <= now.getTime() && compareDates(slot.meetingDate, today) >= 0,
   );
   return closed.at(-1)?.meetingDate ?? null;
 }
@@ -94,8 +94,9 @@ function lateStanding(
   now: Date,
   rule: DeadlineRule,
   report: LateFacts,
+  plannedThrough: CalDate | null,
 ): Standing | null {
-  const monday = handInMonday(now, slots, rule, report);
+  const monday = handInMonday(now, slots, rule, report, plannedThrough);
   const slot = slots.find((candidate) => compareDates(candidate.monday, monday) === 0);
   if (slot === undefined || !isLateReport(slot, report)) return null;
   const closesAt = reportCloses(slot, report);
@@ -123,24 +124,24 @@ export function reportFactsOf(
 
 /**
  * The standing of a point that is not in yet (design sections 3 and 6). `placement` is the first
- * Monday from the submit Monday on that is neither skipped nor generated. When the latest porada
- * that is not skipped has closed and is still ahead (today is its Monday or earlier, i.e. from the
- * deadline on Saturday evening to the meeting day itself), the line says the deadline has passed, whether or
- * not a skipped Monday lies between it and the submit Monday; from the day after the porada it
+ * Monday from the submit Monday on that is not generated. When the latest porada
+ * has closed and is still ahead (today is its Monday or earlier, i.e. from the
+ * deadline on Saturday evening to the meeting day itself), the line says the deadline has passed. From the day after the porada it
  * names the next deadline. A report on an event that ends after the deadline (`report`, ADR 0035)
  * has its own close while that is ahead. Null when no Monday of the window is open.
  */
 export function standingOf(
-  { submitMonday, issues, now, rule }: StandingInput,
+  { submitMonday, issues, now, rule, plannedThrough }: StandingInput,
   report?: LateFacts,
 ): Standing | null {
   const instant = new Date(now);
   const today = instantToWallClock(instant).date;
-  const slots = issueSlots(toIssueRows(issues), today, rule);
+  const boundary = plannedThrough === null ? null : parseIsoDate(plannedThrough);
+  const slots = issueSlots(toIssueRows(issues), today, rule, boundary);
   const slot = placementSlot(parseIsoDate(submitMonday), today, slots);
   if (slot === null) return null;
   const placement = slot.monday;
-  const late = report && lateStanding(slots, instant, rule, report);
+  const late = report && lateStanding(slots, instant, rule, report, boundary);
   if (late) return late;
   const closed = closedPorada(slots, today, instant);
   if (closed !== null) return { kind: 'closed', closed, placement, meeting: slot.meetingDate };

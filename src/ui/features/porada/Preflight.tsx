@@ -14,7 +14,7 @@ export interface FindingView {
     readonly due?: string;
     readonly of?: 'akce' | 'point';
   }[];
-  /** `earlier-open`: the porada to generate or skip first, as ISO dates. */
+  /** `earlier-open`: the porada to generate or drop first, as ISO dates. */
   readonly earlier?: { readonly monday: string; readonly meetingDate: string };
   /** `snapshot-invalid`: the fields that are wrong. */
   readonly paths?: readonly string[];
@@ -50,7 +50,7 @@ function dueText(ref: RefView): string {
   return porada.preflight.due(`${formatDayMonth(date)}\u00a0v\u00a0${time}`);
 }
 
-/** `earlier-open`: the workspace of the porada to generate or skip first, by its meeting date. */
+/** `earlier-open`: the workspace of the porada to generate or drop first, by its meeting date. */
 function EarlierLink({ earlier }: { readonly earlier: NonNullable<FindingView['earlier']> }) {
   return (
     <p>

@@ -125,33 +125,38 @@ describe('reportsSince (the akce whose report goes to a porada)', () => {
   });
 
   it('starts on the meeting day of the porada a week before, which has no row', () => {
-    expect(reportsSince(MONDAY, [])).toEqual(calDate(2026, 10, 19));
+    expect(reportsSince(MONDAY, [], null)).toEqual(calDate(2026, 10, 19));
   });
 
-  it('starts on that porada’s own meeting day when it was moved, and whatever its status but skipped', () => {
-    expect(reportsSince(MONDAY, [row('2026-10-19', 'open', '2026-10-21')])).toEqual(
+  it('starts on that porada’s own meeting day when it was moved, and whatever its status', () => {
+    expect(reportsSince(MONDAY, [row('2026-10-19', 'open', '2026-10-21')], null)).toEqual(
       calDate(2026, 10, 21),
     );
-    expect(reportsSince(MONDAY, [row('2026-10-19', 'generated')])).toEqual(calDate(2026, 10, 19));
+    expect(reportsSince(MONDAY, [row('2026-10-19', 'generated')], null)).toEqual(
+      calDate(2026, 10, 19),
+    );
   });
 
-  it('steps over skipped Mondays to the porada held before them', () => {
-    const rows = [row('2026-10-12', 'skipped'), row('2026-10-19', 'skipped')];
-    expect(reportsSince(MONDAY, rows)).toEqual(calDate(2026, 10, 5));
-    expect(reportsSince(MONDAY, [...rows, row('2026-10-05', 'generated', '2026-10-06')])).toEqual(
+  it('steps over Mondays with no porada, up to the boundary, to the porada held before them', () => {
+    const through = calDate(2026, 10, 19);
+    expect(reportsSince(MONDAY, [], through)).toEqual(calDate(2026, 8, 3));
+    expect(reportsSince(MONDAY, [row('2026-10-05', 'generated', '2026-10-06')], through)).toEqual(
       calDate(2026, 10, 6),
     );
   });
 
-  it('ignores rows outside the look-back, and stops at its first Monday when all of it is skipped', () => {
-    expect(reportsSince(MONDAY, [row('2026-10-26', 'open', '2026-10-27')])).toEqual(
+  it('counts a Monday with no row after the boundary as a porada', () => {
+    expect(reportsSince(MONDAY, [], calDate(2026, 10, 12))).toEqual(calDate(2026, 10, 19));
+    expect(
+      reportsSince(MONDAY, [row('2026-10-19', 'open', '2026-10-21')], calDate(2026, 10, 12)),
+    ).toEqual(calDate(2026, 10, 21));
+  });
+
+  it('ignores rows outside the look-back, and stops at its first Monday when all of it has no porada', () => {
+    expect(reportsSince(MONDAY, [row('2026-10-26', 'open', '2026-10-27')], null)).toEqual(
       calDate(2026, 10, 19),
     );
-    const all = Array.from({ length: REPORT_LOOKBACK_WEEKS }, (_, i) => {
-      const day = new Date(Date.UTC(2026, 9, 19 - 7 * i));
-      return row(day.toISOString().slice(0, 10), 'skipped');
-    });
-    expect(reportsSince(MONDAY, all)).toEqual(calDate(2026, 8, 3));
+    expect(reportsSince(MONDAY, [], calDate(2026, 10, 19))).toEqual(calDate(2026, 8, 3));
   });
 });
 
@@ -169,46 +174,49 @@ describe('owedPorada (the porada an akce’s report goes to, ADR 0049)', () => {
 
   it('is the next Monday for an akce in the middle of a week, with no rows', () => {
     // Wednesday 14 October 2026
-    expect(owedPorada(calDate(2026, 10, 14), [])).toEqual(calDate(2026, 10, 19));
+    expect(owedPorada(calDate(2026, 10, 14), [], null)).toEqual(calDate(2026, 10, 19));
   });
 
   it('is the next Monday for an akce on a Monday, because the meeting must be after the last day', () => {
-    expect(owedPorada(calDate(2026, 10, 12), [])).toEqual(calDate(2026, 10, 19));
+    expect(owedPorada(calDate(2026, 10, 12), [], null)).toEqual(calDate(2026, 10, 19));
   });
 
   it('is the next Monday for an akce on a Sunday', () => {
-    expect(owedPorada(calDate(2026, 10, 18), [])).toEqual(calDate(2026, 10, 19));
+    expect(owedPorada(calDate(2026, 10, 18), [], null)).toEqual(calDate(2026, 10, 19));
   });
 
   it('keeps the porada held earlier in the akce’s own week when the akce ends after its meeting', () => {
     // 12 October's porada was moved to Wednesday 14; an akce ending Tuesday 13 still goes to it
-    expect(owedPorada(calDate(2026, 10, 13), [row('2026-10-12', 'open', '2026-10-14')])).toEqual(
-      calDate(2026, 10, 12),
-    );
-    expect(owedPorada(calDate(2026, 10, 14), [row('2026-10-12', 'open', '2026-10-14')])).toEqual(
-      calDate(2026, 10, 19),
-    );
+    expect(
+      owedPorada(calDate(2026, 10, 13), [row('2026-10-12', 'open', '2026-10-14')], null),
+    ).toEqual(calDate(2026, 10, 12));
+    expect(
+      owedPorada(calDate(2026, 10, 14), [row('2026-10-12', 'open', '2026-10-14')], null),
+    ).toEqual(calDate(2026, 10, 19));
   });
 
-  it('steps over skipped Mondays and whatever status the porada has', () => {
-    const rows = [row('2026-10-19', 'skipped'), row('2026-10-26', 'skipped')];
-    expect(owedPorada(calDate(2026, 10, 14), rows)).toEqual(calDate(2026, 11, 2));
-    expect(owedPorada(calDate(2026, 10, 14), [row('2026-10-19', 'generated')])).toEqual(
+  it('steps over Mondays with no porada and whatever status the porada has', () => {
+    const through = calDate(2026, 10, 26);
+    expect(owedPorada(calDate(2026, 10, 14), [], through)).toEqual(calDate(2026, 11, 2));
+    expect(owedPorada(calDate(2026, 10, 14), [], calDate(2026, 10, 12))).toEqual(
+      calDate(2026, 10, 19),
+    );
+    expect(owedPorada(calDate(2026, 10, 14), [row('2026-10-19', 'generated')], null)).toEqual(
       calDate(2026, 10, 19),
     );
   });
 
   it('names a porada by its Monday even when it was moved', () => {
-    expect(owedPorada(calDate(2026, 10, 21), [row('2026-10-19', 'open', '2026-10-22')])).toEqual(
-      calDate(2026, 10, 19),
-    );
+    expect(
+      owedPorada(calDate(2026, 10, 21), [row('2026-10-19', 'open', '2026-10-22')], null),
+    ).toEqual(calDate(2026, 10, 19));
   });
 
   it('finds a porada moved weeks past its Monday, as reportsSince does', () => {
     // 12 October's porada moved to 2 November: an akce ending 28 October still goes to it
     const moved = [row('2026-10-12', 'open', '2026-11-02')];
-    expect(owedPorada(calDate(2026, 10, 28), moved)).toEqual(calDate(2026, 10, 12));
-    expect(owedPorada(calDate(2026, 11, 2), moved)).toEqual(calDate(2026, 11, 9));
+    expect(owedPorada(calDate(2026, 10, 28), moved, null)).toEqual(calDate(2026, 10, 12));
+    expect(owedPorada(calDate(2026, 11, 2), moved, null)).toEqual(calDate(2026, 11, 9));
   });
 
   it.each([1, 2, 3, 5, REPORT_LOOKBACK_WEEKS - 1])(
@@ -224,17 +232,17 @@ describe('owedPorada (the porada an akce’s report goes to, ADR 0049)', () => {
         const lastDay = day(offset);
         const claiming = mondays.filter((monday) => {
           const porada = rows.find((r) => compareDates(r.monday, monday) === 0);
-          if (porada?.status === 'skipped') return false;
           const since = reportsSince(
             monday,
             rows.filter((r) => compareDates(r.monday, monday) < 0),
+            null,
           );
           return (
             compareDates(lastDay, since) >= 0 &&
             compareDates(lastDay, porada?.meetingDate ?? monday) < 0
           );
         });
-        expect(claiming[0], toIsoDate(lastDay)).toEqual(owedPorada(lastDay, rows));
+        expect(claiming[0], toIsoDate(lastDay)).toEqual(owedPorada(lastDay, rows, null));
       }
     },
   );
@@ -242,21 +250,20 @@ describe('owedPorada (the porada an akce’s report goes to, ADR 0049)', () => {
   it('is the inverse of reportsSince: the akce of [since, meeting) go to that porada', () => {
     const rows = [
       row('2026-10-05', 'generated', '2026-10-06'),
-      row('2026-10-12', 'skipped'),
       row('2026-10-19', 'open', '2026-10-21'),
-      row('2026-10-26', 'skipped'),
       row('2026-11-02', 'open'),
     ];
+    const through = calDate(2026, 10, 26);
     for (let offset = 0; offset < 40; offset++) {
       const day = new Date(Date.UTC(2026, 9, 1 + offset));
       const lastDay = calDate(day.getUTCFullYear(), day.getUTCMonth() + 1, day.getUTCDate());
-      const owed = owedPorada(lastDay, rows);
+      const owed = owedPorada(lastDay, rows, through);
       const porada = rows.find((r) => compareDates(r.monday, owed) === 0);
-      expect(porada?.status).not.toBe('skipped');
       const meeting = porada?.meetingDate ?? owed;
       const since = reportsSince(
         owed,
         rows.filter((r) => compareDates(r.monday, owed) < 0),
+        through,
       );
       expect(compareDates(lastDay, since)).toBeGreaterThanOrEqual(0);
       expect(compareDates(lastDay, meeting)).toBeLessThan(0);

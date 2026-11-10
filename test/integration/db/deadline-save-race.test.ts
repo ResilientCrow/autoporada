@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readSlots } from '@/application/core';
 import { system } from '@/application/ports';
-import { ensureIssue, setSkipped } from '@/application/use-cases/issues';
+import { ensureIssue, moveIssue } from '@/application/use-cases/issues';
 import { saveSettings } from '@/application/use-cases/settings';
 import { toDeadlineRule } from '@/contracts';
 import { deadline } from '@/domain/calendar';
@@ -56,12 +56,12 @@ describe('saving a deadline rule against a freeze in flight (READ COMMITTED)', (
     const read = latch();
     const saving: { started?: Promise<unknown> } = {};
     const writer = world.tx(world.as(head), async (tx) => {
-      const { rule } = await readSlots(tx, world.clock.now());
+      const { rule, plannedThrough } = await readSlots(tx, world.clock.now());
       read.signal();
       // Holds the rule it read until the save waits for it (or, without a lock, has finished).
       await read.reached;
       await blockedOrSettled(() => saving.started);
-      return ensureIssue(tx, AHEAD, rule);
+      return ensureIssue(tx, AHEAD, { rule, plannedThrough });
     });
     await read.reached;
     saving.started = world.run(saveSettings, world.as(head), {
@@ -70,30 +70,33 @@ describe('saving a deadline rule against a freeze in flight (READ COMMITTED)', (
       version: 0,
     });
     const [made, saved] = await Promise.all([writer, saving.started]);
-    expect(made.inserted).toBe(true);
+    expect(made?.inserted).toBe(true);
     expect(saved).toEqual({ ok: true, value: { version: 1 } });
     expect(await aheadRow()).toMatchObject({ deadlineAt: NEW_DEADLINE, version: 2 });
   });
 
-  it('makes a skip that starts while the save holds the rule freeze by the new one', async () => {
+  it('makes a move that starts while the save holds the rule freeze by the new one', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const held = latch();
-    const skipping: { started?: Promise<unknown> } = {};
+    const moving: { started?: Promise<unknown> } = {};
     const save = world.tx(world.as(head), async (tx) => {
       await tx.settings.lock('deadline', 'update');
       await tx.settings.save('deadline', SUNDAY, 0);
       held.signal();
       await held.reached;
-      await blockedOrSettled(() => skipping.started);
+      await blockedOrSettled(() => moving.started);
     });
     await held.reached;
-    skipping.started = world.run(setSkipped, world.as(head), {
+    const wednesday = calDate(2026, 11, 11);
+    moving.started = world.run(moveIssue, world.as(head), {
       monday: toIsoDate(AHEAD),
-      event: 'skip',
-      confirmed: true,
+      meetingDate: toIsoDate(wednesday),
     });
-    const [, skipped] = await Promise.all([save, skipping.started]);
-    expect(skipped).toMatchObject({ ok: true, value: { status: 'skipped' } });
-    expect(await aheadRow()).toMatchObject({ deadlineAt: NEW_DEADLINE });
+    const [, moved] = await Promise.all([save, moving.started]);
+    expect(moved).toMatchObject({ ok: true, value: { meetingDate: '2026-11-11' } });
+    expect(await aheadRow()).toMatchObject({
+      meetingDate: wednesday,
+      deadlineAt: deadline(wednesday, toDeadlineRule(SUNDAY)),
+    });
   });
 });

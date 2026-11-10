@@ -17,7 +17,7 @@ describe('toIssueRows', () => {
         monday: '2026-11-02',
         meetingDate: '2026-11-02',
         deadlineAt: '2026-11-01T17:00:00.000Z',
-        status: 'skipped',
+        status: 'generated',
       },
     ]);
     expect(known.map((row) => toIsoDate(row.monday))).toEqual(['2026-10-26', '2026-11-02']);
@@ -25,7 +25,7 @@ describe('toIssueRows', () => {
       '2026-10-25T17:00:00.000Z',
       '2026-11-01T17:00:00.000Z',
     ]);
-    expect(known.map((row) => row.status)).toEqual(['open', 'skipped']);
+    expect(known.map((row) => row.status)).toEqual(['open', 'generated']);
   });
 
   it('puts the meeting on the Monday: the wire has no meeting date yet', () => {

@@ -1,7 +1,7 @@
 /**
  * M10: the headmaster generates a porada from its preview, downloads the DOCX at once and the PDF
  * once the worker has converted it, and finds both in the archive. A porada waits until every
- * earlier one is generated or skipped (ADR 0040), so this generates this week's. Generating
+ * earlier one is generated or dropped (ADR 0040, 0054), so this generates this week's. Generating
  * publishes every approved point it prints, so this file runs in a project of its own after the
  * others (see playwright.config.ts) and leaves its rows: each run has a database of its own.
  */

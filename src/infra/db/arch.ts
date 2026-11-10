@@ -6,10 +6,15 @@
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { TxContext } from '@/application/ports';
+import { SETTINGS } from '@/contracts';
+import { calendarBoundary } from '@/domain/calendar';
+import { compareDates, instantToWallClock, parseIsoDate, type CalDate } from '@/domain/time';
 
 import type { Database } from './client';
 import { ITEM_ROW, toRecord as futureRecord, visibleFutureItems } from './repos/future-items';
+import type { TxDatabase } from './repos/database';
 import { POINT_ROW, toRecord as pointRecord, visiblePoints } from './repos/points-read';
+import { lockSetting } from './repos/settings';
 import {
   accessRequests,
   archAnnexes,
@@ -30,6 +35,26 @@ import {
 } from './schema';
 
 export type ArchStore = ReturnType<typeof createArchStore>;
+
+/** Whether a Monday with no row is a porada at `now`: after the calendar's boundary (ADR 0054 item 1). */
+async function pastBoundary(
+  tx: Pick<TxDatabase, 'select'>,
+  monday: CalDate,
+  now: Date,
+): Promise<boolean> {
+  const [row] = await tx
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.key, 'calendar'));
+  const { plannedThrough } = row
+    ? SETTINGS.calendar.schema.parse(row.value)
+    : SETTINGS.calendar.default;
+  const boundary = calendarBoundary(
+    plannedThrough ? parseIsoDate(plannedThrough) : null,
+    instantToWallClock(now).date,
+  );
+  return compareDates(monday, boundary) > 0;
+}
 
 export function createArchStore(db: Database) {
   return {
@@ -101,15 +126,28 @@ export function createArchStore(db: Database) {
         ? db.select().from(accessRequests)
         : db.select().from(accessRequests).where(eq(accessRequests.userId, userId)),
 
-    /** False once the porada is no longer open: its document already holds its annexes. */
-    async saveAnnexes(monday: string, annexes: unknown[], actorId: string): Promise<boolean> {
+    /**
+     * The porada's own annexes at `now`. Under the deadline lock in share mode, as every issue
+     * writer (ADR 0032): a drop in flight (update mode) hands them over first. `not-found` for a
+     * Monday up to the calendar's boundary with no row, a dropped porada (ADR 0054 item 7), so a
+     * stale tab never leaves annexes behind for a later add; `not-open` once the porada is
+     * generated, as its document already holds its annexes.
+     */
+    async saveAnnexes(
+      monday: string,
+      annexes: unknown[],
+      actorId: string,
+      now: Date,
+    ): Promise<'saved' | 'not-open' | 'not-found'> {
       return db.transaction(async (tx) => {
+        await lockSetting(tx, 'deadline', 'share');
         const [issue] = await tx
           .select({ id: issues.id, status: issues.status })
           .from(issues)
           .where(eq(issues.monday, monday))
           .for('update');
-        if (issue && issue.status !== 'open') return false;
+        if (issue && issue.status !== 'open') return 'not-open';
+        if (!issue && !(await pastBoundary(tx, parseIsoDate(monday), now))) return 'not-found';
         await tx
           .insert(archAnnexes)
           .values({ monday, annexes })
@@ -124,7 +162,7 @@ export function createArchStore(db: Database) {
           ...(issue && { targetId: issue.id }),
           data: { monday },
         });
-        return true;
+        return 'saved';
       });
     },
 

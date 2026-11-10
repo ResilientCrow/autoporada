@@ -16,12 +16,17 @@ export {
 } from './issue-calendar';
 export { orderConflicts, type OrderConflict } from './order';
 export {
-  nextMeetingBounds,
-  planNextMeeting,
+  moveBounds,
+  planAdd,
+  planDrop,
+  planMove,
   slotMondayOf,
-  type NextMeetingPlan,
-  type NextMeetingRefusal,
-} from './next-meeting';
+  type AddRefusal,
+  type AddResult,
+  type DropResult,
+  type MoveRefusal,
+  type MoveResult,
+} from './plan';
 export { DIGEST_FALLBACK_MS, digestSince, digestSlot, type DigestSlot } from './digest';
 export {
   REMINDER_DRAFT_DAYS,
@@ -56,13 +61,14 @@ export {
 export { summaryDue } from './summary';
 export { pointMonday } from './placement';
 export {
+  calendarBoundary,
   handInMonday,
   handInSlot,
   issueSlots,
   lastSlotMonday,
   PLACEMENT_WEEKS,
   placementSlot,
-  skipWindow,
+  stripStart,
   submitMonday,
   type IssueRow,
   type IssueSlot,

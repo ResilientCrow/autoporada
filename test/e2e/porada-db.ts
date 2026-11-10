@@ -98,3 +98,25 @@ export async function forgetDocument(monday: string): Promise<void> {
   });
   await forgetIssues([monday]);
 }
+
+/** The stored `calendar` setting (`plannedThrough`, ADR 0054), or null when there is none. */
+export async function readCalendarSetting(): Promise<unknown> {
+  return withClient(async (client) => {
+    const { rows } = await client.query<{ value: unknown }>(
+      "SELECT value FROM settings WHERE key = 'calendar'",
+    );
+    return rows[0]?.value ?? null;
+  });
+}
+
+/** Puts the `calendar` setting back as `readCalendarSetting` found it; null removes it. */
+export async function restoreCalendarSetting(value: unknown): Promise<void> {
+  await withClient(async (client) => {
+    if (value === null) await client.query("DELETE FROM settings WHERE key = 'calendar'");
+    else {
+      await client.query("UPDATE settings SET value = $1::jsonb WHERE key = 'calendar'", [
+        JSON.stringify(value),
+      ]);
+    }
+  });
+}

@@ -25,17 +25,19 @@ import {
 } from './future';
 import { documentArchive, downloadDocument } from './documents';
 import {
+  addIssue,
+  dropIssue,
   generateIssue,
   issueMissingReports,
   issuePreview,
   issueWindow,
   issueWorkspace,
+  moveIssue,
   readIssueTexts,
   reportTally,
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
-  setSkipped,
 } from './issues';
 import {
   addOutlineItem,
@@ -99,17 +101,19 @@ export {
 } from './future';
 export { documentArchive, downloadDocument } from './documents';
 export {
+  addIssue,
+  dropIssue,
   generateIssue,
   issueMissingReports,
   issuePreview,
   issueWindow,
   issueWorkspace,
+  moveIssue,
   readIssueTexts,
   reportTally,
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
-  setSkipped,
 } from './issues';
 export {
   addOutlineItem,
@@ -154,6 +158,7 @@ export { changeUserAccess, getUser, listUsers } from './users';
  */
 export const USE_CASES: readonly AnyUseCase[] = [
   addEntries,
+  addIssue,
   addOutlineItem,
   beginLogin,
   beginStepUp,
@@ -168,6 +173,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   decidePoint,
   deletePointType,
   documentArchive,
+  dropIssue,
   downloadDocument,
   getFuture,
   getPoint,
@@ -182,6 +188,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   listPointTypes,
   listUsers,
   me,
+  moveIssue,
   moveList,
   moveOutlineItem,
   myAccess,
@@ -218,7 +225,6 @@ export const USE_CASES: readonly AnyUseCase[] = [
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
-  setSkipped,
   signOut,
   startFutureReport,
   submitFuture,

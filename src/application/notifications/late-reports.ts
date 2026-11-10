@@ -72,10 +72,11 @@ interface LateClose {
 function lateClose(
   slots: readonly IssueSlot[],
   rule: Parameters<typeof handInSlot>[2],
+  plannedThrough: CalDate,
   now: Date,
   facts: LateFacts,
 ): LateClose | null {
-  const slot = handInSlot(now, slots, rule, facts);
+  const slot = handInSlot(now, slots, rule, facts, plannedThrough);
   return isLateReport(slot, facts) ? { slot: slot, due: reportCloses(slot, facts) } : null;
 }
 
@@ -90,12 +91,12 @@ export interface EndedAkce {
 /** The akce whose `report.ended` mail is due now: ended, late for their slot and not yet written. */
 export async function endedAkce(tx: Reads, now: Date): Promise<readonly EndedAkce[]> {
   const today = instantToWallClock(now).date;
-  const [items, { slots, rule }] = await Promise.all([
+  const [items, { slots, rule, plannedThrough }] = await Promise.all([
     tx.futureItems.reportsEnding({ from: addDays(today, -1), to: today }),
     readSlots(tx, now),
   ]);
   return items.flatMap((item) => {
-    const close = lateClose(slots, rule, now, item);
+    const close = lateClose(slots, rule, plannedThrough, now, item);
     return close && lateMailDue('ended', eventEnd(item), close.due, now) ? [{ item, close }] : [];
   });
 }
@@ -119,8 +120,8 @@ export async function loadReportEnded(tx: Reads, itemId: string): Promise<Report
   const { now } = tx.ctx;
   const item = await tx.futureItems.reportEnding(itemId);
   if (!item) return null;
-  const { slots, rule } = await readSlots(tx, now);
-  const close = lateClose(slots, rule, now, item);
+  const { slots, rule, plannedThrough } = await readSlots(tx, now);
+  const close = lateClose(slots, rule, plannedThrough, now, item);
   if (!close || !stillDue('ended', item, close, now)) return null;
   const { authorId, state, reportState } = item;
   return {
@@ -139,7 +140,7 @@ export async function lastCalls(
 ): Promise<readonly LastCallIds[]> {
   const today = instantToWallClock(now).date;
   const window = { from: addDays(today, -1), to: today };
-  const [akce, reports, { slots, rule }] = await Promise.all([
+  const [akce, reports, { slots, rule, plannedThrough }] = await Promise.all([
     tx.futureItems.reportsEnding(window),
     tx.points.reportPoints(window),
     readSlots(tx, now),
@@ -151,7 +152,7 @@ export async function lastCalls(
       .map((point) => ({ kind: 'point' as const, ...point })),
   ];
   return candidates.flatMap(({ kind, id, authorId, ...facts }) => {
-    const close = lateClose(slots, rule, now, facts);
+    const close = lateClose(slots, rule, plannedThrough, now, facts);
     return close && lateMailDue('last-call', eventEnd(facts), close.due, now)
       ? [{ authorId, kind, id, monday: close.slot.monday }]
       : [];
@@ -181,8 +182,8 @@ export async function loadLastCall(tx: Reads & Pick<Tx, 'points'>, id: string) {
       }
     : point && { facts: point, open: point.state === 'draft' || point.state === 'returned' };
   if (!found) return null;
-  const { slots, rule } = await readSlots(tx, now);
-  const close = lateClose(slots, rule, now, found.facts);
+  const { slots, rule, plannedThrough } = await readSlots(tx, now);
+  const close = lateClose(slots, rule, plannedThrough, now, found.facts);
   if (!close || !stillDue('last-call', found.facts, close, now)) return null;
   const facts: LastCallFacts = {
     authorId: found.facts.authorId,

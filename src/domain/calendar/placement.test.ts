@@ -28,7 +28,7 @@ const iso = (day: CalDate | null) => (day ? toIsoDate(day) : null);
 
 /** The slots a caller reads at `now`: the rows and the virtual Mondays. */
 const slotsAt = (now: Date, rows: readonly IssueRow[] = []): readonly IssueSlot[] =>
-  issueSlots(rows, instantToWallClock(now).date, RULE);
+  issueSlots(rows, instantToWallClock(now).date, RULE, null);
 
 describe('pointMonday', () => {
   // The deadline of Monday 2026-10-26 is Saturday 2026-10-24 20:00 Prague (18:00Z).
@@ -58,8 +58,8 @@ describe('pointMonday', () => {
     );
   });
 
-  it('goes on past skipped and generated Mondays after a late resubmit', () => {
-    const list = [known('2026-11-02', 'skipped'), known('2026-11-09', 'generated')];
+  it('goes on past generated Mondays after a late resubmit', () => {
+    const list = [known('2026-11-02', 'generated'), known('2026-11-09', 'generated')];
     const point = { earliest: d('2026-10-26'), handIn: d('2026-11-02') };
     expect(place(point, LATE, slotsAt(LATE, list))).toBe('2026-11-16');
   });
@@ -78,7 +78,7 @@ describe('pointMonday', () => {
 
   it('agrees with the line a point handed in now is promised: the submit Monday, placed', () => {
     const slots = slotsAt(LATE);
-    const submit = submitMonday(LATE, slots, RULE);
+    const submit = submitMonday(LATE, slots, RULE, null);
     const promised = placementSlot(submit, today(LATE), slots)?.monday ?? null;
     expect(iso(submit)).toBe('2026-11-02');
     const point = { earliest: d('2026-10-19'), handIn: submit };
@@ -124,17 +124,24 @@ describe('pointMonday', () => {
     expect(place({ earliest: first, handIn: first }, now, rows)).toBeNull();
   });
 
-  it('steps over a skipped slot: the point waits for the slot after it', () => {
+  it('steps over a Monday with no porada: the point waits for the porada after it', () => {
     const now = new Date('2026-10-18T10:00:00Z');
     const point = { earliest: d('2026-10-19'), handIn: d('2026-10-19') };
-    expect(place(point, now, slotsAt(now, [known('2026-10-19', 'skipped')]))).toBe('2026-10-26');
+    const slots = issueSlots(
+      [known('2026-10-12', 'generated')],
+      d('2026-10-18'),
+      RULE,
+      d('2026-10-19'),
+    );
+    expect(slots.some((s) => toIsoDate(s.monday) === '2026-10-19')).toBe(false);
+    expect(place(point, now, slots)).toBe('2026-10-26');
   });
 
   it('places by the meeting date: a slot moved to a day that is over is passed', () => {
     // Slot 2026-10-26 meets on Friday 2026-10-30; on Saturday 2026-10-31 it is over.
     const saturday = new Date('2026-10-31T10:00:00Z');
     const rows = [{ ...known('2026-10-26', 'open'), meetingDate: d('2026-10-30') }];
-    const slotsOf = (now: Date) => issueSlots(rows, today(now), RULE);
+    const slotsOf = (now: Date) => issueSlots(rows, today(now), RULE, null);
     const point = { earliest: d('2026-10-26'), handIn: d('2026-10-26') };
     expect(place(point, saturday, slotsOf(saturday))).toBe('2026-11-02');
     const friday = new Date('2026-10-30T10:00:00Z');

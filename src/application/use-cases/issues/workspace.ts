@@ -20,7 +20,7 @@ export const issueWorkspace = defineUseCase({
   output: issueWorkspaceOutput,
   access: { kind: 'gate', check: () => ({ action: 'issue.preview' }) },
   async execute({ tx, now }, input) {
-    const { slots } = await readWindow(tx, now);
+    const { slots, plannedThrough } = await readWindow(tx, now);
     const today = instantToWallClock(now).date;
     const working = workingSlot(today, slots);
     const workingMonday = working && toIsoDate(working.monday);
@@ -32,11 +32,11 @@ export const issueWorkspace = defineUseCase({
     if (!slot) return fail({ code: 'not-found' });
 
     // Where the points go if this porada does not take place: the next open slot from its Monday.
-    const without = slots.map((s) => (s === slot ? { ...s, status: 'skipped' as const } : s));
+    const without = slots.filter((s) => s !== slot);
     const next = placementSlot(slot.monday, today, without);
     const [row] = await tx.issues.between(monday, monday);
     const waiting = await tx.points.waitingFor(monday, slot.meetingDate);
-    const since = await readReportsSince(tx, monday);
+    const since = await readReportsSince(tx, monday, plannedThrough);
     const approved = await tx.points.eligibleFor(monday, slot.meetingDate, { since });
     const missing =
       slot.status === 'open'

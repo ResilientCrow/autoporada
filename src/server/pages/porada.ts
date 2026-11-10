@@ -1,9 +1,16 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { documentArchive, issuePreview, issueWorkspace } from '@/application/use-cases';
+import {
+  documentArchive,
+  issuePreview,
+  issueWorkspace,
+  readOutline,
+} from '@/application/use-cases';
 import {
   isDownloadError,
+  toDeadlineRule,
+  toIssueRows,
   type documentInfo,
   type DownloadError,
   type PdfFailure,
@@ -11,6 +18,7 @@ import {
   type issueWorkspaceOutput,
 } from '@/contracts';
 import { composeDocument, type DocumentModel } from '@/document';
+import { issueSlots, planDrop } from '@/domain/calendar';
 import {
   formatDayMonth,
   formatNumericDate,
@@ -20,7 +28,7 @@ import {
 } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus } from '@/domain/review';
-import { compareDates, instantToWallClock, parseIsoDate } from '@/domain/time';
+import { instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
 import { parseIssueSnapshot } from '@/snapshot';
 
 import { getContainer } from '../container';
@@ -91,20 +99,24 @@ interface PoradaPageModel {
   readonly meeting: string;
   /** „9. 11. 2026“. */
   readonly meetingLabel: string;
-  /** „9. 11.“ when the porada is held on another day than its Monday. */
-  readonly movedFrom: string | null;
+  /** The day the porada is held, ISO. */
+  readonly meetingDate: string;
   readonly deadline: { readonly weekday: string; readonly date: string; readonly time: string };
   readonly deadlinePassed: boolean;
   readonly status: IssueStatus;
   /** Null for a Monday without a row yet. */
   readonly version: number | null;
-  /** „10. 11. 2026“: the porada the approved points move to if this one is skipped. */
-  readonly nextLabel: string | null;
   /**
-   * The calendar the skip dialog plans the next porada on (ADR 0051): `issues.window`, the instant
-   * it was read and the rule. Null unless the porada is open, and where the use case refuses it.
+   * The calendar the move and drop dialogs plan on (ADR 0054): `issues.window`, the instant it was
+   * read, the rule and the boundary. Null unless the porada is open, and where the use case refuses it.
    */
-  readonly calendar: Pick<StandingModel, 'issues' | 'now' | 'rule'> | null;
+  readonly calendar: Pick<StandingModel, 'issues' | 'now' | 'rule' | 'plannedThrough'> | null;
+  /**
+   * What „Porada se nekoná“ does to the prepared program (ADR 0054 item 4): `along` when the
+   * porada has one of its own and the heir takes it, `lost` when it has one and the heir cannot,
+   * null when it has none. Null unless the porada is open.
+   */
+  readonly dropProgram: 'along' | 'lost' | null;
   readonly counts: NonNullable<Workspace['slot']>['counts'];
   /** The document of a generated porada; null before. */
   readonly generated: GeneratedModel | null;
@@ -115,6 +127,44 @@ export type PoradaPageResult =
   | { readonly kind: 'workspace'; readonly model: PoradaPageModel }
   | { readonly kind: 'preview'; readonly monday: string };
 
+/** Whether the open porada of `monday` has a stored program, and whether its heir can take it. */
+async function dropProgramOf(
+  viewer: UserPrincipal,
+  monday: string,
+  window: NonNullable<Awaited<ReturnType<typeof readWindow>>>,
+  now: Date,
+): Promise<'along' | 'lost' | null> {
+  const today = instantToWallClock(now).date;
+  const rule = toDeadlineRule(window.rule);
+  const slots = issueSlots(
+    toIssueRows(window.issues),
+    today,
+    rule,
+    parseIsoDate(window.plannedThrough),
+  );
+  const slot = slots.find((s) => toIsoDate(s.monday) === monday);
+  if (slot === undefined) return null;
+  const planned = planDrop(slots, slot, {
+    rule,
+    plannedThrough: parseIsoDate(window.plannedThrough),
+  });
+  if (!planned.ok) return null;
+  const read = async (key: string) =>
+    orNotFound(
+      'outline.read',
+      await runPage(readOutline, {
+        principal: viewer,
+        requestId: await requestId(),
+        input: { monday: key },
+      }),
+    );
+  const own = await read(monday);
+  if (own === null || own.origin.kind !== 'stored') return null;
+  if (planned.heir.status !== 'open') return 'lost';
+  const heir = await read(toIsoDate(planned.heir.monday));
+  return heir !== null && heir.origin.kind !== 'stored' ? 'along' : 'lost';
+}
+
 /** The page of one slot, or null (404) for anyone else and for a Monday outside the calendar. */
 export async function poradaPage(datum: string): Promise<PoradaPageResult | null> {
   const viewer = await getViewer();
@@ -123,26 +173,31 @@ export async function poradaPage(datum: string): Promise<PoradaPageResult | null
   if (read === null || read.slot === null) return null;
   const { slot } = read;
   if (!can(viewer.actor, { action: 'issue.edit' })) return { kind: 'preview', monday: slot.monday };
-  const monday = parseIsoDate(slot.monday);
   const meeting = parseIsoDate(slot.meetingDate);
   const deadlineAt = new Date(slot.deadlineAt);
   const { date, time } = instantToWallClock(deadlineAt);
   const now = getContainer().app.clock.now();
   const window = slot.status === 'open' ? await readWindow(viewer) : null;
   const standing = window && standingFrom(window, now);
+  const dropProgram = window && (await dropProgramOf(viewer, slot.monday, window, now));
   return {
     kind: 'workspace',
     model: {
       monday: slot.monday,
       meeting: formatTitleDate(meeting),
       meetingLabel: formatNumericDate(meeting),
-      movedFrom: compareDates(monday, meeting) === 0 ? null : formatDayMonth(monday),
+      meetingDate: slot.meetingDate,
       deadline: { weekday: weekdayName(date), date: formatDayMonth(date), time: formatClock(time) },
       deadlinePassed: deadlineAt.getTime() <= now.getTime(),
       status: slot.status,
       version: slot.version,
-      nextLabel: slot.next === null ? null : formatNumericDate(parseIsoDate(slot.next)),
-      calendar: standing && { issues: standing.issues, now: standing.now, rule: standing.rule },
+      calendar: standing && {
+        issues: standing.issues,
+        now: standing.now,
+        rule: standing.rule,
+        plannedThrough: standing.plannedThrough,
+      },
+      dropProgram,
       counts: slot.counts,
       generated: generatedModel(slot.monday, slot.document),
     },

@@ -67,6 +67,7 @@ describe('the two school years of the editor', () => {
     issues: [],
     now: '2027-08-29T19:00:00.000Z',
     rule: DEFAULT_DEADLINE,
+    plannedThrough: null,
   };
 
   it('previews with the school year of the porada and checks readiness with today’s', () => {

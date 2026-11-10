@@ -30,11 +30,17 @@ export interface IssueItemRepo {
    * none. The source of a derived outline (`derive`).
    */
   latestSourceBefore(monday: CalDate): Promise<DeriveSource | null>;
+  /**
+   * Hands the further annexes of the porada of Monday `from` (the Arch UI's `arch_annexes`) over
+   * to the porada of Monday `to`: they follow the annexes it has, and `from` has none after. With
+   * `to` null they are only deleted. Gives how many annexes there were. A privileged write
+   * (`issue.edit`, ADR 0011); the caller holds the deadline lock in update mode.
+   */
+  handOverAnnexes(from: CalDate, to: CalDate | null): Promise<number>;
   /** The issue's own three texts, each null when never written; all null for an unknown id. */
   textsOf(issueId: string): Promise<IssueTexts>;
   /**
-   * Per text, the value of the latest issue before `monday` whose value is not null (skipped
-   * issues count; an empty string or an empty doc is a value: a cleared text carries as cleared).
+   * Per text, the value of the latest issue before `monday` whose value is not null (an empty string or an empty doc is a value: a cleared text carries as cleared).
    */
   latestTextsBefore(monday: CalDate): Promise<IssueTexts>;
 }

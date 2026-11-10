@@ -30,5 +30,6 @@ export const RULE_CODES = [
   'issue-not-open',
   'issue-blocked',
   'deadline-past',
+  'porada-exists',
 ] as const;
 export type RuleCode = (typeof RULE_CODES)[number];

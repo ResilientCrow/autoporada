@@ -47,7 +47,7 @@ export function reminderStagger(recipientId: string): number {
   return (hash % (REMINDER_STAGGER_MS / 1000)) * 1000;
 }
 
-/** How many Mondays back the soft reminder looks for the porada before: a summer of skipped Mondays fits. */
+/** How many Mondays back the soft reminder looks for the porada before: a summer of Mondays with no porada fits. */
 export const REPORT_LOOKBACK_WEEKS = 12;
 
 /** The Mondays whose rows `reportsSince` reads for the porada on `monday`: the look-back, the week before included. */
@@ -57,30 +57,42 @@ export function reportLookback(monday: CalDate): { readonly from: CalDate; reado
 
 /**
  * The first last day of an akce whose report goes to the porada on `monday` (ADR 0046): an akce's
- * report goes to the first porada not skipped whose meeting is after its last day, so this is the
- * meeting day of the porada held before, found by stepping back over skipped Mondays. A Monday with
- * no row is a porada on that Monday; `earlier` are the stored rows of the look-back, in any order.
- * With every Monday of the look-back skipped, its first Monday.
+ * report goes to the first porada whose meeting is after its last day, so this is the
+ * meeting day of the porada held before, found by stepping back over Mondays with no porada. A Monday with
+ * no row is a porada on that Monday after `plannedThrough`, none up to it (ADR 0054); `earlier` are the stored rows of the look-back, in any order.
+ * With every Monday of the look-back without a porada, its first Monday.
  */
-export function reportsSince(monday: CalDate, earlier: readonly IssueRow[]): CalDate {
+export function reportsSince(
+  monday: CalDate,
+  earlier: readonly IssueRow[],
+  plannedThrough: CalDate | null,
+): CalDate {
   const rows = new Map(earlier.map((row) => [toIsoDate(row.monday), row]));
   for (let week = 1; week <= REPORT_LOOKBACK_WEEKS; week++) {
     const before = addDays(monday, -7 * week);
     const row = rows.get(toIsoDate(before));
-    if (!row) return before;
-    if (row.status !== 'skipped') return row.meetingDate;
+    if (!row) {
+      // Up to the boundary a Monday with no row is no porada (ADR 0054): step over it.
+      if (plannedThrough && compareDates(before, plannedThrough) <= 0) continue;
+      return before;
+    }
+    return row.meetingDate;
   }
   return reportLookback(monday).from;
 }
 
 /**
  * The Monday of the porada an akce's report goes to (ADR 0049), the inverse of `reportsSince`: the
- * first porada not skipped, in Monday order from `REPORT_LOOKBACK_WEEKS` before the akce's last day
+ * first porada, in Monday order from `REPORT_LOOKBACK_WEEKS` before the akce's last day
  * (as far back as `reportsSince` looks, so a porada moved weeks past its Monday is found), whose
  * meeting day is after that day. A Monday with no row is a porada held on its Monday; `rows` are
  * the stored rows around the day, in any order.
  */
-export function owedPorada(lastDay: CalDate, rows: readonly IssueRow[]): CalDate {
+export function owedPorada(
+  lastDay: CalDate,
+  rows: readonly IssueRow[],
+  plannedThrough: CalDate | null,
+): CalDate {
   const byMonday = new Map(rows.map((row) => [toIsoDate(row.monday), row]));
   for (
     let monday = addDays(mondayOf(lastDay), -7 * REPORT_LOOKBACK_WEEKS);
@@ -88,7 +100,7 @@ export function owedPorada(lastDay: CalDate, rows: readonly IssueRow[]): CalDate
     monday = addDays(monday, 7)
   ) {
     const row = byMonday.get(toIsoDate(monday));
-    if (row?.status === 'skipped') continue;
+    if (!row && plannedThrough && compareDates(monday, plannedThrough) <= 0) continue;
     if (compareDates(row?.meetingDate ?? monday, lastDay) > 0) return monday;
   }
 }

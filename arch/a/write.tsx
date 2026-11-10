@@ -84,7 +84,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   const owed = p.akceId ? Q.owedBy(s, s.userId).find((o) => o.akce.id === p.akceId) : null;
   const target = p.akceId ? Q.owedMonday(s, s.futures.find((f) => f.id === p.akceId)!) : Q.toIsoDate(Q.handInTo(s).monday);
   const m = Q.issueOf(s, target) ? target : Q.workingMonday(s);
-  const built = Q.buildDoc(s, m, { draft: { ...p, handInMonday: m } });
+  const built = Q.buildDoc(s, m, { draft: { ...p, poradaMonday: m } });
   const sheet = focusOn(built, id);
   const si = Number(/^(?:kdo|rekl)-(\d+)$/.exec(cur.key)?.[1] ?? 0); const sfx = si ? `-${si}` : '';
   const st0 = c.statements[si];
@@ -203,7 +203,7 @@ export function Oprava({ id }: { id: string }) {
   const name = Q.nameOf(Q.userById(s, last?.who ?? ''));
   const c = p.content; const sts = c.statements;
   const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
-  const m = p.handInMonday ?? Q.workingMonday(s);
+  const m = p.poradaMonday ?? Q.workingMonday(s);
   const built = focusOn(Q.buildDoc(s, m, { draft: p }), id);
   const can = A.trySubmit(s, id).ok;
   return <App nar noNav col={<>

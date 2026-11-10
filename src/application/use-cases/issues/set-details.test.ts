@@ -11,7 +11,7 @@ import {
   WEEK_3,
 } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
-import { readIssueTexts, setIssueAnnex2, setIssueDetails, setSkipped } from './index';
+import { dropIssue, readIssueTexts, setIssueAnnex2, setIssueDetails } from './index';
 
 const world = setupWorld();
 const fx = outlineFixtures(world);
@@ -179,16 +179,15 @@ describe('issues.setDetails', () => {
     });
   });
 
-  it('refuses a skipped or generated porada as issue-not-open, and a Monday outside the calendar', async () => {
+  it('refuses a generated porada as issue-not-open, a dropped one as outside the calendar, and a Monday outside the calendar', async () => {
     const head = await fx.headmaster();
-    await world.run(setSkipped, world.as(head), {
-      monday: monday(WEEK_2),
-      event: 'skip',
-      confirmed: true,
-    });
+    await world.run(dropIssue, world.as(head), { monday: monday(WEEK_2), confirmed: true });
     await fx.seedIssue(WEEK_3, 'generated');
     const notOpen = { ok: false, error: { code: 'rule', rule: 'issue-not-open' } };
-    expect(await details(head, {}, WEEK_2)).toEqual(notOpen);
+    expect(await details(head, {}, WEEK_2)).toEqual({
+      ok: false,
+      error: { code: 'invalid-input', fields: { monday: 'invalid' } },
+    });
     expect(await details(head, {}, WEEK_3)).toEqual(notOpen);
     expect(
       await world.run(setIssueDetails, world.as(head), {

@@ -4,8 +4,8 @@ import { ArrowLink, Card, SlantLabel } from '@/ui/kit';
 import { Chip, ISSUE_LOOK } from '@/ui/status';
 
 import { DocumentCard, type GeneratedView } from './DocumentCard';
-import { SkipControl, type SkipAction } from './SkipControl';
-import type { SkipCalendar } from './skip';
+import { OpenStatusCard, type DropAction, type MoveAction } from './CalendarActions';
+import type { PlanCalendar } from './calendar-acts';
 import { Steps } from './Steps';
 
 /** One porada as /porada/[datum] shows it; the dates arrive written out. */
@@ -15,17 +15,17 @@ export interface WorkspaceView {
   readonly meeting: string;
   /** „9. 11. 2026“. */
   readonly meetingLabel: string;
-  /** „2. 11.“ when the porada was moved from its Monday. */
-  readonly movedFrom: string | null;
+  /** The day the porada is held, ISO: where the move dialog starts. */
+  readonly meetingDate: string;
   readonly deadline: { readonly weekday: string; readonly date: string; readonly time: string };
   readonly deadlinePassed: boolean;
   readonly status: IssueStatus;
   /** Null for a Monday without a row yet. */
   readonly version: number | null;
-  /** The porada the approved points move to without this one; null when none follows. */
-  readonly nextLabel: string | null;
-  /** The calendar the skip dialog plans the next porada on; null unless the porada is open. */
-  readonly calendar: SkipCalendar | null;
+  /** The calendar the move and drop dialogs plan on; null unless the porada is open. */
+  readonly calendar: PlanCalendar | null;
+  /** What dropping the porada does to its prepared program; null when it has none. */
+  readonly dropProgram: 'along' | 'lost' | null;
   readonly counts: {
     readonly waiting: number;
     readonly returned: number;
@@ -39,16 +39,18 @@ export interface WorkspaceView {
 
 /**
  * The headmaster's page of one porada: where and when it is held, its deadline and status (with
- * „Porada se nekoná“ beside them while it is not generated), what
+ * „Přesunout poradu“ and „Porada se nekoná“ beside them while it is open), what
  * waits for it, and the steps of preparing the document. The document is generated on the
  * preview; a generated porada shows its files here.
  */
 export function Workspace({
   view,
-  setSkipped,
+  moveIssue,
+  dropIssue,
 }: {
   readonly view: WorkspaceView;
-  readonly setSkipped: SkipAction;
+  readonly moveIssue: MoveAction;
+  readonly dropIssue: DropAction;
 }) {
   const { deadline, counts } = view;
   const when = porada.deadline[view.deadlinePassed ? 'passed' : 'ahead'];
@@ -56,7 +58,6 @@ export function Workspace({
     <div className="space-y-3">
       <p className="flex flex-wrap items-center gap-2">
         <Chip look={ISSUE_LOOK[view.status]} />
-        {view.movedFrom !== null && <span>{porada.moved(view.movedFrom)}</span>}
       </p>
       <p>{when(deadline.weekday, deadline.date, deadline.time)}</p>
     </div>
@@ -65,27 +66,27 @@ export function Workspace({
     <>
       <SlantLabel level={1}>{porada.title}</SlantLabel>
       <div className="mt-4 space-y-8">
-        {view.status === 'generated' ? (
-          <Card level={2} title={porada.meeting(view.meeting)}>
-            {status}
-          </Card>
-        ) : (
-          <SkipControl
-            action={setSkipped}
+        {view.status === 'open' && view.calendar !== null ? (
+          <OpenStatusCard
+            move={moveIssue}
+            drop={dropIssue}
             title={porada.meeting(view.meeting)}
             view={{
               monday: view.monday,
+              meetingDate: view.meetingDate,
               label: view.meetingLabel,
               meeting: view.meeting,
-              status: view.status,
               version: view.version,
-              deadlinePassed: view.deadlinePassed,
-              next: view.nextLabel,
               calendar: view.calendar,
+              dropProgram: view.dropProgram,
             }}
           >
             {status}
-          </SkipControl>
+          </OpenStatusCard>
+        ) : (
+          <Card level={2} title={porada.meeting(view.meeting)}>
+            {status}
+          </Card>
         )}
         <Card level={2} title={porada.counts.title}>
           <ul className="space-y-1">

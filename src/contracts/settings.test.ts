@@ -20,8 +20,8 @@ import {
 const KEYS = Object.keys(SETTINGS) as SettingKey[];
 
 describe('SETTINGS', () => {
-  it('holds the deadline, the reminders and the annex 1 texts', () => {
-    expect(KEYS.sort()).toEqual(['deadline', 'reminders', 'texts.annex1']);
+  it('holds the deadline, the calendar boundary, the reminders and the annex 1 texts', () => {
+    expect([...KEYS].sort()).toEqual(['calendar', 'deadline', 'reminders', 'texts.annex1']);
   });
 
   it.each(KEYS)('names %s so the settings_key CHECK accepts it', (key) => {
@@ -161,9 +161,12 @@ describe('the read wire', () => {
     expect(settingsReadInput.safeParse({ key: 'deadline' }).success).toBe(false);
   });
 
-  it('answers every key with its value and version, and nothing else', () => {
+  it('answers every shown key with its value and version, and nothing else (not the calendar)', () => {
     const entries = Object.fromEntries(
-      KEYS.map((key) => [key, { value: SETTINGS[key].default, version: 0 }]),
+      KEYS.filter((key) => key !== 'calendar').map((key) => [
+        key,
+        { value: SETTINGS[key].default, version: 0 },
+      ]),
     );
     expect(settingsReadOutput.safeParse(entries).success).toBe(true);
     expect(settingsReadOutput.safeParse({ ...entries, extra: entries['deadline'] }).success).toBe(
@@ -171,6 +174,12 @@ describe('the read wire', () => {
     );
     const { reminders: _dropped, ...partial } = entries;
     expect(settingsReadOutput.safeParse(partial).success).toBe(false);
+    expect(
+      settingsReadOutput.safeParse({
+        ...entries,
+        calendar: { value: { plannedThrough: null }, version: 0 },
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -180,6 +189,12 @@ describe('the save wire', () => {
     content: [{ type: 'paragraph', attrs: { indent: 0 }, content: [{ type: 'text', text }] }],
   });
   const parse = (input: unknown) => settingsSaveInput.safeParse(input);
+
+  it('cannot write the calendar boundary', () => {
+    expect(
+      parse({ key: 'calendar', value: { plannedThrough: '2026-11-16' }, version: 0 }).success,
+    ).toBe(false);
+  });
 
   it('takes every key, each with its own value and a version', () => {
     expect(

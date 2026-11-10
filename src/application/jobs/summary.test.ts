@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   system,
+  type IssueRecord,
   type JobInput,
   type PointRecord,
   type UserRecord,
@@ -84,6 +85,14 @@ const issueRow = async (status: IssueStatus = 'open', monday = MONDAY) =>
     return issue;
   });
 
+/** The porada of `row` dropped: its row is gone, and the calendar is rows up to the next Monday's. */
+async function dropRow(row: IssueRecord) {
+  const heir = addDays(row.monday, 7);
+  await world.tx(system('test.seed'), (tx) => tx.issues.remove(row.id, row.version));
+  await world.seed.setting('calendar', { plannedThrough: toIsoDate(heir) });
+  await issueRow('open', heir);
+}
+
 /** A pokyn of the author's left in `state` at `when`, first handed in for `earliest`, last for `handIn`. */
 async function pointAt(
   by: UserRecord,
@@ -132,10 +141,10 @@ describe('when the summary is due', () => {
     expect(await runAt(after(120))).toEqual({ kind: 'done', code: 'none' });
   });
 
-  it('does nothing for a Monday without an issue row, or while the issue is skipped', async () => {
+  it('does nothing for a Monday without an issue row, or once the porada is dropped', async () => {
     await headmaster();
     expect(await runAt(OPEN)).toEqual({ kind: 'done', code: 'none' });
-    await issueRow('skipped');
+    await dropRow(await issueRow());
     expect(await runAt(OPEN)).toEqual({ kind: 'done', code: 'none' });
     expect(await queued()).toEqual([]);
   });
@@ -267,11 +276,11 @@ describe('the mail that goes out', () => {
     expect(fake.calls.at(-1)?.mail.text).toContain(textOf(1, 0, 0));
   });
 
-  it('says nothing when the meeting was skipped meanwhile', async () => {
+  it('says nothing when the porada was dropped meanwhile', async () => {
     const head = await headmaster();
-    await issueRow();
+    const row = await issueRow();
     await runAt(OPEN);
-    await issueRow('skipped');
+    await dropRow(row);
     const sent = fake.calls.length;
     expect(await deliver(head)).toEqual({ kind: 'done', code: 'skipped.stale' });
     expect(fake.calls).toHaveLength(sent);
@@ -381,12 +390,12 @@ describe('the late reports of the porada (ADR 0035)', () => {
     expect(text).toContain('Odevzdáno: 1, chybí: 0.');
   });
 
-  it('sends none when the porada has no late report, or when it is skipped', async () => {
+  it('sends none when the porada has no late report, or when it is dropped', async () => {
     await headmaster();
-    await issueRow();
+    const row = await issueRow();
     expect(await runAt(secondAt(5))).toEqual({ kind: 'done', code: 'none' });
     await late.akce(await author(), SUNDAY);
-    await issueRow('skipped');
+    await dropRow(row);
     expect(await runAt(secondAt(5))).toEqual({ kind: 'done', code: 'none' });
     expect(await queued()).toEqual([]);
   });

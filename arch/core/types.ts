@@ -14,6 +14,8 @@ export interface Trail { at: string; who: string; what: string; note?: string; o
 export interface Point {
   id: string; kind: PointKind; typeId: string | null; authorId: string; akceId: string | null;
   content: PointContent; state: PointState; handInMonday: string | null; submittedAt: string | null;
+  /** The porada it is in: the hand-in Monday's, or after a drop the next open one (the server's `poradaMondayOf`). */
+  poradaMonday: string | null;
   note: string | null; savedAt: string; trail: Trail[];
 }
 export interface Future {
@@ -33,6 +35,8 @@ export interface Annex { id: string; title: string; parts: AnnexPart[] }
 export interface Issue {
   monday: string; meetingDate: string; deadlineAt: string; status: IssueStatus; present: string; guests: string;
   annex2: RichDoc | null; annexes: Annex[]; rows: Row[]; placeholders: Record<string, string>;
+  /** What the porada stores itself, not carried or derived: what a drop hands over (ADR 0054). */
+  own: { rows: boolean; present: boolean; guests: boolean; annex2: boolean };
   doc?: { at: string; by: string; pdf: 'rendering' | 'ready' | 'failed'; model: unknown; points: number; pdfFailure?: string; left?: { moved: string[]; missed: string[] } };
 }
 export interface RegistryEntry { id: string; givenName: string; familyName: string; classCode: string; isNew: boolean }
@@ -43,6 +47,6 @@ export interface Mail { id: string; at: string; to: string; subject: string; bod
 export interface Settings { dayOffset: number; time: string; remindSoft: boolean; remindHard: boolean; annex1Heading: string; annex1Intro: RichDoc }
 export interface State {
   v: number; now: string; userId: string | null; users: User[]; types: PointType[]; points: Point[]; futures: Future[];
-  issues: Issue[]; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
+  issues: Issue[]; plannedThrough: string; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
 }
 export type { Campus, DraftPerson, PointContent, PointKind, ResponsibleVerb, Salutation };

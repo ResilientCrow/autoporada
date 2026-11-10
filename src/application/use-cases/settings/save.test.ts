@@ -238,7 +238,6 @@ describe('settings.save', () => {
       const kept = await issue(calDate(2026, 10, 26));
       const ahead = await issue(calDate(2026, 11, 2));
       const handSet = await issue(calDate(2026, 11, 9), 'open', new Date('2026-11-06T11:00:00Z'));
-      const skipped = await issue(calDate(2026, 11, 16), 'skipped');
       const generated = await issue(calDate(2026, 11, 23), 'generated');
       const head = await headmaster();
       expect(await save(head, deadlineRule(SUNDAY))).toMatchObject({ ok: true });
@@ -248,7 +247,7 @@ describe('settings.save', () => {
         deadlineAt: deadline(calDate(2026, 11, 2), rule),
         version: 2,
       });
-      for (const row of [kept, handSet, skipped, generated]) {
+      for (const row of [kept, handSet, generated]) {
         expect(stored.get(toIsoDate(row.monday))).toEqual(row);
       }
       const event = (await world.inspect.audit()).at(-1);

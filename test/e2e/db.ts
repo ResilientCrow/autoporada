@@ -280,17 +280,3 @@ export async function seedDrafts(email: string, count: number): Promise<void> {
     if (rowCount !== count) throw new Error(`no user with the e-mail of this journey: ${email}`);
   });
 }
-
-/**
- * Opens this Monday's meeting again, behind the page's back: what a test that skipped it does
- * after it. The row's version must rise by one (migration 0012), as it does for the app.
- */
-export async function reopenMeeting(monday: string): Promise<void> {
-  await withClient((client) =>
-    client.query(
-      `UPDATE issues SET status = 'open', version = version + 1, updated_at = now()
-        WHERE monday = $1 AND status = 'skipped'`,
-      [monday],
-    ),
-  );
-}

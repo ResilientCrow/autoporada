@@ -1,7 +1,7 @@
 import { toDeadlineRule } from '@/contracts';
 import type { Tx } from '@/application/ports';
-import { issueSlots, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
-import { instantToWallClock } from '@/domain/time';
+import { calendarBoundary, issueSlots, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
+import { instantToWallClock, parseIsoDate, type CalDate } from '@/domain/time';
 
 import { readSettingValue } from './settings';
 
@@ -17,17 +17,42 @@ export async function readDeadlineRule(tx: Pick<Tx, 'settings'>): Promise<Deadli
   return toDeadlineRule(await readSettingValue(tx, 'deadline'));
 }
 
+/** What a caller counts the calendar by: the deadline rule and the effective boundary (ADR 0054). */
+export interface CalendarWindow {
+  readonly rule: DeadlineRule;
+  /** The Monday up to and including which a Monday with no row is no porada (`calendarBoundary`). */
+  readonly plannedThrough: CalDate;
+}
+
+/**
+ * The effective boundary at `now`: the later of the `calendar` setting and last week's Monday. Read
+ * after `readDeadlineRule`, whose share lock also holds back a drop in flight, which writes it.
+ */
+export async function readPlannedThrough(tx: Pick<Tx, 'settings'>, now: Date): Promise<CalDate> {
+  const { plannedThrough } = await readSettingValue(tx, 'calendar');
+  return calendarBoundary(
+    plannedThrough ? parseIsoDate(plannedThrough) : null,
+    instantToWallClock(now).date,
+  );
+}
+
 /**
  * The meeting calendar at `now`: the stored rows from this week on (or with a meeting still
- * ahead) and a virtual slot for each Monday without one, under the deadline rule, which comes
- * back with them so the caller counts and freezes by the rule the slots were made with. One read,
- * which the worker may make too (`issues.calendar` selects only the columns it is granted).
+ * ahead) and a virtual slot for each Monday without one after the boundary, under the deadline
+ * rule, which comes back with them so the caller counts and freezes by the rule the slots were made
+ * with. One read, which the worker may make too (`issues.calendar` selects only the columns it is
+ * granted; the `calendar` setting is within its `settings` grant).
  */
 export async function readSlots(
   tx: Pick<Tx, 'issues' | 'settings'>,
   now: Date,
-): Promise<{ readonly slots: readonly IssueSlot[]; readonly rule: DeadlineRule }> {
+): Promise<{ readonly slots: readonly IssueSlot[] } & CalendarWindow> {
   const today = instantToWallClock(now).date;
   const rule = await readDeadlineRule(tx);
-  return { slots: issueSlots(await tx.issues.calendar(today), today, rule), rule };
+  const plannedThrough = await readPlannedThrough(tx, now);
+  return {
+    slots: issueSlots(await tx.issues.calendar(today), today, rule, plannedThrough),
+    rule,
+    plannedThrough,
+  };
 }

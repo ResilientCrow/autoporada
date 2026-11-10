@@ -137,7 +137,7 @@ describe('issues.missingReports', () => {
     expect((await listed(head)).reports).toEqual([]);
   });
 
-  it.each(['generated', 'skipped'] as const)(
+  it.each(['generated'] as const)(
     'shows a %s porada as closed, with nothing to edit',
     async (status) => {
       const head = await headmaster();

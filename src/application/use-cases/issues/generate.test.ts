@@ -7,7 +7,7 @@ import { calDate, parseIsoDate as d, toIsoDate, type CalDate } from '@/domain/ti
 import { issueFixtures } from '../../../../test/support/issues';
 import { registryFixtures } from '../../../../test/support/registry';
 import { setupWorld } from '../../../../test/support/world';
-import { generateIssue, issuePreview, issueWorkspace } from './index';
+import { dropIssue, generateIssue, issuePreview, issueWorkspace } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
@@ -48,8 +48,15 @@ const akceOf = (id: string) => world.tx(seeder, (tx) => tx.futureItems.get(id), 
 const eventsOf = (id: string) => world.tx(seeder, (tx) => tx.pointEvents.list(id), 'read');
 
 describe('issues.generate', () => {
-  // This week's porada did not happen, so W1 is the first one open (ADR 0040).
-  beforeEach(() => fixtures.issue(THIS_WEEK, { status: 'skipped' }));
+  // This week's porada was dropped, so W1 is the first one open (ADR 0040, 0054).
+  beforeEach(async () => {
+    const head = await headmaster();
+    const dropped = await world.run(dropIssue, world.as(head), {
+      monday: toIsoDate(THIS_WEEK),
+      confirmed: true,
+    });
+    expect(dropped.ok).toBe(true);
+  });
 
   it('stores the document, publishes the points, marks the new entries and queues the PDF', async () => {
     const head = await headmaster();
@@ -341,13 +348,12 @@ describe('issues.generate', () => {
     });
   });
 
-  it('refuses a skipped porada and a generated one', async () => {
+  it('refuses a dropped porada and a generated one', async () => {
     const head = await headmaster();
-    await fixtures.issue(W1, { status: 'skipped' });
     await fixtures.issue(W2, { status: 'generated' });
-    await refuses(() => generate(head, W1, { expectedVersion: 2 }), {
-      code: 'rule',
-      rule: 'issue-not-open',
+    await refuses(() => generate(head, THIS_WEEK), {
+      code: 'invalid-input',
+      fields: { monday: 'invalid' },
     });
     await refuses(() => generate(head, W2, { expectedVersion: 2 }), {
       code: 'rule',
@@ -400,9 +406,13 @@ describe('issues.generate in order (ADR 0040)', () => {
     expect((await everything()).documents).toHaveLength(2);
   });
 
-  it('generates a later porada once the earlier one is skipped', async () => {
+  it('generates a later porada once the earlier one is dropped', async () => {
     const head = await headmaster();
-    await fixtures.issue(THIS_WEEK, { status: 'skipped' });
+    const dropped = await world.run(dropIssue, world.as(head), {
+      monday: toIsoDate(THIS_WEEK),
+      confirmed: true,
+    });
+    expect(dropped.ok).toBe(true);
     expect((await generate(head, W1)).ok).toBe(true);
   });
 });

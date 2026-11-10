@@ -5,6 +5,7 @@ import { calDate, parseIsoDate as d, parseWallTime } from '@/domain/time';
 
 import { issueFixtures } from '../../../../test/support/issues';
 import { setupWorld } from '../../../../test/support/world';
+import { dropIssue } from '../issues';
 import { owedReports } from './index';
 
 const world = setupWorld();
@@ -98,10 +99,11 @@ describe('future.owedReports', () => {
     expect(await listed(author)).toEqual([]);
   });
 
-  it('takes a skipped porada’s akce to the next open one', async () => {
+  it('takes a dropped porada’s akce to the next one', async () => {
     const author = await submitter();
     const akce = await fixtures.future({ author, startDate: d('2026-10-15') });
-    await fixtures.issue(W0, { status: 'skipped' });
+    const head = await world.seed.user({ role: 'headmaster' });
+    await world.run(dropIssue, world.as(head), { monday: '2026-10-19', confirmed: true });
 
     expect(await listed(author)).toMatchObject([{ id: akce, monday: '2026-10-26' }]);
   });

@@ -35,10 +35,9 @@ export const ACCOUNT_LOOK: Readonly<Record<UserStatus, Look>> = {
   deactivated: { tone: 'neutral', label: status.account.deactivated },
 };
 
-/** A meeting Monday: held (still ahead), cancelled by the headmaster, or its document made. */
+/** A meeting Monday: held (still ahead), or its document made. */
 export const ISSUE_LOOK: Readonly<Record<IssueStatus, Look>> = {
   open: { tone: 'waiting', label: status.issue.open },
-  skipped: { tone: 'stopped', label: status.issue.skipped },
   generated: { tone: 'done', label: status.issue.generated },
 };
 

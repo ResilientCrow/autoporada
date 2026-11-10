@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
-import { setSkipped } from '@/server/actions';
+import { dropIssue, moveIssue } from '@/server/actions';
 import { poradaPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, porada } from '@/ui/copy';
 import { Workspace } from '@/ui/features/porada';
@@ -22,7 +22,7 @@ export default async function PoradaDatumPage({
   if (model.kind === 'preview') redirect(`/porada/${model.monday}/nahled`);
   return (
     <Shell viewer={viewer} current="/porada">
-      <Workspace view={model.model} setSkipped={setSkipped} />
+      <Workspace view={model.model} moveIssue={moveIssue} dropIssue={dropIssue} />
     </Shell>
   );
 }

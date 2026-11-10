@@ -64,7 +64,7 @@ function grouped(rows: readonly Placed[]) {
 
 /**
  * The queue as the reviewer's scope holds it now: the submitted points by the Monday they go to
- * (a skipped or generated Monday moves them on, as „Moje body“ does) and then by kind, the
+ * (a generated Monday moves them on, as „Moje body“ does) and then by kind, the
  * approved ones still waiting for a porada apart. `keep` leaves rows out after the limit.
  */
 async function readQueue(tx: Tx, now: Date, keep: (row: QueuedPoint) => boolean = () => true) {

@@ -6,7 +6,7 @@ import { SECTIONS, type Outline, type OutlineOrigin, type OutlineRow } from './m
 
 /** The latest earlier issue that has item rows. */
 export interface DeriveSource {
-  readonly status: 'open' | 'skipped' | 'generated';
+  readonly status: 'open' | 'generated';
   readonly meetingDate: CalDate;
   readonly outline: Outline;
 }
@@ -28,17 +28,10 @@ function carrySection(rows: readonly OutlineRow[]): OutlineRow[] {
 }
 
 /**
- * The outline of an issue that has no rows of its own: a skipped source passes unchanged (that
- * meeting did not happen), any other source is carried over, and with no source the seed starts.
+ * The outline of an issue that has no rows of its own: the source is carried over, and with no source the seed starts.
  */
 export function derive(source: DeriveSource | null, seed: Outline): Derived {
   if (!source) return { outline: seed, origin: { kind: 'seed' } };
-  if (source.status === 'skipped') {
-    return {
-      outline: source.outline,
-      origin: { kind: 'derived', from: source.meetingDate, how: 'pass' },
-    };
-  }
   const [pokyny, hospodareni] = SECTIONS.map((section) => carrySection(source.outline[section]));
   return {
     outline: { pokyny: pokyny ?? [], hospodareni: hospodareni ?? [] },

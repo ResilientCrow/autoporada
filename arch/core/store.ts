@@ -1,10 +1,10 @@
-import { deadline, planNextMeeting, slotMondayOf } from '@/domain/calendar';
+import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
 import { missingForSubmit, newDraft, openingInput, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
 import { openingSentence } from '@/domain/cs';
 import { addDays, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
-import { emptyRichDoc, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
+import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
+import { working, atLeast, buildDoc, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, PointType, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
@@ -27,7 +27,7 @@ const ensureIssue = (s: State, monday: string): State => {
   const last = [...s.issues].sort((a, b) => a.monday.localeCompare(b.monday)).pop()!;
   const d = parseIsoDate(monday);
   const iss: Issue = { ...last, monday, meetingDate: monday, deadlineAt: deadline(d, ruleOf(s)).toISOString(), status: 'open', placeholders: {}, rows: last.rows.filter((r) => r.persistence === 'standing' || r.isNew).map((r) => ({ ...r, isNew: false })) };
-  delete iss.doc; iss.annex2 = null; iss.annexes = [];
+  delete iss.doc; iss.annex2 = null; iss.annexes = []; iss.own = { rows: false, present: false, guests: false, annex2: false };
   return { ...s, issues: [...s.issues, iss] };
 };
 export const needsReauth = (s: State) => !s.stepUpAt || new Date(s.now).getTime() - new Date(s.stepUpAt).getTime() > 600_000;
@@ -57,7 +57,7 @@ export function createPoint(kind: PointKind, typeId: string | null, akceId: stri
     } else if (kind === 'report' && u) {
       content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
     }
-    const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, submittedAt: null, note: null, savedAt: s.now, trail: [] };
+    const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, savedAt: s.now, trail: [] };
     p.content = refreshOpening(s, p, content);
     onId?.(pid);
     return { ...s, points: [...s.points, p], futures: akce ? up(s.futures, akce.id, (f) => ({ ...f, report: 'written' })) : s.futures };
@@ -80,7 +80,7 @@ export function trySubmit(s: State, pid: string): SubmitResult {
 export const submitPoint = (pid: string): Fx => (s0) => {
   const r = trySubmit(s0, pid); if (!r.ok) return s0;
   const s = ensureIssue(s0, r.monday);
-  return { ...s, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, submittedAt: s.now, note: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
+  return { ...s, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
 };
 export const retractPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => (p.state === 'submitted' ? { ...p, state: 'draft', trail: [...p.trail, trail(s, 'Vzato zpět')] } : p)) });
 export const withdrawPoint = (pid: string): Fx => (s) => {
@@ -141,7 +141,12 @@ export const rejectFuture = (fid: string, note: string): Fx => (s) => (!note.tri
 export const cancelFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'cancelled', trail: [...f.trail, trail(s, 'Zrušeno')] })) });
 
 // ---- porada ----
-const patchIssue = (s: State, m: string, f: (i: Issue) => Issue) => ({ ...s, issues: s.issues.map((i) => (i.monday === m ? f(i) : i)) });
+/** A change to the outline or a text is a write the server stores: the porada then has its own (`Issue.own`). */
+const patchIssue = (s: State, m: string, f: (i: Issue) => Issue) => ({ ...s, issues: s.issues.map((i) => {
+  if (i.monday !== m) return i;
+  const n = f(i);
+  return { ...n, own: { rows: n.own.rows || n.rows !== i.rows, present: n.own.present || n.present !== i.present, guests: n.own.guests || n.guests !== i.guests, annex2: n.own.annex2 || n.annex2 !== i.annex2 } };
+}) });
 export const saveIssueTexts = (m: string, present: string, guests: string): Fx => (s) => patchIssue(s, m, (i) => ({ ...i, present, guests }));
 export const setAnnex2 = (m: string, doc: RichDoc | null): Fx => (s) => patchIssue(s, m, (i) => ({ ...i, annex2: doc }));
 export const addAnnex = (m: string, onId?: (id: string) => void): Fx => (s0) => { const [s, aid] = id(s0, 'annex'); onId?.(aid); return patchIssue(s, m, (i) => ({ ...i, annexes: [...i.annexes, { id: aid, title: '', parts: [] }] })); };
@@ -162,25 +167,51 @@ export const placeRow = (m: string, rid: string): Fx => (s) => patchIssue(s, m, 
 export const saveRow = (m: string, rid: string, patch: Partial<Row>): Fx => (s) => patchIssue(s, m, (i) => ({ ...i, rows: i.rows.map((r) => (r.id === rid ? { ...r, ...patch } : r)) }));
 export const addRow = (m: string, section: Row['section'], title: string, text: string | RichDoc, persistence: Row['persistence']): Fx => (s0) => { const [s, rid] = id(s0, 'row'); return patchIssue(s, m, (i) => ({ ...i, rows: [...i.rows, { id: rid, section, slot: null, persistence, title, body: typeof text !== 'string' ? text : text ? richDocFromText(text) : emptyRichDoc(), quotes: [], pointId: null }] })); };
 export const removeRow = (m: string, rid: string): Fx => (s) => patchIssue(s, m, (i) => ({ ...i, rows: i.rows.filter((r) => r.id !== rid || r.slot) }));
-export const planSkip = (s: State, m: string, date: CalDate): ReturnType<typeof planNextMeeting> => planNextMeeting(slotsOf(s), slotsOf(s).find((x) => toIsoDate(x.monday) === m)!, date, { rule: ruleOf(s), now: new Date(s.now) });
-export const setSkipped = (m: string, date: CalDate): Fx => (s0) => {
-  const r = planSkip(s0, m, date); if (!r.ok) return s0;
-  const heldM = toIsoDate(slotMondayOf(date));
-  let s = ensureIssue(s0, m); s = ensureIssue(s, heldM);
-  for (const x of r.plan.skipped as readonly { monday: CalDate }[]) { const k = toIsoDate(x.monday); s = ensureIssue(s, k); s = patchIssue(s, k, (i) => ({ ...i, status: 'skipped' })); }
-  if (r.plan.moved) s = patchIssue(s, heldM, (i) => ({ ...i, meetingDate: toIsoDate(date), deadlineAt: r.plan.held.deadlineAt.toISOString() }));
-  // What was prepared for a skipped porada goes to the next one held: annexes, one-off points, people, paragraphs.
-  for (const x of r.plan.skipped as readonly { monday: CalDate }[]) {
-    const k = toIsoDate(x.monday); if (k === heldM) continue; const from = issueOf(s, k)!;
-    s = patchIssue(s, heldM, (i) => ({ ...i, annexes: [...i.annexes, ...from.annexes.filter((a) => !i.annexes.some((b) => b.id === a.id))], rows: [...i.rows, ...from.rows.filter((a) => !i.rows.some((b) => b.id === a.id))], present: from.present || i.present, guests: from.guests || i.guests, placeholders: { ...from.placeholders, ...i.placeholders } }));
-    s = patchIssue(s, k, (i) => ({ ...i, annexes: [] }));
-  }
-  // Points of a skipped porada go to the next one held.
-  const gone = new Set(r.plan.skipped.map((x: { monday: CalDate }) => toIsoDate(x.monday)));
-  s = { ...s, points: s.points.map((p) => (p.handInMonday && gone.has(p.handInMonday) ? { ...p, handInMonday: heldM } : p)) };
-  return audit(s, `Porada ${m}: ${r.plan.skipped.length ? 'nekoná se' : 'přesunuta'}`);
+export const planMoveOf = (s: State, m: string, date: CalDate) => { const slot = slotsOf(s).find((x) => toIsoDate(x.monday) === m); return slot ? planMove(slotsOf(s), slot, date, { rule: ruleOf(s), now: new Date(s.now) }) : null; };
+export const planDropOf = (s: State, m: string) => { const slot = slotsOf(s).find((x) => toIsoDate(x.monday) === m); return slot ? planDrop(slotsOf(s), slot, { rule: ruleOf(s), plannedThrough: plannedOf(s) }) : null; };
+export const planAddOf = (s: State, date: CalDate) => planAdd(slotsOf(s), date, { rule: ruleOf(s), now: new Date(s.now) });
+/** „Přesunout poradu“: the Monday stays, the meeting date and the deadline change. */
+export const movePorada = (m: string, date: CalDate): Fx => (s0) => {
+  const r = planMoveOf(s0, m, date); if (!r?.ok) return s0;
+  const s = patchIssue(ensureIssue(s0, m), m, (i) => ({ ...i, meetingDate: toIsoDate(date), deadlineAt: r.moved.deadlineAt.toISOString() }));
+  return audit(s, `Porada ${m}: přesunuta na ${toIsoDate(date)}`);
 };
-export const unskip = (m: string): Fx => (s) => (s.issues.some((i) => i.status === 'generated' && i.monday > m) ? s : patchIssue(s, m, (i) => ({ ...i, status: 'open' })));
+/**
+ * „Porada se nekoná“: the porada disappears and an open heir takes what was prepared, as the server's
+ * `issues.drop` hands it over: the outline when the heir has none of its own, each text the heir
+ * has not written from the one the dropped porada wrote (Příloha 2 only when not empty), and the
+ * annexes after the heir's. Its points keep their hand-in Monday and are in the heir from now on.
+ */
+export const dropPorada = (m: string): Fx => (s0) => {
+  const r = planDropOf(s0, m); if (!r?.ok) return s0;
+  const heirM = toIsoDate(r.heir.monday);
+  let s = ensureIssue(s0, m);
+  for (const x of r.fill) s = ensureIssue(s, toIsoDate(x.monday));
+  s = ensureIssue(s, heirM);
+  const from = issueOf(s, m)!; const heir = issueOf(s, heirM)!;
+  if (heir.status === 'open') {
+    const take = (k: 'present' | 'guests') => !heir.own[k] && from.own[k];
+    s = patchIssue(s, heirM, (i) => ({
+      ...i,
+      rows: from.own.rows && !i.own.rows ? from.rows : i.rows,
+      present: take('present') ? from.present : i.present,
+      guests: take('guests') ? from.guests : i.guests,
+      annex2: !i.own.annex2 && from.own.annex2 && from.annex2 && !isRichDocEmpty(from.annex2) ? from.annex2 : i.annex2,
+      annexes: [...i.annexes, ...from.annexes],
+    }));
+  }
+  s = { ...s, issues: s.issues.filter((i) => i.monday !== m), plannedThrough: toIsoDate(r.plannedThrough) };
+  const next = slotsOf(s).find((x) => x.status === 'open' && toIsoDate(x.monday) > m);
+  if (next) s = { ...s, points: s.points.map((p) => (p.poradaMonday === m ? { ...p, poradaMonday: toIsoDate(next.monday) } : p)) };
+  return audit(s, `Porada ${m}: nekoná se`);
+};
+/** „Přidat poradu“: a porada on a date whose week has none. */
+export const addPorada = (date: CalDate): Fx => (s0) => {
+  const r = planAddOf(s0, date); if (!r.ok) return s0;
+  const monday = toIsoDate(r.added.monday);
+  const s = patchIssue(ensureIssue(s0, monday), monday, (i) => ({ ...i, meetingDate: toIsoDate(date), deadlineAt: r.added.deadlineAt.toISOString() }));
+  return audit(s, `Porada ${toIsoDate(date)}: přidána`);
+};
 export const generate = (m: string): Fx => (s) => {
   if (me(s)?.role !== 'headmaster' || preflight(s, m).some((c) => c.level === 'block')) return s;
   const built = buildDoc(s, m); if (!built.model) return s;
@@ -189,14 +220,14 @@ export const generate = (m: string): Fx => (s) => {
   const rowsHere = issueOf(s, m)!.rows.map((r) => r.pointId);
   // A report with no akce behind it that nobody decided waits for the next porada, it is never lost.
   const nextM = toIsoDate(slotsOf(s).find((x) => x.status === 'open' && toIsoDate(x.monday) > m)?.monday ?? addDays(parseIsoDate(m), 7));
-  const moved = s.points.filter((p) => !p.akceId && p.kind === 'report' && p.handInMonday === m && p.state !== 'approved' && p.state !== 'published' && p.state !== 'rejected' && p.state !== 'withdrawn');
+  const moved = s.points.filter((p) => !p.akceId && p.kind === 'report' && p.poradaMonday === m && p.state !== 'approved' && p.state !== 'published' && p.state !== 'rejected' && p.state !== 'withdrawn');
   const left = { moved: moved.map((p) => p.content.title), missed: built.segments.filter((x) => x.kind === 'missing').map((x) => s.futures.find((f) => f.id === x.refId)?.title ?? '') };
   return audit({ ...s,
     issues: s.issues.map((i) => (i.monday === m ? { ...i, status: 'generated', doc: { at: s.now, by: s.userId!, pdf: 'rendering', model: built.model, points: built.points, left } } : i)),
     points: s.points.map((p) => {
-      if (moved.some((x) => x.id === p.id)) return { ...p, handInMonday: nextM };
+      if (moved.some((x) => x.id === p.id)) return { ...p, poradaMonday: nextM };
       if (closed.includes(p.id)) return { ...p, state: 'withdrawn' as const, trail: [...p.trail, { at: s.now, who: 'system', what: 'Uzavřeno generováním' }] };
-      if (p.state === 'approved' && (p.handInMonday === m || rowsHere.includes(p.id))) return { ...p, state: 'published' as const, trail: [...p.trail, { at: s.now, who: 'system', what: 'Zveřejněno v poradě' }] };
+      if (p.state === 'approved' && (p.poradaMonday === m || rowsHere.includes(p.id))) return { ...p, state: 'published' as const, trail: [...p.trail, { at: s.now, who: 'system', what: 'Zveřejněno v poradě' }] };
       return p;
     }),
     futures: s.futures.map((f) => (missed.has(f.id) ? { ...f, report: 'missed' as const } : f)),

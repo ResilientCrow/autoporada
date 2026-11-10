@@ -60,6 +60,7 @@ export const rules = {
   'issue-not-open': 'Tuto poradu už nelze změnit, protože se její stav změnil.',
   'issue-blocked': 'Dokument zatím nelze vygenerovat. Náhled ukazuje, co je potřeba opravit.',
   'deadline-past': 'Uzávěrka by k\u00A0tomu dni už proběhla. Zvolte pozdější den.',
+  'porada-exists': 'V\u00A0tom týdnu už porada je. Přesuňte ji, nebo zvolte jiný týden.',
 } as const satisfies Record<RuleCode, string>;
 
 export const fieldIssues = {

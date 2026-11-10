@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { setSkipped, startFutureReport } from '@/server/actions';
+import { addIssue, startFutureReport } from '@/server/actions';
 import { homePage, requireSignedIn } from '@/server/pages';
 import { cs, pageTitle } from '@/ui/copy';
 import { ReportDueCard } from '@/ui/features/future';
@@ -55,8 +55,8 @@ export default async function HomePage() {
           {model.mine.standing !== null && <StandingLine standing={model.mine.standing} />}
         </MyPointsCard>
       )}
-      {model.kind === 'member' && model.strip !== null && (
-        <MeetingStrip days={model.strip} setSkipped={setSkipped} />
+      {model.kind === 'member' && model.strip !== null && model.calendar !== null && (
+        <MeetingStrip days={model.strip} addIssue={addIssue} calendar={model.calendar} />
       )}
       <AccountCard actor={viewer.actor} home={model} />
     </Shell>

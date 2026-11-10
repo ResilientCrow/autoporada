@@ -22,11 +22,11 @@ interface Owed {
  */
 async function ownOwed(tx: Tx, authorId: string, now: Date): Promise<Owed[]> {
   const today = instantToWallClock(now).date;
-  const { slots } = await readWindow(tx, now);
+  const { slots, plannedThrough } = await readWindow(tx, now);
   const found: Owed[] = [];
   for (const slot of slots) {
     if (slot.status !== 'open') continue;
-    const since = await readReportsSince(tx, slot.monday);
+    const since = await readReportsSince(tx, slot.monday, plannedThrough);
     if (compareDates(since, today) > 0) break;
     for (const akce of await owedAkce(tx, since, slot.meetingDate)) {
       const c = akce.content;

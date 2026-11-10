@@ -71,7 +71,7 @@ export const missingReportsOutput = z.strictObject({
   monday: z.iso.date(),
   /** The day the porada is held. */
   meetingDate: z.iso.date(),
-  /** False for a generated or skipped porada: it has nothing to edit and the list is empty. */
+  /** False for a generated porada: it has nothing to edit and the list is empty. */
   open: z.boolean(),
   reports: z.array(missingReport),
 });

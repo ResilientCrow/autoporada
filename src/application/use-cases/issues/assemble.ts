@@ -20,7 +20,8 @@ const virtualId = (monday: CalDate) => `neulozena-${toIsoDate(monday)}`;
 
 /**
  * The snapshot of one issue as the document would print it now, read from the data (design §4).
- * A Monday without a row assembles as an untouched issue. Read-only; `issues.generate` calls it
+ * A Monday without a row past the calendar's boundary assembles as an untouched issue; null for
+ * one up to it, where no porada is (a dropped one, ADR 0054 item 7). Read-only; `issues.generate` calls it
  * with `lock: true` so the points it reads cannot change under it, and publishes `publish`. The deadline rule is read
  * first, before any issue row (lock order, row 12b), with the calendar that says which earlier
  * porada is still open (ADR 0040). The snapshot is null when it fails its own schema; the
@@ -30,10 +31,11 @@ export async function assembleIssueSnapshot(
   tx: Tx,
   monday: CalDate,
   options: { readonly now: Date; readonly lock?: boolean },
-): Promise<AssemblyResult> {
-  const { slots, rule } = await readSlots(tx, options.now);
+): Promise<AssemblyResult | null> {
+  const { slots, rule, plannedThrough } = await readSlots(tx, options.now);
   const earlier = slots.find((s) => s.status === 'open' && compareDates(s.monday, monday) < 0);
   const [row] = await tx.issues.between(monday, monday);
+  if (!row && compareDates(monday, plannedThrough) <= 0) return null;
   const issue = {
     id: row?.id ?? null,
     monday,
@@ -45,7 +47,7 @@ export async function assembleIssueSnapshot(
   const meeting = issue.meetingDate;
   const outlineIssue = { id: issue.id, monday };
 
-  const since = await readReportsSince(tx, monday);
+  const since = await readReportsSince(tx, monday, plannedThrough);
   const points = await tx.points.eligibleFor(monday, meeting, {
     since,
     lock: options.lock ?? false,

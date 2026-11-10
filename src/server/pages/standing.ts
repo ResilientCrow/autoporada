@@ -20,6 +20,8 @@ export interface StandingModel {
   /** ISO instant. */
   readonly now: string;
   readonly rule: DeadlineRule;
+  /** The calendar's effective boundary (ADR 0054): up to it a Monday with no row is no porada. */
+  readonly plannedThrough: string;
 }
 
 /** The meeting calendar as the viewer, or null where the use case refuses it (404). */
@@ -41,6 +43,7 @@ export function standingFrom(window: MeetingWindow, now: Date): StandingModel {
     issues: window.issues,
     now: now.toISOString(),
     rule: toDeadlineRule(window.rule),
+    plannedThrough: window.plannedThrough,
   };
 }
 

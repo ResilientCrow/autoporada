@@ -23,14 +23,14 @@ import { ensureIssue } from '../issues';
  */
 async function applyDeadline(tx: Tx, now: Date, value: unknown) {
   const newRule = toDeadlineRule(SETTINGS.deadline.schema.parse(value));
-  const { slots, rule } = await readSlots(tx, now);
-  const change = deadlineChange(now, rule, newRule, slots);
+  const { slots, rule, plannedThrough } = await readSlots(tx, now);
+  const change = deadlineChange(now, rule, newRule, slots, plannedThrough);
   const frozen: AuditTarget[] = [];
   const refrozen: AuditTarget[] = [];
   if (!change) return { frozen, refrozen, conflict: false };
   for (const monday of change.freeze) {
-    const { issue, inserted } = await ensureIssue(tx, monday, rule);
-    if (inserted) frozen.push({ type: 'issue', id: issue.id });
+    const ensured = await ensureIssue(tx, monday, { rule, plannedThrough });
+    if (ensured?.inserted) frozen.push({ type: 'issue', id: ensured.issue.id });
   }
   const today = instantToWallClock(now).date;
   const rows = await tx.issues.between(change.from, lastSlotMonday(today));
@@ -41,7 +41,7 @@ async function applyDeadline(tx: Tx, now: Date, value: unknown) {
     changed.add(toIsoDate(row.monday));
   }
   // The new rule decides the deadline of every refrozen row and of every Monday without a row.
-  const after = issueSlots(await tx.issues.calendar(today), today, newRule);
+  const after = issueSlots(await tx.issues.calendar(today), today, newRule, plannedThrough);
   const conflict = after
     .filter((slot) => !slot.stored || changed.has(toIsoDate(slot.monday)))
     .some((slot) => orderConflicts(after, slot).length > 0);

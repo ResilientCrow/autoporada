@@ -5,10 +5,10 @@ import type { RichDoc } from '@/domain/richtext';
 
 import { at, createdAt, id } from './columns';
 
-export const issueStatus = pgEnum('issue_status', ['open', 'generated', 'skipped']);
+export const issueStatus = pgEnum('issue_status', ['open', 'generated']);
 
 /**
- * One row per meeting Monday that someone submitted to or skipped (design
+ * One row per meeting Monday that someone submitted to or added (design
  * §3). The deadline is frozen when the row is made: a deadline already shown
  * never moves. Migration 0012 lets `version` rise only by one per update.
  */

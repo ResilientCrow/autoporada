@@ -1,11 +1,11 @@
-import { and, asc, desc, eq, exists, isNotNull, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, exists, isNotNull, lt, sql } from 'drizzle-orm';
 
 import { ScopeViolation, type IssueItemRepo, type TxContext } from '@/application/ports';
 import { SECTIONS, type Outline, type OutlineRow } from '@/domain/outline';
 import { can } from '@/domain/policy';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 
-import { issueItems, issues } from '../schema';
+import { archAnnexes, issueItems, issues } from '../schema';
 import type { TxDatabase } from './database';
 
 const toRow = (row: typeof issueItems.$inferSelect): OutlineRow => ({
@@ -57,6 +57,36 @@ export function createIssueItemRepo(db: TxDatabase, ctx: TxContext): IssueItemRe
         })),
       );
       if (values.length > 0) await db.insert(issueItems).values(values);
+    },
+    async handOverAnnexes(from, to) {
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.edit' })) {
+        throw new ScopeViolation();
+      }
+      const key = toIsoDate(from);
+      // Locked: a save committed while this waits is what moves, never lost to the delete below.
+      const [own] = await db
+        .select({ annexes: archAnnexes.annexes })
+        .from(archAnnexes)
+        .where(eq(archAnnexes.monday, key))
+        .for('update');
+      if (!own) return 0;
+      const moving = own.annexes as unknown[];
+      await db.delete(archAnnexes).where(eq(archAnnexes.monday, key));
+      if (to === null || moving.length === 0) return moving.length;
+      const target = toIsoDate(to);
+      const [kept] = await db
+        .select({ annexes: archAnnexes.annexes })
+        .from(archAnnexes)
+        .where(eq(archAnnexes.monday, target));
+      const annexes = [...((kept?.annexes as unknown[] | undefined) ?? []), ...moving];
+      await db
+        .insert(archAnnexes)
+        .values({ monday: target, annexes })
+        .onConflictDoUpdate({
+          target: archAnnexes.monday,
+          set: { annexes, version: sql`${archAnnexes.version} + 1`, updatedAt: ctx.now },
+        });
+      return moving.length;
     },
     async textsOf(issueId) {
       const [row] = await db

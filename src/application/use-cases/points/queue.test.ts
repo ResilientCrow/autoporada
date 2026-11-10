@@ -24,7 +24,7 @@ import {
 
 import { FIRST_MONDAY, pointFixtures, readyProposal, START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
-import { issueWindow } from '../issues';
+import { dropIssue, issueWindow } from '../issues';
 import { decidePoint, queuePoints, retractPoint, submitPoint } from './index';
 
 const world = setupWorld();
@@ -117,8 +117,18 @@ async function returnedAndBack(author: UserRecord, id: string): Promise<void> {
   });
 }
 
-/** An issue row with this status, as the headmaster's skip or the generation leaves it. */
-const issue = (monday: CalDate, status: 'skipped' | 'generated' | 'open') =>
+/** The headmaster's „Porada se nekoná“: the porada of `monday` goes, its points move on. */
+async function drop(monday: CalDate): Promise<void> {
+  const head = await world.seed.user({ role: 'headmaster' });
+  const done = await world.run(dropIssue, world.as(head), {
+    monday: toIsoDate(monday),
+    confirmed: true,
+  });
+  expect(done.ok).toBe(true);
+}
+
+/** An issue row with this status, as the generation leaves it. */
+const issue = (monday: CalDate, status: 'generated' | 'open') =>
   world.tx(system('test.seed'), async (tx) => {
     const { issue: row } = await tx.issues.ensure({
       monday,
@@ -216,11 +226,11 @@ describe('points.queue', () => {
     expect(await listed()).toEqual([QUEUE_LIMIT, true]);
   });
 
-  it('moves the points of a skipped or generated Monday on to the next open one', async () => {
+  it('moves the points of a dropped or generated Monday on to the next open one', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const first = await handIn(author, 'pokyn');
     const second = await handIn(author, 'pokyn', { monday: NEXT_MONDAY });
-    await issue(FIRST_MONDAY, 'skipped');
+    await drop(FIRST_MONDAY);
     await issue(NEXT_MONDAY, 'generated');
     expect((await shape(await reviewer())).mondays).toEqual([
       ['2026-11-09', [['pokyn', [first, second]]]],
@@ -240,11 +250,11 @@ describe('points.queue', () => {
     ]);
   });
 
-  it('places nothing when every slot of the calendar is skipped or generated', async () => {
+  it('places nothing when every slot of the calendar is generated', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const id = await handIn(author, 'pokyn');
     for (let week = 0; week < PLACEMENT_WEEKS; week++) {
-      await issue(addDays(FIRST_MONDAY, 7 * week), week % 2 ? 'skipped' : 'generated');
+      await issue(addDays(FIRST_MONDAY, 7 * week), 'generated');
     }
     expect((await shape(await reviewer())).mondays).toEqual([[null, [['pokyn', [id]]]]]);
   });
@@ -281,22 +291,25 @@ describe('points.queue', () => {
     async function promised(by: UserRecord): Promise<string> {
       const got = await world.run(issueWindow, world.as(by), {});
       if (!got.ok) throw new Error(`window refused: ${got.error.code}`);
-      const { submitMonday, issues } = got.value;
+      const { submitMonday, issues, plannedThrough } = got.value;
       const today = instantToWallClock(world.clock.now()).date;
-      const slots = issueSlots(toIssueRows(issues), today, DEFAULT_DEADLINE);
+      const slots = issueSlots(
+        toIssueRows(issues),
+        today,
+        DEFAULT_DEADLINE,
+        parseIsoDate(plannedThrough),
+      );
       const slot = placementSlot(parseIsoDate(submitMonday), today, slots);
       return toIsoDate(slot!.monday);
     }
 
-    it('keeps a resubmitted point on the Monday it was handed in for when the skipped one before it is unskipped (ADR 0029 item 3)', async () => {
+    it('keeps a resubmitted point on the Monday it was handed in for when the porada before it is dropped (ADR 0029 item 3, 0054)', async () => {
       const author = await world.seed.user({ role: 'submitter' });
       const id = await submittedOnTime(author);
       await world.run(retractPoint, world.as(author), { id, expectedVersion: 2 });
-      await issue(FIRST_MONDAY, 'skipped');
+      await drop(FIRST_MONDAY);
       expect((await resubmit(author, id, 3)).ok).toBe(true);
       const by = await reviewer();
-      expect((await shape(by)).mondays).toEqual([['2026-11-02', [['pokyn', [id]]]]]);
-      await issue(FIRST_MONDAY, 'open');
       expect((await shape(by)).mondays).toEqual([['2026-11-02', [['pokyn', [id]]]]]);
     });
 
@@ -377,13 +390,13 @@ describe('points.queue', () => {
       });
     });
 
-    it('keeps an approved point on its own Monday past that deadline, and moves it past a skip', async () => {
+    it('keeps an approved point on its own Monday past that deadline, and moves it past a drop', async () => {
       const author = await world.seed.user({ role: 'submitter' });
       const id = await handIn(author, 'pokyn', { state: 'approved' });
       world.clock.set(AFTER_DEADLINE);
       const by = await reviewer();
       expect((await shape(by)).approved).toEqual([[id, '2026-10-26']]);
-      await issue(FIRST_MONDAY, 'skipped');
+      await drop(FIRST_MONDAY);
       expect((await shape(by)).approved).toEqual([[id, toIsoDate(NEXT_MONDAY)]]);
     });
   });

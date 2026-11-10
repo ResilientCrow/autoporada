@@ -78,8 +78,9 @@ export const setPlaceholder = simple('setPlaceholder', S.setPlaceholder);
 export const placeRow = simple('placeRow', S.placeRow);
 export const saveRow = simple('saveRow', S.saveRow);
 export const removeRow = simple('removeRow', S.removeRow);
-export const setSkipped = simple('setSkipped', S.setSkipped);
-export const unskip = simple('unskip', S.unskip);
+export const movePorada = simple('movePorada', S.movePorada);
+export const dropPorada = simple('dropPorada', S.dropPorada);
+export const addPorada = simple('addPorada', S.addPorada);
 export const generate = simple('generate', S.generate);
 export const addList = simple('addList', S.addList);
 export const renameList = simple('renameList', S.renameList);
@@ -180,8 +181,9 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
       return [{ name: 'outline.save', key: `issue:${m}`, input: { monday: m, ...issueV(m), lineageId: real(rid), ...(patch.title !== undefined && { title: patch.title }), ...(patch.body && { body: patch.body }), ...(patch.quotes && { quotes: patch.quotes }), ...(patch.persistence && { persistence: patch.persistence }) } }];
     }
     case 'removeRow': return [{ name: 'outline.remove', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), lineageId: real(a[1]) } }];
-    case 'setSkipped': return [{ name: 'issues.setSkipped', key: `issue:${a[0]}`, input: { monday: a[0], event: 'skip', ...issueV(a[0]), confirmed: true, nextMeeting: toIsoDate(a[1]) } }];
-    case 'unskip': return [{ name: 'issues.setSkipped', key: `issue:${a[0]}`, input: { monday: a[0], event: 'unskip', ...issueV(a[0]), confirmed: true } }];
+    case 'movePorada': return [{ name: 'issues.move', key: `issue:${a[0]}`, input: { monday: a[0], meetingDate: toIsoDate(a[1]), ...issueV(a[0]) } }];
+    case 'dropPorada': return [{ name: 'issues.drop', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), confirmed: true } }];
+    case 'addPorada': return [{ name: 'issues.add', input: { meetingDate: toIsoDate(a[0]) } }];
     case 'generate': return [{ name: 'issues.generate', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), confirmed: true } }];
     case 'addList': return [{ name: 'registry.saveList', input: { title: a[0], docLabel: a[1], active: true } }];
     case 'renameList': { const l = s.registry.find((x) => x.key === a[0]) as { id?: string } | undefined; return l?.id ? [{ name: 'registry.saveList', key: l.id, input: { id: l.id, version: vers[l.id] ?? 1, title: a[1], docLabel: a[2], active: true } }] : []; }

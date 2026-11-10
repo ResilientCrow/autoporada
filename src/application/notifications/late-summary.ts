@@ -56,7 +56,7 @@ export async function lateReportsFor(tx: Reads, issue: IssueRow): Promise<LateRe
 
 /**
  * The porada whose last late close passed five minutes to two hours ago and that had late
- * reports, with their counts: what the second summary speaks for. None for a skipped porada.
+ * reports, with their counts: what the second summary speaks for.
  */
 export async function lateSummaryIssue(
   tx: Reads & Pick<Tx, 'issues'>,
@@ -64,7 +64,7 @@ export async function lateSummaryIssue(
 ): Promise<{ readonly issue: IssueRow; readonly late: LateReports } | null> {
   const rows = await tx.issues.calendar(instantToWallClock(now).date);
   for (const issue of rows) {
-    if (issue.status === 'skipped' || issue.deadlineAt.getTime() > now.getTime()) continue;
+    if (issue.deadlineAt.getTime() > now.getTime()) continue;
     const late = await lateReportsFor(tx, issue);
     if (late.lastDue && summaryDue(late.lastDue, now)) return { issue, late };
   }

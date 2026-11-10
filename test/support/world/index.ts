@@ -24,6 +24,7 @@ import {
   type UserPrincipal,
   type UserRecord,
 } from '@/application/ports';
+import type { Database } from '@/infra/db';
 
 import { setupTestDatabase, type TestDatabase } from '../database';
 import { FixedClock } from './clock';
@@ -140,6 +141,8 @@ interface PgInspector {
   lockWaits(): Promise<number>;
   /** Runs SQL as the owner, past grants and repositories, for guards the ports cannot reach. */
   owner<R extends object>(sql: string, params?: unknown[]): Promise<R[]>;
+  /** Drizzle over the app's pool (autoporada_app), for the stores that are no port (`createArchStore`). */
+  readonly db: Database;
 }
 
 /** What differs between the worlds; the rest of the World is built on top. */
@@ -347,6 +350,9 @@ function pgBackend(database: TestDatabase): Backend {
     pg: {
       lockWaits: () => lockWaits(database),
       owner: (sql, params) => database.owner(sql, params),
+      get db() {
+        return database.db;
+      },
     },
     audit: () => auditRows(database),
     jobs: () => jobRows(database),

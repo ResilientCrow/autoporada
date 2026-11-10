@@ -27,8 +27,8 @@ const toneOf = (state: MissingReportView['state']) =>
 
 /**
  * „Chybějící zprávy“ as /porada/[datum]/zpravy shows it (ADR 0049): each akce the porada owes a
- * report for and does not have one, with the paragraph the document prints instead. A generated or
- * skipped porada shows no form.
+ * report for and does not have one, with the paragraph the document prints instead. A generated
+ * porada shows no form.
  */
 export function MissingReportsPage({
   model,

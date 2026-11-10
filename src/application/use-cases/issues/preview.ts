@@ -43,7 +43,9 @@ export const issuePreview = defineUseCase({
   async execute({ tx, now }, input) {
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
-    const { snapshot, problems, facts } = await assembleIssueSnapshot(tx, monday, { now });
+    const assembled = await assembleIssueSnapshot(tx, monday, { now });
+    if (!assembled) return fail({ code: 'not-found' });
+    const { snapshot, problems, facts } = assembled;
     const { id, status } = facts.issue;
     const document = id !== null && status === 'generated' ? await tx.documents.forIssue(id) : null;
     if (document) {

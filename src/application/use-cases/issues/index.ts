@@ -1,13 +1,15 @@
+export { addIssue } from './add';
 export { readWindow } from './calendar';
 export { ensureIssue } from './ensure';
+export { dropIssue } from './drop';
 export { generateIssue } from './generate';
 export { issueMissingReports } from './missing-reports';
 export { issuePreview } from './preview';
+export { moveIssue } from './move';
 export { reportTally } from './report-tally';
 export { setIssueAnnex2 } from './set-annex2';
 export { setPlaceholder } from './set-placeholder';
 export { setIssueDetails } from './set-details';
-export { setSkipped } from './skip';
 export { readIssueTexts } from './texts';
 export { issueWindow } from './window';
 export { issueWorkspace } from './workspace';

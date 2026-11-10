@@ -14,8 +14,8 @@ interface PlacedPoint {
 
 /**
  * The Monday of the slot a handed-in point is shown under (ADR 0018 item 1, ADR 0029): the first
- * open slot from its `dueMonday` whose meeting is today or later (`placementSlot`, skipped and
- * generated slots stepped over). A point handed in on time keeps its slot after the deadline, as
+ * open slot from its `dueMonday` whose meeting is today or later (`placementSlot`, generated
+ * slots stepped over). A point handed in on time keeps its slot after the deadline, as
  * its hand-in Monday was ahead of it; a resubmit starts from the Monday it was handed in for, as
  * its `earliest` may be over.
  */

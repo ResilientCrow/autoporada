@@ -11,11 +11,13 @@ export {
   submitFuture,
 } from './future';
 export {
+  addIssue,
+  dropIssue,
   generateIssue,
+  moveIssue,
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
-  setSkipped,
 } from './issues';
 export { addOutlineItem, moveOutlineItem, removeOutlineItem, saveOutlineItem } from './outline';
 export {

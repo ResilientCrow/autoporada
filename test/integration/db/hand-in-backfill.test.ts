@@ -81,7 +81,9 @@ describe('the hand-in Monday backfill (migration 0027)', () => {
       const ids = await Promise.all(instants.map(handedIn));
       await migrate();
       const stored = await Promise.all(ids.map(handInOf));
-      expect(stored).toEqual(instants.map((at) => toIsoDate(submitMonday(at, [], LEGACY_RULE))));
+      expect(stored).toEqual(
+        instants.map((at) => toIsoDate(submitMonday(at, [], LEGACY_RULE, null))),
+      );
       // The edge itself: a second before 18.00 is this Monday's, 18.00 is the next one's.
       expect(stored.slice(1, 4)).toEqual([
         toIsoDate(monday),

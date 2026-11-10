@@ -97,7 +97,6 @@ describe('status looks', () => {
     ['account blocked', ACCOUNT_LOOK.blocked, 'stopped'],
     ['account deactivated', ACCOUNT_LOOK.deactivated, 'neutral'],
     ['issue open', ISSUE_LOOK.open, 'waiting'],
-    ['issue skipped', ISSUE_LOOK.skipped, 'stopped'],
     ['issue generated', ISSUE_LOOK.generated, 'done'],
     ['point draft', POINT_LOOK.draft, 'neutral'],
     ['point submitted', POINT_LOOK.submitted, 'waiting'],

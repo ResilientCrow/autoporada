@@ -10,8 +10,9 @@ import {
 } from '@/application/ports';
 import { OUTLINE_LIMITS, SEED_OUTLINE, type Outline, type OutlineRow } from '@/domain/outline';
 import { emptyRichDoc, richDocFromText, type RichDoc } from '@/domain/richtext';
-import { addDays, calDate, type CalDate } from '@/domain/time';
+import { addDays, calDate, toIsoDate, type CalDate } from '@/domain/time';
 
+import { seedAnnexes } from '../support/annexes';
 import { setupWorld } from '../support/world';
 
 const world = setupWorld();
@@ -56,10 +57,10 @@ const ensure = (monday: CalDate, meetingDate = monday): Promise<IssueRecord> =>
     return issue;
   });
 
-const setStatus = (issue: IssueRecord, status: 'skipped' | 'generated') =>
+const setStatus = (issue: IssueRecord, status: 'generated') =>
   world.tx(cli, async (tx) => {
     const after = await tx.issues.setStatus(issue.id, issue.version, status);
-    await tx.audit.record({ action: 'issue.skip', target: { type: 'issue', id: issue.id } });
+    await tx.audit.record({ action: 'issue.generate', target: { type: 'issue', id: issue.id } });
     return after;
   });
 
@@ -361,20 +362,16 @@ describe('IssueItemRepo (port contract)', () => {
       });
     });
 
-    it('takes a skipped or generated issue as the source, and never the Monday itself', async () => {
+    it('takes a generated issue as the source, and never the Monday itself', async () => {
       const a = await ensure(MONDAY);
       const b = await ensure(week(1));
       await replace(a, outline([row(1)]));
       await replace(b, outline([row(2)]));
-      const skipped = await setStatus(b, 'skipped');
+      await setStatus(b, 'generated');
       expect(await read((tx) => tx.issueItems.latestSourceBefore(week(2)))).toMatchObject({
-        status: 'skipped',
+        status: 'generated',
         outline: outline([row(2)]),
       });
-      await setStatus(skipped, 'generated');
-      expect((await read((tx) => tx.issueItems.latestSourceBefore(week(2))))?.status).toBe(
-        'generated',
-      );
       // A Monday is not before itself.
       expect((await read((tx) => tx.issueItems.latestSourceBefore(week(1))))?.outline).toEqual(
         outline([row(1)]),
@@ -414,14 +411,14 @@ describe('IssueItemRepo (port contract)', () => {
       });
     });
 
-    it('latestTextsBefore takes each text from the latest earlier issue that has it, skipped ones counting', async () => {
+    it('latestTextsBefore takes each text from the latest earlier issue that has it, generated ones counting', async () => {
       const a = await ensure(MONDAY);
       const b = await ensure(week(1));
       const c = await ensure(week(2));
       const annexA = richDocFromText('Příloha A');
       await writeTexts(a, { present: 'A present', guests: 'A guests', annex2: annexA });
-      const skippedB = await setStatus(b, 'skipped');
-      await writeTexts(skippedB, { guests: 'B guests' });
+      const writtenB = await writeTexts(b, { guests: 'B guests' });
+      await setStatus(writtenB, 'generated');
       await writeTexts(c, { present: 'C present' });
       expect(await read((tx) => tx.issueItems.latestTextsBefore(week(3)))).toEqual({
         present: 'C present',
@@ -465,6 +462,72 @@ describe('IssueItemRepo (port contract)', () => {
       await expect(
         world.tx(world.as(author), (tx) => tx.issues.setTexts(issue.id, 1, { present: 'x' })),
       ).rejects.toBeInstanceOf(ScopeViolation);
+    });
+  });
+
+  describe('handOverAnnexes (the Arch annexes of a dropped porada, ADR 0054)', () => {
+    const FROM = week(1);
+    const TO = week(2);
+    const annexesOf = (day: CalDate) =>
+      read((tx) => tx.settings.value(`arch.annexes.${toIsoDate(day).replaceAll('-', '')}`));
+    const handOver = (from: CalDate, to: CalDate | null, by: Principal = cli) =>
+      world.tx(by, async (tx) => {
+        const count = await tx.issueItems.handOverAnnexes(from, to);
+        await tx.audit.record({ action: 'issue.dropped', target: null });
+        return count;
+      });
+
+    it('appends the annexes after the target’s own and leaves none on the source', async () => {
+      await seedAnnexes(world, FROM, [{ id: 'a1' }, { id: 'a2' }]);
+      await seedAnnexes(world, TO, [{ id: 'own' }]);
+      expect(await handOver(FROM, TO)).toBe(2);
+      expect(await annexesOf(TO)).toEqual([{ id: 'own' }, { id: 'a1' }, { id: 'a2' }]);
+      expect(await annexesOf(FROM)).toBeNull();
+    });
+
+    it('gives the annexes to a target that has none', async () => {
+      await seedAnnexes(world, FROM, [{ id: 'a1' }]);
+      expect(await handOver(FROM, TO)).toBe(1);
+      expect(await annexesOf(TO)).toEqual([{ id: 'a1' }]);
+      expect(await annexesOf(FROM)).toBeNull();
+    });
+
+    it('only deletes them when there is no target', async () => {
+      await seedAnnexes(world, FROM, [{ id: 'a1' }, { id: 'a2' }, { id: 'a3' }]);
+      expect(await handOver(FROM, null)).toBe(3);
+      expect(await annexesOf(FROM)).toBeNull();
+    });
+
+    it('counts none, and writes nothing, when the source has no annexes', async () => {
+      await seedAnnexes(world, TO, [{ id: 'own' }]);
+      expect(await handOver(FROM, TO)).toBe(0);
+      expect(await handOver(FROM, null)).toBe(0);
+      expect(await annexesOf(TO)).toEqual([{ id: 'own' }]);
+    });
+
+    it('clears an empty list of the source without touching the target', async () => {
+      await seedAnnexes(world, FROM, []);
+      await seedAnnexes(world, TO, [{ id: 'own' }]);
+      expect(await handOver(FROM, TO)).toBe(0);
+      expect(await annexesOf(FROM)).toBeNull();
+      expect(await annexesOf(TO)).toEqual([{ id: 'own' }]);
+    });
+
+    it('lets only someone who may edit the issue hand annexes over', async () => {
+      await seedAnnexes(world, FROM, [{ id: 'a1' }]);
+      const author = await world.seed.user({ role: 'submitter' });
+      await expect(handOver(FROM, TO, world.as(author))).rejects.toBeInstanceOf(ScopeViolation);
+      expect(await annexesOf(FROM)).toEqual([{ id: 'a1' }]);
+      const head = await world.seed.user({ role: 'headmaster' });
+      expect(await handOver(FROM, TO, world.as(head))).toBe(1);
+    });
+
+    it('writes nothing in a read transaction', async () => {
+      await seedAnnexes(world, FROM, [{ id: 'a1' }]);
+      await expect(read((tx) => tx.issueItems.handOverAnnexes(FROM, TO))).rejects.toBeInstanceOf(
+        DatabaseFailure,
+      );
+      expect(await annexesOf(FROM)).toEqual([{ id: 'a1' }]);
     });
   });
 });

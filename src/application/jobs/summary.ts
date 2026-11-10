@@ -8,7 +8,7 @@ const PRINCIPAL = system('job:headmaster.summary');
  * tells each headmaster how it stands (design section 13). It reconciles to the clock and the
  * data, so a rerun adds nothing: the ledger key is per headmaster and Monday. The same run sends the
  * second summary of the late reports in the same window after the last of their closes (ADR 0035). The counts are read
- * again when the mail goes, and a skipped meeting has no summary.
+ * again when the mail goes.
  */
 export const headmasterSummary: JobHandler<'headmaster.summary'> = async ({ db, clock }, job) => {
   const enqueued = await db.transaction(

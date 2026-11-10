@@ -40,6 +40,13 @@ export const toDeadlineWire = ({ dayOffset, time }: DeadlineRule): DeadlineWire 
   time: toIsoTime(time),
 });
 
+/**
+ * Where the implied poradas start (ADR 0054 item 1): null, or the Monday of a stored porada. Up to
+ * the later of it and last week's Monday the calendar is exactly its rows. Written only by
+ * `issues.drop`; no save takes it and the settings page does not show it.
+ */
+const calendarSchema = z.strictObject({ plannedThrough: z.iso.date().nullable() });
+
 const remindersSchema = z.strictObject({ soft: z.boolean(), hard: z.boolean() });
 
 const annexHeading = z
@@ -70,6 +77,7 @@ const annex1Schema = annex1Shape.superRefine((value, ctx) => {
 export interface SettingValues {
   readonly deadline: DeadlineWire;
   readonly reminders: z.output<typeof remindersSchema>;
+  readonly calendar: z.output<typeof calendarSchema>;
   readonly 'texts.annex1': z.output<typeof annex1Schema>;
 }
 export type SettingKey = keyof SettingValues;
@@ -102,6 +110,7 @@ export const SETTINGS: { readonly [K in SettingKey]: Setting<SettingValues[K]> }
     default: toDeadlineWire(DEFAULT_DEADLINE),
   },
   reminders: { schema: remindersSchema, default: { soft: true, hard: true } },
+  calendar: { schema: calendarSchema, default: { plannedThrough: null } },
   'texts.annex1': { schema: annex1Schema, default: ANNEX1_DEFAULT },
 };
 

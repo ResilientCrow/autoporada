@@ -20,7 +20,6 @@ export const status = {
   },
   issue: {
     open: 'Koná se',
-    skipped: 'Nekoná se',
     generated: 'Vygenerováno',
   },
   student: 'Student',

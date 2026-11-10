@@ -9,7 +9,7 @@ import { mondayOfText, readWindow } from './calendar';
 /**
  * „Chybějící zprávy“ for its page (ADR 0049): the akce the porada owes a report for and does not
  * have one, by their date, each with the paragraph the document would print now, whether that is
- * the headmaster's own and the version a save names. A generated or skipped porada lists nothing:
+ * the headmaster's own and the version a save names. A generated porada lists nothing:
  * it has nothing to edit. Read-only; the rule is read first, before any issue row.
  */
 export const issueMissingReports = defineUseCase({
@@ -21,14 +21,14 @@ export const issueMissingReports = defineUseCase({
   async execute({ tx, now }, input) {
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
-    const { slots } = await readWindow(tx, now);
+    const { slots, plannedThrough } = await readWindow(tx, now);
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'not-found' });
 
     const head = { monday: toIsoDate(monday), meetingDate: toIsoDate(slot.meetingDate) };
     if (slot.status !== 'open') return ok({ ...head, open: false, reports: [] });
 
-    const since = await readReportsSince(tx, monday);
+    const since = await readReportsSince(tx, monday, plannedThrough);
     const points = await tx.points.eligibleFor(monday, slot.meetingDate, { since });
     const missing = await missingReports(tx, await owedAkce(tx, since, slot.meetingDate), points);
     const printed = new Map((await placeholderReports(tx, missing)).map((r) => [r.id, r]));

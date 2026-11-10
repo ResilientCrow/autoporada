@@ -10,8 +10,13 @@ import { ensureIssue } from './index';
 const world = setupWorld();
 const seeder = system('test.seed');
 
-const ensure = (monday: CalDate, rule: DeadlineRule = DEFAULT_DEADLINE) =>
-  world.tx(seeder, (tx) => ensureIssue(tx, monday, rule));
+const ensure = async (monday: CalDate, rule: DeadlineRule = DEFAULT_DEADLINE) => {
+  const made = await world.tx(seeder, (tx) =>
+    ensureIssue(tx, monday, { rule, plannedThrough: calDate(2020, 1, 6) }),
+  );
+  if (!made) throw new Error('ensureIssue refused a Monday past the boundary');
+  return made;
+};
 
 describe('ensureIssue', () => {
   // The default rule: two days before the meeting date at 20.00 Prague time (Saturday for a Monday).

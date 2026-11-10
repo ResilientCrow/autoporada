@@ -118,12 +118,7 @@ const afterwards = (user: UserRecord, patch: Parameters<typeof world.seed.user>[
   });
 
 /** An issue row as it was frozen, for a deadline other than the rule's. */
-const frozen = (
-  monday: CalDate,
-  deadlineAt: Date,
-  status: 'open' | 'skipped' = 'open',
-  meetingDate = monday,
-) =>
+const frozen = (monday: CalDate, deadlineAt: Date, meetingDate = monday) =>
   world.tx(system('test.seed'), async (tx) => {
     const { issue } = await tx.issues.ensure({
       monday,
@@ -131,8 +126,14 @@ const frozen = (
       schoolYear: schoolYear(monday),
       deadlineAt,
     });
-    if (status !== 'open') await tx.issues.setStatus(issue.id, issue.version, status);
+    return issue;
   });
+
+/** The porada before `heir` was dropped: the calendar is rows up to `heir`, which has its row. */
+async function droppedBefore(heir: CalDate): Promise<void> {
+  await world.seed.setting('calendar', { plannedThrough: toIsoDate(heir) });
+  await frozen(heir, deadline(heir, DEFAULT_DEADLINE));
+}
 
 const inLedger = (
   recipient: UserRecord,
@@ -248,25 +249,22 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
   it('counts from the meeting day the porada before really has', async () => {
     const [moved, beforeMove] = [await submitter(), await submitter()];
     // 19 October held on Wednesday 21st: an akce on the 20th went to it, one on the 21st did not.
-    await frozen(
-      calDate(2026, 10, 19),
-      new Date('2026-10-18T18:00:00Z'),
-      'open',
-      calDate(2026, 10, 21),
-    );
+    await frozen(calDate(2026, 10, 19), new Date('2026-10-18T18:00:00Z'), calDate(2026, 10, 21));
     await owed(beforeMove, '2026-10-20');
     await owed(moved, '2026-10-21', '15:00');
     await runAt(SOFT);
     expect(await keys()).toEqual([soft(moved)]);
   });
 
-  it('steps over a skipped porada before to the one held before it', async () => {
-    const [afterSkip, beforeSkip] = [await submitter(), await submitter()];
-    await frozen(calDate(2026, 10, 19), new Date('2026-10-17T18:00:00Z'), 'skipped');
-    await owed(afterSkip, '2026-10-12');
-    await owed(beforeSkip, '2026-10-11');
+  it('steps over a dropped porada before to the one held before it', async () => {
+    const [afterDrop, beforeDrop] = [await submitter(), await submitter()];
+    // 12 October was held, 19 October was dropped: the calendar is rows up to 26 October.
+    await frozen(calDate(2026, 10, 12), new Date('2026-10-10T18:00:00Z'));
+    await droppedBefore(MONDAY);
+    await owed(afterDrop, '2026-10-12');
+    await owed(beforeDrop, '2026-10-11');
     await runAt(SOFT);
-    expect(await keys()).toEqual([soft(afterSkip)]);
+    expect(await keys()).toEqual([soft(afterDrop)]);
   });
 
   it('leaves out an akce not approved and a jednání', async () => {
@@ -478,21 +476,21 @@ describe('which Monday, and when nothing is due', () => {
     });
   });
 
-  it('reminds nobody for a skipped Monday', async () => {
+  it('reminds nobody for a dropped Monday', async () => {
     const user = await submitter();
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
-    await frozen(MONDAY, deadline(MONDAY, DEFAULT_DEADLINE), 'skipped');
+    await droppedBefore(calDate(2026, 11, 2));
     expect(await runAt(HARD)).toEqual({ kind: 'done', code: 'none' });
     expect(await queued()).toEqual([]);
   });
 
-  it('speaks for the Monday after a skipped one at its own slots, not a week early', async () => {
+  it('speaks for the Monday after a dropped one at its own slots, not a week early', async () => {
     const user = await submitter();
-    await owed(user); // 26 October is skipped, so the report goes to 2 November
+    await owed(user); // 26 October is dropped, so the report goes to 2 November
     await pointAt(user, 'draft', '2026-10-20T08:00:00Z');
-    await frozen(MONDAY, deadline(MONDAY, DEFAULT_DEADLINE), 'skipped');
+    await droppedBefore(calDate(2026, 11, 2));
     const next = (kind: 'soft' | 'hard') => `reminder.${kind}:2026-11-02:${user.id}`;
-    // The skipped Monday's own slots are silent, and so is the time before the next one's.
+    // The dropped Monday's own slots are silent, and so is the time before the next one's.
     await runAt(SOFT);
     await runAt(HARD);
     expect(await queued()).toEqual([]);

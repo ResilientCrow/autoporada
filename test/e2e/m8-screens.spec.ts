@@ -8,19 +8,19 @@
  */
 import { formatDayMonth } from '@/domain/cs';
 import { parseIsoDate } from '@/domain/time';
-import { future, issues, points, review } from '@/ui/copy';
+import { future, issues, points, review, rules } from '@/ui/copy';
 
 import {
   earliestMondayOf,
   forgetPointsOf,
   personaOf,
-  reopenMeeting,
   SEED_NOTE,
   seedDrafts,
   seedPoint,
   type SeedState,
 } from './db';
 import { expect, field, openNav, signInElsewhere, test } from './fixtures';
+import { mondayIn } from './porada-db';
 import { standingLines } from './standing';
 
 const dayMonth = (iso: string) => formatDayMonth(parseIsoDate(iso));
@@ -363,80 +363,36 @@ test.describe('the author’s and the reviewer’s screens', () => {
 });
 
 /**
- * The headmaster’s „Nejbližší porady“. Skipping a Monday moves every point placed on it and the
- * issues table is shared by the whole run: each project skips a Monday of its own, far enough
- * ahead that no seeded point is placed on it (they sit on the Monday two weeks out), and a failed
- * test reopens it.
+ * The headmaster’s „Nejbližší porady“: the strip lists the poradas and „Přidat poradu“ opens its
+ * dialog beside it. Moving, dropping and really adding a porada rewrite the shared calendar, so
+ * j6-presun.spec.ts walks them; this one only opens the dialog and refuses what cannot be added.
  */
 test.describe('the meeting strip', () => {
-  test.describe.configure({ mode: 'serial' });
-
-  /** Where in the strip each project works: the fourth Monday, and the third. */
-  const SLOT = { desktop: 3, mobile: 2 } as const;
-  const mondays: string[] = [];
-  test.afterEach(async () => {
-    for (const monday of mondays.splice(0)) await reopenMeeting(monday);
-  });
-
-  test('skips a meeting and brings it back, and a Monday past its deadline is refused', async ({
+  test('„Přidat poradu“ opens a dialog that refuses a week that has a porada and closes again', async ({
     page,
     hydrated,
-    settled,
     signInAs,
     expectAccessible,
-  }, testInfo) => {
+  }) => {
     await signInAs(/^Test – zastupce/);
     await page.goto('/klasicke');
     await hydrated();
-    const heading = page.locator('h3[id^="porada-"]').nth(SLOT[testInfo.project.name as 'desktop']);
-    const monday = (await heading.getAttribute('id'))!
-      .replace(/^porada-/, '')
-      .replace(/-monday$/, '');
-    mondays.push(monday);
-    const label = (await heading.textContent())!;
-    const meeting = page.getByRole('group', { name: label });
     const stripHeading = page.getByRole('heading', { level: 2, name: issues.strip.title });
+    await expect(stripHeading).toBeVisible();
+    await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible();
     await expectAccessible();
 
-    // An unticked box is refused where it stands; the meeting stays as it was.
-    await meeting.getByRole('button', { name: issues.strip.skip.submit }).click();
-    await settled();
-    await expect(meeting.getByText(issues.strip.unconfirmed).first()).toBeVisible();
+    await page.getByRole('button', { name: issues.strip.add.title }).click();
+    const dialog = page.getByRole('dialog');
+    const field = dialog.getByLabel(issues.strip.add.day);
 
-    // Skip: the status flips, the strip says so and takes focus; the box is unticked again.
-    await meeting.getByLabel(issues.strip.skip.confirm).check();
-    await meeting.getByRole('button', { name: issues.strip.skip.submit }).click();
-    await expect(page.getByText(issues.strip.said.skip(label))).toBeVisible();
-    await expect(stripHeading).toBeFocused();
-    await expect(meeting.getByRole('button', { name: issues.strip.unskip.submit })).toBeVisible();
-    await expect(meeting.getByLabel(issues.strip.unskip.confirm)).not.toBeChecked();
+    // Next week has a porada already: the dialog says so before anything is sent.
+    const first = mondayIn(1);
+    await field.fill(first);
+    await expect(dialog.getByText(rules['porada-exists'])).toBeVisible();
     await expectAccessible();
 
-    // Unskip the same Monday: the row has a version now, and the write carries it.
-    await meeting.getByLabel(issues.strip.unskip.confirm).check();
-    await meeting.getByRole('button', { name: issues.strip.unskip.submit }).click();
-    await expect(page.getByText(issues.strip.said.unskip(label))).toBeVisible();
-    await expect(stripHeading).toBeFocused();
-    await expect(meeting.getByRole('button', { name: issues.strip.skip.submit })).toBeVisible();
-    await expect(meeting.getByLabel(issues.strip.skip.confirm)).not.toBeChecked();
-    await settled();
-
-    // A page left open past a deadline: the server refuses the Monday and the form says to reload.
-    await page.route(
-      (url) => url.pathname === '/klasicke',
-      async (route) => {
-        const request = route.request();
-        const body = request.postData();
-        if (request.method() !== 'POST' || body === null || !body.includes(monday)) {
-          return route.fallback();
-        }
-        return route.continue({ postData: body.replaceAll(monday, '2020-01-06') });
-      },
-    );
-    await meeting.getByLabel(issues.strip.skip.confirm).check();
-    await meeting.getByRole('button', { name: issues.strip.skip.submit }).click();
-    await expect(meeting.getByText(issues.strip.stale).first()).toBeVisible();
-    await expect(page.getByText(issues.strip.said.skip(label))).toHaveCount(0);
-    await expectAccessible();
+    await dialog.getByRole('button', { name: issues.strip.add.cancel }).click();
+    await expect(page.getByRole('dialog')).toBeHidden();
   });
 });

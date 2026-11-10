@@ -1,7 +1,7 @@
 import { ScopeViolation, type IssueItemRepo, type TxContext } from '@/application/ports';
 import { SECTIONS, type Outline, type OutlineRow } from '@/domain/outline';
 import { can } from '@/domain/policy';
-import { compareDates, toIsoDate } from '@/domain/time';
+import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
 import { guard, refusedBy } from './guards';
 import type { FakeTxState } from './state';
@@ -69,6 +69,26 @@ export function fakeIssueItemRepo(tx: FakeTxState, ctx: TxContext): IssueItemRep
       seen((r) => r.sourcePointId, 'issue_items_source_key');
       issueItems.set(issueId, structuredClone(outline));
       tx.written.push({ type: 'issue', id: issueId });
+    },
+    async handOverAnnexes(from, to) {
+      guard(tx, true);
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.edit' })) {
+        throw new ScopeViolation();
+      }
+      // The annexes live next to the settings, where `settings.value` reads them (arch_annexes).
+      const keyOf = (monday: CalDate) => `arch.annexes.${toIsoDate(monday).replaceAll('-', '')}`;
+      const own = tx.draft.settings.get(keyOf(from));
+      if (!own) return 0;
+      const moving = own.value as unknown[];
+      tx.draft.settings.delete(keyOf(from));
+      if (to === null || moving.length === 0) return moving.length;
+      const kept = tx.draft.settings.get(keyOf(to));
+      const annexes = [...((kept?.value as unknown[] | undefined) ?? []), ...moving];
+      tx.draft.settings.set(keyOf(to), {
+        value: structuredClone(annexes),
+        version: (kept?.version ?? 0) + 1,
+      });
+      return moving.length;
     },
     async textsOf(issueId) {
       guard(tx, false);

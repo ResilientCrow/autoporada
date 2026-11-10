@@ -210,7 +210,12 @@ function placementOf(
     return null;
   }
   const today = instantToWallClock(now).date;
-  const slots = issueSlots(toIssueRows(window.issues), today, toDeadlineRule(window.rule));
+  const slots = issueSlots(
+    toIssueRows(window.issues),
+    today,
+    toDeadlineRule(window.rule),
+    parseIsoDate(window.plannedThrough),
+  );
   const point = { earliest: parseIsoDate(earliestMonday), handIn: parseIsoDate(handInMonday) };
   const monday = pointMonday(point, today, slots);
   // The date shown is the porada's meeting date, which differs from its Monday once moved.

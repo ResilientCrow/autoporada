@@ -43,7 +43,7 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
   const load = useCallback(async () => {
     const began = writes.current;
     const r = await fetch('/api/arch/state', { credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
-    if (r.status === 401 || r.type === 'opaqueredirect') { const out = { v: 1, now: new Date().toISOString(), userId: null, users: [], types: [], points: [], futures: [], issues: [], registry: [], requests: [], settings: {}, mails: [], stepUpAt: null, seq: 0, audit: [] } as unknown as State; cur.current = out; set(out); return; }
+    if (r.status === 401 || r.type === 'opaqueredirect') { const out = { v: 1, now: new Date().toISOString(), userId: null, users: [], types: [], points: [], futures: [], issues: [], plannedThrough: '', registry: [], requests: [], settings: {}, mails: [], stepUpAt: null, seq: 0, audit: [] } as unknown as State; cur.current = out; set(out); return; }
     if (!r.ok) { setProblem({ code: 'unavailable', name: 'state' }); return; }
     const srv = (await r.json()) as Srv;
     if (queue.current.length || busy.current || began !== writes.current) return;

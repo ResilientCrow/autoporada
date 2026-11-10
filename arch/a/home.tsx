@@ -26,7 +26,7 @@ export function useOwedTasks() {
   });
 }
 const pointLine = (s: ReturnType<typeof useStore>['s'], p: Point) => {
-  const m = p.handInMonday ? Q.dm(p.handInMonday) : '';
+  const m = p.poradaMonday ? Q.dm(p.poradaMonday) : '';
   switch (p.state) {
     case 'draft': return 'Rozepsané, zatím jen u vás';
     case 'submitted': return `U vedení, poslali jste ${p.submittedAt ? Q.dm(new Date(p.submittedAt).toISOString().slice(0, 10)) : ''}`;
@@ -125,7 +125,7 @@ export function Zprava({ id, fresh }: { id: string; fresh?: boolean }) {
   const { s, apply } = useStore(); const p = s.points.find((x) => x.id === id); const u = Q.me(s);
   const [confirmDel, setDel] = useState(false);
   if (!p) return <NotFound />;
-  const mine = p.authorId === u?.id; const m = p.handInMonday ?? Q.workingMonday(s);
+  const mine = p.authorId === u?.id; const m = p.poradaMonday ?? Q.workingMonday(s);
   const meet = Q.issueOf(s, m)?.meetingDate ?? m;
   const on = p.state === 'published' ? 4 : p.state === 'approved' ? 3 : p.state === 'submitted' ? 1 : 0;
   const stamp = { submitted: fresh ? 'Odesláno' : 'U vedení', approved: 'Schváleno', published: 'Vyšlo', rejected: 'Zamítnuto', draft: 'Rozepsáno', returned: 'Vráceno', withdrawn: 'Zrušeno' }[p.state];

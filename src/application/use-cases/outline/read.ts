@@ -21,12 +21,12 @@ export const readOutline = defineUseCase({
   async execute({ tx, now }, input) {
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
-    const { slots } = await readWindow(tx, now);
+    const { slots, plannedThrough } = await readWindow(tx, now);
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'not-found' });
 
     const [issue] = await tx.issues.between(monday, monday);
-    const proposals = await eligiblePoints(tx, monday, slot.meetingDate);
+    const proposals = await eligiblePoints(tx, monday, slot.meetingDate, plannedThrough);
     const titles = new Map(proposals.map((p) => [p.id, singleLine(p.content.title)]));
     const { outline, origin } = await loadEditable(
       tx,

@@ -6,7 +6,7 @@ import { OUTLINE_LIMITS, SEED_OUTLINE } from '@/domain/outline';
 
 import { monday, outlineFixtures, WEEK_1, WEEK_2 } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
-import { setSkipped } from '../issues';
+import { dropIssue } from '../issues';
 import { addOutlineItem, moveOutlineItem } from './index';
 
 const world = setupWorld();
@@ -182,18 +182,17 @@ describe('outline.move', () => {
     );
   });
 
-  it('refuses a skipped porada as issue-not-open', async () => {
+  it('refuses a dropped porada as outside the calendar', async () => {
     const head = await fx.headmaster();
     const id = await fx.addItem(head, WEEK_2, 'Pokyn');
-    await world.run(setSkipped, world.as(head), {
+    await world.run(dropIssue, world.as(head), {
       monday: monday(WEEK_2),
-      event: 'skip',
       confirmed: true,
       expectedVersion: 2,
     });
-    expect(await move(head, id, 'up', { monday: monday(WEEK_2), expectedVersion: 3 })).toEqual(
-      rule('issue-not-open'),
-    );
+    expect(
+      await move(head, id, 'up', { monday: monday(WEEK_2), expectedVersion: 3 }),
+    ).toMatchObject({ ok: false, error: { code: 'invalid-input' } });
   });
 
   it.each([['a direction that is neither'], ['']])(

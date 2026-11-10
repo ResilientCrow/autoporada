@@ -351,6 +351,20 @@
       "when": 1794152410956,
       "tag": "0049_eminent_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794330543584,
+      "tag": "0050_skipped_poradas_gone",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1794330636218,
+      "tag": "0051_issue_status_without_skipped",
+      "breakpoints": true
     }
   ]
 }

@@ -18,7 +18,7 @@ const ISSUE: AuditShape<IssueRecord> = {
 /** The meta of an issue event: the Monday it is about, then ids, dates and counts; never text. */
 export type IssueEventMeta = Readonly<Record<string, Json>> & { readonly monday: string };
 
-/** An issue skipped or unskipped (past tense, as every M8 action). */
+/** An issue event (past tense, as every M8 action). */
 export function issueEvent(
   action: `issue.${string}`,
   before: IssueRecord | null,

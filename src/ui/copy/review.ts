@@ -8,7 +8,7 @@ export const review = {
   point: 'Kontrola bodu',
   /** A Monday of the queue; `date` is day and month, „16.\u00a03.“. */
   porada: (date: string) => `Porada ${date}`,
-  /** The points no Monday of the window takes: every one skipped or generated. */
+  /** The points no Monday of the window takes: every one generated. */
   unplaced: 'Porada zatím neurčena',
   /** The parts of the porada, in its order. */
   kind: {

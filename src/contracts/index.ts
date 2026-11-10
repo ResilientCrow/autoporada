@@ -125,12 +125,16 @@ export {
 export { issuePreviewInput, issuePreviewOutput } from './issue-preview';
 export { issueWorkspaceInput, issueWorkspaceOutput } from './issue-workspace';
 export {
+  addIssueInput,
+  addIssueOutput,
+  dropIssueInput,
+  dropIssueOutput,
+  moveIssueInput,
+  moveIssueOutput,
   generateIssueInput,
   generateIssueOutput,
   issuesWindowInput,
   issuesWindowOutput,
-  setSkippedInput,
-  setSkippedOutput,
   toIssueRows,
 } from './issues';
 export {

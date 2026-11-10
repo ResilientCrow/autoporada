@@ -127,9 +127,11 @@ async function saveAnnexes(actor: Parameters<typeof can>[0], input: unknown): Pr
   if (Buffer.byteLength(JSON.stringify(list)) > MAX_ANNEX_BYTES) {
     return json({ ok: false, error: { code: 'too-long' } }, 400);
   }
-  const saved = await c.arch.saveAnnexes(monday, list!, actor.id);
-  return saved
-    ? json({ ok: true, data: {} })
+  const saved = await c.arch.saveAnnexes(monday, list!, actor.id, c.app.clock.now());
+  if (saved === 'saved') return json({ ok: true, data: {} });
+  // A dropped porada is gone (ADR 0054 item 7), as `ensureIssue` answers a use case.
+  return saved === 'not-found'
+    ? json({ ok: false, error: { code: 'not-found' } }, 404)
     : json({ ok: false, error: { code: 'conflict' } }, 409);
 }
 

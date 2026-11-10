@@ -185,7 +185,9 @@ describe('inventory of entry points', () => {
       'issues.setDetails',
       'issues.setAnnex2',
       'issues.setPlaceholder',
-      'issues.setSkipped',
+      'issues.move',
+      'issues.drop',
+      'issues.add',
       'issues.generate',
     ];
     for (const file of ACTION_MODULES) {
@@ -215,7 +217,9 @@ describe('inventory of entry points', () => {
       'issues.setDetails': admin,
       'issues.setAnnex2': admin,
       'issues.setPlaceholder': admin,
-      'issues.setSkipped': admin,
+      'issues.move': admin,
+      'issues.drop': admin,
+      'issues.add': admin,
       'issues.generate': admin,
     });
   });

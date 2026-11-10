@@ -4,7 +4,7 @@ import { system, type UserRecord } from '@/application/ports';
 import { decidePoint } from '@/application/use-cases';
 import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
-import { calDate } from '@/domain/time';
+import { calDate, toIsoDate } from '@/domain/time';
 import { TEMPLATE_NAMES, type TemplateName } from '@/notify';
 
 import { futureFixtures } from '../../../test/support/future';
@@ -106,18 +106,20 @@ describe('loadSubject', () => {
       expect(await load('reminder.soft', user.id)).toBeNull();
     });
 
-    it('drops a mail queued for a Monday that was skipped afterwards, and speaks for the next one', async () => {
+    it('drops a mail queued for a Monday that was dropped afterwards, and speaks for the next one', async () => {
       const user = await world.seed.user({ role: 'submitter' });
-      // The mail for 26 October was queued at its soft slot; then the headmaster skipped that Monday.
-      await world.tx(system('test.seed'), async (tx) => {
-        const { issue } = await tx.issues.ensure({
-          monday: MONDAY,
-          meetingDate: MONDAY,
-          schoolYear: schoolYear(MONDAY),
-          deadlineAt: deadline(MONDAY, DEFAULT_DEADLINE),
-        });
-        await tx.issues.setStatus(issue.id, issue.version, 'skipped');
-      });
+      // The mail for 26 October was queued at its soft slot; then the headmaster dropped that porada: its heir, 2 November, has the row and
+      // the calendar is rows up to it.
+      const heir = calDate(2026, 11, 2);
+      await world.seed.setting('calendar', { plannedThrough: toIsoDate(heir) });
+      await world.tx(system('test.seed'), (tx) =>
+        tx.issues.ensure({
+          monday: heir,
+          meetingDate: heir,
+          schoolYear: schoolYear(heir),
+          deadlineAt: deadline(heir, DEFAULT_DEADLINE),
+        }),
+      );
       world.clock.set(SOFT);
       expect(await load('reminder.soft', user.id)).toBeNull();
       // The Monday after has its own soft slot, Thursday 29 October 13.00 Prague.

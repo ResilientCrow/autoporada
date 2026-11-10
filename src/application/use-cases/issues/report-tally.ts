@@ -23,10 +23,14 @@ export const reportTally = defineUseCase({
   access: { kind: 'gate', check: () => ({ action: 'issue.edit' }) },
   async execute({ tx, now }) {
     const today = instantToWallClock(now).date;
-    const { slots } = await readWindow(tx, now);
+    const { slots, plannedThrough } = await readWindow(tx, now);
     const slot = slots.find((s) => s.status === 'open' && compareDates(s.meetingDate, today) >= 0);
     if (!slot) return ok({ porada: null });
-    const owed = await owedAkce(tx, await readReportsSince(tx, slot.monday), slot.meetingDate);
+    const owed = await owedAkce(
+      tx,
+      await readReportsSince(tx, slot.monday, plannedThrough),
+      slot.meetingDate,
+    );
     if (owed.length === 0) return ok({ porada: null });
     const bound = owed.flatMap((akce) => akce.reportPointId ?? []);
     const states = new Map((await tx.points.statesOf(bound)).map((s) => [s.id, s.state]));

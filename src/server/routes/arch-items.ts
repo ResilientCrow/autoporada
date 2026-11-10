@@ -1,7 +1,9 @@
 /** Branch arch-ui only: points and future items as Arch shows them, with their trail. */
+import type { IssueRow } from '@/domain/calendar';
 import { toIsoDate, type CalDate } from '@/domain/time';
 
 import type { WebContainer } from '../container';
+import { poradaMondayOf } from './arch-calendar';
 import { flatBefore, iso, WHAT } from './arch-people';
 
 type Store = WebContainer['arch'];
@@ -14,6 +16,7 @@ export function archItems({
   fEvents,
   vers,
   today,
+  poradas,
   viewerId,
   staff,
 }: {
@@ -24,6 +27,8 @@ export function archItems({
   /** The versions the writes must send back; filled here. */
   vers: Record<string, number>;
   today: CalDate;
+  /** The calendar's poradas, stored and virtual, in Monday order (`poradaMondayOf`). */
+  poradas: readonly Pick<IssueRow, 'monday' | 'status'>[];
   viewerId: string;
   /** May see which member of the vedení acted; an author sees „Vedení“ (as `points.get`). */
   staff: boolean;
@@ -66,6 +71,9 @@ export function archItems({
       content: p.content,
       state: p.state,
       handInMonday: p.handInMonday ? toIsoDate(p.handInMonday) : null,
+      poradaMonday: p.handInMonday
+        ? toIsoDate(poradaMondayOf(p.handInMonday, p.state === 'published', poradas))
+        : null,
       submittedAt: iso(p.submittedAt),
       note: noteOf(evs, p.state),
       savedAt: p.updatedAt.toISOString(),

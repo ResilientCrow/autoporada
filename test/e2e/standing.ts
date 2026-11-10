@@ -23,8 +23,8 @@ import { points } from '@/ui/copy';
  * both variants; only the sentence about its deadline differs.
  */
 export function standingLines(now: Date): { before: string; closed: string } {
-  const slots = issueSlots([], instantToWallClock(now).date, DEFAULT_DEADLINE);
-  const first = submitMonday(now, slots, DEFAULT_DEADLINE);
+  const slots = issueSlots([], instantToWallClock(now).date, DEFAULT_DEADLINE, null);
+  const first = submitMonday(now, slots, DEFAULT_DEADLINE, null);
   const placement = placementSlot(first, instantToWallClock(now).date, slots)?.monday;
   if (placement === undefined) throw new Error('no porada is open');
   const { date, time } = instantToWallClock(deadline(placement, DEFAULT_DEADLINE));

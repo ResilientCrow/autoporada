@@ -14,7 +14,7 @@ import {
   type UserRecord,
   type WorkerDeps,
 } from '@/application/ports';
-import { setSkipped } from '@/application/use-cases';
+import { dropIssue } from '@/application/use-cases';
 import { calDate, parseIsoDate, parseWallTime, toIsoDate, wallClockToInstant } from '@/domain/time';
 
 import { createFakeMail } from '../../../test/support/fake-mail';
@@ -228,11 +228,10 @@ describe('a stale job is dropped', () => {
     expect(await jobs('mail.send')).toEqual([]);
   });
 
-  it('when the slot was skipped meanwhile', async () => {
+  it('when the porada was dropped meanwhile', async () => {
     const { head, data } = await moved();
-    const result = await world.run(setSkipped, world.as(head), {
+    const result = await world.run(dropIssue, world.as(head), {
       monday: ISO,
-      event: 'skip',
       expectedVersion: 2,
       confirmed: true,
     });

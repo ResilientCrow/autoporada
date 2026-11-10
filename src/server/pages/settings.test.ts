@@ -136,8 +136,8 @@ describe('settingsPage', () => {
     const next = { dayOffset: -3, time: parseWallTime('18:00') };
     // Saturday 31 Oct 2026, 21:00 Prague: the deadline of Monday 2 Nov has passed.
     const now = new Date('2026-10-31T20:00:00.000Z');
-    const slots = issueSlots([], parseIsoDate('2026-10-31'), old);
-    const change = deadlineChange(now, old, next, slots)!;
+    const slots = issueSlots([], parseIsoDate('2026-10-31'), old, null);
+    const change = deadlineChange(now, old, next, slots, null)!;
     answer({ submitMonday: toIsoDate(change.keep) });
     const { effect } = (await settingsPage())!;
     expect(effect.keep).toBe(formatNumericDate(change.keep));

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { OUTLINE_LIMITS, SEED_OUTLINE } from '@/domain/outline';
 import { calDate } from '@/domain/time';
-import { setSkipped } from '../issues';
+import { dropIssue } from '../issues';
 
 import {
   monday,
@@ -139,26 +139,19 @@ describe('outline.add', () => {
     ]);
   });
 
-  it('passes a skipped porada’s outline on unchanged, one-offs included', async () => {
+  it('hands a dropped porada’s outline to the next one, one-offs included', async () => {
     const head = await fx.headmaster();
     await add(head, { title: 'Jednorázový', persistence: 'once' });
-    const skipped = await world.run(setSkipped, world.as(head), {
+    const dropped = await world.run(dropIssue, world.as(head), {
       monday: monday(WEEK_1),
-      event: 'skip',
       confirmed: true,
       expectedVersion: 2,
     });
-    expect(skipped.ok).toBe(true);
-    await add(head, { monday: monday(WEEK_2), title: 'Další' });
+    expect(dropped.ok).toBe(true);
     const next = await fx.readAs(head, WEEK_2);
     if (!next.ok) throw new Error('read refused');
     expect(titles(next.value.pokyny)).toContain('Jednorázový');
-    const [row] = await fx.auditOf('outline.materialized').then((r) => r.slice(-1));
-    expect(row?.data['meta']).toMatchObject({
-      origin: 'derived',
-      how: 'pass',
-      from: monday(WEEK_1),
-    });
+    expect(await fx.readAs(head, WEEK_1)).toMatchObject({ ok: false });
   });
 
   it('leaves one item when the same lineageId is sent twice', async () => {
@@ -248,16 +241,18 @@ describe('outline.add', () => {
     expect((await add(head, { section: 'hospodareni', expectedVersion: version })).ok).toBe(true);
   });
 
-  it('refuses a skipped porada, a past one and one outside the calendar', async () => {
+  it('refuses a dropped porada, a generated one, a past one and one outside the calendar', async () => {
     const head = await fx.headmaster();
-    const skipped = await world.run(setSkipped, world.as(head), {
+    const dropped = await world.run(dropIssue, world.as(head), {
       monday: monday(WEEK_2),
-      event: 'skip',
       confirmed: true,
     });
-    expect(skipped.ok).toBe(true);
+    expect(dropped.ok).toBe(true);
+    expect(await add(head, { monday: monday(WEEK_2) })).toMatchObject({
+      ok: false,
+      error: { code: 'invalid-input' },
+    });
     const notOpen = { ok: false, error: { code: 'rule', rule: 'issue-not-open' } };
-    expect(await add(head, { monday: monday(WEEK_2) })).toEqual(notOpen);
     await fx.seedIssue(WEEK_3, 'generated');
     expect(await add(head, { monday: monday(WEEK_3) })).toEqual(notOpen);
     // Before this week and past the horizon the Monday is not in the calendar.

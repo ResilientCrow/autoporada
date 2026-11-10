@@ -53,6 +53,8 @@ describe('loadMoved and movedRecipients', () => {
       meetingDate: calDate(2026, 11, 4),
       deadlineAt: FRIDAY_8PM,
       hasWork: true,
+      // Last week's Monday: the effective calendar boundary (ADR 0054).
+      plannedThrough: calDate(2026, 10, 19),
     });
     expect(await asWorker((tx) => loadMoved(tx, other.id))).toMatchObject({ hasWork: false });
     // a user who does not exist has no work, whatever the slot: the send pipeline stops at the recipient

@@ -256,6 +256,7 @@ describe('PointScreen for a proposal', () => {
     issues: [],
     now: '2027-03-09T10:00:00.000Z',
     rule: DEFAULT_DEADLINE,
+    plannedThrough: null,
   };
   const EDITOR = {
     version: 3,

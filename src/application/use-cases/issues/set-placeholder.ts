@@ -24,15 +24,17 @@ export const setPlaceholder = defineUseCase({
     // Lock order: the rule (settings share lock) before any issue row, then the issue row, which
     // `issues.generate` takes before it reads the placeholders: a save either commits before the
     // generation reads it, or waits for it and finds the porada closed.
-    const { slots, rule } = await readWindow(tx, now);
+    const { slots, rule, plannedThrough } = await readWindow(tx, now);
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     if (slot.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
-    const { issue: ensured, inserted } = await ensureIssue(tx, monday, rule);
+    const made = await ensureIssue(tx, monday, { rule, plannedThrough });
+    if (!made) return fail({ code: 'not-found' });
+    const { issue: ensured, inserted } = made;
     const issue = await tx.issues.lock(ensured.id);
     if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
-    const since = await readReportsSince(tx, monday);
+    const since = await readReportsSince(tx, monday, plannedThrough);
     const owed = await tx.futureItems.owedTo({ from: since, to: addDays(issue.meetingDate, -1) });
     if (!owed.some((akce) => akce.id === input.itemId)) {
       return fail({ code: 'invalid-input', fields: { itemId: 'invalid' } });

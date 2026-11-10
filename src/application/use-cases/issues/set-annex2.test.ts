@@ -12,7 +12,7 @@ import {
   WEEK_3,
 } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
-import { readIssueTexts, setIssueAnnex2, setSkipped } from './index';
+import { dropIssue, readIssueTexts, setIssueAnnex2 } from './index';
 
 const world = setupWorld();
 const fx = outlineFixtures(world);
@@ -145,16 +145,12 @@ describe('issues.setAnnex2', () => {
     });
   });
 
-  it('refuses a skipped porada as issue-not-open', async () => {
+  it('refuses a dropped porada as a Monday outside the calendar', async () => {
     const head = await fx.headmaster();
-    await world.run(setSkipped, world.as(head), {
-      monday: monday(WEEK_2),
-      event: 'skip',
-      confirmed: true,
-    });
+    await world.run(dropIssue, world.as(head), { monday: monday(WEEK_2), confirmed: true });
     expect(await annex(head, richText('A'), {}, WEEK_2)).toEqual({
       ok: false,
-      error: { code: 'rule', rule: 'issue-not-open' },
+      error: { code: 'invalid-input', fields: { monday: 'invalid' } },
     });
   });
 });

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import { richDocFromText, type RichDoc } from '@/domain/richtext';
 import { porada } from '@/ui/copy';
 
@@ -446,7 +447,13 @@ describe('MeetingStrip for a moved porada', () => {
             version: null,
           },
         ]}
-        setSkipped={vi.fn()}
+        addIssue={vi.fn()}
+        calendar={{
+          issues: [],
+          now: '2026-11-03T10:00:00.000Z',
+          rule: DEFAULT_DEADLINE,
+          plannedThrough: '2026-11-02',
+        }}
       />,
     );
     expect(html).toContain(

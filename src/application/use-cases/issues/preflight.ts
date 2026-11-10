@@ -34,7 +34,7 @@ export interface Finding {
     /** `late-reports-expected`: whether `id` is an akce or a report draft. */
     readonly of?: 'akce' | 'point';
   }[];
-  /** `earlier-open`: the porada to generate or skip first, by its Monday and meeting date. */
+  /** `earlier-open`: the porada to generate or drop first, by its Monday and meeting date. */
   readonly earlier?: { readonly monday: CalDate; readonly meetingDate: CalDate };
   /** `snapshot-invalid`: where the snapshot is wrong. */
   readonly paths?: readonly string[];
@@ -99,11 +99,7 @@ export function preflight(
   if (now.getTime() < facts.issue.deadlineAt.getTime()) {
     add({ code: 'deadline-ahead', level: 'warn' });
   }
-  if (
-    facts.origin.kind === 'derived' &&
-    facts.sourceStatus !== 'generated' &&
-    facts.sourceStatus !== 'skipped'
-  ) {
+  if (facts.origin.kind === 'derived' && facts.sourceStatus !== 'generated') {
     add({ code: 'source-not-generated', level: 'warn' });
   }
   if (facts.annex1Entries === 0) add({ code: 'annex1-empty', level: 'warn' });

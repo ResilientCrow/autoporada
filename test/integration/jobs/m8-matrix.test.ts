@@ -1,6 +1,6 @@
 /**
  * The M8b cron jobs across the three autumn and spring weeks whose Sunday is the day the clocks
- * change (the deadline, Saturday 20.00 Prague, falls the evening before), with a worker down for three hours, a skipped issue and a frozen
+ * change (the deadline, Saturday 20.00 Prague, falls the evening before), with a worker down for three hours, a dropped porada and a frozen
  * deadline. Every case checks the exact set of ledger keys the run enqueued, never a count. The
  * expected instants are written out in UTC on purpose: they are the oracle for the zone rules.
  */
@@ -12,8 +12,7 @@ import { JOB_HANDLERS } from '@/application/jobs';
 import { system, type UserRecord, type WorkerDeps } from '@/application/ports';
 import { saveFuture } from '@/application/use-cases';
 import { schoolYear } from '@/domain/cs';
-import type { IssueStatus } from '@/domain/review';
-import { calDate, toIsoDate, type CalDate } from '@/domain/time';
+import { addDays, calDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { futureFixtures, readyAkce } from '../../support/future';
 import { pointFixtures } from '../../support/points';
@@ -142,7 +141,7 @@ async function firstSeen(name: Name, instants: readonly Date[]) {
   return seen;
 }
 
-const issueAt = (monday: CalDate, deadlineAt: Date, status: IssueStatus = 'open') =>
+const issueAt = (monday: CalDate, deadlineAt: Date) =>
   world.tx(system('test.seed'), async (tx) => {
     const { issue } = await tx.issues.ensure({
       monday,
@@ -150,7 +149,7 @@ const issueAt = (monday: CalDate, deadlineAt: Date, status: IssueStatus = 'open'
       schoolYear: schoolYear(monday),
       deadlineAt,
     });
-    if (status !== 'open') await tx.issues.setStatus(issue.id, issue.version, status);
+    return issue;
   });
 
 const submitter = (over: Parameters<typeof world.seed.user>[0] = {}) =>
@@ -273,10 +272,13 @@ describe.each(WEEKS)('deadline reminders, $name', (week) => {
     expect(await queued()).toEqual([]);
   });
 
-  it('reminds nobody, and sends no summary, for a skipped Monday', async () => {
+  it('reminds nobody, and sends no summary, for a dropped Monday', async () => {
     await reminderPeople(week);
     await headmaster();
-    await issueAt(week.monday, new Date(week.deadline), 'skipped');
+    // The porada of the Monday was dropped: the calendar is rows up to its heir, a week on.
+    const heir = addDays(week.monday, 7);
+    await world.seed.setting('calendar', { plannedThrough: toIsoDate(heir) });
+    await issueAt(heir, plus(week.deadline, 7 * 24 * HOUR));
     for (const at of [week.soft, week.hard, plus(week.deadline, 10 * MIN)]) {
       await run('reminders.deadline', at);
       await run('headmaster.summary', at);

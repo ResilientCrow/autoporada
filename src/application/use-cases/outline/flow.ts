@@ -42,15 +42,17 @@ export async function editOutline(
   if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
   // Lock order: the rule (settings share lock) before any issue row.
-  const { slots, rule } = await readWindow(tx, now);
+  const { slots, rule, plannedThrough } = await readWindow(tx, now);
   const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
   if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
   if (slot.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
-  const { issue } = await ensureIssue(tx, monday, rule);
+  const ensured = await ensureIssue(tx, monday, { rule, plannedThrough });
+  if (!ensured) return fail({ code: 'not-found' });
+  const { issue } = ensured;
   if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
   const expected = edit.expectedVersion ?? UNTOUCHED_VERSION;
-  const proposals = await eligiblePoints(tx, monday, issue.meetingDate);
+  const proposals = await eligiblePoints(tx, monday, issue.meetingDate, plannedThrough);
   if (edit.alreadyDone) {
     // A look before the version is taken; nothing is written on this path.
     const peek = await loadEditable(tx, { id: issue.id, monday }, proposals);

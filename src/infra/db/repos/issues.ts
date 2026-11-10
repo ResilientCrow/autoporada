@@ -138,6 +138,16 @@ export function createIssueRepo(db: TxDatabase, ctx: TxContext): IssueRepo {
         'issue.edit',
       ),
     setStatus: (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
+    async remove(id, expectedVersion) {
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+        throw new ScopeViolation();
+      }
+      const removed = await db
+        .delete(issues)
+        .where(and(eq(issues.id, id), eq(issues.version, expectedVersion)))
+        .returning({ id: issues.id });
+      if (removed.length === 0) throw new StaleVersion();
+    },
     reschedule: (id, expectedVersion, to) =>
       versioned(id, expectedVersion, {
         meetingDate: toIsoDate(to.meetingDate),

@@ -2,11 +2,17 @@ import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
 import { listMyPoints, queuePoints, reportTally } from '@/application/use-cases';
-import type { issuesWindowOutput, reportTallyOutput } from '@/contracts';
+import {
+  toDeadlineRule,
+  toIssueRows,
+  type issuesWindowOutput,
+  type reportTallyOutput,
+} from '@/contracts';
+import { issueSlots } from '@/domain/calendar';
 import { formatDayMonth, formatNumericDate, formatClock, weekdayName } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import type { IssueStatus, PointState } from '@/domain/review';
-import { addDays, compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
+import { compareDates, instantToWallClock, parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { getContainer } from '../container';
 import { runPage } from './run-page';
@@ -45,8 +51,10 @@ interface MineModel {
 type HomePageModel =
   | {
       readonly kind: 'member';
-      /** The next Mondays, for the one who may skip a meeting; null for everyone else. */
+      /** The next poradas, for the one who may change the calendar; null for everyone else. */
       readonly strip: readonly MeetingDay[] | null;
+      /** The calendar „Přidat poradu“ plans on, with the strip; null for everyone else. */
+      readonly calendar: StandingModel | null;
       /** Null for whoever may not start a point, and where the list is refused. */
       readonly mine: MineModel | null;
       /** „Ke kontrole: {n}“, the points waiting for a decision; null for whoever may not review, and where the queue is refused. */
@@ -62,24 +70,33 @@ type HomePageModel =
 type ReportTally = NonNullable<z.output<typeof reportTallyOutput>['porada']>;
 
 /** Where a moved porada is held and when it closes, written out. */
-function held(row: { readonly deadlineAt: string }): NonNullable<MeetingDay['held']> {
-  const { date, time } = instantToWallClock(new Date(row.deadlineAt));
+function held(row: { readonly deadlineAt: Date }): NonNullable<MeetingDay['held']> {
+  const { date, time } = instantToWallClock(row.deadlineAt);
   return { weekday: weekdayName(date), date: formatDayMonth(date), time: formatClock(time) };
 }
 
-/** The Mondays from the first one whose deadline is ahead on (a skipped one stays, to be undone), each with its row's status and version or the untouched defaults. */
-function meetingStrip(window: z.output<typeof issuesWindowOutput>): readonly MeetingDay[] {
+/** The first poradas whose deadline is still ahead (a generated one stays in view), each with its row's status and version or the untouched defaults. */
+function meetingStrip(
+  window: z.output<typeof issuesWindowOutput>,
+  now: Date,
+): readonly MeetingDay[] {
   const rows = new Map(window.issues.map((issue) => [issue.monday, issue]));
-  const first = parseIsoDate(window.stripFrom);
-  return Array.from({ length: STRIP_DAYS }, (_, week) => {
-    const monday = addDays(first, 7 * week);
-    const row = rows.get(toIsoDate(monday));
-    const meeting = row ? parseIsoDate(row.meetingDate) : monday;
+  const slots = issueSlots(
+    toIssueRows(window.issues),
+    instantToWallClock(now).date,
+    toDeadlineRule(window.rule),
+    parseIsoDate(window.plannedThrough),
+  );
+  const first = slots.findIndex((slot) => slot.deadlineAt.getTime() > now.getTime());
+  if (first < 0) return [];
+  return slots.slice(first, first + STRIP_DAYS).map((slot) => {
+    const key = toIsoDate(slot.monday);
+    const row = rows.get(key);
     return {
-      monday: toIsoDate(monday),
-      label: formatNumericDate(meeting),
-      held: row && compareDates(meeting, monday) !== 0 ? held(row) : null,
-      status: row?.status ?? 'open',
+      monday: key,
+      label: formatNumericDate(slot.meetingDate),
+      held: compareDates(slot.meetingDate, slot.monday) !== 0 ? held(slot) : null,
+      status: slot.status,
       version: row?.version ?? null,
     };
   });
@@ -155,6 +172,7 @@ export async function homePage(): Promise<HomePageModel | null> {
       return {
         kind: 'member',
         strip: null,
+        calendar: null,
         mine: null,
         queue: null,
         reportDue: null,
@@ -175,7 +193,8 @@ export async function homePage(): Promise<HomePageModel | null> {
     const now = getContainer().app.clock.now();
     return {
       kind: 'member',
-      strip: mayStrip && window !== null ? meetingStrip(window) : null,
+      strip: mayStrip && window !== null ? meetingStrip(window, now) : null,
+      calendar: mayStrip && window !== null ? standingFrom(window, now) : null,
       mine: counts && { counts, standing: window && standingFrom(window, now) },
       queue,
       reportDue: due,

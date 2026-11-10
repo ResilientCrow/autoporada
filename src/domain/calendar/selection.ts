@@ -71,9 +71,10 @@ export function deadlineChange(
   oldRule: DeadlineRule,
   newRule: DeadlineRule,
   slots: readonly IssueSlot[],
+  plannedThrough: CalDate | null,
 ): { readonly keep: CalDate; readonly from: CalDate; readonly freeze: readonly CalDate[] } | null {
   if (sameRule(oldRule, newRule)) return null;
-  const keep = submitMonday(now, slots, oldRule);
+  const keep = submitMonday(now, slots, oldRule, plannedThrough);
   const week = mondayOf(instantToWallClock(now).date);
   const freeze = slots
     .filter((slot) => !slot.stored)
@@ -85,7 +86,7 @@ export function deadlineChange(
 /**
  * The stored rows a new rule refreezes, each with its new deadline: the open ones from `from` on
  * whose deadline is still the old rule's for their meeting date. Nobody was shown them as a
- * hand-in slot; a deadline the headmaster set by hand, and a skipped or generated porada, stay.
+ * hand-in slot; a deadline the headmaster set by hand, and a generated porada, stay.
  */
 export function refreezable<R extends IssueRow>(
   rows: readonly R[],

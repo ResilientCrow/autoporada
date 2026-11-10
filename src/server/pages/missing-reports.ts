@@ -18,7 +18,7 @@ export interface MissingReportsPageModel {
   /** „pondělí 9. listopadu 2026“. */
   readonly meeting: string;
   readonly monday: string;
-  /** False for a generated or skipped porada: the page shows no form. */
+  /** False for a generated porada: the page shows no form. */
   readonly open: boolean;
   /** The two fixed lines the document adds under a placeholder, which the form shows read-only. */
   readonly lines: readonly string[];

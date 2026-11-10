@@ -259,10 +259,9 @@ describe('future items', () => {
 });
 
 describe('issues', () => {
-  it('lets only the headmaster generate, reopen, skip and unskip', () => {
-    expect(availableEvents(ISSUE_MACHINE, 'open', headmaster)).toEqual(['generate', 'skip']);
+  it('lets only the headmaster generate, and reopen', () => {
+    expect(availableEvents(ISSUE_MACHINE, 'open', headmaster)).toEqual(['generate']);
     expect(availableEvents(ISSUE_MACHINE, 'generated', headmaster)).toEqual(['reopen']);
-    expect(availableEvents(ISSUE_MACHINE, 'skipped', headmaster)).toEqual(['unskip']);
     expect(availableEvents(ISSUE_MACHINE, 'open', reviewer)).toEqual([]);
   });
 });

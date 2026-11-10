@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { system } from '@/application/ports';
-import { generateIssue, setPlaceholder } from '@/application/use-cases/issues';
+import { dropIssue, generateIssue, setPlaceholder } from '@/application/use-cases/issues';
 import { calDate, parseIsoDate as d, toIsoDate } from '@/domain/time';
 
 import { issueFixtures } from '../../support/issues';
@@ -67,8 +67,12 @@ describe('placeholder save and generation on one issue row (READ COMMITTED)', ()
     const head = await world.seed.user({ role: 'headmaster' });
     const author = await world.seed.user({ role: 'submitter' });
     const akce = await fixtures.future({ author, title: 'Seminář', startDate: d('2026-10-22') });
-    // This week's porada did not happen, so W1 is the first one open (ADR 0040).
-    await fixtures.issue(calDate(2026, 10, 19), { status: 'skipped' });
+    // This week's porada was dropped, so W1 is the first one open (ADR 0040, 0054).
+    const dropped = await world.run(dropIssue, world.as(head), {
+      monday: '2026-10-19',
+      confirmed: true,
+    });
+    expect(dropped.ok).toBe(true);
     const issue = await fixtures.issue(W1);
 
     let release: () => void = () => undefined;

@@ -1,4 +1,4 @@
-import { eventEnd, issueSlots, owedPorada, reportCloses, slotMondayOf, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
+import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, slotMondayOf, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
 import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, suggestGenitive, weekdayName, type Salutation } from '@/domain/cs';
 import { missingForSubmit, reportBody, type DraftPerson, type PointContent } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
@@ -29,7 +29,9 @@ export const mePerson = (s: State): DraftPerson => { const u = me(s)!; return { 
 
 const row = (i: Issue) => ({ monday: parseIsoDate(i.monday), meetingDate: parseIsoDate(i.meetingDate), deadlineAt: new Date(i.deadlineAt), status: i.status });
 export const rowsOf = (s: State) => s.issues.map(row);
-export const slotsOf = (s: State): IssueSlot[] => [...issueSlots(rowsOf(s), todayOf(s), ruleOf(s))];
+/** The calendar's boundary (ADR 0054): up to it a Monday with no row is no porada. */
+export const plannedOf = (s: State): CalDate => calendarBoundary(s.plannedThrough ? parseIsoDate(s.plannedThrough) : null, todayOf(s));
+export const slotsOf = (s: State): IssueSlot[] => [...issueSlots(rowsOf(s), todayOf(s), ruleOf(s), plannedOf(s))];
 export const issueOf = (s: State, monday: string) => s.issues.find((i) => i.monday === monday);
 /** The porada the school works on: first open with a meeting today or later. */
 export function working(s: State): IssueSlot { return workingSlot(todayOf(s), slotsOf(s)) ?? slotsOf(s)[0]!; }
@@ -67,12 +69,10 @@ export const guessSalutation = (p: { givenName: string; familyName: string; affi
   const woman = /(ová|á)$/i.test(p.familyName) || (/a$/i.test(p.givenName) && !/^(jan|honz|mich|luk|nikol|jir|kub|mis|sas)a$/i.test(p.givenName));
   return !woman ? 'pan' : p.affiliation ? 'slecna' : 'pani';
 };
-/** Akce that end before a moved meeting start owing it a report. */
-export const newlyOwed = (s: State, monday: string, date: CalDate) => { const iss = issueOf(s, monday); if (!iss) return 0; const from = parseIsoDate(iss.meetingDate); return s.futures.filter((f) => f.kind === 'akce' && f.state === 'approved' && compareDates(lastDayOf(f), from) >= 0 && compareDates(lastDayOf(f), date) < 0).length; };
 export const lastDayOf = (f: Future) => f.endDate ?? f.date;
 export const futureEnd = (f: Future) => eventEnd({ lastDay: lastDayOf(f), timeTo: f.timeTo });
 export const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).getTime();
-export const owedMonday = (s: State, f: Future) => toIsoDate(owedPorada(lastDayOf(f), rowsOf(s)));
+export const owedMonday = (s: State, f: Future) => toIsoDate(owedPorada(lastDayOf(f), rowsOf(s), plannedOf(s)));
 export const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn' && p.state !== 'rejected');
 const closeFor = (s: State, f: Future, monday: string) => {
   const sl = slotsOf(s).find((x) => toIsoDate(x.monday) === monday);
@@ -132,7 +132,7 @@ export function snapshotOf(s: State, monday: string, opts: { pending?: boolean; 
   const meeting = parseIsoDate(iss.meetingDate);
   const reports: Record<string, unknown>[] = []; const refs: Record<string, Segment['state']> = {};
   const add = (p: Point, st: Segment['state']) => { const { report } = reportFromContent(p.content, { id: p.id }); if (report) { reports.push(report as never); refs[p.id] = st; } };
-  const here = s.points.filter((p) => p.kind === 'report' && p.handInMonday === monday);
+  const here = s.points.filter((p) => p.kind === 'report' && p.poradaMonday === monday);
   const shown = new Set<string>();
   for (const p of here) if (p.state === 'approved' || p.state === 'published') { add(p, p.state); shown.add(p.akceId ?? p.id); }
   if (opts.pending) for (const p of here) if (p.state === 'submitted') { add(p, 'submitted'); shown.add(p.akceId ?? p.id); }
@@ -205,10 +205,10 @@ export function preflight(s: State, monday: string): Check[] {
   const iss = issueOf(s, monday); const c: Check[] = [];
   if (!iss) return c;
   const earlier = slotsOf(s).find((x) => x.status === 'open' && toIsoDate(x.monday) < monday);
-  if (earlier) c.push({ level: 'block', code: 'earlier-open', text: `Nejdřív je potřeba uzavřít poradu ${dm(earlier.monday)}: vygenerovat ji, nebo označit, že se nekoná.`, to: toIsoDate(earlier.monday) });
+  if (earlier) c.push({ level: 'block', code: 'earlier-open', text: `Nejdřív je potřeba uzavřít poradu ${dm(earlier.monday)}: vygenerovat ji, nebo ji zrušit, když se nekoná.`, to: toIsoDate(earlier.monday) });
   const built = buildDoc(s, monday);
   if (built.errors.length) c.push({ level: 'block', code: 'invalid', text: 'Dokument teď nejde sestavit. Zkontrolujte přítomné a pokyny.' });
-  const here = s.points.filter((p) => p.handInMonday === monday && p.kind === 'report');
+  const here = s.points.filter((p) => p.poradaMonday === monday && p.kind === 'report');
   const wait = here.filter((p) => p.state === 'submitted').length, ret = here.filter((p) => p.state === 'returned').length;
   const akce = queueFutures(s).length;
   if (wait) c.push({ level: 'warn', code: 'waiting', n: wait, text: `${wait === 1 ? '1 zpráva čeká' : wait < 5 ? `${wait} zprávy čekají` : `${wait} zpráv čeká`} na kontrolu. Bez schválení nevyjde.`, to: 'kontrola' });

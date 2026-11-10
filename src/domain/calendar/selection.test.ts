@@ -44,7 +44,13 @@ describe('a change of the deadline rule (ADR 0032)', () => {
     status,
   });
   const change = (rows: readonly IssueRow[] = [], rule = SUNDAY) => {
-    const found = deadlineChange(NOW, THURSDAY, rule, issueSlots(rows, TODAY, THURSDAY));
+    const found = deadlineChange(
+      NOW,
+      THURSDAY,
+      rule,
+      issueSlots(rows, TODAY, THURSDAY, null),
+      null,
+    );
     return found && { ...found, keep: toIsoDate(found.keep), from: toIsoDate(found.from) };
   };
 
@@ -63,12 +69,12 @@ describe('a change of the deadline rule (ADR 0032)', () => {
   it('never sends the submit Monday backwards: Thursday to Sunday on a Friday', () => {
     const found = change();
     const frozen = (found?.freeze ?? []).map((monday) => row(toIsoDate(monday)));
-    const after = issueSlots(frozen, TODAY, SUNDAY);
-    expect(toIsoDate(submitMonday(NOW, after, SUNDAY))).toBe('2026-11-02');
+    const after = issueSlots(frozen, TODAY, SUNDAY, null);
+    expect(toIsoDate(submitMonday(NOW, after, SUNDAY, null))).toBe('2026-11-02');
   });
 
-  it('steps over a skipped Monday to keep the next open one', () => {
-    expect(change([row('2026-11-02', 'skipped')])).toMatchObject({
+  it('steps over a generated Monday to keep the next open one', () => {
+    expect(change([row('2026-11-02', 'generated')])).toMatchObject({
       keep: '2026-11-09',
       from: '2026-11-16',
     });
@@ -84,7 +90,7 @@ describe('a change of the deadline rule (ADR 0032)', () => {
       row('2026-11-09'),
       row('2026-11-16', 'open', undefined, '2026-11-18'),
       row('2026-11-23', 'open', new Date('2026-11-20T11:00:00Z')),
-      row('2026-11-30', 'skipped'),
+      row('2026-11-30', 'generated'),
       row('2026-12-07', 'generated'),
     ];
     const picked = refreezable(rows, d('2026-11-09'), THURSDAY, SUNDAY);

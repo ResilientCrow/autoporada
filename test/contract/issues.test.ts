@@ -13,6 +13,7 @@ import {
 import type { IssueStatus } from '@/domain/review';
 import { calDate, type CalDate } from '@/domain/time';
 
+import { snapshotFixture } from '../support/snapshots';
 import { UnauditedWrite } from '../support/world/fake/oracle';
 import { setupWorld } from '../support/world';
 
@@ -50,7 +51,7 @@ const setStatus = (
 ) =>
   world.tx(by, async (tx) => {
     const after = await tx.issues.setStatus(row.id, version, status);
-    await tx.audit.record({ action: 'issue.skip', target: { type: 'issue', id: row.id } });
+    await tx.audit.record({ action: 'issue.generate', target: { type: 'issue', id: row.id } });
     return after;
   });
 
@@ -111,7 +112,7 @@ describe('IssueRepo (port contract)', () => {
       ...issueOf(calDate(2026, 11, 16)),
       meetingDate: calDate(2026, 11, 20),
     });
-    await setStatus(moved.issue, 'skipped');
+    await setStatus(moved.issue, 'generated');
     const rows = await read((tx) => tx.issues.calendar(TODAY));
     expect(rows).toEqual([
       {
@@ -130,7 +131,7 @@ describe('IssueRepo (port contract)', () => {
         monday: calDate(2026, 11, 16),
         meetingDate: calDate(2026, 11, 20),
         deadlineAt: new Date('2026-10-23T10:00:00.123Z'),
-        status: 'skipped',
+        status: 'generated',
       },
     ]);
   });
@@ -156,7 +157,7 @@ describe('IssueRepo (port contract)', () => {
       meetingDate: calDate(2026, 11, 13),
     });
     await ensure(issueOf(calDate(2026, 10, 19)));
-    await setStatus(second.issue, 'skipped');
+    await setStatus(second.issue, 'generated');
     const asWorker = world.workerDb.transaction(
       { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
       { mode: 'read' },
@@ -173,7 +174,7 @@ describe('IssueRepo (port contract)', () => {
         monday: calDate(2026, 11, 9),
         meetingDate: calDate(2026, 11, 13),
         deadlineAt: second.issue.deadlineAt,
-        status: 'skipped',
+        status: 'generated',
       },
     ]);
   });
@@ -186,7 +187,7 @@ describe('IssueRepo (port contract)', () => {
       ...issueOf(calDate(2026, 11, 2)),
       meetingDate: calDate(2026, 11, 4),
     });
-    await setStatus(moved.issue, 'skipped');
+    await setStatus(moved.issue, 'generated');
     const asWorker = world.workerDb.transaction(
       { principal: system('job:reminders.deadline'), now: world.clock.now(), requestId: 'test' },
       { mode: 'read' },
@@ -197,28 +198,28 @@ describe('IssueRepo (port contract)', () => {
     ).toEqual([
       { monday: calDate(2026, 10, 19), meetingDate: calDate(2026, 10, 19), status: 'open' },
       { monday: calDate(2026, 10, 26), meetingDate: calDate(2026, 10, 26), status: 'open' },
-      { monday: calDate(2026, 11, 2), meetingDate: calDate(2026, 11, 4), status: 'skipped' },
+      { monday: calDate(2026, 11, 2), meetingDate: calDate(2026, 11, 4), status: 'generated' },
     ]);
   });
 
   it('changes the status against the expected version and raises it by one', async () => {
     const { issue } = await ensure(issueOf(MONDAY));
-    const skipped = await setStatus(issue, 'skipped');
-    expect(skipped).toEqual({ ...issue, status: 'skipped', version: 2 });
-    expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toEqual([skipped]);
-    const reopened = await setStatus(skipped, 'open');
+    const generated = await setStatus(issue, 'generated');
+    expect(generated).toEqual({ ...issue, status: 'generated', version: 2 });
+    expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toEqual([generated]);
+    const reopened = await setStatus(generated, 'open');
     expect(reopened).toMatchObject({ status: 'open', version: 3 });
   });
 
   it('refuses a status change on a stale version or an unknown issue', async () => {
     const { issue } = await ensure(issueOf(MONDAY));
-    await setStatus(issue, 'skipped');
+    await setStatus(issue, 'generated');
     await expect(setStatus(issue, 'open')).rejects.toBeInstanceOf(StaleVersion);
     await expect(
       setStatus({ ...issue, id: '00000000-0000-7000-8000-999999999999' }, 'open', 2),
     ).rejects.toBeInstanceOf(StaleVersion);
     expect(await read((tx) => tx.issues.between(MONDAY, MONDAY))).toMatchObject([
-      { status: 'skipped', version: 2 },
+      { status: 'generated', version: 2 },
     ]);
   });
 
@@ -227,10 +228,10 @@ describe('IssueRepo (port contract)', () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const { issue } = await ensure(issueOf(MONDAY), world.as(author));
     await expect(
-      setStatus(issue, 'skipped', issue.version, world.as(author)),
+      setStatus(issue, 'generated', issue.version, world.as(author)),
     ).rejects.toBeInstanceOf(ScopeViolation);
-    expect(await setStatus(issue, 'skipped', issue.version, world.as(head))).toMatchObject({
-      status: 'skipped',
+    expect(await setStatus(issue, 'generated', issue.version, world.as(head))).toMatchObject({
+      status: 'generated',
     });
   });
 
@@ -255,7 +256,7 @@ describe('IssueRepo (port contract)', () => {
 
     it('refuses a stale version or an unknown issue and changes nothing', async () => {
       const { issue } = await ensure(issueOf(MONDAY));
-      await setStatus(issue, 'skipped');
+      await setStatus(issue, 'generated');
       await expect(reschedule(issue)).rejects.toBeInstanceOf(StaleVersion);
       const unknown = { ...issue, id: '00000000-0000-7000-8000-999999999999' };
       await expect(reschedule(unknown, 2)).rejects.toBeInstanceOf(StaleVersion);
@@ -332,10 +333,112 @@ describe('IssueRepo (port contract)', () => {
       expect(await touch(issue, 1, world.as(head))).toMatchObject({ version: 2 });
     });
 
-    it('touches a skipped or generated issue too: the caller decides whether it may be edited', async () => {
+    it('touches a generated or generated issue too: the caller decides whether it may be edited', async () => {
       const { issue } = await ensure(issueOf(MONDAY));
-      const skipped = await setStatus(issue, 'skipped');
-      expect(await touch(skipped)).toMatchObject({ status: 'skipped', version: 3 });
+      const generated = await setStatus(issue, 'generated');
+      expect(await touch(generated)).toMatchObject({ status: 'generated', version: 3 });
+    });
+  });
+
+  describe('remove (a porada that does not take place, ADR 0054)', () => {
+    const remove = (row: IssueRecord, version = row.version, by: Principal = cli) =>
+      world.tx(by, async (tx) => {
+        await tx.issues.remove(row.id, version);
+        await tx.audit.record({ action: 'issue.dropped', target: { type: 'issue', id: row.id } });
+      });
+    const rows = () => read((tx) => tx.issues.between(MONDAY, MONDAY));
+
+    it('deletes the row, so the Monday can be made again as a new one', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      await remove(issue);
+      expect(await rows()).toEqual([]);
+      const again = await ensure(issueOf(MONDAY));
+      expect(again.inserted).toBe(true);
+      expect(again.issue).toMatchObject({ version: 1, status: 'open' });
+      expect(again.issue.id).not.toBe(issue.id);
+    });
+
+    it('leaves the other issues alone', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      const next = calDate(2026, 11, 2);
+      await ensure(issueOf(next));
+      await remove(issue);
+      expect(await read((tx) => tx.issues.between(MONDAY, next))).toMatchObject([{ monday: next }]);
+    });
+
+    it('refuses a stale version or an unknown issue and changes nothing', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      await expect(remove(issue, 2)).rejects.toBeInstanceOf(StaleVersion);
+      await expect(
+        remove({ ...issue, id: '00000000-0000-7000-8000-999999999999' }),
+      ).rejects.toBeInstanceOf(StaleVersion);
+      expect(await rows()).toEqual([issue]);
+    });
+
+    it('lets only someone who may run the meeting remove a porada', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const head = await world.seed.user({ role: 'headmaster' });
+      const { issue } = await ensure(issueOf(MONDAY));
+      await expect(remove(issue, issue.version, world.as(author))).rejects.toBeInstanceOf(
+        ScopeViolation,
+      );
+      expect(await rows()).toEqual([issue]);
+      await remove(issue, issue.version, world.as(head));
+      expect(await rows()).toEqual([]);
+    });
+
+    it('is held by the rows that hang on the issue: its outline and its document', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      await world.tx(cli, async (tx) => {
+        await tx.issueItems.replace(issue.id, {
+          pokyny: [
+            {
+              lineageId: '0192f000-0000-7000-8000-000000000001',
+              section: 'pokyny',
+              slot: null,
+              persistence: 'standing',
+              title: 'Pokyn',
+              body: { type: 'doc', content: [] },
+              quotes: [],
+              sourcePointId: null,
+            },
+          ],
+          hospodareni: [],
+        });
+        await tx.audit.record({ action: 'outline.saved', target: { type: 'issue', id: issue.id } });
+      });
+      await expect(remove(issue)).rejects.toMatchObject({
+        sqlstate: 'db.constraint.issue_items_issue_id_issues_id_fk',
+      });
+      expect(await rows()).toEqual([issue]);
+    });
+
+    it('does not delete a generated issue that has a document', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      const generated = await setStatus(issue, 'generated');
+      await world.tx(cli, async (tx) => {
+        const document = await tx.documents.insert({
+          issueId: generated.id,
+          snapshot: snapshotFixture('template-replica'),
+          docx: new Uint8Array([0x50, 0x4b, 3, 4]),
+        });
+        await tx.audit.record({
+          action: 'test.seed',
+          target: { type: 'document', id: document.id },
+        });
+      });
+      await expect(remove(generated)).rejects.toMatchObject({
+        sqlstate: 'db.constraint.generated_documents_issue_id_issues_id_fk',
+      });
+      expect(await rows()).toEqual([generated]);
+    });
+
+    it('writes nothing in a read transaction', async () => {
+      const { issue } = await ensure(issueOf(MONDAY));
+      await expect(read((tx) => tx.issues.remove(issue.id, issue.version))).rejects.toBeInstanceOf(
+        DatabaseFailure,
+      );
+      expect(await rows()).toEqual([issue]);
     });
   });
 
@@ -355,7 +458,7 @@ describe.runIf(inject('world') === 'fake')('issue audit coverage in the fake wor
   it('fails a commit that changed a status no audit event names', async () => {
     const { issue } = await ensure(issueOf(MONDAY));
     const unaudited = world.tx(cli, (tx) =>
-      tx.issues.setStatus(issue.id, issue.version, 'skipped'),
+      tx.issues.setStatus(issue.id, issue.version, 'generated'),
     );
     await expect(unaudited).rejects.toBeInstanceOf(UnauditedWrite);
   });

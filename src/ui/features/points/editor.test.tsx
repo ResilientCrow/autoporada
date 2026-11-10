@@ -512,6 +512,7 @@ describe('the standing line in the editor', () => {
     issues: [],
     now: '2027-03-09T10:00:00.000Z',
     rule: DEFAULT_DEADLINE,
+    plannedThrough: null,
   };
   const TEXT = `Zařadíme do porady z\u00a015.\u00a03.`;
   const page = () => editorPage(CONTENT, 'Exkurze', SPEC, 'on', STANDING);

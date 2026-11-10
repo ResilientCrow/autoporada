@@ -47,7 +47,13 @@ const WINDOW = {
     },
   ],
   rule: { dayOffset: -2, time: '20:00' },
+  plannedThrough: '2026-11-02',
 };
+
+/** What `outline.read` says of a Monday: its origin kind. */
+const outline = (origin: 'stored' | 'seed' | 'derived') => ({
+  origin: { kind: origin, from: null },
+});
 
 const SLOT = {
   monday: '2026-11-09',
@@ -62,13 +68,17 @@ const SLOT = {
 
 /** Use cases answered by name, as the pipeline does. */
 function answer(values: Record<string, unknown>) {
-  runRegistered.mockImplementation(async (_c, useCase: { name: string }) => {
-    if (!(useCase.name in values)) throw new Error(`unexpected ${useCase.name}`);
-    const value = values[useCase.name];
-    return typeof value === 'object' && value !== null && 'error' in value
-      ? { ok: false, error: (value as { error: unknown }).error }
-      : { ok: true, value };
-  });
+  runRegistered.mockImplementation(
+    async (_c, useCase: { name: string }, args?: { input: unknown }) => {
+      if (!(useCase.name in values)) throw new Error(`unexpected ${useCase.name}`);
+      const given = values[useCase.name];
+      const value =
+        typeof given === 'function' ? (given as (input: unknown) => unknown)(args?.input) : given;
+      return typeof value === 'object' && value !== null && 'error' in value
+        ? { ok: false, error: (value as { error: unknown }).error }
+        : { ok: true, value };
+    },
+  );
 }
 
 beforeEach(() => {
@@ -117,29 +127,87 @@ describe('poradaPage', () => {
     expect(await poradaPage('2030-01-07')).toBeNull();
   });
 
-  it('writes the dates out for the headmaster, a moved porada with its Monday, with the calendar the skip dialog plans on', async () => {
+  it('writes the dates out for the headmaster, with the calendar the move and drop dialogs plan on', async () => {
     as('headmaster');
-    answer({ 'issues.workspace': { working: '2026-11-09', slot: SLOT }, 'issues.window': WINDOW });
+    answer({
+      'issues.workspace': { working: '2026-11-09', slot: SLOT },
+      'issues.window': WINDOW,
+      'outline.read': outline('seed'),
+    });
     expect(await poradaPage('2026-11-09')).toEqual({
       kind: 'workspace',
       model: {
         monday: '2026-11-09',
         meeting: 'středa 11. listopadu 2026',
         meetingLabel: '11. 11. 2026',
-        movedFrom: '9.\u00a011.',
+        meetingDate: '2026-11-11',
         deadline: { weekday: 'sobota', date: '7.\u00a011.', time: '20:00' },
         deadlinePassed: false,
         status: 'open',
         version: 3,
-        nextLabel: '16. 11. 2026',
         calendar: {
           issues: WINDOW.issues,
           now: '2026-11-03T10:00:00.000Z',
           rule: { dayOffset: -2, time: { hour: 20, minute: 0 } },
+          plannedThrough: '2026-11-02',
         },
+        dropProgram: null,
         counts: SLOT.counts,
         generated: null,
       },
+    });
+  });
+
+  describe('what dropping does to the prepared program', () => {
+    const program = (own: 'stored' | 'seed', heir: 'stored' | 'seed', window = WINDOW) => {
+      as('headmaster');
+      answer({
+        'issues.workspace': { working: '2026-11-09', slot: SLOT },
+        'issues.window': window,
+        'outline.read': (input: { monday: string }) =>
+          outline(input.monday === '2026-11-09' ? own : heir),
+      });
+      return poradaPage('2026-11-09');
+    };
+
+    it('is null when the porada has no program of its own stored', async () => {
+      expect(await program('seed', 'seed')).toMatchObject({ model: { dropProgram: null } });
+    });
+
+    it('goes along when the porada has one and its heir has none', async () => {
+      expect(await program('stored', 'seed')).toMatchObject({ model: { dropProgram: 'along' } });
+    });
+
+    it('is lost when the heir has a program of its own', async () => {
+      expect(await program('stored', 'stored')).toMatchObject({ model: { dropProgram: 'lost' } });
+    });
+
+    it('is lost when the heir is already generated', async () => {
+      const generated = {
+        ...WINDOW,
+        issues: [
+          {
+            monday: '2026-11-16',
+            meetingDate: '2026-11-16',
+            deadlineAt: '2026-11-14T19:00:00.000Z',
+            status: 'generated',
+            version: 5,
+          },
+        ],
+      };
+      expect(await program('stored', 'seed', generated)).toMatchObject({
+        model: { dropProgram: 'lost' },
+      });
+    });
+
+    it('is null where the outline is refused', async () => {
+      as('headmaster');
+      answer({
+        'issues.workspace': { working: '2026-11-09', slot: SLOT },
+        'issues.window': WINDOW,
+        'outline.read': { error: { code: 'not-found' } },
+      });
+      expect(await poradaPage('2026-11-09')).toMatchObject({ model: { dropProgram: null } });
     });
   });
 
@@ -173,7 +241,7 @@ describe('poradaPage', () => {
     }
   });
 
-  it('has no movedFrom when held on its Monday, and knows when the deadline has passed', async () => {
+  it('knows when the deadline has passed', async () => {
     as('headmaster');
     answer({
       'issues.workspace': {
@@ -183,27 +251,30 @@ describe('poradaPage', () => {
           monday: '2026-11-02',
           meetingDate: '2026-11-02',
           deadlineAt: '2026-10-31T19:00:00.000Z',
-          next: null,
         },
       },
       'issues.window': WINDOW,
+      'outline.read': outline('seed'),
     });
-    const page = await poradaPage('2026-11-02');
-    expect(page).toMatchObject({
+    expect(await poradaPage('2026-11-02')).toMatchObject({
       kind: 'workspace',
-      model: { movedFrom: null, deadlinePassed: true, nextLabel: null },
+      model: { meetingDate: '2026-11-02', deadlinePassed: true },
     });
   });
 
   it('reads no calendar for a porada that is not open, and none the use case refuses', async () => {
     as('headmaster');
-    answer({ 'issues.workspace': { working: null, slot: { ...SLOT, status: 'skipped' } } });
-    expect(await poradaPage('2026-11-09')).toMatchObject({ model: { calendar: null } });
+    answer({ 'issues.workspace': { working: null, slot: { ...SLOT, status: 'generated' } } });
+    expect(await poradaPage('2026-11-09')).toMatchObject({
+      model: { calendar: null, dropProgram: null },
+    });
     answer({
       'issues.workspace': { working: null, slot: SLOT },
       'issues.window': { error: { code: 'forbidden' } },
     });
-    expect(await poradaPage('2026-11-09')).toMatchObject({ model: { calendar: null } });
+    expect(await poradaPage('2026-11-09')).toMatchObject({
+      model: { calendar: null, dropProgram: null },
+    });
   });
 
   it('sends a staff reviewer to the preview', async () => {

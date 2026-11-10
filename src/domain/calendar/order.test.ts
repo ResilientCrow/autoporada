@@ -66,13 +66,13 @@ describe('orderConflicts', () => {
     expect(conflictsOf(before, changed)).toEqual([at(0)]);
   });
 
-  it('leaves a skipped slot out, whatever its dates', () => {
-    const skipped = [slot(0), slot(1, 0, 'skipped'), slot(2)];
-    expect(orderConflicts(skipped, slot(0, 10))).toEqual([]);
-    expect(conflictsOf(skipped, slot(0, 15))).toEqual([at(2)]);
+  it('checks all poradas over a Monday with no porada between them', () => {
+    const gap = [slot(0), slot(2), slot(3)];
+    expect(orderConflicts(gap, slot(0, 10))).toEqual([]);
+    expect(conflictsOf(gap, slot(0, 15))).toEqual([at(2)]);
   });
 
-  it('counts a generated slot and reports its status, so it can never be skipped away', () => {
+  it('counts a generated slot and reports its status, so it is never dropped away', () => {
     const generated = [slot(0, 0, 'generated'), slot(1)];
     expect(orderConflicts(generated, slot(1, -10))).toEqual([
       { monday: slot(0).monday, meetingDate: slot(0).meetingDate, status: 'generated' },
@@ -80,7 +80,7 @@ describe('orderConflicts', () => {
   });
 
   it('never names the changed slot itself, whatever its status', () => {
-    expect(orderConflicts(calendar, { ...slot(1, 30), status: 'skipped' }).map(key)).toEqual([
+    expect(orderConflicts(calendar, { ...slot(1, 30), status: 'generated' }).map(key)).toEqual([
       at(2),
       at(3),
     ]);
@@ -98,11 +98,9 @@ describe('orderConflicts', () => {
 });
 
 describe('orderConflicts property (design §3, row 33)', () => {
-  /** Whether the non-skipped slots rise in meeting date and deadline with their Monday. */
+  /** Whether the slots rise in meeting date and deadline with their Monday. */
   const holds = (slots: readonly IssueSlot[]) => {
-    const taken = slots
-      .filter((s) => s.status !== 'skipped')
-      .sort((a, b) => compareDates(a.monday, b.monday));
+    const taken = [...slots].sort((a, b) => compareDates(a.monday, b.monday));
     return taken.every((s, i) => {
       const prev = taken[i - 1];
       return (
@@ -118,10 +116,9 @@ describe('orderConflicts property (design §3, row 33)', () => {
   const calendars = fc
     .record({
       steps: fc.array(fc.integer({ min: 1, max: 14 }), { minLength: 2, maxLength: 9 }),
-      skipped: fc.array(fc.boolean(), { minLength: 9, maxLength: 9 }),
       status: fc.constantFrom<IssueStatus>('open', 'generated'),
     })
-    .map(({ steps, skipped, status }) => {
+    .map(({ steps, status }) => {
       let day = 0;
       return steps.map((step, week) => {
         day += step;
@@ -130,13 +127,13 @@ describe('orderConflicts property (design §3, row 33)', () => {
           monday: addDays(MONDAY0, 7 * week),
           meetingDate,
           deadlineAt: wallClockToInstant(addDays(meetingDate, -1), TIME),
-          status: skipped[week] ? ('skipped' as const) : status,
+          status,
           stored: true,
         } satisfies IssueSlot;
       });
     });
 
-  it('skipping every conflict restores the order the calendar had', () => {
+  it('dropping every conflict restores the order the calendar had', () => {
     fc.assert(
       fc.property(
         calendars,
@@ -154,9 +151,9 @@ describe('orderConflicts property (design §3, row 33)', () => {
             deadlineAt: wallClockToInstant(addDays(meetingDate, -gap), TIME),
           };
           const conflicts = new Set(orderConflicts(slots, changed).map(key));
-          const after = slots.map((s) =>
-            s === old ? changed : conflicts.has(key(s)) ? { ...s, status: 'skipped' as const } : s,
-          );
+          const after = slots
+            .filter((s) => s === old || !conflicts.has(key(s)))
+            .map((s) => (s === old ? changed : s));
           expect(holds(after)).toBe(true);
         },
       ),

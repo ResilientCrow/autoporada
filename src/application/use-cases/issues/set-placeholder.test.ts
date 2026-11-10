@@ -8,7 +8,7 @@ import { calDate, parseIsoDate as d } from '@/domain/time';
 
 import { issueFixtures } from '../../../../test/support/issues';
 import { setupWorld } from '../../../../test/support/world';
-import { setPlaceholder } from './index';
+import { dropIssue, setPlaceholder } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
@@ -170,13 +170,10 @@ describe('issues.setPlaceholder', () => {
     });
   });
 
-  it.each([
-    ['generated', 'generated'],
-    ['skipped', 'skipped'],
-  ] as const)('refuses a %s porada as issue-not-open', async (_name, status) => {
+  it('refuses a generated porada as issue-not-open', async () => {
     const head = await headmaster();
     const id = await owedAkce();
-    await fixtures.issue(W1, { status });
+    await fixtures.issue(W1, { status: 'generated' });
     expect(await send(head, id)).toEqual({
       ok: false,
       error: { code: 'rule', rule: 'issue-not-open' },
@@ -226,11 +223,11 @@ describe('issues.setPlaceholder', () => {
     expect(await send(head, id, { paragraph })).toEqual({ ok: true, value: { version: 1 } });
   });
 
-  it('accepts the akce of an earlier porada once a skipped one moves its window', async () => {
-    // 19 October skipped: its akce are owed to 26 October, which then reaches back to 12 October.
+  it('accepts the akce of an earlier porada once a dropped one moves its window', async () => {
+    // 19 October dropped: its akce are owed to 26 October, which then reaches back to 12 October.
     const head = await headmaster();
     const author = await submitter();
-    await fixtures.issue(calDate(2026, 10, 19), { status: 'skipped' });
+    await world.run(dropIssue, world.as(head), { monday: '2026-10-19', confirmed: true });
     const id = await fixtures.future({ author, startDate: d('2026-10-15') });
     expect(await send(head, id)).toEqual({ ok: true, value: { version: 1 } });
   });

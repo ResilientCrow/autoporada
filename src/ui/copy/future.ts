@@ -5,7 +5,7 @@ import type { FutureState, ReviewDecision } from '@/domain/review';
 import { rules } from './forms';
 
 /** What an item of the overview does in the porada on one Monday; see `placement.ts`. */
-export type StripSlot = 'meetings' | 'events' | 'later' | 'hidden' | 'skipped';
+export type StripSlot = 'meetings' | 'events' | 'later' | 'hidden';
 
 /** „Akce“: the jednání and akce of the school (design section 12), listed and read here. */
 export const future = {
@@ -131,7 +131,6 @@ export const future = {
       events: 'v\u00A0přehledu akcí',
       later: 'mezi dalšími známými akcemi',
       hidden: 'už ne',
-      skipped: 'porada se nekoná',
     } as const satisfies Record<StripSlot, string>,
   },
 } as const;

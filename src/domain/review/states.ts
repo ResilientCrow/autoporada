@@ -172,16 +172,13 @@ export function reportDue(akce: ReportFacts, now: Date): boolean {
 
 // ── Issues ─────────────────────────────────────────────────────────────────
 
-export type IssueStatus = 'open' | 'generated' | 'skipped';
-export type IssueEvent = 'generate' | 'reopen' | 'skip' | 'unskip';
+export type IssueStatus = 'open' | 'generated';
+export type IssueEvent = 'generate' | 'reopen';
 
 export const ISSUE_MACHINE: Machine<IssueStatus, IssueEvent, ReviewActor> = {
   generate: { from: ['open'], to: 'generated', allowed: headmaster },
   /** Only the latest generated issue, while the next one is not generated (use case). */
   reopen: { from: ['generated'], to: 'open', allowed: headmaster },
-  /** „Porada se nekoná“ */
-  skip: { from: ['open'], to: 'skipped', allowed: headmaster },
-  unskip: { from: ['skipped'], to: 'open', allowed: headmaster },
 };
 
 // ── Access requests ────────────────────────────────────────────────────────

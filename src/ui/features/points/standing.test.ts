@@ -24,7 +24,7 @@ const NB = '\u00a0';
 const { soon } = cs.points.standing;
 
 /** Mondays of March 2027 (the 15th is one): the Czech clocks are on winter time until the 28th. */
-const issue = (monday: string, deadlineAt: string, status: 'open' | 'skipped' | 'generated') => ({
+const issue = (monday: string, deadlineAt: string, status: 'open' | 'generated') => ({
   monday,
   meetingDate: monday,
   deadlineAt,
@@ -35,7 +35,7 @@ const input = (
   now: string,
   submitMonday: string,
   issues: StandingInput['issues'] = [],
-): StandingInput => ({ submitMonday, issues, now, rule: DEFAULT_DEADLINE });
+): StandingInput => ({ submitMonday, issues, now, rule: DEFAULT_DEADLINE, plannedThrough: null });
 
 const textOf = (given: StandingInput, report?: LateFacts) => {
   const standing = standingOf(given, report);
@@ -77,10 +77,13 @@ describe('the standing line before the deadline', () => {
     );
   });
 
-  it('names the Monday after a skipped one', () => {
-    const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
-    const result = textOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', [skipped]));
-    expect(result?.text).toBe(
+  it('names the next porada when the Monday has none (no row up to plannedThrough)', () => {
+    const next = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'open');
+    const given = {
+      ...input('2027-03-09T10:00:00.000Z', '2027-03-15', [next]),
+      plannedThrough: '2027-03-22',
+    };
+    expect(textOf(given)?.text).toBe(
       `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20:00.`,
     );
   });
@@ -130,9 +133,9 @@ describe('the last 24 hours', () => {
   });
 
   it('measures against the deadline of the porada the point goes to', () => {
-    // 15 March is skipped: the point goes to the 22nd, whose deadline is a week later.
-    const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
-    const result = textOf(input('2027-03-13T10:00:00.000Z', '2027-03-15', [skipped]));
+    // 15 March is generated: the point goes to the 22nd, whose deadline is a week later.
+    const generated = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'generated');
+    const result = textOf(input('2027-03-13T10:00:00.000Z', '2027-03-15', [generated]));
     expect(result?.urgent).toBe(false);
   });
 
@@ -166,49 +169,41 @@ describe('the standing line after the deadline', () => {
     expect(result?.text).toContain('Zařadíme do porady');
   });
 
-  it('names the Monday after a skipped one as the porada the point goes to', () => {
-    const skipped = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'skipped');
-    const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-22', [skipped]));
+  it('names the Monday after a generated one as the porada the point goes to', () => {
+    const generated = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'generated');
+    const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-22', [generated]));
     expect(result?.text).toBe(
       `Uzávěrka porady z${NB}15.${NB}3. už proběhla. Bod půjde do porady z${NB}29.${NB}3.`,
     );
   });
 
-  it('names the porada that closed even when the Monday after it is skipped', () => {
-    // Sunday 14 March 2027, 18:30: the 15th has closed, the 22nd is skipped, so hand-ins go to
+  it('names the porada that closed even when the Monday after it is generated', () => {
+    // Sunday 14 March 2027, 18:30: the 15th has closed, the 22nd is generated, so hand-ins go to
     // the 29th (the submit Monday the window names); the line still says the 15th has closed.
-    const skipped = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'skipped');
-    const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-29', [skipped]));
+    const generated = issue('2027-03-22', '2027-03-20T19:00:00.000Z', 'generated');
+    const result = textOf(input('2027-03-14T17:30:00.000Z', '2027-03-29', [generated]));
     expect(result?.text).toBe(
       `Uzávěrka porady z${NB}15.${NB}3. už proběhla. Bod půjde do porady z${NB}29.${NB}3.`,
-    );
-  });
-
-  it('does not talk about a closed porada that is skipped: nobody meets', () => {
-    const skipped = issue('2027-03-15', '2027-03-13T19:00:00.000Z', 'skipped');
-    const result = textOf(input('2027-03-15T08:00:00.000Z', '2027-03-22', [skipped]));
-    expect(result?.text).toBe(
-      `Zařadíme do porady z${NB}22.${NB}3. Uzávěrka: sobota 20.${NB}3. v${NB}20:00.`,
     );
   });
 });
 
 describe('without an open Monday', () => {
-  it('has no standing when the 26 Mondays are all skipped', () => {
+  it('has no standing when the 26 Mondays are all generated', () => {
     const first = parseIsoDate('2027-03-15');
     const issues = Array.from({ length: 27 }, (_, week) =>
-      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-13T19:00:00.000Z', 'skipped'),
+      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-13T19:00:00.000Z', 'generated'),
     );
     expect(standingOf(input('2027-03-09T10:00:00.000Z', '2027-03-15', issues))).toBeNull();
   });
 
   it('has no standing when the submit Monday lies past the last slot', () => {
     // Tuesday 9 March 2027: the calendar ends at Monday 30 August. With every Monday from 15 March
-    // to it skipped, the server hands in for 6 September, which no slot reaches: the server places
+    // to it generated, the server hands in for 6 September, which no slot reaches: the server places
     // nothing there, so the line names nothing either.
     const first = parseIsoDate('2027-03-15');
     const issues = Array.from({ length: 25 }, (_, week) =>
-      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-13T19:00:00.000Z', 'skipped'),
+      issue(toIsoDate(addDays(first, 7 * week)), '2027-03-13T19:00:00.000Z', 'generated'),
     );
     expect(issues.at(-1)?.monday).toBe('2027-08-30');
     expect(standingOf(input('2027-03-09T10:00:00.000Z', '2027-09-06', issues))).toBeNull();
@@ -237,7 +232,7 @@ describe('the line and the porada a resubmit lands in', () => {
     const landed = pointMonday(
       point,
       parseIsoDate('2026-10-25'),
-      issueSlots([], parseIsoDate('2026-10-25'), DEFAULT_DEADLINE),
+      issueSlots([], parseIsoDate('2026-10-25'), DEFAULT_DEADLINE, null),
     );
     expect(landed && toIsoDate(landed)).toBe('2026-11-02');
     expect(standing && toIsoDate(standing.placement)).toBe('2026-11-02');
@@ -312,9 +307,9 @@ describe('the standing line of a report on a late event', () => {
     expect(textOf(given, monday)).toEqual(textOf(given));
   });
 
-  it('is the plain line when the porada the report would reach is skipped', () => {
-    const skipped = issue('2026-11-02', '2026-10-31T19:00:00.000Z', 'skipped');
-    const given = input('2026-11-01T20:30:00.000Z', '2026-11-09', [skipped]);
+  it('is the plain line when the porada the report would reach is generated', () => {
+    const generated = issue('2026-11-02', '2026-10-31T19:00:00.000Z', 'generated');
+    const given = input('2026-11-01T20:30:00.000Z', '2026-11-09', [generated]);
     expect(textOf(given, ENDS_SUNDAY)).toEqual(textOf(given));
   });
 
@@ -434,7 +429,7 @@ describe('the standing line of a report when the porada was moved (ADR 0034)', (
       timeTo: end === null ? null : parseWallTime(end),
     };
     const rows = toIssueRows([moved]);
-    const slot = issueSlots(rows, parseIsoDate('2026-11-02'), DEFAULT_DEADLINE).find(
+    const slot = issueSlots(rows, parseIsoDate('2026-11-02'), DEFAULT_DEADLINE, null).find(
       (s) => toIsoDate(s.monday) === moved.monday,
     )!;
     for (const now of ['2026-11-02T12:00:00.000Z', '2026-11-03T12:00:00.000Z']) {

@@ -6,24 +6,38 @@ import { parseIsoDate } from '@/domain/time';
 import { deadlineSchema } from './settings';
 
 /**
- * „Porada se nekoná“ and its undo. `expectedVersion` is the version of the row
- * the page showed; a Monday without a row has none, which reads as an
- * untouched issue. `confirmed` is the checkbox (ADR 0013 item 10). `nextMeeting`,
- * with a skip only, is the day the next porada is held, any weekday: the porada
- * of its nearest Monday is held on it, and every one before it is skipped
- * (ADR 0051).
+ * „Přesunout poradu“ (ADR 0054 item 3): the open porada keyed by `monday` is held on `meetingDate`
+ * instead. `expectedVersion` is the version of the row the page showed; a Monday without a row has
+ * none, which reads as an untouched issue.
  */
-export const setSkippedInput = z.strictObject({
+export const moveIssueInput = z.strictObject({
   monday: z.iso.date().max(10),
-  event: z.enum(['skip', 'unskip']),
+  meetingDate: z.iso.date().max(10),
   expectedVersion: z.number().int().positive().optional(),
-  confirmed: z.literal(true).optional(),
-  nextMeeting: z.iso.date().max(10).optional(),
 });
-export const setSkippedOutput = z.object({
-  status: z.enum(['open', 'generated', 'skipped']),
+/** An issue as a calendar act leaves it: its key, the day it is held and its deadline. */
+const calendarActOutput = z.object({
+  monday: z.iso.date(),
+  meetingDate: z.iso.date(),
+  deadlineAt: z.iso.datetime(),
   version: z.number().int().positive(),
 });
+export const moveIssueOutput = calendarActOutput;
+
+/** „Porada se nekoná“ (ADR 0054 item 4); `confirmed` is the checkbox (ADR 0013 item 10). */
+export const dropIssueInput = z.strictObject({
+  monday: z.iso.date().max(10),
+  expectedVersion: z.number().int().positive().optional(),
+  confirmed: z.literal(true).optional(),
+});
+/** The porada that takes the dropped one's place in the calendar and its prepared content. */
+export const dropIssueOutput = z.object({
+  heir: z.object({ monday: z.iso.date(), meetingDate: z.iso.date() }),
+});
+
+/** „Přidat poradu“ (ADR 0054 item 5): a porada held on `meetingDate`, keyed by that day's nearest Monday. */
+export const addIssueInput = z.strictObject({ meetingDate: z.iso.date().max(10) });
+export const addIssueOutput = calendarActOutput;
 
 /**
  * Generating a porada's document (ADR 0038): the version of the row the preview showed (none for
@@ -42,9 +56,9 @@ export const generateIssueOutput = z.object({
 /** The calendar the Přehled, the standing line and the lists read: no input. */
 export const issuesWindowInput = z.strictObject({});
 export const issuesWindowOutput = z.object({
-  /** The first open Monday whose deadline is still ahead: where a hand-in goes (skipped and generated Mondays are stepped over). */
+  /** The first open Monday whose deadline is still ahead: where a hand-in goes (generated Mondays are stepped over). */
   submitMonday: z.iso.date(),
-  /** The first Monday whose deadline is still ahead, whatever its status: where the strips of meetings start, so a skipped one stays in view to be undone. */
+  /** The first Monday whose deadline is still ahead, whatever its status: where the strips of meetings start. */
   stripFrom: z.iso.date(),
   /** The rows from this week's Monday to the last slot Monday (25 weeks on), earliest first; a Monday without a row has none. */
   issues: z.array(
@@ -53,12 +67,14 @@ export const issuesWindowOutput = z.object({
       /** The day the porada is held: the Monday until it is moved (ADR 0051). */
       meetingDate: z.iso.date(),
       deadlineAt: z.iso.datetime(),
-      status: z.enum(['open', 'generated', 'skipped']),
+      status: z.enum(['open', 'generated']),
       version: z.number().int().positive(),
     }),
   ),
   /** The deadline rule in force: what a Monday with no row is counted by (`toDeadlineRule` reads it). */
   rule: deadlineSchema,
+  /** The effective boundary (ADR 0054): up to it a Monday with no row is no porada. */
+  plannedThrough: z.iso.date(),
 });
 
 /** The rows of `issues.window` as the calendar domain reads them (placement, standing line). */

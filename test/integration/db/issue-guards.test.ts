@@ -51,7 +51,7 @@ describe('issue guards (migrations 0011 and 0012)', () => {
   it('lets a version rise by exactly one, for the app and the owner alike', async () => {
     await insert({ monday: '2026-12-07' });
     const bump = (by: string) =>
-      sql.raw(`UPDATE issues SET status = 'skipped', version = version ${by}
+      sql.raw(`UPDATE issues SET status = 'generated', version = version ${by}
                 WHERE monday = '2026-12-07'`);
     for (const by of ['+ 0', '+ 2', '- 1']) {
       expect(await pgErrorOf(database.db.execute(bump(by))), by).toMatchObject({
@@ -63,7 +63,7 @@ describe('issue guards (migrations 0011 and 0012)', () => {
       database.owner(`UPDATE issues SET version = 7 WHERE monday = '2026-12-07'`),
     ).rejects.toMatchObject({ code: CHECK, constraint: 'version_bump' });
     // An UPDATE that leaves version out is the lost update the guard exists to stop.
-    const statusOnly = `UPDATE issues SET status = 'skipped' WHERE monday = '2026-12-07'`;
+    const statusOnly = `UPDATE issues SET status = 'generated' WHERE monday = '2026-12-07'`;
     expect(await pgErrorOf(database.db.execute(sql.raw(statusOnly)))).toMatchObject({
       code: CHECK,
       constraint: 'version_bump',
@@ -76,6 +76,6 @@ describe('issue guards (migrations 0011 and 0012)', () => {
     const [row] = await database.owner<{ status: string; version: number }>(
       `SELECT status, version FROM issues WHERE monday = '2026-12-07'`,
     );
-    expect(row).toEqual({ status: 'skipped', version: 2 });
+    expect(row).toEqual({ status: 'generated', version: 2 });
   });
 });

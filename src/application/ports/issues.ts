@@ -73,4 +73,11 @@ export interface IssueRepo {
     expectedVersion: number,
     to: Pick<IssueRecord, 'meetingDate' | 'deadlineAt'>,
   ): Promise<IssueRecord>;
+  /**
+   * Deletes the row (a porada that does not take place, ADR 0054): version-checked, StaleVersion
+   * for an unknown id or another version, ScopeViolation for a user who may not `issue.generate`.
+   * The caller has deleted the issue's outline rows first (`issue_items` restricts) and holds the
+   * deadline lock in update mode; a generated issue is held by its document's foreign key.
+   */
+  remove(id: string, expectedVersion: number): Promise<void>;
 }

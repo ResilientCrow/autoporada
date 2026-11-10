@@ -101,5 +101,25 @@ export function fakeIssueRepo(tx: FakeTxState, ctx: TxContext): IssueRepo {
     },
     setStatus: async (id, expectedVersion, status) => versioned(id, expectedVersion, { status }),
     reschedule: async (id, expectedVersion, to) => versioned(id, expectedVersion, to),
+    remove: async (id, expectedVersion) => {
+      guard(tx, true);
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'issue.generate' })) {
+        throw new ScopeViolation();
+      }
+      const issue = [...issues.values()].find((i) => i.id === id);
+      if (!issue || issue.version !== expectedVersion) throw new StaleVersion();
+      // issue_items restricts, and generated_documents references the row (their foreign keys).
+      const items = tx.draft.issueItems.get(id);
+      if (items && items.pokyny.length + items.hospodareni.length > 0) {
+        throw refusedBy('issue_items_issue_id_issues_id_fk');
+      }
+      if ([...tx.draft.documents.values()].some((d) => d.issueId === id)) {
+        throw refusedBy('generated_documents_issue_id_issues_id_fk');
+      }
+      issues.delete(toIsoDate(issue.monday));
+      issueTexts.delete(toIsoDate(issue.monday));
+      tx.draft.issueItems.delete(id);
+      tx.written.push({ type: 'issue', id });
+    },
   };
 }

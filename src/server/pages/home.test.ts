@@ -103,7 +103,13 @@ describe('homePage', () => {
       serve({
         window: {
           ok: true,
-          value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
+          value: {
+            submitMonday: '2026-11-09',
+            stripFrom: '2026-11-09',
+            issues: [],
+            rule: RULE,
+            plannedThrough: '2026-11-02',
+          },
         },
         future: { ok: true, value: { items: [due] } },
         types: { ok: true, value: { types: [{ id: 't1', name: 'Seminář', detail: null }] } },
@@ -127,8 +133,18 @@ describe('homePage', () => {
       status,
       version,
     });
-    const window = (submitMonday: string, issues: unknown[], stripFrom = submitMonday) =>
-      serve({ window: { ok: true, value: { submitMonday, stripFrom, issues, rule: RULE } } });
+    const window = (
+      submitMonday: string,
+      issues: unknown[],
+      plannedThrough = '2026-11-02',
+      stripFrom = submitMonday,
+    ) =>
+      serve({
+        window: {
+          ok: true,
+          value: { submitMonday, stripFrom, issues, rule: RULE, plannedThrough },
+        },
+      });
 
     it('reads the window once and gives four Mondays from the submit Monday', async () => {
       as('headmaster');
@@ -153,14 +169,13 @@ describe('homePage', () => {
     it('takes status and version from the rows and ignores rows outside the four', async () => {
       as('headmaster');
       window('2026-11-09', [
-        row('2026-11-02', 'generated', 4),
-        row('2026-11-16', 'skipped', 2),
+        row('2026-11-16', 'open', 2),
         row('2026-11-23', 'generated', 5),
-        row('2026-12-07', 'skipped', 9),
+        row('2026-12-07', 'open', 9),
       ]);
       expect(await stripOfHome()).toEqual([
         { monday: '2026-11-09', label: '9. 11. 2026', held: null, status: 'open', version: null },
-        { monday: '2026-11-16', label: '16. 11. 2026', held: null, status: 'skipped', version: 2 },
+        { monday: '2026-11-16', label: '16. 11. 2026', held: null, status: 'open', version: 2 },
         {
           monday: '2026-11-23',
           label: '23. 11. 2026',
@@ -172,16 +187,42 @@ describe('homePage', () => {
       ]);
     });
 
-    it('starts the strip at stripFrom, so a skipped head Monday stays in view with its version', async () => {
+    it('leaves out a Monday with no row up to plannedThrough: it holds no porada', async () => {
       as('headmaster');
-      // 9 November is skipped: a hand-in goes to the 16th, the strip still starts at the 9th.
-      window('2026-11-16', [row('2026-11-09', 'skipped', 3)], '2026-11-09');
-      expect(await stripOfHome()).toEqual([
-        { monday: '2026-11-09', label: '9. 11. 2026', held: null, status: 'skipped', version: 3 },
-        { monday: '2026-11-16', label: '16. 11. 2026', held: null, status: 'open', version: null },
-        { monday: '2026-11-23', label: '23. 11. 2026', held: null, status: 'open', version: null },
-        { monday: '2026-11-30', label: '30. 11. 2026', held: null, status: 'open', version: null },
+      window('2026-11-09', [row('2026-11-16', 'open', 2)], '2026-11-23');
+      expect((await stripOfHome())?.map((day) => day.monday)).toEqual([
+        '2026-11-16',
+        '2026-11-30',
+        '2026-12-07',
+        '2026-12-14',
       ]);
+    });
+
+    it('starts at the first porada whose deadline is ahead, a generated one included', async () => {
+      as('headmaster');
+      // The 9th has closed on 8 November 17:00 UTC but NOW is 3 November: it is ahead, and generated.
+      window('2026-11-16', [row('2026-11-09', 'generated', 3)]);
+      expect(await stripOfHome()).toMatchObject([
+        { monday: '2026-11-09', status: 'generated', version: 3 },
+        { monday: '2026-11-16', status: 'open', version: null },
+        { monday: '2026-11-23' },
+        { monday: '2026-11-30' },
+      ]);
+    });
+
+    it('gives the headmaster the calendar „Přidat poradu“ plans on', async () => {
+      as('headmaster');
+      window('2026-11-09', [row('2026-11-16', 'open', 2)], '2026-11-23');
+      const model = await homePage();
+      expect(model).toMatchObject({
+        kind: 'member',
+        calendar: {
+          now: NOW.toISOString(),
+          rule: expect.anything() as unknown,
+          plannedThrough: '2026-11-23',
+          issues: [expect.objectContaining({ monday: '2026-11-16' })],
+        },
+      });
     });
 
     // Row 35: a porada moved to another day is labelled by its meeting, and says when it is held.
@@ -192,19 +233,6 @@ describe('homePage', () => {
       expect(moved).toMatchObject({ monday: '2026-11-16', label: '18. 11. 2026', version: 2 });
       // The row’s deadline, 8 November 2026 at 17:00 UTC, is Sunday 18:00 in Prague.
       expect(moved?.held).toEqual({ weekday: 'neděle', date: '8.\u00a011.', time: '18:00' });
-    });
-
-    it('follows a submit Monday across the year end', async () => {
-      as('headmaster');
-      window('2026-12-28', []);
-      const strip = await stripOfHome();
-      expect(strip?.map((day) => day.monday)).toEqual([
-        '2026-12-28',
-        '2027-01-04',
-        '2027-01-11',
-        '2027-01-18',
-      ]);
-      expect(strip?.[1]?.label).toBe('4. 1. 2027');
     });
 
     it.each(['forbidden', 'not-found', 'invalid-input'])('is null on %s', async (code) => {
@@ -232,7 +260,13 @@ describe('homePage', () => {
   describe('the „Moje body“ card', () => {
     const WINDOW = {
       ok: true,
-      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
+      value: {
+        submitMonday: '2026-11-09',
+        stripFrom: '2026-11-09',
+        issues: [],
+        rule: RULE,
+        plannedThrough: '2026-11-02',
+      },
     };
     const mineOf = async () => {
       const model = await homePage();
@@ -296,6 +330,7 @@ describe('homePage', () => {
         issues: [],
         now: NOW.toISOString(),
         rule: DEFAULT_DEADLINE,
+        plannedThrough: '2026-11-02',
       });
     });
 
@@ -327,6 +362,7 @@ describe('homePage', () => {
         expect(await homePage()).toEqual({
           kind: 'member',
           strip: null,
+          calendar: null,
           mine: null,
           queue: null,
           reportDue: { items: [], types: [] },
@@ -353,7 +389,13 @@ describe('homePage', () => {
   describe('the „Ke kontrole“ card', () => {
     const WINDOW = {
       ok: true,
-      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
+      value: {
+        submitMonday: '2026-11-09',
+        stripFrom: '2026-11-09',
+        issues: [],
+        rule: RULE,
+        plannedThrough: '2026-11-02',
+      },
     };
     const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `p${i}` }));
     const QUEUE = {
@@ -448,7 +490,13 @@ describe('homePage', () => {
   describe('the headmaster’s count of missing akce reports', () => {
     const window = {
       ok: true,
-      value: { submitMonday: '2026-11-09', stripFrom: '2026-11-09', issues: [], rule: RULE },
+      value: {
+        submitMonday: '2026-11-09',
+        stripFrom: '2026-11-09',
+        issues: [],
+        rule: RULE,
+        plannedThrough: '2026-11-02',
+      },
     };
     const porada = { monday: '2026-11-09', meetingDate: '2026-11-09', owed: 3, missing: 2 };
 

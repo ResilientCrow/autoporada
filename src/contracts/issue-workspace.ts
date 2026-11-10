@@ -10,10 +10,10 @@ const slot = z.strictObject({
   monday: z.iso.date(),
   meetingDate: z.iso.date(),
   deadlineAt: z.iso.datetime(),
-  status: z.enum(['open', 'generated', 'skipped']),
+  status: z.enum(['open', 'generated']),
   /** Null for a Monday without a row yet. */
   version: z.number().int().positive().nullable(),
-  /** The meeting the approved points move to if this porada is skipped; null when no slot follows. */
+  /** The meeting the approved points move to if this porada is dropped; null when no slot follows. */
   next: z.iso.date().nullable(),
   counts: z.strictObject({
     waiting: z.int().min(0),

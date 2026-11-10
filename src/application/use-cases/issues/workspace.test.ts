@@ -14,7 +14,7 @@ import { addDays, calDate, parseIsoDate as d, toIsoDate, type CalDate } from '@/
 
 import { issueFixtures } from '../../../../test/support/issues';
 import { setupWorld } from '../../../../test/support/world';
-import { issueWorkspace } from './index';
+import { dropIssue, issueWorkspace } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
@@ -54,8 +54,8 @@ describe('issues.workspace', () => {
       expect(result).toEqual({ ok: true, value: { working: '2026-10-19', slot: null } });
     });
 
-    it('steps over a skipped slot and a generated one', async () => {
-      await fixtures.issue(TODAY, { status: 'skipped' });
+    it('steps over generated slots', async () => {
+      await fixtures.issue(TODAY, { status: 'generated' });
       await fixtures.issue(W1, { status: 'generated' });
       const result = await ask();
       expect(result.ok && result.value.working).toBe('2026-11-02');
@@ -99,13 +99,13 @@ describe('issues.workspace', () => {
       });
     });
 
-    it('reports a skipped slot as skipped and still names where its points would go', async () => {
-      await fixtures.issue(W1, { status: 'skipped' });
-      expect(await slotOf(W1)).toMatchObject({ status: 'skipped', next: '2026-11-02' });
+    it('reports a generated slot as generated and still names where its points would go', async () => {
+      await fixtures.issue(W1, { status: 'generated' });
+      expect(await slotOf(W1)).toMatchObject({ status: 'generated', next: '2026-11-02' });
     });
 
-    it('names the next open slot past skipped and generated ones, and none when none follows', async () => {
-      await fixtures.issue(W2, { status: 'skipped' });
+    it('names the next open slot past generated ones, and none when none follows', async () => {
+      await fixtures.issue(W2, { status: 'generated' });
       await fixtures.issue(W3, { status: 'generated' });
       expect((await slotOf(W1)).next).toBe('2026-11-16');
       const last = addDays(TODAY, 7 * 25);
@@ -179,6 +179,19 @@ describe('issues.workspace', () => {
       expect(await ask(addDays(TODAY, -7))).toEqual({ ok: false, error: { code: 'not-found' } });
     });
 
+    it.each([
+      ['this week’s', TODAY],
+      ['a coming', W1],
+    ])('does not find %s porada once it is dropped (ADR 0054)', async (_name, dropped) => {
+      const by = await headmaster();
+      const result = await world.run(dropIssue, world.as(by), {
+        monday: toIsoDate(dropped),
+        confirmed: true,
+      });
+      expect(result.ok).toBe(true);
+      expect(await ask(dropped, by)).toEqual({ ok: false, error: { code: 'not-found' } });
+    });
+
     it('finds a stored row that lies before this week (a porada moved past its own)', async () => {
       await fixtures.issue(addDays(TODAY, -7), { meetingDate: d('2026-10-20') });
       expect(await slotOf(addDays(TODAY, -7))).toMatchObject({ meetingDate: '2026-10-20' });
@@ -194,7 +207,7 @@ describe('issues.workspace', () => {
 
 describe('the working slot and where a point lands (parity, design §3)', () => {
   const mondayArb = fc.integer({ min: 0, max: 40 }).map((n) => addDays(calDate(2026, 8, 3), 7 * n));
-  const statusArb = fc.constantFrom('open', 'open', 'open', 'skipped', 'generated' as const);
+  const statusArb = fc.constantFrom('open', 'open', 'open', 'generated' as const);
 
   const scenario = fc.record({
     today: fc.integer({ min: 0, max: 280 }).map((n) => addDays(calDate(2026, 9, 1), n)),
@@ -220,7 +233,7 @@ describe('the working slot and where a point lands (parity, design §3)', () => 
           deadlineAt: deadline(r.monday, DEFAULT_DEADLINE),
           status: r.status,
         }));
-        const slots = issueSlots(issueRows, today, DEFAULT_DEADLINE);
+        const slots = issueSlots(issueRows, today, DEFAULT_DEADLINE, null);
         const working = workingSlot(today, slots);
         for (const p of points) {
           const point = { earliest: p.earliest, handIn: addDays(p.earliest, 7 * p.handIn) };

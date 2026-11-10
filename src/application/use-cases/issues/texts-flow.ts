@@ -31,12 +31,14 @@ export async function editTexts(
   if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
   // Lock order: the rule (settings share lock) before any issue row.
-  const { slots, rule } = await readWindow(tx, now);
+  const { slots, rule, plannedThrough } = await readWindow(tx, now);
   const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
   if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
   if (slot.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
-  const { issue } = await ensureIssue(tx, monday, rule);
+  const ensured = await ensureIssue(tx, monday, { rule, plannedThrough });
+  if (!ensured) return fail({ code: 'not-found' });
+  const { issue } = ensured;
   if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
   const written = await tx.issues.setTexts(
     issue.id,

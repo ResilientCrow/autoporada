@@ -137,7 +137,7 @@ describe('MissingReportsPage', () => {
     expect(html).not.toContain(porada.missing.intro);
   });
 
-  it('shows a generated or skipped porada as closed, with no form even for a stale list', () => {
+  it('shows a generated porada as closed, with no form even for a stale list', () => {
     const html = render([report()], { open: false });
     expect(html).toContain(porada.missing.closed);
     expect(html).not.toContain('<form');

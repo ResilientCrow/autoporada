@@ -8,14 +8,15 @@ import type { UseCase } from '@/application/core';
 import type { UserPrincipal } from '@/application/ports';
 import { readIssueTexts, readOutline, readOutlineItem } from '@/application/use-cases';
 import { SETTINGS } from '@/contracts';
-import { issueSlots, workingSlot, type IssueRow } from '@/domain/calendar';
+import { workingSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
-import { instantToWallClock, parseIsoDate, parseWallTime, toIsoDate } from '@/domain/time';
+import { instantToWallClock, parseWallTime, toIsoDate } from '@/domain/time';
 import { composeDocument } from '@/document/compose';
 import { parseIssueSnapshot } from '@/snapshot';
 
 import type { WebContainer } from '../container';
 import { runRegistered } from '../pipeline';
+import { archCalendar } from './arch-calendar';
 import { archItems } from './arch-items';
 import { peopleFor } from './arch-people';
 
@@ -60,7 +61,12 @@ export async function archState(
   const deadline = setting('deadline');
   const reminders = setting('reminders');
   const annex1 = setting('texts.annex1');
+  const planned = setting('calendar').plannedThrough;
   const rule = { dayOffset: deadline.dayOffset, time: parseWallTime(deadline.time) };
+
+  // ---- issues ----
+  const issueRows = await db.issues();
+  const { plannedThrough, slots, poradas } = archCalendar(issueRows, planned, today, rule);
 
   // ---- points and future items, as the policy lets this viewer see them ----
   const pointRows = await db.points(ctx);
@@ -76,6 +82,7 @@ export async function archState(
     fEvents,
     vers,
     today,
+    poradas,
     viewerId: actor.id,
     staff,
   });
@@ -110,15 +117,6 @@ export async function archState(
     };
   });
 
-  // ---- issues ----
-  const issueRows = await db.issues();
-  const calRows: IssueRow[] = issueRows.map((i) => ({
-    monday: parseIsoDate(i.monday),
-    meetingDate: parseIsoDate(i.meetingDate),
-    deadlineAt: i.deadlineAt,
-    status: i.status,
-  }));
-  const slots = issueSlots(calRows, today, rule);
   const work = workingSlot(today, slots) ?? slots[0];
   const placeholderRows = staff ? await db.placeholders(fIds) : [];
   const placeholders: Record<string, string> = {};
@@ -159,8 +157,11 @@ export async function archState(
     let present = staff ? (row?.presentText ?? '') : '';
     let guests = staff ? (row?.guestsText ?? '') : '';
     let annex2: unknown = staff ? (row?.annex2 ?? null) : null;
+    // What the porada stores itself, not carried or derived: what a drop hands over (ADR 0054).
+    let ownRows = false;
     if (staff && open) {
       const items = row ? await db.issueItems(row.id) : [];
+      ownRows = items.length > 0;
       if (items.length) {
         rows = items.map((it) => ({
           id: it.lineageId,
@@ -229,6 +230,12 @@ export async function archState(
       guests,
       annex2,
       annexes: staff ? annexSetting(monday) : [],
+      own: {
+        rows: ownRows,
+        present: staff && (row?.presentText ?? null) !== null,
+        guests: staff && (row?.guestsText ?? null) !== null,
+        annex2: staff && (row?.annex2 ?? null) !== null,
+      },
       rows,
       placeholders,
       ...(docOut && { doc: docOut }),
@@ -304,6 +311,7 @@ export async function archState(
     points: archPoints,
     futures: archFutures,
     issues: archIssues,
+    plannedThrough: toIsoDate(plannedThrough),
     registry,
     requests,
     settings: {

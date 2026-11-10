@@ -16,6 +16,7 @@ const input = (now: string, submitMonday: string): StandingInput => ({
   issues: [],
   now,
   rule: DEFAULT_DEADLINE,
+  plannedThrough: null,
 });
 const render = (given: StandingInput, report?: LateFacts) =>
   renderToStaticMarkup(<StandingLine standing={given} report={report} />);
@@ -51,7 +52,7 @@ describe('StandingLine', () => {
       monday: new Date(Date.UTC(2027, 2, 15 + 7 * week)).toISOString().slice(0, 10),
       meetingDate: new Date(Date.UTC(2027, 2, 15 + 7 * week)).toISOString().slice(0, 10),
       deadlineAt: '2027-03-13T19:00:00.000Z',
-      status: 'skipped' as const,
+      status: 'generated' as const,
       version: 1,
     }));
     expect(render({ ...input('2027-03-09T10:00:00.000Z', '2027-03-15'), issues })).toBe('');

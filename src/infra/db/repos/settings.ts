@@ -12,6 +12,17 @@ import type { TxDatabase } from './database';
  */
 const SETTING_LOCK = 0x5354_4e47;
 
+/** `SettingsRepo.lock` for a transaction that is no port's (the Arch UI's annexes, `arch.ts`). */
+export async function lockSetting(
+  db: Pick<TxDatabase, 'execute'>,
+  key: string,
+  mode: 'share' | 'update',
+): Promise<void> {
+  await (mode === 'share'
+    ? db.execute(sql`SELECT pg_advisory_xact_lock_shared(${SETTING_LOCK}, hashtext(${key}))`)
+    : db.execute(sql`SELECT pg_advisory_xact_lock(${SETTING_LOCK}, hashtext(${key}))`));
+}
+
 export function createSettingsRepo(db: TxDatabase, ctx: TxContext): SettingsRepo {
   const { principal } = ctx;
   return {
@@ -57,10 +68,6 @@ export function createSettingsRepo(db: TxDatabase, ctx: TxContext): SettingsRepo
               .returning({ version: settings.version });
       return row?.version ?? null;
     },
-    async lock(key, mode) {
-      await (mode === 'share'
-        ? db.execute(sql`SELECT pg_advisory_xact_lock_shared(${SETTING_LOCK}, hashtext(${key}))`)
-        : db.execute(sql`SELECT pg_advisory_xact_lock(${SETTING_LOCK}, hashtext(${key}))`));
-    },
+    lock: (key, mode) => lockSetting(db, key, mode),
   };
 }

@@ -28,6 +28,7 @@ const STANDING = {
   issues: [],
   now: '2027-03-09T10:00:00.000Z',
   rule: DEFAULT_DEADLINE,
+  plannedThrough: null,
 };
 const EDITOR = {
   version: 3,

@@ -34,6 +34,8 @@ export function TextField({
   maxLength,
   autoComplete,
   type,
+  min,
+  max,
   readOnly = false,
   describedBy,
   after,
@@ -51,6 +53,9 @@ export function TextField({
   readonly autoComplete?: string;
   /** A native input type such as `date` or `time`; the default is text. */
   readonly type?: string;
+  /** The bounds of a `date` or `number` input, as the browser reads them (ISO text for a date). */
+  readonly min?: string;
+  readonly max?: string;
   /** Shown and focusable, but not editable (an autosaving editor waiting on its banner). */
   readonly readOnly?: boolean;
   /** The id of text the page renders after the control, which describes it (the date echo). */
@@ -101,7 +106,11 @@ export function TextField({
         <span className="sr-only">{hiddenPrefix}</span>
         <span>{message}</span>
       </FieldError>
-      {multiline ? <TextArea rows={5} className={CONTROL} /> : <Input className={CONTROL} />}
+      {multiline ? (
+        <TextArea rows={5} className={CONTROL} />
+      ) : (
+        <Input className={CONTROL} min={min} max={max} />
+      )}
       {after}
     </AriaTextField>
   );

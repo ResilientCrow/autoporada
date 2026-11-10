@@ -74,7 +74,7 @@ const APPLIES: {
   /** The author of the report, while it is still to be handed in. */
   'report.last-call': ({ authorId, open }, recipient) =>
     open && authorId === recipient.id && member(recipient),
-  /** The headmaster, while they can sign in; a skipped or closed issue has no subject to begin with. */
+  /** The headmaster, while they can sign in; a closed issue has no subject to begin with. */
   'headmaster.summary': (_subject, recipient) => isHeadmaster(recipient),
   'headmaster.late-summary': (_subject, recipient) => isHeadmaster(recipient),
 };

@@ -12,7 +12,7 @@ import { lateReportFixtures } from '../../../../test/support/late-reports';
 import { START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { assembleIssueSnapshot } from './assemble';
-import { issuePreview } from './index';
+import { dropIssue, issuePreview } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
@@ -40,6 +40,12 @@ async function preview(by: UserRecord, monday = W1) {
     parsed = check.snapshot;
   }
   return { ...rest, snapshot: parsed };
+}
+
+/** The headmaster's „Porada se nekoná“ for `monday`. */
+async function drop(by: UserRecord, monday: ReturnType<typeof calDate>) {
+  const result = await world.run(dropIssue, world.as(by), { monday: iso(monday), confirmed: true });
+  if (!result.ok) throw new Error(`drop refused: ${JSON.stringify(result.error)}`);
 }
 
 const codes = (findings: readonly { code: string }[]) => findings.map((f) => f.code);
@@ -117,6 +123,19 @@ describe('issues.preview', () => {
       expect(rows).toEqual([]);
       expect(await world.inspect.audit()).toEqual(before);
     });
+
+    it('answers not-found for a dropped porada, as for any Monday up to the boundary with no row', async () => {
+      const head = await headmaster();
+      await drop(head, W1);
+      expect(await world.run(issuePreview, world.as(head), { monday: iso(W1) })).toEqual({
+        ok: false,
+        error: { code: 'not-found' },
+      });
+      // A past Monday nobody touched is no porada either (ADR 0054 item 1).
+      expect(await world.run(issuePreview, world.as(head), { monday: '2026-10-12' })).toMatchObject(
+        { ok: false, error: { code: 'not-found' } },
+      );
+    });
   });
 
   describe('an untouched Monday', () => {
@@ -171,13 +190,11 @@ describe('issues.preview', () => {
   });
 
   describe('a stored issue', () => {
-    it('blocks a skipped issue and a generated one', async () => {
+    it('blocks a generated issue', async () => {
       const head = await headmaster();
-      for (const status of ['skipped', 'generated'] as const) {
-        await fixtures.issue(W2, { status });
-        const result = await preview(head, W2);
-        expect(result.findings[0]).toEqual({ code: 'issue-not-open', level: 'block' });
-      }
+      await fixtures.issue(W2, { status: 'generated' });
+      const result = await preview(head, W2);
+      expect(result.findings[0]).toEqual({ code: 'issue-not-open', level: 'block' });
     });
 
     it('takes the meeting date from the row and says the porada moved', async () => {
@@ -231,7 +248,7 @@ describe('issues.preview', () => {
       expect(codes(result.findings)).not.toContain('source-not-generated');
     });
 
-    it('warns when the outline comes from an issue that was never generated, and passes a skipped one on', async () => {
+    it('warns when the outline comes from an issue that was never generated, and hands a dropped one on', async () => {
       const head = await headmaster();
       const earlier = await fixtures.issue(calDate(2026, 10, 19));
       await store(earlier, {
@@ -239,14 +256,11 @@ describe('issues.preview', () => {
         hospodareni: [],
       });
       expect(codes((await preview(head)).findings)).toContain('source-not-generated');
-      await world.tx(seeder, async (tx) => {
-        await tx.issues.setStatus(earlier.id, earlier.version, 'skipped');
-        await tx.audit.record({ action: 'issue.skip', target: { type: 'issue', id: earlier.id } });
-      });
+      await drop(head, calDate(2026, 10, 19));
       const result = await preview(head);
-      expect(result.origin).toEqual({ kind: 'derived', from: '2026-10-19', how: 'pass' });
+      expect(result.origin).toMatchObject({ kind: 'stored' });
       expect(codes(result.findings)).not.toContain('source-not-generated');
-      // A skipped meeting did not happen: its one-off item is still there.
+      // A porada that did not take place handed its outline over: its one-off item is still there.
       expect(titlesOf(result.snapshot)).toContain('Vlastní 2');
     });
   });
@@ -256,13 +270,13 @@ describe('issues.preview', () => {
     const earlierOf = async (monday: ReturnType<typeof calDate>) =>
       (await preview(await headmaster(), monday)).findings.find((f) => f.code === 'earlier-open');
 
-    it('names the earliest one as a block, until it is skipped or generated', async () => {
+    it('names the earliest one as a block, until it is dropped or generated', async () => {
       expect(await earlierOf(W2)).toEqual({
         code: 'earlier-open',
         level: 'block',
         earlier: { monday: '2026-10-19', meetingDate: '2026-10-19' },
       });
-      await fixtures.issue(THIS_WEEK, { status: 'skipped' });
+      await drop(await headmaster(), THIS_WEEK);
       expect((await earlierOf(W2))?.earlier).toEqual({
         monday: '2026-10-26',
         meetingDate: '2026-10-26',
@@ -476,7 +490,7 @@ describe('issues.preview', () => {
         content: { timeTo: { hour: 21, minute: 0 } as never },
       });
       const early = await fixtures.future({ author, title: 'Seminář', startDate: d('2026-10-21') });
-      await fixtures.issue(calDate(2026, 10, 19), { status: 'skipped' });
+      await drop(head, calDate(2026, 10, 19));
       const { findings, snapshot } = await preview(head);
       expect(codes(findings)).toEqual([
         'late-reports-expected',
@@ -513,7 +527,7 @@ describe('issues.preview', () => {
       const head = await headmaster();
       const author = await submitter();
       await fixtures.future({ author, startDate: d('2026-10-22') });
-      await fixtures.issue(calDate(2026, 10, 19), { status: 'skipped' });
+      await drop(head, calDate(2026, 10, 19));
       const { findings, problems } = await preview(head);
       expect(problems).toEqual([]);
       expect(findings.filter((f) => f.level === 'block')).toEqual([]);
@@ -638,7 +652,7 @@ describe('issues.preview', () => {
     it('follows the screen: blocks, waiting, then warnings, then information', async () => {
       const head = await headmaster();
       const author = await submitter();
-      await fixtures.issue(W1, { status: 'skipped', meetingDate: d('2026-10-28') });
+      await fixtures.issue(W1, { status: 'generated', meetingDate: d('2026-10-28') });
       await fixtures.point({ author, state: 'submitted' });
       await fixtures.point({ author, state: 'returned' });
       const { findings } = await preview(head);
@@ -661,8 +675,9 @@ describe('issues.preview', () => {
       const read = (lock: boolean) =>
         world.tx(seeder, (tx) => assembleIssueSnapshot(tx, W1, { now: START, lock }), 'write');
       const [plain, locked] = [await read(false), await read(true)];
-      expect(locked.snapshot).toEqual(plain.snapshot);
-      expect(locked.problems).toEqual(plain.problems);
+      expect(locked?.snapshot).toEqual(plain?.snapshot);
+      expect(locked?.problems).toEqual(plain?.problems);
+      expect(plain?.snapshot).not.toBeNull();
     });
   });
 });

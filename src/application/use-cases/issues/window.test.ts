@@ -7,7 +7,7 @@ import type { IssueStatus } from '@/domain/review';
 import { addDays, calDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { setupWorld } from '../../../../test/support/world';
-import { issueWindow } from './index';
+import { dropIssue, issueWindow } from './index';
 
 const world = setupWorld();
 const seeder = system('test.seed');
@@ -62,6 +62,8 @@ describe('issues.window', () => {
         value: {
           submitMonday: toIsoDate(SUBMIT),
           stripFrom: toIsoDate(SUBMIT),
+          // Last week's Monday: the calendar's rows end there, virtual Mondays follow.
+          plannedThrough: '2026-10-26',
           issues: [],
           rule: { dayOffset: -2, time: '20:00' },
         },
@@ -72,7 +74,7 @@ describe('issues.window', () => {
       world.clock.set(NOW);
       const user = await world.seed.user({ role: 'submitter' });
       const late = await seedIssue(weeks(CURRENT, 25));
-      const skipped = await seedIssue(weeks(CURRENT, 2), { status: 'skipped' });
+      const generated = await seedIssue(weeks(CURRENT, 2), { status: 'generated' });
       const current = await seedIssue(CURRENT);
       await seedIssue(weeks(CURRENT, -1));
       await seedIssue(weeks(CURRENT, 26));
@@ -89,8 +91,8 @@ describe('issues.window', () => {
         {
           monday: '2026-11-16',
           meetingDate: '2026-11-16',
-          deadlineAt: skipped.deadlineAt.toISOString(),
-          status: 'skipped',
+          deadlineAt: generated.deadlineAt.toISOString(),
+          status: 'generated',
           version: 2,
         },
         {
@@ -108,8 +110,8 @@ describe('issues.window', () => {
       // Monday is 16 November; the rows still end 25 weeks after this week's Monday.
       world.clock.set(new Date('2026-11-07T20:00:00Z'));
       const user = await world.seed.user({ role: 'submitter' });
-      const last = await seedIssue(weeks(CURRENT, 25), { status: 'skipped' });
-      await seedIssue(weeks(CURRENT, 26), { status: 'skipped' });
+      const last = await seedIssue(weeks(CURRENT, 25), { status: 'generated' });
+      await seedIssue(weeks(CURRENT, 26), { status: 'generated' });
       const result = await read(user);
       expect(result).toMatchObject({ ok: true, value: { submitMonday: '2026-11-16' } });
       if (!result.ok) throw new Error('window refused');
@@ -118,7 +120,7 @@ describe('issues.window', () => {
           monday: toIsoDate(weeks(CURRENT, 25)),
           meetingDate: toIsoDate(weeks(CURRENT, 25)),
           deadlineAt: last.deadlineAt.toISOString(),
-          status: 'skipped',
+          status: 'generated',
           version: 2,
         },
       ]);
@@ -133,14 +135,24 @@ describe('issues.window', () => {
       expect(result).toMatchObject({ ok: true, value: { submitMonday: '2026-11-02' } });
     });
 
-    it('steps over a skipped Monday when naming the submit Monday, and keeps it where the strips start', async () => {
+    it('steps over a dropped Monday when naming the submit Monday, and raises the boundary to its heir', async () => {
       world.clock.set(NOW);
       const user = await world.seed.user({ role: 'submitter' });
-      await seedIssue(SUBMIT, { status: 'skipped' });
-      expect(await read(user)).toMatchObject({
-        ok: true,
-        value: { submitMonday: '2026-11-16', stripFrom: '2026-11-09' },
+      const head = await world.seed.user({ role: 'headmaster' });
+      const dropped = await world.run(dropIssue, world.as(head), {
+        monday: toIsoDate(SUBMIT),
+        confirmed: true,
       });
+      expect(dropped.ok).toBe(true);
+      const result = await read(user);
+      expect(result).toMatchObject({
+        ok: true,
+        value: { submitMonday: '2026-11-16', plannedThrough: '2026-11-16' },
+      });
+      if (!result.ok) throw new Error('window refused');
+      // The heir has its row; the dropped Monday has none and is not listed.
+      expect(result.value.issues.map((i) => i.monday)).toContain('2026-11-16');
+      expect(result.value.issues.map((i) => i.monday)).not.toContain('2026-11-09');
     });
 
     it('starts the strips at a generated head Monday too', async () => {

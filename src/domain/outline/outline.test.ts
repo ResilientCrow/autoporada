@@ -88,13 +88,6 @@ describe('derive', () => {
     },
   );
 
-  it('passes a skipped source on unchanged: that meeting did not happen', () => {
-    const meetingDate = d('2026-10-12');
-    const result = derive({ status: 'skipped', meetingDate, outline: source }, SEED_OUTLINE);
-    expect(result.outline).toBe(source);
-    expect(result.origin).toEqual({ kind: 'derived', from: meetingDate, how: 'pass' });
-  });
-
   it('keeps the lineage ids of the carried rows', () => {
     const result = derive(
       { status: 'generated', meetingDate: d('2026-10-12'), outline: SEED_OUTLINE },

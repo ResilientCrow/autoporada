@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { system, type UserRecord } from '@/application/ports';
 import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
-import { addDays, calDate, parseIsoDate, toIsoDate } from '@/domain/time';
+import { addDays, calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
 import { issueFixtures } from '../../../../test/support/issues';
@@ -23,6 +23,7 @@ import {
 } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { saveFuture, startFutureReport } from '../future';
+import { dropIssue } from '../issues';
 import { savePoint, submitPoint } from './index';
 
 const world = setupWorld();
@@ -42,6 +43,16 @@ async function refuses(id: string, run: () => Promise<unknown>, error: unknown) 
 }
 const invalid = (fields: Record<string, string>) => ({ code: 'invalid-input', fields });
 const forbidden = { code: 'forbidden' };
+
+/** The headmaster's „Porada se nekoná“ for the porada of `monday`. */
+async function dropPorada(monday: CalDate): Promise<void> {
+  const head = await world.seed.user({ role: 'headmaster' });
+  const done = await world.run(dropIssue, world.as(head), {
+    monday: toIsoDate(monday),
+    confirmed: true,
+  });
+  expect(done.ok).toBe(true);
+}
 
 describe('points.submit', () => {
   describe('a first submit', () => {
@@ -152,16 +163,8 @@ describe('points.submit', () => {
       expect(await get(author, id)).toMatchObject({ earliestMonday: monday, handInMonday: monday });
     });
 
-    it('steps over a skipped Monday: the first Monday is the next open one', async () => {
-      await world.tx(system('test.seed'), async (tx) => {
-        const { issue } = await tx.issues.ensure({
-          monday: FIRST_MONDAY,
-          meetingDate: FIRST_MONDAY,
-          schoolYear: schoolYear(FIRST_MONDAY),
-          deadlineAt: deadline(FIRST_MONDAY, DEFAULT_DEADLINE),
-        });
-        await tx.issues.setStatus(issue.id, issue.version, 'skipped');
-      });
+    it('steps over a dropped Monday: the first Monday is the next porada', async () => {
+      await dropPorada(FIRST_MONDAY);
       const author = await user();
       const id = await start(author, 'pokyn');
       await submit(author, id, readyProposal());
@@ -274,9 +277,9 @@ describe('points.submit', () => {
       expect(await get(author, id)).toMatchObject({ earliestMonday: OWED, handInMonday: OWED });
     });
 
-    it('steps over a skipped porada to the next one that is held', async () => {
+    it('steps over a dropped porada to the next one that is held', async () => {
       const { author, id } = await answering();
-      await issues.issue(OWED, { status: 'skipped' });
+      await dropPorada(OWED);
       expect((await submit(author, id, content)).ok).toBe(true);
       const next = addDays(OWED, 7);
       expect(await get(author, id)).toMatchObject({ earliestMonday: next, handInMonday: next });
@@ -291,24 +294,13 @@ describe('points.submit', () => {
       });
     });
 
-    it('refuses when the porada it is owed to is a past Monday with no row, and makes no issue', async () => {
-      // Ended Wednesday 2026-10-07: owed to Monday 2026-10-12, five weeks gone, never held.
+    it('steps over a past Monday with no row: it is no porada (ADR 0054), the report goes to the next', async () => {
+      // Ended Wednesday 2026-10-07; today is Sunday 2026-11-15. The Mondays up to 2026-11-02 have no
+      // row, so no porada was held there; the first porada after the event is the one of 2026-11-09.
       const { author, id } = await answering({ startDate: '2026-10-06', endDate: '2026-10-07' });
-      const before = await world.tx(
-        system('test.seed'),
-        (tx) => tx.issues.calendarBetween(calDate(2026, 9, 1), calDate(2027, 3, 1)),
-        'read',
-      );
-      await refuses(id, () => submit(author, id, content), {
-        code: 'rule',
-        rule: 'report-not-due',
-      });
-      const after = await world.tx(
-        system('test.seed'),
-        (tx) => tx.issues.calendarBetween(calDate(2026, 9, 1), calDate(2027, 3, 1)),
-        'read',
-      );
-      expect(after).toEqual(before);
+      expect((await submit(author, id, content)).ok).toBe(true);
+      const next = calDate(2026, 11, 9);
+      expect(await get(author, id)).toMatchObject({ earliestMonday: next, handInMonday: next });
     });
 
     it('goes to a porada moved weeks past its Monday, found beyond one week back', async () => {

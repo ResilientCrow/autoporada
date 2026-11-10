@@ -79,13 +79,6 @@ describe('settings.save, the meeting order after the refreeze', () => {
     expect((await state()).setting).toBeNull();
   });
 
-  it('takes the rule when that porada is skipped: a skipped one is out of the order', async () => {
-    await issue(W3, 'skipped', EARLY_CLOSE);
-    expect(await saveDeadline()).toEqual({ ok: true, value: { version: 1 } });
-    const { setting } = await state();
-    expect(setting?.value).toEqual(SUNDAY);
-  });
-
   it('takes the rule when the porada after closes later than the new deadline', async () => {
     await issue(W3, 'generated', deadline(W3, DEFAULT_DEADLINE));
     expect(await saveDeadline()).toEqual({ ok: true, value: { version: 1 } });

@@ -36,7 +36,7 @@ export interface Outline {
 
 export type OutlineOrigin =
   | { readonly kind: 'stored' }
-  | { readonly kind: 'derived'; readonly from: CalDate; readonly how: 'carry' | 'pass' }
+  | { readonly kind: 'derived'; readonly from: CalDate; readonly how: 'carry' }
   | { readonly kind: 'seed' };
 
 export const SECTIONS: readonly OutlineSection[] = ['pokyny', 'hospodareni'];

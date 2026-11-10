@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
+import { moveBounds } from '@/domain/calendar';
 import { POINT_LIMITS } from '@/domain/report';
 import { emptyRichDoc } from '@/domain/richtext';
 import { createWith, go, Sheet, useStore } from '../core/react';
@@ -27,9 +28,9 @@ function WholeDesk({ pending = true, note, focus }: { pending?: boolean; note?: 
   return <Desk cls="mg clip" fold={`Otevřít celý dokument, ${Q.pagesText(Q.pagesOf(b))}`} right={<DocNav built={b} attention={ATT} />} note={note ? <b>{note}</b> : <><b>Celý dokument, {Q.pagesText(Q.pagesOf(b))}.</b> Klikněte na část a upravte ji.</>}><div className="wrapm"><Sheet built={b} marginNote={label} onSeg={open} cls={(x) => `${x.state === 'submitted' ? 'np' : ''}${x.key === fk ? ' cur' : ''}`} /></div></Desk>;
 }
 const Jr = ({ n, t, why, to, a, st }: { n: number; t: string; why: string; to: string; a?: string; st: 'c' | 'd' | '' }) => <li className={st}><a href={`#${to}`}><i>{st === 'd' ? <Ic n="chk" /> : n}</i><span className="tx"><b>{t}</b><span>{why}</span></span>{a ? <span className="btn">{a}</span> : null}</a></li>;
-export function Porada({ over: overP }: { over?: boolean }) {
-  const { s } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const sl = Q.working(s);
-  const [skip, setSkip] = useState(!!overP);
+export function Porada() {
+  const { s } = useStore(); const u = Q.me(s)!; const m = useM(); const iss = Q.issueOf(s, m); const sl = Q.working(s);
+  const [dlg, setDlg] = useState<'move' | 'drop' | 'add' | null>(null);
   if (!iss) return <PoradaVirtual m={m} />;
   const whole = Q.buildDoc(s, m, { pending: true });
   const q = Q.queuePoints(s).length + Q.queueFutures(s).length;
@@ -48,23 +49,38 @@ export function Porada({ over: overP }: { over?: boolean }) {
   ];
   const first = steps.findIndex((x) => !x.done);
   const reqs = Q.pendingRequests(s);
-  return <App desk={<WholeDesk />} over={skip ? <SkipDialog m={m} onClose={() => setSkip(false)} /> : null} col={<>
+  return <App desk={<WholeDesk />} over={dlg === 'move' ? <MoveDialog m={m} onClose={() => setDlg(null)} /> : dlg === 'drop' ? <DropDialog m={m} onClose={() => setDlg(null)} /> : dlg === 'add' ? <AddDialog onClose={() => setDlg(null)} /> : null} col={<>
     <Top big h={`Porada ${Q.dm(iss.meetingDate)}`} lead={<>Termín pro učitele je <b>{WHEN(iss.deadlineAt)}</b>{new Date(iss.deadlineAt) < new Date(s.now) ? ', už minul' : ''}. V dokumentu {whole.points >= 2 && whole.points <= 4 ? 'jsou' : 'je'} {counts(whole.points, 'bod', 'body', 'bodů')}, {Q.pagesText(Q.pagesOf(whole))}{whole.points > Q.buildDoc(s, m).points ? `. Z toho ${notYet(whole.points - Q.buildDoc(s, m).points)}` : ''}.</>} />
     <ol className="jr">{steps.map((x, i) => <Jr key={x.t} n={steps.slice(0, i + 1).filter((y) => !y.done).length} t={x.t} why={x.why} to={x.to} {...(x.a ? { a: x.a } : {})} st={x.done ? 'd' : i === first ? 'c' : ''} />)}</ol>
     <button type="button" className="add" onClick={() => go('/pridat')}><span>Přidat do porady</span><b><Ic n="plus" /></b></button>
     {reqs.length ? <Sec h="Žádosti o přístup"><Item to="/lide" t={reqs.map((r) => r.name).join(' a ')} st="Čekají na vaše rozhodnutí" mk="o" /></Sec> : null}
-    <Sec h="Další porady">{Q.slotsOf(s).filter((x) => Q.toIsoDate(x.monday) > m).slice(0, 3).map((x) => <Item key={Q.toIsoDate(x.monday)} t={Q.dm(x.meetingDate)} st={x.status === 'skipped' ? 'Nekoná se' : `Uzávěrka ${WHEN(x.deadlineAt)}`} />)}</Sec>
-    {sl.status === 'open' ? <button type="button" className="q" onClick={() => setSkip(true)}>Tato porada se nekoná</button> : null}
+    <Sec h="Další porady">{Q.slotsOf(s).filter((x) => Q.toIsoDate(x.monday) > m).slice(0, 3).map((x) => <Item key={Q.toIsoDate(x.monday)} t={Q.dm(x.meetingDate)} st={`Uzávěrka ${WHEN(x.deadlineAt)}`} />)}</Sec>
+    {u.role === 'headmaster' ? <button type="button" className="q" onClick={() => setDlg('add')}>Přidat poradu</button> : null}
+    {sl.status === 'open' ? <><button type="button" className="q" onClick={() => setDlg('move')}>Přesunout poradu</button><button type="button" className="q" onClick={() => setDlg('drop')}>Porada se nekoná</button></> : null}
   </>} />;
 }
 function PoradaVirtual({ m }: { m: string }) { return <App col={<Top big h={`Porada ${Q.dm(m)}`} lead="Tato porada se začne připravovat, až do ní někdo něco pošle." />} />; }
-const REFUSE: Record<string, string> = { early: 'Ten den už patří dřívější poradě.', late: 'Tak daleko dopředu kalendář nesahá.', same: 'Na ten den porada už je.', skipped: 'Na ten den připadá porada, která se nekoná.', 'deadline-past': 'Uzávěrka by tím už minula, a teď je ještě otevřená.', 'meeting-order': 'Pořadí porad by tím přestalo sedět.' };
-export function SkipDialog({ m, onClose }: { m: string; onClose: () => void }) {
-  const { s, apply } = useStore(); const [d, set] = useState(() => new Date(Date.parse(`${m}T12:00:00Z`) + 7 * 864e5).toISOString().slice(0, 10));
-  const plan = useMemo(() => { try { return A.planSkip(s, m, parseIsoDate(d)); } catch { return null; } }, [s, m, d]);
-  const newly = plan?.ok ? Q.newlyOwed(s, m, parseIsoDate(d)) : 0; const owedMore = newly ? ` Do té doby skončí ${newly === 1 ? '1 akce, její zpráva pak patří' : newly < 5 ? `${newly} akce, jejich zprávy pak patří` : `${newly} akcí, jejich zprávy pak patří`} do této porady.` : '';
-  const effect = !plan ? 'Vyberte den.' : !plan.ok ? REFUSE[plan.refusal] : plan.plan.skipped.length ? `${plan.plan.skipped.length > 1 ? 'Porady' : 'Porada'} ${plan.plan.skipped.map((x) => Q.dm(x.monday)).join(', ')} se ${plan.plan.skipped.length > 1 ? 'nekonají' : 'nekoná'}. Další bude ${Q.dm(d)}, uzávěrka ${WHEN(plan.plan.held.deadlineAt)}. Body a přílohy se přesunou.${owedMore}` : `Porada se přesune na ${Q.dm(d)}, uzávěrka ${WHEN(plan.plan.held.deadlineAt)}.${owedMore}`;
-  return <Dialog title="Kdy bude další porada?" onClose={onClose}><p>Vyberte den. Řekneme vám, co to udělá.</p><label className="l">Den<input className="in bigi" type="date" value={d} onChange={(e) => set(e.target.value)} /></label><div className={`fx${plan && !plan.ok ? ' bad' : ''}`} role="status">{effect}</div><button type="button" className={`btn lg w ${plan?.ok ? 'dk' : 'off'}`} aria-disabled={!plan?.ok} onClick={() => { if (plan?.ok) { apply(A.setSkipped(m, parseIsoDate(d))); onClose(); } }}>Potvrdit</button></Dialog>;
+const REFUSE: Record<string, string> = { early: 'Ten den už patří dřívější poradě.', late: 'Tak daleko dopředu kalendář nesahá.', same: 'Na ten den porada už je.', 'porada-exists': 'V tom týdnu už porada je. Přesuňte ji, nebo zvolte jiný týden.', 'not-open': 'Tato porada už není otevřená.', 'later-generated': 'Pozdější porada už je vygenerovaná.', 'deadline-past': 'Uzávěrka by tím už minula, a teď je ještě otevřená.', 'meeting-order': 'Pořadí porad by tím přestalo sedět.' };
+const Confirm = ({ ok, label, onClick }: { ok: boolean; label: string; onClick: () => void }) => <button type="button" className={`btn lg w ${ok ? 'dk' : 'off'}`} aria-disabled={!ok} onClick={() => { if (ok) onClick(); }}>{label}</button>;
+export function MoveDialog({ m, onClose }: { m: string; onClose: () => void }) {
+  const { s, apply } = useStore(); const [d, set] = useState('');
+  const slot = Q.slotsOf(s).find((x) => toIsoDate(x.monday) === m); const bounds = slot ? moveBounds(Q.slotsOf(s), slot, Q.todayOf(s)) : null;
+  const plan = useMemo(() => { try { return d ? A.planMoveOf(s, m, parseIsoDate(d)) : null; } catch { return null; } }, [s, m, d]);
+  const effect = !plan ? 'Vyberte den.' : !plan.ok ? REFUSE[plan.refusal] : `Porada bude ${Q.dm(d)}, uzávěrka ${WHEN(plan.moved.deadlineAt)}.`;
+  return <Dialog title="Přesunout poradu" onClose={onClose}><p>Vyberte nový den porady. Body, pokyny i přílohy zůstanou u ní.</p><label className="l">Den<input className="in bigi" type="date" value={d} {...(bounds && { min: toIsoDate(bounds.from), max: toIsoDate(bounds.to) })} onChange={(e) => set(e.target.value)} /></label><div className={`fx${plan && !plan.ok ? ' bad' : ''}`} role="status">{effect}</div><Confirm ok={!!plan?.ok} label="Přesunout" onClick={() => { apply(A.movePorada(m, parseIsoDate(d))); onClose(); }} /></Dialog>;
+}
+export function DropDialog({ m, onClose }: { m: string; onClose: () => void }) {
+  const { s, apply } = useStore(); const [tick, setTick] = useState(false); const iss = Q.issueOf(s, m);
+  const plan = A.planDropOf(s, m);
+  const prepared = !!iss && (iss.rows.some((r) => !!r.pointId || r.isNew) || iss.annexes.length > 0 || !!iss.present || !!iss.guests);
+  const effect = !plan ? 'Tuto poradu nejde zrušit.' : !plan.ok ? REFUSE[plan.refusal] : <>Porada {Q.dm(iss?.meetingDate ?? m)} se nebude konat a zmizí z kalendáře. Odevzdané body přejdou na poradu {Q.dm(plan.heir.meetingDate)} {plan.heir.status !== 'open' ? 'Ta porada je už vygenerovaná, proto se připravený program smaže.' : prepared ? 'Připravený program (pokyny, přílohy, přítomní) půjde s nimi.' : 'Nic připraveného tu zatím není.'}</>;
+  return <Dialog title="Porada se nekoná" onClose={onClose}><div className={`fx${plan && !plan.ok ? ' bad' : ''}`} role="status">{effect}</div><label className="chk"><input type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} />Rozumím, poradu pak nelze vrátit.</label><Confirm ok={!!plan?.ok && tick} label="Porada se nekoná" onClick={() => { apply(A.dropPorada(m)); onClose(); }} /></Dialog>;
+}
+export function AddDialog({ onClose }: { onClose: () => void }) {
+  const { s, apply } = useStore(); const [d, set] = useState('');
+  const plan = useMemo(() => { try { return d ? A.planAddOf(s, parseIsoDate(d)) : null; } catch { return null; } }, [s, d]);
+  const effect = !plan ? 'Vyberte den.' : !plan.ok ? REFUSE[plan.refusal] : `Nová porada ${Q.dm(d)}, uzávěrka ${WHEN(plan.added.deadlineAt)}.${plan.closed ? ' Uzávěrka už minula, učitelé do ní nic nepošlou.' : ''}`;
+  return <Dialog title="Přidat poradu" onClose={onClose}><p>Vyberte den další porady. Týden, ve kterém už porada je, přidat nejde.</p><label className="l">Den<input className="in bigi" type="date" value={d} min={toIsoDate(Q.todayOf(s))} onChange={(e) => set(e.target.value)} /></label><div className={`fx${plan && !plan.ok ? ' bad' : ''}`} role="status">{effect}</div><Confirm ok={!!plan?.ok} label="Přidat poradu" onClick={() => { apply(A.addPorada(parseIsoDate(d))); onClose(); }} /></Dialog>;
 }
 export function Udaje() {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!; const [ok, setOk] = useState(false);
@@ -164,11 +180,11 @@ export function Zpravy() {
   </>} />;
 }
 export function Nahled() {
-  const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!; const checks = Q.preflight(s, m); const [dlg, setDlg] = useState(false); const [tick, setTick] = useState(false); const [skipFor, setSkipFor] = useState<string | null>(null);
+  const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!; const checks = Q.preflight(s, m); const [dlg, setDlg] = useState(false); const [tick, setTick] = useState(false); const [dropFor, setDropFor] = useState<string | null>(null);
   const blocked = checks.some((c) => c.level === 'block'); const b = Q.buildDoc(s, m, { pending: true }); const printed = Q.buildDoc(s, m); const narrow = useNarrow(); const [openDoc, setOpenDoc] = useState(false);
   const link = (to?: string) => (to === 'kontrola' ? '#/kontrola' : to === 'zpravy' ? '#/porada/zpravy' : to === 'pokyny' ? '#/porada/pokyny' : to === 'udaje' ? '#/porada/udaje' : to === 'seznamy' ? '#/seznamy' : undefined);
-  const rows = checks.map((c) => ({ k: (c.level === 'ok' ? 'd' : c.level === 'block' ? 'x' : 'n') as 'd' | 'x' | 'n', t: link(c.to) ? <a href={link(c.to)}>{c.text}</a> : c.to && /^\d{4}-\d{2}-\d{2}$/.test(c.to) ? <a href="#" role="button" onClick={(e) => { e.preventDefault(); setDlg(false); setSkipFor(c.to!); }}>{c.text}</a> : c.text }));
-  return <App nar over={skipFor ? <SkipDialog m={skipFor} onClose={() => setSkipFor(null)} /> : dlg ? <Dialog title="Vygenerovat dokument?" onClose={() => setDlg(false)}><Todo rows={rows.filter((r) => r.k !== 'd')} /><div className="fx">{counts(printed.points, 'bod', 'body', 'bodů')} {printed.points >= 2 && printed.points <= 4 ? 'vyjdou' : 'vyjde'}, zveřejní se a dokument si stáhne vedení.</div><label className="chk"><input type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} />Rozumím, poradu pak nelze změnit.</label><button type="button" className={`btn lg w ${tick ? 'go' : 'off'}`} aria-disabled={!tick} onClick={() => { if (!tick) return; apply(A.generate(m)); goReplace(`/hotovo/${m}`); }}>Vygenerovat a zveřejnit</button></Dialog> : null}
+  const rows = checks.map((c) => ({ k: (c.level === 'ok' ? 'd' : c.level === 'block' ? 'x' : 'n') as 'd' | 'x' | 'n', t: link(c.to) ? <a href={link(c.to)}>{c.text}</a> : c.to && /^\d{4}-\d{2}-\d{2}$/.test(c.to) ? <a href="#" role="button" onClick={(e) => { e.preventDefault(); setDlg(false); setDropFor(c.to!); }}>{c.text}</a> : c.text }));
+  return <App nar over={dropFor ? <DropDialog m={dropFor} onClose={() => setDropFor(null)} /> : dlg ? <Dialog title="Vygenerovat dokument?" onClose={() => setDlg(false)}><Todo rows={rows.filter((r) => r.k !== 'd')} /><div className="fx">{counts(printed.points, 'bod', 'body', 'bodů')} {printed.points >= 2 && printed.points <= 4 ? 'vyjdou' : 'vyjde'}, zveřejní se a dokument si stáhne vedení.</div><label className="chk"><input type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} />Rozumím, poradu pak nelze změnit.</label><button type="button" className={`btn lg w ${tick ? 'go' : 'off'}`} aria-disabled={!tick} onClick={() => { if (!tick) return; apply(A.generate(m)); goReplace(`/hotovo/${m}`); }}>Vygenerovat a zveřejnit</button></Dialog> : null}
     dock={<div className="dock">{blocked ? <p className="hint a">Nejdřív vyřešte, co je výše červeně.</p> : null}<div className="row"><button type="button" className={`btn lg ${blocked ? 'off' : 'go'}`} aria-disabled={blocked} onClick={() => !blocked && (setTick(false), setDlg(true))}>Vygenerovat a zveřejnit</button></div></div>}
     desk={narrow ? undefined : <Desk cls="mg clip" right={<DocNav built={b} attention={ATT} />} note={<b>Takhle vyjde, když vygenerujete teď</b>}><div className="wrapm"><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} marginNote={(x) => (x.state === 'submitted' ? <span className="mn w">Neschváleno, teď by nevyšlo</span> : x.kind === 'missing' ? <span className="mn w">Chybí zpráva, vytiskne se odstavec</span> : null)} /></div></Desk>}
     col={<><Back to="/porada" t="Zpět na poradu" /><Top h="Náhled porady" lead={`${printed.points >= 2 && printed.points <= 4 ? 'Jdou' : 'Jde'} do něj ${counts(printed.points, 'bod', 'body', 'bodů')}, ${Q.pagesText(Q.pagesOf(b))}. Přeškrtnuté zatím nevyjde.`} /><Sec h="Před generováním"><Todo rows={rows} /></Sec>{narrow ? (openDoc ? <><DocNav built={b} attention={ATT} /><div className="pv"><p className="pvh">Dokument</p><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} /></div></> : <button type="button" className="btn lg w" onClick={() => setOpenDoc(true)}>Otevřít celý dokument</button>) : null}<p className="sm" hidden>{iss.monday}</p></>} />;
@@ -193,9 +209,9 @@ export function Hotovo({ m }: { m: string }) {
   </>} />;
 }
 export function Archiv() {
-  const { s, apply } = useStore(); const u = Q.me(s)!; const iss = [...s.issues].sort((a, b) => b.monday.localeCompare(a.monday)).filter((i) => i.status !== 'open');
+  const { s } = useStore(); const u = Q.me(s)!; const iss = [...s.issues].sort((a, b) => b.monday.localeCompare(a.monday)).filter((i) => i.status !== 'open');
   if (!Q.atLeast(u.role, 'reviewer')) return <NotFound />;
-  return <div className="lay full"><div className="work arch-top"><header /></div><aside className="desk scroll shelfw"><div className="deskhd"><a className="back on-d" href="#/"><Ic n="back" />Zpět</a><h1 className="big m">Archiv porad</h1></div><div className="shelf">{iss.map((i) => { const model = i.status === 'generated' ? modelOf(s, i.monday) : null; const titles = model ? model.sections.flatMap((x) => x.blocks).filter((b) => b.kind === 'point').slice(-3).map((b) => (b as { text: string }).text) : []; return <div className="bk" key={i.monday}><a className="pg" href={i.status === 'generated' ? `#/archiv/${i.monday}` : '#/archiv'} aria-label={`Otevřít poradu ${Q.dm(i.meetingDate)}`}><span>Porada vedení školy</span><span className="ln">{titles.map((t) => <b key={t}>{t}</b>)}</span></a><span><b>{Q.dm(i.meetingDate)} {i.meetingDate.slice(0, 4)}</b><small>{i.status === 'skipped' ? 'Nekonala se' : (i.doc ? counts(i.doc.points, 'bod', 'body', 'bodů') : '')}</small></span>{i.status === 'generated' && model ? <span className="lnks"><DocxBtn m={i.monday}>DOCX</DocxBtn>{i.doc?.pdf === 'ready' ? <a href={`#/archiv/${i.monday}`}>PDF</a> : i.doc?.pdf === 'rendering' ? <span>PDF se dělá</span> : <span>PDF chybí</span>}</span> : u.role === 'headmaster' && i.status === 'skipped' && !s.issues.some((x) => x.status === 'generated' && x.monday > i.monday) ? <span className="lnks"><button onClick={() => apply(A.unskip(i.monday))}>Porada se koná</button></span> : null}</div>; })}</div></aside></div>;
+  return <div className="lay full"><div className="work arch-top"><header /></div><aside className="desk scroll shelfw"><div className="deskhd"><a className="back on-d" href="#/"><Ic n="back" />Zpět</a><h1 className="big m">Archiv porad</h1></div><div className="shelf">{iss.filter((i) => i.status === 'generated').map((i) => { const model = modelOf(s, i.monday); const titles = model ? model.sections.flatMap((x) => x.blocks).filter((b) => b.kind === 'point').slice(-3).map((b) => (b as { text: string }).text) : []; return <div className="bk" key={i.monday}><a className="pg" href={`#/archiv/${i.monday}`} aria-label={`Otevřít poradu ${Q.dm(i.meetingDate)}`}><span>Porada vedení školy</span><span className="ln">{titles.map((t) => <b key={t}>{t}</b>)}</span></a><span><b>{Q.dm(i.meetingDate)} {i.meetingDate.slice(0, 4)}</b><small>{i.doc ? counts(i.doc.points, 'bod', 'body', 'bodů') : ''}</small></span>{model ? <span className="lnks"><DocxBtn m={i.monday}>DOCX</DocxBtn>{i.doc?.pdf === 'ready' ? <a href={`#/archiv/${i.monday}`}>PDF</a> : i.doc?.pdf === 'rendering' ? <span>PDF se dělá</span> : <span>PDF chybí</span>}</span> : null}</div>; })}</div></aside></div>;
 }
 export function ArchivDoc({ m }: { m: string }) {
   const { s } = useStore(); const iss = Q.issueOf(s, m); const model = modelOf(s, m); if (!iss || !model) return <NotFound />;

@@ -23,7 +23,13 @@ const submitter = () => world.seed.user({ role: 'submitter' });
 const plain = (text: string) => text.replaceAll('\u00a0', ' ');
 
 async function assemble(by: UserRecord, monday = W1) {
-  return world.tx(world.as(by), (tx) => assembleIssueSnapshot(tx, monday, { now: START }), 'read');
+  const assembled = await world.tx(
+    world.as(by),
+    (tx) => assembleIssueSnapshot(tx, monday, { now: START }),
+    'read',
+  );
+  if (!assembled) throw new Error(`no porada on ${monday.year}-${monday.month}-${monday.day}`);
+  return assembled;
 }
 
 const paragraphOf = (report: { body: RichDoc }) => plain(richDocToPlainText(report.body));

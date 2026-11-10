@@ -89,15 +89,16 @@ export const generateIssue = defineUseCase({
     const monday = mondayOfText(input.monday);
     if (!monday) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
 
-    const { slots, rule } = await readWindow(tx, now);
+    const { slots, rule, plannedThrough } = await readWindow(tx, now);
     const slot = slots.find((s) => compareDates(s.monday, monday) === 0);
     if (!slot) return fail({ code: 'invalid-input', fields: { monday: 'invalid' } });
     if (slot.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
     // The issue row is taken before anything is read, so a placeholder save (which takes it too)
     // is either committed and read here, or waits for this generation and finds the porada closed.
-    const { issue: ensured } = await ensureIssue(tx, monday, rule);
-    const issue = await tx.issues.lock(ensured.id);
+    const ensured = await ensureIssue(tx, monday, { rule, plannedThrough });
+    if (!ensured) return fail({ code: 'not-found' });
+    const issue = await tx.issues.lock(ensured.issue.id);
     if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
     const step = transition(ISSUE_MACHINE, issue.status, 'generate', {
       kind: 'user',
@@ -110,10 +111,10 @@ export const generateIssue = defineUseCase({
 
     // The points are locked, then the row is taken at the version the preview showed: an edit or
     // a second generation that committed in between makes this StaleVersion (`conflict`).
-    const { snapshot, problems, facts, publish } = await assembleIssueSnapshot(tx, monday, {
-      now,
-      lock: true,
-    });
+    const assembled = await assembleIssueSnapshot(tx, monday, { now, lock: true });
+    // The row exists (ensured above), so the Monday is a porada.
+    if (!assembled) return fail({ code: 'not-found' });
+    const { snapshot, problems, facts, publish } = assembled;
     const blocked = preflight(facts, problems, now).some((f) => f.level === 'block');
     if (blocked || snapshot === null) return fail({ code: 'rule', rule: 'issue-blocked' });
     const after = await tx.issues.setStatus(issue.id, expected, step.to);

@@ -1,17 +1,25 @@
 'use server';
 
 import {
+  addIssue as addIssueUseCase,
+  dropIssue as dropIssueUseCase,
   generateIssue as generateIssueUseCase,
+  moveIssue as moveIssueUseCase,
   setIssueAnnex2 as setIssueAnnex2UseCase,
   setIssueDetails as setIssueDetailsUseCase,
   setPlaceholder as setPlaceholderUseCase,
-  setSkipped as setSkippedUseCase,
 } from '@/application/use-cases';
 
 import { defineAction } from '@/server/bind';
 
-/** „Porada se nekoná“ and „Porada se koná“ on the Přehled; the page re-renders with the new status. */
-export const setSkipped = defineAction(setSkippedUseCase, { rateLimit: 'admin' });
+/** „Přesunout poradu“: the porada keeps its Monday and takes a new meeting date (ADR 0054). */
+export const moveIssue = defineAction(moveIssueUseCase, { rateLimit: 'admin' });
+
+/** „Porada se nekoná“: the porada is removed and its content passes to the next one (ADR 0054). */
+export const dropIssue = defineAction(dropIssueUseCase, { rateLimit: 'admin' });
+
+/** „Přidat poradu“: a porada on a day the calendar has none (ADR 0054). */
+export const addIssue = defineAction(addIssueUseCase, { rateLimit: 'admin' });
 
 /** „Uložit“ on Údaje: Přítomni and Hosté, both sent whole. */
 export const setIssueDetails = defineAction(setIssueDetailsUseCase, { rateLimit: 'admin' });

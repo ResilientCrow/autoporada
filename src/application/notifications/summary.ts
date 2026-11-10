@@ -25,12 +25,12 @@ export const isHeadmaster = (user: Pick<UserRecord, 'role' | 'status'>) =>
 
 /**
  * The issue whose deadline passed five minutes to two hours ago, with the rest of its row: none
- * when no row is in that window or the meeting does not take place (skipped). Only the columns
+ * when no row is in that window. Only the columns
  * migrations 0024, 0025 and 0030 grant the worker.
  */
 export async function summaryIssue(tx: Pick<Tx, 'issues'>, now: Date): Promise<IssueRow | null> {
   const rows = await tx.issues.calendar(instantToWallClock(now).date);
-  return rows.find((row) => summaryDue(row.deadlineAt, now) && row.status !== 'skipped') ?? null;
+  return rows.find((row) => summaryDue(row.deadlineAt, now)) ?? null;
 }
 
 /** What a summary mail is about at send time: the meeting and where its points stand. */

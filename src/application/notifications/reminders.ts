@@ -33,11 +33,13 @@ export interface ReminderIssue {
   /** The day that porada is held: what the mail names. */
   readonly meetingDate: CalDate;
   readonly deadlineAt: Date;
+  /** The effective boundary (ADR 0054): the look-back steps over Mondays with no porada up to it. */
+  readonly plannedThrough: CalDate;
 }
 
 /**
  * The Monday that submissions go to now, with its frozen deadline or else the rule's: the first
- * open slot whose deadline is still ahead, so a skipped Monday is stepped over and its successor
+ * open slot whose deadline is still ahead, so a generated Monday is stepped over and its successor
  * is the one reminded. Reads only the columns migrations 0024, 0025 and 0030 grant the worker
  * (the rule through `settings.value`, never the version).
  */
@@ -45,9 +47,15 @@ export async function reminderIssue(
   tx: Pick<Tx, 'issues' | 'settings'>,
   now: Date,
 ): Promise<ReminderIssue> {
-  const { slots, rule } = await readSlots(tx, now);
-  const { monday, meetingDate, deadlineAt } = handInSlot(now, slots, rule);
-  return { monday, meetingDate, deadlineAt };
+  const { slots, rule, plannedThrough } = await readSlots(tx, now);
+  const { monday, meetingDate, deadlineAt } = handInSlot(
+    now,
+    slots,
+    rule,
+    undefined,
+    plannedThrough,
+  );
+  return { monday, meetingDate, deadlineAt, plannedThrough };
 }
 
 /**
@@ -70,7 +78,7 @@ export async function owingAuthors(
   issue: ReminderIssue,
   now: Date,
 ): Promise<readonly string[]> {
-  const since = await readReportsSince(tx, issue.monday);
+  const since = await readReportsSince(tx, issue.monday, issue.plannedThrough);
   const today = instantToWallClock(now).date;
   const owed = await tx.futureItems.reportsOwed({ from: since, to: today });
   const ended = owed.filter((item) => eventEnd(item).getTime() <= now.getTime());

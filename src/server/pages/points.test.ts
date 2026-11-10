@@ -151,6 +151,7 @@ describe('pointPage', () => {
   const WINDOW = {
     submitMonday: '2026-11-02',
     rule: RULE,
+    plannedThrough: '2026-10-26',
     issues: [
       {
         monday: '2026-11-02',
@@ -207,6 +208,7 @@ describe('pointPage', () => {
         submitMonday: '2026-11-02',
         issues: WINDOW.issues,
         now: NOW.toISOString(),
+        plannedThrough: WINDOW.plannedThrough,
         rule: DEFAULT_DEADLINE,
       },
       moves: ['withdraw'],
@@ -517,6 +519,7 @@ describe('pointPage', () => {
         submitMonday: WINDOW.submitMonday,
         issues: WINDOW.issues,
         now: '2026-10-26T23:30:00.000Z',
+        plannedThrough: WINDOW.plannedThrough,
         rule: DEFAULT_DEADLINE,
       });
     });
@@ -649,7 +652,10 @@ describe('myPointsPage', () => {
   const serve = (
     rows: unknown[],
     next: string | null = null,
-    window: unknown = { ok: true, value: { submitMonday: '2026-11-02', issues: [], rule: RULE } },
+    window: unknown = {
+      ok: true,
+      value: { submitMonday: '2026-11-02', issues: [], rule: RULE, plannedThrough: '2026-10-26' },
+    },
   ) =>
     runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
       if (useCase.name === 'issues.window') return window;
@@ -786,37 +792,56 @@ describe('myPointsPage', () => {
       expect((await rowsOf([approved('2026-11-09')]))?.[0]?.placement).toBe('2026-11-09');
       const open = {
         ok: true,
-        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-09', 'open')], rule: RULE },
+        value: {
+          submitMonday: '2026-11-02',
+          issues: [issue('2026-11-09', 'open')],
+          rule: RULE,
+          plannedThrough: '2026-10-26',
+        },
       };
       expect((await rowsOf([approved('2026-11-09')], open))?.[0]?.placement).toBe('2026-11-09');
     });
 
-    it('moves past a skipped or generated Monday', async () => {
+    it('moves past a generated Monday', async () => {
       const window = {
         ok: true,
         value: {
           submitMonday: '2026-11-16',
-          issues: [issue('2026-11-09', 'skipped'), issue('2026-11-16', 'generated')],
+          issues: [issue('2026-11-09', 'generated'), issue('2026-11-16', 'generated')],
           rule: RULE,
+          plannedThrough: '2026-10-26',
         },
       };
       expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBe('2026-11-23');
     });
 
     it('starts from the point’s own Monday, even one before the submit Monday', async () => {
-      const window = { ok: true, value: { submitMonday: '2026-11-16', issues: [], rule: RULE } };
+      const window = {
+        ok: true,
+        value: { submitMonday: '2026-11-16', issues: [], rule: RULE, plannedThrough: '2026-10-26' },
+      };
       expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBe('2026-11-09');
     });
 
     it('never names a porada that is over: an earliest Monday before the window moves to the next one', async () => {
       // Now is Tuesday 2026-10-27 in Prague; the window starts at 2026-10-26 and has no row for 2026-10-19.
-      const window = { ok: true, value: { submitMonday: '2026-11-02', issues: [], rule: RULE } };
-      expect((await rowsOf([approved('2026-10-19')], window))?.[0]?.placement).toBe('2026-11-02');
-      const skipped = {
+      const window = {
         ok: true,
-        value: { submitMonday: '2026-11-02', issues: [issue('2026-11-02', 'skipped')], rule: RULE },
+        value: { submitMonday: '2026-11-02', issues: [], rule: RULE, plannedThrough: '2026-10-26' },
       };
-      expect((await rowsOf([approved('2026-10-19')], skipped))?.[0]?.placement).toBe('2026-11-09');
+      expect((await rowsOf([approved('2026-10-19')], window))?.[0]?.placement).toBe('2026-11-02');
+      const generated = {
+        ok: true,
+        value: {
+          submitMonday: '2026-11-02',
+          issues: [issue('2026-11-02', 'generated')],
+          rule: RULE,
+          plannedThrough: '2026-10-26',
+        },
+      };
+      expect((await rowsOf([approved('2026-10-19')], generated))?.[0]?.placement).toBe(
+        '2026-11-09',
+      );
     });
 
     it('is none for any other state, and the calendar is not read when no point is approved', async () => {
@@ -846,11 +871,16 @@ describe('myPointsPage', () => {
     it('is none when no Monday of the window is open', async () => {
       const closed = Array.from({ length: 26 }, (_, week) => {
         const monday = new Date(Date.UTC(2026, 10, 9 + 7 * week)).toISOString().slice(0, 10);
-        return issue(monday, 'skipped');
+        return issue(monday, 'generated');
       });
       const window = {
         ok: true,
-        value: { submitMonday: '2026-11-09', issues: closed, rule: RULE },
+        value: {
+          submitMonday: '2026-11-09',
+          issues: closed,
+          rule: RULE,
+          plannedThrough: '2026-10-26',
+        },
       };
       expect((await rowsOf([approved('2026-11-09')], window))?.[0]?.placement).toBeNull();
     });

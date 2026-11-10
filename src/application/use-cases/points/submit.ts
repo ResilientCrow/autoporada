@@ -1,4 +1,4 @@
-import { defineUseCase, fail, ok } from '@/application/core';
+import { defineUseCase, fail, ok, type CalendarWindow } from '@/application/core';
 import type {
   AuditTarget,
   FutureItemRecord,
@@ -46,11 +46,12 @@ async function placeAt(
   tx: Tx,
   point: PointRecord,
   monday: CalDate,
-  rule: DeadlineRule,
-): Promise<HandIn> {
+  window: CalendarWindow,
+): Promise<HandIn | null> {
   if (point.earliestMonday !== null) return handInOf(point, monday, null);
-  const { issue, inserted } = await ensureIssue(tx, monday, rule);
-  return handInOf(point, monday, inserted ? issue : null);
+  const ensured = await ensureIssue(tx, monday, window);
+  if (!ensured) return null;
+  return handInOf(point, monday, ensured.inserted ? ensured.issue : null);
 }
 
 /**
@@ -63,7 +64,11 @@ async function owedHandIn(
   tx: Tx,
   point: PointRecord,
   akce: FutureItemRecord,
-  window: { readonly slots: readonly IssueSlot[]; readonly rule: DeadlineRule },
+  window: {
+    readonly slots: readonly IssueSlot[];
+    readonly rule: DeadlineRule;
+    readonly plannedThrough: CalDate;
+  },
 ): Promise<HandIn | null | undefined> {
   const { startDate, endDate } = akce.content;
   const lastDay = endDate ?? startDate;
@@ -73,18 +78,17 @@ async function owedHandIn(
     addDays(lastDay, -7 * (REPORT_LOOKBACK_WEEKS + 1)),
     addDays(lastDay, 7 * REPORT_LOOKBACK_WEEKS),
   );
-  const monday = owedPorada(lastDay, rows);
+  const monday = owedPorada(lastDay, rows, window.plannedThrough);
   // Only a porada the calendar names and holds open takes it: a generated one prints nothing more,
   // and a past Monday with no row was never held, so no issue is made for it.
   const slot = window.slots.find((s) => isSameDate(s.monday, monday));
   if (!slot || slot.status !== 'open') return null;
-  return placeAt(tx, point, monday, window.rule);
+  return placeAt(tx, point, monday, window);
 }
 
 /**
- * The Monday this hand-in is for: the first open slot whose close is still ahead, skipped and
- * generated slots stepped over, so a later unskip does not pull the point back to a Monday it
- * never was handed in for (ADR 0029). A report about an event that ends before a meeting day has
+ * The Monday this hand-in is for: the first open slot whose close is still ahead, generated
+ * slots stepped over (ADR 0029). A report about an event that ends before a meeting day has
  * the later close of ADR 0035, so a Sunday-evening report still reaches Monday's porada. A report
  * that answers an approved akce goes to the porada the akce is owed to instead (`owedHandIn`).
  * It is stored as `hand_in_monday` at every submit, so a resubmit after a return or a retract is
@@ -99,12 +103,14 @@ async function handIn(
   akce: FutureItemRecord | null,
   now: Date,
 ): Promise<HandIn | null> {
-  const { slots, rule } = await readWindow(tx, now);
-  const owed = akce ? await owedHandIn(tx, point, akce, { slots, rule }) : undefined;
+  const { slots, rule, plannedThrough } = await readWindow(tx, now);
+  const owed = akce
+    ? await owedHandIn(tx, point, akce, { slots, rule, plannedThrough })
+    : undefined;
   if (owed !== undefined) return owed;
   const report = point.kind === 'report' ? lateFacts(content) : undefined;
-  const first = handInMonday(now, slots, rule, report);
-  return placeAt(tx, point, first, rule);
+  const first = handInMonday(now, slots, rule, report, plannedThrough);
+  return placeAt(tx, point, first, { rule, plannedThrough });
 }
 
 /**

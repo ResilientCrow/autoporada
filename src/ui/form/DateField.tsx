@@ -18,6 +18,8 @@ export function DateField({
   name,
   description,
   initial,
+  min,
+  max,
   onChange,
   issue,
   readOnly,
@@ -26,6 +28,9 @@ export function DateField({
   readonly name: string;
   readonly description?: string;
   readonly initial: string | null;
+  /** The earliest and latest day the picker offers, ISO text. */
+  readonly min?: string;
+  readonly max?: string;
   readonly onChange: (value: string) => void;
   readonly issue: string | undefined;
   readonly readOnly: boolean;
@@ -41,6 +46,8 @@ export function DateField({
       name={name}
       description={description}
       type="date"
+      min={min}
+      max={max}
       value={shown}
       onChange={(value) => {
         setShown(value);

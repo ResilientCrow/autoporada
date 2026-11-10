@@ -10,7 +10,7 @@ export {
 } from './define-use-case';
 export { fromTransition } from './failure';
 export { MAX_FIELDS } from './field-issues';
-export { readDeadlineRule, readSlots } from './issue-rule';
+export { readDeadlineRule, readPlannedThrough, readSlots, type CalendarWindow } from './issue-rule';
 export { readAccess, writeAccess } from './resource-access';
 export { eligiblePoints, readReportsSince } from './report-window';
 export { readSetting, readSettingValue, type SettingState } from './settings';
