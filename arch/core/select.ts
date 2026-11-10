@@ -118,7 +118,10 @@ export const genitive = (x: { salutation: NonNullable<Salutation>; givenName: st
 export const peopleFor = (s: State, id: string) => recentPeople(myPoints(s, id).map((p) => ({ ...p.content, updatedAt: new Date(p.savedAt) })) as never, 300);
 
 // ---- the document ----
-export interface Segment { key: string; kind: 'head' | 'report' | 'missing' | 'item' | 'tail'; refId?: string; state?: Point['state'] | 'missing' | 'generated'; blocks: Block[] }
+/** The first three pokyny fill themselves from akce and the student list: they keep their place and have nothing to edit. */
+const FIXED_SLOTS = new Set(['meetings', 'events', 'talent']);
+export const isFixedRow = (r: Issue['rows'][number]) => !!r.slot && FIXED_SLOTS.has(r.slot);
+export interface Segment { key: string; kind: 'head' | 'report' | 'missing' | 'item' | 'tail'; refId?: string; fixed?: true; state?: Point['state'] | 'missing' | 'generated'; blocks: Block[] }
 export interface Built { model: DocumentModel | null; errors: string[]; segments: Segment[]; points: number; printed: string[] }
 
 /** The real snapshot of a porada. `extra` adds points not yet decided (preview) or the draft being typed. */
@@ -163,7 +166,7 @@ function segmentize(model: DocumentModel, snap: IssueSnapshot, refs: Record<stri
       out.push(cur); n++;
       const i = reports.findIndex((r) => norm(r.title) === norm(b.text));
       if (i >= 0) { const r = reports.splice(i, 1)[0]!; cur = { key: r.id, kind: r.missing ? 'missing' : 'report', refId: r.id.replace(/^missing-/, ''), state: refs[r.id], blocks: [b] }; }
-      else { const row = rows.find((x) => norm(b.text).startsWith(norm(x.title))); cur = { key: `n${n}`, kind: 'item', ...(row && { refId: row.id }), blocks: [b] }; }
+      else { const row = rows.find((x) => norm(b.text).startsWith(norm(x.title))); cur = { key: `n${n}`, kind: 'item', ...(row && { refId: row.id }), ...(row && isFixedRow(row) && { fixed: true as const }), blocks: [b] }; }
     } else if (b.kind === 'closing' || b.kind === 'annex') { out.push(cur); cur = { key: `t${out.length}`, kind: 'tail', blocks: [b] }; }
     else if (b.kind === 'section' && cur.kind !== 'head') { out.push(cur); cur = { key: `s${out.length}`, kind: 'head', blocks: [b] }; }
     else cur.blocks.push(b);

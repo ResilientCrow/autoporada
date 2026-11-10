@@ -61,7 +61,7 @@ button.pick:hover{border-color:var(--ink);background:var(--wash)}
 .rowi .tx{flex:1;min-width:0;display:flex;flex-direction:column;text-decoration:none}.rowi .tt{font-weight:600;font-size:16.5px;line-height:1.3}.rowi .st{font-size:15px;color:var(--mut)}
 .rowi a.tx:hover .tt{text-decoration:underline;text-underline-offset:3px}
 .nw-r{background:var(--gold-soft);margin:0 -10px;padding:10px;border-radius:8px}
-.updn{display:flex;flex-direction:column;flex:none}.updn button{width:40px;height:30px;border:0;background:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}.updn button:hover{background:var(--wash)}.updn svg{width:18px;height:18px}
+.updn{display:flex;flex-direction:column;flex:none}.updn button{width:40px;height:30px;border:0;background:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}.updn button:hover{background:var(--wash)}.updn:empty{width:40px}.updn button:disabled{opacity:.3;cursor:default;background:none}.updn svg{width:18px;height:18px}
 .ppar{font:400 15.5px/1.42 var(--paper);background:var(--wash);padding:10px 12px;border-radius:8px}
 .mz{border-top:1px solid var(--line);padding-top:14px}.mz h2{font-size:17px}
 .fx.bad{background:#F8E9EC;color:var(--red)}

@@ -154,7 +154,7 @@ export function Sheet({ built, cls, onSeg, label, marginNote, empty }: { built: 
   return (
     <article className={`${paper['paper']} ${paper['blocks']} sheet`} aria-label={label ?? 'Dokument porady'}>
       {built.segments.map((seg) => {
-        const clickable = onSeg && seg.kind !== 'head' && seg.kind !== 'tail';
+        const clickable = onSeg && seg.kind !== 'head' && seg.kind !== 'tail' && !seg.fixed;
         return (
           <div key={seg.key} id={`seg-${seg.key}`} className={`seg seg-${seg.kind} ${seg.state ? `st-${seg.state}` : ''} ${cls?.(seg) ?? ''}`} {...(clickable ? { role: 'button', tabIndex: 0, onClick: () => onSeg(seg), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter') onSeg(seg); } } : {})}>
             {marginNote?.(seg)}
