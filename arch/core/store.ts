@@ -4,7 +4,7 @@ import { openingSentence } from '@/domain/cs';
 import { addDays, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
+import { working, atLeast, buildDoc, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, PointType, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
@@ -157,11 +157,12 @@ export const moveAnnex = (m: string, aid: string, dir: -1 | 1): Fx => (s) => pat
 export const placeRowAfter = (m: string, rid: string, afterId: string): Fx => (s) => patchIssue(s, m, (i) => { const row = i.rows.find((r) => r.id === rid); if (!row) return i; const rest = i.rows.filter((r) => r.id !== rid); const k = rest.findIndex((r) => r.id === afterId); return { ...i, rows: [...rest.slice(0, k + 1), { ...row, isNew: false }, ...rest.slice(k + 1)] }; });
 export const setPlaceholder = (m: string, akce: string, text: string | null): Fx => (s) => patchIssue(s, m, (i) => { const placeholders = { ...i.placeholders }; if (text === null) delete placeholders[akce]; else placeholders[akce] = text; return { ...i, placeholders }; });
 export const moveRow = (m: string, rid: string, dir: -1 | 1): Fx => (s) => patchIssue(s, m, (i) => {
-  const rows = [...i.rows]; const k = rows.findIndex((r) => r.id === rid); const row = rows[k]!;
-  let j = k + dir; while (j >= 0 && j < rows.length && rows[j]!.section !== row.section) j += dir;
+  // Past the next listed row of its section, over the hidden ones, as the server's one-step moves do.
+  const rows = i.rows; const k = rows.findIndex((r) => r.id === rid); const row = rows[k]!;
+  let j = k + dir; while (j >= 0 && j < rows.length && (rows[j]!.section !== row.section || isAutoRow(rows[j]!))) j += dir;
   if (j < 0 || j >= rows.length) return i;
-  [rows[k], rows[j]] = [rows[j]!, { ...row, isNew: false }];
-  return { ...i, rows };
+  const rest = rows.filter((_, x) => x !== k);
+  return { ...i, rows: [...rest.slice(0, j), { ...row, isNew: false }, ...rest.slice(j)] };
 });
 export const placeRow = (m: string, rid: string): Fx => (s) => patchIssue(s, m, (i) => ({ ...i, rows: i.rows.map((r) => (r.id === rid ? { ...r, isNew: false } : r)) }));
 export const saveRow = (m: string, rid: string, patch: Partial<Row>): Fx => (s) => patchIssue(s, m, (i) => ({ ...i, rows: i.rows.map((r) => (r.id === rid ? { ...r, ...patch } : r)) }));

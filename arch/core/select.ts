@@ -123,6 +123,9 @@ export const peopleFor = (s: State, id: string) => recentPeople(myPoints(s, id).
 /** The first three pokyny fill themselves from akce and the student list: they keep their place and have nothing to edit. */
 const FIXED_SLOTS = new Set(['meetings', 'events', 'talent']);
 export const isFixedRow = (r: Issue['rows'][number]) => !!r.slot && FIXED_SLOTS.has(r.slot);
+/** Rows the document fills by itself; the pokyny page does not list them. */
+const AUTO_SLOTS = new Set([...FIXED_SLOTS, 'exemptions']);
+export const isAutoRow = (r: Issue['rows'][number]) => !!r.slot && AUTO_SLOTS.has(r.slot);
 export interface Segment { key: string; kind: 'head' | 'report' | 'missing' | 'item' | 'tail'; refId?: string; fixed?: true; state?: Point['state'] | 'missing' | 'generated'; blocks: Block[] }
 export interface Built { model: DocumentModel | null; errors: string[]; segments: Segment[]; points: number; printed: string[] }
 
