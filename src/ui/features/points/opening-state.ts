@@ -6,9 +6,10 @@ import { readText } from '@/ui/form';
 import type { PointContentWire } from './fields';
 import type { Edit } from './report-patch';
 
-/** What the sentence needs besides the content: the type's title gender and its bullets (which name the organisers). */
+/** What the sentence needs besides the content: the type's name, its title gender and its bullets (which name the organisers). */
 export interface OpeningContext {
   readonly titleGender: TitleGender | null;
+  readonly typeName: string | null;
   readonly spec: readonly BulletSpec[];
 }
 
@@ -30,8 +31,9 @@ export function generated(
   content: PointContentWire,
   titleGender: TitleGender | null,
   spec: readonly BulletSpec[],
+  typeName: string | null,
 ): string {
-  const input = openingInput(domainContent(content), titleGender, spec);
+  const input = openingInput(domainContent(content), titleGender, spec, typeName);
   return input === null ? '' : openingSentence(input);
 }
 
@@ -41,7 +43,7 @@ export function generated(
  */
 export function withOpening(content: PointContentWire, ctx: OpeningContext): PointContentWire {
   if (content.openingEdited) return content;
-  return { ...content, opening: generated(content, ctx.titleGender, ctx.spec) };
+  return { ...content, opening: generated(content, ctx.titleGender, ctx.spec, ctx.typeName) };
 }
 
 /** `withOpening` for what the editor holds, whether the fields or the bullets changed. */
@@ -73,7 +75,7 @@ export function noticeShown(
   basis: string,
 ): boolean {
   if (!content.openingEdited) return false;
-  const sentence = generated(content, ctx.titleGender, ctx.spec);
+  const sentence = generated(content, ctx.titleGender, ctx.spec, ctx.typeName);
   return sentence !== '' && sentence !== basis;
 }
 
@@ -88,12 +90,12 @@ export function basisAfterTyping(
   basis: string,
   ctx: OpeningContext,
 ): string {
-  return before.openingEdited ? basis : generated(before, ctx.titleGender, ctx.spec);
+  return before.openingEdited ? basis : generated(before, ctx.titleGender, ctx.spec, ctx.typeName);
 }
 
 /** The basis after „Ponechat“: the sentence the fields make now. */
 export function keptBasis(content: PointContentWire, ctx: OpeningContext): string {
-  return generated(content, ctx.titleGender, ctx.spec);
+  return generated(content, ctx.titleGender, ctx.spec, ctx.typeName);
 }
 
 /** What the area under the box shows: nothing, the notice, or (once asked, until answered) the question. */

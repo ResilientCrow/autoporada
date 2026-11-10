@@ -168,6 +168,7 @@ describe('PointEditor for a proposal', () => {
         content={content}
         spec={[]}
         titleGender={null}
+        typeName={null}
         today={TODAY}
         readinessSchoolYear="2026/2027"
         previewSchoolYear="2026/2027"
@@ -261,6 +262,7 @@ describe('PointScreen for a proposal', () => {
     content: PROPOSAL,
     spec: [],
     titleGender: null,
+    typeName: null,
     today: TODAY,
     readinessSchoolYear: '2026/2027',
     recents: [],

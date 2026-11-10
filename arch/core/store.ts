@@ -43,7 +43,7 @@ export const setClock = (iso: string): Fx => (s) => ({ ...s, now: iso });
 export function refreshOpening(s: State, p: Point, content: PointContent): PointContent {
   if (p.kind !== 'report' || content.openingEdited) return content;
   const type = s.types.find((t) => t.id === p.typeId);
-  const input = openingInput(content, type?.titleGender ?? null, type?.bullets ?? []);
+  const input = openingInput(content, type?.titleGender ?? null, type?.bullets ?? [], type?.name);
   return { ...content, opening: input ? openingSentence(input) : '' };
 }
 export function createPoint(kind: PointKind, typeId: string | null, akceId: string | null, onId?: (id: string) => void): Fx {

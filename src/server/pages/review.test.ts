@@ -259,6 +259,7 @@ describe('reviewPointPage', () => {
         spec: TYPE.defaultBullets,
         kind: 'report',
         titleGender: 'f',
+        typeName: 'Exkurze',
         today: { year: 2026, month: 10, day: 27 },
         recents: RECENTS,
         directory: 'off',
@@ -273,6 +274,7 @@ describe('reviewPointPage', () => {
       expect(await editOf('headmaster', { state: 'approved', type: null })).toMatchObject({
         spec: [],
         titleGender: null,
+        typeName: null,
       });
     });
 
@@ -293,6 +295,7 @@ describe('reviewPointPage', () => {
           kind,
           spec: [],
           titleGender: null,
+          typeName: null,
           today: { year: 2026, month: 10, day: 27 },
           recents: [],
           directory: 'off',

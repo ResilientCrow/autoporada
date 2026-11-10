@@ -46,6 +46,7 @@ const EDIT: ReviewEditorModel = {
   kind: 'report',
   spec: SPEC,
   titleGender: 'f',
+  typeName: null,
   today: calDate(2026, 10, 27),
   recents: [],
   directory: 'off',
@@ -63,6 +64,7 @@ const PROPOSAL: ReviewEditorModel = {
   },
   spec: [],
   titleGender: null,
+  typeName: null,
 };
 const ALL: DecisionBarModel = { decisions: ['approve', 'return', 'reject'], othersApprove: false };
 const READ = 'READ VIEW';

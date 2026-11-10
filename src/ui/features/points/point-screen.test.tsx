@@ -47,6 +47,7 @@ const EDITOR = {
   },
   spec: [],
   titleGender: null,
+  typeName: null,
   today: calDate(2027, 3, 9),
   readinessSchoolYear: '2026/2027',
   recents: [],

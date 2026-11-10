@@ -145,6 +145,14 @@ describe('openingInput', () => {
     expect(openingInput(content, null, SPEC)?.titleGender).toBeUndefined();
   });
 
+  it('passes the type name through only with a gender', () => {
+    const named = { ...content, title: 'Robotická olympiáda' };
+    expect(openingInput(named, 'm', SPEC, 'Seminář')?.typeName).toBe('Seminář');
+    expect(openingInput(named, 'm', SPEC, '  ')?.typeName).toBeUndefined();
+    const input = openingInput(named, 'm', SPEC, 'Seminář');
+    expect(input && openingSentence(input)).toContain('proběhl seminář Robotická olympiáda');
+  });
+
   it('maps each campus, with Jinde printing only the place', () => {
     expect(sentence({ ...content, campus: 'radlice' })).toContain('v areálu Radlice v učebně S206');
     expect(sentence({ ...content, campus: 'na-vidouli' })).toContain('v areálu Na Vidouli');

@@ -1,22 +1,42 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { foldForSearch, normalizeClass, parsePeopleList, suggestGenitive, type Salutation } from '@/domain/cs';
-import { displayName, POINT_LIMITS, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
+import { foldForSearch, normalizeClass, parsePeopleList, roomLocative, suggestGenitive, type Salutation } from '@/domain/cs';
+import { displayName, POINT_LIMITS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
 import { fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
-import type { Point } from '../core/types';
-import { App, TitleField, goReplace, Desk, focusOn, Hash, Ic, Note, Saved, Seg, Sheet, WHEN } from './ui';
+import type { Point, State } from '../core/types';
+import { App, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Saved, Seg, Sheet, WHEN } from './ui';
 import { NotFound } from './home';
 
 const SAL: readonly (readonly [Salutation, string])[] = [['pan', 'pan'], ['pani', 'paní'], ['slecna', 'slečna']];
 type Step = { key: string; title: string };
-function stepsFor(p: Point): Step[] {
+type Statement = PointContent['statements'][number];
+/** A place in the opening sentence starts with a preposition: „na Pražském hradě“, „v Národním muzeu“. */
+const PREP = /^(?:v|ve|na|u|do|z|ze|při|před|za|mezi|pod|nad|po|k|ke|o|s|se|vedle|kolem|okolo|poblíž|uvnitř)\s/i;
+/** The people bullet the opening sentence names (the type's organisers role), or -1 when the draft has none. */
+function orgAt(s: State, p: Point): number {
+  const keys = new Set((s.types.find((t) => t.id === p.typeId)?.bullets ?? []).filter((b) => b.role === 'organisers').map((b) => b.key));
+  return p.content.bullets.findIndex((b) => b.kind === 'people' && (keys.has(b.key) || b.key === 'organisers' || b.key === 'speakers'));
+}
+function statementOf(x: DraftPerson, quote: string): Statement {
+  const g = x.salutation ? suggestGenitive({ salutation: x.salutation, givenName: x.givenName, familyName: x.familyName }) : null;
+  return { speaker: x, speakerGenitive: g?.text ?? '', ...(x.affiliation && { affiliation: x.affiliation }), quote };
+}
+/** Puts x's statement first: their later one moves up, a first one without a speaker becomes theirs, and one by someone else moves after it. Null when nothing changes or there is no room. */
+function leadBy(sts: readonly Statement[], x: DraftPerson): Statement[] | null {
+  const head = sts[0]; const j = sts.findIndex((t) => !!t.speaker && samePerson(t.speaker, x));
+  if (j === 0) return null;
+  const mine = j > 0 ? sts[j]! : statementOf(x, ''); const rest = sts.filter((_, q) => q !== j);
+  if (!head?.speaker) return [{ ...mine, quote: head?.quote.trim() ? head.quote : mine.quote }, ...rest.slice(1)];
+  return j < 0 && sts.length >= POINT_LIMITS.statements ? null : [mine, ...rest];
+}
+function stepsFor(p: Point, org: number): Step[] {
   const s: Step[] = [];
   if (!p.akceId) s.push({ key: 'zaklad', title: 'O čem je zpráva' });
-  s.push({ key: 'co', title: 'Jak to dopadlo' });
-  p.content.bullets.forEach((b, i) => { if (b.kind === 'people' && b.key !== 'organisers' && b.key !== 'speakers') s.push({ key: `lide-${i}`, title: b.label }); if (b.kind === 'text') s.push({ key: `text-${i}`, title: b.label }); });
+  s.push({ key: 'org', title: 'Kdo to organizoval' }, { key: 'co', title: 'Jak to dopadlo' });
+  p.content.bullets.forEach((b, i) => { if (i !== org && b.kind === 'people' && b.key !== 'organisers' && b.key !== 'speakers') s.push({ key: `lide-${i}`, title: b.label }); if (b.kind === 'text') s.push({ key: `text-${i}`, title: b.label }); });
   const sts = Math.max(1, p.content.statements.length);
   for (let i = 0; i < sts; i++) s.push({ key: i ? `kdo-${i}` : 'kdo', title: 'Kdo se vyjádřil' }, { key: i ? `rekl-${i}` : 'rekl', title: 'Co řekl' });
   s.push({ key: 'hotovo', title: 'Kontrola' });
@@ -51,12 +71,12 @@ export function PersonRow({ p, onChange, onRemove }: { p: DraftPerson; onChange:
 }
 export function Wizard({ id, step }: { id: string; step?: string }) {
   const { s, apply } = useStore(); const p = s.points.find((x) => x.id === id);
-  const curRef = useRef<HTMLDivElement | null>(null);
+  const curRef = useRef<HTMLDivElement | null>(null); const [del, setDel] = useState(false);
   useEffect(() => { curRef.current?.querySelector('.cur')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); });
   if (!p) return <NotFound />;
   if (p.authorId !== s.userId) return <NotFound />;
   if (p.state !== 'draft' && p.state !== 'returned') { if (location.hash.includes('/psat/')) goReplace(`/zprava/${id}`); return null; }
-  const steps = stepsFor(p); const key = step && steps.some((x) => x.key === step) ? step : steps[p.akceId ? 0 : 0]!.key;
+  const org = orgAt(s, p); const steps = stepsFor(p, org); const key = step && steps.some((x) => x.key === step) ? step : steps[p.akceId ? 0 : 0]!.key;
   const k = steps.findIndex((x) => x.key === key); const cur = steps[k]!;
   const next = steps[k + 1]?.key, prev = steps[k - 1]?.key;
   const c = p.content; const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
@@ -70,17 +90,34 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   const st0 = c.statements[si];
   const putSt = (x: PointContent['statements'][number]) => { const a = [...c.statements]; a[si] = x; set({ statements: a }); };
   const speakerName = st0?.speaker ? displayName(st0.speaker) : '';
+  const meP = Q.mePerson(s); const orgBul = org >= 0 ? (c.bullets[org] as Extract<DraftBullet, { kind: 'people' }>) : null; const orgPeople = orgBul?.people ?? [];
+  const isOrg = (x: DraftPerson) => orgPeople.some((o) => samePerson(o, x));
+  const setOrg = (people: readonly DraftPerson[]) => set({ bullets: orgBul ? c.bullets.map((b, j) => (j === org ? { ...orgBul, people } : b)) : [...c.bullets, { key: 'organisers', label: 'Organizátoři', kind: 'people', order: 'input', people }] });
+  /** Leaving „Kdo to organizoval“: a lone organiser is the one who speaks first, and a statement already written moves after theirs. */
+  const leadFromOrg = () => {
+    const lead = c.statements[0]; const only = orgPeople[0];
+    if (orgPeople.length !== 1 || !only || (lead?.speaker && isOrg(lead.speaker))) return;
+    const next = leadBy(c.statements, only); if (next) set({ statements: next });
+  };
+  const lead = c.statements[0]; const leadOk = !!lead?.speaker && isOrg(lead.speaker) && !!lead.quote.trim();
   let ask: ReactNode = '', help: ReactNode = '', body: ReactNode = null, can = true, hint = '', nextText = 'Pokračovat';
   const body0 = toText(c.body);
   const banner = owed?.late ? <Note h={`Odevzdejte do ${Q.fromDay(WHEN(owed.close))}`}>Akce skončila až po uzávěrce, proto má zpráva vlastní čas. Vyjde v poradě {Q.dm(owed.monday)}</Note> : owed?.pastClose ? <Note h="Termín už minul">Porada {Q.dm(owed.monday)} na zprávu ještě čeká, takže se stihne.</Note> : !p.akceId && Q.toIsoDate(Q.handInTo(s).monday) !== Q.workingMonday(s) ? <Note h={`Půjde na poradu ${Q.dm(Q.handInTo(s).meetingDate)}`}>Uzávěrka porady {Q.dm(Q.working(s).meetingDate)} už minula.</Note> : null;
   if (cur.key === 'zaklad') {
     ask = 'O čem bude zpráva?'; help = 'Vyplňte základ a úvodní větu napíšeme za vás.';
-    can = !!c.title.trim() && !!c.eventDate; hint = 'Napište název a datum.';
+    const jinde = (c.campus ?? 'jinde') === 'jinde'; const place = c.place ?? '';
+    can = !!c.title.trim() && !!c.eventDate && (!jinde || !!place.trim()); hint = !c.title.trim() || !c.eventDate ? 'Napište název a datum.' : 'Napište, kde to bylo.';
     body = <div className="stack">
-      <label className="l">Jak se to jmenovalo<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} placeholder="Například: Soutěž Robotiáda" /></label>
+      <label className="l">Jak se to jmenovalo<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} placeholder="Například: Robotiáda" /></label>
       <div className="two"><label className="l">Kdy<input className="in bigi" type="date" value={c.eventDate ? toIsoDate(c.eventDate) : ''} onChange={(e) => set({ eventDate: e.target.value ? parseIsoDate(e.target.value) : null })} /></label><label className="l">Kde<select className="in bigi" value={c.campus ?? 'jinde'} onChange={(e) => set({ campus: e.target.value as PointContent['campus'] })}><option value="smichov">Smíchov</option><option value="radlice">Radlice</option><option value="na-vidouli">Na Vidouli</option><option value="jinde">Jinde</option></select></label></div>
-      <div className="stack st6"><span className="lb">Co to bylo</span><Seg label="Co to bylo" value={p.typeId} options={s.types.filter((t) => t.active).map((t) => [t.id, t.name] as const)} onChange={(v) => { const t = s.types.find((x) => x.id === v)!; apply(A.retype(id, { typeId: v })); const keep = new Map(c.bullets.map((b) => [b.key, b])); apply(A.savePoint(id, { ...c, bullets: t.bullets.map((b) => keep.get(b.key) ?? (b.kind === 'people' ? { key: b.key, label: b.label, kind: 'people', order: 'input', people: [] } : { key: b.key, label: b.label, kind: 'text', text: '' })) as DraftBullet[] })); }} /></div>
+      <label className="l">{jinde ? 'Kde přesně' : 'Kde přesně (nepovinné)'}<small>{jinde ? 'Tak, jak to bude ve větě: „na Pražském hradě“, „v\u00a0Národním muzeu“.' : 'Třeba číslo učebny, například S206.'}</small><input className="in bigi" maxLength={POINT_LIMITS.place} value={place} placeholder={jinde ? 'Například: na Pražském hradě' : 'Například: S206'} onChange={(e) => set({ place: e.target.value || null })} onBlur={(e) => { const v = roomLocative(e.target.value); if (v !== e.target.value) set({ place: v || null }); }} />{place.trim() && !PREP.test(place.trim()) ? <small className="w-err">Začněte předložkou, třeba „v“ nebo „na“, ať věta dává smysl.</small> : null}</label>
+      <div className="stack st6"><span className="lb">Co to bylo</span><Seg label="Co to bylo" value={p.typeId} options={s.types.filter((t) => t.active).map((t) => [t.id, t.name] as const)} onChange={(v) => { const t = s.types.find((x) => x.id === v)!; apply(A.retype(id, { typeId: v })); const keep = new Map(c.bullets.map((b) => [b.key, b])); const was = orgPeople.length ? orgPeople : [meP]; apply(A.savePoint(id, { ...c, bullets: t.bullets.map((b) => keep.get(b.key) ?? (b.kind === 'people' ? { key: b.key, label: b.label, kind: 'people', order: 'input', people: b.role === 'organisers' ? was : [] } : { key: b.key, label: b.label, kind: 'text', text: '' })) as DraftBullet[] })); }} /></div>
     </div>;
+  } else if (cur.key === 'org') {
+    const noSal = orgPeople.filter((x) => !x.salutation).length;
+    ask = orgBul?.key === 'speakers' ? 'Kdo přednášel?' : 'Kdo to organizoval?'; help = 'Většinou to jste vy. Když to organizoval někdo jiný nebo víc lidí, přidejte je. Jeden z nich se pak ke zprávě vyjádří.';
+    can = orgPeople.length > 0 && noSal === 0; hint = orgPeople.length ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení.` : 'Přidejte aspoň jednoho člověka.';
+    body = <>{!orgPeople.some((x) => samePerson(x, meP)) ? <button type="button" className="btn lg w" onClick={() => setOrg([meP, ...orgPeople])}><Ic n="plus" />Přidat sebe: {displayName(meP)}</button> : null}<PeoplePick list={[...orgPeople]} placeholder="Někdo jiný? Začněte psát jméno" onAdd={(x) => setOrg([...orgPeople, ...x])} />{orgPeople.length ? <ul className="prs">{orgPeople.map((x, j) => <PersonRow key={j} p={x} onChange={(n) => setOrg(orgPeople.map((y, q) => (q === j ? n : y)))} onRemove={() => setOrg(orgPeople.filter((_, q) => q !== j))} />)}</ul> : null}</>;
   } else if (cur.key === 'co') {
     ask = 'Jak to dopadlo?'; help = 'Stačí pár vět. Úvodní větu o tom, kdy a kde akce byla, jsme napsali za vás.';
     can = !!body0.trim(); hint = 'Napište aspoň jednu větu.';
@@ -100,21 +137,27 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     ask = `${bul.label}?`; help = 'Nepovinné. Když není co psát, klidně přeskočte.'; nextText = bul.text.trim() ? 'Pokračovat' : 'Přeskočit';
     body = <label className="l"><span className="vh">{bul.label}</span><textarea className="in big" autoFocus value={bul.text} onChange={(e) => set({ bullets: c.bullets.map((b, j) => (j === i ? { ...bul, text: e.target.value } : b)) })} /></label>;
   } else if (cur.key.startsWith('kdo')) {
-    ask = si ? 'Kdo další se vyjádřil?' : 'Kdo se k tomu vyjádřil?'; help = si ? 'Vyberte ho, co řekl, napíšete v dalším kroku.' : 'Každá zpráva má mít aspoň jedno vyjádření od někoho, kdo u toho byl. Vyberte ho, co řekl, napíšete v dalším kroku.';
-    const inBullets = c.bullets.flatMap((b) => (b.kind === 'people' ? b.people : [])).filter((x) => x.familyName);
-    const others = new Set(c.statements.filter((_, j) => j !== si).map((x) => (x.speaker ? displayName(x.speaker) : '')));
-    const uniq = inBullets.filter((x, i, a) => a.findIndex((y) => displayName(y) === displayName(x)) === i && !others.has(displayName(x)));
-    const pick = (x: DraftPerson) => { const g = x.salutation ? suggestGenitive({ salutation: x.salutation, givenName: x.givenName, familyName: x.familyName }) : null; putSt({ speaker: x, speakerGenitive: g?.text ?? '', ...(x.affiliation && { affiliation: x.affiliation }), quote: st0?.quote ?? '' }); };
-    can = !!st0?.speaker && !!st0.speakerGenitive.trim() && !!st0.speaker.salutation; hint = st0?.speaker ? 'Zkontrolujte tvar jména.' : 'Vyberte člověka.';
+    ask = si ? 'Kdo další se vyjádřil?' : 'Kdo z organizátorů se vyjádří?'; help = si ? 'Nepovinné, třeba někdo z účastníků. Vyberte ho, co řekl, napíšete v dalším kroku.' : 'Každá zpráva má vyjádření organizátora. Vyberte ho, co řekl, napíšete v dalším kroku. Vyjádření účastníků můžete přidat potom.';
+    const inBullets = (si ? c.bullets.flatMap((b) => (b.kind === 'people' ? b.people : [])) : orgPeople).filter((x) => x.familyName);
+    const others = c.statements.flatMap((x, j) => (j !== si && x.speaker ? [x.speaker] : []));
+    const uniq = inBullets.filter((x, i, a) => a.findIndex((y) => samePerson(y, x)) === i && (!si || !others.some((o) => samePerson(o, x))));
+    const pick = (x: DraftPerson) => putSt(statementOf(x, st0?.quote ?? ''));
+    const choose = (x: DraftPerson) => (si ? pick(x) : set({ statements: leadBy(c.statements, x) ?? c.statements }));
+    /** „Změnit“ on a first statement by someone who did not organise keeps their words as a later statement. */
+    const blank: Statement = { speaker: null, speakerGenitive: '', quote: '' };
+    const change = () => (!si && st0?.speaker && !isOrg(st0.speaker) && c.statements.length < POINT_LIMITS.statements ? set({ statements: [blank, ...c.statements] }) : putSt({ ...blank, quote: st0?.quote ?? '' }));
+    const notOrg = !si && !!st0?.speaker && !isOrg(st0.speaker);
+    can = !!st0?.speaker && !!st0.speakerGenitive.trim() && !!st0.speaker.salutation && !notOrg; hint = notOrg ? 'Vyjádřit se má někdo z organizátorů.' : st0?.speaker ? 'Zkontrolujte tvar jména.' : 'Vyberte člověka.';
     const g = st0?.speaker?.salutation ? suggestGenitive({ salutation: st0.speaker.salutation, givenName: st0.speaker.givenName, familyName: st0.speaker.familyName }) : null;
     const dropThis = si ? <button type="button" className="q r" onClick={() => { set({ statements: c.statements.filter((_, q) => q !== si) }); toStep('hotovo'); }}>Další vyjádření nepřidávat</button> : null;
     body = st0?.speaker ? <div className="stack st8">
-      <div className="pick"><b>{speakerName}</b><span>{st0.speaker.affiliation ?? ''} <button type="button" className="q in-l" onClick={() => putSt({ speaker: null, speakerGenitive: '', quote: st0.quote })}>Změnit</button></span></div>
+      <div className="pick"><b>{speakerName}</b><span>{st0.speaker.affiliation ?? ''} <button type="button" className="q in-l" onClick={change}>Změnit</button></span></div>
+      {notOrg ? <Note err>{speakerName} není mezi organizátory. Vyberte někoho z nich, nebo ho doplňte do organizátorů.</Note> : null}
       {!st0.speaker.salutation ? <div className="stack st6"><span className="lb">Oslovení</span><Seg label="Oslovení" value={null} options={SAL} onChange={(v) => { const sp = { ...st0.speaker!, salutation: v }; pick(sp); }} /></div> : null}
       {st0.speaker.salutation ? <label className="l">Do dokumentu patří „vyjádření koho“{g?.needsCheck ? <small>Tvar jsme jen odhadli, prosím zkontrolujte ho.</small> : <small>Tvar jsme doplnili, opravte ho, jen když nesedí.</small>}<input className={`in bigi${g?.needsCheck ? ' chk-it' : ''}`} value={st0.speakerGenitive} onChange={(e) => putSt({ ...st0, speakerGenitive: e.target.value })} /></label> : null}
-    </div> : <>{uniq.length ? <div className="picks">{uniq.map((x) => <button type="button" className="pick" key={displayName(x)} onClick={() => pick(x)}><b>{displayName(x)}</b><span>{x.affiliation ? `${x.affiliation}, ` : ''}je ve vaší zprávě</span></button>)}</div> : null}<PeoplePick list={uniq} placeholder="Někdo jiný? Začněte psát jméno" onAdd={(x) => pick(x[0]!)} />{dropThis}</>;
+    </div> : <>{uniq.length ? <div className="picks">{uniq.map((x) => <button type="button" className="pick" key={displayName(x)} onClick={() => choose(x)}><b>{displayName(x)}</b><span>{x.affiliation ? `${x.affiliation}, ` : ''}{si ? 'je ve vaší zprávě' : 'organizátor'}</span></button>)}</div> : null}{si ? <PeoplePick list={uniq} placeholder="Někdo jiný? Začněte psát jméno" onAdd={(x) => choose(x[0]!)} /> : <p className="sm">Chybí tu někdo? <a href={Hash(`/psat/${id}/org`)}>Doplňte organizátory</a></p>}{dropThis}</>;
   } else if (cur.key.startsWith('rekl')) {
-    ask = st0?.speaker ? `Co ${speakerName} řekl${st0.speaker.salutation === 'pan' ? '' : 'a'}?` : 'Co řekl?'; help = 'Může to být jedna věta i celý odstavec. V dokumentu vyjde jako jeden odstavec v uvozovkách, ty doplníme.';
+    ask = st0?.speaker ? (samePerson(st0.speaker, meP) ? 'Co k tomu říkáte?' : `Co ${speakerName} řekl${st0.speaker.salutation === 'pan' ? '' : 'a'}?`) : 'Co řekl?'; help = 'Může to být jedna věta i celý odstavec. V dokumentu vyjde jako jeden odstavec v uvozovkách, ty doplníme.';
     can = !!st0?.quote.trim(); hint = 'Napište, co řekl nebo řekla.';
     if (!st0?.speaker) { body = <Note>Nejdřív vyberte, kdo se vyjádřil. <a href={Hash(`/psat/${id}/kdo${sfx}`)}>Vybrat</a></Note>; can = false; }
     else body = <><label className="l"><span className="vh">Co řekl</span><textarea className="in big" autoFocus maxLength={POINT_LIMITS.quote} value={st0.quote} onChange={(e) => putSt({ ...st0, quote: e.target.value })} placeholder="Například: Robota jsme ladili až do poslední minuty." /></label>
@@ -123,30 +166,33 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   } else {
     const r = Q.readiness(s, p); const try_ = A.trySubmit(s, id);
     ask = 'Takhle to vyjde. Můžeme to poslat?'; help = 'Vedení si to přečte a když bude něco chybět, ozve se vám. Do té doby to můžete vzít zpět.';
-    can = try_.ok; nextText = Q.me(s)?.role === 'headmaster' ? 'Zařadit do porady' : 'Odeslat vedení';
+    can = try_.ok && leadOk; nextText = Q.me(s)?.role === 'headmaster' ? 'Zařadit do porady' : 'Odeslat vedení';
     const ans = (t: string, v: ReactNode, to: string) => <div className="ans" key={`${t}${to}`}><span className="tx"><span className="st">{t}</span><span className="tt">{v}</span></span><a className="btn" href={Hash(`/psat/${id}/${to}`)} aria-label={`Změnit: ${t}`}>Změnit</a></div>;
     body = <>
       {r.problems.length ? <Note err h="Ještě chybí">{r.problems.map((x, i) => <span key={i} className="pl">{copy.readiness.problem(x.code, x.params)}</span>)}</Note> : null}
+      {!(lead?.speaker && isOrg(lead.speaker)) ? <Note err h="Chybí vyjádření organizátora">Zpráva potřebuje vyjádření někoho z organizátorů. <a href={Hash(`/psat/${id}/kdo`)}>Doplnit</a></Note> : null}
       {!try_.ok && try_.why === 'report-not-due' ? <Note err h="Porada už je vygenerovaná">Zprávu už nejde odeslat.</Note> : null}
       <div className="anss">
+        {ans(orgBul?.label ?? 'Organizátoři', orgPeople.map(displayName).join(', ') || 'Nikdo', 'org')}
         {ans('Jak to dopadlo', body0 || 'Zatím nic', 'co')}
-        {c.bullets.map((b, i) => (b.kind === 'people' && b.key !== 'organisers' && b.key !== 'speakers' ? ans(b.label, b.people.map(displayName).join(', ') || 'Nikdo', `lide-${i}`) : b.kind === 'text' ? ans(b.label, b.text || 'Nevyplněno', `text-${i}`) : null))}
-        {(c.statements.length ? c.statements : [null]).map((x, j) => ans(c.statements.length > 1 ? `Vyjádření ${j + 1}` : 'Kdo se vyjádřil', x?.speaker ? <>{displayName(x.speaker)}: „{x.quote}“{c.statements.length > 1 ? <> <button type="button" className="q in-l r" onClick={() => set({ statements: c.statements.filter((_, q) => q !== j) })}>Odebrat</button></> : null}</> : 'Nikdo', j ? `kdo-${j}` : 'kdo'))}
+        {c.bullets.map((b, i) => (b.kind === 'people' && i !== org ? ans(b.label, b.people.map(displayName).join(', ') || 'Nikdo', `lide-${i}`) : b.kind === 'text' ? ans(b.label, b.text || 'Nevyplněno', `text-${i}`) : null))}
+        {(c.statements.length ? c.statements : [null]).map((x, j) => ans(!j ? 'Vyjádření organizátora' : c.statements.length > 2 ? `Další vyjádření ${j}` : 'Další vyjádření', x?.speaker ? <>{displayName(x.speaker)}: „{x.quote}“{j ? <> <button type="button" className="q in-l r" onClick={() => set({ statements: c.statements.filter((_, q) => q !== j) })}>Odebrat</button></> : null}</> : 'Nikdo', j ? `kdo-${j}` : 'kdo'))}
       </div>
       {r.warnings.length ? <p className="sm">{copy.readiness.warning(r.warnings[0]!.code, r.warnings[0]!.params)}</p> : null}
     </>;
   }
   const n = k + 1; const of = steps.length;
   return <App nar noNav
+    over={del ? <Dialog title={p.state === 'returned' ? 'Smazat vrácenou zprávu?' : 'Smazat rozepsanou zprávu?'} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.{p.akceId ? ' O zprávu z akce vás znovu požádáme.' : ''}</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawPoint(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null}
     col={<>
-      <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a></div>
+      <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a><button type="button" className="q r" onClick={() => setDel(true)}>Smazat zprávu</button></div>
       <p className="stn">{c.title || 'Nová zpráva'}, krok {n} z {of}</p><Dots n={n} of={of} />
       {banner}
       <div className="top"><h1 className="ask">{ask}</h1>{help ? <p className="lead">{help}</p> : null}</div>
       {body}
       <div className="pv" aria-label="Takhle to vyjde v dokumentu"><p className="pvh">Takhle to vyjde</p><Sheet built={{ ...sheet, segments: sheet.segments.filter((x) => x.key === id) }} empty={null} /></div>
     </>}
-    dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => { if (si && cur.key.startsWith('kdo') && !st0?.speaker) set({ statements: c.statements.filter((_, q) => q !== si) }); toStep(prev); }}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur.key === 'hotovo') { apply(A.submitPoint(id)); if (Q.me(s)?.role === 'headmaster') apply(A.approvePoint(id)); goReplace(`/zprava/${id}?fresh=1`); } else toStep(next); }}>{nextText}</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
+    dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => { if (si && cur.key.startsWith('kdo') && !st0?.speaker) set({ statements: c.statements.filter((_, q) => q !== si) }); toStep(prev); }}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur.key === 'hotovo') { apply(A.submitPoint(id)); if (Q.me(s)?.role === 'headmaster') apply(A.approvePoint(id)); goReplace(`/zprava/${id}?fresh=1`); } else { if (cur.key === 'org') leadFromOrg(); toStep(next); } }}>{nextText}</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
     desk={<Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn" ref={curRef}><Sheet built={sheet} cls={(x) => (x.key === id ? 'cur live' : '')} empty={<div className="arch"><p className="center">Dokument se objeví, až vyplníte název a datum.</p></div>} /></div></Desk>} />;
 }
 /** A returned report: only what the reviewer asked for, then send again. */

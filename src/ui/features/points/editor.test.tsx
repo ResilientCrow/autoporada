@@ -71,6 +71,7 @@ const editorPage = (
       content={content}
       spec={spec}
       titleGender="f"
+      typeName={null}
       today={TODAY}
       readinessSchoolYear="2026/2027"
       previewSchoolYear="2026/2027"
@@ -417,6 +418,7 @@ describe('PointScreen', () => {
     content: CONTENT,
     spec: SPEC,
     titleGender: 'f' as const,
+    typeName: null,
     today: TODAY,
     readinessSchoolYear: '2026/2027',
     recents: [],

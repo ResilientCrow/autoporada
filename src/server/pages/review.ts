@@ -49,6 +49,7 @@ interface ReviewEditModel {
   readonly kind: PointKind;
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
+  readonly typeName: string | null;
   readonly today: CalDate;
   readonly recents: readonly RecentPerson[];
   readonly directory: 'on' | 'off';
@@ -119,6 +120,7 @@ export async function reviewPointPage(id: string): Promise<ReviewPointPageModel 
         kind: loaded.kind,
         spec: loaded.type?.defaultBullets ?? [],
         titleGender: loaded.type?.titleGender ?? null,
+        typeName: loaded.type?.name ?? null,
         today,
         recents: loaded.kind === 'report' ? await recentsOf(viewer) : [],
         directory: getContainer().directoryMode,

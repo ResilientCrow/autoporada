@@ -224,3 +224,4 @@ html{scroll-padding-bottom:150px}
 @media (prefers-reduced-motion:reduce){.tl{transition:none}}
 .store-load{padding:40px 16px;text-align:center;color:var(--mut,#585a75);font-size:15px}
 .store-full button{margin-left:12px;height:30px;padding:0 12px;border-radius:6px;border:1px solid #fff;background:transparent;color:#fff;font:inherit;cursor:pointer}
+.wzh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 16px}

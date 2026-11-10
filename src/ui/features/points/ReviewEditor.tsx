@@ -26,6 +26,7 @@ export interface ReviewEditorModel {
   /** The type's bullets: which must stay, and which may be taken out. */
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
+  readonly typeName: string | null;
   /** The day the people's classes are worked out for. */
   readonly today: CalDate;
   /** The people the reviewer named lately, to offer first. */
@@ -69,6 +70,7 @@ export function ReviewEditor({
   const report = useReportEdit({
     initial: edit.content,
     titleGender: edit.titleGender,
+    typeName: edit.typeName,
     spec: edit.spec,
     recents: edit.recents,
     onChange: () => setDirty(true),

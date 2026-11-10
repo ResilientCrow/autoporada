@@ -58,6 +58,56 @@ describe('openingSentence', () => {
     expect(openingSentence({ ...base, title, titleGender })).toContain(phrase);
   });
 
+  it('names the type before the title, agreeing with the type', () => {
+    expect(
+      openingSentence({ ...base, title: 'Robotická olympiáda', typeName: 'Seminář' }),
+    ).toContain('proběhl seminář Robotická olympiáda, který organizovali');
+    expect(
+      openingSentence({
+        ...base,
+        title: 'Robotická olympiáda',
+        typeName: 'Projektový den',
+        organisers: [],
+      }),
+    ).toMatch(/proběhl projektový den Robotická olympiáda\.$/);
+  });
+
+  it('leaves the type out when the title already holds it', () => {
+    expect(openingSentence({ ...base, typeName: 'Seminář' })).toContain(
+      'proběhl Vesmírný seminář, který',
+    );
+    expect(
+      openingSentence({ ...base, title: 'Soutez Robotiáda', titleGender: 'f', typeName: 'Soutěž' }),
+    ).toContain('proběhla Soutez Robotiáda, kterou');
+  });
+
+  it('matches the type word only as a whole word', () => {
+    expect(openingSentence({ ...base, title: 'Seminární práce', typeName: 'Seminář' })).toContain(
+      'proběhl seminář Seminární práce',
+    );
+    expect(
+      openingSentence({
+        ...base,
+        title: 'Přednáškový cyklus',
+        titleGender: 'f',
+        typeName: 'Přednáška',
+      }),
+    ).toContain('proběhla přednáška Přednáškový cyklus');
+  });
+
+  it('keeps an acronym type in capitals', () => {
+    expect(
+      openingSentence({ ...base, title: 'Robotiáda', titleGender: 'f', typeName: 'SOČ' }),
+    ).toContain('proběhla SOČ Robotiáda');
+  });
+
+  it('names no type when the gender is unknown', () => {
+    const { titleGender: _unknown, ...rest } = base;
+    expect(openingSentence({ ...rest, title: 'Hackathon', typeName: 'Jiné' })).toContain(
+      'proběhla akce „Hackathon“',
+    );
+  });
+
   it('falls back to „akce“ when the gender is unknown', () => {
     const { titleGender: _unknown, ...rest } = base;
     expect(openingSentence({ ...rest, title: 'Hackathon' })).toContain(

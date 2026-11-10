@@ -216,6 +216,7 @@ describe('pointPage', () => {
         content: LOADED.content,
         spec: SPEC,
         titleGender: 'f',
+        typeName: 'Exkurze',
         today: calDate(2026, 10, 27),
         readinessSchoolYear: '2026/2027',
         recents: RECENTS,
@@ -446,6 +447,7 @@ describe('pointPage', () => {
           content: LOADED.content,
           spec: [],
           titleGender: null,
+          typeName: null,
           recents: [],
         });
         expect(page?.read.content).toBeNull();

@@ -120,6 +120,7 @@ function page(phase: Phase, readOnly: boolean, sending = false): string {
         { key: 'vysledky', label: 'Výsledky', kind: 'text', required: false },
       ]}
       titleGender="f"
+      typeName={null}
       today={calDate(2026, 10, 27)}
       readinessSchoolYear="2026/2027"
       previewSchoolYear="2026/2027"

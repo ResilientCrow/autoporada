@@ -29,7 +29,7 @@ const SPEC: readonly BulletSpec[] = [
   },
   { key: 'ucastnici', label: 'Účastníci', kind: 'people', required: true },
 ];
-const CTX: OpeningContext = { titleGender: 'f', spec: SPEC };
+const CTX: OpeningContext = { titleGender: 'f', typeName: null, spec: SPEC };
 
 const NOVAK = { salutation: 'pan', givenName: 'Jan', familyName: 'Novák' } as const;
 const MALA = { salutation: 'slecna', givenName: 'Eva', familyName: 'Malá' } as const;
@@ -58,7 +58,7 @@ const patched = (content: PointContentWire, name: Parameters<typeof patchFor>[0]
 
 describe('generated', () => {
   it('writes the sentence from the title, date, campus, place and organisers', () => {
-    const sentence = generated(CONTENT, 'f', SPEC);
+    const sentence = generated(CONTENT, 'f', SPEC, null);
     expect(sentence).toContain('14. ledna 2027');
     expect(sentence).toContain('v areálu Radlice');
     expect(sentence).toContain('v\u00a0učebně S206');
@@ -67,28 +67,33 @@ describe('generated', () => {
   });
 
   it('names only the people of the organisers bullet', () => {
-    expect(generated(CONTENT, 'f', SPEC)).not.toContain('Dvořák');
+    expect(generated(CONTENT, 'f', SPEC, null)).not.toContain('Dvořák');
   });
 
   it('uses the title gender of the type', () => {
-    expect(generated(CONTENT, 'm', SPEC)).toContain('proběhl Exkurze do Terezína');
+    expect(generated(CONTENT, 'm', SPEC, null)).toContain('proběhl Exkurze do Terezína');
+    expect(generated(CONTENT, 'm', SPEC, 'Seminář')).toContain(
+      'proběhl seminář Exkurze do Terezína',
+    );
   });
 
   it('is empty while the title is missing', () => {
-    expect(generated({ ...CONTENT, title: '  ' }, 'f', SPEC)).toBe('');
+    expect(generated({ ...CONTENT, title: '  ' }, 'f', SPEC, null)).toBe('');
   });
 
   it('is empty while the start date is missing', () => {
-    expect(generated({ ...CONTENT, eventDate: null }, 'f', SPEC)).toBe('');
+    expect(generated({ ...CONTENT, eventDate: null }, 'f', SPEC, null)).toBe('');
   });
 
   it('is empty rather than throwing for a date it cannot read', () => {
-    expect(generated({ ...CONTENT, eventDate: '0020-13-45' }, 'f', SPEC)).toBe('');
+    expect(generated({ ...CONTENT, eventDate: '0020-13-45' }, 'f', SPEC, null)).toBe('');
   });
 
   it('leaves out an end date that is not after the start', () => {
-    expect(generated({ ...CONTENT, endDate: '2027-01-10' }, 'f', SPEC)).not.toContain('Ve dnech');
-    expect(generated({ ...CONTENT, endDate: '2027-01-15' }, 'f', SPEC)).toContain('Ve dnech');
+    expect(generated({ ...CONTENT, endDate: '2027-01-10' }, 'f', SPEC, null)).not.toContain(
+      'Ve dnech',
+    );
+    expect(generated({ ...CONTENT, endDate: '2027-01-15' }, 'f', SPEC, null)).toContain('Ve dnech');
   });
 });
 
@@ -97,7 +102,7 @@ describe('withOpening, while the author has not edited the sentence', () => {
 
   it('sets the sentence the first time the fields allow one', () => {
     const next = follows(CONTENT);
-    expect(next.opening).toBe(generated(CONTENT, 'f', SPEC));
+    expect(next.opening).toBe(generated(CONTENT, 'f', SPEC, null));
     expect(next.opening).not.toBe('');
     expect(next.openingEdited).toBe(false);
   });
@@ -131,7 +136,7 @@ describe('withOpening, while the author has not edited the sentence', () => {
   });
 
   it('does not touch the rest of the content', () => {
-    expect(follows(CONTENT)).toEqual({ ...CONTENT, opening: generated(CONTENT, 'f', SPEC) });
+    expect(follows(CONTENT)).toEqual({ ...CONTENT, opening: generated(CONTENT, 'f', SPEC, null) });
   });
 });
 
@@ -172,7 +177,7 @@ describe('withOpening, once the author has edited the sentence', () => {
 });
 
 describe('noticeShown', () => {
-  const basis = generated(CONTENT, 'f', SPEC);
+  const basis = generated(CONTENT, 'f', SPEC, null);
   const EDITED = typed(withOpening(CONTENT, CTX), 'Moje věta.');
 
   it('is hidden while the sentence follows the fields', () => {
@@ -185,7 +190,9 @@ describe('noticeShown', () => {
   });
 
   it('is hidden after a reload with edited text: the basis is the sentence of the loaded fields', () => {
-    expect(noticeShown(EDITED, CTX, generated(EDITED, CTX.titleGender, CTX.spec))).toBe(false);
+    expect(
+      noticeShown(EDITED, CTX, generated(EDITED, CTX.titleGender, CTX.spec, CTX.typeName)),
+    ).toBe(false);
   });
 
   it('appears when a field changes what the sentence would say', () => {
@@ -212,7 +219,7 @@ describe('noticeShown', () => {
 
   it('is hidden while the fields make no sentence, and back when they make another one', () => {
     const cleared = patched(EDITED, 'title', '');
-    expect(generated(cleared, CTX.titleGender, CTX.spec)).toBe('');
+    expect(generated(cleared, CTX.titleGender, CTX.spec, CTX.typeName)).toBe('');
     expect(noticeShown(cleared, CTX, basis)).toBe(false);
     expect(noticeShown(patched(cleared, 'title', 'Výlet'), CTX, basis)).toBe(true);
     expect(noticeShown(patched(EDITED, 'eventDate', ''), CTX, basis)).toBe(false);
@@ -220,7 +227,7 @@ describe('noticeShown', () => {
 
   it('is hidden after „Ponechat“: the basis becomes the current sentence', () => {
     const away = patched(EDITED, 'title', 'Výlet');
-    const kept = generated(away, CTX.titleGender, CTX.spec);
+    const kept = generated(away, CTX.titleGender, CTX.spec, CTX.typeName);
     expect(noticeShown(away, CTX, kept)).toBe(false);
     expect(noticeShown(patched(away, 'title', 'Jiný'), CTX, kept)).toBe(true);
   });
@@ -235,7 +242,7 @@ describe('replaced („Ano, nahradit“)', () => {
 
   it('gives the sentence back to the fields, which one recompute then writes', () => {
     const next = withOpeningEdit(edit(replaced(away)), CTX).content;
-    expect(next.opening).toBe(generated(away, 'f', SPEC));
+    expect(next.opening).toBe(generated(away, 'f', SPEC, null));
     expect(next.openingEdited).toBe(false);
     expect(withOpening(patched(next, 'place', 'v Aule'), CTX).opening).toContain('v Aule');
   });
@@ -251,12 +258,12 @@ describe('basisAfterTyping', () => {
 
   it('becomes the sentence of the fields on the keystroke that makes the text the author’s', () => {
     const before = withOpening(CONTENT, CTX);
-    expect(basisAfterTyping(before, '', CTX)).toBe(generated(CONTENT, 'f', SPEC));
+    expect(basisAfterTyping(before, '', CTX)).toBe(generated(CONTENT, 'f', SPEC, null));
   });
 
   it('is the sentence of the fields as they are, not of an earlier state', () => {
     const before = withOpening(patched(CONTENT, 'title', 'Výlet'), CTX);
-    expect(basisAfterTyping(before, generated(CONTENT, 'f', SPEC), CTX)).toContain('Výlet');
+    expect(basisAfterTyping(before, generated(CONTENT, 'f', SPEC, null), CTX)).toContain('Výlet');
   });
 
   it('never moves while the text is already the author’s, even after a field changed', () => {
@@ -283,7 +290,7 @@ describe('keptBasis („Ponechat“)', () => {
   it('is the sentence the fields make now', () => {
     const away = patched(typed(withOpening(CONTENT, CTX), 'Moje věta.'), 'title', 'Výlet');
     const basis = keptBasis(away, CTX);
-    expect(basis).toBe(generated(away, 'f', SPEC));
+    expect(basis).toBe(generated(away, 'f', SPEC, null));
     expect(basis).toContain('Výlet');
     expect(noticeShown(away, CTX, basis)).toBe(false);
   });
@@ -313,7 +320,7 @@ describe('withOpeningEdit', () => {
 
   it('keeps the bullets and recomputes the content', () => {
     expect(start.bullets).toEqual(keyBullets(CONTENT.bullets));
-    expect(start.content.opening).toBe(generated(CONTENT, 'f', SPEC));
+    expect(start.content.opening).toBe(generated(CONTENT, 'f', SPEC, null));
   });
 
   it('drops the organisers from the sentence when their bullet is taken out', () => {

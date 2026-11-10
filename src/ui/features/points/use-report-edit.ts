@@ -47,6 +47,7 @@ export type ReportEdit = ReturnType<typeof useReportEdit>;
 export function useReportEdit({
   initial,
   titleGender,
+  typeName,
   spec,
   recents,
   onChange,
@@ -54,6 +55,8 @@ export function useReportEdit({
   readonly initial: PointContentWire;
   /** The type's grammatical gender for the opening sentence; null where it is not known („Jiné“). */
   readonly titleGender: TitleGender | null;
+  /** The type's name, which the opening sentence puts before the title. */
+  readonly typeName: string | null;
   /** The type's bullets: which must stay, and which may be taken out. */
   readonly spec: readonly BulletSpec[];
   /** The people the editing user named lately, which the speakers follow too. */
@@ -79,11 +82,11 @@ export function useReportEdit({
     [],
   );
 
-  const ctx: OpeningContext = { titleGender, spec };
+  const ctx: OpeningContext = { titleGender, typeName, spec };
   // What the fields made when the text became the author's or when they chose to keep it,
   // in this page's memory only: a reload starts from what the loaded fields make, with no
   // notice. Only those two moments (and the load) move it; an answer resolves a notice.
-  const [basis, setBasis] = useState(() => generated(initial, titleGender, spec));
+  const [basis, setBasis] = useState(() => generated(initial, titleGender, spec, typeName));
   // The question „Nahradit vaši větu novou?“ is open.
   const [asking, setAsking] = useState(false);
 

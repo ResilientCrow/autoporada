@@ -21,7 +21,8 @@ export const pointTypes = {
     },
     titleGender: {
       label: 'Rod názvu',
-      description: 'Podle něj se ohýbá úvodní věta bodu („proběhl“, „proběhla“ …).',
+      description:
+        'Rod názvu typu. Podle něj se ohýbá úvodní věta bodu („proběhl seminář …“, „proběhla soutěž …“). Název typu se ve větě píše s\u00a0malým písmenem, zkratky jako SOČ zůstávají.',
       options: {
         none: 'Neurčeno (věta začne slovem „akce“)',
         m: 'Mužský rod (proběhl)',

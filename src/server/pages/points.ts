@@ -79,6 +79,7 @@ interface PointEditorModel {
   readonly content: LoadedPoint['content'];
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
+  readonly typeName: string | null;
   readonly today: CalDate;
   readonly readinessSchoolYear: string;
   readonly recents: readonly RecentPerson[];
@@ -123,6 +124,7 @@ function shaped(
           content,
           spec: type?.defaultBullets ?? [],
           titleGender: type?.titleGender ?? null,
+          typeName: type?.name ?? null,
           today,
           readinessSchoolYear: schoolYear(today),
           recents,

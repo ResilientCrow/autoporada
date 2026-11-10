@@ -63,6 +63,7 @@ export function PointEditor({
   content: initial,
   spec,
   titleGender,
+  typeName,
   today,
   readinessSchoolYear,
   previewSchoolYear,
@@ -85,6 +86,7 @@ export function PointEditor({
   readonly spec: readonly BulletSpec[];
   /** The type's grammatical gender for the opening sentence; null where it is not known („Jiné“). */
   readonly titleGender: TitleGender | null;
+  readonly typeName: string | null;
   /** The day the people's classes are worked out for. */
   readonly today: CalDate;
   /** Today's school year („2026/2027“): the one the submit checks the classes against (use-cases/points/submit.ts), so the readiness list must too. */
@@ -108,6 +110,7 @@ export function PointEditor({
   const report = useReportEdit({
     initial,
     titleGender,
+    typeName,
     spec,
     recents,
     onChange: (next) => autosave.onChange(next),

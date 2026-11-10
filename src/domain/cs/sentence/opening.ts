@@ -3,6 +3,7 @@ import { isSameDate, type CalDate, type WallTime } from '@/domain/time';
 import { formatLongDate, formatLongRange, formatProseTimeRange, onWeekday } from '../dates/format';
 import { SALUTATION } from '../names/person';
 import { renderPeople, type Person } from '../people/list';
+import { searchWords } from '../sort/fold';
 
 /**
  * Grammatical gender and number of an event title, chosen by an admin per
@@ -79,14 +80,32 @@ export interface OpeningInput {
   readonly title: string;
   /** Unknown (type „Jiné“): the sentence says „proběhla akce „…““, always correct. */
   readonly titleGender?: TitleGender;
+  /** The point type („Seminář“), said before the title with `titleGender` as its own gender. */
+  readonly typeName?: string;
   readonly organisers: readonly Person[];
+}
+
+/** „seminář Robotická olympiáda“; the title alone when it already holds the type („Vesmírný seminář“). */
+function namedTitle(title: string, typeName: string | undefined): string {
+  const noun = typeName?.trim() ?? '';
+  if (noun === '' || holdsWords(searchWords(title), searchWords(noun))) return title;
+  // „Seminář“ becomes „seminář“; an acronym („SOČ“) keeps its capitals.
+  const word = /^\p{Lu}\p{Ll}/u.test(noun)
+    ? noun.charAt(0).toLocaleLowerCase('cs') + noun.slice(1)
+    : noun;
+  return `${word} ${title}`;
+}
+
+/** Whether the words run in order, whole, somewhere in the text: „Seminární práce“ does not hold „seminář“. */
+function holdsWords(text: readonly string[], words: readonly string[]): boolean {
+  return words.length > 0 && text.some((_, i) => words.every((w, k) => text[i + k] === w));
 }
 
 /**
  * The pre-written first sentence of a report point, in the template's style:
  * „Ve středu 14. října 2026 od 10.00 do 12.00 hodin v areálu Smíchov
- * v učebně S206 proběhl Vesmírný seminář, který organizovali slečna Eva Malá
- * a pan Jan Novák (oba 3.B).“ The submitter edits it freely afterwards.
+ * v učebně S206 proběhl seminář Robotická olympiáda, který organizovali slečna
+ * Eva Malá a pan Jan Novák (oba 3.B).“ The submitter edits it freely afterwards.
  */
 export function openingSentence(input: OpeningInput): string {
   // formatLongRange throws on a range that ends before it starts.
@@ -100,7 +119,8 @@ export function openingSentence(input: OpeningInput): string {
     .join(' ');
 
   const gender: TitleGender = input.titleGender ?? 'f';
-  const what = input.titleGender ? input.title.trim() : `akce „${input.title.trim()}“`;
+  const title = input.title.trim();
+  const what = input.titleGender ? namedTitle(title, input.typeName) : `akce „${title}“`;
   const main = [when, time, where, PAST_TENSE[gender], what].filter(Boolean).join(' ');
 
   if (input.organisers.length === 0) return `${main}.`;

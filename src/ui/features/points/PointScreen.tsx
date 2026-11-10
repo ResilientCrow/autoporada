@@ -51,6 +51,7 @@ interface PointEditorModel {
   readonly content: PointContentWire;
   readonly spec: readonly BulletSpec[];
   readonly titleGender: TitleGender | null;
+  readonly typeName: string | null;
   readonly today: CalDate;
   readonly readinessSchoolYear: string;
   readonly recents: readonly RecentPerson[];
@@ -124,6 +125,7 @@ export function PointScreen({
           content={editor.content}
           spec={editor.spec}
           titleGender={editor.titleGender}
+          typeName={editor.typeName}
           today={editor.today}
           readinessSchoolYear={editor.readinessSchoolYear}
           previewSchoolYear={placementYear(standing, editor.readinessSchoolYear)}

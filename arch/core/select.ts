@@ -1,6 +1,6 @@
 import { eventEnd, issueSlots, owedPorada, reportCloses, slotMondayOf, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
 import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, suggestGenitive, weekdayName, type Salutation } from '@/domain/cs';
-import { missingForSubmit, reportBody, type PointContent } from '@/domain/report';
+import { missingForSubmit, reportBody, type DraftPerson, type PointContent } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText } from '@/domain/richtext';
 import { addDays, compareDates, instantToWallClock, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
@@ -24,6 +24,8 @@ export const charsLeft = (n: number) => `${n >= 2 && n <= 4 ? 'Zbývají' : 'Zb�
 export const atLeast = (r: Role | undefined, m: Role) => { const o: Role[] = ['pending', 'submitter', 'reviewer', 'headmaster']; return r ? o.indexOf(r) >= o.indexOf(m) : false; };
 export const ruleOf = (s: State): DeadlineRule => ({ dayOffset: s.settings.dayOffset, time: parseWallTime(s.settings.time) });
 export const yearOf = (s: State) => schoolYear(todayOf(s));
+/** The signed-in user as a person of a report, with their class or job for this school year. */
+export const mePerson = (s: State): DraftPerson => { const u = me(s)!; return { salutation: u.salutation, givenName: u.givenName, familyName: u.familyName, ...(u.affiliation && { affiliation: u.affiliation, affiliationYear: yearOf(s) }) }; };
 
 const row = (i: Issue) => ({ monday: parseIsoDate(i.monday), meetingDate: parseIsoDate(i.meetingDate), deadlineAt: new Date(i.deadlineAt), status: i.status });
 export const rowsOf = (s: State) => s.issues.map(row);

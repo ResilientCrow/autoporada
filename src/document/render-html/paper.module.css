@@ -52,15 +52,19 @@
   font-weight: bold;
 }
 
+/* Number at 170, text at 527; a number wider than the gap pushes the text on, as Word's tab does. */
 .point {
-  position: relative;
   padding-left: calc(527 * var(--tw));
+  text-indent: calc(-357 * var(--tw));
   font-weight: bold;
 }
 
 .point .number {
-  position: absolute;
-  left: calc(170 * var(--tw));
+  display: inline-block;
+  box-sizing: border-box;
+  min-width: calc(357 * var(--tw));
+  padding-right: 0.3em;
+  text-indent: 0;
 }
 
 .body {

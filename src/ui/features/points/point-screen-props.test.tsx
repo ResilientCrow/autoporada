@@ -41,6 +41,7 @@ const render = (standing: object | null, today = calDate(2027, 8, 29)) =>
           content: {} as never,
           spec: [],
           titleGender: null,
+          typeName: null,
           today,
           readinessSchoolYear: '2026/2027',
           recents: [],
