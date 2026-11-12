@@ -70,13 +70,17 @@ const run = (page: Page, name: string, input: unknown) =>
     [name, input] as const,
   );
 
+/** The wizard's forward button: „Přeskočit“ on an optional step left empty, else „Pokračovat“. */
+const onward = (page: Page) => page.getByRole('button', { name: /^(Pokračovat|Přeskočit)$/ });
+
 async function sendAkce(page: Page, title: string): Promise<void> {
   await page.getByRole('button', { name: 'Nová akce' }).click();
   await page.getByRole('textbox', { name: 'Název' }).fill(title);
   await page.getByRole('button', { name: 'Pokračovat' }).click();
   await page.getByLabel('Den', { exact: true }).fill(isoInDays(11));
-  for (let step = 0; step < 3; step += 1) {
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
+  // Kdy, then Kde, Kdo and Poznámka, which are optional and left empty.
+  for (let step = 0; step < 4; step += 1) {
+    await onward(page).click();
   }
   await page.getByRole('button', { name: 'Odeslat vedení' }).click();
   await expect(page.getByRole('heading', { name: 'Hotovo, je to u vedení' })).toBeVisible();
@@ -124,9 +128,18 @@ test.describe('the Arch UI', () => {
     await page.getByLabel('Den', { exact: true }).fill(isoInDays(10));
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(page.getByRole('heading', { name: 'Kde to bude?' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Přeskočit' })).toBeVisible();
+    await page.getByRole('button', { name: 'Přeskočit' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Kdo to organizuje a kdo se zúčastní?' }),
+    ).toBeVisible();
+    await page.getByLabel(/^Organizátor/).fill('organizuje paní zástupkyně Jana Nováková');
+    await page.getByLabel(/^Účastníci/).fill('účast slečna Tereza Malá (3.B)');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
-    await expect(page.getByRole('heading', { name: 'Kdo to má na starosti?' })).toBeVisible();
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Chcete k tomu ještě něco připsat?' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Přeskočit' }).click();
     await expect(
       page.getByRole('heading', { name: 'Takhle to vyjde. Můžeme to poslat?' }),
     ).toBeVisible();
@@ -135,6 +148,16 @@ test.describe('the Arch UI', () => {
 
     // The draft and the submit reached the server, not only the page's store.
     await expect.poll(async () => (await futureOf(email, title))?.state).toBe('submitted');
+    const typed = await withClient((c) =>
+      c.query<{ organizer: string; participants: string }>(
+        `SELECT organizer, participants FROM future_items WHERE title = $1`,
+        [title],
+      ),
+    );
+    expect(typed.rows[0]).toEqual({
+      organizer: 'organizuje paní zástupkyně Jana Nováková',
+      participants: 'účast slečna Tereza Malá (3.B)',
+    });
     const id = (await futureOf(email, title))!.id;
 
     const head = await signInElsewhere(newContext, headmaster(project));
@@ -300,38 +323,18 @@ test.describe('the Arch UI', () => {
     await forgetFutureOf(email);
     await signInAs(headmaster(testInfo.project.name));
 
-    // A date with nobody behind it: no place, no person, no report owed.
+    // The headmaster's akce goes through the same steps and needs no second person to approve it.
     await page.goto('/#/pridat');
-    await page.getByRole('button', { name: /Termín bez organizátora/ }).click();
-    await expect(page.getByRole('heading', { name: 'Co je to za termín?' })).toBeVisible();
-    await page.getByRole('textbox', { name: 'Název' }).fill('podzimní prázdniny');
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
-    await page.getByLabel('Den', { exact: true }).fill(isoInDays(40));
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
-    await expect(
-      page.getByRole('heading', { name: 'Takhle to vyjde. Zařadíme to?' }),
-    ).toBeVisible();
-    await page.getByRole('button', { name: 'Zařadit do porady' }).click();
-    await expect(page.getByRole('heading', { name: 'Hotovo, je to v poradě' })).toBeVisible();
-    await expect
-      .poll(async () => (await futureOf(email, 'podzimní prázdniny'))?.state)
-      .toBe('approved');
-
-    // An akce keeps its whole wizard and needs no second person to approve it.
-    await page.getByRole('link', { name: 'Přidat další' }).click();
     await page.getByRole('button', { name: /Přidat akci, podle data/ }).click();
     await page.getByRole('textbox', { name: 'Název' }).fill('Den otevřených dveří');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await page.getByLabel('Den', { exact: true }).fill(isoInDays(50));
-    for (let i = 0; i < 2; i += 1) await page.getByRole('button', { name: 'Pokračovat' }).click();
-    // Anyone can be named, not only somebody with an account.
-    await page.getByLabel('Jména').fill('Tereza Malá (3.B)');
-    await page.getByLabel('Jména').press('Enter');
-    await page
-      .getByRole('radiogroup', { name: 'Oslovení: Tereza Malá' })
-      .getByRole('radio', { name: 'slečna' })
-      .click();
-    await page.getByRole('button', { name: 'Pokračovat' }).click();
+    await onward(page).click();
+    await onward(page).click();
+    // Anyone can be named, as free text.
+    await page.getByLabel(/^Organizátor/).fill('organizuje Tereza Malá (3.B)');
+    await onward(page).click();
+    await onward(page).click();
     await page.getByRole('button', { name: 'Zařadit do porady' }).click();
     await expect
       .poll(async () => (await futureOf(email, 'Den otevřených dveří'))?.state)
@@ -392,7 +395,7 @@ test.describe('the Arch UI', () => {
     await page.goto(`/#/akce/${again.id}`);
     await page.getByRole('button', { name: 'Stejné na jiný den' }).click();
     await page.getByLabel('Den', { exact: true }).fill(isoInDays(57));
-    for (let i = 0; i < 3; i += 1) await page.getByRole('button', { name: 'Pokračovat' }).click();
+    for (let i = 0; i < 4; i += 1) await onward(page).click();
     await page.getByRole('button', { name: 'Zařadit do porady' }).click();
     await expect
       .poll(async () =>

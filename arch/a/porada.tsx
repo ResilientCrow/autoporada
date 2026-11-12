@@ -120,7 +120,7 @@ export function Prilohy({ id }: { id?: string }) {
 /** Every list of the document, in its order: the headmaster's way to put anything in, with no approval step. */
 export function Pridat() {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const rows = iss?.rows ?? [];
-  const future = (k: 'akce' | 'jednani', term?: boolean) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); if (term) apply(A.saveFuture(id, { campus: 'jinde', responsible: { verb: 'vede', people: [] } })); go(`/nova-akce/${id}`); };
+  const future = (k: 'akce' | 'jednani') => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
   const item = (r: Row) => {
     if (r.slot === 'meetings') return <Item key={r.id} act={() => future('jednani')} t={r.title} st="Přidat jednání" />;
@@ -135,7 +135,6 @@ export function Pridat() {
     <Sec h="Provoz školy">
       <Item act={report} t="Zpráva o tom, co proběhlo" st="Vlastní bod s účastníky a vyjádřením" />
       <Item act={() => future('akce')} t="Další doposud známé akce" st="Přidat akci, podle data se zařadí sama" />
-      <Item act={() => future('jednani', true)} t="Termín bez organizátora" st="Prázdniny a podobně, zprávu po něm nikdo nepíše" />
     </Sec>
     {iss ? <Sec h="Záhlaví a přílohy"><Item to="/porada/udaje" t="Přítomní a hosté" /><Item to="/porada/prilohy" t="Přílohy" st="Text, tabulka nebo obrázek" /></Sec> : null}
   </>} />;

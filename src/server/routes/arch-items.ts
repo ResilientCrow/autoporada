@@ -105,7 +105,6 @@ export function archItems({
       timeTo: ct.timeTo,
       campus: ct.campus,
       place: ct.place ?? '',
-      responsible: ct.responsible ?? { verb: 'organizuje', people: [] },
       organizer: ct.organizer ?? '',
       participants: ct.participants ?? '',
       remark: ct.note ?? '',

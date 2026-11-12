@@ -134,14 +134,14 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 ### One question at a time (`NovaAkce` in `akce.tsx`, `Wizard` in `write.tsx`)
 
 - Narrow layout `<App nar noNav ...>`: a „Odejít, rozepsané zůstane uložené" link, „Nová akce, krok 2 z 5" text, segmented progress bar `.steps` (gold for done), one big question `.ask` plus optional `.lead` help, the single input, and a `.dock` with `Zpět` and `Pokračovat` (`.wzb`). A disabled step shows `.btn.off` and a `.hint` with the reason.
-- `NovaAkce` steps: `nazev`, `kdy`, `kde`, `kdo`, `hotovo` (a date with no organiser skips `kde` and `kdo`). The last step asks „Takhle to vyjde. Zařadíme to?" (headmaster, goes straight into the porada) or „Můžeme to poslat?".
+- `NovaAkce` steps, the same for everyone and both kinds (ADR 0060): `nazev`, `kdy`, `kde` (Areál, Místo), `kdo` (Organizátor and Účastníci, free text), `poznamka`, `hotovo`. Only Název and Den block „Pokračovat“; an optional step whose fields are all empty (Kde counts as empty while Areál and Místo are) shows „Přeskočit“ in its place, as `Wizard` does for bullets. Od and Do hide, and their times clear, once Poslední den is after Den. The preview line is the document's own (`futureBullet`): date, time, areál, místo, název, poznámka, organizátor, účastníci. The last step asks „Takhle to vyjde. Zařadíme to?" (headmaster, goes straight into the porada) or „Můžeme to poslat?".
 - Document preview: desktop shows the sheet on the desk (`focusOn` cuts it to the title, the section and your part); phone shows the same line inside `.pv` ("Takhle to vyjde") because the desk is hidden. Always provide both.
 - Steps are route segments (`/nova-akce/<id>/<step>`, `/psat/<id>/<step>`); drafts autosave through `apply`.
 
 ### „Přidat do porady" (`Pridat` in `porada.tsx`, route `pridat`)
 
 - Headmaster only: `main.tsx` renders `<Pridat />` when `head`, else `NotFound`. Entered from the `.add` button on the porada screen.
-- Lists every list of the document in document order: the `pokyny` rows, then `hospodareni` rows (each section ends with „Nový bod"), then „Provoz školy" (report, further akce, term without organiser), then „Záhlaví a přílohy" (when an issue exists). Row behaviour follows `Row.slot`: `meetings` and `events` start a new jednání or akce (`Item act`), `talent` and `exemptions` go to `/seznamy`, others open `/porada/pokyny/<id>`.
+- Lists every list of the document in document order: the `pokyny` rows, then `hospodareni` rows (each section ends with „Nový bod"), then „Provoz školy" (report, further akce), then „Záhlaví a přílohy" (when an issue exists). Row behaviour follows `Row.slot`: `meetings` and `events` start a new jednání or akce (`Item act`), `talent` and `exemptions` go to `/seznamy`, others open `/porada/pokyny/<id>`.
 - It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde."
 
 ### A write, end to end

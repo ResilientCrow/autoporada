@@ -1,5 +1,5 @@
 import type { Campus, ResponsibleVerb, Salutation } from '@/domain/cs';
-import type { BulletSpec, DraftPerson, PointContent, PointKind, Responsible } from '@/domain/report';
+import type { BulletSpec, DraftPerson, PointContent, PointKind } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import type { Statement, SystemSlot } from '@/domain/outline';
 import type { RichDoc } from '@/domain/richtext';
@@ -21,7 +21,7 @@ export interface Point {
 }
 export interface Future {
   id: string; kind: 'jednani' | 'akce'; authorId: string; title: string; date: CalDate; endDate: CalDate | null;
-  timeFrom: WallTime | null; timeTo: WallTime | null; campus: Campus | null; place: string; responsible: Responsible; /** Free texts (ADR 0060); `remark` is the Poznámka, `note` is the reviewer's return note. */ organizer: string; participants: string; remark: string;
+  timeFrom: WallTime | null; timeTo: WallTime | null; campus: Campus | null; place: string; /** Free texts (ADR 0060); `remark` is the Poznámka, `note` is the reviewer's return note. */ organizer: string; participants: string; remark: string;
   state: FutureState; changed: boolean; /** Approved once, even if back in review since: cancelled, never deleted (ADR 0057). */ wasApproved: boolean; note: string | null; parts: string[] | null; report: ReportState; submittedAt: string | null; savedAt: string; trail: Trail[]; dateSet?: boolean;
 }
 export interface Row {

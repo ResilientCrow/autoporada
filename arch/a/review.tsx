@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { futureBullet } from '@/document/compose/future';
 import { displayName } from '@/domain/report';
 import { fromText, go, Sheet, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
@@ -60,7 +61,7 @@ export function Kontrola({ id }: { id?: string }) {
       </>} />;
   }
   const f = cur.f;
-  return <App nar over={over} dock={dock} desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch"><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl cur"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><p className="ln0">- {Q.dm(f.date)}{f.place ? `, ${f.place}` : ''}: {f.title}, {f.responsible.people.map(displayName).join(', ')}</p></div></div></div></Desk>} col={<>
+  return <App nar over={over} dock={dock} desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch"><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl cur"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><p className="ln0">{'\u2022 '}{(futureBullet(Q.futureSnap(f) as never) as unknown as { runs: { text: string }[] }).runs[0]!.text}</p></div></div></div></Desk>} col={<>
     <Back to={home} t="Zpět domů" />
     <p className="stn">{idx}. z {q.length} ke kontrole</p>
     <Top h={f.title} lead={`${f.changed ? 'Změna schválené akce' : f.kind === 'akce' ? 'Nová akce' : 'Nová schůzka'}, ${Q.dm(f.date)} Autor: ${Q.nameOf(au)}.`} />

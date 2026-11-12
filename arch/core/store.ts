@@ -53,7 +53,7 @@ export function createPoint(kind: PointKind, typeId: string | null, akceId: stri
     const u = me(s)!; const akce = s.futures.find((f) => f.id === akceId);
     let content = newDraft(kind === 'report' ? type?.bullets ?? [] : []);
     if (akce) {
-      content = { ...content, title: akce.title, eventDate: akce.date, endDate: akce.endDate, timeFrom: akce.timeFrom, timeTo: akce.timeTo, campus: akce.campus, place: akce.place || null, bullets: content.bullets.map((b) => (b.kind === 'people' && (b.key === 'organisers' || b.key === 'speakers') ? { ...b, people: akce.responsible.people } : b)) };
+      content = { ...content, title: akce.title, eventDate: akce.date, endDate: akce.endDate, timeFrom: akce.timeFrom, timeTo: akce.timeTo, campus: akce.campus, place: akce.place || null };
     } else if (kind === 'report' && u) {
       content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
     }
@@ -132,7 +132,7 @@ export function createFuture(kind: Future['kind'], onId?: (id: string) => void):
   return (s0) => {
     const [s, fid] = id(s0, 'f'); const u = me(s)!; onId?.(fid);
     const tomorrow = parseIsoDate(toIsoDate(handInTo(s).monday));
-    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: null, place: '', organizer: '', participants: '', remark: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, wasApproved: false, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
+    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: null, place: '', organizer: '', participants: '', remark: '', state: 'draft', changed: false, wasApproved: false, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
     return { ...s, futures: [...s.futures, f] };
   };
 }
