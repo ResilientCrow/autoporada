@@ -2,6 +2,7 @@ import { readReportsSince } from '@/application/core';
 import type { FutureItemRecord, PointRecord, Tx } from '@/application/ports';
 import { lateFacts, reportCloses, type PoradaClose } from '@/domain/calendar';
 import { placeholderParagraph } from '@/domain/cs';
+import { placeholderChecked } from '@/domain/review';
 import { richDocFromText, singleLine } from '@/domain/richtext';
 import { addDays, compareDates, toIsoDate, type CalDate } from '@/domain/time';
 import type { SnapshotReport } from '@/snapshot';
@@ -63,6 +64,27 @@ export async function missingReportOf(
     eligible,
   );
   return missing[0] ?? null;
+}
+
+/**
+ * The placeholders among `missing` the headmaster has not checked (ADR 0061), by the akce's date:
+ * no confirmation, or one that is not the paragraph the system writes now.
+ */
+export async function uncheckedPlaceholders(
+  tx: Pick<Tx, 'reportPlaceholders'>,
+  missing: readonly MissingReport[],
+): Promise<{ id: string; title: string }[]> {
+  const stored = new Map(
+    (await tx.reportPlaceholders.many(missing.map((m) => m.akce.id))).map((s) => [
+      s.futureItemId,
+      s.confirmedOriginal,
+    ]),
+  );
+  return missing.flatMap(({ akce }) => {
+    const basis = systemParagraph(akce);
+    if (basis === null || placeholderChecked(stored.get(akce.id) ?? null, basis)) return [];
+    return [{ id: akce.id, title: singleLine(akce.content.title) }];
+  });
 }
 
 /** When hand-in closes for the akce at `porada` (ADR 0035); null for an akce without a start date. */

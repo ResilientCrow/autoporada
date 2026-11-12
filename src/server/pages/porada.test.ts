@@ -334,6 +334,7 @@ describe('previewPage', () => {
       monday: '2026-11-09',
       version: 3,
       blocked: true,
+      unchecked: 0,
     });
     answer({
       'issues.workspace': { working: null, slot: SLOT },

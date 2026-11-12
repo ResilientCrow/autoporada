@@ -7,7 +7,12 @@ import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 import { parseIssueSnapshot, SNAPSHOT_SCHEMA_VERSION } from '@/snapshot';
 
 import { futureItemOf, inAgendaWindow } from './assemble-future';
-import { missingReports, owedAkce, placeholderReports } from './assemble-missing';
+import {
+  missingReports,
+  owedAkce,
+  placeholderReports,
+  uncheckedPlaceholders,
+} from './assemble-missing';
 import { assembleOutline } from './assemble-outline';
 import { assembleRegistry } from './assemble-registry';
 import { assembleReports } from './assemble-reports';
@@ -131,6 +136,7 @@ export async function assembleIssueSnapshot(
         title: singleLine(akce.content.title),
         state: report?.state ?? ('none' as const),
       })),
+      uncheckedPlaceholders: await uncheckedPlaceholders(tx, missing),
       annex1Entries: registry.annex1Entries,
       newEntries: registry.newEntries,
       ohlasyEmpty: outline.ohlasyEmpty,

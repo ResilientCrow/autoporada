@@ -62,6 +62,11 @@ export interface AssemblyFacts {
     readonly title: string;
     readonly state: 'none' | PointState;
   }[];
+  /**
+   * Of those, the placeholders the headmaster has not checked (ADR 0061): the paragraph confirmed is
+   * not the one the system writes now. A warning before generating, never a refusal.
+   */
+  readonly uncheckedPlaceholders: readonly { readonly id: string; readonly title: string }[];
   readonly annex1Entries: number;
   readonly newEntries: number;
   /** Media and partners both have nothing in them. */

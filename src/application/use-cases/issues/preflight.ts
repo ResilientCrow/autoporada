@@ -12,6 +12,7 @@ type FindingCode =
   | 'akce-waiting'
   | 'late-reports-expected'
   | 'reports-missing'
+  | 'placeholders-unchecked'
   | 'proposal-dropped'
   | 'deadline-ahead'
   | 'source-not-generated'
@@ -92,6 +93,17 @@ export function preflight(
       code: 'reports-missing',
       level: 'warn',
       refs: facts.missingReports.map(({ id, title }) => ({ id, title, of: 'akce' as const })),
+    });
+  }
+  if (facts.uncheckedPlaceholders.length > 0) {
+    add({
+      code: 'placeholders-unchecked',
+      level: 'warn',
+      refs: facts.uncheckedPlaceholders.map(({ id, title }) => ({
+        id,
+        title,
+        of: 'akce' as const,
+      })),
     });
   }
   if (facts.dropped.length > 0)

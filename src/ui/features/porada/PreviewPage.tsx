@@ -44,6 +44,16 @@ export function PreviewPage({
             <ArrowLink href={`/porada/${view.monday}`}>{porada.preview.back}</ArrowLink>
           </p>
         )}
+        {view.generated === null && view.generate !== null && view.generate.unchecked > 0 && (
+          <Notice tone="problem" live={false}>
+            <p className="font-bold">{porada.generate.unchecked.banner}</p>
+            <p>
+              <ArrowLink href={`/porada/${view.monday}/zpravy`}>
+                {porada.generate.unchecked.check}
+              </ArrowLink>
+            </p>
+          </Notice>
+        )}
         {view.generated === null ? (
           <Preflight findings={view.findings} editMonday={view.canEdit ? view.monday : null} />
         ) : (

@@ -57,6 +57,20 @@ export const porada = {
     confirm: 'Rozumím, že vygenerovanou poradu už nelze změnit.',
     unconfirmed: 'Potvrďte prosím vygenerování.',
     submit: 'Vygenerovat dokument',
+    /** Unchecked placeholders for missing reports (ADR 0061): a banner above the preflight, and a confirmation before generating. */
+    unchecked: {
+      banner:
+        'Některé odstavce za nedodané zprávy nejsou zkontrolované. Vyjdou tak, jak je napsal systém.',
+      check: 'Zkontrolovat odstavce',
+      title: 'Nezkontrolované odstavce',
+      /** „1 odstavec … Vyjde tak, jak ho napsal systém.“, 2 to 4 and 5 or more with the plural. */
+      confirm: (n: number) =>
+        n === 1
+          ? '1 odstavec za nedodanou zprávu jste nezkontrolovali. Vyjde tak, jak ho napsal systém.'
+          : `${n} ${n >= 2 && n <= 4 ? 'odstavce' : 'odstavců'} za nedodané zprávy jste nezkontrolovali. Vyjdou tak, jak je napsal systém.`,
+      goCheck: 'Zkontrolovat',
+      anyway: 'Vygenerovat i\u00a0tak',
+    },
     /** On the workspace of an open porada: the button is on the preview. */
     where: 'Dokument vygenerujete v\u00a0náhledu, až ho zkontrolujete.',
     open: 'Zkontrolovat a\u00a0vygenerovat',
@@ -288,6 +302,8 @@ export const porada = {
         'Zprávy z\u00a0již skončených akcí se ještě mohou odevzdat po uzávěrce a\u00a0v\u00a0dokumentu zatím nejsou:',
       'reports-missing':
         'Zprávy z\u00a0těchto akcí nejsou schválené. V\u00a0dokumentu bude místo nich jen věta o\u00a0akci a\u00a0poznámka, že zpráva nebyla dodána. Po vygenerování už se zpráva odevzdat nedá:',
+      'placeholders-unchecked':
+        'Odstavce za nedodané zprávy nejsou zkontrolované. Vyjdou tak, jak je napsal systém:',
       'proposal-dropped':
         'Návrhy zařazené v\u00a0pokynech už nejsou schválené, a\u00a0proto se z\u00a0dokumentu vynechaly:',
       'deadline-ahead': 'Uzávěrka ještě neproběhla, body mohou ještě přibýt.',

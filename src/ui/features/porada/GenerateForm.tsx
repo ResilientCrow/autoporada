@@ -1,11 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import type { z } from 'zod';
 
 import type { generateIssueInput, generateIssueOutput, ServerAction } from '@/contracts';
 import { porada } from '@/ui/copy';
 import { CheckboxField, Form, SubmitButton, useActionForm } from '@/ui/form';
-import { Card } from '@/ui/kit';
+import { Button, ButtonLink, Card, Cluster, Dialog } from '@/ui/kit';
 
 import { generateInput, generateSpec } from './generate';
 
@@ -21,6 +22,8 @@ export interface GenerateView {
   readonly version: number | null;
   /** A finding blocks it: the button stays off until the data is fixed. */
   readonly blocked: boolean;
+  /** Placeholders for missing reports the headmaster has not checked (ADR 0061): generating asks first. */
+  readonly unchecked: number;
 }
 
 /**
@@ -38,15 +41,45 @@ export function GenerateForm({
     action,
     toInput: (data) => generateInput(view.monday, view.version, data),
   });
+  const [asking, setAsking] = useState(false);
+  const formId = `porada-generate-${view.monday}`;
+  const ask = view.unchecked > 0 && !view.blocked;
   return (
     <Card level={2} title={porada.generate.title}>
       <div className="space-y-3">
         <p id="generovani-pozn">{view.blocked ? porada.generate.blocked : porada.generate.intro}</p>
-        <Form id={`porada-generate-${view.monday}`} spec={generateSpec} state={state}>
+        <Form id={formId} spec={generateSpec} state={state}>
           <CheckboxField name="confirmed" disabled={view.blocked} />
-          <SubmitButton isDisabled={view.blocked} describedBy="generovani-pozn">
-            {porada.generate.submit}
-          </SubmitButton>
+          {ask ? (
+            <Dialog
+              title={porada.generate.unchecked.title}
+              isOpen={asking}
+              onOpenChange={setAsking}
+              trigger={<Button describedBy="generovani-pozn">{porada.generate.submit}</Button>}
+            >
+              <p>{porada.generate.unchecked.confirm(view.unchecked)}</p>
+              <Cluster>
+                <ButtonLink href={`/porada/${view.monday}/zpravy`}>
+                  {porada.generate.unchecked.goCheck}
+                </ButtonLink>
+                <Button
+                  variant="secondary"
+                  onPress={() => {
+                    setAsking(false);
+                    document
+                      .querySelector<HTMLFormElement>(`form[id="${formId}"]`)
+                      ?.requestSubmit();
+                  }}
+                >
+                  {porada.generate.unchecked.anyway}
+                </Button>
+              </Cluster>
+            </Dialog>
+          ) : (
+            <SubmitButton isDisabled={view.blocked} describedBy="generovani-pozn">
+              {porada.generate.submit}
+            </SubmitButton>
+          )}
         </Form>
       </div>
     </Card>

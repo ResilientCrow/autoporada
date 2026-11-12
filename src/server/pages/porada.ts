@@ -221,6 +221,8 @@ export interface PreviewPageModel {
     readonly monday: string;
     readonly version: number | null;
     readonly blocked: boolean;
+    /** Placeholders for missing reports not yet checked (ADR 0061). */
+    readonly unchecked: number;
   } | null;
   /** A generated porada: its document; the paper is the snapshot it was generated from. */
   readonly generated: GeneratedModel | null;
@@ -251,6 +253,8 @@ export async function previewPage(datum: string): Promise<PreviewPageModel | nul
           monday: slot.monday,
           version: slot.version,
           blocked: preview.findings.some((f) => f.level === 'block'),
+          unchecked:
+            preview.findings.find((f) => f.code === 'placeholders-unchecked')?.refs?.length ?? 0,
         }
       : null;
   return {

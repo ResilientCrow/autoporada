@@ -256,6 +256,8 @@ export function preflight(s: State, monday: string): Check[] {
   if (ret) c.push({ level: 'warn', code: 'returned', n: ret, text: `${ret === 1 ? '1 zpráva je vrácená' : `${ret} vrácené zprávy`} autorovi. Bez schválení nevyjde.` });
   const miss = owedTo(s, monday).filter((o) => !o.delivered && !o.notYetOver);
   if (miss.length) c.push({ level: 'warn', code: 'reports-missing', n: miss.length, text: `${miss.length === 1 ? 'Z 1 akce chybí zpráva' : `Ze ${miss.length} akcí chybí zpráva`}. Vytiskne se jen odstavec o akci.`, to: 'zpravy' });
+  const unchecked = placeholdersOf(s, monday).filter((h) => h.status !== 'checked').length;
+  if (unchecked) c.push({ level: 'warn', code: 'placeholders-unchecked', n: unchecked, text: 'Odstavce za nedodané zprávy nejsou zkontrolované. Vyjdou tak, jak je napsal systém.', to: 'zpravy' });
   const late = owedTo(s, monday).filter((o) => o.notYetOver);
   if (late.length) c.push({ level: 'warn', code: 'late-expected', n: late.length, text: `Ještě se čeká na pozdní zprávu: ${late.slice(0, 3).map((x) => x.akce.title).join(', ')}${late.length > 3 ? ` a ${late.length - 3} dalších` : ''}.` });
   const orphan = iss.rows.filter((r) => r.pointId && !['approved', 'published'].includes(s.points.find((p) => p.id === r.pointId)?.state ?? ''));

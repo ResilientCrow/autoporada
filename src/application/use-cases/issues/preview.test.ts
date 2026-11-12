@@ -495,6 +495,7 @@ describe('issues.preview', () => {
       expect(codes(findings)).toEqual([
         'late-reports-expected',
         'reports-missing',
+        'placeholders-unchecked',
         'deadline-ahead',
         'annex1-empty',
         'ohlasy-empty',

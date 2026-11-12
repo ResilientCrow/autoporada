@@ -36,7 +36,7 @@ const refHref = (
   ref: RefView,
   editMonday: string | null,
 ): `/${string}` | null => {
-  if (code === 'reports-missing') {
+  if (code === 'reports-missing' || code === 'placeholders-unchecked') {
     return editMonday === null ? null : `/porada/${editMonday}/zpravy`;
   }
   if (code === 'akce-waiting' || ref.of === 'akce') return `/akce/${ref.id}`;
