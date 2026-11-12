@@ -54,10 +54,11 @@ record that supersedes it.
 | [0046](0046-the-soft-reminder-asks-for-owed-reports.md) | The soft reminder asks for owed reports, and no one opts out | Accepted; supersedes 0018 item 10, 0020 items 3 and 5 and 0032 item 3 in part; item 2 amended by 0054 |
 | [0047](0047-skip-until-a-chosen-porada.md) | Skip until a chosen porada, from a dialog | Accepted; adds to 0018, 0034 and 0041; adds `Dialog` to the kit; items 1 and 2 superseded by 0051; item 3 superseded by 0054 |
 | [0048](0048-every-approved-akce-owes-a-report.md) | Every approved akce owes a report, and nobody declines it | Accepted; supersedes 0020 item 4, 0027 items 2 and 3, 0035 item 6 and 0046 items 1 and 3 in part |
-| [0049](0049-an-akce-report-goes-to-its-porada-or-a-placeholder-does.md) | An akce's report goes to its porada, or a placeholder does | Accepted; supersedes 0029 and 0035 item 4 in part (akce reports only); adds to 0038; amended by 0054 (Mondays with no porada) |
+| [0049](0049-an-akce-report-goes-to-its-porada-or-a-placeholder-does.md) | An akce's report goes to its porada, or a placeholder does | Accepted; supersedes 0029 and 0035 item 4 in part (akce reports only); adds to 0038; amended by 0054 (Mondays with no porada); item 3 superseded in part by 0056 |
 | [0050](0050-development-clamps-a-negative-measure-end.md) | Development clamps a negative measure end | Accepted; adds to 0023 |
 | [0051](0051-the-next-porada-on-any-date.md) | The next porada on any date, and no move page | Accepted; supersedes 0047 items 1 and 2 and 0034 item 3 and part of item 2; items 2 to 5 superseded by 0054 |
 | [0052](0052-owed-reports-first-proposals-for-vedeni.md) | Owed reports come first, and only vedení proposes | Accepted; builds on 0049; bounds the report card left open by 0048; amended by 0054 |
 | [0053](0053-the-arch-ui-at-the-root.md) | The Arch UI at the root, on the same backend | Accepted; builds on 0004, 0012, 0017 and 0043 |
 | [0054](0054-a-porada-that-does-not-take-place-does-not-exist.md) | A porada that does not take place does not exist: move, drop, add | Accepted; supersedes 0041, 0051 items 2 to 5, 0047 item 3, 0034 item 7 and parts of 0018, 0029, 0030; amends 0032, 0040, 0046, 0049, 0052 |
 | [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Accepted; adds to 0053 |
+| [0056](0056-a-refused-report-closes-its-akce.md) | A refused report closes its akce | Accepted; supersedes 0049 item 3 in part; builds on 0052 |

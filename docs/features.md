@@ -161,7 +161,9 @@ in v1 unless the [plan of record](plan.md) changes first.
   organizátora nebylo dodáno.“ The headmaster can rewrite the paragraph on
   „Chybějící zprávy“ (`/porada/[datum]/zpravy`) and restore the system's text.
   Generation closes such a report: an unfinished draft or a report still in
-  review is withdrawn, and the akce is no longer asked about (ADR 0049).
+  review is withdrawn, and the akce is no longer asked about (ADR 0049). A
+  report the vedení refused closes its akce: nothing is printed for it and the
+  author is not asked for another (ADR 0056).
 - Generation: „Vygenerovat dokument“ on the Náhled (headmaster, after a
   confirmation tick; held off while the preflight blocks) stores a DOCX in the
   exact template look and publishes the points it prints. The worker then makes

@@ -28,7 +28,7 @@ async function tally(by: UserRecord) {
 /** An akce of the 21st whose report point is in `state`. */
 async function reported(
   author: UserRecord,
-  state: 'draft' | 'returned' | 'withdrawn' | 'submitted' | 'approved',
+  state: 'draft' | 'returned' | 'withdrawn' | 'submitted' | 'approved' | 'rejected',
 ) {
   const akce = await fixtures.future({ author, startDate: d('2026-10-21') });
   await fixtures.point({
@@ -63,6 +63,8 @@ describe('issues.reportTally', () => {
     for (const state of ['draft', 'returned', 'withdrawn', 'submitted', 'approved'] as const) {
       await reported(author, state);
     }
+    // A refused report closes its akce (ADR 0056): neither owed nor missing.
+    await reported(author, 'rejected');
     // Owed to other porady: not counted.
     await fixtures.future({ author, startDate: d('2026-10-15') });
     await fixtures.future({ author, startDate: d('2026-10-27') });

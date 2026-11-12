@@ -224,6 +224,26 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
     expect(facts.missingReports).toEqual([]);
   });
 
+  it('leaves out an akce whose report the vedení refused: no placeholder, nothing to close (ADR 0056)', async () => {
+    const head = await headmaster();
+    const author = await submitter();
+    const akce = await fixtures.future({ author, title: 'Seminář', startDate: d('2026-10-22') });
+    await fixtures.point({
+      author,
+      kind: 'report',
+      title: 'Seminář',
+      eventDate: d('2026-10-22'),
+      futureItemId: akce,
+      state: 'rejected',
+    });
+
+    const { snapshot, facts, publish } = await assemble(head);
+
+    expect(snapshot?.reports).toEqual([]);
+    expect(facts.missingReports).toEqual([]);
+    expect(publish.missing).toEqual([]);
+  });
+
   it.each(['draft', 'submitted', 'returned', 'withdrawn'] as const)(
     'prints a placeholder, not the content, for an akce whose report is %s, and names that state',
     async (state) => {

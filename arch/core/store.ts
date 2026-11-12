@@ -60,7 +60,7 @@ export function createPoint(kind: PointKind, typeId: string | null, akceId: stri
     const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, savedAt: s.now, trail: [] };
     p.content = refreshOpening(s, p, content);
     onId?.(pid);
-    return { ...s, points: [...s.points, p], futures: akce ? up(s.futures, akce.id, (f) => ({ ...f, report: 'written' })) : s.futures };
+    return { ...s, points: [...s.points, p] };
   };
 }
 export const savePoint = (pid: string, content: PointContent): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => ({ ...p, content: refreshOpening(s, p, content), savedAt: s.now })) });
@@ -80,13 +80,13 @@ export function trySubmit(s: State, pid: string): SubmitResult {
 export const submitPoint = (pid: string): Fx => (s0) => {
   const r = trySubmit(s0, pid); if (!r.ok) return s0;
   const s = ensureIssue(s0, r.monday);
-  return { ...s, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
+  const akceId = s.points.find((x) => x.id === pid)?.akceId;
+  // Handing the report in writes the akce's report (REPORT_MACHINE.write); nothing reopens it after.
+  const futures = akceId ? up(s.futures, akceId, (f) => (f.report === 'none' || f.report === 'prompted' ? { ...f, report: 'written' as const } : f)) : s.futures;
+  return { ...s, futures, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
 };
 export const retractPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => (p.state === 'submitted' ? { ...p, state: 'draft', trail: [...p.trail, trail(s, 'Vzato zpět')] } : p)) });
-export const withdrawPoint = (pid: string): Fx => (s) => {
-  const p = s.points.find((x) => x.id === pid)!;
-  return { ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'withdrawn', trail: [...x.trail, trail(s, 'Zrušeno')] })), futures: p.akceId ? up(s.futures, p.akceId, (f) => ({ ...f, report: 'prompted' })) : s.futures };
-};
+export const withdrawPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'withdrawn', trail: [...x.trail, trail(s, 'Zrušeno')] })) });
 const placeProposal = (s: State, p: Point): State => {
   if (p.kind === 'report') return s;
   const m = toIsoDate(handInTo(s).monday); const s1 = ensureIssue(s, m);
@@ -108,7 +108,7 @@ export const returnPoint = (pid: string, note: string): Fx => (s) => {
 export const rejectPoint = (pid: string, note: string): Fx => (s) => {
   const p = s.points.find((x) => x.id === pid)!;
   if (!note.trim() || !atLeast(me(s)?.role, 'reviewer')) return s;
-  return decideMail({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'rejected', note, trail: [...x.trail, trail(s, 'Zamítnuto', { note })] })), futures: p.akceId ? up(s.futures, p.akceId, (f) => ({ ...f, report: 'prompted' })) : s.futures }, p, `Zamítnuto: ${p.content.title}`, note);
+  return decideMail({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'rejected', note, trail: [...x.trail, trail(s, 'Zamítnuto', { note })] })) }, p, `Zamítnuto: ${p.content.title}`, note);
 };
 /** A reviewer's edit keeps the original wording of what changed („Původní znění“). */
 export const editAsReviewer = (pid: string, content: PointContent): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => {

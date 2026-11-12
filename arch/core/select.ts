@@ -73,13 +73,16 @@ export const lastDayOf = (f: Future) => f.endDate ?? f.date;
 export const futureEnd = (f: Future) => eventEnd({ lastDay: lastDayOf(f), timeTo: f.timeTo });
 export const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).getTime();
 export const owedMonday = (s: State, f: Future) => toIsoDate(owedPorada(lastDayOf(f), rowsOf(s), plannedOf(s)));
-export const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn' && p.state !== 'rejected');
+/** The report an akce started and still has: any but a withdrawn one, so a refused report too (it closes the akce, ADR 0056). */
+export const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn');
+/** Deleting this report brings its akce back to „Čeká na vás“: only while the report was never handed in. */
+export const asksAgain = (s: State, p: Point) => { const f = p.akceId ? s.futures.find((x) => x.id === p.akceId) : undefined; return !!f && (f.report === 'none' || f.report === 'prompted'); };
 const closeFor = (s: State, f: Future, monday: string) => {
   const sl = slotsOf(s).find((x) => toIsoDate(x.monday) === monday);
   return sl ? reportCloses(sl, { lastDay: lastDayOf(f), timeTo: f.timeTo }) : deadline(parseIsoDate(monday), ruleOf(s));
 };
 export interface Owed { akce: Future; point?: Point; monday: string; close: Date; pastClose: boolean; late: boolean }
-/** „Akce čekající na zprávu“: ended akce of the author, porada still open, report not handed in. */
+/** „Akce čekající na zprávu“ (as `future.owedReports`): ended akce of the author, porada still open, its report a draft or returned, or none started while one may be. */
 export function owedBy(s: State, userId: string | null): Owed[] {
   const out: Owed[] = [];
   for (const f of s.futures) {
@@ -87,19 +90,21 @@ export function owedBy(s: State, userId: string | null): Owed[] {
     const monday = owedMonday(s, f);
     const iss = issueOf(s, monday);
     if (iss?.status === 'generated') continue;
-    const point = pointOfAkce(s, f.id);
-    if (point && !['draft', 'returned'].includes(point.state)) continue;
+    const bound = pointOfAkce(s, f.id);
+    const point = bound && (bound.state === 'draft' || bound.state === 'returned') ? bound : undefined;
+    if (!point && (bound || (f.report !== 'none' && f.report !== 'prompted'))) continue;
     const close = closeFor(s, f, monday);
     const sl = slotsOf(s).find((x) => toIsoDate(x.monday) === monday);
     out.push({ akce: f, ...(point && { point }), monday, close, pastClose: close.getTime() <= nowOf(s).getTime(), late: sl ? close.getTime() > sl.deadlineAt.getTime() : false });
   }
   return out.sort((a, b) => a.monday.localeCompare(b.monday) || a.close.getTime() - b.close.getTime());
 }
-/** Every akce owed to a porada, with what happened to its report: the headmaster's „Chybějící zprávy“. */
+/** Every akce owed to a porada, with what happened to its report: the headmaster's „Chybějící zprávy“. A refused report closes its akce (ADR 0056). */
 export function owedTo(s: State, monday: string) {
-  return s.futures.filter((f) => f.kind === 'akce' && f.state === 'approved' && owedMonday(s, f) === monday && (ownerIsOver(s, f) || compareDates(lastDayOf(f), parseIsoDate(issueOf(s, monday)?.meetingDate ?? monday)) < 0)).map((f) => {
+  return s.futures.filter((f) => f.kind === 'akce' && f.state === 'approved' && owedMonday(s, f) === monday && (ownerIsOver(s, f) || compareDates(lastDayOf(f), parseIsoDate(issueOf(s, monday)?.meetingDate ?? monday)) < 0)).flatMap((f) => {
     const point = pointOfAkce(s, f.id);
-    return { akce: f, point, delivered: !!point && (point.state === 'approved' || point.state === 'published'), notYetOver: !ownerIsOver(s, f) };
+    if (point?.state === 'rejected') return [];
+    return [{ akce: f, point, delivered: !!point && (point.state === 'approved' || point.state === 'published'), notYetOver: !ownerIsOver(s, f) }];
   });
 }
 export function placeholderText(s: State, f: Future, monday: string): string {

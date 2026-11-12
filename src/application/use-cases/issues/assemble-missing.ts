@@ -24,8 +24,9 @@ export function owedAkce(
 
 /**
  * The owed akce that have no report for the porada: those of `owed` whose report is not among
- * `eligible` (it is printed as it is) or already published. Their reports stand as read without
- * scope, so the headmaster sees where a report is without reading it.
+ * `eligible` (it is printed as it is), already published, or refused (ADR 0056: a refused report
+ * closes its akce, which then prints nothing). Their reports stand as read without scope, so the
+ * headmaster sees where a report is without reading it.
  */
 export async function missingReports(
   tx: Pick<Tx, 'points'>,
@@ -38,7 +39,7 @@ export async function missingReports(
   return owed.flatMap((akce) => {
     const report = akce.reportPointId === null ? null : (standing.get(akce.reportPointId) ?? null);
     if (akce.reportPointId !== null && printed.has(akce.reportPointId)) return [];
-    if (report?.state === 'published') return [];
+    if (report?.state === 'published' || report?.state === 'rejected') return [];
     return [{ akce, report }];
   });
 }

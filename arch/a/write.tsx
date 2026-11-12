@@ -183,7 +183,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   }
   const n = k + 1; const of = steps.length;
   return <App nar noNav
-    over={del ? <Dialog title={p.state === 'returned' ? 'Smazat vrácenou zprávu?' : 'Smazat rozepsanou zprávu?'} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.{p.akceId ? ' O zprávu z akce vás znovu požádáme.' : ''}</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawPoint(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null}
+    over={del ? <Dialog title={p.state === 'returned' ? 'Smazat vrácenou zprávu?' : 'Smazat rozepsanou zprávu?'} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.{Q.asksAgain(s, p) ? ' O zprávu z akce vás znovu požádáme.' : ''}</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawPoint(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null}
     col={<>
       <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a><button type="button" className="q r" onClick={() => setDel(true)}>Smazat zprávu</button></div>
       <p className="stn">{c.title || 'Nová zpráva'}, krok {n} z {of}</p><Dots n={n} of={of} />
