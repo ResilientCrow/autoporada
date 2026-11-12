@@ -1,4 +1,5 @@
 import type { RecentPerson } from '@/domain/people';
+import type { FutureReturnPart } from '@/domain/review';
 import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
 import type { Directory } from '@/ui/form';
@@ -31,6 +32,8 @@ export interface FutureScreenItem extends FutureReadItem {
   readonly version: number;
   /** What the reviewer wrote on returning the item, for its author; null otherwise. */
   readonly returnNote: string | null;
+  /** The parts that return named to rework (ADR 0058), as codes; empty otherwise. */
+  readonly returnParts: readonly string[];
   /** The author may take a submitted item back. */
   readonly canRetract: boolean;
   /** The reviewer's decisions and the cancel the viewer may make; null when there are none. */
@@ -55,7 +58,8 @@ export function FutureScreen({
   readonly item: FutureScreenItem;
   readonly actions: FutureActions;
 }) {
-  const { id, kind, state, view, window, editor, returnNote, review } = item;
+  const { id, kind, state, view, window, editor, returnNote, returnParts, review } = item;
+  const rework = returnParts.flatMap((c) => future.returnPart[c as FutureReturnPart] ?? []);
   const reviewing =
     review === null ? null : (
       <FutureReview
@@ -92,10 +96,11 @@ export function FutureScreen({
     <FutureHost>
       <div className="space-y-4">
         <FutureHeader kind={kind} state={state} title={view.title} />
-        {returnNote === null ? null : (
+        {returnNote === null && rework.length === 0 ? null : (
           <section className="space-y-1">
             <h2 className="font-semibold">{future.returnNote}</h2>
-            <p className="whitespace-pre-line">{returnNote}</p>
+            {rework.length === 0 ? null : <p>{future.reworkParts(rework)}</p>}
+            {returnNote === null ? null : <p className="whitespace-pre-line">{returnNote}</p>}
           </section>
         )}
         {state === 'approved' ? (

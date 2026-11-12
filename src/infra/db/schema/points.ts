@@ -17,6 +17,7 @@ import {
 import type { PointEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
 import type { DraftBullet, DraftStatement, PointFieldValues } from '@/domain/report';
+import { MAX_RETURN_PARTS } from '@/domain/review';
 import type { RichDoc } from '@/domain/richtext';
 
 import { at, atMs, createdAt, id } from './columns';
@@ -174,7 +175,7 @@ export const pointEvents = pgTable(
     ),
     check(
       'point_events_return_parts',
-      sql`${t.returnParts} IS NULL OR (${t.event} = 'return' AND cardinality(${t.returnParts}) BETWEEN 1 AND 4)`,
+      sql`${t.returnParts} IS NULL OR (${t.event} = 'return' AND cardinality(${t.returnParts}) BETWEEN 1 AND ${sql.raw(String(MAX_RETURN_PARTS))})`,
     ),
     check('point_events_before_edit', sql`${t.before} IS NULL OR ${t.event} = 'edit'`),
   ],

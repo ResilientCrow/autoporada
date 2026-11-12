@@ -35,6 +35,8 @@ export const future = {
   } as const satisfies Record<FutureReturnPart, string>,
   /** The label above the reviewer's note on a returned item, for its author. */
   returnNote: 'Poznámka z\u00A0kontroly',
+  /** The parts the return named, under that label (ADR 0058). */
+  reworkParts: (labels: readonly string[]) => `K\u00A0přepracování: ${labels.join(', ')}`,
   /** The link on the list, the page heading and the tab title of /akce/novy. */
   new: 'Nová akce',
   empty: 'Zatím tu nejsou žádné akce.',

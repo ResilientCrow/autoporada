@@ -153,6 +153,7 @@ describe('futurePage', () => {
       canRetract: false,
       review: null,
       returnNote: null,
+      returnParts: [],
       editor: {
         version: 3,
         content: content(),
@@ -250,11 +251,12 @@ describe('futurePage: the editor', () => {
 });
 
 describe('futurePage: the return note', () => {
-  const event = (name: string, note: string | null) => ({
+  const event = (name: string, note: string | null, parts: string[] | null = null) => ({
     event: name,
     fromState: 'submitted',
     toState: 'returned',
     note,
+    parts,
     editedFields: null,
     createdAt: '2026-11-05T09:00:00.000Z',
   });
@@ -283,6 +285,22 @@ describe('futurePage: the return note', () => {
   it('is null where no return event is left to read', async () => {
     serve({ get: { ok: true, value: loaded({ state: 'returned' }) } });
     expect((await futurePage(ID))?.returnNote).toBeNull();
+    expect((await futurePage(ID))?.returnParts).toEqual([]);
+  });
+
+  it('carries the parts the latest return named, a note or not (ADR 0058)', async () => {
+    const timeline = [event('return', null, ['when', 'place']), event('return', 'Starší.')];
+    serve({ get: { ok: true, value: loaded({ state: 'returned', timeline }) } });
+    expect(await futurePage(ID)).toMatchObject({
+      returnNote: null,
+      returnParts: ['when', 'place'],
+    });
+  });
+
+  it('leaves the parts out once the item is submitted again', async () => {
+    const timeline = [event('return', null, ['place'])];
+    serve({ get: { ok: true, value: loaded({ state: 'submitted', timeline }) } });
+    expect((await futurePage(ID))?.returnParts).toEqual([]);
   });
 });
 

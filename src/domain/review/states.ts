@@ -53,12 +53,8 @@ export const POINT_MACHINE: Machine<PointState, PointEvent, ReviewActor> = {
   retract: { from: ['submitted'], to: 'draft', allowed: author },
   withdraw: { from: ['draft', 'returned', 'submitted'], to: 'withdrawn', allowed: author },
   approve: { from: ['submitted'], to: 'approved', allowed: approver },
-  return: {
-    from: ['submitted', 'approved'],
-    to: 'returned',
-    allowed: reviewer,
-    requiresNote: true,
-  },
+  // A return names parts, a note or both; the contract checks it (refineDecision, ADR 0058).
+  return: { from: ['submitted', 'approved'], to: 'returned', allowed: reviewer },
   reject: {
     from: ['submitted', 'approved'],
     to: 'rejected',
@@ -97,12 +93,8 @@ export const FUTURE_MACHINE: Machine<FutureState, FutureEvent, ReviewActor> = {
   retract: { from: ['submitted'], to: 'draft', allowed: author },
   withdraw: { from: ['draft', 'returned', 'submitted'], to: 'withdrawn', allowed: author },
   approve: { from: ['submitted'], to: 'approved', allowed: approver },
-  return: {
-    from: ['submitted', 'approved'],
-    to: 'returned',
-    allowed: reviewer,
-    requiresNote: true,
-  },
+  // A return names parts, a note or both; the contract checks it (refineDecision, ADR 0058).
+  return: { from: ['submitted', 'approved'], to: 'returned', allowed: reviewer },
   reject: {
     from: ['submitted', 'approved'],
     to: 'rejected',

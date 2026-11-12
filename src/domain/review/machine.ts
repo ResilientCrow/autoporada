@@ -6,7 +6,7 @@ export interface Transition<S extends string, A> {
   readonly from: readonly S[];
   readonly to: S;
   readonly allowed: (actor: A) => boolean;
-  /** E.g. returning a point must tell the author why. */
+  /** E.g. rejecting must tell the author why (a return names parts instead or as well: ADR 0058). */
   readonly requiresNote?: boolean;
 }
 

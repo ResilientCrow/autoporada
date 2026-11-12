@@ -60,6 +60,7 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
   version: 3,
   canRetract: false,
   returnNote: null,
+  returnParts: [],
   review: null,
   view: {
     title: 'Lyžařský kurz',
@@ -139,6 +140,15 @@ describe('the return note', () => {
     expect(html).toContain('Doplňte &lt;b&gt;vyjádření&lt;/b&gt;.');
     expect(html.indexOf(future.returnNote)).toBeLessThan(html.indexOf('<form'));
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+
+  it('names the parts to rework, also without a note (ADR 0058)', () => {
+    const html = render({ state: 'returned', returnParts: ['when', 'responsible'] });
+    expect(html).toContain(future.returnNote);
+    expect(html).toContain(
+      future.reworkParts([future.returnPart.when, future.returnPart.responsible]),
+    );
+    expect(html.indexOf(future.returnNote)).toBeLessThan(html.indexOf('<form'));
   });
 
   it('is left out where there is none', () => {

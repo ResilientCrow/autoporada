@@ -204,7 +204,9 @@ export function Oprava({ id }: { id: string }) {
   const last = p.trail.filter((t) => t.what.startsWith('Vráceno')).at(-1);
   const name = Q.nameOf(Q.userById(s, last?.who ?? ''));
   const c = p.content; const sts = c.statements; const org = orgAt(s, p);
-  const open = p.parts?.length ? p.parts : NOTE_ONLY;
+  // A named part with nothing to show here (a people list, when the organisers are the only one) opens none.
+  const shown = (p.parts ?? []).filter((x) => x !== 'people' || c.bullets.some((b, i) => b.kind === 'people' && i !== org));
+  const open = shown.length ? shown : NOTE_ONLY;
   const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
   const setPeople = (i: number, people: readonly DraftPerson[]) => set({ bullets: c.bullets.map((b, j) => (j === i && b.kind === 'people' ? { ...b, people } : b)) });
   const m = p.poradaMonday ?? Q.workingMonday(s);

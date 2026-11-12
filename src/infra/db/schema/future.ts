@@ -16,7 +16,7 @@ import {
 import type { FutureEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
 import { POINT_LIMITS, type Responsible } from '@/domain/report';
-import type { FutureState, ReportState } from '@/domain/review';
+import { MAX_RETURN_PARTS, type FutureState, type ReportState } from '@/domain/review';
 
 import { at, atMs, createdAt, id } from './columns';
 import { users } from './identity';
@@ -140,7 +140,7 @@ export const futureEvents = pgTable(
     ),
     check(
       'future_events_return_parts',
-      sql`${t.returnParts} IS NULL OR (${t.event} = 'return' AND cardinality(${t.returnParts}) BETWEEN 1 AND 4)`,
+      sql`${t.returnParts} IS NULL OR (${t.event} = 'return' AND cardinality(${t.returnParts}) BETWEEN 1 AND ${sql.raw(String(MAX_RETURN_PARTS))})`,
     ),
   ],
 );

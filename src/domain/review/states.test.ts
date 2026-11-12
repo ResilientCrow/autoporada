@@ -43,10 +43,10 @@ describe('point lifecycle', () => {
     expect(transition(POINT_MACHINE, from, event, actor)).toEqual({ ok: true, to });
   });
 
-  it('requires a note to return or reject', () => {
+  it('requires a note to reject; a return names parts or a note, as the contract checks (ADR 0058)', () => {
     expect(transition(POINT_MACHINE, 'submitted', 'return', reviewer)).toEqual({
-      ok: false,
-      reason: 'note-required',
+      ok: true,
+      to: 'returned',
     });
     expect(transition(POINT_MACHINE, 'submitted', 'reject', reviewer, '   ')).toMatchObject({
       reason: 'note-required',
@@ -187,9 +187,10 @@ describe('future item lifecycle', () => {
     });
   });
 
-  it('requires a note to return or reject', () => {
-    expect(transition(FUTURE_MACHINE, 'submitted', 'return', reviewer)).toMatchObject({
-      reason: 'note-required',
+  it('requires a note to reject; a return names parts or a note, as the contract checks (ADR 0058)', () => {
+    expect(transition(FUTURE_MACHINE, 'submitted', 'return', reviewer)).toEqual({
+      ok: true,
+      to: 'returned',
     });
     expect(transition(FUTURE_MACHINE, 'submitted', 'reject', reviewer)).toMatchObject({
       reason: 'note-required',

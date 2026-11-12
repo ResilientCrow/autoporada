@@ -100,6 +100,8 @@ export interface FuturePageModel {
   readonly review: FutureBarModel | null;
   /** What the reviewer wrote when they returned the item: only while it stands returned, else null. */
   readonly returnNote: string | null;
+  /** The parts that return named to rework (ADR 0058), as codes: only while it stands returned. */
+  readonly returnParts: readonly string[];
   /** Only for the author of a draft, returned or approved item: what the editor opens with. */
   readonly editor: FutureEditorModel | null;
   /** Only for the author of an item that is still going somewhere; else null. */
@@ -128,6 +130,8 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
   const strip = isAuthor && GOING.includes(state);
   const shows = editable && content !== null;
   // Independent reads, each only where its part of the page shows.
+  // The timeline is newest first: the latest return is the one the author answers.
+  const lastReturn = state === 'returned' ? timeline.find((e) => e.event === 'return') : undefined;
   const [window, recents] = await Promise.all([
     strip ? readWindow(viewer) : null,
     shows ? recentsOf(viewer) : [],
@@ -148,9 +152,8 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
         event: 'retract',
       }),
     review: futureBarOf(viewer.actor, { isAuthor, state, kind }),
-    // The timeline is newest first: the latest return is the one the author answers.
-    returnNote:
-      state === 'returned' ? (timeline.find((e) => e.event === 'return')?.note ?? null) : null,
+    returnNote: lastReturn?.note ?? null,
+    returnParts: lastReturn?.parts ?? [],
     editor: shows
       ? {
           version,
