@@ -100,12 +100,9 @@ describe('MissingReportsPage', () => {
     },
   );
 
-  it('shows the two fixed lines read-only under each field, as the document words them', () => {
+  it('shows the one fixed line read-only under each field, as the document words it', () => {
     const html = render([report(), report({ id: A2, title: 'Výlet' })]);
-    expect(MISSING_REPORT_LINES).toEqual([
-      'Seznam účastníků nebyl dodán.',
-      'Vyjádření organizátora nebylo dodáno.',
-    ]);
+    expect(MISSING_REPORT_LINES).toEqual(['vyjádření organizátora: nebylo dodáno']);
     for (const line of MISSING_REPORT_LINES) {
       expect(html.split(`<li>${line}</li>`)).toHaveLength(3);
     }

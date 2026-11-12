@@ -86,6 +86,11 @@ function page(phase: string, readOnly: boolean, sending = false): string {
 }
 
 const count = (html: string, text: string) => html.split(text).length - 1;
+/** Every text control (input, textarea) of the form, as its tag. */
+const textControls = (html: string) =>
+  [...html.matchAll(/<(?:input|textarea) [^>]*>/g)]
+    .map((m) => m[0])
+    .filter((tag) => !/type="(?:radio|hidden)"/.test(tag));
 const submitButton = (html: string) =>
   new RegExp(`<button [^>]*>(?:(?!</button>).)*${future.editor.submit}`, 's').exec(html)?.[0];
 
@@ -94,7 +99,8 @@ describe('the editor with the autosave idle', () => {
 
   it('has no banner, an enabled fieldset and an enabled submit', () => {
     expect(count(html, 'role="alert"')).toBe(0);
-    expect(html).not.toMatch(/<fieldset[^>]*disabled=""/);
+    for (const tag of textControls(html)) expect(tag).not.toMatch(/readonly=""/i);
+    expect(html).not.toMatch(/aria-readonly/);
     expect(submitButton(html)).not.toMatch(/ disabled=""/);
     expect(cspMarkupProblems(html)).toEqual([]);
   });
@@ -102,11 +108,14 @@ describe('the editor with the autosave idle', () => {
 
 describe('the editor held by a banner', () => {
   it.each(['conflict', 'gone', 'failed', 'signedOut'] as const)(
-    '%s mounts one alert, locks the fieldset and the submit',
+    '%s mounts one alert, holds every field and locks the submit',
     (phase) => {
       const html = page(phase, true);
       expect(count(html, 'role="alert"')).toBe(1);
-      expect(html).toMatch(/<fieldset[^>]*disabled=""/);
+      // The editor has no group to disable at once: each control is read-only itself.
+      expect(textControls(html).length).toBeGreaterThanOrEqual(7);
+      for (const tag of textControls(html)) expect(tag).toMatch(/readonly=""/i);
+      expect(html).toMatch(/aria-readonly="true"/);
       expect(submitButton(html)).toMatch(/ disabled=""/);
     },
   );
@@ -123,7 +132,7 @@ describe('the editor while a send is on its way', () => {
   const html = page('saved', false, true);
 
   it('holds the fields still', () => {
-    expect(html).toMatch(/<fieldset[^>]*disabled=""/);
+    for (const tag of textControls(html)) expect(tag).toMatch(/readonly=""/i);
     const title = /<input [^>]*id="akce-title"[^>]*>/.exec(html)?.[0];
     expect(title).toMatch(/readonly=""/i);
   });

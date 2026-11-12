@@ -19,6 +19,9 @@ const wire = (over: Record<string, unknown> = {}) => ({
   timeTo: null,
   campus: null,
   place: null,
+  organizer: null,
+  participants: null,
+  note: null,
   ...over,
 });
 const save = (over: Record<string, unknown> = {}) =>

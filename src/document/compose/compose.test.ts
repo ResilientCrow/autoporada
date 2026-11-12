@@ -101,9 +101,9 @@ describe('composeDocument on the template replica', () => {
     ]);
     expect(plain(2)).toEqual([
       'pondělí 12. října 2026, 8.00 až 12.00 hodin, areál Smíchov, celoškolní piškvorkový turnaj, kvalifikace do oblastního kola celostátní soutěže plšQworky, organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)',
-      'úterý 13. října 2026, areál Smíchov, Den otevřených dveří',
       'úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon',
-      '20. až 22. října 2026, exkurze 2.B do CERNu, organizuje pan Mgr. Petr Dvořák',
+      'úterý 13. října 2026, areál Smíchov, Den otevřených dveří',
+      'úterý 20. října až čtvrtek 22. října 2026, exkurze 2.B do CERNu, organizuje pan Mgr. Petr Dvořák',
     ]);
     expect(plain(17)).toEqual([
       'čtvrtek 12. listopadu 2026, 8.00 hodin, areál Radlice, školní kolo matematické olympiády',
@@ -190,6 +190,72 @@ describe('composeDocument on the template replica', () => {
 
   it('is deterministic', () => {
     expect(composeDocument(snapshotFixture('template-replica'))).toEqual(replica);
+  });
+});
+
+describe('free-text akce lines (ADR 0060)', () => {
+  const akce = (id: string, title: string, over: Record<string, unknown> = {}) => ({
+    id,
+    kind: 'akce',
+    title,
+    date: '2026-10-13',
+    ...over,
+  });
+  /** The replica with only these agenda items, in schema 2, and the lines of point 2. */
+  const lines = (items: Record<string, unknown>[]) =>
+    pointContent(
+      composeDocument(
+        snapshotFixture('template-replica', (raw) => {
+          raw['schema'] = 2;
+          raw['futureItems'] = items;
+        }),
+      ),
+      2,
+    ).map((b) => text(b).replaceAll(NB, ' '));
+
+  it('prints date, time, areál, místo, název, poznámka, organizátor, účastníci, joined by commas', () => {
+    expect(
+      lines([
+        akce('f-1', 'Stáž', {
+          timeFrom: '14:00',
+          timeTo: '16:00',
+          campus: 'smichov',
+          place: 'Divadlo Viola, Národní 7, Praha 1',
+          note: 'téma kybernetická bezpečnost',
+          organizer: 'organizuje paní zástupkyně Jana Nováková',
+          participants: 'účast slečny a pánové z 2.B',
+        }),
+      ]),
+    ).toEqual([
+      'úterý 13. října 2026, 14.00 až 16.00 hodin, areál Smíchov, Divadlo Viola, Národní 7, Praha 1, Stáž, téma kybernetická bezpečnost, organizuje paní zástupkyně Jana Nováková, účast slečny a pánové z 2.B',
+    ]);
+  });
+
+  it('prints a multi-day akce as a range across months and years, and no time', () => {
+    expect(
+      lines([
+        akce('f-1', 'Výlet', {
+          date: '2026-10-13',
+          endDate: '2026-11-04',
+          timeFrom: '08:00',
+          timeTo: '10:00',
+        }),
+      ]),
+    ).toEqual(['úterý 13. října až středa 4. listopadu 2026, Výlet']);
+  });
+
+  it('sorts a start day: multi-day first, then timed by time, then untimed, ties by title', () => {
+    const order = lines([
+      akce('f-1', 'Beta'),
+      akce('f-2', 'Alfa'),
+      akce('f-3', 'Zeta', { timeFrom: '09:00' }),
+      akce('f-4', 'Yankee', { timeFrom: '08:00' }),
+      akce('f-5', 'Čtvrtek', { timeFrom: '08:00' }),
+      akce('f-6', 'Výlet', { endDate: '2026-10-15' }),
+    ]).map((line) =>
+      line.replace(/^.*?\d{4}(?: až \w+ \d+\. \w+)?, /, '').replace(/^\d+\.\d+ hodin, /, ''),
+    );
+    expect(order).toEqual(['Výlet', 'Čtvrtek', 'Yankee', 'Zeta', 'Alfa', 'Beta']);
   });
 });
 
@@ -330,14 +396,14 @@ describe('a placeholder report (ADR 0049)', () => {
     return reports[1]?.title ?? '';
   };
 
-  it('prints the stored paragraph, then the two fixed lines that say what was not delivered', () => {
+  it('prints the stored paragraph, then the one line that says what was not delivered', () => {
     const model = placeholder();
     const blocks = allBlocks(model);
     const at = blocks.findIndex((b) => b.kind === 'point' && b.text === titleOf());
     expect(at).toBeGreaterThan(-1);
     const lines = blocks.slice(at + 1, at + 4).map((b) => text(b).replaceAll(NB, ' '));
-    expect(lines[1]).toBe('Seznam účastníků nebyl dodán.');
-    expect(lines[2]).toBe('Vyjádření organizátora nebylo dodáno.');
+    expect(lines[1]).toBe('vyjádření organizátora: nebylo dodáno');
+    expect(lines[2]).not.toContain('nebyl');
   });
 
   it('leaves a report without the flag as it was', () => {

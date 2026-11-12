@@ -125,19 +125,7 @@
         </w:numPr>
       </w:pPr>
       <w:r>
-        <w:t xml:space="preserve">8. až 12. října 2026, akce a-before-M</w:t>
-      </w:r>
-    </w:p>
-    <w:p>
-      <w:pPr>
-        <w:pStyle w:val="ListParagraph"/>
-        <w:numPr>
-          <w:ilvl w:val="0"/>
-          <w:numId w:val="3"/>
-        </w:numPr>
-      </w:pPr>
-      <w:r>
-        <w:t xml:space="preserve">úterý 13. října 2026, akce a-day</w:t>
+        <w:t xml:space="preserve">čtvrtek 8. října až pondělí 12. října 2026, akce a-before-M</w:t>
       </w:r>
     </w:p>
     <w:p>
@@ -150,6 +138,18 @@
       </w:pPr>
       <w:r>
         <w:t xml:space="preserve">úterý 13. října 2026, 15.00 až 17.00 hodin, akce a-timed</w:t>
+      </w:r>
+    </w:p>
+    <w:p>
+      <w:pPr>
+        <w:pStyle w:val="ListParagraph"/>
+        <w:numPr>
+          <w:ilvl w:val="0"/>
+          <w:numId w:val="3"/>
+        </w:numPr>
+      </w:pPr>
+      <w:r>
+        <w:t xml:space="preserve">úterý 13. října 2026, akce a-day</w:t>
       </w:r>
     </w:p>
     <w:p>

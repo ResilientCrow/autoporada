@@ -12,7 +12,7 @@ import { guard, refusedBy } from './guards';
 import { newId, type FakeState, type FakeTxState } from './state';
 
 /**
- * What migrations 0019 and 0020 refuse, in PostgreSQL's order: the CHECKs by name, then the
+ * What migrations 0019, 0020 and 0054 (one to five return parts) refuse, in PostgreSQL's order: the CHECKs by name, then the
  * foreign keys in the order the migration made them.
  */
 function refuse(state: FakeState, row: FutureEventRecord): void {
@@ -28,7 +28,7 @@ function refuse(state: FakeState, row: FutureEventRecord): void {
   }
   if (
     row.returnParts !== null &&
-    !(row.event === 'return' && row.returnParts.length <= 4 && row.returnParts.length >= 1)
+    !(row.event === 'return' && row.returnParts.length <= 5 && row.returnParts.length >= 1)
   ) {
     throw refusedBy('future_events_return_parts');
   }

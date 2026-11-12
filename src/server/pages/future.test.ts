@@ -51,13 +51,10 @@ const WINDOW = {
 };
 
 /** Answers the use cases the page asks for. */
-const serve = (answers: { get?: unknown; list?: unknown; window?: unknown; recents?: unknown }) =>
+const serve = (answers: { get?: unknown; list?: unknown; window?: unknown }) =>
   runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
     if (useCase.name === 'future.get') return answers.get;
     if (useCase.name === 'future.list') return answers.list;
-    if (useCase.name === 'people.recent') {
-      return answers.recents ?? { ok: true, value: { people: [] } };
-    }
     return answers.window ?? { ok: true, value: WINDOW };
   });
 const asked = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
@@ -160,7 +157,7 @@ describe('futurePage', () => {
       view: view(),
       window: WINDOW,
     });
-    expect(asked().sort()).toEqual(['future.get', 'issues.window', 'people.recent']);
+    expect(asked().sort()).toEqual(['future.get', 'issues.window']);
     expect(input('future.get')).toEqual({ id: ID });
   });
 

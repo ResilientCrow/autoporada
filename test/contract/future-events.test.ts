@@ -113,6 +113,20 @@ describe('FutureEventRepo (port contract)', () => {
     expect(await list(cli, item.id)).toEqual([event]);
   });
 
+  it('accepts five parts on a return, the most the CHECK allows', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const item = await makeItem(author, true);
+    const [event] = await append(world.as(reviewer), {
+      futureItemId: item.id,
+      fromState: 'submitted',
+      toState: 'returned',
+      event: 'return',
+      returnParts: ['title', 'when', 'place', 'who', 'note'],
+    });
+    expect(event!.returnParts).toHaveLength(5);
+  });
+
   it('keeps the parts of a return, with a note or without one, and none on another event', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const reviewer = await world.seed.user({ role: 'reviewer' });
@@ -314,7 +328,10 @@ describe('FutureEventRepo (port contract)', () => {
       ['future_events_return_parts', { event: 'reject', note: 'x', returnParts: ['title'] }],
       ['future_events_return_parts', { event: 'submit', returnParts: ['title'] }],
       ['future_events_return_parts', { event: 'return', returnParts: [] }],
-      ['future_events_return_parts', { event: 'return', returnParts: ['a', 'b', 'c', 'd', 'e'] }],
+      [
+        'future_events_return_parts',
+        { event: 'return', returnParts: ['a', 'b', 'c', 'd', 'e', 'f'] },
+      ],
       // Several at once: PostgreSQL names the CHECK that sorts first.
       ['future_events_note', { event: 'return', note: '' }],
     ])('%s', async (constraint, event) => {

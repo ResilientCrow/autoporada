@@ -162,6 +162,20 @@ describe('PointEventRepo (port contract)', () => {
     );
   });
 
+  it('accepts five parts on a return, the most the CHECK allows', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const point = await makePoint(author, true);
+    const [event] = await append(world.as(reviewer), {
+      pointId: point.id,
+      fromState: 'submitted',
+      toState: 'returned',
+      event: 'return',
+      returnParts: ['heading', 'body', 'people', 'statements', 'extra'],
+    });
+    expect(event!.returnParts).toHaveLength(5);
+  });
+
   it('keeps the parts of a return, with a note or without one, and none on another event', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const reviewer = await world.seed.user({ role: 'reviewer' });
@@ -302,7 +316,10 @@ describe('PointEventRepo (port contract)', () => {
       ['point_events_return_parts', { event: 'reject', note: 'x', returnParts: ['body'] }],
       ['point_events_return_parts', { event: 'submit', returnParts: ['body'] }],
       ['point_events_return_parts', { event: 'return', returnParts: [] }],
-      ['point_events_return_parts', { event: 'return', returnParts: ['a', 'b', 'c', 'd', 'e'] }],
+      [
+        'point_events_return_parts',
+        { event: 'return', returnParts: ['a', 'b', 'c', 'd', 'e', 'f'] },
+      ],
       ['point_events_before_edit', { event: 'submit', before: { title: 'x' } }],
       // Several at once: PostgreSQL names the CHECK that sorts first.
       ['point_events_before_edit', { event: 'return', before: { title: 'x' } }],

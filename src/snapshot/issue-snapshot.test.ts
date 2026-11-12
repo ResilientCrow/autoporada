@@ -27,7 +27,7 @@ const errorsOf = (input: unknown) => {
   return result.ok ? [] : result.errors;
 };
 
-describe('IssueSnapshot v1', () => {
+describe('IssueSnapshot', () => {
   it('accepts the template replica and defaults omitted fields', () => {
     const result = parseIssueSnapshot(replica);
     expect(result.ok).toBe(true);
@@ -188,6 +188,6 @@ describe('IssueSnapshot v1', () => {
   });
 
   it('rejects a future schema version', () => {
-    expect(errorsOf(variant(['schema'], 2))).toContainEqual(expect.stringMatching(/^schema:/));
+    expect(errorsOf(variant(['schema'], 3))).toContainEqual(expect.stringMatching(/^schema:/));
   });
 });

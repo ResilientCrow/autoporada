@@ -109,15 +109,30 @@ describe('future.submit', () => {
       await refuses(id, () => submit(author, id, readyAkce(over)), invalid(fields));
     });
 
-    it('lets an end time equal the start on a multi-day akce, and asks for nothing else', async () => {
+    it('refuses a time on a multi-day akce: it prints none', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      const over = { endDate: '2026-11-12', timeFrom: '08:00', timeTo: '08:00' };
+      await refuses(
+        id,
+        () => submit(author, id, readyAkce(over)),
+        invalid({ 'content.timeFrom': 'invalid' }),
+      );
+      const onlyTo = { endDate: '2026-11-12', timeFrom: null, timeTo: '09:00' };
+      await refuses(
+        id,
+        () => submit(author, id, readyAkce(onlyTo)),
+        invalid({ 'content.timeFrom': 'invalid', 'content.timeTo': 'invalid' }),
+      );
+    });
+
+    it('accepts a multi-day akce without a time, and asks for nothing else', async () => {
       const author = await user();
       const id = await start(author, 'akce');
       const content = futureWire({
         title: 'Škola v přírodě',
         startDate: '2026-11-10',
         endDate: '2026-11-12',
-        timeFrom: '08:00',
-        timeTo: '08:00',
       });
       expect(await submit(author, id, content)).toMatchObject({ ok: true });
     });

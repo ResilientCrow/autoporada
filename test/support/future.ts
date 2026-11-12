@@ -13,8 +13,6 @@ import { parseIsoDate } from '@/domain/time';
 
 import type { World } from './world';
 
-export const staffer = { salutation: 'pan', givenName: 'Jan', familyName: 'Novák' };
-
 /** What the editor sends for an empty item: dates and times as ISO text. */
 export const futureWire = (over: Record<string, unknown> = {}) => ({
   title: '',
@@ -30,12 +28,12 @@ export const futureWire = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-/** An akce a submit accepts. */
+/** An akce a submit accepts: one day with a time (a multi-day item prints none, ADR 0060). */
 export const readyAkce = (over: Record<string, unknown> = {}) =>
   futureWire({
     title: 'Výlet do Prahy',
     startDate: '2026-11-10',
-    endDate: '2026-11-11',
+    endDate: null,
     timeFrom: '08:00',
     timeTo: '14:30',
     campus: 'radlice',

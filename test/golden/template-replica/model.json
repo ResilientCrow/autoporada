@@ -89,14 +89,6 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "úterý 13. října 2026, areál Smíchov, Den otevřených dveří"
-            }
-          ]
-        },
-        {
-          "kind": "bullet",
-          "runs": [
-            {
               "text": "úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon"
             }
           ]
@@ -105,7 +97,15 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "20. až 22. října 2026, exkurze 2.B do CERNu, organizuje pan Mgr. Petr Dvořák"
+              "text": "úterý 13. října 2026, areál Smíchov, Den otevřených dveří"
+            }
+          ]
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "úterý 20. října až čtvrtek 22. října 2026, exkurze 2.B do CERNu, organizuje pan Mgr. Petr Dvořák"
             }
           ]
         },

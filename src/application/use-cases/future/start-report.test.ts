@@ -4,7 +4,7 @@ import type { FutureItemPatch, UserRecord } from '@/application/ports';
 import { DRAFT_CAP } from '@/domain/report';
 import { parseIsoDate } from '@/domain/time';
 
-import { futureFixtures, readyAkce, staffer } from '../../../../test/support/future';
+import { futureFixtures, readyAkce } from '../../../../test/support/future';
 import { BULLETS, pointFixtures } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { withdrawPoint } from '../points';
@@ -27,7 +27,7 @@ const patch = (author: UserRecord, id: string, over: FutureItemPatch) =>
     await tx.audit.record({ action: 'future.test', target: { type: 'future_item', id } });
   });
 
-/** An approved akce, whose last day (11 November) is past: it owes a report. */
+/** An approved akce, whose last day (10 November) is past: it owes a report. */
 async function dueAkce(
   author: UserRecord,
   content = readyAkce(),
@@ -67,17 +67,17 @@ describe('future.startReport', () => {
       content: {
         title: 'Výlet do Prahy',
         eventDate: parseIsoDate('2026-11-10'),
-        endDate: parseIsoDate('2026-11-11'),
+        endDate: null,
         campus: 'radlice',
         place: 'v Národním muzeu',
         opening: '',
         openingEdited: false,
       },
     });
-    // The people responsible take the organisers' place; the other bullets start empty.
+    // An akce holds its organizer as text, so no people carry over; the bullets start empty.
     const [organisers, results] = point!.content.bullets;
     expect(organisers).toMatchObject({ key: 'organisers', kind: 'people', order: 'input' });
-    expect(organisers).toMatchObject({ people: [expect.objectContaining(staffer)] });
+    expect(organisers).toMatchObject({ people: [] });
     expect(results).toMatchObject({ key: 'results', kind: 'text', text: '' });
 
     const { item } = await snapshot(id);
@@ -249,8 +249,8 @@ describe('future.startReport', () => {
     await moveTo(author, id, 'approved');
     const { id: typeId } = await type();
     await refuses(id, () => startReport(author, id, typeId), rule);
-    world.clock.advance(23 * DAY);
-    // 11 November 2026, 10:00 in Prague: the last day.
+    world.clock.advance(22 * DAY);
+    // 10 November 2026, 09:00 in Prague: the last day.
     await refuses(id, () => startReport(author, id, typeId), rule);
     world.clock.advance(DAY);
     expect((await startReport(author, id, typeId)).ok).toBe(true);
@@ -260,10 +260,10 @@ describe('future.startReport', () => {
     const author = await user();
     const id = await dueAkce(author);
     const { id: typeId } = await type();
-    // The akce ends at 14.30 on 11 November 2026 (CET): 13:30 UTC.
-    world.clock.set(new Date('2026-11-11T13:29:00Z'));
+    // The akce ends at 14.30 on 10 November 2026 (CET): 13:30 UTC.
+    world.clock.set(new Date('2026-11-10T13:29:00Z'));
     await refuses(id, () => startReport(author, id, typeId), rule);
-    world.clock.set(new Date('2026-11-11T13:30:00Z'));
+    world.clock.set(new Date('2026-11-10T13:30:00Z'));
     expect((await startReport(author, id, typeId)).ok).toBe(true);
   });
 
@@ -271,9 +271,9 @@ describe('future.startReport', () => {
     const author = await user();
     const id = await dueAkce(author, readyAkce({ timeTo: null }));
     const { id: typeId } = await type();
-    world.clock.set(new Date('2026-11-11T18:59:00Z'));
+    world.clock.set(new Date('2026-11-10T18:59:00Z'));
     await refuses(id, () => startReport(author, id, typeId), rule);
-    world.clock.set(new Date('2026-11-11T19:00:00Z'));
+    world.clock.set(new Date('2026-11-10T19:00:00Z'));
     expect((await startReport(author, id, typeId)).ok).toBe(true);
   });
 

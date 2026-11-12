@@ -42,7 +42,7 @@ describe('future.queue', () => {
         kind: 'akce',
         title: 'První',
         startDate: '2026-11-10',
-        endDate: '2026-11-11',
+        endDate: null,
         submittedAt: '2026-10-19T08:00:00.000Z',
         revised: false,
       },

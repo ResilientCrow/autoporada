@@ -13,7 +13,7 @@ import { pointReadable } from './points';
 import { newId, type FakeState, type FakeTxState } from './state';
 
 /**
- * What migration 0015 refuses, in PostgreSQL's order: the CHECKs by name, then
+ * What migrations 0015 and 0054 (one to five return parts) refuse, in PostgreSQL's order: the CHECKs by name, then
  * the foreign keys in the order the migration made them.
  */
 function refuse(state: FakeState, row: PointEventRecord): void {
@@ -30,7 +30,7 @@ function refuse(state: FakeState, row: PointEventRecord): void {
   }
   if (
     row.returnParts !== null &&
-    !(row.event === 'return' && row.returnParts.length <= 4 && row.returnParts.length >= 1)
+    !(row.event === 'return' && row.returnParts.length <= 5 && row.returnParts.length >= 1)
   ) {
     throw refusedBy('point_events_return_parts');
   }

@@ -61,14 +61,14 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
       statements: [],
     });
     expect(paragraphOf(report!)).toBe(
-      'Dne 22. 10. 2026 proběhla akce s názvem Seminář, kterou organizoval pan Jan Novák (1.A).',
+      'Ve čtvrtek 22. října 2026 proběhla akce Seminář. Akci zajišťovali: organizuje pan Jan Novák (1.A). Zpráva o akci nebyla dodána.',
     );
     expect(facts.missingReports).toEqual([{ id, title: 'Seminář', state: 'none' }]);
     expect(publish.missing.map((m) => m.akce.id)).toEqual([id]);
     expect(publish.missing[0]?.report).toBeNull();
   });
 
-  it('writes a multi-day akce as a range and an akce with nobody responsible without people', async () => {
+  it('writes a multi-day akce as a range with no time, and leaves out the sentences of an empty organizer', async () => {
     const head = await headmaster();
     const author = await submitter();
     await fixtures.future({
@@ -82,7 +82,7 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
 
     expect(snapshot?.reports[0]).toMatchObject({ date: '2026-10-20', endDate: '2026-10-22' });
     expect(paragraphOf(snapshot!.reports[0]!)).toBe(
-      'Ve dnech 20.–22. 10. 2026 proběhla akce s názvem Výlet.',
+      'Od úterý 20. října do čtvrtka 22. října 2026 proběhla akce Výlet. Zpráva o akci nebyla dodána.',
     );
   });
 

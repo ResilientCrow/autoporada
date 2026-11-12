@@ -81,15 +81,7 @@
           "kind": "bullet",
           "runs": [
             {
-              "text": "8. až 12. října 2026, akce a-before-M"
-            }
-          ]
-        },
-        {
-          "kind": "bullet",
-          "runs": [
-            {
-              "text": "úterý 13. října 2026, akce a-day"
+              "text": "čtvrtek 8. října až pondělí 12. října 2026, akce a-before-M"
             }
           ]
         },
@@ -98,6 +90,14 @@
           "runs": [
             {
               "text": "úterý 13. října 2026, 15.00 až 17.00 hodin, akce a-timed"
+            }
+          ]
+        },
+        {
+          "kind": "bullet",
+          "runs": [
+            {
+              "text": "úterý 13. října 2026, akce a-day"
             }
           ]
         },
