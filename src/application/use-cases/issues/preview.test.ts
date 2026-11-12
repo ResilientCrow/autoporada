@@ -12,7 +12,7 @@ import { lateReportFixtures } from '../../../../test/support/late-reports';
 import { START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { assembleIssueSnapshot } from './assemble';
-import { dropIssue, issuePreview } from './index';
+import { confirmPlaceholder, dropIssue, issueMissingReports, issuePreview } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
@@ -522,6 +522,59 @@ describe('issues.preview', () => {
         futureItemId: akce,
       });
       expect(codes((await preview(head)).findings)).not.toContain('reports-missing');
+    });
+
+    it('warns of each unchecked placeholder, naming its akce, and stops warning once it is checked', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      const a = await fixtures.future({ author, title: 'Seminář', startDate: d('2026-10-21') });
+      const b = await fixtures.future({ author, title: 'Exkurze', startDate: d('2026-10-22') });
+      await drop(head, calDate(2026, 10, 19));
+      const warned = (await preview(head)).findings.find(
+        (f) => f.code === 'placeholders-unchecked',
+      );
+      expect(warned).toEqual({
+        code: 'placeholders-unchecked',
+        level: 'warn',
+        refs: [
+          { id: a, title: 'Seminář', of: 'akce' },
+          { id: b, title: 'Exkurze', of: 'akce' },
+        ],
+      });
+
+      const listed = await world.run(issueMissingReports, world.as(head), { monday: iso(W1) });
+      if (!listed.ok) throw new Error('missingReports refused');
+      for (const row of listed.value.reports) {
+        const sent = await world.run(confirmPlaceholder, world.as(head), {
+          monday: iso(W1),
+          itemId: row.id,
+          expectedVersion: row.version,
+          akceVersion: row.akceVersion,
+        });
+        expect(sent.ok).toBe(true);
+      }
+      const after = (await preview(head)).findings;
+      expect(codes(after)).toContain('reports-missing');
+      expect(codes(after)).not.toContain('placeholders-unchecked');
+    });
+
+    it('does not warn of a checked placeholder when only the other one is unchecked', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      const a = await fixtures.future({ author, title: 'Seminář', startDate: d('2026-10-21') });
+      const b = await fixtures.future({ author, title: 'Exkurze', startDate: d('2026-10-22') });
+      await drop(head, calDate(2026, 10, 19));
+      const listed = await world.run(issueMissingReports, world.as(head), { monday: iso(W1) });
+      if (!listed.ok) throw new Error('missingReports refused');
+      const row = listed.value.reports.find((r) => r.id === a)!;
+      await world.run(confirmPlaceholder, world.as(head), {
+        monday: iso(W1),
+        itemId: a,
+        expectedVersion: row.version,
+        akceVersion: row.akceVersion,
+      });
+      const found = (await preview(head)).findings.find((f) => f.code === 'placeholders-unchecked');
+      expect(found?.refs).toEqual([{ id: b, title: 'Exkurze', of: 'akce' }]);
     });
 
     it('never blocks: a placeholder is a finished report', async () => {

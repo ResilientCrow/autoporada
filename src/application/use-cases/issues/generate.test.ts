@@ -168,6 +168,23 @@ describe('issues.generate', () => {
       },
     );
 
+    it('generates with an unchecked placeholder: the preview warns, the generation does not refuse', async () => {
+      const head = await headmaster();
+      const author = await world.seed.user({ role: 'submitter' });
+      const akce = await ended(author);
+
+      const preview = await world.run(issuePreview, world.as(head), { monday: toIsoDate(W1) });
+      expect(preview.ok && preview.value.findings.map((f) => [f.code, f.level])).toContainEqual([
+        'placeholders-unchecked',
+        'warn',
+      ]);
+
+      const result = await generate(head);
+      if (!result.ok) throw new Error(JSON.stringify(result.error));
+      const stored = await world.tx(seeder, (tx) => tx.documents.snapshot(result.value.documentId));
+      expect(stored?.reports.map((r) => [r.id, r.missing])).toEqual([[akce, true]]);
+    });
+
     it('publishes an approved report as it is and leaves its akce alone', async () => {
       const head = await headmaster();
       const author = await world.seed.user({ role: 'submitter' });

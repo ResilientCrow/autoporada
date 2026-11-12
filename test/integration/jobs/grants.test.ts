@@ -424,8 +424,9 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
   });
 
   // Migration 0031: the names of the school's people are no business of any job. `issue_items`
-  // holds the agenda's text, which carries names too (M9 review, Security 6).
-  it.each(['registry_lists', 'registry_entries', 'issue_items'])(
+  // holds the agenda's text, which carries names too (M9 review, Security 6). report_placeholders holds
+  // the headmaster's paragraphs and their confirmations (0055).
+  it.each(['registry_lists', 'registry_entries', 'issue_items', 'report_placeholders'])(
     'gives the worker no privilege at all on %s',
     async (table) => {
       const [row] = await database.owner<{ held: boolean }>(
