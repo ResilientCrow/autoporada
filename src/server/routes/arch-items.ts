@@ -1,5 +1,6 @@
 /** Branch arch-ui only: points and future items as Arch shows them, with their trail. */
 import type { IssueRow } from '@/domain/calendar';
+import { wasApproved } from '@/domain/review';
 import { toIsoDate, type CalDate } from '@/domain/time';
 
 import type { WebContainer } from '../container';
@@ -107,6 +108,7 @@ export function archItems({
       responsible: ct.responsible ?? { verb: 'organizuje', people: [] },
       state: f.state,
       changed: evs.some((e) => e.event === 'revise'),
+      wasApproved: wasApproved(evs),
       note: noteOf(evs, f.state),
       parts: partsOf(evs, f.state),
       report: f.reportState,

@@ -36,6 +36,7 @@ export {
   REPORT_MACHINE,
   reportDue,
   REVIEW_DECISIONS,
+  wasApproved,
   type AccessEvent,
   type AccessState,
   type AuthorMove,

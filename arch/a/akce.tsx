@@ -43,7 +43,7 @@ export function NovaAkce({ id, step }: { id: string; step?: string }) {
   const it = term ? 'termín' : f.kind === 'akce' ? 'akci' : 'schůzku';
   const confirm = del ? <Dialog title={`Smazat ${f.state === 'returned' ? 'vrácen' : 'rozepsan'}${term ? 'ý' : 'ou'} ${it}?`} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawFuture(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null;
   return <App nar noNav over={confirm} col={<>
-    <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a><button type="button" className="q r" onClick={() => setDel(true)}>Smazat {it}</button></div>
+    <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a>{f.wasApproved ? null : <button type="button" className="q r" onClick={() => setDel(true)}>Smazat {it}</button>}</div>
     <p className="stn">{term ? 'Nový' : 'Nová'} {noun}, krok {k + 1} z {steps.length}</p><div className="steps" role="img" aria-label={`Krok ${k + 1} z ${steps.length}`}>{steps.map((_, j) => <span key={j} className={j <= k ? 'on' : ''} />)}</div>
     <div className="top"><h1 className="ask">{ask}</h1>{help ? <p className="lead">{help}</p> : null}</div>{f.state === 'returned' ? <Rework labels={Q.partLabels(f, f.parts)} note={f.note} /> : null}{body}
     <div className="pv"><p className="pvh">Takhle to vyjde</p><div className="arch"><Line f={f} /></div></div>

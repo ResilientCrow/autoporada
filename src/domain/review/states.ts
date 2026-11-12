@@ -115,6 +115,15 @@ export const FUTURE_MACHINE: Machine<FutureState, FutureEvent, ReviewActor> = {
 };
 
 /**
+ * True when an item's history holds a move into or out of `approved`: it was approved once, even if
+ * the author's revise or a reviewer's return sent it back to review. Such an akce still owes its
+ * report and is cancelled, never withdrawn (ADR 0057).
+ */
+export const wasApproved = (
+  history: readonly { readonly fromState: FutureState; readonly toState: FutureState }[],
+): boolean => history.some((e) => e.fromState === 'approved' || e.toState === 'approved');
+
+/**
  * Authors edit drafts, returned items and approved ones — an author's change
  * to an approved item sends it back to review (see futureEditNeedsReview).
  * Other reviewers edit what is waiting or approved.

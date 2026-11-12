@@ -7,7 +7,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { submitFuture, withdrawFuture } from './index';
+import { decideFuture, saveFuture, submitFuture, withdrawFuture } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = futureFixtures(world);
@@ -99,6 +99,46 @@ describe('future.withdraw', () => {
       await refuses(id, () => withdraw(author, id, version), forbidden);
     },
   );
+
+  describe('an akce once approved (ADR 0057: cancelled, never withdrawn)', () => {
+    /** Submitted by the author and approved by the headmaster through the use cases: version 3. */
+    async function approved(author: UserRecord): Promise<string> {
+      const [id] = await itemIn(author, 'submitted');
+      const done = await world.run(decideFuture, world.as(await user('headmaster')), {
+        id,
+        expectedVersion: 2,
+        event: 'approve',
+      });
+      if (!done.ok) throw new Error(`approve refused: ${done.error.code}`);
+      return id;
+    }
+
+    it('refuses it back in review after the author’s change', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const revised = await world.run(saveFuture, world.as(author), {
+        id,
+        expectedVersion: 3,
+        intent: 'revise',
+        content: readyAkce({ title: 'Jiný název' }),
+      });
+      expect(revised).toMatchObject({ ok: true, value: { state: 'submitted' } });
+      await refuses(id, () => withdraw(author, id, 4), forbidden);
+    });
+
+    it('refuses it returned by a reviewer', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const returned = await world.run(decideFuture, world.as(await user('reviewer')), {
+        id,
+        expectedVersion: 3,
+        event: 'return',
+        parts: ['place'],
+      });
+      expect(returned.ok).toBe(true);
+      await refuses(id, () => withdraw(author, id, 4), forbidden);
+    });
+  });
 
   it('answers a stale version with conflict', async () => {
     const author = await user();

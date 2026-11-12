@@ -109,6 +109,14 @@ describe('the parts a return names, as Arch reads them', () => {
     expect(rejected.archPoints[0]).toMatchObject({ note: 'Ne.', parts: null });
   });
 
+  it('marks an akce approved once, also back in review, and no other', () => {
+    const back = { ...decision('return', 2), fromState: 'approved' };
+    expect(items('returned', [back]).archFutures[0]).toMatchObject({ wasApproved: true });
+    expect(items('returned', [decision('return', 1)]).archFutures[0]).toMatchObject({
+      wasApproved: false,
+    });
+  });
+
   it('puts the parts in the trail entry of the return, and none where there are none', () => {
     const { archPoints } = items('returned', [
       decision('return', 1, { note: 'Doplňte.' }),

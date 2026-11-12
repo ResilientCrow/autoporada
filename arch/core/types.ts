@@ -22,7 +22,7 @@ export interface Point {
 export interface Future {
   id: string; kind: 'jednani' | 'akce'; authorId: string; title: string; date: CalDate; endDate: CalDate | null;
   timeFrom: WallTime | null; timeTo: WallTime | null; campus: Campus | null; place: string; responsible: Responsible;
-  state: FutureState; changed: boolean; note: string | null; parts: string[] | null; report: ReportState; submittedAt: string | null; savedAt: string; trail: Trail[]; dateSet?: boolean;
+  state: FutureState; changed: boolean; /** Approved once, even if back in review since: cancelled, never deleted (ADR 0057). */ wasApproved: boolean; note: string | null; parts: string[] | null; report: ReportState; submittedAt: string | null; savedAt: string; trail: Trail[]; dateSet?: boolean;
 }
 export interface Row {
   id: string; section: 'pokyny' | 'hospodareni'; slot: SystemSlot | null; persistence: 'standing' | 'once';

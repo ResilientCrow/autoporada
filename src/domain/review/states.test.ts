@@ -17,8 +17,10 @@ import {
   REPORT_MACHINE,
   reportDue,
   transition,
+  type FutureState,
   type PointState,
   type ReviewActor,
+  wasApproved,
 } from './index';
 
 const user = (role: Role, isAuthor = false): ReviewActor => ({ kind: 'user', role, isAuthor });
@@ -255,6 +257,27 @@ describe('future items', () => {
     for (const actor of [SYSTEM, author, reviewer, headmaster]) {
       expect(availableEvents(REPORT_MACHINE, 'missed', actor)).toEqual([]);
     }
+  });
+});
+
+describe('wasApproved (ADR 0057)', () => {
+  const ev = (fromState: FutureState, toState: FutureState) => ({ fromState, toState });
+
+  it('holds once the history moved into or out of approved', () => {
+    expect(wasApproved([ev('draft', 'submitted'), ev('submitted', 'approved')])).toBe(true);
+    expect(wasApproved([ev('approved', 'submitted')])).toBe(true);
+    expect(wasApproved([ev('approved', 'returned')])).toBe(true);
+  });
+
+  it('does not hold for an item never approved', () => {
+    expect(wasApproved([])).toBe(false);
+    expect(
+      wasApproved([
+        ev('draft', 'submitted'),
+        ev('submitted', 'returned'),
+        ev('returned', 'submitted'),
+      ]),
+    ).toBe(false);
   });
 });
 
