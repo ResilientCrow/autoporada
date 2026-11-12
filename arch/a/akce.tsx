@@ -6,12 +6,14 @@ import { createWith, fromText, go, Sheet, toText, useStore } from '../core/react
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future } from '../core/types';
-import { App, TitleField, Back, Desk, Dialog, goReplace, Ic, Note, Saved, Seg, Sec, Stamp, Todo, Top, Track, WHEN } from './ui';
+import { App, TitleField, Back, Desk, Dialog, goReplace, Ic, Note, Rework, Saved, Seg, Sec, Stamp, Todo, Top, Track, TrailMore, WHEN } from './ui';
 import { futureLine, NotFound } from './home';
 import { PeoplePick, PersonRow } from './write';
 
 const CAMPUS = [['smichov', 'Smíchov'], ['radlice', 'Radlice'], ['na-vidouli', 'Na Vidouli'], ['jinde', 'Jinde']] as const;
 const time = (x: string) => { if (!x) return null; try { return parseWallTime(x); } catch { return null; } };
+/** The wizard step that asks a part a return named (ADR 0058). */
+const STEP_OF: Record<string, string> = { title: 'nazev', when: 'kdy', place: 'kde', responsible: 'kdo' };
 const VERB = { organizuje: 'Organizuje', koordinuje: 'Koordinuje', 'zajišťuje': 'Zajišťuje', vede: 'Vede' } as const;
 const whenText = (f: Future) => `${Q.dm(f.date)}${f.endDate ? `–${Q.dm(f.endDate)}` : ''}${f.timeFrom ? ` v ${toIsoTime(f.timeFrom)}` : ''}`;
 function Line({ f }: { f: Future }) {
@@ -43,7 +45,7 @@ export function NovaAkce({ id, step }: { id: string; step?: string }) {
   return <App nar noNav over={confirm} col={<>
     <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a><button type="button" className="q r" onClick={() => setDel(true)}>Smazat {it}</button></div>
     <p className="stn">{term ? 'Nový' : 'Nová'} {noun}, krok {k + 1} z {steps.length}</p><div className="steps" role="img" aria-label={`Krok ${k + 1} z ${steps.length}`}>{steps.map((_, j) => <span key={j} className={j <= k ? 'on' : ''} />)}</div>
-    <div className="top"><h1 className="ask">{ask}</h1>{help ? <p className="lead">{help}</p> : null}</div>{body}
+    <div className="top"><h1 className="ask">{ask}</h1>{help ? <p className="lead">{help}</p> : null}</div>{f.state === 'returned' ? <Rework labels={Q.partLabels(f, f.parts)} note={f.note} /> : null}{body}
     <div className="pv"><p className="pvh">Takhle to vyjde</p><div className="arch"><Line f={f} /></div></div>
   </>} dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => nav(steps[k - 1])}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur === 'hotovo') { apply(A.submitFuture(id)); if (head) apply(A.approveFuture(id)); goReplace(`/akce/${id}?fresh=1`); } else nav(steps[k + 1]); }}>{nx}</button></div><Saved t={`Uloženo v ${Q.clock(f.savedAt).time}`} /></div>} desk={<AkceDesk f={f} />} />;
 }
@@ -62,18 +64,18 @@ export function AkceDetail({ id, fresh }: { id: string; fresh?: boolean }) {
     col={<>
       <Back to={mine ? '/moje' : '/akce'} t={mine ? 'Zpět na Moje' : 'Zpět na akce'} />
       <Top h={!fresh ? Q.cap(f.title) : f.state === 'approved' ? 'Hotovo, je to v poradě' : 'Hotovo, je to u vedení'} lead={!fresh ? `${[whenText(f), f.responsible.people.map(displayName).join(', ')].filter(Boolean).join(', ')}. ${futureLine(f)}.` : f.state === 'approved' ? 'Datum určí, ve kterém seznamu to vyjde.' : 'Po schválení ji uvidí celá škola.'} />
-      {f.note ? <Note h="Poznámka vedení">{f.note}</Note> : null}
+      {f.state === 'returned' ? <Rework labels={Q.partLabels(f, f.parts)} note={f.note} /> : f.note ? <Note h="Poznámka vedení">{f.note}</Note> : null}
       {mine && f.state !== 'cancelled' && f.state !== 'rejected' ? <Track on={on} steps={['Napsáno', 'U vedení', 'Vidí ji škola', f.kind === 'akce' ? 'Zpráva po akci' : 'V poradě']} /> : null}
       {edit ? <div className="stack"><label className="l">Název<input className="in" value={v.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label><label className="l">Den<input className="in" type="date" value={toIsoDate(v.date)} onChange={(e) => e.target.value && setDraft({ ...draft, date: parseIsoDate(e.target.value) })} /></label><label className="l">Místo<input className="in" value={v.place} onChange={(e) => setDraft({ ...draft, place: e.target.value })} /></label><Note>{mine ? 'Změna schválené akce jde znovu ke kontrole vedení. Do té doby akce dál platí v původní podobě.' : 'Upravíte to za autora, ke kontrole se to nevrací.'}</Note><div className="row"><button className="btn lg" onClick={() => { setEdit(false); setDraft({}); }}>Zpět</button><button className="btn go lg" onClick={() => { apply(A.reviseFuture(id, draft)); setEdit(false); setDraft({}); }}>Uložit změny</button></div></div> : null}
       {!edit ? <div className="stack st8">
         {fresh ? <a className="btn go lg w" href={u?.role === 'headmaster' ? '#/pridat' : '#/'}>{u?.role === 'headmaster' ? 'Přidat další' : 'Zpět domů'}</a> : null}
-        {f.state === 'returned' && mine ? <a className="btn go lg w" href={`#/nova-akce/${id}/hotovo`}>Opravit a poslat znovu</a> : null}
+        {f.state === 'returned' && mine ? <a className="btn go lg w" href={`#/nova-akce/${id}/${STEP_OF[Q.returnPartsOf(f).find(([c]) => f.parts?.includes(c))?.[0] ?? ''] ?? 'hotovo'}`}>Opravit a poslat znovu</a> : null}
         {f.state === 'submitted' && mine ? <button className="btn lg w" onClick={() => { apply(A.retractFuture(id)); go(`/nova-akce/${id}/hotovo`); }}>Vzít zpět a upravit</button> : null}
         {f.state === 'approved' && u?.role === 'headmaster' ? <button type="button" className="btn lg w" onClick={() => { const nid = createWith(apply, s, (cb) => A.createFuture(f.kind, cb)); apply(A.saveFuture(nid, { title: f.title, timeFrom: f.timeFrom, timeTo: f.timeTo, campus: f.campus, place: f.place, responsible: f.responsible })); go(`/nova-akce/${nid}/kdy`); }}>Stejné na jiný den</button> : null}
         {f.state === 'approved' && (mine || staff) ? <button className="btn lg w" onClick={() => setEdit(true)}>Změnit</button> : null}
         {f.state === 'approved' && (mine || staff) ? <button className="q r" onClick={() => setCancel(true)}>Zrušit akci</button> : null}
       </div> : null}
-      {mine && f.trail.length ? <Sec h="Co se dělo"><Todo rows={f.trail.map((t) => ({ k: 'd' as const, t: <>{t.what}, {WHEN(t.at)}{t.note ? <><br /><span className="sm">{t.note}</span></> : null}</> }))} /></Sec> : null}
+      {mine && f.trail.length ? <Sec h="Co se dělo"><Todo rows={f.trail.map((t) => ({ k: 'd' as const, t: <>{t.what}, {WHEN(t.at)}<TrailMore labels={Q.partLabels(f, t.parts)} note={t.note} /></> }))} /></Sec> : null}
     </>} />;
 }
 export function Navrh({ id }: { id: string }) {
@@ -85,7 +87,7 @@ export function Navrh({ id }: { id: string }) {
   return <App nar col={<>
     <Back to="/moje" t="Zpět na Moje" />
     <Top h={editable ? 'Co navrhujete?' : c.title} lead={editable ? 'Napište to tak, jak to má stát v dokumentu. Po schválení to ředitel zařadí na správné místo.' : p.state === 'submitted' ? 'Návrh je u kontroly.' : p.state === 'approved' ? 'Schváleno. Ředitel ho zařadí do dokumentu.' : p.state === 'published' ? 'Vyšlo v poradě.' : p.note ?? ''} />
-    {p.state === 'returned' && p.note ? <Note h="Poznámka">{p.note}</Note> : null}
+    {p.state === 'returned' ? <Rework labels={Q.partLabels(p, p.parts)} note={p.note} /> : null}
     {editable ? <div className="stack"><div className="stack st6"><span className="lb">Kam to patří</span><Seg label="Kam to patří" value={p.kind as 'finance' | 'pokyn'} options={[['finance', 'Hospodaření'], ['pokyn', 'Pokyny']]} onChange={(v) => apply(A.retype(id, { kind: v }))} /></div><label className="l">Název<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} /></label><label className="l">Text<textarea className="in big" value={toText(c.body)} onChange={(e) => set({ body: fromText(e.target.value) })} /></label></div> : null}
     {p.state === 'submitted' ? <button className="btn lg w" onClick={() => apply(A.retractPoint(id))}>Vzít zpět a upravit</button> : null}
   </>} dock={editable ? <div className="dock">{!can ? <p className="hint a">Napište název a text.</p> : null}<div className="row"><button className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (can) { apply(A.submitPoint(id)); go('/moje'); } }}>Odeslat ke kontrole</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div> : undefined}

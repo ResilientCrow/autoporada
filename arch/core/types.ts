@@ -10,18 +10,19 @@ export interface User {
   id: string; salutation: Salutation; givenName: string; familyName: string; titlesBefore?: string;
   email: string; role: Role; isStudent: boolean; status: 'active' | 'blocked'; affiliation?: string; job?: string;
 }
-export interface Trail { at: string; who: string; what: string; note?: string; original?: Record<string, string> }
+export interface Trail { at: string; who: string; what: string; note?: string; parts?: string[]; original?: Record<string, string> }
 export interface Point {
   id: string; kind: PointKind; typeId: string | null; authorId: string; akceId: string | null;
   content: PointContent; state: PointState; handInMonday: string | null; submittedAt: string | null;
   /** The porada it is in: the hand-in Monday's, or after a drop the next open one (the server's `poradaMondayOf`). */
   poradaMonday: string | null;
-  note: string | null; savedAt: string; trail: Trail[];
+  /** While returned: the reviewer's note and the parts to rework (ADR 0058), either or both. */
+  note: string | null; parts: string[] | null; savedAt: string; trail: Trail[];
 }
 export interface Future {
   id: string; kind: 'jednani' | 'akce'; authorId: string; title: string; date: CalDate; endDate: CalDate | null;
   timeFrom: WallTime | null; timeTo: WallTime | null; campus: Campus | null; place: string; responsible: Responsible;
-  state: FutureState; changed: boolean; note: string | null; report: ReportState; submittedAt: string | null; savedAt: string; trail: Trail[]; dateSet?: boolean;
+  state: FutureState; changed: boolean; note: string | null; parts: string[] | null; report: ReportState; submittedAt: string | null; savedAt: string; trail: Trail[]; dateSet?: boolean;
 }
 export interface Row {
   id: string; section: 'pokyny' | 'hospodareni'; slot: SystemSlot | null; persistence: 'standing' | 'once';

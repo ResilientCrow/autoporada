@@ -7,7 +7,7 @@ import { fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Point, State } from '../core/types';
-import { App, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Saved, Seg, Sheet, WHEN } from './ui';
+import { App, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, WHEN } from './ui';
 import { NotFound } from './home';
 
 const SAL: readonly (readonly [Salutation, string])[] = [['pan', 'pan'], ['pani', 'paní'], ['slecna', 'slečna']];
@@ -195,28 +195,34 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => { if (si && cur.key.startsWith('kdo') && !st0?.speaker) set({ statements: c.statements.filter((_, q) => q !== si) }); toStep(prev); }}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur.key === 'hotovo') { apply(A.submitPoint(id)); if (Q.me(s)?.role === 'headmaster') apply(A.approvePoint(id)); goReplace(`/zprava/${id}?fresh=1`); } else { if (cur.key === 'org') leadFromOrg(); toStep(next); } }}>{nextText}</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
     desk={<Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn" ref={curRef}><Sheet built={sheet} cls={(x) => (x.key === id ? 'cur live' : '')} empty={<div className="arch"><p className="center">Dokument se objeví, až vyplníte název a datum.</p></div>} /></div></Desk>} />;
 }
-/** A returned report: only what the reviewer asked for, then send again. */
+/** What a return without parts (one from before ADR 0058) opens: the text and the statements. */
+const NOTE_ONLY = ['body', 'statements'];
+/** A returned report: the parts the reviewer named (ADR 0058), then send again. */
 export function Oprava({ id }: { id: string }) {
   const { s, apply } = useStore(); const p = s.points.find((x) => x.id === id); const [more, setMore] = useState(false);
   if (!p || p.authorId !== s.userId) return <NotFound />;
   const last = p.trail.filter((t) => t.what.startsWith('Vráceno')).at(-1);
   const name = Q.nameOf(Q.userById(s, last?.who ?? ''));
-  const c = p.content; const sts = c.statements;
+  const c = p.content; const sts = c.statements; const org = orgAt(s, p);
+  const open = p.parts?.length ? p.parts : NOTE_ONLY;
   const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
+  const setPeople = (i: number, people: readonly DraftPerson[]) => set({ bullets: c.bullets.map((b, j) => (j === i && b.kind === 'people' ? { ...b, people } : b)) });
   const m = p.poradaMonday ?? Q.workingMonday(s);
   const built = focusOn(Q.buildDoc(s, m, { draft: p }), id);
-  const can = A.trySubmit(s, id).ok;
+  const can = A.trySubmit(s, id).ok; const problem = Q.readiness(s, p).problems[0];
   return <App nar noNav col={<>
     <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a></div>
     <p className="stn">{c.title}</p>
-    <div className="top"><h1 className="ask">{name || 'Vedení'} prosí o doplnění</h1></div>
-    <Note h="Poznámka">{p.note}</Note>
-    <label className="l">Text zprávy<textarea className="in big" value={toText(c.body)} onChange={(e) => set({ body: fromText(e.target.value) })} /></label>
-    <div className="stack st8"><span className="lb">Vyjádření</span>{sts.map((x, i) => <div className="stmt" key={i}><label className="l">{x.speakerGenitive ? `Vyjádření ${x.speakerGenitive}` : 'Kdo'}<textarea className="in big" maxLength={POINT_LIMITS.quote} value={x.quote} onChange={(e) => set({ statements: sts.map((y, j) => (j === i ? { ...y, quote: e.target.value } : y)) })} /></label></div>)}
+    <div className="top"><h1 className="ask">{name || 'Vedení'} prosí o úpravu</h1></div>
+    <Rework labels={Q.partLabels(p, p.parts)} note={p.note} />
+    {open.includes('heading') ? <div className="stack"><label className="l">Název<TitleField value={c.title} onChange={(v) => set({ title: v })} /></label>{p.kind === 'report' ? <label className="l">Kdy<input className="in bigi" type="date" value={c.eventDate ? toIsoDate(c.eventDate) : ''} onChange={(e) => set({ eventDate: e.target.value ? parseIsoDate(e.target.value) : null })} /></label> : null}</div> : null}
+    {open.includes('body') ? <label className="l">Text zprávy<textarea className="in big" value={toText(c.body)} onChange={(e) => set({ body: fromText(e.target.value) })} /></label> : null}
+    {open.includes('people') ? c.bullets.map((b, i) => (b.kind === 'people' && i !== org ? <div className="stack st8" key={b.key}><span className="lb">{b.label}</span><PeoplePick list={[...b.people]} placeholder="Například: Tereza Malá (3.B), Jakub Veselý (3.B)" onAdd={(x) => setPeople(i, [...b.people, ...x])} />{b.people.length ? <ul className="prs">{b.people.map((x, j) => <PersonRow key={j} p={x} onChange={(n) => setPeople(i, b.people.map((y, q) => (q === j ? n : y)))} onRemove={() => setPeople(i, b.people.filter((_, q) => q !== j))} />)}</ul> : null}</div> : null)) : null}
+    {open.includes('statements') ? <div className="stack st8"><span className="lb">Vyjádření</span>{sts.map((x, i) => <div className="stmt" key={i}><label className="l">{x.speakerGenitive ? `Vyjádření ${x.speakerGenitive}` : 'Kdo'}<textarea className="in big" maxLength={POINT_LIMITS.quote} value={x.quote} onChange={(e) => set({ statements: sts.map((y, j) => (j === i ? { ...y, quote: e.target.value } : y)) })} /></label></div>)}
       {more ? <div className="stmt"><label className="l">Kdo (ve tvaru „koho“)<input className="in" autoFocus placeholder="ředitele školy" onBlur={(e) => { if (e.target.value.trim()) { set({ statements: [...sts, { speaker: { salutation: 'pan', givenName: '', familyName: e.target.value.trim() }, speakerGenitive: e.target.value.trim(), quote: '' }] }); setMore(false); } }} /></label></div> : <button type="button" className="q" onClick={() => setMore(true)}>Přidat další vyjádření</button>}
-    </div>
+    </div> : null}
     <a className="q" href={Hash(`/psat/${id}/hotovo`)}>Upravit ostatní části zprávy</a>
     <div className="pv"><p className="pvh">Takhle to vyjde</p><Sheet built={{ ...built, segments: built.segments.filter((x) => x.key === id) }} /></div>
-  </>} dock={<div className="dock">{!can ? <p className="hint a">Vyplňte prosím text vyjádření.</p> : null}<div className="row wzb"><a className="btn lg" href="#/"><Ic n="back" />Zpět</a><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; apply(A.submitPoint(id)); goReplace(`/zprava/${id}?fresh=1`); }}>Poslat znovu</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
+  </>} dock={<div className="dock">{!can ? <p className="hint a">{problem ? copy.readiness.problem(problem.code, problem.params) : 'Zprávu teď nejde poslat.'}</p> : null}<div className="row wzb"><a className="btn lg" href="#/"><Ic n="back" />Zpět</a><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; apply(A.submitPoint(id)); goReplace(`/zprava/${id}?fresh=1`); }}>Poslat znovu</button></div><Saved t={`Uloženo v ${Q.clock(p.savedAt).time}`} /></div>}
     desk={<Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn"><Sheet built={built} cls={(x) => (x.key === id ? 'cur live' : '')} /></div></Desk>} />;
 }

@@ -125,8 +125,10 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
   const fu = (id: string) => s.futures.find((f) => f.id === id || real(f.id) === real(id));
   const pw = (id: string) => ({ id: real(id), expectedVersion: vers[real(id)] ?? 1 });
   const issueV = (m: string) => (vers[`issue:${m}`] ? { expectedVersion: vers[`issue:${m}`] } : {});
-  const decidePoint = (event: string, note?: string): Call[] => [{ name: 'points.decide', key: real(a[0]), input: { ...pw(a[0]), event, ...(note ? { note } : {}) } }];
-  const decideFuture = (event: string, note?: string): Call[] => [{ name: 'future.decide', key: real(a[0]), input: { ...pw(a[0]), event, ...(note ? { note } : {}) } }];
+  /** A decision's note (trimmed) and, on a return, the parts to rework (ADR 0058): each only when there is one. */
+  const extras = (note?: string, parts?: readonly string[]) => ({ ...(note?.trim() ? { note: note.trim() } : {}), ...(parts?.length ? { parts } : {}) });
+  const decidePoint = (event: string, note?: string, parts?: readonly string[]): Call[] => [{ name: 'points.decide', key: real(a[0]), input: { ...pw(a[0]), event, ...extras(note, parts) } }];
+  const decideFuture = (event: string, note?: string, parts?: readonly string[]): Call[] => [{ name: 'future.decide', key: real(a[0]), input: { ...pw(a[0]), event, ...extras(note, parts) } }];
   const content = (id: string) => contentWire(pt(id)!.content);
   switch (op.k) {
     case 'createPoint': {
@@ -139,7 +141,7 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'retractPoint': return [{ name: 'points.retract', key: real(a[0]), input: pw(a[0]) }];
     case 'withdrawPoint': return [{ name: 'points.withdraw', key: real(a[0]), input: { ...pw(a[0]), confirmed: true } }];
     case 'approvePoint': return decidePoint('approve');
-    case 'returnPoint': return decidePoint('return', a[1]);
+    case 'returnPoint': return decidePoint('return', a[1], a[2]);
     case 'rejectPoint': return decidePoint('reject', a[1]);
     case 'editAsReviewer': return [{ name: 'points.reviewEdit', key: real(a[0]), input: { ...pw(a[0]), content: content(a[0]) } }];
     case 'createFuture': return [{ name: 'future.create', tmp: op.tmp!, input: { clientRef: uuid(), kind: a[0] } }];
@@ -149,7 +151,7 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'retractFuture': return [{ name: 'future.retract', key: real(a[0]), input: pw(a[0]) }];
     case 'withdrawFuture': return [{ name: 'future.withdraw', key: real(a[0]), input: { ...pw(a[0]), confirmed: true } }];
     case 'approveFuture': return decideFuture('approve');
-    case 'returnFuture': return decideFuture('return', a[1]);
+    case 'returnFuture': return decideFuture('return', a[1], a[2]);
     case 'rejectFuture': return decideFuture('reject', a[1]);
     case 'cancelFuture': return [{ name: 'future.cancel', key: real(a[0]), input: { ...pw(a[0]), confirmed: true } }];
     case 'saveIssueTexts': return [{ name: 'issues.setDetails', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), present: a[1], guests: a[2] } }];

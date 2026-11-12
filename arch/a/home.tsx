@@ -3,7 +3,7 @@ import { useStore, createWith, go } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future, Point } from '../core/types';
-import { App, Back, Desk, Dialog, focusOn, Hash, Ic, Item, Sec, Seg, Sheet, Stamp, Top, Track, WHEN, diffWords, Note, Todo } from './ui';
+import { App, Back, Desk, Dialog, focusOn, Hash, Ic, Item, Sec, Seg, Sheet, Stamp, Top, Track, TrailMore, WHEN, diffWords, Note, Todo } from './ui';
 import { foldForSearch } from '@/domain/cs';
 import { DocNav } from '../core/parts';
 import { toText } from '../core/react';
@@ -143,7 +143,7 @@ export function Zprava({ id, fresh }: { id: string; fresh?: boolean }) {
       {p.state !== 'rejected' && p.state !== 'withdrawn' ? <Track on={on} steps={[...STEPS.slice(0, 3), `V poradě ${Q.dm(meet)}`]} /> : null}
       {edited.map((t, i) => <Note key={i} h={`Úprava: ${Q.nameOf(Q.userById(s, t.who))}`}>{Object.entries(t.original!).map(([k, v]) => <p key={k} className="diff"><span className="sm">{k}</span><br />{k === 'Text' || k === 'Jak to dopadlo' ? diffWords(v, toText(p.content.body)) : v}</p>)}</Note>)}
       {p.state === 'submitted' && mine ? <div className="stack st8">{fresh ? <a className="btn go lg w" href="#/">Hotovo, zpět na přehled</a> : null}<button className="btn lg w" onClick={() => { apply(A.retractPoint(p.id)); go(`/psat/${p.id}/hotovo`); }}>Vzít zpět a upravit</button><button className="q r" onClick={() => setDel(true)}>Smazat zprávu</button></div> : null}
-      {p.trail.length ? <Sec h="Co se dělo"><Todo rows={p.trail.map((t) => ({ k: 'd' as const, t: <>{t.what}: {Q.nameOf(Q.userById(s, t.who)) || 'systém'}, {WHEN(t.at)}{t.note ? <><br /><span className="sm">{t.note}</span></> : null}</> }))} /></Sec> : null}
+      {p.trail.length ? <Sec h="Co se dělo"><Todo rows={p.trail.map((t) => ({ k: 'd' as const, t: <>{t.what}: {Q.nameOf(Q.userById(s, t.who)) || 'systém'}, {WHEN(t.at)}<TrailMore labels={Q.partLabels(p, t.parts)} note={t.note} /></> }))} /></Sec> : null}
     </>} />;
 }
 export function Udalosti() {

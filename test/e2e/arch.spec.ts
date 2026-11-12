@@ -12,7 +12,7 @@ import { cs } from '@/ui/copy';
 import { emailOf, isoInDays, signInAsRe } from './akce-steps';
 import { expect, showAllPersonas, signInElsewhere, test } from './fixtures';
 import { forgetFutureOf, readFuture } from './future-db';
-import { withClient } from './db';
+import { forgetPointsOf, readPoint, seedPoint, withClient } from './db';
 
 const headmaster = (project: string) => signInAsRe('rizeni', project);
 
@@ -40,7 +40,12 @@ interface ArchState {
     status: string;
     isStudent: boolean;
   }[];
-  readonly futures: readonly { id: string; trail: readonly { who: string; what: string }[] }[];
+  readonly futures: readonly {
+    id: string;
+    note: string | null;
+    parts: readonly string[] | null;
+    trail: readonly { who: string; what: string }[];
+  }[];
   readonly issues: readonly { monday: string; status: string }[];
 }
 
@@ -90,8 +95,12 @@ const idOfTitle = (email: string, title: string) =>
 test.describe('the Arch UI', () => {
   // One author per project, whose akce are cleared around each test: the tests take turns.
   test.describe.configure({ mode: 'serial' });
-  test.beforeEach(({}, testInfo) => forgetFutureOf(emailOf('archa', testInfo.project.name)));
-  test.afterEach(({}, testInfo) => forgetFutureOf(emailOf('archa', testInfo.project.name)));
+  const forget = async (project: string) => {
+    await forgetFutureOf(emailOf('archa', project));
+    await forgetPointsOf(emailOf('archa', project));
+  };
+  test.beforeEach(({}, testInfo) => forget(testInfo.project.name));
+  test.afterEach(({}, testInfo) => forget(testInfo.project.name));
 
   test('an author sends a new akce through the wizard, and the headmaster approves it', async ({
     page,
@@ -165,10 +174,19 @@ test.describe('the Arch UI', () => {
 
     const head = await signInElsewhere(newContext, signInAsRe('rizeni', project));
     await head.goto(`/#/kontrola/${id}`);
-    await head.getByRole('button', { name: /^Vrátit s poznámkou/ }).click();
+    await head.getByRole('button', { name: 'Vrátit k úpravě', exact: true }).click();
+    await head.getByRole('checkbox', { name: 'Místo' }).check();
     await head.getByRole('textbox').last().fill('Doplňte prosím místo.');
     await head.getByRole('button', { name: 'Vrátit autorovi', exact: true }).click();
     await expect.poll(async () => (await readFuture(id)).state).toBe('returned');
+
+    await page.goto(`/#/akce/${id}`);
+    await page.reload();
+    await expect(page.getByText('Upravte: Místo')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Opravit a poslat znovu' })).toHaveAttribute(
+      'href',
+      `#/nova-akce/${id}/kde`,
+    );
 
     const state = await stateOf(page);
     const me = state.users.find((u) => u.id === state.userId)!;
@@ -182,10 +200,40 @@ test.describe('the Arch UI', () => {
       });
     }
     expect(state.users.length).toBeLessThan(10);
-    const trail = state.futures.find((f) => f.id === id)!.trail;
+    const returned = state.futures.find((f) => f.id === id)!;
+    expect(returned).toMatchObject({ note: 'Doplňte prosím místo.', parts: ['place'] });
+    const trail = returned.trail;
     expect(trail.map((t) => t.who)).toContain('vedeni');
     const reviewerIds = new Set(state.users.map((u) => u.id));
     for (const { who } of trail) expect([...reviewerIds, 'system']).toContain(who);
+  });
+
+  test('a returned report opens only the parts the vedení named', async ({
+    page,
+    signInAs,
+    newContext,
+  }, testInfo) => {
+    const project = testInfo.project.name;
+    const id = await seedPoint(emailOf('archa', project), `Vrácená zpráva ${project}`, 'submitted');
+
+    const head = await signInElsewhere(newContext, signInAsRe('rizeni', project));
+    await head.goto(`/#/kontrola/${id}`);
+    await head.getByRole('button', { name: 'Vrátit k úpravě', exact: true }).click();
+    await head.getByRole('checkbox', { name: 'Název a\u00a0datum' }).check();
+    await head.getByRole('checkbox', { name: 'Seznam účastníků' }).check();
+    await head.getByRole('button', { name: 'Vrátit autorovi', exact: true }).click();
+    await expect.poll(async () => (await readPoint(id)).state).toBe('returned');
+
+    await signInAs(signInAsRe('archa', project));
+    await page.goto(`/#/oprava/${id}`);
+    await expect(page.getByText('Upravte: Název a\u00a0datum, Seznam účastníků')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Název' })).toBeVisible();
+    await expect(page.getByLabel('Kdy')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Odebrat: .*Ondřej Pech$/ })).toBeVisible();
+    // The organisers are the akce's own; the text and the statements were not named.
+    await expect(page.getByRole('button', { name: /^Odebrat: .*Jana Nováková$/ })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Text zprávy' })).toHaveCount(0);
+    await expect(page.getByText('Vyjádření', { exact: true })).toHaveCount(0);
   });
 
   test('the annexes endpoint takes only what the snapshot can print', async ({

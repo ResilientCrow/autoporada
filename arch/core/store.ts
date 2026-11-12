@@ -4,7 +4,7 @@ import { openingSentence } from '@/domain/cs';
 import { addDays, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
+import { working, atLeast, buildDoc, partLabels, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, PointType, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
@@ -57,7 +57,7 @@ export function createPoint(kind: PointKind, typeId: string | null, akceId: stri
     } else if (kind === 'report' && u) {
       content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
     }
-    const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, savedAt: s.now, trail: [] };
+    const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, parts: null, savedAt: s.now, trail: [] };
     p.content = refreshOpening(s, p, content);
     onId?.(pid);
     return { ...s, points: [...s.points, p] };
@@ -83,7 +83,7 @@ export const submitPoint = (pid: string): Fx => (s0) => {
   const akceId = s.points.find((x) => x.id === pid)?.akceId;
   // Handing the report in writes the akce's report (REPORT_MACHINE.write); nothing reopens it after.
   const futures = akceId ? up(s.futures, akceId, (f) => (f.report === 'none' || f.report === 'prompted' ? { ...f, report: 'written' as const } : f)) : s.futures;
-  return { ...s, futures, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
+  return { ...s, futures, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, parts: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
 };
 export const retractPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => (p.state === 'submitted' ? { ...p, state: 'draft', trail: [...p.trail, trail(s, 'Vzato zpět')] } : p)) });
 export const withdrawPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'withdrawn', trail: [...x.trail, trail(s, 'Zrušeno')] })) });
@@ -97,18 +97,25 @@ const decideMail = (s: State, p: Point, subject: string, body: string) => (p.aut
 export const approvePoint = (pid: string): Fx => (s) => {
   const p = s.points.find((x) => x.id === pid)!;
   if (!canDecidePoint(me(s), p) || p.state !== 'submitted') return s;
-  const after = { ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'approved' as const, note: null, trail: [...x.trail, trail(s, 'Schváleno')] })) };
+  const after = { ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'approved' as const, note: null, parts: null, trail: [...x.trail, trail(s, 'Schváleno')] })) };
   return placeProposal(decideMail(after, p, `Schváleno: ${p.content.title}`, `Vaše zpráva vyjde v poradě.`), p);
 };
-export const returnPoint = (pid: string, note: string): Fx => (s) => {
-  const p = s.points.find((x) => x.id === pid)!;
-  if (!note.trim() || !atLeast(me(s)?.role, 'reviewer')) return s;
-  return decideMail({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'returned', note, trail: [...x.trail, trail(s, 'Vráceno k úpravě', { note })] })) }, p, `Vráceno k úpravě: ${p.content.title}`, note);
+/** A return names a note, the parts to rework, or both (ADR 0058): what it leaves on the item and in its trail, or null when it names neither. */
+const returnOf = (note: string, parts: readonly string[]) => {
+  const n = note.trim(); const ps = parts.length ? [...parts] : null;
+  if (!n && !ps) return null;
+  return { note: n || null, parts: ps, trail: { ...(n ? { note: n } : {}), ...(ps ? { parts: ps } : {}) } };
+};
+export const returnPoint = (pid: string, note: string, parts: readonly string[] = []): Fx => (s) => {
+  const p = s.points.find((x) => x.id === pid)!; const r = returnOf(note, parts);
+  if (!r || !atLeast(me(s)?.role, 'reviewer')) return s;
+  const body = [r.note, r.parts ? `K přepracování: ${partLabels(p, r.parts).join(', ')}` : null].filter(Boolean).join('\n');
+  return decideMail({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'returned', note: r.note, parts: r.parts, trail: [...x.trail, trail(s, 'Vráceno k úpravě', r.trail)] })) }, p, `Vráceno k úpravě: ${p.content.title}`, body);
 };
 export const rejectPoint = (pid: string, note: string): Fx => (s) => {
   const p = s.points.find((x) => x.id === pid)!;
   if (!note.trim() || !atLeast(me(s)?.role, 'reviewer')) return s;
-  return decideMail({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'rejected', note, trail: [...x.trail, trail(s, 'Zamítnuto', { note })] })) }, p, `Zamítnuto: ${p.content.title}`, note);
+  return decideMail({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'rejected', note, parts: null, trail: [...x.trail, trail(s, 'Zamítnuto', { note })] })) }, p, `Zamítnuto: ${p.content.title}`, note);
 };
 /** A reviewer's edit keeps the original wording of what changed („Původní znění“). */
 export const editAsReviewer = (pid: string, content: PointContent): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => {
@@ -125,19 +132,19 @@ export function createFuture(kind: Future['kind'], onId?: (id: string) => void):
   return (s0) => {
     const [s, fid] = id(s0, 'f'); const u = me(s)!; onId?.(fid);
     const tomorrow = parseIsoDate(toIsoDate(handInTo(s).monday));
-    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: 'smichov', place: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, note: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
+    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: 'smichov', place: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
     return { ...s, futures: [...s.futures, f] };
   };
 }
 export const saveFuture = (fid: string, patch: Partial<Future>): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => ({ ...f, ...patch, savedAt: s.now })) });
-export const submitFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.title.trim() ? { ...f, state: 'submitted', submittedAt: s.now, note: null, trail: [...f.trail, trail(s, 'Odesláno')] } : f)) });
+export const submitFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.title.trim() ? { ...f, state: 'submitted', submittedAt: s.now, note: null, parts: null, trail: [...f.trail, trail(s, 'Odesláno')] } : f)) });
 export const retractFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.state === 'submitted' ? { ...f, state: 'draft', trail: [...f.trail, trail(s, 'Vzato zpět')] } : f)) });
 export const withdrawFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'withdrawn', trail: [...f.trail, trail(s, 'Zrušeno')] })) });
 /** „Uložit změny“: an approved akce changes only through this; its author sends it back to review. */
 export const reviseFuture = (fid: string, patch: Partial<Future>): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => { const author = f.authorId === s.userId; return { ...f, ...patch, ...(author ? { state: 'submitted' as const, changed: true, submittedAt: s.now } : {}), trail: [...f.trail, trail(s, author ? 'Změna, znovu ke kontrole' : 'Upraveno vedením')] }; }) });
-export const approveFuture = (fid: string): Fx => (s) => { const f = s.futures.find((x) => x.id === fid)!; if (!canDecideFuture(me(s), f) || f.state !== 'submitted') return s; return { ...s, futures: up(s.futures, fid, (x) => ({ ...x, state: 'approved', changed: false, note: null, trail: [...x.trail, trail(s, 'Schváleno')] })) }; };
-export const returnFuture = (fid: string, note: string): Fx => (s) => (!note.trim() ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'returned', note, trail: [...f.trail, trail(s, 'Vráceno k úpravě', { note })] })) });
-export const rejectFuture = (fid: string, note: string): Fx => (s) => (!note.trim() ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'rejected', note, trail: [...f.trail, trail(s, 'Zamítnuto', { note })] })) });
+export const approveFuture = (fid: string): Fx => (s) => { const f = s.futures.find((x) => x.id === fid)!; if (!canDecideFuture(me(s), f) || f.state !== 'submitted') return s; return { ...s, futures: up(s.futures, fid, (x) => ({ ...x, state: 'approved', changed: false, note: null, parts: null, trail: [...x.trail, trail(s, 'Schváleno')] })) }; };
+export const returnFuture = (fid: string, note: string, parts: readonly string[] = []): Fx => (s) => { const r = returnOf(note, parts); return !r ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'returned', note: r.note, parts: r.parts, trail: [...f.trail, trail(s, 'Vráceno k úpravě', r.trail)] })) }; };
+export const rejectFuture = (fid: string, note: string): Fx => (s) => (!note.trim() ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'rejected', note, parts: null, trail: [...f.trail, trail(s, 'Zamítnuto', { note })] })) });
 export const cancelFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'cancelled', trail: [...f.trail, trail(s, 'Zrušeno')] })) });
 
 // ---- porada ----

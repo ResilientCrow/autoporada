@@ -68,6 +68,13 @@ export function Item({ to, act, t, st, mk, end, warn }: { to?: string; act?: () 
   return to ? <a className="it" href={Hash(to)}>{inner}</a> : <div className="it">{inner}</div>;
 }
 export const Note = ({ h, children, err }: { h?: string; children: ReactNode; err?: boolean }) => <div className={`note${err ? ' err' : ''}`} {...(err ? { role: 'alert' } : {})}>{h ? <b>{h}</b> : null}{children}</div>;
+/** What a return asked of the author (ADR 0058): the parts to rework as the heading, the reviewer's note below. */
+export function Rework({ labels, note }: { labels: readonly string[]; note: string | null }) {
+  if (!labels.length) return note ? <Note h="Poznámka vedení">{note}</Note> : null;
+  return <Note h={`Upravte: ${labels.join(', ')}`}>{note}</Note>;
+}
+/** A „Co se dělo“ line's tail: the parts a return named and the note, each on a line of its own. */
+export const TrailMore = ({ labels, note }: { labels: readonly string[]; note: string | undefined }) => <>{labels.length ? <><br /><span className="sm">{`K\u00a0přepracování: ${labels.join(', ')}`}</span></> : null}{note ? <><br /><span className="sm">{note}</span></> : null}</>;
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const close = useRef(onClose); useEffect(() => { close.current = onClose; });
   useEffect(() => { const opener = document.activeElement as HTMLElement | null; const f = (e: KeyboardEvent) => { if (e.key === 'Escape') close.current(); }; addEventListener('keydown', f); document.querySelector<HTMLElement>('.dlg')?.focus(); return () => { removeEventListener('keydown', f); opener?.focus?.(); }; }, []);

@@ -7,9 +7,17 @@ import { addDays, compareDates, instantToWallClock, parseIsoDate, parseWallTime,
 import { composeDocument, reportFromContent } from '@/document/compose';
 import type { Block, DocumentModel } from '@/document/model';
 import { parseIssueSnapshot, type IssueSnapshot } from '@/snapshot';
+import { FUTURE_RETURN_PARTS, pointReturnPartsFor } from '@/domain/review';
+import { future as futureCopy } from '@/ui/copy/future';
+import { points as pointCopy } from '@/ui/copy/points';
 import type { Future, Issue, Point, Role, State, User } from './types';
 
 export const nowOf = (s: State) => new Date(s.now);
+/** The parts a return may name (ADR 0058), as [code, label] in the order the form asks them: a report's four, a proposal's title and text, an akce's or schůzka's four. */
+export const returnPartsOf = (it: Point | Future): (readonly [string, string])[] =>
+  'content' in it ? pointReturnPartsFor(it.kind).map((c) => [c, pointCopy.timeline.part(c, it.kind) ?? c] as const) : FUTURE_RETURN_PARTS.map((c) => [c, futureCopy.returnPart[c]] as const);
+/** The labels of the parts a return named, in the form's order. */
+export const partLabels = (it: Point | Future, parts: readonly string[] | null | undefined) => returnPartsOf(it).filter(([c]) => parts?.includes(c)).map(([, l]) => l);
 /** The older Příloha 2 (one text, carried from porada to porada) prints before the further annexes, as `composeDocument` numbers them. */
 export const hasAnnex2 = (iss: Issue) => !!iss.annex2 && !isRichDocEmpty(iss.annex2);
 export const firstExtraAnnex = (iss: Issue) => (hasAnnex2(iss) ? 3 : 2);

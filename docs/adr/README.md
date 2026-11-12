@@ -63,3 +63,4 @@ record that supersedes it.
 | [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Accepted; adds to 0053 |
 | [0056](0056-a-refused-report-closes-its-akce.md) | A refused report closes its akce | Accepted; supersedes 0049 item 3 in part; builds on 0052 |
 | [0057](0057-the-author-deletes-an-unfinished-akce.md) | The author deletes an unfinished akce or schůzka | Accepted; adds to 0053 |
+| [0058](0058-a-return-names-the-parts-to-rework.md) | A return names the parts to rework | Accepted; adds to 0053 |
