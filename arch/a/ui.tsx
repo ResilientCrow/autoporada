@@ -9,7 +9,7 @@ export const Hash = (to: string) => `#${to}`;
 
 export function useNav() {
   const { s } = useStore(); const u = Q.me(s);
-  const q = Q.queuePoints(s).length + Q.queueFutures(s).length;
+  const q = Q.queuePoints(s).length + Q.queueFutures(s).length + Q.placeholderQueue(s, u).length;
   const req = Q.pendingRequests(s).length;
   if (u?.role === 'headmaster') return [['/', 'home', 'Domů', 0], ['/porada', 'book', 'Porada', 0], ['/kontrola', 'rev', 'Ke kontrole', q], ['/archiv', 'stack', 'Archiv', 0], ['/lide', 'gear', 'Správa', req]] as const;
   if (u?.role === 'reviewer') return [['/', 'home', 'Domů', 0], ['/kontrola', 'rev', 'Ke kontrole', q], ['/moje', 'doc', 'Moje', 0], ['/archiv', 'stack', 'Archiv', 0]] as const;

@@ -4,13 +4,19 @@ import { displayName } from '@/domain/report';
 import { fromText, go, Sheet, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
-import type { Future, Point } from '../core/types';
+import type { Future, Point, User } from '../core/types';
 import { App, Back, Desk, Dialog, diffWords, focusOn, Note, Sec, Top, WHEN, Toast } from './ui';
 import { NotFound } from './home';
 
-type It = { kind: 'p'; p: Point } | { kind: 'f'; f: Future };
-const queue = (s: ReturnType<typeof useStore>['s']): It[] => [...Q.queuePoints(s).map((p) => ({ kind: 'p' as const, p })), ...Q.queueFutures(s).map((f) => ({ kind: 'f' as const, f }))];
-const idOf = (i: It) => (i.kind === 'p' ? i.p.id : i.f.id);
+type It = { kind: 'p'; p: Point } | { kind: 'f'; f: Future } | { kind: 'ph'; h: Q.PlaceholderItem };
+type S = ReturnType<typeof useStore>['s'];
+const queue = (s: S, u: User): It[] => [...Q.queuePoints(s).map((p) => ({ kind: 'p' as const, p })), ...Q.queueFutures(s).map((f) => ({ kind: 'f' as const, f })), ...Q.placeholderQueue(s, u).map((h) => ({ kind: 'ph' as const, h }))];
+/** A placeholder's address is `chybi-<akce id>` (ADR 0061). */
+const PH = 'chybi-';
+const idOf = (i: It) => (i.kind === 'p' ? i.p.id : i.kind === 'f' ? i.f.id : PH + i.h.akce.id);
+const MARKER = 'Vygenerováno automaticky (zpráva nedodána)';
+const days = (f: Future) => (f.endDate ? `${Q.dm(f.date)} až ${Q.dm(f.endDate)}` : Q.dm(f.date));
+const STATUS_LINE = (h: Q.PlaceholderItem) => h.status === 'checked' ? 'Zkontrolováno.' : h.status === 'handed-in' ? 'Autor zprávu odevzdal, čeká na rozhodnutí.' : h.status === 'open' ? `Autor může zprávu odevzdat do ${Q.clock(h.close).full}.` : 'Termín na odevzdání zprávy minul.';
 type Parts = readonly (readonly [string, string])[];
 
 /** „Vrátit autorovi“ or „Zamítnout“: a return ticks the parts to rework and may add a note (ADR 0058); a refusal needs the note. */
@@ -28,18 +34,38 @@ export function Kontrola({ id }: { id?: string }) {
   const { s, apply, replace } = useStore(); const u = Q.me(s)!;
   const [undo, setUndo] = useState<{ s: typeof s; to: string } | null>(null); const [dlg, setDlg] = useState<'ret' | 'rej' | null>(null); const [edit, setEdit] = useState(false); const [tt, setTt] = useState(''); const [done, setDone] = useState(0); const [toast, setToast] = useState('');
   const [title, setTitle] = useState(''); const [body, setBody] = useState('');
-  const q = queue(s); const decidable = q.filter((x) => (x.kind === 'p' ? Q.canDecidePoint(u, x.p) : Q.canDecideFuture(u, x.f)));
-  const cur = (id && q.find((x) => idOf(x) === id)) || decidable[0] || q[0];
+  const q = queue(s, u); const decidable = q.filter((x) => (x.kind === 'p' ? Q.canDecidePoint(u, x.p) : x.kind === 'f' ? Q.canDecideFuture(u, x.f) : true));
+  const lone = id?.startsWith(PH) ? Q.placeholderById(s, u, id.slice(PH.length)) : undefined;
+  const cur: It | undefined = (id && q.find((x) => idOf(x) === id)) || (lone && { kind: 'ph' as const, h: lone }) || decidable[0] || q[0];
+  const [phEdit, setPhEdit] = useState(false); const [phText, setPhText] = useState('');
   const [seenId, setSeenId] = useState(id);
-  if (seenId !== id) { setSeenId(id); setEdit(false); }
+  if (seenId !== id) { setSeenId(id); setEdit(false); setPhEdit(false); }
   if (!Q.atLeast(u.role, 'reviewer')) return <NotFound />;
   const home = '/';
   if (!cur) return <App desk={<Desk cls="mg clip" note={<b>Porada {Q.dm(Q.working(s).meetingDate)}</b>}><div className="wrapm wrapn"><Sheet built={Q.buildDoc(s, Q.workingMonday(s))} /></div></Desk>} col={<><Top big h="Všechno je rozhodnuté" lead={done ? `Právě jste rozhodli ${done === 1 ? '1 položku' : done < 5 ? `${done} položky` : `${done} položek`}. Autoři dostanou e-mail.` : 'Teď tu nic nečeká.'} /><a className="btn go lg w" href={`#${home}`}>Zpět domů</a>{u.role === 'headmaster' ? <a className="btn lg w" href="#/porada/nahled">Otevřít náhled porady</a> : null}</>} />;
+  const list = <details className="qd"><summary>Celá fronta ({q.length})</summary><div className="grp">{q.map((x) => <a key={idOf(x)} className={`it qi${idOf(x) === idOf(cur) ? ' on' : ''}`} href={`#/kontrola/${idOf(x)}`}><span className="tx"><span className="tt">{x.kind === 'p' ? x.p.content.title || 'Bez názvu' : x.kind === 'f' ? x.f.title : x.h.akce.title}</span><span className="st">{x.kind === 'ph' ? `${MARKER}, ${days(x.h.akce)}` : <>{x.kind === 'p' ? (x.p.kind === 'report' ? 'Zpráva' : 'Návrh') : x.f.changed ? 'Změna akce' : x.f.kind === 'akce' ? 'Akce' : 'Schůzka'}, {Q.nameOf(Q.userById(s, x.kind === 'p' ? x.p.authorId : x.f.authorId))}</>}</span></span></a>)}</div></details>;
+  if (cur.kind === 'ph') {
+    const { akce: f, monday: m, status, point } = cur.h; const chk = s.placeholderChecks[f.id]; const current = Q.placeholderText(s, f, m);
+    const own = !!Q.issueOf(s, m)?.placeholders[f.id]; const moved = !chk?.checked && !!chk?.was && chk.was !== Q.systemText(f);
+    const rest = decidable.filter((x) => idOf(x) !== idOf(cur));
+    const confirm = () => { apply(A.confirmPlaceholder(m, f.id, Q.systemText(f))); setUndo(null); setToast(`Zkontrolováno: ${f.title}`); go(rest[0] ? `/kontrola/${idOf(rest[0])}` : '/kontrola'); };
+    const phDock = phEdit ? <div className="dock"><div className="row"><button className="btn lg" onClick={() => setPhEdit(false)}>Zpět</button><button className={`btn lg ${phText.trim() ? 'go' : 'off'}`} aria-disabled={!phText.trim()} onClick={() => { if (!phText.trim()) return; apply(A.setPlaceholder(m, f.id, phText)); setPhEdit(false); }}>Uložit</button></div></div> : status === 'checked' ? undefined : <div className="dock"><div className="row"><button type="button" className="btn go lg" onClick={confirm}>Zkontrolováno</button></div></div>;
+    const phOver = toast ? <Toast key={toast} onDone={() => { setToast(''); setUndo(null); }}>{toast}</Toast> : null;
+    return <App nar over={phOver} dock={phDock} desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>} right={<span>Porada {Q.dm(Q.issueOf(s, m)?.meetingDate ?? m)}</span>}><div className="wrapm wrapn"><Sheet built={focusOn(Q.buildDoc(s, m, { pending: true }), `missing-${f.id}`)} cls={(x) => (x.key === `missing-${f.id}` ? 'cur' : '')} /></div></Desk>}
+      col={<>
+        <Back to={home} t="Zpět domů" />
+        {q.some((x) => idOf(x) === idOf(cur)) ? <p className="stn">{q.findIndex((x) => idOf(x) === idOf(cur)) + 1}. z {q.length} ke kontrole</p> : null}
+        <Top h={f.title} lead={`${MARKER}. ${days(f)}. Autor: ${Q.nameOf(Q.userById(s, f.authorId))}.`} />
+        <p className="sm">{point ? `Zpráva je ${point.state === 'submitted' ? 'u kontroly' : point.state === 'returned' ? 'vrácená autorovi' : 'rozepsaná'}. ` : 'Autor zatím nezačal. '}{STATUS_LINE(cur.h)}</p>
+        {moved ? <Note h="Akce se od vaší kontroly změnila"><p className="diff">{diffWords(chk!.was!, Q.systemText(f))}</p></Note> : null}
+        {phEdit ? <label className="l">Odstavec<textarea className="in big" autoFocus value={phText} onChange={(e) => setPhText(e.target.value)} /></label> : <><p className="ppar">{current}</p><div className="row wr"><button className="btn" onClick={() => { setPhText(current); setPhEdit(true); }}>Přepsat odstavec</button>{own ? <button className="q" onClick={() => apply(A.setPlaceholder(m, f.id, null))}>Vrátit původní text</button> : null}</div></>}
+        {list}
+      </>} />;
+  }
   const after = (msg: string) => { setUndo({ s, to: idOf(cur) }); setDone((d) => d + 1); setToast(msg); const rest = decidable.filter((x) => idOf(x) !== idOf(cur)); go(rest[0] ? `/kontrola/${idOf(rest[0])}` : '/kontrola'); };
   const idx = q.findIndex((x) => idOf(x) === idOf(cur)) + 1;
   const canDo = cur.kind === 'p' ? Q.canDecidePoint(u, cur.p) : Q.canDecideFuture(u, cur.f);
   const au = Q.userById(s, cur.kind === 'p' ? cur.p.authorId : cur.f.authorId);
-  const list = <details className="qd"><summary>Celá fronta ({q.length})</summary><div className="grp">{q.map((x) => <a key={idOf(x)} className={`it qi${idOf(x) === idOf(cur) ? ' on' : ''}`} href={`#/kontrola/${idOf(x)}`}><span className="tx"><span className="tt">{x.kind === 'p' ? x.p.content.title || 'Bez názvu' : x.f.title}</span><span className="st">{x.kind === 'p' ? (x.p.kind === 'report' ? 'Zpráva' : 'Návrh') : x.f.changed ? 'Změna akce' : x.f.kind === 'akce' ? 'Akce' : 'Schůzka'}, {Q.nameOf(Q.userById(s, x.kind === 'p' ? x.p.authorId : x.f.authorId))}</span></span></a>)}</div></details>;
   const dock = canDo ? <div className="dock"><div className="row"><button type="button" className="btn go lg" onClick={() => { const name = cur.kind === 'p' ? cur.p.content.title : cur.f.title; apply(cur.kind === 'p' ? A.approvePoint(cur.p.id) : A.approveFuture(cur.f.id)); after(`Schváleno: ${name}`); }}>Schválit</button></div><div className="row dec2"><button type="button" className="btn" onClick={() => setDlg('ret')}>Vrátit k úpravě</button>{cur.kind === 'p' ? <button type="button" className="btn" onClick={() => { setTitle(cur.p.content.title); setBody(toText(cur.p.content.body)); setTt(cur.p.content.opening); setEdit(true); }}>Upravit text</button> : null}<button type="button" className="q r" onClick={() => setDlg('rej')}>Zamítnout</button></div></div> : undefined;
   const over = dlg ? <Decide key={`${dlg}-${idOf(cur)}`} parts={dlg === 'ret' ? Q.returnPartsOf(cur.kind === 'p' ? cur.p : cur.f) : null} title={dlg === 'ret' ? 'Vrátit autorovi' : 'Zamítnout'} verb={dlg === 'ret' ? 'Vrátit autorovi' : 'Zamítnout'} placeholder={dlg === 'ret' ? 'Například: Doplňte prosím vyjádření ředitele.' : 'Proč to nevyjde'} onClose={() => setDlg(null)} onDone={(n, parts) => { apply(cur.kind === 'p' ? (dlg === 'ret' ? A.returnPoint(cur.p.id, n, parts) : A.rejectPoint(cur.p.id, n)) : dlg === 'ret' ? A.returnFuture(cur.f.id, n, parts) : A.rejectFuture(cur.f.id, n)); setDlg(null); after(dlg === 'ret' ? 'Vráceno autorovi' : 'Zamítnuto'); }} /> : toast ? <Toast key={toast} onDone={() => { setToast(''); setUndo(null); }} {...(undo ? { undo: () => { replace(undo.s); setDone((d) => d - 1); setToast(''); setUndo(null); go(`/kontrola/${undo.to}`); } } : {})}>{toast}</Toast> : null;
   if (cur.kind === 'p') {

@@ -76,7 +76,7 @@ type Tile = { t: string; ic: string; tone: string; to?: string; act?: () => void
 export function Domu() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const tasks = useOwedTasks();
   const head = u.role === 'headmaster'; const staff = Q.atLeast(u.role, 'reviewer');
-  const q = staff ? Q.queuePoints(s).filter((p) => Q.canDecidePoint(u, p)).length + Q.queueFutures(s).filter((f) => Q.canDecideFuture(u, f)).length : 0;
+  const q = staff ? Q.queuePoints(s).filter((p) => Q.canDecidePoint(u, p)).length + Q.queueFutures(s).filter((f) => Q.canDecideFuture(u, f)).length + Q.placeholderQueue(s, u).length : 0;
   const req = head ? Q.pendingRequests(s).length : 0;
   const wk = Q.working(s); const dl = WHEN(wk.deadlineAt);
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };

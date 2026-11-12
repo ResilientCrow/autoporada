@@ -40,6 +40,8 @@ export interface Issue {
   own: { rows: boolean; present: boolean; guests: boolean; annex2: boolean };
   doc?: { at: string; by: string; pdf: 'rendering' | 'ready' | 'failed'; model: unknown; points: number; pdfFailure?: string; left?: { moved: string[]; missed: string[] } };
 }
+/** The headmaster's check of an akce's missing-report paragraph (ADR 0061): `was` is the paragraph they confirmed. */
+export interface PlaceholderCheck { checked: boolean; was: string | null }
 export interface RegistryEntry { id: string; givenName: string; familyName: string; classCode: string; isNew: boolean }
 export interface RegistryList { key: string; purpose: 'annex1' | 'point4'; docLabel: string; name: string; archived: boolean; entries: RegistryEntry[] }
 export interface PointType { id: string; name: string; titleGender: 'm' | 'f' | 'n' | 'pl' | 'npl' | null; bullets: BulletSpec[]; locked: boolean; active: boolean }
@@ -48,6 +50,6 @@ export interface Mail { id: string; at: string; to: string; subject: string; bod
 export interface Settings { dayOffset: number; time: string; remindSoft: boolean; remindHard: boolean; annex1Heading: string; annex1Intro: RichDoc }
 export interface State {
   v: number; now: string; userId: string | null; users: User[]; types: PointType[]; points: Point[]; futures: Future[];
-  issues: Issue[]; plannedThrough: string; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
+  issues: Issue[]; /** By akce id; the headmaster's only. */ placeholderChecks: Record<string, PlaceholderCheck>; plannedThrough: string; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
 }
 export type { Campus, DraftPerson, PointContent, PointKind, Salutation };

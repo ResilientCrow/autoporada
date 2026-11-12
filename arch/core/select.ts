@@ -107,18 +107,42 @@ export function owedBy(s: State, userId: string | null): Owed[] {
   }
   return out.sort((a, b) => a.monday.localeCompare(b.monday) || a.close.getTime() - b.close.getTime());
 }
+/** The akce a porada can owe a report for, as the server's `owedAkce` reads them (ADR 0049): approved, or back in review after an approval; not closed as missed; with a start date. */
+const isOwable = (f: Future) => f.kind === 'akce' && f.report !== 'missed' && f.dateSet !== false && (f.state === 'approved' || ((f.state === 'submitted' || f.state === 'returned') && f.wasApproved));
 /** Every akce owed to a porada, with what happened to its report: the headmaster's „Chybějící zprávy“. A refused report closes its akce (ADR 0056). */
 export function owedTo(s: State, monday: string) {
-  return s.futures.filter((f) => f.kind === 'akce' && f.state === 'approved' && owedMonday(s, f) === monday && (ownerIsOver(s, f) || compareDates(lastDayOf(f), parseIsoDate(issueOf(s, monday)?.meetingDate ?? monday)) < 0)).flatMap((f) => {
+  return s.futures.filter((f) => isOwable(f) && owedMonday(s, f) === monday && (ownerIsOver(s, f) || compareDates(lastDayOf(f), parseIsoDate(issueOf(s, monday)?.meetingDate ?? monday)) < 0)).flatMap((f) => {
     const point = pointOfAkce(s, f.id);
     if (point?.state === 'rejected') return [];
     return [{ akce: f, point, delivered: !!point && (point.state === 'approved' || point.state === 'published'), notYetOver: !ownerIsOver(s, f) }];
   });
 }
-export function placeholderText(s: State, f: Future, monday: string): string {
-  const custom = issueOf(s, monday)?.placeholders[f.id];
-  if (custom) return custom;
+/** The paragraph the system writes for an akce (ADR 0060), whatever the headmaster wrote instead. */
+export function systemText(f: Future): string {
   return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), ...(f.timeFrom && { from: f.timeFrom }), campus: f.campus, ...(f.place.trim() && { place: singleLine(f.place) }), title: singleLine(f.title), ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }) });
+}
+export function placeholderText(s: State, f: Future, monday: string): string {
+  return issueOf(s, monday)?.placeholders[f.id] || systemText(f);
+}
+/** Where an akce's missing-report paragraph stands (ADR 0061); as the server's `placeholderStatus`. */
+export type PlaceholderStatus = 'checked' | 'handed-in' | 'open' | 'to-check';
+export function placeholderStatusOf(s: State, f: Future, monday: string): PlaceholderStatus {
+  if (s.placeholderChecks[f.id]?.checked) return 'checked';
+  if (pointOfAkce(s, f.id)?.state === 'submitted') return 'handed-in';
+  return nowOf(s).getTime() < closeFor(s, f, monday).getTime() ? 'open' : 'to-check';
+}
+export interface PlaceholderItem { akce: Future; monday: string; status: PlaceholderStatus; close: Date; point: Point | undefined }
+/** The placeholders of an open porada: one for each akce owed to it whose report is not decided. */
+export function placeholdersOf(s: State, monday: string): PlaceholderItem[] {
+  if (issueOf(s, monday)?.status === 'generated') return [];
+  return owedTo(s, monday).filter((o) => !o.delivered).map((o) => ({ akce: o.akce, monday, status: placeholderStatusOf(s, o.akce, monday), close: closeFor(s, o.akce, monday), point: o.point })).sort((a, b) => compareDates(a.akce.date, b.akce.date));
+}
+/** One placeholder by its akce, in whatever standing: the detail page opens for any that exists (headmaster only). */
+export const placeholderById = (s: State, u: User | null, akceId: string): PlaceholderItem | undefined => (u?.role === 'headmaster' ? slotsOf(s).filter((x) => x.status === 'open').flatMap((x) => placeholdersOf(s, toIsoDate(x.monday))).find((x) => x.akce.id === akceId) : undefined);
+/** Ke kontrole: the headmaster's placeholders still to check, over every open porada, by the akce's date. */
+export function placeholderQueue(s: State, u: User | null): PlaceholderItem[] {
+  if (u?.role !== 'headmaster') return [];
+  return slotsOf(s).filter((x) => x.status === 'open').flatMap((x) => placeholdersOf(s, toIsoDate(x.monday))).filter((x) => x.status === 'to-check').sort((a, b) => compareDates(a.akce.date, b.akce.date));
 }
 export const myPoints = (s: State, id: string) => s.points.filter((p) => p.authorId === id && p.state !== 'withdrawn');
 export const myFutures = (s: State, id: string) => s.futures.filter((f) => f.authorId === id && f.state !== 'withdrawn');
@@ -139,7 +163,7 @@ export const isFixedRow = (r: Issue['rows'][number]) => !!r.slot && FIXED_SLOTS.
 /** Rows the document fills by itself; the pokyny page does not list them. */
 const AUTO_SLOTS = new Set([...FIXED_SLOTS, 'exemptions']);
 export const isAutoRow = (r: Issue['rows'][number]) => !!r.slot && AUTO_SLOTS.has(r.slot);
-export interface Segment { key: string; kind: 'head' | 'report' | 'missing' | 'item' | 'tail'; refId?: string; fixed?: true; state?: Point['state'] | 'missing' | 'generated'; blocks: Block[] }
+export interface Segment { key: string; kind: 'head' | 'report' | 'missing' | 'item' | 'tail'; refId?: string; fixed?: true; state?: Point['state'] | 'missing' | 'checked' | 'generated'; blocks: Block[] }
 export interface Built { model: DocumentModel | null; errors: string[]; segments: Segment[]; points: number; printed: string[] }
 
 /** The real snapshot of a porada. `extra` adds points not yet decided (preview) or the draft being typed. */
@@ -156,7 +180,7 @@ export function snapshotOf(s: State, monday: string, opts: { pending?: boolean; 
   for (const o of owedTo(s, monday)) {
     if (shown.has(o.akce.id) || o.notYetOver && !opts.pending) continue;
     reports.push({ id: `missing-${o.akce.id}`, title: o.akce.title, date: toIsoDate(o.akce.date), ...(o.akce.endDate && { endDate: toIsoDate(o.akce.endDate) }), body: richDocFromText(placeholderText(s, o.akce, monday)), bullets: [], statements: [], missing: true });
-    refs[`missing-${o.akce.id}`] = 'missing';
+    refs[`missing-${o.akce.id}`] = s.placeholderChecks[o.akce.id]?.checked ? 'checked' : 'missing';
   }
   const futureItems = s.futures.filter((f) => f.state === 'approved').map(futureSnap);
   const rowOut = (r: Issue['rows'][number]) => {

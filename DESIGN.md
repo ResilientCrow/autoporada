@@ -144,6 +144,13 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 - Lists every list of the document in document order: the `pokyny` rows, then `hospodareni` rows (each section ends with „Nový bod"), then „Provoz školy" (report, further akce), then „Záhlaví a přílohy" (when an issue exists). Row behaviour follows `Row.slot`: `meetings` and `events` start a new jednání or akce (`Item act`), `talent` and `exemptions` go to `/seznamy`, others open `/porada/pokyny/<id>`.
 - It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde."
 
+### Missing-report placeholders (`Kontrola` in `review.tsx`, `Zpravy` in `porada.tsx`, ADR 0061)
+
+- A placeholder is the paragraph the system prints for an akce whose report did not come. `State.placeholderChecks` (headmaster only, by akce id: `{ checked, was }`) says whether the headmaster confirmed the paragraph the system writes now; `was` is the one they confirmed. `Q.placeholdersOf(s, monday)` lists an open porada's placeholders with their status (`checked`, `handed-in`, `open`, `to-check`, as the server's `placeholderStatus`); `Q.placeholderQueue` is the `to-check` ones over every open porada, headmaster only.
+- Ke kontrole lists the `to-check` ones after the points and akce, with the marker „Vygenerováno automaticky (zpráva nedodána)“ and the dates. Its count badge (nav, Domů tile, Porada step) includes them. The detail is `/kontrola/chybi-<akce id>` and opens for a placeholder in any status: marker, author, report state and close, the paragraph with „Přepsat odstavec“ (Uložit / Zpět) and „Vrátit původní text“, a Note „Akce se od vaší kontroly změnila“ with `diffWords` when the akce changed after a check, and the dock primary „Zkontrolováno“ (`confirmPlaceholder`, then the next item).
+- Chybějící zprávy under Porada is only the overview: one `Item` per placeholder with the status line („Čeká na vaši kontrolu“, „Zkontrolováno“, „Autor může zprávu odevzdat do …“, „Zpráva je odevzdaná a čeká na rozhodnutí“), each linking to the detail. The WholeDesk `missing` segments open the detail too; „Čeká na vás“ in the document navigator counts only the unchecked ones (`Segment.state` is `checked` for a confirmed one).
+- A local edit of the akce or a save of the paragraph sets `checked: false`, as the server does.
+
 ### A write, end to end
 
 1. A screen calls `apply(A.someOp(...))` (`arch/core/ops.ts`). Each op is an `Fx`, a pure `State => State` function tagged with `op: { k, a, tmp?, d?, m? }` (`tag`, `simple`).

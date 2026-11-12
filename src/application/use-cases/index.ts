@@ -118,6 +118,7 @@ export {
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
+  systemParagraph,
 } from './issues';
 export {
   addOutlineItem,

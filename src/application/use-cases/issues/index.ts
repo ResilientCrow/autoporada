@@ -1,5 +1,6 @@
 export { addIssue } from './add';
 export { readWindow } from './calendar';
+export { systemParagraph } from './assemble-missing';
 export { ensureIssue } from './ensure';
 export { confirmPlaceholder } from './confirm-placeholder';
 export { dropIssue } from './drop';

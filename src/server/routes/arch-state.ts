@@ -18,6 +18,7 @@ import type { WebContainer } from '../container';
 import { runRegistered } from '../pipeline';
 import { archCalendar } from './arch-calendar';
 import { archItems } from './arch-items';
+import { archPlaceholders } from './arch-placeholders';
 import { peopleFor } from './arch-people';
 
 type Json = Record<string, unknown>;
@@ -118,12 +119,7 @@ export async function archState(
   });
 
   const work = workingSlot(today, slots) ?? slots[0];
-  const placeholderRows = staff ? await db.placeholders(fIds) : [];
-  const placeholders: Record<string, string> = {};
-  for (const r of placeholderRows) {
-    if (r.paragraph !== null) placeholders[r.futureItemId] = r.paragraph;
-    vers[`ph:${r.futureItemId}`] = r.version;
-  }
+  const ph = await archPlaceholders(db, { staff, head }, futureRows, vers);
   const docs = staff ? await db.documents() : [];
   const annexRows = new Map<string, unknown>(
     staff ? (await db.annexes()).map((r) => [r.monday, r.annexes]) : [],
@@ -237,7 +233,7 @@ export async function archState(
         annex2: staff && (row?.annex2 ?? null) !== null,
       },
       rows,
-      placeholders,
+      placeholders: ph.placeholders,
       ...(docOut && { doc: docOut }),
     };
   };
@@ -311,6 +307,7 @@ export async function archState(
     points: archPoints,
     futures: archFutures,
     issues: archIssues,
+    placeholderChecks: ph.placeholderChecks,
     plannedThrough: toIsoDate(plannedThrough),
     registry,
     requests,

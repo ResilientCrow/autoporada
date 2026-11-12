@@ -16,15 +16,15 @@ import { App, Back, Desk, Dialog, goReplace, Ic, Item, Note, Saved, Sec, Seg, St
 const notYet = (n: number) => (n === 1 ? '1 zatím nevyjde, protože čeká na schválení' : n < 5 ? `${n} zatím nevyjdou, protože čekají na schválení` : `${n} zatím nevyjde, protože čeká na schválení`);
 const useM = () => { const { s } = useStore(); return Q.workingMonday(s); };
 const { counts } = Q;
-const ATT = { label: 'Čeká na vás', test: (i: Q.OutlineItem) => i.state === 'submitted' || i.kind === 'missing' };
+const ATT = { label: 'Čeká na vás', test: (i: Q.OutlineItem) => i.state === 'submitted' || (i.kind === 'missing' && i.state !== 'checked') };
 let deskTop = 0;
 function WholeDesk({ pending = true, note, focus }: { pending?: boolean; note?: string; focus?: (x: Q.Segment) => boolean }) {
   const { s } = useStore(); const m = useM(); const b = Q.buildDoc(s, m, { pending });
   const fk = focus ? b.segments.find(focus)?.key : undefined;
   // Coming back from a report lands where you left the long document, editing a point lands on that point.
   useEffect(() => { const d = document.querySelector<HTMLElement>('.desk.mg'); if (!d) return; if (fk) document.getElementById(`seg-${fk}`)?.scrollIntoView({ block: 'start' }); else d.scrollTop = deskTop; return () => { if (!fk) deskTop = d.scrollTop; }; }, [fk]);
-  const open = (x: Q.Segment) => { if (x.kind === 'missing') go('/porada/zpravy'); else if (x.kind === 'report') go(x.state === 'submitted' ? `/kontrola/${x.key}` : `/zprava/${x.key}`); else if (x.kind === 'item') go(x.refId ? `/porada/pokyny/${x.refId}` : '/porada/pokyny'); };
-  const label = (x: Q.Segment) => x.state === 'submitted' ? <span className="mn w">Čeká na kontrolu</span> : x.kind === 'missing' ? <span className="mn w">Chybí zpráva</span> : null;
+  const open = (x: Q.Segment) => { if (x.kind === 'missing') go(`/kontrola/chybi-${x.refId}`); else if (x.kind === 'report') go(x.state === 'submitted' ? `/kontrola/${x.key}` : `/zprava/${x.key}`); else if (x.kind === 'item') go(x.refId ? `/porada/pokyny/${x.refId}` : '/porada/pokyny'); };
+  const label = (x: Q.Segment) => x.state === 'submitted' ? <span className="mn w">Čeká na kontrolu</span> : x.kind === 'missing' ? <span className="mn w">{x.state === 'checked' ? 'Chybí zpráva, odstavec zkontrolovaný' : 'Chybí zpráva'}</span> : null;
   return <Desk cls="mg clip" fold={`Otevřít celý dokument, ${Q.pagesText(Q.pagesOf(b))}`} right={<DocNav built={b} attention={ATT} />} note={note ? <b>{note}</b> : <><b>Celý dokument, {Q.pagesText(Q.pagesOf(b))}.</b> Klikněte na část a upravte ji.</>}><div className="wrapm"><Sheet built={b} marginNote={label} onSeg={open} cls={(x) => `${x.state === 'submitted' ? 'np' : ''}${x.key === fk ? ' cur' : ''}`} /></div></Desk>;
 }
 const Jr = ({ n, t, why, to, a, st }: { n: number; t: string; why: string; to: string; a?: string; st: 'c' | 'd' | '' }) => <li className={st}><a href={`#${to}`}><i>{st === 'd' ? <Ic n="chk" /> : n}</i><span className="tx"><b>{t}</b><span>{why}</span></span>{a ? <span className="btn">{a}</span> : null}</a></li>;
@@ -33,7 +33,7 @@ export function Porada() {
   const [dlg, setDlg] = useState<'move' | 'drop' | 'add' | null>(null);
   if (!iss) return <PoradaVirtual m={m} />;
   const whole = Q.buildDoc(s, m, { pending: true });
-  const q = Q.queuePoints(s).length + Q.queueFutures(s).length;
+  const q = Q.queuePoints(s).length + Q.queueFutures(s).length + Q.placeholderQueue(s, u).length;
   const newRows = iss.rows.filter((r) => r.isNew).length;
   const miss = Q.owedTo(s, m).filter((o) => !o.delivered && !o.notYetOver);
   const talent = s.registry.find((l) => l.purpose === 'annex1');
@@ -168,14 +168,15 @@ export function Pokyny({ rowId, adding, section }: { rowId?: string; adding?: bo
   }
   return <App desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." />} col={<><Back to="/porada" t="Zpět na poradu" /><Top h="Pokyny a hospodaření" lead="Pořadí je pořadí v dokumentu. Klikněte na bod a upravte ho." />{SECT('pokyny', 'Pokyny')}{SECT('hospodareni', 'Hospodaření')}<a className="btn lg w" href="#/porada/pokyny-novy"><Ic n="plus" />Přidat bod</a></>} />;
 }
+/** What each placeholder waits for (ADR 0061); the detail is in Ke kontrole. */
+const phLine = (h: Q.PlaceholderItem) => h.status === 'checked' ? 'Zkontrolováno' : h.status === 'to-check' ? 'Čeká na vaši kontrolu' : h.status === 'handed-in' ? 'Zpráva je odevzdaná a čeká na rozhodnutí' : `Autor může zprávu odevzdat do ${Q.clock(h.close).full}`;
 export function Zpravy() {
-  const { s, apply } = useStore(); const m = useM(); const list = Q.owedTo(s, m); const [ed, setEd0] = useState<string | null>(null); const [t, setT] = useState(''); const [last, setLast] = useState<string | null>(null); const setEd = (x: string | null) => { setEd0(x); if (x) setLast(x); };
-  const missing = list.filter((o) => !o.delivered);
-  return <App nar desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." {...(last ? { focus: (x: Q.Segment) => x.refId === last } : {})} />} col={<>
+  const { s } = useStore(); const m = useM(); const list = Q.placeholdersOf(s, m);
+  const todo = list.filter((h) => h.status !== 'checked').length;
+  return <App nar desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." />} col={<>
     <Back to="/porada" t="Zpět na poradu" />
-    <Top h="Chybějící zprávy" lead={missing.length ? `Chybí ${missing.filter((o) => !o.notYetOver).length}, u dalších ${missing.filter((o) => o.notYetOver).length} akce ještě neskončila. Kde zpráva nebude, vytiskneme tento odstavec. Můžete ho přepsat.` : 'Nic nechybí, všechny zprávy jsou schválené.'} />
-    {missing.map((o) => { const custom = !!Q.issueOf(s, m)!.placeholders[o.akce.id]; return <section className="stack st8 mz" key={o.akce.id}><h2>{o.akce.title}</h2><p className="sm">{o.notYetOver ? 'Akce ještě neskončila.' : o.point ? `Zpráva je ${o.point.state === 'submitted' ? 'u kontroly' : o.point.state === 'returned' ? 'vrácená autorovi' : 'rozepsaná'}.` : `Autor: ${Q.nameOf(Q.userById(s, o.akce.authorId))}, zatím nezačal.`}</p>
-      {ed === o.akce.id ? <><label className="l"><span className="vh">Odstavec</span><textarea className="in" autoFocus value={t} onChange={(e) => setT(e.target.value)} /></label><div className="row"><button className="btn" onClick={() => setEd(null)}>Zpět</button><button className={`btn ${t.trim() ? 'go' : 'off'}`} onClick={() => { if (t.trim()) { apply(A.setPlaceholder(m, o.akce.id, t)); setEd(null); } }}>Uložit</button></div></> : <><p className="ppar">{Q.placeholderText(s, o.akce, m)}</p><div className="row wr"><button className="btn" onClick={() => { setEd(o.akce.id); setT(Q.placeholderText(s, o.akce, m)); }}>Přepsat odstavec</button>{custom ? <button className="q" onClick={() => { setLast(o.akce.id); apply(A.setPlaceholder(m, o.akce.id, null)); }}>Vrátit původní text</button> : null}</div></>}</section>; })}
+    <Top h="Chybějící zprávy" lead={list.length ? `Kde zpráva nebude, vytiskneme odstavec, který napsal systém. ${todo ? `Zkontrolovat zbývá ${counts(todo, 'odstavec', 'odstavce', 'odstavců')}.` : 'Všechny odstavce jsou zkontrolované.'}` : 'Nic nechybí, všechny zprávy jsou schválené.'} />
+    {list.length ? <Sec h="Za nedodané zprávy">{list.map((h) => <Item key={h.akce.id} to={`/kontrola/chybi-${h.akce.id}`} t={h.akce.title} st={phLine(h)} mk={h.status === 'checked' ? 'c' : h.status === 'to-check' ? 'n' : 'o'} />)}</Sec> : null}
   </>} />;
 }
 export function Nahled() {
@@ -185,7 +186,7 @@ export function Nahled() {
   const rows = checks.map((c) => ({ k: (c.level === 'ok' ? 'd' : c.level === 'block' ? 'x' : 'n') as 'd' | 'x' | 'n', t: link(c.to) ? <a href={link(c.to)}>{c.text}</a> : c.to && /^\d{4}-\d{2}-\d{2}$/.test(c.to) ? <a href="#" role="button" onClick={(e) => { e.preventDefault(); setDlg(false); setDropFor(c.to!); }}>{c.text}</a> : c.text }));
   return <App nar over={dropFor ? <DropDialog m={dropFor} onClose={() => setDropFor(null)} /> : dlg ? <Dialog title="Vygenerovat dokument?" onClose={() => setDlg(false)}><Todo rows={rows.filter((r) => r.k !== 'd')} /><div className="fx">{counts(printed.points, 'bod', 'body', 'bodů')} {printed.points >= 2 && printed.points <= 4 ? 'vyjdou' : 'vyjde'}, zveřejní se a dokument si stáhne vedení.</div><label className="chk"><input type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} />Rozumím, poradu pak nelze změnit.</label><button type="button" className={`btn lg w ${tick ? 'go' : 'off'}`} aria-disabled={!tick} onClick={() => { if (!tick) return; apply(A.generate(m)); goReplace(`/hotovo/${m}`); }}>Vygenerovat a zveřejnit</button></Dialog> : null}
     dock={<div className="dock">{blocked ? <p className="hint a">Nejdřív vyřešte, co je výše červeně.</p> : null}<div className="row"><button type="button" className={`btn lg ${blocked ? 'off' : 'go'}`} aria-disabled={blocked} onClick={() => !blocked && (setTick(false), setDlg(true))}>Vygenerovat a zveřejnit</button></div></div>}
-    desk={narrow ? undefined : <Desk cls="mg clip" right={<DocNav built={b} attention={ATT} />} note={<b>Takhle vyjde, když vygenerujete teď</b>}><div className="wrapm"><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} marginNote={(x) => (x.state === 'submitted' ? <span className="mn w">Neschváleno, teď by nevyšlo</span> : x.kind === 'missing' ? <span className="mn w">Chybí zpráva, vytiskne se odstavec</span> : null)} /></div></Desk>}
+    desk={narrow ? undefined : <Desk cls="mg clip" right={<DocNav built={b} attention={ATT} />} note={<b>Takhle vyjde, když vygenerujete teď</b>}><div className="wrapm"><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} marginNote={(x) => (x.state === 'submitted' ? <span className="mn w">Neschváleno, teď by nevyšlo</span> : x.kind === 'missing' ? <span className="mn w">{x.state === 'checked' ? 'Chybí zpráva, vytiskne se zkontrolovaný odstavec' : 'Chybí zpráva, vytiskne se odstavec'}</span> : null)} /></div></Desk>}
     col={<><Back to="/porada" t="Zpět na poradu" /><Top h="Náhled porady" lead={`${printed.points >= 2 && printed.points <= 4 ? 'Jdou' : 'Jde'} do něj ${counts(printed.points, 'bod', 'body', 'bodů')}, ${Q.pagesText(Q.pagesOf(b))}. Přeškrtnuté zatím nevyjde.`} /><Sec h="Před generováním"><Todo rows={rows} /></Sec>{narrow ? (openDoc ? <><DocNav built={b} attention={ATT} /><div className="pv"><p className="pvh">Dokument</p><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} /></div></> : <button type="button" className="btn lg w" onClick={() => setOpenDoc(true)}>Otevřít celý dokument</button>) : null}<p className="sm" hidden>{iss.monday}</p></>} />;
 }
 const modelOf = (s: ReturnType<typeof useStore>['s'], m: string) => (Q.issueOf(s, m)?.doc?.model as DocumentModel | null) ?? Q.buildDoc(s, m).model;

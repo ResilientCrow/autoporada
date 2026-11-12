@@ -75,6 +75,8 @@ export const saveAnnex = simple('annexes', S.saveAnnex);
 export const removeAnnex = simple('annexes', S.removeAnnex);
 export const moveAnnex = simple('annexes', S.moveAnnex);
 export const setPlaceholder = simple('setPlaceholder', S.setPlaceholder);
+/** „Zkontrolováno“ on a missing report's paragraph; the server computes the paragraph itself. */
+export const confirmPlaceholder = (m: string, akce: string, was: string): Fx => tag(S.confirmPlaceholder(akce, was), { k: 'confirmPlaceholder', a: [m, akce] });
 export const placeRow = simple('placeRow', S.placeRow);
 export const saveRow = simple('saveRow', S.saveRow);
 export const removeRow = simple('removeRow', S.removeRow);
@@ -160,6 +162,7 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'setAnnex2': return [{ name: 'issues.setAnnex2', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), body: a[1] ?? emptyRichDoc() } }];
     case 'annexes': { const m = a[0] as string; return [{ name: 'arch.annexes', input: { monday: m, annexes: s.issues.find((i) => i.monday === m)?.annexes ?? [] } }]; }
     case 'setPlaceholder': return [{ name: 'issues.setPlaceholder', key: `ph:${real(a[1])}`, input: { monday: a[0], itemId: real(a[1]), paragraph: a[2], expectedVersion: vers[`ph:${real(a[1])}`] ?? 0 } }];
+    case 'confirmPlaceholder': return [{ name: 'issues.confirmPlaceholder', key: `ph:${real(a[1])}`, input: { monday: a[0], itemId: real(a[1]), expectedVersion: vers[`ph:${real(a[1])}`] ?? 0, akceVersion: vers[real(a[1])] ?? 1 } }];
     case 'addRow': {
       const [m, section, title, text, persistence] = a as unknown as [string, string, string, string | RichDoc, string];
       const row = issueRows(s, m).find((r) => r.id === op.tmp);
