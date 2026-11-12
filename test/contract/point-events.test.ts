@@ -107,6 +107,7 @@ describe('PointEventRepo (port contract)', () => {
       fromState: 'draft',
       toState: 'submitted',
       note: null,
+      returnParts: null,
       editedFields: null,
       before: null,
       createdAt: world.clock.now(),
@@ -159,6 +160,26 @@ describe('PointEventRepo (port contract)', () => {
     expect(await list(world.as(author), point.id)).toEqual(
       expect.arrayContaining([edit, returned]),
     );
+  });
+
+  it('keeps the parts of a return, with a note or without one, and none on another event', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const point = await makePoint(author, true);
+    const returned = { pointId: point.id, fromState: 'submitted', toState: 'returned' } as const;
+    const [partsOnly, both, noteOnly, submit] = await append(
+      world.as(reviewer),
+      { ...returned, event: 'return', returnParts: ['people', 'heading'] },
+      { ...returned, event: 'return', note: 'Doplňte.', returnParts: ['body'] },
+      { ...returned, event: 'return', note: 'Doplňte.' },
+      { ...SUBMIT, pointId: point.id },
+    );
+    expect(partsOnly).toMatchObject({ note: null, returnParts: ['people', 'heading'] });
+    expect(both).toMatchObject({ note: 'Doplňte.', returnParts: ['body'] });
+    expect(noteOnly!.returnParts).toBeNull();
+    expect(submit!.returnParts).toBeNull();
+    const listed = await list(world.as(author), point.id);
+    expect(listed).toEqual(expect.arrayContaining([partsOnly, both, noteOnly, submit]));
   });
 
   it('lists a point’s events newest first, ties to the higher id, and no other point’s', async () => {
@@ -276,6 +297,12 @@ describe('PointEventRepo (port contract)', () => {
       ['point_events_note', { event: 'submit', note: '' }],
       ['point_events_note_required', { event: 'return' }],
       ['point_events_note_required', { event: 'reject' }],
+      // Parts stand in for the note of a return only.
+      ['point_events_note_required', { event: 'reject', returnParts: [] }],
+      ['point_events_return_parts', { event: 'reject', note: 'x', returnParts: ['body'] }],
+      ['point_events_return_parts', { event: 'submit', returnParts: ['body'] }],
+      ['point_events_return_parts', { event: 'return', returnParts: [] }],
+      ['point_events_return_parts', { event: 'return', returnParts: ['a', 'b', 'c', 'd', 'e'] }],
       ['point_events_before_edit', { event: 'submit', before: { title: 'x' } }],
       // Several at once: PostgreSQL names the CHECK that sorts first.
       ['point_events_before_edit', { event: 'return', before: { title: 'x' } }],

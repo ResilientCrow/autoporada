@@ -130,6 +130,60 @@ describe('future.decide', () => {
       expect(JSON.stringify(audit)).not.toContain('Doplňte');
     });
 
+    it.each(['akce', 'jednani'] as const)(
+      'stores the parts of a %s return without a note, never in the audit',
+      async (kind) => {
+        const id = await handedIn(await user(), 'submitted', kind);
+        const reviewer = await user('reviewer');
+        const parts = ['responsible', 'when'];
+        expect(await decide(reviewer, { id, event: 'return', parts })).toEqual({
+          ok: true,
+          value: { version: 3 },
+        });
+        const { item, events, audit } = await snapshot(id);
+        expect(item).toMatchObject({ state: 'returned' });
+        expect(events[0]).toMatchObject({ event: 'return', note: null, returnParts: parts });
+        expect(JSON.stringify(audit)).not.toContain('responsible');
+      },
+    );
+
+    it('stores a note and parts together, and no parts for a return without them', async () => {
+      const reviewer = await user('reviewer');
+      const withBoth = await handedIn(await user(), 'approved');
+      const parts = ['title', 'place'];
+      expect(
+        (await decide(reviewer, { id: withBoth, event: 'return', note: NOTE, parts })).ok,
+      ).toBe(true);
+      expect((await snapshot(withBoth)).events[0]).toMatchObject({
+        note: NOTE,
+        returnParts: parts,
+      });
+      const plain = await handedIn(await user());
+      expect((await decide(reviewer, { id: plain, event: 'return', note: NOTE })).ok).toBe(true);
+      expect((await snapshot(plain)).events[0]?.returnParts).toBeNull();
+    });
+
+    it('refuses parts on a reject, a part of a point, and a return with neither', async () => {
+      const id = await handedIn(await user());
+      const reviewer = await user('reviewer');
+      const refusal = (fields: Record<string, string>) => ({ code: 'invalid-input', fields });
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'reject', note: NOTE, parts: ['title'] }),
+        refusal({ parts: 'invalid' }),
+      );
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'return', parts: ['people'] }),
+        refusal({ 'parts.0': 'invalid' }),
+      );
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'return' }),
+        refusal({ note: 'required' }),
+      );
+    });
+
     it('keeps a returned item handed in, so reviewers still read it', async () => {
       const id = await handedIn(await user());
       const reviewer = await user('reviewer');

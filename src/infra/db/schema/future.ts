@@ -122,6 +122,8 @@ export const futureEvents = pgTable(
     fromState: futureState().$type<FutureState>().notNull(),
     toState: futureState().$type<FutureState>().notNull(),
     note: text(),
+    /** A return: the parts of the item to rework (FUTURE_RETURN_PARTS), at most four. */
+    returnParts: text().array(),
     /** A reviewer's edit: the names of the fields it changed. */
     editedFields: text().array(),
     createdAt: createdAt(),
@@ -134,7 +136,11 @@ export const futureEvents = pgTable(
     ),
     check(
       'future_events_note_required',
-      sql`${t.event} NOT IN ('return','reject') OR ${t.note} IS NOT NULL`,
+      sql`${t.event} NOT IN ('return','reject') OR ${t.note} IS NOT NULL OR (${t.event} = 'return' AND ${t.returnParts} IS NOT NULL)`,
+    ),
+    check(
+      'future_events_return_parts',
+      sql`${t.returnParts} IS NULL OR (${t.event} = 'return' AND cardinality(${t.returnParts}) BETWEEN 1 AND 4)`,
     ),
   ],
 );

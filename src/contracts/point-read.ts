@@ -78,6 +78,8 @@ export const getPointOutput = z.object({
       fromState: pointStateSchema,
       toState: pointStateSchema,
       note: z.string().nullable(),
+      /** A return's parts to rework (POINT_RETURN_PARTS); null when it names none. */
+      parts: z.array(z.string()).nullable(),
       editedFields: z.array(z.string()).nullable(),
       /** A review edit's „Původní znění“: the values of exactly the fields it changed. */
       before: pointFieldsWire.nullable(),

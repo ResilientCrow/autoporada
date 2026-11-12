@@ -169,6 +169,80 @@ describe('points.decide', () => {
     });
   });
 
+  describe('the parts to rework', () => {
+    it('stores the parts of a return without a note, in the event row and never in the audit', async () => {
+      const id = await handedIn(await user(), 'submitted', 'report');
+      const reviewer = await user('reviewer');
+      const parts = ['people', 'heading'];
+      expect(await decide(reviewer, { id, event: 'return', parts })).toEqual({
+        ok: true,
+        value: { version: 3, next: null },
+      });
+      const { point, events, audit } = await snapshot(id);
+      expect(point).toMatchObject({ state: 'returned' });
+      expect(events[0]).toMatchObject({ event: 'return', note: null, returnParts: parts });
+      expect(JSON.stringify(audit)).not.toContain('people');
+    });
+
+    it('stores a note and parts together', async () => {
+      const id = await handedIn(await user(), 'approved', 'report');
+      const reviewer = await user('reviewer');
+      const parts = ['body', 'statements'];
+      expect((await decide(reviewer, { id, event: 'return', note: NOTE, parts })).ok).toBe(true);
+      expect((await snapshot(id)).events[0]).toMatchObject({ note: NOTE, returnParts: parts });
+    });
+
+    it('keeps no parts on a return that names none', async () => {
+      const id = await handedIn(await user());
+      const reviewer = await user('reviewer');
+      expect((await decide(reviewer, { id, event: 'return', note: NOTE })).ok).toBe(true);
+      expect((await snapshot(id)).events[0]?.returnParts).toBeNull();
+    });
+
+    it('takes heading and body of a proposal', async () => {
+      const id = await handedIn(await user(), 'submitted', 'finance');
+      const reviewer = await user('reviewer');
+      const parts = ['heading', 'body'];
+      expect((await decide(reviewer, { id, event: 'return', parts })).ok).toBe(true);
+      expect((await snapshot(id)).events[0]?.returnParts).toEqual(parts);
+    });
+
+    it.each([
+      ['finance', 'people'],
+      ['finance', 'statements'],
+      ['pokyn', 'people'],
+      ['pokyn', 'statements'],
+    ] as const)('refuses %s with the part %s, which a proposal has not', async (kind, part) => {
+      const id = await handedIn(await user(), 'submitted', kind);
+      const reviewer = await user('reviewer');
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'return', note: NOTE, parts: ['heading', part] }),
+        note({ parts: 'invalid' }),
+      );
+    });
+
+    it('refuses parts on a reject and on an approval, and a return with neither', async () => {
+      const id = await handedIn(await user(), 'submitted', 'report');
+      const reviewer = await user('reviewer');
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'reject', note: NOTE, parts: ['body'] }),
+        note({ parts: 'invalid' }),
+      );
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'approve', parts: ['body'] }),
+        note({ parts: 'invalid' }),
+      );
+      await refuses(
+        id,
+        () => decide(reviewer, { id, event: 'return' }),
+        note({ note: 'required' }),
+      );
+    });
+  });
+
   describe('who and which version', () => {
     it('refuses the author, who is no reviewer', async () => {
       const author = await user();

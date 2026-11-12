@@ -70,12 +70,32 @@ describe('future.get', () => {
             fromState: 'submitted',
             toState: 'returned',
             note: 'Doplňte prosím místo.',
+            parts: null,
             editedFields: null,
             createdAt: world.clock.now().toISOString(),
           },
         ],
       },
     });
+  });
+
+  it('gives the parts a return named, with no note, in the timeline', async () => {
+    const author = await user();
+    const id = await item(author, 'returned');
+    await world.tx(system('test.seed'), async (tx) => {
+      await tx.futureEvents.append({
+        futureItemId: id,
+        event: 'return',
+        fromState: 'submitted',
+        toState: 'returned',
+        returnParts: ['title', 'responsible'],
+      });
+      await tx.audit.record({ action: 'future.returned', target: { type: 'future_item', id } });
+    });
+    const result = await open(author, id);
+    expect(result.ok && result.value.timeline).toMatchObject([
+      { event: 'return', note: null, parts: ['title', 'responsible'] },
+    ]);
   });
 
   it.each([

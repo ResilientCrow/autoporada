@@ -69,6 +69,7 @@ async function record(
   after: FutureItemRecord,
   event: FutureMove,
   note?: string,
+  returnParts?: readonly string[],
 ): Promise<void> {
   await tx.futureEvents.append({
     futureItemId: item.id,
@@ -76,6 +77,7 @@ async function record(
     fromState: item.state,
     toState: after.state,
     ...(note !== undefined && { note }),
+    ...(returnParts !== undefined && { returnParts }),
   });
   await tx.audit.record(futureEvent(ACTIONS[event], item, after));
 }
@@ -102,15 +104,16 @@ export async function move(
 /**
  * A decision, or a cancel, on the item loaded for the decision path: only the
  * state moves, through `decide`, which the review scope allows; what the author
- * wrote stays. A reviewer's note goes into the history event, never the audit.
+ * wrote stays. A reviewer's note and the parts to rework go into the history event, never the audit.
  */
 export async function decideMove(
   tx: Tx,
   item: FutureItemRecord,
   event: DecisionMove,
   note?: string,
+  returnParts?: readonly string[],
 ): Promise<FutureItemRecord> {
   const after = await tx.futureItems.decide(item.id, item.version, FUTURE_MACHINE[event].to);
-  await record(tx, item, after, event, note);
+  await record(tx, item, after, event, note, returnParts);
   return after;
 }

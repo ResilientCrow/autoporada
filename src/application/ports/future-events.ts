@@ -9,8 +9,10 @@ export interface NewFutureEvent {
   readonly event: FutureEventName;
   readonly fromState: FutureState;
   readonly toState: FutureState;
-  /** 1 to 2000 code points; required for `return` and `reject` (the CHECKs refuse otherwise). */
+  /** 1 to 2000 code points; required for `reject`, and for `return` unless it names `returnParts` (the CHECKs refuse otherwise). */
   readonly note?: string;
+  /** The parts of the item a `return` names for rework: 1 to 4 codes, only on `return`. */
+  readonly returnParts?: readonly string[];
   /** A reviewer's edit: the names of the fields it changed. */
   readonly editedFields?: readonly string[];
 }
@@ -24,6 +26,8 @@ export interface FutureEventRecord {
   readonly fromState: FutureState;
   readonly toState: FutureState;
   readonly note: string | null;
+  /** The parts a return named for rework; null when none (and for every other event). */
+  readonly returnParts: readonly string[] | null;
   readonly editedFields: readonly string[] | null;
   readonly createdAt: Date;
 }

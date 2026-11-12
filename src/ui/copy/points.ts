@@ -1,6 +1,6 @@
 import { countWord, type Campus, type PluralForms } from '@/domain/cs';
 import type { Params, PointContent, PointKind, ProblemCode, Warning } from '@/domain/report';
-import type { PointState } from '@/domain/review';
+import type { PointReturnPart, PointState } from '@/domain/review';
 
 const word = (params: Params, key: string): string => String(params[key]);
 const words = (params: Params, key: string): string => {
@@ -56,6 +56,19 @@ const EDITED_FIELD = {
   statements: 'vyjádření',
 } as const satisfies Record<Exclude<keyof PointContent, 'openingEdited'>, string>;
 const EDITED_FIELDS: ReadonlyMap<string, string> = new Map(Object.entries(EDITED_FIELD));
+
+/** What a reviewer may ask to have reworked on a report, as the return names it. */
+const RETURN_PART = {
+  heading: 'Název a\u00A0datum',
+  body: 'Text zprávy',
+  people: 'Seznam účastníků',
+  statements: 'Vyjádření',
+} as const satisfies Record<PointReturnPart, string>;
+/** A finance or pokyn proposal has a title and a text only. */
+const PROPOSAL_RETURN_PART: Readonly<Partial<Record<PointReturnPart, string>>> = {
+  heading: 'Název',
+  body: 'Text',
+};
 
 /** The headings of „Moje body“, in the order of the list. */
 const MINE_GROUP = {
@@ -257,6 +270,14 @@ export const points = {
     submit: (day: string, time: string) => `Odesláno ke kontrole ${day} v\u00A0${time}`,
     returned: (note: string | null) =>
       note === null ? 'Vráceno k\u00A0úpravě' : `Vráceno k\u00A0úpravě: ${note}`,
+    /** The parts a return asked to rework, one line after the return itself. */
+    reworkParts: (labels: readonly string[]) => `K\u00A0přepracování: ${labels.join(', ')}`,
+    /** The label of a part a return named, or null for a code this page does not know. */
+    part: (code: string, kind: PointKind): string | null => {
+      const labels: Readonly<Record<string, string | undefined>> =
+        kind === 'report' ? RETURN_PART : PROPOSAL_RETURN_PART;
+      return labels[code] ?? null;
+    },
     edit: (fields: readonly string[]) =>
       fields.length === 0 ? 'Upraveno kontrolou' : `Upraveno kontrolou: ${fields.join(', ')}`,
     approve: 'Schváleno',

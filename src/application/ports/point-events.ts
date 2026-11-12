@@ -10,8 +10,10 @@ export interface NewPointEvent {
   readonly event: PointEventName;
   readonly fromState: PointState;
   readonly toState: PointState;
-  /** 1 to 2000 code points; required for `return` and `reject` (the CHECKs refuse otherwise). */
+  /** 1 to 2000 code points; required for `reject`, and for `return` unless it names `returnParts` (the CHECKs refuse otherwise). */
   readonly note?: string;
+  /** The parts of the point a `return` names for rework: 1 to 4 codes, only on `return`. */
+  readonly returnParts?: readonly string[];
   /** A reviewer's edit: the names of the fields it changed. */
   readonly editedFields?: readonly string[];
   /** A reviewer's edit: the previous values of those fields; only on `edit`. */
@@ -27,6 +29,8 @@ export interface PointEventRecord {
   readonly fromState: PointState;
   readonly toState: PointState;
   readonly note: string | null;
+  /** The parts a return named for rework; null when none (and for every other event). */
+  readonly returnParts: readonly string[] | null;
   readonly editedFields: readonly string[] | null;
   /** A reviewer's edit: the values it replaced (D13), as stored. */
   readonly before: Partial<PointFieldValues> | null;

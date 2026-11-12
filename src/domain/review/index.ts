@@ -6,6 +6,14 @@ export {
   type AccessHistoryItem,
   type RequestStanding,
 } from './access';
+export {
+  FUTURE_RETURN_PARTS,
+  MAX_RETURN_PARTS,
+  POINT_RETURN_PARTS,
+  pointReturnPartsFor,
+  type FutureReturnPart,
+  type PointReturnPart,
+} from './parts';
 export { reportPromptStage, reportPromptWindow } from './report-prompt';
 export {
   availableEvents,

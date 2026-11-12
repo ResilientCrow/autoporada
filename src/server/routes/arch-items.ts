@@ -39,6 +39,7 @@ export function archItems({
       actorId: string | null;
       createdAt: Date;
       note: string | null;
+      returnParts: string[] | null;
       before?: unknown;
     }[],
   ) =>
@@ -49,12 +50,18 @@ export function archItems({
         who: !e.actorId ? 'system' : staff || e.actorId === viewerId ? e.actorId : 'vedeni',
         what: WHAT[e.event],
         ...(e.note && { note: e.note }),
+        ...(e.returnParts && { parts: e.returnParts }),
         ...(e.event === 'edit' && e.before ? { original: flatBefore(e.before) } : {}),
       }));
-  const noteOf = (evs: { event: string; note: string | null }[], state: string) =>
+  const decisionOf = <T extends { event: string }>(evs: T[], state: string) =>
     state === 'returned' || state === 'rejected'
-      ? (evs.filter((e) => e.event === 'return' || e.event === 'reject').at(-1)?.note ?? null)
-      : null;
+      ? evs.filter((e) => e.event === 'return' || e.event === 'reject').at(-1)
+      : undefined;
+  const noteOf = (evs: { event: string; note: string | null }[], state: string) =>
+    decisionOf(evs, state)?.note ?? null;
+  /** The parts the latest return named, while the item stands returned; else null. */
+  const partsOf = (evs: { event: string; returnParts: string[] | null }[], state: string) =>
+    state === 'returned' ? (decisionOf(evs, state)?.returnParts ?? null) : null;
 
   const akceOfPoint = new Map(
     futureRows.filter((f) => f.reportPointId).map((f) => [f.reportPointId!, f.id]),
@@ -76,6 +83,7 @@ export function archItems({
         : null,
       submittedAt: iso(p.submittedAt),
       note: noteOf(evs, p.state),
+      parts: partsOf(evs, p.state),
       savedAt: p.updatedAt.toISOString(),
       trail: trailOf(evs),
     };
@@ -100,6 +108,7 @@ export function archItems({
       state: f.state,
       changed: evs.some((e) => e.event === 'revise'),
       note: noteOf(evs, f.state),
+      parts: partsOf(evs, f.state),
       report: f.reportState,
       submittedAt: iso(f.submittedAt),
       savedAt: f.updatedAt.toISOString(),

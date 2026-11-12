@@ -57,7 +57,7 @@ export function PointReview({
           schoolYear={point.read.schoolYear}
         />,
       )}
-      <Timeline entries={point.read.timeline} />
+      <Timeline entries={point.read.timeline} kind={point.kind} />
     </div>
   );
 }

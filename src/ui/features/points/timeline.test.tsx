@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
+import type { PointKind } from '@/domain/report';
+
 import { Timeline, type TimelineEntry } from './Timeline';
 
 const NB = '\u00a0';
@@ -12,8 +14,8 @@ const entry = (over: Partial<TimelineEntry> & Pick<TimelineEntry, 'event'>): Tim
   createdAt: '2027-03-14T15:02:00.000Z',
   ...over,
 });
-const render = (entries: readonly TimelineEntry[]) =>
-  renderToStaticMarkup(<Timeline entries={entries} />);
+const render = (entries: readonly TimelineEntry[], kind?: PointKind) =>
+  renderToStaticMarkup(<Timeline entries={entries} {...(kind && { kind })} />);
 /** The text of each list item, tags removed. */
 const lines = (html: string) =>
   [...html.matchAll(/<li[ >](.*?)<\/li>/gs)].map((m) => (m[1] ?? '').replace(/<[^>]+>/g, ''));
@@ -63,6 +65,49 @@ describe('Timeline', () => {
       'Upraveno kontrolou',
     ]);
     expect(lines(render([entry({ event: 'edit' })]))).toEqual(['Upraveno kontrolou']);
+  });
+
+  describe('the parts a return names', () => {
+    const parts = ['heading', 'body', 'people', 'statements'];
+
+    it('writes them as Czech labels, with no note', () => {
+      expect(lines(render([entry({ event: 'return', parts })]))).toEqual([
+        `Vráceno k${NB}úpravě\nK${NB}přepracování: Název a${NB}datum, Text zprávy, Seznam účastníků, Vyjádření`,
+      ]);
+    });
+
+    it('writes them after the note when there is one', () => {
+      const returned = entry({ event: 'return', note: 'Doplňte.', parts: ['body'] });
+      expect(lines(render([returned]))).toEqual([
+        `Vráceno k${NB}úpravě: Doplňte.\nK${NB}přepracování: Text zprávy`,
+      ]);
+    });
+
+    it('calls the heading and the body of a proposal „Název“ and „Text“', () => {
+      const returned = entry({ event: 'return', parts: ['heading', 'body'] });
+      for (const kind of ['finance', 'pokyn'] as const) {
+        expect(lines(render([returned], kind))).toEqual([
+          `Vráceno k${NB}úpravě\nK${NB}přepracování: Název, Text`,
+        ]);
+      }
+    });
+
+    it('leaves out a part it has no label for, and the line when none is left', () => {
+      const returned = entry({ event: 'return', parts: ['zzz', 'people'] });
+      expect(lines(render([returned]))).toEqual([
+        `Vráceno k${NB}úpravě\nK${NB}přepracování: Seznam účastníků`,
+      ]);
+      expect(lines(render([entry({ event: 'return', parts: ['zzz'] })]))).toEqual([
+        `Vráceno k${NB}úpravě`,
+      ]);
+    });
+
+    it('is ignored on an event other than a return, and for null', () => {
+      expect(lines(render([entry({ event: 'approve', parts })]))).toEqual(['Schváleno']);
+      expect(lines(render([entry({ event: 'return', parts: null })]))).toEqual([
+        `Vráceno k${NB}úpravě`,
+      ]);
+    });
   });
 
   it('lists the entries in the order given, newest first as the server sends them', () => {

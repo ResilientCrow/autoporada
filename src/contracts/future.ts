@@ -229,6 +229,8 @@ export const getFutureOutput = z.object({
       fromState: futureStateSchema,
       toState: futureStateSchema,
       note: z.string().nullable(),
+      /** A return's parts to rework (FUTURE_RETURN_PARTS); null when it names none. */
+      parts: z.array(z.string()).nullable(),
       editedFields: z.array(z.string()).nullable(),
       createdAt: instant,
     }),

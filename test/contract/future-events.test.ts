@@ -96,6 +96,7 @@ describe('FutureEventRepo (port contract)', () => {
       fromState: 'draft',
       toState: 'submitted',
       note: null,
+      returnParts: null,
       editedFields: null,
       createdAt: world.clock.now(),
     });
@@ -108,6 +109,30 @@ describe('FutureEventRepo (port contract)', () => {
     const [event] = await append(cli, { ...SUBMIT, futureItemId: item.id, event: 'cancel' });
     expect(event).toMatchObject({ actorId: null, event: 'cancel' });
     expect(await list(cli, item.id)).toEqual([event]);
+  });
+
+  it('keeps the parts of a return, with a note or without one, and none on another event', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    const item = await makeItem(author, true);
+    const returned = {
+      futureItemId: item.id,
+      fromState: 'submitted',
+      toState: 'returned',
+    } as const;
+    const [partsOnly, both, noteOnly, submit] = await append(
+      world.as(reviewer),
+      { ...returned, event: 'return', returnParts: ['responsible', 'when'] },
+      { ...returned, event: 'return', note: 'Doplňte.', returnParts: ['place'] },
+      { ...returned, event: 'return', note: 'Doplňte.' },
+      { ...SUBMIT, futureItemId: item.id },
+    );
+    expect(partsOnly).toMatchObject({ note: null, returnParts: ['responsible', 'when'] });
+    expect(both).toMatchObject({ note: 'Doplňte.', returnParts: ['place'] });
+    expect(noteOnly!.returnParts).toBeNull();
+    expect(submit!.returnParts).toBeNull();
+    const listed = await list(world.as(author), item.id);
+    expect(listed).toEqual(expect.arrayContaining([partsOnly, both, noteOnly, submit]));
   });
 
   it('keeps the note and the edited fields of a reviewer’s edit', async () => {
@@ -282,6 +307,12 @@ describe('FutureEventRepo (port contract)', () => {
       ['future_events_note', { event: 'submit', note: '' }],
       ['future_events_note_required', { event: 'return' }],
       ['future_events_note_required', { event: 'reject' }],
+      // Parts stand in for the note of a return only.
+      ['future_events_note_required', { event: 'reject', returnParts: [] }],
+      ['future_events_return_parts', { event: 'reject', note: 'x', returnParts: ['title'] }],
+      ['future_events_return_parts', { event: 'submit', returnParts: ['title'] }],
+      ['future_events_return_parts', { event: 'return', returnParts: [] }],
+      ['future_events_return_parts', { event: 'return', returnParts: ['a', 'b', 'c', 'd', 'e'] }],
       // Several at once: PostgreSQL names the CHECK that sorts first.
       ['future_events_note', { event: 'return', note: '' }],
     ])('%s', async (constraint, event) => {

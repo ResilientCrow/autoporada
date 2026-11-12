@@ -1,28 +1,25 @@
 import { z } from 'zod';
 
 import { POINT_LIMITS } from '@/domain/report';
-import { FUTURE_MACHINE, REVIEW_DECISIONS } from '@/domain/review';
+import { FUTURE_RETURN_PARTS, REVIEW_DECISIONS } from '@/domain/review';
 
+import { refineDecision, returnPartsSchema } from './decision';
 import { futureKindSchema, futureView, futureWrite, version } from './future';
 import { QUEUE_LIMIT } from './point-read';
 
 /**
  * „Schválit“, „Vrátit k úpravě“, „Zamítnout“ on an akce or a jednání (design section 12), as a
- * point's decision is made. The note is for the author and only the decisions the machine says
- * require one take it: a return or a reject without a note is `required` on `note`, an approval
- * with one is `invalid`. One object with a refinement, since a use case's input is one strict object.
+ * point's decision is made. The note and the `parts` to rework are for the author: a return takes either or both, a
+ * reject a note, an approval neither (`refineDecision`). One object with a refinement, since a use case's input is one strict object.
  */
 export const decideFutureInput = z
   .strictObject({
     ...futureWrite,
     event: z.enum(REVIEW_DECISIONS),
     note: z.string().trim().min(1).max(POINT_LIMITS.note).optional(),
+    parts: returnPartsSchema(FUTURE_RETURN_PARTS).optional(),
   })
-  .superRefine(({ event, note }, ctx) => {
-    if ((FUTURE_MACHINE[event].requiresNote === true) === (note !== undefined)) return;
-    const code = note === undefined ? 'required' : 'invalid';
-    ctx.addIssue({ code: 'custom', path: ['note'], message: code, params: { code } });
-  });
+  .superRefine(refineDecision);
 export const decideFutureOutput = z.object({ version });
 
 /** „Zrušit akci“; `confirmed` is the checkbox that must be ticked. */

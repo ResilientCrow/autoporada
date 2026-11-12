@@ -35,6 +35,8 @@ interface MoveExtras {
   readonly related?: readonly AuditTarget[];
   /** A reviewer's note: in the point event only, never in the audit. */
   readonly note?: string;
+  /** The parts a return names for rework: in the point event only, never in the audit. */
+  readonly returnParts?: readonly string[];
 }
 
 /**
@@ -48,7 +50,7 @@ export async function move(
   tx: Tx,
   point: PointRecord,
   event: UserMove,
-  { patch = {}, related, note }: MoveExtras = {},
+  { patch = {}, related, note, returnParts }: MoveExtras = {},
 ): Promise<{ readonly after: PointRecord; readonly eventId: string }> {
   const { to } = POINT_MACHINE[event];
   const after = await tx.points.update(point.id, point.version, { ...patch, state: to });
@@ -58,6 +60,7 @@ export async function move(
     fromState: point.state,
     toState: to,
     ...(note !== undefined && { note }),
+    ...(returnParts !== undefined && { returnParts }),
   });
   await tx.audit.record({
     ...pointEvent(ACTIONS[event], point, after),

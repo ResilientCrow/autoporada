@@ -157,6 +157,8 @@ export const pointEvents = pgTable(
     fromState: pointState().notNull(),
     toState: pointState().notNull(),
     note: text(),
+    /** A return: the parts of the point to rework (POINT_RETURN_PARTS), at most four. */
+    returnParts: text().array(),
     /** A reviewer's edit: the names of the fields it changed. */
     editedFields: text().array(),
     /** A reviewer's edit: the previous values of those fields (D13), as the content holds them. */
@@ -168,7 +170,11 @@ export const pointEvents = pgTable(
     check('point_events_note', sql`${t.note} IS NULL OR char_length(${t.note}) BETWEEN 1 AND 2000`),
     check(
       'point_events_note_required',
-      sql`${t.event} NOT IN ('return','reject') OR ${t.note} IS NOT NULL`,
+      sql`${t.event} NOT IN ('return','reject') OR ${t.note} IS NOT NULL OR (${t.event} = 'return' AND ${t.returnParts} IS NOT NULL)`,
+    ),
+    check(
+      'point_events_return_parts',
+      sql`${t.returnParts} IS NULL OR (${t.event} = 'return' AND cardinality(${t.returnParts}) BETWEEN 1 AND 4)`,
     ),
     check('point_events_before_edit', sql`${t.before} IS NULL OR ${t.event} = 'edit'`),
   ],

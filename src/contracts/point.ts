@@ -11,7 +11,7 @@ import {
   type PointContent,
   type PointFieldValues,
 } from '@/domain/report';
-import { POINT_MACHINE, REVIEW_DECISIONS } from '@/domain/review';
+import { POINT_RETURN_PARTS, REVIEW_DECISIONS } from '@/domain/review';
 import {
   LIMITS as RICH_LIMITS,
   parseRichDoc,
@@ -28,6 +28,7 @@ import {
   type WallTime,
 } from '@/domain/time';
 
+import { refineDecision, returnPartsSchema } from './decision';
 import { bulletKeySchema, uniqueKeys } from './point-type';
 
 /**
@@ -332,24 +333,22 @@ export const withdrawPointInput = z.strictObject({ ...pointWrite, confirmed: z.b
 export const withdrawPointOutput = pointVersion;
 
 /**
- * „Schválit“, „Vrátit k úpravě“, „Zamítnout“ (design section 10). The note is for the author and
- * only the decisions the machine says require one take it. It is trimmed and counted as
+ * „Schválit“, „Vrátit k úpravě“, „Zamítnout“ (design section 10). The note and the `parts` to rework are
+ * for the author: a return takes either or both, a reject a note, an approval neither
+ * (`refineDecision`). The note is trimmed and counted as
  * `String.length` (POINT_LIMITS), so a note within the cap always passes the CHECK on
  * `char_length`; the pipeline has already made every line break one `\n` (ADR 0011 step 2), as
- * the bar's counter counts it. One object with a refinement, since a use case's input is one strict object: a
- * return or a reject without a note is `required` on `note`, an approval with one is `invalid`.
+ * the bar's counter counts it. One object with a refinement, since a use case's input is one strict object.
+ * Which parts a point of its kind may name is the use case's to check.
  */
 export const decidePointInput = z
   .strictObject({
     ...pointWrite,
     event: z.enum(REVIEW_DECISIONS),
     note: z.string().trim().min(1).max(POINT_LIMITS.note).optional(),
+    parts: returnPartsSchema(POINT_RETURN_PARTS).optional(),
   })
-  .superRefine(({ event, note }, ctx) => {
-    if ((POINT_MACHINE[event].requiresNote === true) === (note !== undefined)) return;
-    const code = note === undefined ? 'required' : 'invalid';
-    ctx.addIssue({ code: 'custom', path: ['note'], message: code, params: { code } });
-  });
+  .superRefine(refineDecision);
 /** The new version, and the next submitted point of the queue the actor may approve (null: none waits). */
 export const decidePointOutput = z.object({
   version: z.number().int().positive(),

@@ -138,7 +138,7 @@ export function PointScreen({
           pointStatus={pointStatus}
         />
       )}
-      <Timeline entries={point.read.timeline} />
+      <Timeline entries={point.read.timeline} kind={point.kind} />
     </div>
   );
 }

@@ -365,6 +365,13 @@
       "when": 1794330636218,
       "tag": "0051_issue_status_without_skipped",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794502918158,
+      "tag": "0052_equal_gateway",
+      "breakpoints": true
     }
   ]
 }

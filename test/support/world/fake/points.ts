@@ -451,6 +451,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         fromState: before.state,
         toState: moved.state,
         note: null,
+        returnParts: null,
         editedFields: null,
         before: null,
         createdAt: now,

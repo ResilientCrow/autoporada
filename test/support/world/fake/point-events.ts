@@ -21,8 +21,18 @@ function refuse(state: FakeState, row: PointEventRecord): void {
   if (row.note !== null && (codePoints(row.note) < 1 || codePoints(row.note) > 2000)) {
     throw refusedBy('point_events_note');
   }
-  if ((row.event === 'return' || row.event === 'reject') && row.note === null) {
+  if (
+    (row.event === 'return' || row.event === 'reject') &&
+    row.note === null &&
+    !(row.event === 'return' && row.returnParts !== null)
+  ) {
     throw refusedBy('point_events_note_required');
+  }
+  if (
+    row.returnParts !== null &&
+    !(row.event === 'return' && row.returnParts.length <= 4 && row.returnParts.length >= 1)
+  ) {
+    throw refusedBy('point_events_return_parts');
   }
   if (!state.points.has(row.pointId)) throw refusedBy('point_events_point_id_points_id_fk');
   if (row.actorId !== null && !state.users.has(row.actorId)) {
@@ -55,6 +65,7 @@ export function fakePointEventRepo(tx: FakeTxState, ctx: TxContext): PointEventR
         fromState: event.fromState,
         toState: event.toState,
         note: event.note ?? null,
+        returnParts: event.returnParts ? [...event.returnParts] : null,
         editedFields: event.editedFields ? [...event.editedFields] : null,
         // jsonb keeps a copy, not the caller's object.
         before: event.before ? structuredClone(event.before) : null,

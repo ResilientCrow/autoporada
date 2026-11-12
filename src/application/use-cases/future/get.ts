@@ -51,6 +51,7 @@ export const getFuture = defineUseCase({
         fromState: event.fromState,
         toState: event.toState,
         note: event.note,
+        parts: event.returnParts && [...event.returnParts],
         editedFields: event.editedFields && [...event.editedFields],
         createdAt: event.createdAt.toISOString(),
       })),

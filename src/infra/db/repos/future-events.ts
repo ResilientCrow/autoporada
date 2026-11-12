@@ -15,6 +15,7 @@ const EVENT_ROW = {
   fromState: futureEvents.fromState,
   toState: futureEvents.toState,
   note: futureEvents.note,
+  returnParts: futureEvents.returnParts,
   editedFields: futureEvents.editedFields,
   createdAt: futureEvents.createdAt,
 };
@@ -29,7 +30,7 @@ export function createFutureEventRepo(db: TxDatabase, ctx: TxContext): FutureEve
   const parent = { table: futureItems, key: futureItems.id, visible: reviewableFutureItems(ctx) };
 
   return {
-    async append({ futureItemId, event, fromState, toState, note, editedFields }) {
+    async append({ futureItemId, event, fromState, toState, note, returnParts, editedFields }) {
       await requireVisible(db, parent, futureItemId);
       const [row] = await db
         .insert(futureEvents)
@@ -40,6 +41,7 @@ export function createFutureEventRepo(db: TxDatabase, ctx: TxContext): FutureEve
           fromState,
           toState,
           note,
+          returnParts: returnParts && [...returnParts],
           editedFields: editedFields && [...editedFields],
           createdAt: ctx.now,
         })

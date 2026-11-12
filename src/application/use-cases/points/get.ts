@@ -41,6 +41,7 @@ export const getPoint = defineUseCase({
         fromState: event.fromState,
         toState: event.toState,
         note: event.note,
+        parts: event.returnParts && [...event.returnParts],
         editedFields: event.editedFields && [...event.editedFields],
         before: event.before && fieldValuesWire(event.before),
         createdAt: event.createdAt.toISOString(),

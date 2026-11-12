@@ -51,6 +51,7 @@ const EVENT_ROW = {
   fromState: pointEvents.fromState,
   toState: pointEvents.toState,
   note: pointEvents.note,
+  returnParts: pointEvents.returnParts,
   editedFields: pointEvents.editedFields,
   before: pointEvents.before,
   createdAt: pointEvents.createdAt,
@@ -65,7 +66,7 @@ export function createPointEventRepo(db: TxDatabase, ctx: TxContext): PointEvent
   const actorId = eventActor(ctx);
 
   return {
-    async append({ pointId, event, fromState, toState, note, editedFields, before }) {
+    async append({ pointId, event, fromState, toState, note, returnParts, editedFields, before }) {
       await requireVisible(db, { ...POINTS, visible: visiblePoints(ctx) }, pointId);
       const [row] = await db
         .insert(pointEvents)
@@ -76,6 +77,7 @@ export function createPointEventRepo(db: TxDatabase, ctx: TxContext): PointEvent
           fromState,
           toState,
           note,
+          returnParts: returnParts && [...returnParts],
           editedFields: editedFields && [...editedFields],
           before,
           createdAt: now,

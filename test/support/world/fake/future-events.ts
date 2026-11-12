@@ -19,8 +19,18 @@ function refuse(state: FakeState, row: FutureEventRecord): void {
   if (row.note !== null && (codePoints(row.note) < 1 || codePoints(row.note) > 2000)) {
     throw refusedBy('future_events_note');
   }
-  if ((row.event === 'return' || row.event === 'reject') && row.note === null) {
+  if (
+    (row.event === 'return' || row.event === 'reject') &&
+    row.note === null &&
+    !(row.event === 'return' && row.returnParts !== null)
+  ) {
     throw refusedBy('future_events_note_required');
+  }
+  if (
+    row.returnParts !== null &&
+    !(row.event === 'return' && row.returnParts.length <= 4 && row.returnParts.length >= 1)
+  ) {
+    throw refusedBy('future_events_return_parts');
   }
   if (!state.futureItems.has(row.futureItemId)) {
     throw refusedBy('future_events_future_item_id_future_items_id_fk');
@@ -55,6 +65,7 @@ export function fakeFutureEventRepo(tx: FakeTxState, ctx: TxContext): FutureEven
         fromState: event.fromState,
         toState: event.toState,
         note: event.note ?? null,
+        returnParts: event.returnParts ? [...event.returnParts] : null,
         editedFields: event.editedFields ? [...event.editedFields] : null,
         createdAt: now,
       };

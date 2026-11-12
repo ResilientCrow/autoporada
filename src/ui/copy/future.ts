@@ -1,6 +1,6 @@
 import type { FutureKind } from '@/domain/calendar';
 import type { ResponsibleVerb } from '@/domain/cs';
-import type { FutureState, ReviewDecision } from '@/domain/review';
+import type { FutureReturnPart, FutureState, ReviewDecision } from '@/domain/review';
 
 import { rules } from './forms';
 
@@ -26,6 +26,13 @@ export const future = {
     withdrawn: 'Staženo',
     cancelled: 'Zrušeno',
   } as const satisfies Record<FutureState, string>,
+  /** What a reviewer may ask to have reworked on an akce or a jednání, as the return names it. */
+  returnPart: {
+    title: 'Název',
+    when: 'Datum a\u00A0čas',
+    place: 'Místo',
+    responsible: 'Kdo ji vede',
+  } as const satisfies Record<FutureReturnPart, string>,
   /** The label above the reviewer's note on a returned item, for its author. */
   returnNote: 'Poznámka z\u00A0kontroly',
   /** The link on the list, the page heading and the tab title of /akce/novy. */

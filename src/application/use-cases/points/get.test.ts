@@ -207,18 +207,31 @@ describe('points.get', () => {
       });
       await tx.audit.record({ action: 'point.returned', target: { type: 'point', id } });
     });
+    world.clock.advance(60_000);
+    await world.tx(world.as(reviewer), async (tx) => {
+      await tx.pointEvents.append({
+        pointId: id,
+        event: 'return',
+        fromState: 'submitted',
+        toState: 'returned',
+        returnParts: ['heading', 'body'],
+      });
+      await tx.audit.record({ action: 'point.returned', target: { type: 'point', id } });
+    });
 
     const event = (name: string, from: string, to: string, minutes: number) => ({
       event: name,
       fromState: from,
       toState: to,
       note: null,
+      parts: null,
       editedFields: null,
       before: null,
       createdAt: at(minutes),
     });
     const got = await read(author, id);
     expect(got.ok && got.value.timeline).toEqual([
+      { ...event('return', 'submitted', 'returned', 5), parts: ['heading', 'body'] },
       { ...event('return', 'submitted', 'returned', 4), note: 'Doplňte cenu.' },
       {
         ...event('edit', 'submitted', 'submitted', 3),
