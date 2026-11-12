@@ -65,3 +65,4 @@ record that supersedes it.
 | [0057](0057-the-author-deletes-an-unfinished-akce.md) | The author deletes an unfinished akce or schůzka | Accepted; adds to 0053 |
 | [0058](0058-a-return-names-the-parts-to-rework.md) | A return names the parts to rework | Accepted; adds to 0053 |
 | [0059](0059-the-agenda-windows-end-where-the-monday-porada-would.md) | The agenda windows end where the Monday porada would | Accepted; supersedes 0034 item 5 in part |
+| [0060](0060-akce-and-jednani-as-free-text.md) | Akce and jednání are free text | Accepted; supersedes 0009 in part, 0049 item 4, 0058 item 1, 0018 item 9; amends 0049 item 3 |
