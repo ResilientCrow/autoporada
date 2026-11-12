@@ -8,6 +8,7 @@ import {
   formatClose,
   formatDayMonth,
   formatLongDate,
+  formatAgendaDays,
   formatLongRange,
   formatNumericDate,
   formatNumericRange,
@@ -79,11 +80,11 @@ describe('date ranges', () => {
   });
 
   it.each([
-    ['2026-10-20', '2026-10-22', '20. až 22. října 2026'],
-    ['2026-10-30', '2026-11-02', '30. října až 2. listopadu 2026'],
-    ['2026-12-30', '2027-01-02', '30. prosince 2026 až 2. ledna 2027'],
-  ])('writes %s..%s with „až“ for agenda bullets', (from, to, text) => {
-    expect(formatLongRange(d(from), d(to), { joiner: 'až' })).toBe(text);
+    ['2026-05-03', '2026-05-14', 'neděle 3. května až čtvrtek 14. května 2026'],
+    ['2026-12-28', '2027-01-01', 'pondělí 28. prosince 2026 až pátek 1. ledna 2027'],
+    ['2026-05-11', '2026-05-11', 'pondělí 11. května 2026'],
+  ])('writes %s..%s as agenda days', (from, to, text) => {
+    expect(formatAgendaDays(d(from), d(to))).toBe(text);
   });
 
   it('rejects a range that ends before it starts', () => {

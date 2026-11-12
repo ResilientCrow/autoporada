@@ -77,23 +77,28 @@ export function formatNumericRange(from: CalDate, to: CalDate): string {
 }
 
 /**
- * „27.–29. října 2026“, „30. října – 2. listopadu 2026“, „30. prosince 2026 – 2. ledna 2027“;
- * with `joiner: 'až'` (agenda bullets): „27. až 29. října 2026“.
+ * „27.–29. října 2026“, „30. října – 2. listopadu 2026“, „30. prosince 2026 – 2. ledna 2027“.
  */
-export function formatLongRange(
-  from: CalDate,
-  to: CalDate,
-  { joiner = 'dash' }: { joiner?: 'dash' | 'až' } = {},
-): string {
+export function formatLongRange(from: CalDate, to: CalDate): string {
   assertOrdered(from, to);
   if (compareDates(from, to) === 0) return formatLongDate(from);
-  // The dash is unspaced between bare day numbers; „až“ is always a word.
-  const spaced = joiner === 'až' ? ' až ' : ` ${EN_DASH} `;
-  const tight = joiner === 'až' ? ' až ' : EN_DASH;
-  if (from.year !== to.year) return `${formatLongDate(from)}${spaced}${formatLongDate(to)}`;
+  // The dash is unspaced between bare day numbers.
+  if (from.year !== to.year) return `${formatLongDate(from)} ${EN_DASH} ${formatLongDate(to)}`;
   if (from.month !== to.month)
-    return `${from.day}. ${monthGenitive(from)}${spaced}${formatLongDate(to)}`;
-  return `${from.day}.${tight}${formatLongDate(to)}`;
+    return `${from.day}. ${monthGenitive(from)} ${EN_DASH} ${formatLongDate(to)}`;
+  return `${from.day}.${EN_DASH}${formatLongDate(to)}`;
+}
+
+/**
+ * The days of a multi-day akce in the agenda (ADR 0060): weekday, day and month at both ends, the
+ * year once at the end: „neděle 3. května až čtvrtek 14. května 2026“; across years each end
+ * carries its year: „pondělí 28. prosince 2026 až pátek 1. ledna 2027“. One day is a title date.
+ */
+export function formatAgendaDays(from: CalDate, to: CalDate): string {
+  assertOrdered(from, to);
+  if (compareDates(from, to) === 0) return formatTitleDate(from);
+  if (from.year !== to.year) return `${formatTitleDate(from)} až ${formatTitleDate(to)}`;
+  return `${weekdayName(from)} ${from.day}. ${monthGenitive(from)} až ${formatTitleDate(to)}`;
 }
 
 /**

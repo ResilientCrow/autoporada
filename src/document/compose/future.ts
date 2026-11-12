@@ -1,13 +1,5 @@
 import { routeFutureItem } from '@/domain/calendar';
-import {
-  csCollator,
-  formatAgendaTimeRange,
-  formatLongRange,
-  formatTitleDate,
-  renderPeople,
-  responsibleVerb,
-  type Salutation,
-} from '@/domain/cs';
+import { csCollator, formatAgendaTimeRange, formatAgendaDays, formatTitleDate } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
 import type { SnapshotFutureItem } from '@/snapshot';
 
@@ -32,11 +24,17 @@ const dated = (item: SnapshotFutureItem) => ({
   ...(item.endDate && { endDate: parseIsoDate(item.endDate) }),
 });
 
-/** Chronological: date, then start time (all-day first), then title. */
+/**
+ * Start day; on one start day the multi-day items first, then the timed ones by start time, then
+ * the untimed ones; then title (ADR 0060).
+ */
 function compareFuture(a: SnapshotFutureItem, b: SnapshotFutureItem): number {
-  const minutes = (t?: string) => (t ? parseWallTime(t).hour * 60 + parseWallTime(t).minute : -1);
+  const multiDay = (i: SnapshotFutureItem) => (i.endDate && i.endDate > i.date ? 0 : 1);
+  const minutes = (t?: string) =>
+    t ? parseWallTime(t).hour * 60 + parseWallTime(t).minute : Number.MAX_SAFE_INTEGER;
   return (
     compareDates(parseIsoDate(a.date), parseIsoDate(b.date)) ||
+    multiDay(a) - multiDay(b) ||
     minutes(a.timeFrom) - minutes(b.timeFrom) ||
     csCollator.compare(a.title, b.title)
   );
@@ -53,30 +51,13 @@ export function routeFuture(items: readonly SnapshotFutureItem[], meeting: CalDa
   };
 }
 
-/** „za Next Zone Event Space koordinuje absolvent pan Jan Novák“, or nothing. */
-function responsiblePart(
-  item: SnapshotFutureItem,
-  groupOrder?: readonly Salutation[],
-): string | undefined {
-  const r = item.responsible;
-  if (!r) return undefined;
-  const people = renderPeople(r.people, {
-    join: 'and',
-    order: 'input',
-    ...(groupOrder && { groupOrder }),
-  });
-  return [r.behalfOf && `za ${r.behalfOf}`, responsibleVerb(r.verb, r.people.length), people]
-    .filter(Boolean)
-    .join(' ');
-}
-
 /**
- * The headmaster's agenda format, every part after the date optional:
- * „úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event
- * Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan
- * Novák“. Multi-day items: „20. až 22. října 2026, …“, no times.
+ * The agenda line, every part after the date optional and empty parts left out (ADR 0060):
+ * „úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib,
+ * téma stáže, organizuje paní Jana Nováková, účast pánové …“. Multi-day items print the day
+ * range and no time. The note, the organizer and the participants are the author's words.
  */
-export function futureBullet(item: SnapshotFutureItem, groupOrder?: readonly Salutation[]): Block {
+export function futureBullet(item: SnapshotFutureItem): Block {
   const start = parseIsoDate(item.date);
   const end = item.endDate ? parseIsoDate(item.endDate) : undefined;
   const multiDay = end !== undefined && compareDates(start, end) < 0;
@@ -88,12 +69,14 @@ export function futureBullet(item: SnapshotFutureItem, groupOrder?: readonly Sal
         )
       : undefined;
   const parts = [
-    multiDay ? formatLongRange(start, end, { joiner: 'až' }) : formatTitleDate(start),
+    multiDay ? formatAgendaDays(start, end) : formatTitleDate(start),
     time,
     item.campus && CAMPUS_LABEL[item.campus],
     item.place,
     item.title,
-    responsiblePart(item, groupOrder),
+    item.note,
+    item.organizer,
+    item.participants,
   ];
   return { kind: 'bullet', runs: [{ text: finalText(parts.filter(Boolean).join(', ')) }] };
 }

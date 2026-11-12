@@ -4,6 +4,7 @@ export {
   formatClose,
   formatDayMonth,
   formatLongDate,
+  formatAgendaDays,
   formatLongRange,
   formatNumericDate,
   formatNumericRange,

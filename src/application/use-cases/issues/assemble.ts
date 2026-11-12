@@ -4,7 +4,7 @@ import { deadline } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
 import { singleLine } from '@/domain/richtext';
 import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
-import { parseIssueSnapshot } from '@/snapshot';
+import { parseIssueSnapshot, SNAPSHOT_SCHEMA_VERSION } from '@/snapshot';
 
 import { futureItemOf, inAgendaWindow } from './assemble-future';
 import { missingReports, owedAkce, placeholderReports } from './assemble-missing';
@@ -73,7 +73,7 @@ export async function assembleIssueSnapshot(
   const { problems } = assembled;
 
   const candidate = {
-    schema: 1,
+    schema: SNAPSHOT_SCHEMA_VERSION,
     issue: {
       id: issue.id ?? virtualId(monday),
       monday: toIsoDate(monday),

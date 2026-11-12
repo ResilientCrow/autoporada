@@ -1,5 +1,4 @@
 import type { FutureItemRecord } from '@/application/ports';
-import { snapshotPerson } from '@/document';
 import { routeFutureItem } from '@/domain/calendar';
 import { singleLine } from '@/domain/richtext';
 import { toIsoDate, toIsoTime, type CalDate } from '@/domain/time';
@@ -10,8 +9,9 @@ export function futureItemOf(item: FutureItemRecord): SnapshotFutureItem[] {
   const c = item.content;
   if (c.startDate === null) return [];
   const place = c.place ? singleLine(c.place) : '';
-  const people = (c.responsible?.people ?? []).flatMap((p) => snapshotPerson(p) ?? []);
-  const behalfOf = c.responsible?.behalfOf ? singleLine(c.responsible.behalfOf) : '';
+  const organizer = c.organizer ? singleLine(c.organizer) : '';
+  const participants = c.participants ? singleLine(c.participants) : '';
+  const note = c.note ? singleLine(c.note) : '';
   return [
     {
       id: item.id,
@@ -23,10 +23,9 @@ export function futureItemOf(item: FutureItemRecord): SnapshotFutureItem[] {
       ...(c.timeTo && { timeTo: toIsoTime(c.timeTo) }),
       ...(c.campus && { campus: c.campus }),
       ...(place && { place }),
-      ...(c.responsible &&
-        people.length > 0 && {
-          responsible: { verb: c.responsible.verb, ...(behalfOf && { behalfOf }), people },
-        }),
+      ...(organizer && { organizer }),
+      ...(participants && { participants }),
+      ...(note && { note }),
     },
   ];
 }

@@ -2,7 +2,7 @@ import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, slotM
 import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, suggestGenitive, weekdayName, type Salutation } from '@/domain/cs';
 import { missingForSubmit, reportBody, type DraftPerson, type PointContent } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
-import { isRichDocEmpty, richDocFromText } from '@/domain/richtext';
+import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
 import { addDays, compareDates, instantToWallClock, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { composeDocument, reportFromContent } from '@/document/compose';
 import type { Block, DocumentModel } from '@/document/model';
@@ -165,7 +165,7 @@ export function snapshotOf(s: State, monday: string, opts: { pending?: boolean; 
   };
   const eligible = (r: Issue['rows'][number]) => { if (!r.pointId) return true; const pt = s.points.find((p) => p.id === r.pointId); return pt?.state === 'approved' || pt?.state === 'published'; };
   const raw = {
-    schema: 1, issue: { id: `issue-${monday}`, monday, meetingDate: iss.meetingDate, schoolYear: schoolYear(meeting) },
+    schema: 2, issue: { id: `issue-${monday}`, monday, meetingDate: iss.meetingDate, schoolYear: schoolYear(meeting) },
     presentText: iss.present, guestsText: iss.guests,
     pokyny: iss.rows.filter((r) => r.section === 'pokyny' && eligible(r)).map(rowOut), hospodareni: iss.rows.filter((r) => r.section === 'hospodareni' && eligible(r)).map(rowOut),
     reports, futureItems, registry: s.registry.filter((l) => !l.archived).map((l) => ({ key: l.key, purpose: l.purpose, docLabel: l.docLabel, entries: l.entries.map(({ givenName, familyName, classCode, isNew }) => ({ givenName, familyName, classCode, isNew })) })),
@@ -195,7 +195,7 @@ const isoO = (x: Future) => ({ date: toIsoDate(x.date), ...(x.endDate && { endDa
 /** The akce as the document's composer reads it. */
 export const futureSnap = (f: Future) => ({
     id: f.id, kind: f.kind, title: f.title, ...isoO(f), ...(f.campus && { campus: f.campus }), ...(f.place && { place: f.place }),
-    ...(f.responsible.people.some((p) => p.salutation && p.familyName) && { responsible: { verb: f.responsible.verb, ...(f.responsible.behalfOf && { behalfOf: f.responsible.behalfOf }), people: f.responsible.people.filter((p) => p.salutation && p.familyName).map((p) => ({ salutation: p.salutation, givenName: p.givenName, familyName: p.familyName, ...(p.titlesBefore && { titlesBefore: p.titlesBefore }), ...(p.affiliation && { affiliation: p.affiliation }) })) } }),
+    ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }), ...(f.remark.trim() && { note: singleLine(f.remark) }),
 });
 // ponytail: last few builds only; every action makes new state, so this just spares repeats within one render.
 const buildCache: { k: unknown[]; v: Built }[] = [];

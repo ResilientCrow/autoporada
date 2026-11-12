@@ -34,7 +34,7 @@ export function composeProvoz(ctx: ComposeContext): Block[] {
     ctx.future.later.length > 0
       ? point(
           'Další doposud známé akce školy',
-          ctx.future.later.map((item) => futureBullet(item, ctx.snapshot.options.groupOrder)),
+          ctx.future.later.map((item) => futureBullet(item)),
         )
       : [];
   return [
