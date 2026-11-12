@@ -186,13 +186,13 @@ describe('points and the people memory in the notice (M8a)', () => {
     expect(text).toContain('Když autor odeslání stáhne, je to zase jen jeho koncept.');
     expect(text).toContain('Vrácený bod vidí kontroloři a\u00A0ředitel dál');
     expect(text).toContain(
-      'Schválené akce vidí všichni přihlášení, i\u00A0studenti, a\u00A0to i\u00A0se jmény osob, které akci zajišťují.',
+      'Schválené akce vidí všichni přihlášení, i\u00A0studenti, a\u00A0to včetně organizátora, účastníků a\u00A0poznámky tak, jak je autor napsal.',
     );
     expect(notesOf('prijemci')).toContain(
       'Ověřit, že kontroloři a\u00A0ředitel smějí číst vrácený bod, který autor dál upravuje.',
     );
     expect(notesOf('prijemci')).toContain(
-      'Ověřit, že studenti smějí vidět jména zodpovědných osob u\u00A0schválených akcí.',
+      'Ověřit, že studenti smějí vidět organizátora, účastníky a\u00A0poznámku u\u00A0schválených akcí, včetně jmen a\u00A0tříd nezletilých studentů.',
     );
   });
 

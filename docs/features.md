@@ -39,10 +39,16 @@ in v1 unless the [plan of record](plan.md) changes first.
 - Genitive suggestion with a confidence indicator. The submitter can correct it.
 - Future items (jednání / akce). They are placed into points 1 and 2 and the
   last PROVOZ point by date. An approved akce is visible to every signed-in
-  user, students included, with the people who run it. An approved akce is
+  user, students included, with its free-text Organizátor, Účastníci and Poznámka
+  as typed (ADR 0060). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
+  Poznámka); only Název and Den are required. The printed line is date, time,
+  areál, místo, název, poznámka, organizátor, účastníci, joined by commas, with
+  empty pieces left out; multi-day items print „neděle 3. května až čtvrtek
+  14. května 2026“ and no time. Within a list: by start day, multi-day items
+  first, then timed, then untimed, then by title. An approved akce is
   changed only by „Uložit změny“, which sends it for review again. After the
   event, the author is asked to write the report by e-mail and gets a draft
-  prefilled from the akce. Every approved akce owes a report; it cannot be
+  prefilled from the akce (title, dates, areál and místo; not the organizers). Every approved akce owes a report; it cannot be
   declined (ADR 0048). The author deletes a draft or returned item from its
   wizard after a confirmation (ADR 0057).
 - Proposals for HOSPODAŘENÍ items and for extra POKYNY points, by vedení only
@@ -156,10 +162,12 @@ in v1 unless the [plan of record](plan.md) changes first.
   proposals no longer eligible, an empty Příloha 1 and a deadline still ahead.
 - A missing report: every akce owed to the porada whose report is not approved
   at generation is printed among the reports as its title, a paragraph the
-  system writes from the akce („Dne 18. 9. 2027 proběhla akce s názvem
-  Testovní akce, kterou organizoval pan Jan Novák (1.A).“, with the akce's
-  people and verb), „Seznam účastníků nebyl dodán.“ and „Vyjádření
-  organizátora nebylo dodáno.“ The headmaster can rewrite the paragraph on
+  system writes from the akce („V úterý 5. května 2026 od 14.00 hodin proběhla
+  akce předání diplomů (areál Smíchov, Zasedací místnost). Akci zajišťovali:
+  organizuje paní profesorka Jana Nováková. Za Smíchovskou střední se
+  zúčastnili: účast slečna Eva Malá (2.GA). Zpráva o akci nebyla dodána.“, the
+  Organizátor and Účastníci texts as typed, empty pieces left out) and the line
+  „vyjádření organizátora: nebylo dodáno“. The headmaster can rewrite the paragraph on
   „Chybějící zprávy“ (`/porada/[datum]/zpravy`) and restore the system's text.
   Generation closes such a report: an unfinished draft or a report still in
   review is withdrawn, and the akce is no longer asked about (ADR 0049). A

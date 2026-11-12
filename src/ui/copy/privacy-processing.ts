@@ -55,7 +55,7 @@ export const processingSections = [
           {
             term: 'Akce k\u00A0poradě',
             value:
-              'název, termín, místo a\u00A0jména vyučujících, kteří akci zajišťují, a\u00A0poznámka, kterou kontrola napíše autorovi',
+              'název, termín, místo, organizátor, účastníci a\u00A0poznámka, jak je autor napsal (mohou obsahovat jména a\u00A0třídy lidí, i\u00A0nezletilých studentů), a\u00A0poznámka, kterou kontrola napíše autorovi',
           },
           {
             term: 'Postup bodu',
@@ -149,10 +149,10 @@ export const processingSections = [
       },
       {
         kind: 'p',
-        text: 'Schválené akce vidí všichni přihlášení, i\u00A0studenti, a\u00A0to i\u00A0se jmény osob, které akci zajišťují.',
+        text: 'Schválené akce vidí všichni přihlášení, i\u00A0studenti, a\u00A0to včetně organizátora, účastníků a\u00A0poznámky tak, jak je autor napsal. V\u00A0dokumentu porady se tisknou stejně.',
         review: {
           by: 'dpo',
-          note: 'Ověřit, že studenti smějí vidět jména zodpovědných osob u\u00A0schválených akcí.',
+          note: 'Ověřit, že studenti smějí vidět organizátora, účastníky a\u00A0poznámku u\u00A0schválených akcí, včetně jmen a\u00A0tříd nezletilých studentů.',
         },
       },
       {
