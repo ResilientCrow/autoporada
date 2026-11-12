@@ -62,3 +62,4 @@ record that supersedes it.
 | [0054](0054-a-porada-that-does-not-take-place-does-not-exist.md) | A porada that does not take place does not exist: move, drop, add | Accepted; supersedes 0041, 0051 items 2 to 5, 0047 item 3, 0034 item 7 and parts of 0018, 0029, 0030; amends 0032, 0040, 0046, 0049, 0052 |
 | [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Accepted; adds to 0053 |
 | [0056](0056-a-refused-report-closes-its-akce.md) | A refused report closes its akce | Accepted; supersedes 0049 item 3 in part; builds on 0052 |
+| [0057](0057-the-author-deletes-an-unfinished-akce.md) | The author deletes an unfinished akce or schůzka | Accepted; adds to 0053 |

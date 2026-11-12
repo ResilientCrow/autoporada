@@ -22,6 +22,7 @@ import {
   saveFuture,
   startFutureReport,
   submitFuture,
+  withdrawFuture,
 } from './future';
 import { documentArchive, downloadDocument } from './documents';
 import {
@@ -98,6 +99,7 @@ export {
   saveFuture,
   startFutureReport,
   submitFuture,
+  withdrawFuture,
 } from './future';
 export { documentArchive, downloadDocument } from './documents';
 export {
@@ -230,5 +232,6 @@ export const USE_CASES: readonly AnyUseCase[] = [
   submitFuture,
   submitPoint,
   takeSignIn,
+  withdrawFuture,
   withdrawPoint,
 ];

@@ -2,6 +2,7 @@ export { createFuture } from './create';
 export { getFuture } from './get';
 export { listFuture } from './list';
 export { retractFuture } from './retract';
+export { withdrawFuture } from './withdraw';
 export { saveFuture } from './save';
 export { submitFuture } from './submit';
 export { cancelFuture } from './cancel';

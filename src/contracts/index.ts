@@ -73,6 +73,8 @@ export {
   parseResponsible,
   retractFutureInput,
   retractFutureOutput,
+  withdrawFutureInput,
+  withdrawFutureOutput,
   saveFutureInput,
   saveFutureOutput,
   submitFutureInput,

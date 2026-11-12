@@ -23,7 +23,7 @@ function AkceDesk({ f }: { f: Future }) {
 }
 /** New akce or jednání: one question at a time, the line in the document beside it. */
 export function NovaAkce({ id, step }: { id: string; step?: string }) {
-  const { s, apply } = useStore(); const f = s.futures.find((x) => x.id === id);
+  const { s, apply } = useStore(); const f = s.futures.find((x) => x.id === id); const [del, setDel] = useState(false);
   if (!f || f.authorId !== s.userId) return <NotFound />;
   if (f.state !== 'draft' && f.state !== 'returned') { if (location.hash.includes('/nova-akce/')) goReplace(`/akce/${id}`); return null; }
   const head = Q.me(s)?.role === 'headmaster';
@@ -38,8 +38,10 @@ export function NovaAkce({ id, step }: { id: string; step?: string }) {
   if (cur === 'kdo') { ask = 'Kdo to má na starosti?'; help = 'Předvyplnili jsme vás. Po skončení akce požádáme o zprávu autora.'; can = f.responsible.people.length > 0 && f.responsible.people.every((p) => p.salutation); hint = f.responsible.people.length ? 'U každého vyberte oslovení.' : 'Musí tu být aspoň jeden člověk.'; body = <div className="stack"><Seg label="Co dělá" value={f.responsible.verb} options={Object.entries(VERB) as never} onChange={(v) => set({ responsible: { ...f.responsible, verb: v } })} /><ul className="prs">{f.responsible.people.map((p, i) => <PersonRow key={i} p={p} onChange={(x) => set({ responsible: { ...f.responsible, people: f.responsible.people.map((y, j) => (j === i ? x : y)) } })} onRemove={() => set({ responsible: { ...f.responsible, people: f.responsible.people.filter((_, j) => j !== i) } })} />)}</ul><PeoplePick list={[...f.responsible.people]} placeholder="Například: Tereza Malá (3.B)" onAdd={(x) => set({ responsible: { ...f.responsible, people: [...f.responsible.people, ...x] } })} /></div>; }
   if (cur === 'hotovo') { ask = head ? 'Takhle to vyjde. Zařadíme to?' : 'Takhle to vyjde. Můžeme to poslat?'; help = head ? 'Jde to rovnou do porady, bez schvalování.' : f.kind === 'akce' ? 'Po schválení akci uvidí celá škola. Až skončí, připomeneme vám zprávu.' : 'Po schválení se objeví v poradě. Zprávu po schůzce nepíšete.'; nx = head ? 'Zařadit do porady' : 'Odeslat vedení'; body = <div className="anss">{([['Název', f.title, 'nazev'], ['Kdy', whenText(f), 'kdy'], ['Kde', `${CAMPUS.find((c) => c[0] === f.campus)?.[1] ?? ''}${f.place ? `, ${f.place}` : ''}`, 'kde'], ['Kdo', f.responsible.people.map(displayName).join(', '), 'kdo']] as const).filter(([t]) => !term || (t !== 'Kde' && t !== 'Kdo')).map(([t, v, to]) => <div className="ans" key={t}><span className="tx"><span className="st">{t}</span><span className="tt">{v}</span></span><a className="btn" href={`#/nova-akce/${id}/${to}`} aria-label={`Změnit: ${t}`}>Změnit</a></div>)}</div>; }
   const nav = (x?: string) => go(x ? `/nova-akce/${id}/${x}` : '/');
-  return <App nar noNav col={<>
-    <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a></div>
+  const it = term ? 'termín' : f.kind === 'akce' ? 'akci' : 'schůzku';
+  const confirm = del ? <Dialog title={`Smazat ${f.state === 'returned' ? 'vrácen' : 'rozepsan'}${term ? 'ý' : 'ou'} ${it}?`} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawFuture(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null;
+  return <App nar noNav over={confirm} col={<>
+    <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a><button type="button" className="q r" onClick={() => setDel(true)}>Smazat {it}</button></div>
     <p className="stn">{term ? 'Nový' : 'Nová'} {noun}, krok {k + 1} z {steps.length}</p><div className="steps" role="img" aria-label={`Krok ${k + 1} z ${steps.length}`}>{steps.map((_, j) => <span key={j} className={j <= k ? 'on' : ''} />)}</div>
     <div className="top"><h1 className="ask">{ask}</h1>{help ? <p className="lead">{help}</p> : null}</div>{body}
     <div className="pv"><p className="pvh">Takhle to vyjde</p><div className="arch"><Line f={f} /></div></div>

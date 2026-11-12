@@ -202,6 +202,10 @@ export const submitFutureOutput = z.object({ version });
 export const retractFutureInput = z.strictObject(futureWrite);
 export const retractFutureOutput = z.object({ version });
 
+/** „Smazat akci / schůzku“: a draft, returned or submitted item gone; `confirmed` is the dialog's yes. */
+export const withdrawFutureInput = z.strictObject({ ...futureWrite, confirmed: z.boolean() });
+export const withdrawFutureOutput = z.object({ version });
+
 const instant = z.iso.datetime();
 
 /** One item, by id: a read sees it only inside the reader's scope. */

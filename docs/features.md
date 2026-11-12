@@ -43,7 +43,8 @@ in v1 unless the [plan of record](plan.md) changes first.
   changed only by „Uložit změny“, which sends it for review again. After the
   event, the author is asked to write the report by e-mail and gets a draft
   prefilled from the akce. Every approved akce owes a report; it cannot be
-  declined (ADR 0048).
+  declined (ADR 0048). The author deletes a draft or returned item from its
+  wizard after a confirmation (ADR 0057).
 - Proposals for HOSPODAŘENÍ items and for extra POKYNY points, by vedení only
   (reviewers and the headmaster, never a student; ADR 0052).
 - „Akce čekající na zprávu“ lists the author's ended akce whose porada is

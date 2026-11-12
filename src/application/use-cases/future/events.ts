@@ -39,6 +39,7 @@ export function futureEvent(
 const ACTIONS = {
   submit: 'future.submitted',
   retract: 'future.retracted',
+  withdraw: 'future.withdrawn',
   revise: 'future.revised',
   approve: 'future.approved',
   return: 'future.returned',
@@ -90,7 +91,7 @@ async function record(
 export async function move(
   tx: Tx,
   item: FutureItemRecord,
-  event: Extract<FutureMove, 'submit' | 'retract' | 'revise'>,
+  event: Extract<FutureMove, 'submit' | 'retract' | 'revise' | 'withdraw'>,
   patch: Omit<FutureItemPatch, 'state'> = {},
 ): Promise<FutureItemRecord> {
   const after = await tx.futureItems.update(item.id, item.version, {

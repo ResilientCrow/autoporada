@@ -146,8 +146,8 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'saveFuture': return fu(a[0]) ? [{ name: 'future.save', key: real(a[0]), input: { ...pw(a[0]), content: futureWire(fu(a[0])!) } }] : [];
     case 'reviseFuture': return [{ name: 'future.save', key: real(a[0]), input: { ...pw(a[0]), content: futureWire(fu(a[0])!), intent: 'revise' } }];
     case 'submitFuture': return [{ name: 'future.submit', key: real(a[0]), input: { ...pw(a[0]), content: futureWire(fu(a[0])!) } }];
-    case 'retractFuture':
-    case 'withdrawFuture': return [{ name: 'future.retract', key: real(a[0]), input: pw(a[0]) }];
+    case 'retractFuture': return [{ name: 'future.retract', key: real(a[0]), input: pw(a[0]) }];
+    case 'withdrawFuture': return [{ name: 'future.withdraw', key: real(a[0]), input: { ...pw(a[0]), confirmed: true } }];
     case 'approveFuture': return decideFuture('approve');
     case 'returnFuture': return decideFuture('return', a[1]);
     case 'rejectFuture': return decideFuture('reject', a[1]);
