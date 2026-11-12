@@ -152,12 +152,12 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 4. Each call is `POST /api/arch/run` with `{ name, input }`. Failures set `problem` (`code`, `rule?`, `keep`); `unauthenticated` redirects to `/`, `step-up-required` to the step-up page, and typed text stays on screen after a refused autosave.
 5. `GET /api/arch/state` is re-read only when no write is queued or running.
 
-To add a write: a state function in `store.ts`, a tagged op in `ops.ts`, a branch in `toCalls` mapping it to an existing use case. If no use case exists, that is a backend limitation (see rules).
+To add a write: a state function in `store.ts`, a tagged op in `ops.ts`, a branch in `toCalls` mapping it to a use case. If no use case fits, add or extend one in `src/application/use-cases` (see rules); if the screen needs data `GET /api/arch/state` does not return, extend `src/server/routes/arch-state.ts`.
 
 ## 6. Hard rules
 
 1. **Style is 1:1 with the prototype**: font, colour, spacing, radii, shadows and icons, on desktop and phone. Structure may differ where it is better; style may not. After any UI change, compare screenshots side by side with the prototype (`/work/ssps/app`) at the same viewport.
-2. **UI and UX only. Do not change the backend**: nothing in `src/` (domain, contracts, application, infra, server, document), no `drizzle/` migrations, no ADR changes for it. New features go in `arch/` on top of existing use cases. If something needs the backend, state it as a limitation.
+2. **Backend changes are allowed when a feature needs them.** Prefer an existing use case; when none fits, change `src/` (domain, contracts, application, infra, server, document) and `drizzle/` by the rules in `CLAUDE.md`: the layers in `.dependency-cruiser.cjs`, a new use case in `USE_CASES` with its colocated test, schema changes through `pnpm db:generate` (never edit a committed migration), a grants migration for any new column the worker reads, and a new ADR (never an edited one) for a decision. The classic UI at `/klasicke` runs on the same use cases, so a backend change must keep it working.
 3. **No slanted edges or rotated elements. No gradients, no cards with a coloured left border, no emoji.**
 4. **Copy is Czech** (live in the screen files; the classic copy is `src/ui/copy`). No em dashes, no all-caps labels, no middle dots, no eyebrow labels. Sentences that address a person avoid gendered forms where they can. Use ` ` for non-breaking spaces (see the tile „Schůzka s partnery").
 5. **Real porada documents in `/work/ssps/porady` hold real names.** Never copy content or names from them into the repo; use fictional samples.
