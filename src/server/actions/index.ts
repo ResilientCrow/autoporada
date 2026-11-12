@@ -12,6 +12,7 @@ export {
 } from './future';
 export {
   addIssue,
+  confirmPlaceholder,
   dropIssue,
   generateIssue,
   moveIssue,

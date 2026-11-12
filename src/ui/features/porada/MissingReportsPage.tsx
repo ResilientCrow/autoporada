@@ -3,7 +3,7 @@ import { porada } from '@/ui/copy';
 import { ArrowLink, Item, ItemList, Meta, Notice, SlantLabel, Stack, StatusChip } from '@/ui/kit';
 
 import { MissingReportForm } from './MissingReportForm';
-import type { PlaceholderAction } from './placeholder';
+import type { ConfirmPlaceholderAction, PlaceholderAction } from './placeholder';
 
 const { missing } = porada;
 
@@ -19,6 +19,12 @@ interface MissingReportView {
   readonly original: string;
   readonly own: boolean;
   readonly version: number;
+  /** Where the placeholder stands (ADR 0061). */
+  readonly status: 'checked' | 'handed-in' | 'open' | 'to-check';
+  readonly checked: boolean;
+  /** When the author's hand-in closes, written. */
+  readonly due: string;
+  readonly akceVersion: number;
 }
 
 /** A report's state is the point's, so the chip's tone is too; „not started“ is neutral. */
@@ -27,12 +33,14 @@ const toneOf = (state: MissingReportView['state']) =>
 
 /**
  * „Chybějící zprávy“ as /porada/[datum]/zpravy shows it (ADR 0049): each akce the porada owes a
- * report for and does not have one, with the paragraph the document prints instead. A generated
+ * report for and does not have one, with the paragraph the document prints instead and where the
+ * headmaster's check of it stands (ADR 0061). A generated
  * porada shows no form.
  */
 export function MissingReportsPage({
   model,
   action,
+  confirmAction,
 }: {
   readonly model: {
     readonly meeting: string;
@@ -43,6 +51,7 @@ export function MissingReportsPage({
     readonly reports: readonly MissingReportView[];
   };
   readonly action: PlaceholderAction;
+  readonly confirmAction: ConfirmPlaceholderAction;
 }) {
   return (
     <>
@@ -74,6 +83,7 @@ export function MissingReportsPage({
                     <Meta>{missing.when(report.dates)}</Meta>
                     <MissingReportForm
                       action={action}
+                      confirmAction={confirmAction}
                       monday={model.monday}
                       start={report}
                       lines={model.lines}

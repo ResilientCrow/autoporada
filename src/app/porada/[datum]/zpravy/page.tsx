@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { setPlaceholder } from '@/server/actions';
+import { confirmPlaceholder, setPlaceholder } from '@/server/actions';
 import { missingReportsPage, requireSignedIn } from '@/server/pages';
 import { pageTitle, porada } from '@/ui/copy';
 import { MissingReportsPage } from '@/ui/features/porada';
@@ -21,7 +21,7 @@ export default async function PoradaMissingReportsPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/porada">
-      <MissingReportsPage model={model} action={setPlaceholder} />
+      <MissingReportsPage model={model} action={setPlaceholder} confirmAction={confirmPlaceholder} />
     </Shell>
   );
 }

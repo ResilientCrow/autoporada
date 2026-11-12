@@ -13,12 +13,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { MissingReportsPage } from './index';
-import { resetPlaceholderInput, savePlaceholderInput } from './placeholder';
+import { checkPlaceholderInput, resetPlaceholderInput, savePlaceholderInput } from './placeholder';
 
 const MONDAY = '2026-11-09';
 const A1 = '0b0c1d2e-3f40-4152-8364-758697a8b9c1';
 const A2 = '0b0c1d2e-3f40-4152-8364-758697a8b9c2';
 const action = vi.fn();
+const confirmAction = vi.fn();
 
 const report = (
   over: Partial<Parameters<typeof MissingReportsPage>[0]['model']['reports'][number]> = {},
@@ -31,6 +32,10 @@ const report = (
   original: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
   own: false,
   version: 0,
+  status: 'to-check' as const,
+  checked: false,
+  due: '2.\u00a011.\u00a0v\u00a020:00',
+  akceVersion: 3,
   ...over,
 });
 const render = (
@@ -48,6 +53,7 @@ const render = (
         ...over,
       }}
       action={action}
+      confirmAction={confirmAction}
     />,
   );
 
@@ -145,7 +151,36 @@ describe('MissingReportsPage', () => {
   });
 });
 
+describe('the status line and „Zkontrolováno“', () => {
+  it.each([
+    ['to-check', porada.missing.status['to-check']],
+    ['handed-in', porada.missing.status['handed-in']],
+    ['open', porada.missing.status.open('2.\u00a011.\u00a0v\u00a020:00')],
+    ['checked', porada.missing.status.checked],
+  ] as const)('says %s', (status, line) => {
+    expect(render([report({ status, checked: status === 'checked' })])).toContain(line);
+  });
+
+  it('offers the check form while unchecked, beside the editor, and not once checked', () => {
+    const open = render([report()]);
+    expect(open).toContain(`id="zprava-${A1}-zkontrolovano"`);
+    expect(open).toContain(`id="zprava-${A1}"`);
+    const done = render([report({ status: 'checked', checked: true })]);
+    expect(done).not.toContain('-zkontrolovano"');
+    expect(done).toContain(`id="zprava-${A1}"`);
+  });
+});
+
 describe('the placeholder inputs', () => {
+  it('„Zkontrolováno“ names the versions of the placeholder and of the akce the page read', () => {
+    expect(checkPlaceholderInput(MONDAY, A1, 2, 5)()).toEqual({
+      monday: MONDAY,
+      itemId: A1,
+      expectedVersion: 2,
+      akceVersion: 5,
+    });
+  });
+
   const form = (paragraph: string) => {
     const data = new FormData();
     data.set('paragraph', paragraph);

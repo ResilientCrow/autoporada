@@ -244,6 +244,15 @@ export const porada = {
     saved: 'Odstavec je uložen.',
     reset: 'Obnovit původní text',
     resetDone: 'Je zpět původní odstavec.',
+    /** Where the placeholder stands for the headmaster (ADR 0061); `due` arrives written, „14. 11. v 20:00“. */
+    status: {
+      checked: 'Zkontrolováno',
+      'to-check': 'Čeká na vaši kontrolu',
+      'handed-in': 'Zpráva je odevzdaná a\u00a0čeká na rozhodnutí',
+      open: (due: string) => `Autor může zprávu odevzdat do ${due}`,
+    },
+    check: 'Zkontrolováno',
+    checkedDone: 'Odstavec je zkontrolovaný.',
     stale: 'Porada nebo odstavec se mezitím změnily. Načtěte stránku znovu.',
   },
   origin: {

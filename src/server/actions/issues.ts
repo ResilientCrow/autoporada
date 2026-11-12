@@ -2,6 +2,7 @@
 
 import {
   addIssue as addIssueUseCase,
+  confirmPlaceholder as confirmPlaceholderUseCase,
   dropIssue as dropIssueUseCase,
   generateIssue as generateIssueUseCase,
   moveIssue as moveIssueUseCase,
@@ -32,6 +33,12 @@ export const setIssueAnnex2 = defineAction(setIssueAnnex2UseCase, { rateLimit: '
  * report is missing (ADR 0049). Not an autosave, so it refreshes the page.
  */
 export const setPlaceholder = defineAction(setPlaceholderUseCase, { rateLimit: 'admin' });
+
+/**
+ * „Zkontrolováno“ on Chybějící zprávy: the headmaster confirms the paragraph a missing report
+ * prints (ADR 0061). Not an autosave, so it refreshes the page.
+ */
+export const confirmPlaceholder = defineAction(confirmPlaceholderUseCase, { rateLimit: 'admin' });
 
 /** „Vygenerovat dokument“ on the Náhled: the DOCX is stored and the PDF queued (ADR 0038). */
 export const generateIssue = defineAction(generateIssueUseCase, { rateLimit: 'admin' });

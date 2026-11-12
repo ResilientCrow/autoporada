@@ -613,6 +613,10 @@ describe('missingReportsPage', () => {
         original: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
         own: false,
         version: 0,
+        status: 'open',
+        checked: false,
+        dueAt: '2026-11-06T19:00:00.000Z',
+        akceVersion: 2,
       },
       {
         id: 'a-2',
@@ -624,6 +628,10 @@ describe('missingReportsPage', () => {
         original: 'Dne 5. 11. 2026 proběhla akce s názvem Výlet.',
         own: true,
         version: 2,
+        status: 'checked',
+        checked: true,
+        dueAt: '2026-11-09T23:00:00.000Z',
+        akceVersion: 4,
       },
     ],
   };
@@ -643,7 +651,7 @@ describe('missingReportsPage', () => {
       meeting: 'středa 11. listopadu 2026',
       monday: '2026-11-09',
       open: true,
-      lines: ['Seznam účastníků nebyl dodán.', 'Vyjádření organizátora nebylo dodáno.'],
+      lines: ['vyjádření organizátora: nebylo dodáno'],
       reports: [
         {
           id: 'a-1',
@@ -654,6 +662,10 @@ describe('missingReportsPage', () => {
           original: 'Dne 4. 11. 2026 proběhla akce s názvem Seminář.',
           own: false,
           version: 0,
+          status: 'open',
+          checked: false,
+          due: '6.\u00a011.\u00a0v\u00a020:00',
+          akceVersion: 2,
         },
         {
           id: 'a-2',
@@ -664,6 +676,10 @@ describe('missingReportsPage', () => {
           original: 'Dne 5. 11. 2026 proběhla akce s názvem Výlet.',
           own: true,
           version: 2,
+          status: 'checked',
+          checked: true,
+          due: '9.\u00a011.\u00a0v\u00a023:59',
+          akceVersion: 4,
         },
       ],
     });
