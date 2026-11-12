@@ -67,8 +67,6 @@ export function MissingReportForm({
   readonly lines: readonly string[];
 }) {
   const [version, setVersion] = useState(start.version);
-  const [own, setOwn] = useState(start.own);
-  const [checked, setChecked] = useState(start.checked);
   const [text, setText] = useState(start.paragraph);
   const [dirty, setDirty] = useState(false);
   const [said, setSaid] = useState({ message: '', count: 0 });
@@ -83,8 +81,6 @@ export function MissingReportForm({
     toInput: savePlaceholderInput(monday, start.id, version),
     onSuccess: (written) => {
       setVersion(written.version);
-      setOwn(true);
-      setChecked(false);
       done(missing.saved);
     },
   });
@@ -93,8 +89,6 @@ export function MissingReportForm({
     toInput: resetPlaceholderInput(monday, start.id, version),
     onSuccess: () => {
       setVersion(0);
-      setOwn(false);
-      setChecked(false);
       setText(start.original);
       done(missing.resetDone);
     },
@@ -104,11 +98,12 @@ export function MissingReportForm({
     toInput: checkPlaceholderInput(monday, start.id, version, start.akceVersion),
     onSuccess: (written) => {
       setVersion(written.version);
-      setChecked(true);
       done(missing.checkedDone);
     },
   });
-  // Once checked, only a save or a reset undoes it; then the page no longer knows the older status.
+  // Each action refreshes the page, so the status, the own mark and the check come from the server's
+  // reading in `start`, never from a guess made here.
+  const { checked, own } = start;
   const statusLine = checked
     ? missing.status.checked
     : start.status === 'open'
