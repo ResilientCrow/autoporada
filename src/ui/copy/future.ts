@@ -59,11 +59,14 @@ export const future = {
   editor: {
     type: 'Druh',
     organizer: 'Organizátor',
-    organizerHint: 'Vypíše se tak, jak ho napíšete.',
+    organizerHint:
+      'Vypíše se tak, jak ho napíšete. Po schválení ho uvidí všichni přihlášení, i\u00A0studenti.',
     participants: 'Účastníci',
-    participantsHint: 'Vypíše se tak, jak ho napíšete.',
+    participantsHint:
+      'Můžete uvést jména a\u00A0třídy. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',
     note: 'Poznámka',
-    noteHint: 'například téma nebo kdo píše texty',
+    noteHint:
+      'například téma nebo kdo píše texty. Po schválení ji uvidí všichni přihlášení, i\u00A0studenti.',
     submit: 'Odeslat ke kontrole',
     /** An approved akce is not autosaved: one press hands the change in. */
     revise: 'Uložit změny',

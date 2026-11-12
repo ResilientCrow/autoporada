@@ -13,7 +13,21 @@ import { describe, expect, it } from 'vitest';
  * does not follow a value through a variable: `const meta = { title }; record({ meta })` passes
  * unseen, so write meta in place.
  */
-const FORBIDDEN = new Set(['title', 'note', 'text', 'quote', 'name', 'body', 'before']);
+const FORBIDDEN = new Set([
+  'title',
+  'note',
+  'text',
+  'quote',
+  'name',
+  'body',
+  'before',
+  'organizer',
+  'participants',
+  'paragraph',
+  'original',
+  'confirmedOriginal',
+  'place',
+]);
 
 /**
  * The same rule for a diff: in an `AuditShape` (the rule per field of a record) a field that
@@ -35,6 +49,12 @@ const TEXT_FIELDS = new Set([
   'jobTitle',
   'department',
   'defaultBullets',
+  'organizer',
+  'participants',
+  'paragraph',
+  'original',
+  'confirmedOriginal',
+  'place',
 ]);
 
 const ROOT = join(__dirname, '..', '..');
