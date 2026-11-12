@@ -6,7 +6,7 @@ import { future, points } from '@/ui/copy';
 import { ArrowLink } from '@/ui/kit';
 
 import { FutureHeader } from './FutureHeader';
-import { responsibleText, whenText, type FutureView } from './facts';
+import { whenText, type FutureView } from './facts';
 import { PlacementStrip } from './PlacementStrip';
 import type { StripWindow } from './placement';
 
@@ -25,15 +25,17 @@ function factRows(view: FutureView): readonly (readonly [string, string])[] {
     [future.facts.when, whenText(view)],
     [points.facts.campus, view.campus && points.campus[view.campus]],
     [points.facts.place, view.place?.trim() || null],
-    [future.facts.responsible, responsibleText(view)],
+    [future.facts.organizer, view.organizer?.trim() || null],
+    [future.facts.participants, view.participants?.trim() || null],
+    [future.facts.note, view.note?.trim() || null],
   ];
   return rows.filter((row): row is readonly [string, string] => row[1] !== null);
 }
 
 /**
  * One jednání or akce to read (design section 12): the title, what it is and where it stands,
- * the facts that are set, and for its author where it lands in the next porady. It shows names
- * only, whoever reads it.
+ * the facts that are set, and for its author where it lands in the next porady. Everyone who may read it
+ * sees the texts as typed (ADR 0060).
  */
 export function FutureRead({
   item,
@@ -55,7 +57,7 @@ export function FutureRead({
           {rows.map(([term, value]) => (
             <div key={term}>
               <dt className="font-bold">{term}</dt>
-              <dd>{value}</dd>
+              <dd className="whitespace-pre-line">{value}</dd>
             </div>
           ))}
         </dl>

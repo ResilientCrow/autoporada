@@ -45,7 +45,6 @@ test.describe('the report card', () => {
     await expect(page).toHaveURL(/\/body\/[0-9a-f-]{36}$/);
     await hydrated();
     await expect(field(page, points.editor.title)).toHaveValue('Exkurze do Terezína');
-    await expect(page.getByRole('listitem').filter({ hasText: 'Jana Nováková' })).toBeVisible();
     const reportId = (await readFuture(id)).reportPointId;
     expect(reportId).not.toBeNull();
 

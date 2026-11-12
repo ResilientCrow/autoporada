@@ -1,9 +1,9 @@
 import type { z } from 'zod';
 
 import type { ActionResult, FieldIssueCode, FieldIssues, saveFutureInput } from '@/contracts';
-import type { Campus, ResponsibleVerb } from '@/domain/cs';
+import type { Campus } from '@/domain/cs';
 import { fieldIssues, future, points } from '@/ui/copy';
-import { pickedTime, typedDate, type Chip, type FormSpec } from '@/ui/form';
+import { pickedTime, typedDate, type FormSpec } from '@/ui/form';
 
 /** The id of the editor's form: the ids of its controls are made from it. */
 export const FUTURE_FORM_ID = 'akce';
@@ -11,26 +11,10 @@ export const FUTURE_FORM_ID = 'akce';
 /** An item's content as the save takes it, and as the page hands it to the editor. */
 export type FutureContentWire = z.input<typeof saveFutureInput>['content'];
 
-/** Who is responsible as the editor holds it: the people as chips, the behalf-of as typed. */
-export interface ResponsibleDraft {
-  readonly verb: ResponsibleVerb;
-  readonly behalfOf: string;
-  readonly people: readonly Chip[];
-}
-
-/** What the editor holds: the content as the save takes it, and the responsible people as the field edits them. */
+/** What the editor holds: the content as the save takes it. */
 export interface FutureEdit {
   readonly content: FutureContentWire;
-  readonly responsible: ResponsibleDraft;
 }
-
-/** The verbs in the order the form offers them. */
-export const VERBS = [
-  'organizuje',
-  'koordinuje',
-  'zajišťuje',
-  'vede',
-] as const satisfies readonly ResponsibleVerb[];
 
 /** The campuses in the order the form offers them. */
 export const CAMPUSES = [
@@ -40,42 +24,33 @@ export const CAMPUSES = [
   'jinde',
 ] as const satisfies readonly Campus[];
 
-/** The verb a select's value names; the first for any other text. */
-export const verbOf = (value: string): ResponsibleVerb =>
-  VERBS.find((verb) => verb === value) ?? VERBS[0];
-
 const campusOf = (value: string): Campus | null =>
   CAMPUSES.find((campus) => campus === value) ?? null;
 
-/**
- * The editor's start: the people keyed by their place (not a random id: the key reaches the
- * markup as an id, so the server's render and the browser's agree), nobody responsible being the
- * first verb and no behalf-of.
- */
-export function startEdit(content: FutureContentWire): FutureEdit {
-  const { responsible } = content;
-  return {
-    content,
-    responsible: {
-      verb: responsible?.verb ?? VERBS[0],
-      behalfOf: responsible?.behalfOf ?? '',
-      people: (responsible?.people ?? []).map((person, i) => ({ key: `r.${i}`, person })),
-    },
-  };
-}
+/** The editor's start: the content as the page loaded it. */
+export const startEdit = (content: FutureContentWire): FutureEdit => ({ content });
 
-/** What the save takes of the responsible draft: nothing while nobody and no behalf-of is named. */
-export function responsibleWire(draft: ResponsibleDraft): FutureContentWire['responsible'] {
-  if (draft.people.length === 0 && draft.behalfOf === '') return null;
-  return {
-    verb: draft.verb,
-    ...(draft.behalfOf !== '' && { behalfOf: draft.behalfOf }),
-    people: draft.people.map((chip) => chip.person),
-  };
-}
+/** Whether the item runs over more than one day: it prints no hours then. */
+export const isMultiDay = ({
+  startDate,
+  endDate,
+}: Pick<FutureContentWire, 'startDate' | 'endDate'>) =>
+  startDate !== null && endDate !== null && endDate > startDate;
 
 export type PatchName =
-  'title' | 'startDate' | 'endDate' | 'timeFrom' | 'timeTo' | 'campus' | 'place';
+  | 'title'
+  | 'startDate'
+  | 'endDate'
+  | 'timeFrom'
+  | 'timeTo'
+  | 'campus'
+  | 'place'
+  | 'organizer'
+  | 'participants'
+  | 'note';
+
+/** The text of a free-text field: nothing typed is null. */
+const textOrNull = (value: string): string | null => (value === '' ? null : value);
 
 /**
  * What a control's new value does to the content: the patch for the field named `name`. A date or
@@ -90,15 +65,22 @@ export function patchFor(
     case 'title':
       return { title: value };
     case 'startDate':
-    case 'endDate':
-      return { [name]: typedDate(value, content[name]).value };
+    case 'endDate': {
+      const dates = { startDate: content.startDate, endDate: content.endDate };
+      dates[name] = typedDate(value, content[name]).value;
+      // A run of days has no hours: the times go when the end moves past the start.
+      return isMultiDay(dates) ? { ...dates, timeFrom: null, timeTo: null } : dates;
+    }
     case 'timeFrom':
     case 'timeTo':
       return { [name]: pickedTime(value, content[name]) };
     case 'campus':
       return { campus: campusOf(value) };
     case 'place':
-      return { place: value === '' ? null : value };
+    case 'organizer':
+    case 'participants':
+    case 'note':
+      return { [name]: textOrNull(value) };
   }
 }
 
@@ -111,13 +93,6 @@ export function withPatch(edit: FutureEdit, patch: Partial<FutureContentWire>): 
   return { ...edit, content: { ...edit.content, ...patch } };
 }
 
-/** The edit after a change to who is responsible, the content following it. */
-export function withResponsible(edit: FutureEdit, change: Partial<ResponsibleDraft>): FutureEdit {
-  const responsible = { ...edit.responsible, ...change };
-  return { responsible, content: { ...edit.content, responsible: responsibleWire(responsible) } };
-}
-
-const who = future.editor.responsible;
 /** The editor's fields in page order, the same for both kinds. A draft may be unfinished: the submit asks for the title and the start. */
 export const FUTURE_SPEC: FormSpec = {
   title: { label: points.editor.title, required: true },
@@ -127,18 +102,16 @@ export const FUTURE_SPEC: FormSpec = {
   timeTo: { label: points.facts.timeTo, messages: { invalid: future.editor.timeTo } },
   campus: { label: points.facts.campus },
   place: { label: points.facts.place },
-  'responsible.verb': { label: who.verb, required: true },
-  'responsible.behalfOf': { label: who.behalfOf },
-  'responsible.people': { label: who.people },
+  organizer: { label: future.editor.organizer },
+  participants: { label: future.editor.participants },
+  note: { label: future.editor.note },
 };
 
 const PREFIX = 'content.';
-/** A path into one person of the responsible list. */
-const PERSON = /^responsible\.people\.\d+\./;
 
 /**
  * The issues of a refused save or submit as the editor's fields carry them: the contract's paths
- * lose `content.`, and a person's missing part is the people field's. `unknown` is set for a path
+ * lose `content.`. `unknown` is set for a path
  * with no field here (the content over its size cap, a field the editor does not have), which
  * becomes the generic problem.
  */
@@ -150,9 +123,7 @@ export function issuesOf(fields: FieldIssues): {
   let unknown = Object.keys(fields).length === 0;
   for (const [path, code] of Object.entries(fields)) {
     const name = path.startsWith(PREFIX) ? path.slice(PREFIX.length) : '';
-    const person = PERSON.test(name);
-    const field = person ? 'responsible.people' : name;
-    if (Object.hasOwn(FUTURE_SPEC, field)) known[field] = person ? 'required' : code;
+    if (Object.hasOwn(FUTURE_SPEC, name)) known[name] = code;
     else unknown = true;
   }
   return { known, unknown };
@@ -170,8 +141,6 @@ export function messagesOf(
         return [name, missing ? future.editor.endWithoutStart : future.editor.endBeforeStart];
       }
       if (name === 'timeTo') return [name, future.editor.timeTo];
-      if (name === 'responsible.people' && code === 'too-long')
-        return [name, future.editor.tooMany];
       return [name, fieldIssues[code]];
     }),
   );

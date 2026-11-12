@@ -1,5 +1,4 @@
 import type { FutureKind } from '@/domain/calendar';
-import type { ResponsibleVerb } from '@/domain/cs';
 import type { FutureReturnPart, FutureState, ReviewDecision } from '@/domain/review';
 
 import { rules } from './forms';
@@ -31,8 +30,11 @@ export const future = {
     title: 'Název',
     when: 'Datum a\u00A0čas',
     place: 'Místo',
-    responsible: 'Kdo ji vede',
-  } as const satisfies Record<FutureReturnPart, string>,
+    responsible: 'Organizátor a\u00A0účastníci',
+    who: 'Organizátor a\u00A0účastníci',
+    note: 'Poznámka',
+    // `responsible` goes with the contract in the commit that drops it.
+  } as const satisfies Record<FutureReturnPart | 'who' | 'note', string>,
   /** The label above the reviewer's note on a returned item, for its author. */
   returnNote: 'Poznámka z\u00A0kontroly',
   /** The parts the return named, under that label (ADR 0058). */
@@ -44,7 +46,9 @@ export const future = {
   back: 'Všechny akce',
   facts: {
     when: 'Kdy',
-    responsible: 'Zajišťují',
+    organizer: 'Organizátor',
+    participants: 'Účastníci',
+    note: 'Poznámka',
   },
   /** /akce/novy: what to start. */
   chooser: {
@@ -56,22 +60,12 @@ export const future = {
   /** The editor of an item (design section 12); the labels it shares with a point are `points.facts`. */
   editor: {
     type: 'Druh',
-    responsible: {
-      legend: 'Kdo to zajišťuje',
-      hint: 'Uveďte vyučující, kteří akci zajišťují.',
-      verb: 'Jak se podílejí',
-      behalfOf: 'Za koho',
-      behalfOfHint: 'například 8.\u00A0A\u00A0nebo předmětová komise',
-      people: 'Vyučující',
-      add: 'Přidat vyučujícího',
-      list: 'Vyučující, kteří akci zajišťují',
-      verbs: {
-        organizuje: 'Organizují',
-        koordinuje: 'Koordinují',
-        zajišťuje: 'Zajišťují',
-        vede: 'Vedou',
-      } as const satisfies Record<ResponsibleVerb, string>,
-    },
+    organizer: 'Organizátor',
+    organizerHint: 'Vypíše se tak, jak ho napíšete.',
+    participants: 'Účastníci',
+    participantsHint: 'Vypíše se tak, jak ho napíšete.',
+    note: 'Poznámka',
+    noteHint: 'například téma nebo kdo píše texty',
     submit: 'Odeslat ke kontrole',
     /** An approved akce is not autosaved: one press hands the change in. */
     revise: 'Uložit změny',
@@ -84,7 +78,6 @@ export const future = {
     endBeforeStart: 'Datum konce nesmí být před datem začátku.',
     endWithoutStart: 'Vyplňte také datum začátku.',
     timeTo: 'Čas do musí být později než čas od.',
-    tooMany: 'Je tu příliš mnoho vyučujících.',
   },
   /** „Akce čekající na zprávu“: the card on the home page and in „Moje body“ (design section 12). */
   report: {

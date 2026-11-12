@@ -1,8 +1,4 @@
-import type { RecentPerson } from '@/domain/people';
-import type { FutureReturnPart } from '@/domain/review';
-import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
-import type { Directory } from '@/ui/form';
 import { ArrowLink } from '@/ui/kit';
 
 import type { FutureActions } from './actions';
@@ -20,9 +16,6 @@ import type { FutureReviewModel } from './review-calls';
 interface FutureEditorStart {
   readonly version: number;
   readonly content: FutureContentWire;
-  readonly today: CalDate;
-  readonly recents: readonly RecentPerson[];
-  readonly directory: Directory;
 }
 
 /** What /akce/[id] hands the screen. */
@@ -59,7 +52,9 @@ export function FutureScreen({
   readonly actions: FutureActions;
 }) {
   const { id, kind, state, view, window, editor, returnNote, returnParts, review } = item;
-  const rework = returnParts.flatMap((c) => future.returnPart[c as FutureReturnPart] ?? []);
+  const rework = returnParts.flatMap(
+    (c) => future.returnPart[c as keyof typeof future.returnPart] ?? [],
+  );
   const reviewing =
     review === null ? null : (
       <FutureReview
@@ -87,9 +82,6 @@ export function FutureScreen({
     kind,
     version: editor.version,
     content: editor.content,
-    today: editor.today,
-    recents: editor.recents,
-    directory: editor.directory,
     window,
   };
   return (

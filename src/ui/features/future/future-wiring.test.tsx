@@ -78,11 +78,8 @@ function page(phase: string, readOnly: boolean, sending = false): string {
         organizer: null,
         participants: null,
         note: null,
-        responsible: { verb: 'vede', people: [PERSON] },
+        responsible: null,
       }}
-      today={calDate(2026, 11, 4)}
-      recents={[]}
-      directory="off"
       window={null}
       saveFuture={never}
       submitFuture={never}

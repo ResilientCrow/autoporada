@@ -12,18 +12,16 @@ import {
   sameContent,
   startEdit,
   withPatch,
-  withResponsible,
   type FutureContentWire,
   type FutureEdit,
   type PatchName,
-  type ResponsibleDraft,
 } from './edit';
 
 /**
  * An item's fields being edited (design section 12): the content in the wire form the save takes,
- * the responsible people as the field holds them, and what the contract refused in the last save.
+ * and what the contract refused in the last save.
  * Every change goes through one way in, which hands the new content to `onChange` unless it is the
- * content already held (a verb picked while nobody is named saves nothing). The owner saves: the
+ * content already held (a date typed that the field refuses saves nothing). The owner saves: the
  * autosave for a draft, one press for an approved akce; the autosave passes each answer to
  * `afterSave`.
  */
@@ -64,7 +62,5 @@ export function useFutureEdit({
       const { content } = latest.current;
       apply(withPatch(latest.current, patchFor(name, value, content)));
     },
-    setResponsible: (change: Partial<ResponsibleDraft>) =>
-      apply(withResponsible(latest.current, change)),
   };
 }

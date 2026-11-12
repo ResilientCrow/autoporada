@@ -4,10 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 
 import type { FutureKind } from '@/domain/calendar';
-import type { RecentPerson } from '@/domain/people';
-import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
-import { AutosaveStatus, Form, saveAnswerOf, useAutosave, type Directory } from '@/ui/form';
+import { AutosaveStatus, Form, saveAnswerOf, useAutosave } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
 import type { FutureStatusAction, SaveFutureAction, SubmitFutureAction } from './actions';
@@ -33,9 +31,6 @@ export function FutureEditor({
   kind,
   version,
   content: initial,
-  today,
-  recents,
-  directory,
   window,
   saveFuture,
   submitFuture,
@@ -45,9 +40,6 @@ export function FutureEditor({
   readonly kind: FutureKind;
   readonly version: number;
   readonly content: FutureContentWire;
-  readonly today: CalDate;
-  readonly recents: readonly RecentPerson[];
-  readonly directory: Directory;
   /** The meeting calendar of the placement strip; null where the page shows none. */
   readonly window: StripWindow | null;
   readonly saveFuture: SaveFutureAction;
@@ -105,7 +97,6 @@ export function FutureEditor({
   });
   const readOnly = autosave.readOnly || send.sending;
   const { edit } = editing;
-  const picker = { today, recents, directory };
 
   return (
     <div className="bar-room space-y-4">
@@ -119,9 +110,7 @@ export function FutureEditor({
           edit={edit}
           issues={editing.messages}
           readOnly={readOnly}
-          picker={picker}
           onPatch={editing.patch}
-          onResponsible={editing.setResponsible}
           onBlur={autosave.onBlur}
         />
         <div>

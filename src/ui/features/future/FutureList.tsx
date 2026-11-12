@@ -5,13 +5,13 @@ import { future, points } from '@/ui/copy';
 import { ArrowLink, ButtonLink, ItemLink, SlantLabel } from '@/ui/kit';
 import { Chip, FUTURE_LOOK } from '@/ui/status';
 
-import { campusAndPlace, responsibleText, whenText } from './facts';
+import { campusAndPlace, whenText } from './facts';
 
 /** A line of „Akce“ as the list use case answers it. */
 export type FutureRow = z.output<typeof listFutureOutput>['items'][number];
 
 function Row({ row }: { readonly row: FutureRow }) {
-  const lines = [whenText(row), campusAndPlace(row), responsibleText(row)].filter(
+  const lines = [whenText(row), campusAndPlace(row), row.organizer?.trim() || null].filter(
     (line): line is string => line !== null,
   );
   return (

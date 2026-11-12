@@ -4,10 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { FutureKind } from '@/domain/calendar';
-import type { RecentPerson } from '@/domain/people';
-import type { CalDate } from '@/domain/time';
 import { future } from '@/ui/copy';
-import { Form, LiveStatus, type Directory } from '@/ui/form';
+import { Form, LiveStatus } from '@/ui/form';
 import { Button } from '@/ui/kit';
 
 import type { SaveFutureAction } from './actions';
@@ -36,9 +34,6 @@ export function FutureRevise({
   kind,
   version,
   content: initial,
-  today,
-  recents,
-  directory,
   window,
   saveFuture,
 }: {
@@ -46,9 +41,6 @@ export function FutureRevise({
   readonly kind: FutureKind;
   readonly version: number;
   readonly content: FutureContentWire;
-  readonly today: CalDate;
-  readonly recents: readonly RecentPerson[];
-  readonly directory: Directory;
   readonly window: StripWindow | null;
   readonly saveFuture: SaveFutureAction;
 }) {
@@ -90,9 +82,7 @@ export function FutureRevise({
           edit={edit}
           issues={editing.messages}
           readOnly={send.sending}
-          picker={{ today, recents, directory }}
           onPatch={editing.patch}
-          onResponsible={editing.setResponsible}
           onBlur={NO_CHANGE}
         />
         <p id={NOTICE_ID}>{future.editor.reviseNotice}</p>

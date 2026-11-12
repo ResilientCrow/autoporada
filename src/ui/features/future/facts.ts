@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { getFutureOutput } from '@/contracts';
-import { formatClock, formatNumericDate, formatNumericRange, responsibleVerb } from '@/domain/cs';
+import { formatClock, formatNumericDate, formatNumericRange } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime } from '@/domain/time';
 import { points } from '@/ui/copy';
 
@@ -26,14 +26,6 @@ export function whenText({ startDate, endDate, timeFrom, timeTo }: When): string
   const from = formatClock(parseWallTime(timeFrom));
   const hours = timeTo === null ? from : `${from} až ${formatClock(parseWallTime(timeTo))}`;
   return `${days}, ${hours} hodin`;
-}
-
-/** „za 8.A koordinuje Jana Nováková“; null where no one is named. */
-export function responsibleText({ responsible }: Pick<FutureView, 'responsible'>): string | null {
-  if (responsible === null || responsible.names.length === 0) return null;
-  const { verb, behalfOf, names } = responsible;
-  const who = `${responsibleVerb(verb, names.length)} ${names.join(', ')}`;
-  return behalfOf === null ? who : `za ${behalfOf} ${who}`;
 }
 
 /** „Šmíchov, v učebně S206“; null where neither is set. */

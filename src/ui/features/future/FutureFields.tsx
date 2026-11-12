@@ -1,35 +1,31 @@
 'use client';
 
 import { POINT_LIMITS } from '@/domain/report';
-import { points } from '@/ui/copy';
+import { future, points } from '@/ui/copy';
 import { DateField, RadioGroupField, TextField } from '@/ui/form';
 
-import { CAMPUSES, type FutureEdit, type PatchName, type ResponsibleDraft } from './edit';
-import { ResponsibleFields, type PickerContext } from './ResponsibleFields';
+import { CAMPUSES, isMultiDay, type FutureEdit, type PatchName } from './edit';
 
 const CAMPUS_OPTIONS = CAMPUSES.map((campus) => ({ value: campus, label: points.campus[campus] }));
 
 /**
  * The fields of an item in page order (design section 12): title, the dates and times as native
- * controls with their ISO value, campus, place and who is responsible. Every approved akce owes a
- * report, so there is nothing to tick for it (ADR 0048). Each change goes to the editor by name; `issues` holds the messages of the last
- * refused save, by field name.
+ * controls with their ISO value (the times only for a single day), campus, place and the three
+ * free texts: organizer, participants and note, printed as typed (ADR 0060). Every approved akce
+ * owes a report, so there is nothing to tick for it (ADR 0048). Each change goes to the editor by
+ * name; `issues` holds the messages of the last refused save, by field name.
  */
 export function FutureFields({
   edit,
   issues,
   readOnly,
-  picker,
   onPatch,
-  onResponsible,
   onBlur,
 }: {
   readonly edit: FutureEdit;
   readonly issues: Readonly<Record<string, string>>;
   readonly readOnly: boolean;
-  readonly picker: PickerContext;
   readonly onPatch: (name: PatchName, value: string) => void;
-  readonly onResponsible: (change: Partial<ResponsibleDraft>) => void;
   /** Leaving a field saves at once. */
   readonly onBlur: () => void;
 }) {
@@ -54,10 +50,12 @@ export function FutureFields({
         <DateField {...bound('startDate')} initial={content.startDate} />
         <DateField {...bound('endDate')} initial={content.endDate} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField {...bound('timeFrom')} type="time" value={content.timeFrom ?? ''} />
-        <TextField {...bound('timeTo')} type="time" value={content.timeTo ?? ''} />
-      </div>
+      {isMultiDay(content) ? null : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField {...bound('timeFrom')} type="time" value={content.timeFrom ?? ''} />
+          <TextField {...bound('timeTo')} type="time" value={content.timeTo ?? ''} />
+        </div>
+      )}
       <RadioGroupField
         name="campus"
         options={CAMPUS_OPTIONS}
@@ -72,13 +70,26 @@ export function FutureFields({
         value={content.place ?? ''}
         autoComplete="off"
       />
-      <ResponsibleFields
-        value={edit.responsible}
-        issues={issues}
-        readOnly={readOnly}
-        picker={picker}
-        onChange={onResponsible}
-        onBlur={onBlur}
+      <TextField
+        {...bound('organizer')}
+        description={future.editor.organizerHint}
+        multiline
+        maxLength={POINT_LIMITS.organizer}
+        value={content.organizer ?? ''}
+      />
+      <TextField
+        {...bound('participants')}
+        description={future.editor.participantsHint}
+        multiline
+        maxLength={POINT_LIMITS.participants}
+        value={content.participants ?? ''}
+      />
+      <TextField
+        {...bound('note')}
+        description={future.editor.noteHint}
+        multiline
+        maxLength={POINT_LIMITS.futureNote}
+        value={content.note ?? ''}
       />
     </>
   );

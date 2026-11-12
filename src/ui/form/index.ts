@@ -17,7 +17,7 @@ export { pickedTime, readText, typedDate } from './dates';
 export { ErrorSummary } from './ErrorSummary';
 export { FormProblem } from './FormProblem';
 export { LiveStatus } from './LiveStatus';
-export { NativeFieldError, useNativeField } from './native-field';
+export { NativeFieldError } from './native-field';
 export { NoScriptNotice } from './NoScriptNotice';
 export { NoteField } from './NoteField';
 export type { Chip, Directory, DirectoryFetcher, RawAnswer } from './people-picker';

@@ -157,9 +157,6 @@ describe('futurePage', () => {
       editor: {
         version: 3,
         content: content(),
-        today: { year: 2026, month: 11, day: 4 },
-        recents: [],
-        directory: 'off',
       },
       view: view(),
       window: WINDOW,
@@ -216,18 +213,14 @@ describe('futurePage', () => {
 });
 
 describe('futurePage: the editor', () => {
-  const PEOPLE = [{ firstName: 'Jana', lastName: 'Nováková' }];
-
   it.each(['draft', 'returned', 'approved'] as const)(
     'is there for the author of a %s item',
     async (state) => {
       serve({
         get: { ok: true, value: loaded({ state }) },
-        recents: { ok: true, value: { people: PEOPLE } },
       });
       const model = await futurePage(ID);
       expect(model?.editor?.version).toBe(3);
-      expect(model?.editor?.recents).toEqual(PEOPLE);
     },
   );
 
@@ -235,18 +228,9 @@ describe('futurePage: the editor', () => {
     ['not the author', { isAuthor: false, editable: false, content: null, state: 'approved' }],
     ['submitted', { state: 'submitted', editable: false }],
     ['rejected', { state: 'rejected', editable: false }],
-  ])('is null when the item is %s, and the recent people are not read', async (_name, over) => {
+  ])('is null when the item is %s', async (_name, over) => {
     serve({ get: { ok: true, value: loaded(over) } });
     expect((await futurePage(ID))?.editor).toBeNull();
-    expect(asked()).not.toContain('people.recent');
-  });
-
-  it('opens with no recent people when the memory is refused', async () => {
-    serve({
-      get: { ok: true, value: loaded() },
-      recents: { ok: false, error: { code: 'forbidden' } },
-    });
-    expect((await futurePage(ID))?.editor?.recents).toEqual([]);
   });
 });
 

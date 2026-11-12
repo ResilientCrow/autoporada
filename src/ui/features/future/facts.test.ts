@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { responsibleText, whenText, type FutureView } from './facts';
+import { whenText, type FutureView } from './facts';
 
 const view = (over: Partial<FutureView> = {}): FutureView => ({
   title: 'Lyžák',
@@ -29,20 +29,5 @@ describe('whenText', () => {
     [{ startDate: null, timeFrom: '08:00' }, null],
   ] as const)('writes %j as %j', (over, expected) => {
     expect(whenText(view(over))).toBe(expected);
-  });
-});
-
-describe('responsibleText', () => {
-  const people = (verb: 'koordinuje' | 'vede', names: string[], behalfOf: string | null = null) =>
-    view({ responsible: { verb, behalfOf, names } });
-
-  it.each([
-    [view(), null],
-    [people('vede', []), null],
-    [people('vede', ['Jana Nováková']), 'vede Jana Nováková'],
-    [people('vede', ['Jana Nováková', 'Petr Dvořák']), 'vedou Jana Nováková, Petr Dvořák'],
-    [people('koordinuje', ['Jana Nováková'], '8.A'), 'za 8.A koordinuje Jana Nováková'],
-  ])('writes %j as %j', (input, expected) => {
-    expect(responsibleText(input)).toBe(expected);
   });
 });

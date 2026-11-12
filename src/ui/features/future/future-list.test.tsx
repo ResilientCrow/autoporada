@@ -19,11 +19,11 @@ const row = (over: Partial<FutureRow> = {}): FutureRow => ({
   timeTo: null,
   campus: 'smichov',
   place: 'Špindlerův Mlýn',
-  organizer: null,
+  organizer: 'organizuje pan Malý',
   participants: null,
   note: null,
   reportState: 'none',
-  responsible: { verb: 'vede', behalfOf: null, names: ['Jana Nováková'] },
+  responsible: null,
   updatedAt: '2026-10-01T10:00:00.000Z',
   ...over,
 });
@@ -53,7 +53,7 @@ describe('FutureList', () => {
     expect(html).toMatch(/<h2[^>]*>.*Budoucí události.*<\/h2>/s);
   });
 
-  it('shows a line with the link, kind, days, place, campus and who is responsible', () => {
+  it('shows a line with the link, kind, days, place, campus and the organizer', () => {
     const [item] = itemsOf(render([row()]));
     expect(item).toContain('href="/akce/0b0c1d2e-3f40-4152-8364-758697a8b9ca"');
     expect(item).toContain('>Lyžařský kurz</a>');
@@ -61,7 +61,7 @@ describe('FutureList', () => {
     expect(item).toContain('10.–12. 11. 2026');
     expect(item).toContain('Špindlerův Mlýn');
     expect(item).toContain(points.campus.smichov);
-    expect(item).toContain('vede Jana Nováková');
+    expect(item).toContain('organizuje pan Malý');
   });
 
   it('marks the state of the reader’s own items only, as a student sees the list', () => {

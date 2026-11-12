@@ -42,19 +42,12 @@ const content = (over: Partial<FutureContentWire> = {}): FutureContentWire => ({
   organizer: null,
   participants: null,
   note: null,
-  responsible: {
-    verb: 'koordinuje',
-    behalfOf: '8.A',
-    people: [{ salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' }],
-  },
+  responsible: null,
   ...over,
 });
 const editorOf = (over: Partial<FutureContentWire> = {}) => ({
   version: 3,
   content: content(over),
-  today: calDate(2026, 11, 4),
-  recents: [],
-  directory: 'off' as const,
 });
 const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
   id: ID,
@@ -76,7 +69,7 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
     organizer: null,
     participants: null,
     note: null,
-    responsible: { verb: 'koordinuje', behalfOf: '8.A', names: ['Jana Nováková'] },
+    responsible: null,
   },
   window: null,
   editor: editorOf(),
@@ -105,12 +98,11 @@ describe('the editor of a draft', () => {
     expect(html).toContain('10. listopadu 2026');
   });
 
-  it('has the responsible fieldset with the verb, the behalf-of and the people', () => {
-    expect(html).toContain(`<legend`);
-    expect(html).toContain(future.editor.responsible.legend);
-    expect(html).toContain(future.editor.responsible.verbs.koordinuje);
-    expect(html).toMatch(/<input [^>]*name="responsible\.behalfOf"[^>]*value="8\.A"/);
-    expect(html).toContain('Jana Nováková');
+  it('has the organizer, participants and note as text areas', () => {
+    expect(html).toMatch(/<textarea [^>]*name="organizer"/);
+    expect(html).toMatch(/<textarea [^>]*name="participants"/);
+    expect(html).toMatch(/<textarea [^>]*name="note"/);
+    expect(html).not.toContain('responsible');
   });
 
   it('does not ask whether a report follows: every akce owes one (ADR 0048)', () => {
@@ -149,11 +141,9 @@ describe('the return note', () => {
   });
 
   it('names the parts to rework, also without a note (ADR 0058)', () => {
-    const html = render({ state: 'returned', returnParts: ['when', 'responsible'] });
+    const html = render({ state: 'returned', returnParts: ['when', 'who'] });
     expect(html).toContain(future.returnNote);
-    expect(html).toContain(
-      future.reworkParts([future.returnPart.when, future.returnPart.responsible]),
-    );
+    expect(html).toContain(future.reworkParts([future.returnPart.when, future.returnPart.who]));
     expect(html.indexOf(future.returnNote)).toBeLessThan(html.indexOf('<form'));
   });
 

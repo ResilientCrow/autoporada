@@ -104,7 +104,6 @@ test.describe('the akce journey', () => {
     await settled();
     await expect(field(page, points.editor.title)).toHaveValue(TITLE);
     await expect(field(page, points.facts.eventDate)).toHaveValue(day);
-    await expect(page.getByRole('listitem').filter({ hasText: 'Jana Nováková' })).toBeVisible();
     await expectAccessible();
 
     // The author submits the report; the akce counts as written and the card stops offering it.

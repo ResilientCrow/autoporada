@@ -3,18 +3,14 @@ import type { z } from 'zod';
 import { getFuture, listFuture } from '@/application/use-cases';
 import type { getFutureOutput, listFutureOutput } from '@/contracts';
 import type { FutureKind } from '@/domain/calendar';
-import type { RecentPerson } from '@/domain/people';
 import { can } from '@/domain/policy';
 import type { FutureState } from '@/domain/review';
-import { instantToWallClock, type CalDate } from '@/domain/time';
 
-import { getContainer } from '../container';
 import { runPage } from './run-page';
 
 import { futureBarOf, type FutureBarModel } from './future-bar';
 import { orNotFound } from './not-found';
 import { first, type SearchParams } from './params';
-import { recentsOf } from './recents';
 import { readWindow, type MeetingWindow } from './standing';
 import { getViewer, requestId } from './viewer';
 
@@ -74,16 +70,11 @@ export async function newFuturePage(): Promise<NewFuturePageModel | null> {
 
 /**
  * What the editor starts from: the version it was loaded at (its key and the first
- * `expectedVersion`), the content as the save takes it back, the Prague day the date fields
- * count from, the people the author named in their recent points and whether the school
- * directory is searched at all.
+ * `expectedVersion`) and the content as the save takes it back.
  */
 interface FutureEditorModel {
   readonly version: number;
   readonly content: NonNullable<z.output<typeof getFutureOutput>['content']>;
-  readonly today: CalDate;
-  readonly recents: readonly RecentPerson[];
-  readonly directory: 'on' | 'off';
 }
 
 export interface FuturePageModel {
@@ -129,13 +120,9 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
   // Whatever the stored date: a new draft has none, and the editor's strip follows the typing.
   const strip = isAuthor && GOING.includes(state);
   const shows = editable && content !== null;
-  // Independent reads, each only where its part of the page shows.
   // The timeline is newest first: the latest return is the one the author answers.
   const lastReturn = state === 'returned' ? timeline.find((e) => e.event === 'return') : undefined;
-  const [window, recents] = await Promise.all([
-    strip ? readWindow(viewer) : null,
-    shows ? recentsOf(viewer) : [],
-  ]);
+  const window = strip ? await readWindow(viewer) : null;
   return {
     id: loaded.id,
     kind,
@@ -154,15 +141,7 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
     review: futureBarOf(viewer.actor, { isAuthor, state, kind }),
     returnNote: lastReturn?.note ?? null,
     returnParts: lastReturn?.parts ?? [],
-    editor: shows
-      ? {
-          version,
-          content,
-          today: instantToWallClock(getContainer().app.clock.now()).date,
-          recents,
-          directory: getContainer().directoryMode,
-        }
-      : null,
+    editor: shows ? { version, content } : null,
     window,
   };
 }
