@@ -83,11 +83,13 @@ export function Domu() {
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
   const waits: Tile = { t: 'Čeká na vás', ic: 'bell', tone: 'browse', to: '/tyden', n: tasks.length };
-  const write: Tile[] = [{ t: 'Napsat zprávu', ic: 'pen', tone: 'act', act: report }, { t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Schůzka s\u00a0partnery', ic: 'talk', tone: 'act', act: () => future('jednani') }];
+  const start: Tile[] = [{ t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Schůzka s\u00a0partnery', ic: 'talk', tone: 'act', act: () => future('jednani') }];
+  // Most reports answer an akce from „Čeká na vás“; a report of one's own is the exception, so it sits lighter.
+  const write: Tile = { t: 'Napsat zprávu', ic: 'pen', tone: 'browse', act: report };
   const mine: Tile[] = [{ t: 'Moje', ic: 'doc', tone: 'browse', to: '/moje' }, { t: 'Akce školy', ic: 'cal', tone: 'browse', to: '/akce' }];
   const tiles: Tile[] = head
     ? [{ t: 'Porada', ic: 'book', tone: 'core', to: '/porada' }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }, { t: 'Archiv', ic: 'stack', tone: 'core', to: '/archiv' }, { t: 'Přidat do porady', ic: 'plus', tone: 'act', to: '/pridat' }, ...(tasks.length ? [waits] : []), ...mine, { t: 'Lidé', ic: 'ppl', tone: 'browse', to: '/lide', n: req }, { t: 'Seznamy studentů', ic: 'list', tone: 'admin', to: '/seznamy' }, { t: 'Typy zpráv', ic: 'tag', tone: 'admin', to: '/typy' }, { t: 'Nastavení', ic: 'gear', tone: 'admin', to: '/nastaveni' }]
-    : [...write, ...(staff ? [{ t: 'Návrh do pokynů', ic: 'flag', tone: 'act', act: proposal }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }] : []), waits, ...mine, ...(staff ? [{ t: 'Archiv', ic: 'stack', tone: 'browse', to: '/archiv' }] : [])];
+    : [{ ...waits, tone: 'act' }, ...start, ...(staff ? [{ t: 'Návrh do pokynů', ic: 'flag', tone: 'act', act: proposal }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }] : []), write, ...mine, ...(staff ? [{ t: 'Archiv', ic: 'stack', tone: 'browse', to: '/archiv' }] : [])];
   const waiting = q + tasks.length + req;
   const lead = waiting ? <>Na vás {waiting === 1 ? <>čeká <b>1 věc</b></> : waiting < 5 ? <>čekají <b>{waiting} věci</b></> : <>čeká <b>{waiting} věcí</b></>}, poznáte je podle žlutých čísel. Termín je <b>{dl}</b>.</> : <>Teď na vás nic nečeká. Termín příští porady je <b>{dl}</b>.</>;
   const inner = (x: Tile) => <><Ic n={x.ic} />{x.n ? <span className="tl-n" aria-label={`${x.n} čeká`}>{x.n}</span> : null}<span className="tl-t">{x.t}</span></>;
