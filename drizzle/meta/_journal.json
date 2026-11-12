@@ -379,6 +379,13 @@
       "when": 1794513505747,
       "tag": "0053_elite_toxin",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794514386779,
+      "tag": "0054_public_black_widow",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,5 @@
 import type { Campus } from '@/domain/cs';
 import type { FutureKind } from '@/domain/calendar';
-import type { Responsible } from '@/domain/report';
 import type { FutureState, ReportState } from '@/domain/review';
 import type { CalDate, WallTime } from '@/domain/time';
 
@@ -15,7 +14,6 @@ export interface FutureContent {
   readonly campus: Campus | null;
   /** A locative phrase: „v učebně S206“. */
   readonly place: string | null;
-  readonly responsible: Responsible | null;
   /** Free text printed as typed (ADR 0060). */
   readonly organizer: string | null;
   readonly participants: string | null;
@@ -108,9 +106,7 @@ export interface FutureItemPatch {
  * a colleague who reads an approved akce cannot lock or move it, and nor can a reviewer
  * move what they read. The decisions have a path of their own, `loadForDecision` and `decide`,
  * within the review scope (`futureReviewScopeOf`): the author's own items and, for reviewers,
- * the handed-in ones; it moves the state and nothing else. The
- * `responsible` jsonb goes through the contracts schema before a write and after a read;
- * a value it refuses fails as `db.parse.future_items`. The CHECKs of migration 0019
+ * the handed-in ones; it moves the state and nothing else. The CHECKs of migration 0019
  * refuse a malformed row by its constraint name.
  */
 export interface FutureItemRepo {

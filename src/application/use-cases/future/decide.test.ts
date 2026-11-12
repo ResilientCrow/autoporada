@@ -135,7 +135,7 @@ describe('future.decide', () => {
       async (kind) => {
         const id = await handedIn(await user(), 'submitted', kind);
         const reviewer = await user('reviewer');
-        const parts = ['responsible', 'when'];
+        const parts = ['who', 'when'];
         expect(await decide(reviewer, { id, event: 'return', parts })).toEqual({
           ok: true,
           value: { version: 3 },
@@ -143,7 +143,7 @@ describe('future.decide', () => {
         const { item, events, audit } = await snapshot(id);
         expect(item).toMatchObject({ state: 'returned' });
         expect(events[0]).toMatchObject({ event: 'return', note: null, returnParts: parts });
-        expect(JSON.stringify(audit)).not.toContain('responsible');
+        expect(JSON.stringify(audit)).not.toContain('who');
       },
     );
 

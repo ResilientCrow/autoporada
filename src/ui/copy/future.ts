@@ -30,11 +30,9 @@ export const future = {
     title: 'Název',
     when: 'Datum a\u00A0čas',
     place: 'Místo',
-    responsible: 'Organizátor a\u00A0účastníci',
     who: 'Organizátor a\u00A0účastníci',
     note: 'Poznámka',
-    // `responsible` goes with the contract in the commit that drops it.
-  } as const satisfies Record<FutureReturnPart | 'who' | 'note', string>,
+  } as const satisfies Record<FutureReturnPart, string>,
   /** The label above the reviewer's note on a returned item, for its author. */
   returnNote: 'Poznámka z\u00A0kontroly',
   /** The parts the return named, under that label (ADR 0058). */

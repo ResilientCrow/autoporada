@@ -27,7 +27,6 @@ const CONTENT: FutureContentWire = {
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
 };
 const fail = (error: ActionError) => ({ ok: false, error }) as const;
 

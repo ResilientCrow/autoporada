@@ -1,4 +1,4 @@
-import type { Campus, ResponsibleVerb, Salutation } from '@/domain/cs';
+import type { Campus, Salutation } from '@/domain/cs';
 import type { BulletSpec, DraftPerson, PointContent, PointKind } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import type { Statement, SystemSlot } from '@/domain/outline';
@@ -50,4 +50,4 @@ export interface State {
   v: number; now: string; userId: string | null; users: User[]; types: PointType[]; points: Point[]; futures: Future[];
   issues: Issue[]; plannedThrough: string; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
 }
-export type { Campus, DraftPerson, PointContent, PointKind, ResponsibleVerb, Salutation };
+export type { Campus, DraftPerson, PointContent, PointKind, Salutation };

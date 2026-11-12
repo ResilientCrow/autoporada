@@ -48,7 +48,6 @@ describe('future.create', () => {
         timeTo: null,
         campus: null,
         place: null,
-        responsible: null,
       },
     });
   });

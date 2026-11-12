@@ -369,7 +369,16 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
   const WITHHELD: Readonly<Record<string, readonly string[]>> = {
     points: ['title', 'opening', 'body', 'bullets', 'statements', 'place', 'client_ref'],
     point_events: ['note', 'before', 'edited_fields'],
-    future_items: ['title', 'responsible', 'place', 'client_ref', 'campus', 'time_from'],
+    future_items: [
+      'title',
+      'organizer',
+      'participants',
+      'note',
+      'place',
+      'client_ref',
+      'campus',
+      'time_from',
+    ],
     issues: ['school_year', 'version', 'created_at', 'updated_at'],
     settings: ['version', 'updated_at'],
     generated_documents: [

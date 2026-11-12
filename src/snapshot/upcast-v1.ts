@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { renderPeople, responsibleVerb } from '@/domain/cs';
+import { renderPeople } from '@/domain/cs';
 
 import {
   campus,
@@ -42,6 +42,17 @@ const snapshotV1 = z
 
 type FutureItemV1 = z.output<typeof futureItemV1>;
 
+const PLURAL_VERB = {
+  organizuje: 'organizují',
+  koordinuje: 'koordinují',
+  zajišťuje: 'zajišťují',
+  vede: 'vedou',
+} as const;
+
+/** „koordinuje“ for one person, „koordinují“ for more: the verb schema 1 printed. */
+const verbForm = (verb: keyof typeof PLURAL_VERB, people: number): string =>
+  people === 1 ? verb : PLURAL_VERB[verb];
+
 /** „za Next Zone Event Space koordinuje absolvent pan Jan Novák“, or nothing: the line schema 1 printed. */
 function organizerOf(
   item: FutureItemV1,
@@ -54,7 +65,7 @@ function organizerOf(
     order: 'input',
     ...(groupOrder && { groupOrder }),
   });
-  return [r.behalfOf && `za ${r.behalfOf}`, responsibleVerb(r.verb, r.people.length), people]
+  return [r.behalfOf && `za ${r.behalfOf}`, verbForm(r.verb, r.people.length), people]
     .filter(Boolean)
     .join(' ');
 }

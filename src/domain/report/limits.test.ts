@@ -10,7 +10,6 @@ describe('POINT_LIMITS', () => {
     expect(POINT_LIMITS).toMatchObject({
       peoplePerBullet: 200,
       peoplePerPoint: 400,
-      responsiblePeople: 50,
       bullets: 12,
       statements: 10,
       bodyBytes: 64 * 1024,

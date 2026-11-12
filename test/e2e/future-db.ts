@@ -14,13 +14,7 @@ interface SeedFutureOptions {
   readonly startInDays?: number;
 }
 
-const RESPONSIBLE = {
-  verb: 'koordinuje',
-  behalfOf: '8. A',
-  people: [{ salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' }],
-};
-
-/** A complete akce of `email` in `state`, with the person who runs it. Returns its id. */
+/** A complete akce of `email` in `state`, with an organizer. Returns its id. */
 export async function seedFuture(
   email: string,
   title: string,
@@ -29,14 +23,14 @@ export async function seedFuture(
 ): Promise<string> {
   return withClient(async (client) => {
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO future_items (kind, author_id, client_ref, state, title, start_date, end_date, responsible,
+      `INSERT INTO future_items (kind, author_id, client_ref, state, title, start_date, end_date, organizer,
                                 submitted_at)
        SELECT $2::future_kind, u.id, gen_random_uuid(), $3::future_state, $4, current_date + $5::int,
-              current_date + $5::int, $6::jsonb,
+              current_date + $5::int, $6,
               CASE WHEN $3 = 'draft' THEN NULL ELSE now() END
          FROM users u WHERE u.email = $1
        RETURNING id`,
-      [email, kind, state, title, startInDays, JSON.stringify(RESPONSIBLE)],
+      [email, kind, state, title, startInDays, 'organizuje paní Jana Nováková (8. A)'],
     );
     const made = rows[0];
     if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);

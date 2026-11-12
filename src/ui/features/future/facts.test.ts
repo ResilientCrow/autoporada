@@ -13,7 +13,6 @@ const view = (over: Partial<FutureView> = {}): FutureView => ({
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
   ...over,
 });
 

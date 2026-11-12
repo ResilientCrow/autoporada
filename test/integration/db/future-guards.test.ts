@@ -14,7 +14,14 @@ const CHECK = '23514';
 const DENIED = '42501';
 const FOREIGN_KEY = '23503';
 // The CHECK numbers are the app's caps: each is accepted at the cap and refused one past it.
-const { title: TITLE, place: PLACE, note: NOTE } = POINT_LIMITS;
+const {
+  title: TITLE,
+  place: PLACE,
+  note: NOTE,
+  organizer: ORGANIZER,
+  participants: PARTICIPANTS,
+  futureNote: FUTURE_NOTE,
+} = POINT_LIMITS;
 
 let authorId = '';
 let typeId = '';
@@ -112,7 +119,7 @@ describe('future item guards (migrations 0019 and 0020)', () => {
     [{ state: 'rejected' }],
     [{ state: 'withdrawn' }],
     [{ report_state: 'written' }],
-    [{ responsible: '{"verb":"organizuje","people":[]}' }],
+    [{ organizer: 'organizuje paní Jana Nováková', participants: 'účast 2.A', note: 'téma' }],
   ])('accepts %o', async (row) => {
     await insertItem(row);
   });
@@ -124,9 +131,9 @@ describe('future item guards (migrations 0019 and 0020)', () => {
     [{ campus: 'karlin' }, 'future_items_campus'],
     [{ title: 'x'.repeat(TITLE + 1) }, 'future_items_lengths'],
     [{ place: 'x'.repeat(PLACE + 1) }, 'future_items_lengths'],
-    [{ responsible: '[]' }, 'future_items_responsible'],
-    [{ responsible: '"organizuje"' }, 'future_items_responsible'],
-    [{ responsible: '7' }, 'future_items_responsible'],
+    [{ organizer: 'x'.repeat(ORGANIZER + 1) }, 'future_items_lengths'],
+    [{ participants: 'x'.repeat(PARTICIPANTS + 1) }, 'future_items_lengths'],
+    [{ note: 'x'.repeat(FUTURE_NOTE + 1) }, 'future_items_lengths'],
     [{ ...SUBMITTED, title: '' }, 'future_items_submitted_complete'],
     [{ ...SUBMITTED, state: 'approved', start_date: null }, 'future_items_submitted_complete'],
     [{ ...SUBMITTED, state: 'cancelled', submitted_at: null }, 'future_items_submitted_complete'],
@@ -148,29 +155,6 @@ describe('future item guards (migrations 0019 and 0020)', () => {
 
   it('accepts every length at its cap, counted in characters, not bytes', async () => {
     await insertItem({ title: 'č'.repeat(TITLE), place: 'ž'.repeat(PLACE) });
-  });
-
-  it('caps the responsible jsonb at 262,144 bytes of its text form, like a point’s content', async () => {
-    const MAX = 262_144;
-    const withPad = (pad: number) =>
-      JSON.stringify({ verb: 'vede', people: [], behalfOf: 'č'.repeat(pad) });
-    // jsonb adds spaces to its text form: ask it how many bytes a body of one pad takes.
-    const [probe] = await database.owner<{ bytes: number }>(
-      `SELECT octet_length($1::jsonb::text) AS bytes`,
-      [withPad(1000)],
-    );
-    // Each 'č' is two bytes in the text form.
-    const pad = 1000 + Math.floor((MAX - probe!.bytes) / 2);
-    const id = await insertItem({ responsible: withPad(pad) });
-    const [stored] = await database.owner<{ bytes: number }>(
-      `SELECT octet_length(responsible::text) AS bytes FROM future_items WHERE id = $1`,
-      [id],
-    );
-    expect(stored!.bytes).toBe(MAX - ((MAX - probe!.bytes) % 2));
-    expect(await pgErrorOf(insertItem({ responsible: withPad(pad + 1) }))).toMatchObject({
-      code: CHECK,
-      constraint: 'future_items_responsible',
-    });
   });
 
   it('refuses a second akce with the same client ref from one author', async () => {

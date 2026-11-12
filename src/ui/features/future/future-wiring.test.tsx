@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
@@ -56,7 +55,6 @@ vi.mock('next/navigation', () => ({
 
 const { future, autosave } = cs;
 const never = () => Promise.reject(new Error('not called while rendering'));
-const PERSON = { salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' } as const;
 
 function page(phase: string, readOnly: boolean, sending = false): string {
   hook.phase = phase;
@@ -78,7 +76,6 @@ function page(phase: string, readOnly: boolean, sending = false): string {
         organizer: null,
         participants: null,
         note: null,
-        responsible: null,
       }}
       window={null}
       saveFuture={never}

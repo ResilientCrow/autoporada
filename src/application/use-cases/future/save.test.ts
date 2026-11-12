@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { system, type UserRecord } from '@/application/ports';
 import { calDate, wallTime } from '@/domain/time';
 
-import { futureFixtures, futureWire, readyAkce, staffer } from '../../../../test/support/future';
+import { futureFixtures, futureWire, readyAkce } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
 import { saveFuture } from './index';
 
@@ -59,7 +59,9 @@ describe('future.save', () => {
             timeTo: wallTime(14, 30),
             campus: 'radlice',
             place: 'v Národním muzeu',
-            responsible: { verb: 'zajišťuje', behalfOf: '2.A' },
+            organizer: null,
+            participants: null,
+            note: null,
           },
         });
         const { events, audit } = await snapshot(id);
@@ -247,20 +249,6 @@ describe('future.save', () => {
       await refuses(id, () => revise(author, id, readyAkce({ startDate: null, endDate: null })), {
         code: 'invalid-input',
         fields: { 'content.startDate': 'required' },
-      });
-    });
-
-    it('asks for a salutation of each responsible person in the change', async () => {
-      const author = await user();
-      const id = await approved(author);
-      const responsible = {
-        verb: 'vede',
-        behalfOf: '2.A',
-        people: [{ ...staffer, salutation: null }],
-      };
-      await refuses(id, () => revise(author, id, readyAkce({ responsible })), {
-        code: 'invalid-input',
-        fields: { 'content.responsible.people.0.salutation': 'required' },
       });
     });
 

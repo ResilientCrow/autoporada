@@ -115,7 +115,6 @@ const futureWire = (f: Future) => ({
   timeTo: f.timeTo ? toIsoTime(f.timeTo) : null,
   campus: f.campus,
   place: f.place.trim() ? f.place : null,
-  responsible: null,
   organizer: f.organizer.trim() || null,
   participants: f.participants.trim() || null,
   note: f.remark.trim() || null,

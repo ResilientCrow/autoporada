@@ -7,7 +7,6 @@ export {
   type PointContent,
   type PointKind,
   type ProposalKind,
-  type Responsible,
 } from './content';
 export { draftBullet, newDraft } from './draft';
 export {

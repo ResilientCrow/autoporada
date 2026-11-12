@@ -4,7 +4,6 @@ import {
   date,
   index,
   integer,
-  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -15,7 +14,7 @@ import {
 
 import type { FutureEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
-import { POINT_LIMITS, type Responsible } from '@/domain/report';
+import { POINT_LIMITS } from '@/domain/report';
 import { MAX_RETURN_PARTS, type FutureState, type ReportState } from '@/domain/review';
 
 import { at, atMs, createdAt, id } from './columns';
@@ -65,7 +64,6 @@ export const futureItems = pgTable(
     timeTo: time(),
     campus: text().$type<Campus>(),
     place: text(),
-    responsible: jsonb().$type<Responsible>(),
     /** Free text printed as typed (ADR 0060). */
     organizer: text(),
     participants: text(),
@@ -96,12 +94,6 @@ export const futureItems = pgTable(
         AND char_length(coalesce(${t.organizer}, '')) <= ${sql.raw(String(POINT_LIMITS.organizer))}
         AND char_length(coalesce(${t.participants}, '')) <= ${sql.raw(String(POINT_LIMITS.participants))}
         AND char_length(coalesce(${t.note}, '')) <= ${sql.raw(String(POINT_LIMITS.futureNote))}`,
-    ),
-    // Under Zod and the repository's parse: an object, and as large as a point's content may be.
-    check(
-      'future_items_responsible',
-      sql`${t.responsible} IS NULL
-        OR (jsonb_typeof(${t.responsible}) = 'object' AND octet_length(${t.responsible}::text) <= 262144)`,
     ),
     check(
       'future_items_submitted_complete',

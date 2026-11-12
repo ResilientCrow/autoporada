@@ -200,9 +200,9 @@ describe('future.startReport', () => {
     expect(point?.content.bullets).toEqual([expect.objectContaining({ key: 'results' })]);
   });
 
-  it('takes an akce without responsible people or dates beyond the start', async () => {
+  it('takes an akce without an organizer or dates beyond the start', async () => {
     const author = await user();
-    const id = await dueAkce(author, readyAkce({ endDate: null, responsible: null }));
+    const id = await dueAkce(author, readyAkce({ endDate: null, organizer: null }));
     const { id: typeId } = await type();
     const started = await startReport(author, id, typeId);
     const pointId = started.ok ? started.value.pointId : '';

@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 import type { FutureKind } from '@/domain/calendar';
-import type { Campus, ResponsibleVerb } from '@/domain/cs';
-import { displayName, POINT_LIMITS, type Responsible } from '@/domain/report';
+import type { Campus } from '@/domain/cs';
+import { POINT_LIMITS } from '@/domain/report';
 import type { FutureEvent, FutureState, ReportState } from '@/domain/review';
 import { compareDates, toIsoDate, toIsoTime, type CalDate, type WallTime } from '@/domain/time';
 
 import { CURSOR_MAX, cursorSchema } from './cursor';
-import { campusSchema, draftPersonSchema, isoDate, wallTime } from './point';
+import { campusSchema, isoDate, wallTime } from './point';
 
 /** Every `FutureKind` once: the compiler refuses a missing or an unknown one. */
 const FUTURE_KINDS: Readonly<Record<FutureKind, FutureKind>> = { jednani: 'jednani', akce: 'akce' };
@@ -48,32 +48,6 @@ const FUTURE_EVENTS: Readonly<Record<FutureEvent | 'edit', FutureEvent | 'edit'>
 };
 const futureEventSchema = z.enum(FUTURE_EVENTS);
 
-/** Every `ResponsibleVerb` once. */
-const VERBS: Readonly<Record<ResponsibleVerb, ResponsibleVerb>> = {
-  organizuje: 'organizuje',
-  koordinuje: 'koordinuje',
-  zajišťuje: 'zajišťuje',
-  vede: 'vede',
-};
-
-/** Who is behind an akce and in which words: „za … koordinuje …“. */
-const responsibleSchema = z.strictObject({
-  verb: z.enum(VERBS),
-  behalfOf: z.string().max(POINT_LIMITS.person.affiliation).optional(),
-  people: z.array(draftPersonSchema).max(POINT_LIMITS.responsiblePeople),
-}) satisfies z.ZodType<Responsible>;
-
-/**
- * The one parse of an item's `responsible` jsonb, on read and before write: the value
- * wrapped, because null is a valid one; undefined when the contract refuses it.
- */
-export function parseResponsible(
-  value: unknown,
-): { readonly value: Responsible | null } | undefined {
-  const parsed = responsibleSchema.nullable().safeParse(value);
-  return parsed.success ? { value: parsed.data } : undefined;
-}
-
 const capped = (max: number) => z.string().max(max);
 
 /**
@@ -90,7 +64,6 @@ const futureContentSchema = z
     timeTo: wallTime,
     campus: campusSchema.nullable(),
     place: capped(POINT_LIMITS.place).nullable(),
-    responsible: responsibleSchema.nullable(),
     organizer: capped(POINT_LIMITS.organizer).nullable(),
     participants: capped(POINT_LIMITS.participants).nullable(),
     note: capped(POINT_LIMITS.futureNote).nullable(),
@@ -110,7 +83,6 @@ const futureContentWire = z.strictObject({
   timeTo: z.iso.time({ precision: -1 }).nullable(),
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
-  responsible: responsibleSchema.nullable(),
   organizer: z.string().nullable(),
   participants: z.string().nullable(),
   note: z.string().nullable(),
@@ -125,7 +97,6 @@ export interface FutureContentValue {
   readonly timeTo: WallTime | null;
   readonly campus: Campus | null;
   readonly place: string | null;
-  readonly responsible: Responsible | null;
   readonly organizer: string | null;
   readonly participants: string | null;
   readonly note: string | null;
@@ -143,16 +114,9 @@ export const futureContentToWire = (
   endDate: dateText(content.endDate),
   timeFrom: timeText(content.timeFrom),
   timeTo: timeText(content.timeTo),
-  responsible: content.responsible && {
-    ...content.responsible,
-    people: [...content.responsible.people],
-  },
 });
 
-/**
- * What a reader who is not the author sees of an item: the list row's content. Who is responsible
- * is a name each; no salutation, affiliation or directory id (design section 12, privacy review).
- */
+/** What a reader who is not the author sees of an item: the list row's content, as typed. */
 export const futureView = z.strictObject({
   title: z.string(),
   startDate: z.iso.date().nullable(),
@@ -161,30 +125,14 @@ export const futureView = z.strictObject({
   timeTo: z.iso.time({ precision: -1 }).nullable(),
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
-  responsible: z
-    .strictObject({
-      verb: z.enum(VERBS),
-      behalfOf: z.string().nullable(),
-      names: z.array(z.string()),
-    })
-    .nullable(),
   organizer: z.string().nullable(),
   participants: z.string().nullable(),
   note: z.string().nullable(),
 });
 
-/** The stored content as `futureView`: the wire conversion, with the people reduced to names. */
-export function futureContentToView(content: FutureContentValue): z.input<typeof futureView> {
-  const { responsible, ...rest } = futureContentToWire(content);
-  return {
-    ...rest,
-    responsible: responsible && {
-      verb: responsible.verb,
-      behalfOf: responsible.behalfOf ?? null,
-      names: responsible.people.map(displayName),
-    },
-  };
-}
+/** The stored content as `futureView`: the wire conversion. */
+export const futureContentToView = (content: FutureContentValue): z.input<typeof futureView> =>
+  futureContentToWire(content);
 
 /** „Nový bod do přehledu“: `clientRef` is the draft's id in the browser, so a retry returns the same one. */
 export const createFutureInput = z.strictObject({ clientRef: z.uuid(), kind: futureKindSchema });

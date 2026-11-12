@@ -26,7 +26,6 @@ const item = (state: FutureState): FutureItemRecord => ({
     organizer: null,
     participants: null,
     note: null,
-    responsible: null,
   },
   reportState: 'none',
   reportPointId: null,

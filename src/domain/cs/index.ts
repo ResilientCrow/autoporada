@@ -58,12 +58,10 @@ export {
 } from './people/paste';
 export {
   openingSentence,
-  responsibleVerb,
   organiserVerb,
   roomLocative,
   type Campus,
   type OpeningInput,
-  type ResponsibleVerb,
   TITLE_GENDERS,
   type TitleGender,
 } from './sentence/opening';

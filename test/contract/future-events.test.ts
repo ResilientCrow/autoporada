@@ -40,7 +40,6 @@ const CONTENT: FutureContent = {
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
 };
 
 /** A submitted akce, so a reviewer may see it; or a draft, which only its author and the system see. */
@@ -125,12 +124,12 @@ describe('FutureEventRepo (port contract)', () => {
     } as const;
     const [partsOnly, both, noteOnly, submit] = await append(
       world.as(reviewer),
-      { ...returned, event: 'return', returnParts: ['responsible', 'when'] },
+      { ...returned, event: 'return', returnParts: ['who', 'when'] },
       { ...returned, event: 'return', note: 'Doplňte.', returnParts: ['place'] },
       { ...returned, event: 'return', note: 'Doplňte.' },
       { ...SUBMIT, futureItemId: item.id },
     );
-    expect(partsOnly).toMatchObject({ note: null, returnParts: ['responsible', 'when'] });
+    expect(partsOnly).toMatchObject({ note: null, returnParts: ['who', 'when'] });
     expect(both).toMatchObject({ note: 'Doplňte.', returnParts: ['place'] });
     expect(noteOnly!.returnParts).toBeNull();
     expect(submit!.returnParts).toBeNull();

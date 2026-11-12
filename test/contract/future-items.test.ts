@@ -36,7 +36,6 @@ const EMPTY: FutureContent = {
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
 };
 
 /** Every field filled. */
@@ -48,17 +47,9 @@ const FULL: FutureContent = {
   timeTo: wallTime(14, 30),
   campus: 'radlice',
   place: 'v Národním muzeu',
-  organizer: null,
+  organizer: 'zajišťuje 2.A pan Mgr. Jan Novák',
   participants: null,
   note: null,
-  responsible: {
-    verb: 'zajišťuje',
-    behalfOf: '2.A',
-    people: [
-      { salutation: 'pan', titlesBefore: 'Mgr.', givenName: 'Jan', familyName: 'Novák' },
-      { salutation: null, givenName: 'Eva', familyName: 'Malá', affiliation: '3.B' },
-    ],
-  },
 };
 
 const SUBMIT: FutureItemPatch = {
@@ -183,10 +174,10 @@ describe('FutureItemRepo (port contract)', () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author), { content: FULL });
     const cleared = await update(world.as(author), item, {
-      content: { ...FULL, endDate: null, timeTo: null, place: null, responsible: null },
+      content: { ...FULL, endDate: null, timeTo: null, place: null, organizer: null },
     });
     expect(cleared.content).toMatchObject({ endDate: null, timeTo: null, place: null });
-    expect(cleared.content.responsible).toBeNull();
+    expect(cleared.content.organizer).toBeNull();
   });
 
   it('refuses a stale version and an unknown item with StaleVersion, writing nothing', async () => {
@@ -356,54 +347,6 @@ describe('FutureItemRepo (port contract)', () => {
         new DatabaseFailure('db.constraint.future_items_dates'),
       );
     });
-  });
-});
-
-describe('FutureItemRepo responsible', () => {
-  /** Content the contract refuses, as a caller that skipped Zod could hand it over. */
-  const REFUSED: [string, unknown][] = [
-    ['an unknown verb', { verb: 'řídí', people: [] }],
-    ['a stray key', { verb: 'vede', people: [], note: 'x' }],
-    [
-      'a person without a family name',
-      { verb: 'vede', people: [{ salutation: null, givenName: 'Eva' }] },
-    ],
-  ];
-  const withResponsible = (responsible: unknown) =>
-    ({ ...FULL, responsible }) as unknown as FutureContent;
-
-  it.each(REFUSED)('refuses %s before writing, as db.parse.future_items', async (_name, bad) => {
-    const author = await world.seed.user({ role: 'submitter' });
-    const parse = new DatabaseFailure('db.parse.future_items');
-    expect(await failure(create(world.as(author), { content: withResponsible(bad) }))).toEqual(
-      parse,
-    );
-    const { item } = await create(world.as(author), { content: FULL });
-    const refused = update(world.as(author), item, { content: withResponsible(bad) });
-    expect(await failure(refused)).toEqual(parse);
-    expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(item);
-  });
-
-  it('parses before it looks for the clientRef or the version', async () => {
-    const author = await world.seed.user({ role: 'submitter' });
-    const parse = new DatabaseFailure('db.parse.future_items');
-    const clientRef = nextRef();
-    const { item } = await create(world.as(author), { clientRef });
-    const bad = withResponsible(REFUSED[0]![1]);
-    expect(await failure(create(world.as(author), { clientRef, content: bad }))).toEqual(parse);
-    const stale = update(world.as(author), item, { content: bad }, item.version + 1);
-    expect(await failure(stale)).toEqual(parse);
-  });
-
-  it('keeps what the contract accepts, a null and a bare verb included', async () => {
-    const author = await world.seed.user({ role: 'submitter' });
-    const bare = { verb: 'vede', people: [] } as const;
-    const { item } = await create(world.as(author), { content: { ...FULL, responsible: bare } });
-    expect(item.content.responsible).toEqual(bare);
-    const cleared = await update(world.as(author), item, {
-      content: { ...FULL, responsible: null },
-    });
-    expect(cleared.content.responsible).toBeNull();
   });
 });
 

@@ -37,7 +37,6 @@ const futureRow = (state: string) =>
       timeTo: null,
       campus: null,
       place: null,
-      responsible: null,
     },
     state,
     reportState: 'none',

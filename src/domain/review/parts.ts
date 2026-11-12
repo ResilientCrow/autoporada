@@ -5,11 +5,11 @@ export const POINT_RETURN_PARTS = ['heading', 'body', 'people', 'statements'] as
 export type PointReturnPart = (typeof POINT_RETURN_PARTS)[number];
 
 /** The parts of an akce or a jednání a reviewer may name when returning it. */
-export const FUTURE_RETURN_PARTS = ['title', 'when', 'place', 'responsible'] as const;
+export const FUTURE_RETURN_PARTS = ['title', 'when', 'place', 'who', 'note'] as const;
 export type FutureReturnPart = (typeof FUTURE_RETURN_PARTS)[number];
 
 /** The most parts one return names: every part of the longer list. */
-export const MAX_RETURN_PARTS = 4;
+export const MAX_RETURN_PARTS = 5;
 
 /** A proposal (finance, pokyn) has a title and a text, no people and no statements. */
 const PROPOSAL_PARTS: readonly PointReturnPart[] = ['heading', 'body'];

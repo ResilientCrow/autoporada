@@ -1,5 +1,4 @@
 import {
-  DatabaseFailure,
   futureReviewScopeOf,
   futureWriteScopeOf,
   scopeOf,
@@ -13,8 +12,8 @@ import {
   type Principal,
   type TxContext,
 } from '@/application/ports';
-import { parseResponsible } from '@/contracts';
 import { admits, can, type Scope } from '@/domain/policy';
+import { POINT_LIMITS } from '@/domain/report';
 import { REPORT_MACHINE } from '@/domain/review';
 import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
@@ -39,15 +38,20 @@ function endingOf(item: FakeFutureItem): EndingAkce | null {
 
 /**
  * What migrations 0019 and 0020 refuse, in PostgreSQL's order: the CHECKs by name, then the
- * foreign key. future_items_campus cannot be hit through the typed port, and nor can
- * future_items_responsible, which the contract's parse (db.parse.future_items) refuses first.
+ * foreign key. future_items_campus cannot be hit through the typed port.
  */
 function refuse(state: FakeState, row: FakeFutureItem): void {
   const { content: c } = row;
   if (c.endDate && (!c.startDate || toIsoDate(c.endDate) < toIsoDate(c.startDate))) {
     throw refusedBy('future_items_dates');
   }
-  if (codePoints(c.title) > 200 || codePoints(c.place ?? '') > 120) {
+  if (
+    codePoints(c.title) > 200 ||
+    codePoints(c.place ?? '') > 120 ||
+    codePoints(c.organizer ?? '') > POINT_LIMITS.organizer ||
+    codePoints(c.participants ?? '') > POINT_LIMITS.participants ||
+    codePoints(c.note ?? '') > POINT_LIMITS.futureNote
+  ) {
     throw refusedBy('future_items_lengths');
   }
   if (row.reportState !== 'none' && row.kind !== 'akce')
@@ -75,15 +79,8 @@ export const futureReviewable = (principal: Principal) => admitted(futureReviewS
 
 const record = ({ clientRef: _ref, ...item }: FakeFutureItem): FutureItemRecord => item;
 
-/**
- * As the repository: `responsible` goes through the contract's one parse before anything else,
- * and the jsonb keeps a copy, not the caller's object.
- */
-function stored(content: FutureContent): FutureContent {
-  const responsible = parseResponsible(content.responsible);
-  if (!responsible) throw new DatabaseFailure('db.parse.future_items');
-  return structuredClone({ ...content, responsible: responsible.value });
-}
+/** As the repository: the stored row keeps a copy, not the caller's object. */
+const stored = (content: FutureContent): FutureContent => structuredClone(content);
 
 /** `list`'s order: last changed first, ties to the higher id (uuid text compares as PostgreSQL's uuids). */
 const newer = (a: FutureCursor, b: FutureCursor) =>

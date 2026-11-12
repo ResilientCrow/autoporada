@@ -60,10 +60,7 @@ describe('future.get', () => {
         reportState: 'none',
         reportPointId: null,
         content: readyAkce(),
-        view: {
-          ...readyAkce({ responsible: undefined }),
-          responsible: { verb: 'zajišťuje', behalfOf: '2.A', names: ['Jan Novák'] },
-        },
+        view: readyAkce(),
         timeline: [
           {
             event: 'return',
@@ -88,13 +85,13 @@ describe('future.get', () => {
         event: 'return',
         fromState: 'submitted',
         toState: 'returned',
-        returnParts: ['title', 'responsible'],
+        returnParts: ['title', 'who'],
       });
       await tx.audit.record({ action: 'future.returned', target: { type: 'future_item', id } });
     });
     const result = await open(author, id);
     expect(result.ok && result.value.timeline).toMatchObject([
-      { event: 'return', note: null, parts: ['title', 'responsible'] },
+      { event: 'return', note: null, parts: ['title', 'who'] },
     ]);
   });
 
@@ -151,26 +148,19 @@ describe('future.get', () => {
   });
 
   describe('an approved akce read by someone else', () => {
-    const person = {
-      graphId: '11111111-1111-4111-8111-111111111111',
-      salutation: 'pan',
-      titlesBefore: 'Mgr.',
-      givenName: 'Jan',
-      familyName: 'Novák',
-      affiliation: 'kabinet fyziky',
-      affiliationYear: '2026/2027',
-    };
     const readers = [
       ['a colleague', { role: 'submitter' }],
       ['a student', { role: 'submitter', isStudent: true }],
     ] as const;
 
-    /** An approved akce whose responsible person has everything the directory gave. */
-    async function approvedWithPerson(): Promise<{ id: string; author: UserRecord }> {
+    /** An approved akce with its three free-text fields filled. */
+    async function approvedWithText(): Promise<{ id: string; author: UserRecord }> {
       const author = await user();
       const id = await start(author, 'akce');
       const content = readyAkce({
-        responsible: { verb: 'vede', behalfOf: '2.A', people: [person] },
+        organizer: 'organizuje pan Mgr. Jan Novák',
+        participants: 'účast 2.A',
+        note: 'téma stáže',
       });
       await world.run(saveFuture, world.as(author), { id, expectedVersion: 1, content });
       await moveTo(author, id, 'approved');
@@ -178,44 +168,34 @@ describe('future.get', () => {
       return { id, author };
     }
 
-    it.each(readers)(
-      'gives %s the names of who is responsible, and not its history',
-      async (_who, seed) => {
-        const { id } = await approvedWithPerson();
-        const reader = await world.seed.user(seed);
-        const result = await open(reader, id);
-        expect(result).toMatchObject({
-          ok: true,
-          value: {
-            isAuthor: false,
-            editable: false,
-            timeline: [],
-            content: null,
-            view: {
-              title: 'Výlet do Prahy',
-              startDate: '2026-11-10',
-              responsible: { verb: 'vede', behalfOf: '2.A', names: ['Mgr. Jan Novák'] },
-            },
-          },
-        });
-      },
-    );
-
-    it.each(readers)('hands %s no directory id, affiliation or salutation', async (_who, seed) => {
-      const { id } = await approvedWithPerson();
+    it.each(readers)('gives %s the free text as typed, and not its history', async (_who, seed) => {
+      const { id } = await approvedWithText();
       const reader = await world.seed.user(seed);
-      const json = JSON.stringify(await open(reader, id));
-      for (const secret of [person.graphId, person.affiliation, person.affiliationYear, '"pan"']) {
-        expect(json).not.toContain(secret);
-      }
+      const result = await open(reader, id);
+      expect(result).toMatchObject({
+        ok: true,
+        value: {
+          isAuthor: false,
+          editable: false,
+          timeline: [],
+          content: null,
+          view: {
+            title: 'Výlet do Prahy',
+            startDate: '2026-11-10',
+            organizer: 'organizuje pan Mgr. Jan Novák',
+            participants: 'účast 2.A',
+            note: 'téma stáže',
+          },
+        },
+      });
     });
 
-    it('still gives the author the full content, the directory id included', async () => {
-      const { id, author } = await approvedWithPerson();
+    it('still gives the author the full content', async () => {
+      const { id, author } = await approvedWithText();
       const result = await open(author, id);
       expect(result).toMatchObject({
         ok: true,
-        value: { content: { responsible: { people: [person] } } },
+        value: { content: { organizer: 'organizuje pan Mgr. Jan Novák' } },
       });
     });
   });

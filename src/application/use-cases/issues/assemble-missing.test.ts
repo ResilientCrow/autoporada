@@ -43,12 +43,7 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
       title: 'Seminář',
       startDate: d('2026-10-22'),
       content: {
-        responsible: {
-          verb: 'organizuje',
-          people: [
-            { salutation: 'pan', givenName: 'Jan', familyName: 'Novák', affiliation: '1.A' },
-          ],
-        },
+        organizer: 'organizuje pan Jan Novák (1.A)',
       },
     });
 

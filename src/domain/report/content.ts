@@ -1,4 +1,4 @@
-import type { Campus, ResponsibleVerb, Salutation } from '@/domain/cs';
+import type { Campus, Salutation } from '@/domain/cs';
 import type { RichDoc } from '@/domain/richtext';
 import type { CalDate, WallTime } from '@/domain/time';
 
@@ -23,13 +23,6 @@ export interface DraftPerson {
   readonly affiliation?: string;
   /** The school year in which the class was confirmed („2026/2027“). */
   readonly affiliationYear?: string;
-}
-
-/** Who is behind an akce and in which words: „za … koordinuje …“ (the snapshot's `responsible`). */
-export interface Responsible {
-  readonly verb: ResponsibleVerb;
-  readonly behalfOf?: string;
-  readonly people: readonly DraftPerson[];
 }
 
 export type DraftBullet =

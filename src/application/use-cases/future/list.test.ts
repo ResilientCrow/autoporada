@@ -6,7 +6,7 @@ import type { FutureContent, UserRecord } from '@/application/ports';
 import { FUTURE_LIST_PAGE } from '@/contracts';
 import type { FutureState } from '@/domain/review';
 
-import { futureFixtures, readyAkce, readyJednani, staffer } from '../../../../test/support/future';
+import { futureFixtures, readyAkce, readyJednani } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
 import { listFuture, saveFuture } from './index';
 
@@ -23,7 +23,6 @@ const EMPTY_CONTENT: FutureContent = {
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
 };
 const { start, moveTo } = futureFixtures(world);
 
@@ -81,7 +80,7 @@ describe('future.list', () => {
     expect(await titles(reviewer)).toEqual(['jednani approved', 'akce submitted']);
   });
 
-  it('names who is responsible and shows no affiliation or salutation', async () => {
+  it('shows the organizer as typed', async () => {
     const author = await user();
     await item(author, 'approved');
     const reader = await user();
@@ -93,12 +92,11 @@ describe('future.list', () => {
           {
             state: 'approved',
             isAuthor: false,
-            responsible: { verb: 'zajišťuje', behalfOf: '2.A', names: ['Jan Novák'] },
+            organizer: 'zajišťuje 2.A paní učitelka Jana Nováková',
           },
         ],
       },
     });
-    expect(JSON.stringify(result)).not.toContain(staffer.salutation);
   });
 
   describe('paging', () => {

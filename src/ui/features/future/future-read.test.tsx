@@ -19,7 +19,6 @@ const view = (over: Partial<FutureView> = {}): FutureView => ({
   organizer: 'organizuje paní zástupkyně Jana Nováková',
   participants: 'účast 8.A',
   note: 'téma stáže',
-  responsible: null,
   ...over,
 });
 const item = (over: Partial<FutureReadItem> = {}): FutureReadItem => ({

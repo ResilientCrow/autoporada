@@ -169,7 +169,6 @@ describe('PointRepo (port contract)', () => {
           organizer: null,
           participants: null,
           note: null,
-          responsible: null,
         },
       });
       await tx.audit.record({

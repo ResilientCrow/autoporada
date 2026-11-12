@@ -4,7 +4,6 @@ import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
   openingSentence,
-  responsibleVerb,
   organiserVerb,
   roomLocative,
   type OpeningInput,
@@ -161,19 +160,6 @@ describe('organiserVerb', () => {
     [[eva, lucie], 'organizovaly'],
   ])('%#: %s', (people, verb) => {
     expect(organiserVerb(people)).toBe(verb);
-  });
-});
-
-describe('responsibleVerb', () => {
-  it.each([
-    ['organizuje', 1, 'organizuje'],
-    ['organizuje', 2, 'organizují'],
-    ['koordinuje', 1, 'koordinuje'],
-    ['koordinuje', 3, 'koordinují'],
-    ['zajišťuje', 2, 'zajišťují'],
-    ['vede', 2, 'vedou'],
-  ] as const)('%s × %i → %s', (verb, count, form) => {
-    expect(responsibleVerb(verb, count)).toBe(form);
   });
 });
 

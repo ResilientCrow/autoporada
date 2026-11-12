@@ -230,7 +230,6 @@ export function issueFixtures(world: World) {
       organizer: null,
       participants: null,
       note: null,
-      responsible: null,
       ...seed.content,
     };
     const id = await world.tx(world.as(seed.author), async (tx) => {

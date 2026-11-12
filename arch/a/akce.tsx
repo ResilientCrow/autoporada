@@ -11,7 +11,7 @@ import { futureLine, NotFound } from './home';
 const CAMPUS = [['smichov', 'Smíchov'], ['radlice', 'Radlice'], ['na-vidouli', 'Na Vidouli'], ['jinde', 'Jinde']] as const;
 const time = (x: string) => { if (!x) return null; try { return parseWallTime(x); } catch { return null; } };
 /** The wizard step that asks a part a return named (ADR 0058). */
-const STEP_OF: Record<string, string> = { title: 'nazev', when: 'kdy', place: 'kde', who: 'kdo', responsible: 'kdo', note: 'poznamka' };
+const STEP_OF: Record<string, string> = { title: 'nazev', when: 'kdy', place: 'kde', who: 'kdo', note: 'poznamka' };
 const whenText = (f: Future) => `${Q.dm(f.date)}${f.endDate ? `–${Q.dm(f.endDate)}` : ''}${f.timeFrom ? ` v ${toIsoTime(f.timeFrom)}` : ''}`;
 function Line({ f }: { f: Future }) {
   const text = (futureBullet(Q.futureSnap(f) as never) as unknown as { runs: { text: string }[] }).runs[0]!.text;

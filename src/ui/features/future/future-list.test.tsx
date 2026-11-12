@@ -23,7 +23,6 @@ const row = (over: Partial<FutureRow> = {}): FutureRow => ({
   participants: null,
   note: null,
   reportState: 'none',
-  responsible: null,
   updatedAt: '2026-10-01T10:00:00.000Z',
   ...over,
 });
@@ -98,7 +97,6 @@ describe('FutureList', () => {
           endDate: null,
           campus: null,
           place: null,
-          responsible: null,
         }),
       ]),
     );

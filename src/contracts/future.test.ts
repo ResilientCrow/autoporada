@@ -19,12 +19,10 @@ const wire = (over: Record<string, unknown> = {}) => ({
   timeTo: null,
   campus: null,
   place: null,
-  responsible: null,
   ...over,
 });
 const save = (over: Record<string, unknown> = {}) =>
   saveFutureInput.safeParse({ id, expectedVersion: 1, content: wire(over) });
-const person = { salutation: 'pan', givenName: 'Jan', familyName: 'Novák' };
 
 /** The field paths a refused parse names, so a test pins which field was refused. */
 const refusedPaths = (result: ReturnType<typeof save>) =>
@@ -68,7 +66,7 @@ describe('saveFutureInput', () => {
     expect(save({ endDate: '2026-11-10' }).success).toBe(true);
   });
 
-  it('bounds the title, the place and the responsible people', () => {
+  it('bounds the title, the place and the free-text fields', () => {
     expect(save({ title: 'x'.repeat(POINT_LIMITS.title) }).success).toBe(true);
     expect(refusedPaths(save({ title: 'x'.repeat(POINT_LIMITS.title + 1) }))).toEqual([
       'content.title',
@@ -76,18 +74,18 @@ describe('saveFutureInput', () => {
     expect(refusedPaths(save({ place: 'x'.repeat(POINT_LIMITS.place + 1) }))).toEqual([
       'content.place',
     ]);
-    const crowd = Array.from({ length: POINT_LIMITS.responsiblePeople + 1 }, () => person);
-    expect(refusedPaths(save({ responsible: { verb: 'vede', people: crowd } }))).toEqual([
-      'content.responsible.people',
+    expect(refusedPaths(save({ organizer: 'x'.repeat(POINT_LIMITS.organizer + 1) }))).toEqual([
+      'content.organizer',
+    ]);
+    expect(refusedPaths(save({ participants: 'x'.repeat(POINT_LIMITS.participants + 1) }))).toEqual(
+      ['content.participants'],
+    );
+    expect(refusedPaths(save({ note: 'x'.repeat(POINT_LIMITS.futureNote + 1) }))).toEqual([
+      'content.note',
     ]);
   });
 
-  it('takes the responsible people in the verbs the sentence knows, and no stray keys', () => {
-    expect(
-      save({ responsible: { verb: 'koordinuje', behalfOf: '2.A', people: [person] } }).success,
-    ).toBe(true);
-    expect(save({ responsible: { verb: 'řídí', people: [person] } }).success).toBe(false);
-    expect(save({ responsible: { verb: 'vede', people: [person], extra: 1 } }).success).toBe(false);
+  it('takes a known campus and no stray keys', () => {
     expect(save({ campus: 'jinde-nekde' }).success).toBe(false);
     expect(save({ extra: 1 }).success).toBe(false);
   });
@@ -106,7 +104,6 @@ describe('futureContentToWire', () => {
       organizer: null,
       participants: null,
       note: null,
-      responsible: { verb: 'vede', people: [{ ...person, salutation: 'pan' }] },
     };
     const out = futureContentToWire(content);
     expect(out).toMatchObject({ startDate: '2026-11-10', endDate: null, timeFrom: '08:00' });

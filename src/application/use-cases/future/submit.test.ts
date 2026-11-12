@@ -8,7 +8,6 @@ import {
   futureWire,
   readyAkce,
   readyJednani,
-  staffer,
 } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
 import { retractFuture, saveFuture, submitFuture } from './index';
@@ -101,29 +100,6 @@ describe('future.submit', () => {
         'an end time after the start when the end date is the start date',
         { endDate: '2026-11-10', timeFrom: '14:00', timeTo: '13:00' },
         { 'content.timeTo': 'invalid' },
-      ],
-      [
-        'people when it names who is responsible',
-        { responsible: { verb: 'vede', people: [] } },
-        { 'content.responsible.people': 'required' },
-      ],
-      [
-        'a family name and a salutation for each responsible person',
-        {
-          responsible: {
-            verb: 'vede',
-            people: [staffer, { ...staffer, familyName: ' ', salutation: null }],
-          },
-        },
-        {
-          'content.responsible.people.1.familyName': 'required',
-          'content.responsible.people.1.salutation': 'required',
-        },
-      ],
-      [
-        'a name for the organisation it acts for, if it names one',
-        { responsible: { verb: 'vede', behalfOf: ' ', people: [staffer] } },
-        { 'content.responsible.behalfOf': 'required' },
       ],
     ];
 

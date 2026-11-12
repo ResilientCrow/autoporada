@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
@@ -42,7 +41,6 @@ const content = (over: Partial<FutureContentWire> = {}): FutureContentWire => ({
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
   ...over,
 });
 const editorOf = (over: Partial<FutureContentWire> = {}) => ({
@@ -69,7 +67,6 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
     organizer: null,
     participants: null,
     note: null,
-    responsible: null,
   },
   window: null,
   editor: editorOf(),
@@ -102,7 +99,6 @@ describe('the editor of a draft', () => {
     expect(html).toMatch(/<textarea [^>]*name="organizer"/);
     expect(html).toMatch(/<textarea [^>]*name="participants"/);
     expect(html).toMatch(/<textarea [^>]*name="note"/);
-    expect(html).not.toContain('responsible');
   });
 
   it('does not ask whether a report follows: every akce owes one (ADR 0048)', () => {

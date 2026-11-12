@@ -19,7 +19,6 @@ const CONTENT: FutureContentWire = {
   organizer: null,
   participants: null,
   note: null,
-  responsible: null,
 };
 
 describe('outcomeOf', () => {

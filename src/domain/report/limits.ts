@@ -16,8 +16,6 @@ export { PERSON_FIELD_MAX };
 export const POINT_LIMITS = {
   peoplePerBullet: 200,
   peoplePerPoint: 400,
-  /** The people behind one akce („za … koordinuje …“). */
-  responsiblePeople: 50,
   bullets: 12,
   statements: 10,
   /** Serialized rich text, as the rich text module caps it. */

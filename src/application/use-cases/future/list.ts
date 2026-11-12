@@ -14,7 +14,7 @@ const rowWire = (item: FutureItemRecord, readerId: string) => ({
   state: item.state,
   isAuthor: item.authorId === readerId,
   reportState: item.reportState,
-  // The list names who is responsible and shows nothing else about them.
+  // Every reader sees the free-text fields as typed; they print in the document anyway.
   ...futureContentToView(item.content),
   updatedAt: item.updatedAt.toISOString(),
 });

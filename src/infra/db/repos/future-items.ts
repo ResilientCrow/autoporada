@@ -16,7 +16,6 @@ import {
 } from 'drizzle-orm';
 
 import {
-  DatabaseFailure,
   futureReviewScopeOf,
   futureWriteScopeOf,
   scopeOf,
@@ -28,8 +27,6 @@ import {
   type FutureItemRepo,
   type TxContext,
 } from '@/application/ports';
-import { parseResponsible } from '@/contracts';
-import type { Responsible } from '@/domain/report';
 import type { FutureState } from '@/domain/review';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 
@@ -51,7 +48,6 @@ export const ITEM_ROW = {
   timeTo: futureItems.timeTo,
   campus: futureItems.campus,
   place: futureItems.place,
-  responsible: futureItems.responsible,
   organizer: futureItems.organizer,
   participants: futureItems.participants,
   note: futureItems.note,
@@ -63,16 +59,6 @@ export const ITEM_ROW = {
 };
 
 type ItemRow = Pick<typeof futureItems.$inferSelect, keyof typeof ITEM_ROW>;
-
-/** The failure code of a `responsible` the contract refuses; it never carries the payload (ADR 0015). */
-const PARSE_FAILURE = 'db.parse.future_items';
-
-/** The jsonb through the contract's one parse, on read and before write. */
-function parsedResponsible(value: unknown): Responsible | null {
-  const parsed = parseResponsible(value);
-  if (!parsed) throw new DatabaseFailure(PARSE_FAILURE);
-  return parsed.value;
-}
 
 export function toRecord(row: ItemRow): FutureItemRecord {
   const { id, kind, authorId, state, reportState, reportPointId, submittedAt } = row;
@@ -89,7 +75,6 @@ export function toRecord(row: ItemRow): FutureItemRecord {
       timeTo: timeOrNull(row.timeTo),
       campus: row.campus,
       place: row.place,
-      responsible: parsedResponsible(row.responsible),
       organizer: row.organizer,
       participants: row.participants,
       note: row.note,
@@ -111,7 +96,6 @@ const contentColumns = (content: FutureContent) => ({
   timeTo: isoTime(content.timeTo),
   campus: content.campus,
   place: content.place,
-  responsible: parsedResponsible(content.responsible),
   organizer: content.organizer,
   participants: content.participants,
   note: content.note,

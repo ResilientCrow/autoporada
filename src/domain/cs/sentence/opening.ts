@@ -47,21 +47,6 @@ export function organiserVerb(organisers: readonly Person[]): string {
   return women === organisers.length ? 'organizovaly' : 'organizovali';
 }
 
-/** What the people named at the end of an agenda item do. */
-export type ResponsibleVerb = 'organizuje' | 'koordinuje' | 'zajišťuje' | 'vede';
-
-const PLURAL_VERB: Readonly<Record<ResponsibleVerb, string>> = {
-  organizuje: 'organizují',
-  koordinuje: 'koordinují',
-  zajišťuje: 'zajišťují',
-  vede: 'vedou',
-};
-
-/** „koordinuje“ for one person, „koordinují“ for more (agenda bullets, present tense). */
-export function responsibleVerb(verb: ResponsibleVerb, people: number): string {
-  return people === 1 ? verb : PLURAL_VERB[verb];
-}
-
 /** „S206“ → „v učebně S206“; anything else is used as typed. */
 export function roomLocative(room: string): string {
   const code = room.trim();
