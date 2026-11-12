@@ -107,7 +107,7 @@ label.l small{font-weight:400;color:var(--mut);font-size:14px}
 .in{width:100%;min-height:50px;padding:10px 14px;border:1.5px solid #B9BACB;border-radius:10px;font:400 16px/1.4 var(--ui);color:var(--ink);background:#fff}
 .in:focus{outline:0;border-color:var(--ink);box-shadow:0 0 0 3px var(--gold-soft)}
 textarea.in{min-height:96px;resize:vertical}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .two>*{min-width:0}.two input{width:100%;min-width:0}
 @media (max-width:480px){.two:has(input[type=date]){grid-template-columns:1fr}}
 .sgm{display:flex;gap:6px;flex-wrap:wrap}.sgm span{min-height:40px;padding:0 14px;display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;font-weight:500;font-size:15px}.sgm span.on{background:var(--ink);border-color:var(--ink);color:#fff}
