@@ -109,6 +109,19 @@ test.describe('the akce journey', () => {
     // The author submits the report; the akce counts as written and the card stops offering it.
     const reportId = idOfUrl(page);
     // What the report still needs: a participant from the directory and one statement.
+    // The report no longer copies the organisers from the akce, so both rows are filled by hand.
+    const organisers = page.getByRole('main').getByRole('group', { name: /^Organizátoři/ });
+    const organiserBox = organisers.getByRole('combobox', { name: points.bullets.addPerson });
+    await organiserBox.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await organiserBox.click();
+    await organiserBox.pressSequentially('Svobod');
+    await page
+      .getByRole('listbox')
+      .getByRole('option', { name: 'Petr Svoboda', exact: true })
+      .click();
+    await organisers
+      .getByRole('button', { name: people.chips.bulk.setLabel('pan'), exact: true })
+      .click();
     const participants = page.getByRole('main').getByRole('group', { name: /^Účastníci/ });
     const box = participants.getByRole('combobox', { name: points.bullets.addPerson });
     await box.evaluate((el) => el.scrollIntoView({ block: 'center' }));
