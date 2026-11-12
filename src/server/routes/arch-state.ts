@@ -18,7 +18,7 @@ import type { WebContainer } from '../container';
 import { runRegistered } from '../pipeline';
 import { archCalendar } from './arch-calendar';
 import { archItems } from './arch-items';
-import { archPlaceholders } from './arch-placeholders';
+import { archPlaceholders, withServerStatusOf } from './arch-placeholders';
 import { peopleFor } from './arch-people';
 
 type Json = Record<string, unknown>;
@@ -253,6 +253,10 @@ export async function archState(
     if (!sl.stored && m <= last) archIssues.push(await issueOut(m, undefined, sl));
   }
   archIssues.sort((a, b) => String(a['monday']).localeCompare(String(b['monday'])));
+  // The headmaster's placeholder status is the server's reading of each open porada (ADR 0061).
+  const placeholderChecks = head
+    ? await withServerStatusOf(c, principal, ph.placeholderChecks, archIssues)
+    : ph.placeholderChecks;
 
   // ---- registry ----
   let registry: Json[] = [];
@@ -307,7 +311,7 @@ export async function archState(
     points: archPoints,
     futures: archFutures,
     issues: archIssues,
-    placeholderChecks: ph.placeholderChecks,
+    placeholderChecks,
     plannedThrough: toIsoDate(plannedThrough),
     registry,
     requests,

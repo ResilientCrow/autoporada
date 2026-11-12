@@ -109,12 +109,15 @@ export function owedBy(s: State, userId: string | null): Owed[] {
 }
 /** The akce a porada can owe a report for, as the server's `owedAkce` reads them (ADR 0049): approved, or back in review after an approval; not closed as missed; with a start date. */
 const isOwable = (f: Future) => f.kind === 'akce' && f.report !== 'missed' && f.dateSet !== false && (f.state === 'approved' || ((f.state === 'submitted' || f.state === 'returned') && f.wasApproved));
+/** As the server's `missingReports`: a report is delivered to this porada when it is published, or approved for it (its porada is this one or an earlier open one); an approved report that waits for a later porada leaves the akce missing here. */
+const reportDelivered = (point: Point | undefined, monday: string): boolean =>
+  !!point && (point.state === 'published' || (point.state === 'approved' && (point.poradaMonday ?? monday) <= monday));
 /** Every akce owed to a porada, with what happened to its report: the headmaster's „Chybějící zprávy“. A refused report closes its akce (ADR 0056). */
 export function owedTo(s: State, monday: string) {
   return s.futures.filter((f) => isOwable(f) && owedMonday(s, f) === monday && (ownerIsOver(s, f) || compareDates(lastDayOf(f), parseIsoDate(issueOf(s, monday)?.meetingDate ?? monday)) < 0)).flatMap((f) => {
     const point = pointOfAkce(s, f.id);
     if (point?.state === 'rejected') return [];
-    return [{ akce: f, point, delivered: !!point && (point.state === 'approved' || point.state === 'published'), notYetOver: !ownerIsOver(s, f) }];
+    return [{ akce: f, point, delivered: reportDelivered(point, monday), notYetOver: !ownerIsOver(s, f) }];
   });
 }
 /** The paragraph the system writes for an akce (ADR 0060), whatever the headmaster wrote instead. */
@@ -127,7 +130,10 @@ export function placeholderText(s: State, f: Future, monday: string): string {
 /** Where an akce's missing-report paragraph stands (ADR 0061); as the server's `placeholderStatus`. */
 export type PlaceholderStatus = 'checked' | 'handed-in' | 'open' | 'to-check';
 export function placeholderStatusOf(s: State, f: Future, monday: string): PlaceholderStatus {
-  if (s.placeholderChecks[f.id]?.checked) return 'checked';
+  const known = s.placeholderChecks[f.id];
+  if (known?.checked) return 'checked';
+  // The headmaster's state carries the server's status; a local edit drops it, and then the rule is mirrored here.
+  if (known?.status && known.status !== 'checked') return known.status;
   if (pointOfAkce(s, f.id)?.state === 'submitted') return 'handed-in';
   return nowOf(s).getTime() < closeFor(s, f, monday).getTime() ? 'open' : 'to-check';
 }

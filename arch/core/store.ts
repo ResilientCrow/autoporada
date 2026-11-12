@@ -1,10 +1,10 @@
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
 import { missingForSubmit, newDraft, openingInput, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
 import { openingSentence } from '@/domain/cs';
-import { addDays, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
+import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, partLabels, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
+import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, PointType, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
@@ -136,14 +136,34 @@ export function createFuture(kind: Future['kind'], onId?: (id: string) => void):
     return { ...s, futures: [...s.futures, f] };
   };
 }
-/** An edit of the akce changes the paragraph the system writes: the check no longer holds (ADR 0061). */
-const unchecked = (s: State, fid: string): State['placeholderChecks'] => (s.placeholderChecks[fid]?.checked ? { ...s.placeholderChecks, [fid]: { ...s.placeholderChecks[fid]!, checked: false } } : s.placeholderChecks);
-export const saveFuture = (fid: string, patch: Partial<Future>): Fx => (s) => ({ ...s, placeholderChecks: unchecked(s, fid), futures: up(s.futures, fid, (f) => ({ ...f, ...patch, savedAt: s.now })) });
+/** A multi-day item carries no times (ADR 0060): the server clears them too. */
+const patched = (f: Future, patch: Partial<Future>): Future => {
+  const n = { ...f, ...patch };
+  return n.endDate !== null && compareDates(n.endDate, n.date) > 0 ? { ...n, timeFrom: null, timeTo: null } : n;
+};
+/** An edit that changes the paragraph the system writes un-checks it (ADR 0061); one that leaves the text alone does not. The server status goes too: it no longer holds. */
+const uncheckedBy = (s: State, before: Future, after: Future): State['placeholderChecks'] => {
+  const chk = s.placeholderChecks[before.id];
+  if (!chk?.checked || systemText(before) === systemText(after)) return s.placeholderChecks;
+  const { status: _status, ...rest } = chk;
+  return { ...s.placeholderChecks, [before.id]: { ...rest, checked: false } };
+};
+export const saveFuture = (fid: string, patch: Partial<Future>): Fx => (s) => {
+  const before = s.futures.find((x) => x.id === fid); if (!before) return s;
+  const after = { ...patched(before, patch), savedAt: s.now };
+  return { ...s, placeholderChecks: uncheckedBy(s, before, after), futures: up(s.futures, fid, () => after) };
+};
 export const submitFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.title.trim() ? { ...f, state: 'submitted', submittedAt: s.now, note: null, parts: null, trail: [...f.trail, trail(s, 'Odesláno')] } : f)) });
 export const retractFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.state === 'submitted' ? { ...f, state: 'draft', trail: [...f.trail, trail(s, 'Vzato zpět')] } : f)) });
 export const withdrawFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.wasApproved || !['draft', 'returned', 'submitted'].includes(f.state) ? f : { ...f, state: 'withdrawn', trail: [...f.trail, trail(s, 'Zrušeno')] })) });
 /** „Uložit změny“: an approved akce changes only through this; its author sends it back to review. */
-export const reviseFuture = (fid: string, patch: Partial<Future>): Fx => (s) => ({ ...s, placeholderChecks: unchecked(s, fid), futures: up(s.futures, fid, (f) => { const author = f.authorId === s.userId; return { ...f, ...patch, ...(author ? { state: 'submitted' as const, changed: true, submittedAt: s.now } : {}), trail: [...f.trail, trail(s, author ? 'Změna, znovu ke kontrole' : 'Upraveno vedením')] }; }) });
+export const reviseFuture = (fid: string, patch: Partial<Future>): Fx => (s) => {
+  const before = s.futures.find((x) => x.id === fid); if (!before) return s;
+  const author = before.authorId === s.userId;
+  const merged = patched(before, patch);
+  const after: Future = { ...merged, ...(author ? { state: 'submitted' as const, changed: true, submittedAt: s.now } : {}), trail: [...before.trail, trail(s, author ? 'Změna, znovu ke kontrole' : 'Upraveno vedením')] };
+  return { ...s, placeholderChecks: uncheckedBy(s, before, after), futures: up(s.futures, fid, () => after) };
+};
 export const approveFuture = (fid: string): Fx => (s) => { const f = s.futures.find((x) => x.id === fid)!; if (!canDecideFuture(me(s), f) || f.state !== 'submitted') return s; return { ...s, futures: up(s.futures, fid, (x) => ({ ...x, state: 'approved', changed: false, wasApproved: true, note: null, parts: null, trail: [...x.trail, trail(s, 'Schváleno')] })) }; };
 export const returnFuture = (fid: string, note: string, parts: readonly string[] = []): Fx => (s) => { const r = returnOf(note, parts); return !r ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'returned', note: r.note, parts: r.parts, trail: [...f.trail, trail(s, 'Vráceno k úpravě', r.trail)] })) }; };
 export const rejectFuture = (fid: string, note: string): Fx => (s) => (!note.trim() ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'rejected', note, parts: null, trail: [...f.trail, trail(s, 'Zamítnuto', { note })] })) });
@@ -166,7 +186,7 @@ export const moveAnnex = (m: string, aid: string, dir: -1 | 1): Fx => (s) => pat
 export const placeRowAfter = (m: string, rid: string, afterId: string): Fx => (s) => patchIssue(s, m, (i) => { const row = i.rows.find((r) => r.id === rid); if (!row) return i; const rest = i.rows.filter((r) => r.id !== rid); const k = rest.findIndex((r) => r.id === afterId); return { ...i, rows: [...rest.slice(0, k + 1), { ...row, isNew: false }, ...rest.slice(k + 1)] }; });
 export const setPlaceholder = (m: string, akce: string, text: string | null): Fx => (s) => patchIssue({ ...s, placeholderChecks: { ...s.placeholderChecks, [akce]: { checked: false, was: null } } }, m, (i) => { const placeholders = { ...i.placeholders }; if (text === null) delete placeholders[akce]; else placeholders[akce] = text; return { ...i, placeholders }; });
 /** „Zkontrolováno“: the paragraph as the system writes it now is the one confirmed (ADR 0061). */
-export const confirmPlaceholder = (akce: string, was: string): Fx => (s) => ({ ...s, placeholderChecks: { ...s.placeholderChecks, [akce]: { checked: true, was } } });
+export const confirmPlaceholder = (akce: string, was: string): Fx => (s) => ({ ...s, placeholderChecks: { ...s.placeholderChecks, [akce]: { checked: true, was, status: 'checked' as const } } });
 export const moveRow = (m: string, rid: string, dir: -1 | 1): Fx => (s) => patchIssue(s, m, (i) => {
   // Past the next listed row of its section, over the hidden ones, as the server's one-step moves do.
   const rows = i.rows; const k = rows.findIndex((r) => r.id === rid); const row = rows[k]!;
