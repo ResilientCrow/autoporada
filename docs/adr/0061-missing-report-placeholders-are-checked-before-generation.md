@@ -54,6 +54,10 @@ sentence nobody read.
    napsal systém.“; five and more: „{n} odstavců …“), with „Zkontrolovat“
    (to the list) and „Vygenerovat i tak“. `reports-missing` stays as it is and
    sits beside the new warning.
+   Reviewers (staff who are not the headmaster) see the warning on Náhled
+   like `reports-missing`; this is deliberate. It carries titles only, no
+   paragraph text, and they cannot confirm or write a placeholder: the Arch
+   state gives them neither the checks nor the placeholder versions.
 5. **`issues.confirmPlaceholder`.** Headmaster (`issue.edit`), `admin` rate
    limit, refresh `'page'`. Input: `monday`, `itemId`, `expectedVersion` (0:
    no row yet) and `akceVersion`. It takes the issue row lock like

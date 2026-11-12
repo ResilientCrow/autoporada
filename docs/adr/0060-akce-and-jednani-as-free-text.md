@@ -36,8 +36,11 @@ fix it. The school wants to type the line and see it printed as typed.
    the end: „neděle 3. května až čtvrtek 14. května 2026“; across years both
    ends carry their year: „pondělí 28. prosince 2026 až pátek 1. ledna 2027“.
    A multi-day item prints no time: the editors hide Od and Do once Poslední
-   den is a later day than Den and clear the saved times, and a submit with a
-   time on a multi-day item is refused (`timeFrom` invalid).
+   den is a later day than Den and clear the saved times, the revise of `future.save`
+   clears them too before it checks (so a „Změnit“ that makes a timed akce multi-day
+   is not refused for a field the editor hides), and a submit with a time on a
+   multi-day item is refused (`timeFrom` invalid). The order ignores a stored
+   time on a multi-day item.
 4. **Sorting inside each list**: by start day; on one start day multi-day
    items first, then timed items by start time, then untimed ones; ties by
    title in Czech collation. Untimed items used to come first.
@@ -77,8 +80,9 @@ fix it. The school wants to type the line and see it printed as typed.
 10. **A return names these parts of an akce or jednání**: `title`, `when`,
     `place`, `who` (Organizátor and Účastníci) and `note`, replacing
     `responsible`; at most five. A report's and a proposal's parts are
-    unchanged. A stored return with the old code is read as unknown and
-    dropped by the screens.
+    unchanged. Migration 0054 rewrites a stored return's `responsible` to
+    `who` in place, lifting the append-only trigger once inside the migration
+    transaction.
 11. **Privacy: other readers see the fields as typed.** An approved akce is
     readable by every signed-in user, and the three texts print in the
     document anyway, so they are shown like the title. The privacy notice
@@ -93,6 +97,10 @@ fix it. The school wants to type the line and see it printed as typed.
   old return-parts bound dropped once nothing reads them.
 - A pupil's name typed in Účastníci is personal data that is not tied to an
   account: it is covered by the same retention and access as the akce.
+- A porada generated before this change re-renders its paper view with the
+  new layout (one missing-report line, the new order). The stored DOCX and PDF
+  are the record and stay as they were. The app was not live, so this is
+  accepted and no legacy rendering is kept.
 - The missing-report paragraph no longer agrees in gender or number with the
   organizer: it quotes the typed text after a colon.
 
