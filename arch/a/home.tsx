@@ -44,7 +44,7 @@ function deskFor(s: ReturnType<typeof useStore>['s'], meId: string) {
   const m = Q.workingMonday(s); const b = Q.buildDoc(s, m, { pending: true });
   const mine = new Set(Q.myPoints(s, meId).map((p) => p.id));
   const seen = b.segments.filter((x) => x.kind === 'report' && mine.has(x.key)).length;
-  return <Desk cls="mg clip" fold={`Otevřít celou poradu, ${Q.pagesText(Q.pagesOf(b))}`} right={<DocNav built={b} attention={{ label: 'Vaše části', test: (i) => mine.has(i.key) }} />} note={<><b>Porada {Q.dm(s.issues.find((i) => i.monday === m)?.meetingDate ?? m)}</b> {seen ? 'Vaše části jsou žlutě.' : 'Zatím v ní nemáte žádnou část.'}</>}><div className="wrapm wrapn"><Sheet built={b} cls={(x) => (mine.has(x.key) ? 'me' : x.kind === 'report' || x.kind === 'missing' || x.kind === 'item' ? 'peek' : '')} onSeg={(x) => { const p = s.points.find((k) => k.id === x.key); if (p && mine.has(p.id)) go(pointTo(p)); }} /></div></Desk>;
+  return <Desk cls="mg clip" fold={`Otevřít celou poradu, ${Q.pagesText(Q.pagesOf(b))}`} right={<DocNav built={b} attention={{ label: 'Vaše části', test: (i) => mine.has(i.key) }} />} note={<><b>Porada {Q.dm(s.issues.find((i) => i.monday === m)?.meetingDate ?? m)}</b> {seen ? 'Vaše části jsou žlutě.' : 'Zatím v ní nemáte žádnou část.'}</>}><div className="wrapm wrapn"><Sheet built={b} cls={(x) => (mine.has(x.key) ? 'me' : x.state === 'submitted' || x.kind === 'missing' ? 'peek' : '')} onSeg={(x) => { const p = s.points.find((k) => k.id === x.key); if (p && mine.has(p.id)) go(pointTo(p)); }} /></div></Desk>;
 }
 export function Tyden() {
   const { s } = useStore(); const u = Q.me(s)!; const tasks = useOwedTasks(); const [add, setAdd] = useState(false);
