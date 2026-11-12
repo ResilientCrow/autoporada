@@ -169,6 +169,17 @@ in v1 unless the [plan of record](plan.md) changes first.
   Organizátor and Účastníci texts as typed, empty pieces left out) and the line
   „vyjádření organizátora: nebylo dodáno“. The headmaster can rewrite the paragraph on
   „Chybějící zprávy“ (`/porada/[datum]/zpravy`) and restore the system's text.
+  Each paragraph is reviewed (ADR 0061): „Zkontrolováno“ confirms the system's
+  text, and the paragraph counts as checked only while that confirmed original
+  equals the paragraph the system would write now, so an edit of the akce or the
+  headmaster's own save un-checks it. The status is checked, handed-in (a report
+  waits for a decision), open (the author can still hand in) or to-check. In the
+  Arch UI the headmaster sees the to-check ones in Ke kontrole, marked
+  „Vygenerováno automaticky (zpráva nedodána)“, with „Zkontrolováno“; Chybějící
+  zprávy there is an overview. The classic page has „Zkontrolováno“ too.
+  Generation shows a bold warning while any paragraph is unchecked, and
+  „Vygenerovat“ then opens a confirm dialog („Zkontrolovat“ / „Vygenerovat i
+  tak“). It is never blocked.
   Generation closes such a report: an unfinished draft or a report still in
   review is withdrawn, and the akce is no longer asked about (ADR 0049). A
   report the vedení refused closes its akce: nothing is printed for it and the
