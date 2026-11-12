@@ -29,13 +29,16 @@ const dated = (item: SnapshotFutureItem) => ({
  * the untimed ones; then title (ADR 0060).
  */
 function compareFuture(a: SnapshotFutureItem, b: SnapshotFutureItem): number {
-  const multiDay = (i: SnapshotFutureItem) => (i.endDate && i.endDate > i.date ? 0 : 1);
-  const minutes = (t?: string) =>
-    t ? parseWallTime(t).hour * 60 + parseWallTime(t).minute : Number.MAX_SAFE_INTEGER;
+  const isMultiDay = (i: SnapshotFutureItem) => Boolean(i.endDate && i.endDate > i.date);
+  // A multi-day item prints no time, so a stored one never orders it.
+  const minutes = (i: SnapshotFutureItem) =>
+    i.timeFrom && !isMultiDay(i)
+      ? parseWallTime(i.timeFrom).hour * 60 + parseWallTime(i.timeFrom).minute
+      : Number.MAX_SAFE_INTEGER;
   return (
     compareDates(parseIsoDate(a.date), parseIsoDate(b.date)) ||
-    multiDay(a) - multiDay(b) ||
-    minutes(a.timeFrom) - minutes(b.timeFrom) ||
+    Number(!isMultiDay(a)) - Number(!isMultiDay(b)) ||
+    minutes(a) - minutes(b) ||
     csCollator.compare(a.title, b.title)
   );
 }

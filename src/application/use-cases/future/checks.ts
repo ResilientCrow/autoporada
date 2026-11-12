@@ -7,12 +7,24 @@ import { compareDates, compareTimes } from '@/domain/time';
  * What a handed-in item must hold: the pieces the CHECKs and the issue snapshot ask for. Nobody
  * has to be named (ADR 0060).
  */
+const isOneDay = ({ startDate, endDate }: FutureContent): boolean =>
+  endDate === null || (startDate !== null && compareDates(endDate, startDate) === 0);
+
+/**
+ * A multi-day item prints no time (ADR 0060) and the editors hide the fields, so a save that
+ * makes an item multi-day clears them before the checks look at them.
+ */
+export function withoutTimesOnMultiDay(content: FutureContent): FutureContent {
+  if (isOneDay(content) || (content.timeFrom === null && content.timeTo === null)) return content;
+  return { ...content, timeFrom: null, timeTo: null };
+}
+
 function readinessIssues(content: FutureContent): FieldIssues {
   const issues: Record<string, FieldIssueCode> = {};
-  const { title, startDate, endDate, timeFrom, timeTo } = content;
+  const { title, startDate, timeFrom, timeTo } = content;
   if (title.trim() === '') issues['content.title'] = 'required';
   if (startDate === null) issues['content.startDate'] = 'required';
-  const oneDay = endDate === null || (startDate !== null && compareDates(endDate, startDate) === 0);
+  const oneDay = isOneDay(content);
   // A multi-day item prints no time (ADR 0060): the editors clear it, a submit refuses it.
   if (!oneDay && (timeFrom !== null || timeTo !== null)) issues['content.timeFrom'] = 'invalid';
   if (timeTo !== null) {

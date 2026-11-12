@@ -257,6 +257,15 @@ describe('free-text akce lines (ADR 0060)', () => {
     );
     expect(order).toEqual(['Výlet', 'Čtvrtek', 'Yankee', 'Zeta', 'Alfa', 'Beta']);
   });
+
+  it('ignores a stored time on multi-day items: they tie and go by title', () => {
+    const order = lines([
+      akce('f-1', 'Zájezd', { endDate: '2026-10-15', timeFrom: '08:00' }),
+      akce('f-2', 'Čundr', { endDate: '2026-10-16', timeFrom: '12:00' }),
+      akce('f-3', 'Alfa', { endDate: '2026-10-14' }),
+    ]).map((line) => line.replace(/^.*?\d{4}, /, ''));
+    expect(order).toEqual(['Alfa', 'Čundr', 'Zájezd']);
+  });
 });
 
 describe('optional parts', () => {

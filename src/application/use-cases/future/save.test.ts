@@ -263,6 +263,29 @@ describe('future.save', () => {
     });
   });
 
+  describe('a revise that makes the akce multi-day', () => {
+    it('drops the times when a revise makes a timed akce multi-day, and hands it in', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const multi = readyAkce({ endDate: '2026-11-12' });
+      expect(await revise(author, id, multi)).toMatchObject({ ok: true });
+      expect(await get(author, id)).toMatchObject({
+        state: 'submitted',
+        content: { endDate: calDate(2026, 11, 12), timeFrom: null, timeTo: null },
+      });
+    });
+
+    it('keeps the times of a single-day item whose end date equals its start', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const sameDay = readyAkce({ endDate: '2026-11-10' });
+      expect(await revise(author, id, sameDay)).toMatchObject({ ok: true });
+      expect(await get(author, id)).toMatchObject({
+        content: { timeFrom: wallTime(8, 0), timeTo: wallTime(14, 30) },
+      });
+    });
+  });
+
   describe('the revise intent', () => {
     it.each(['draft', 'returned'] as const)(
       'is refused on a %s item, which only autosaves',
