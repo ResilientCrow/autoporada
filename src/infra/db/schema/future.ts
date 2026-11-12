@@ -66,6 +66,10 @@ export const futureItems = pgTable(
     campus: text().$type<Campus>(),
     place: text(),
     responsible: jsonb().$type<Responsible>(),
+    /** Free text printed as typed (ADR 0060). */
+    organizer: text(),
+    participants: text(),
+    note: text(),
     reportState: reportState().$type<ReportState>().notNull().default('none'),
     /** The report written for this akce; the point's `future_item_id` points back. */
     reportPointId: uuid().references(() => points.id),
@@ -88,7 +92,10 @@ export const futureItems = pgTable(
     check('future_items_campus', sql`${t.campus} IS NULL OR ${t.campus} IN (${campusList})`),
     check(
       'future_items_lengths',
-      sql`char_length(${t.title}) <= 200 AND char_length(coalesce(${t.place}, '')) <= 120`,
+      sql`char_length(${t.title}) <= 200 AND char_length(coalesce(${t.place}, '')) <= 120
+        AND char_length(coalesce(${t.organizer}, '')) <= ${sql.raw(String(POINT_LIMITS.organizer))}
+        AND char_length(coalesce(${t.participants}, '')) <= ${sql.raw(String(POINT_LIMITS.participants))}
+        AND char_length(coalesce(${t.note}, '')) <= ${sql.raw(String(POINT_LIMITS.futureNote))}`,
     ),
     // Under Zod and the repository's parse: an object, and as large as a point's content may be.
     check(

@@ -132,7 +132,7 @@ export function createFuture(kind: Future['kind'], onId?: (id: string) => void):
   return (s0) => {
     const [s, fid] = id(s0, 'f'); const u = me(s)!; onId?.(fid);
     const tomorrow = parseIsoDate(toIsoDate(handInTo(s).monday));
-    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: 'smichov', place: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, wasApproved: false, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
+    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: null, place: '', organizer: '', participants: '', remark: '', responsible: { verb: kind === 'akce' ? 'organizuje' : 'vede', people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] }, state: 'draft', changed: false, wasApproved: false, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
     return { ...s, futures: [...s.futures, f] };
   };
 }

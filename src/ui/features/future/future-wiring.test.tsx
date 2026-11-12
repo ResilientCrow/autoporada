@@ -75,6 +75,9 @@ function page(phase: string, readOnly: boolean, sending = false): string {
         timeTo: null,
         campus: null,
         place: null,
+        organizer: null,
+        participants: null,
+        note: null,
         responsible: { verb: 'vede', people: [PERSON] },
       }}
       today={calDate(2026, 11, 4)}

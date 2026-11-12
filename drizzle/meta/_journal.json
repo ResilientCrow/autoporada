@@ -372,6 +372,13 @@
       "when": 1794502918158,
       "tag": "0052_equal_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794513505747,
+      "tag": "0053_elite_toxin",
+      "breakpoints": true
     }
   ]
 }

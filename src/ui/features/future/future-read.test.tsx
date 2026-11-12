@@ -16,6 +16,9 @@ const view = (over: Partial<FutureView> = {}): FutureView => ({
   timeTo: null,
   campus: 'radlice',
   place: 'Špindlerův Mlýn',
+  organizer: null,
+  participants: null,
+  note: null,
   responsible: { verb: 'koordinuje', behalfOf: '8.A', names: ['Jana Nováková'] },
   ...over,
 });

@@ -27,6 +27,9 @@ const content = (patch: Partial<FutureContentWire> = {}): FutureContentWire => (
   timeTo: null,
   campus: null,
   place: null,
+  organizer: null,
+  participants: null,
+  note: null,
   responsible: null,
   ...patch,
 });

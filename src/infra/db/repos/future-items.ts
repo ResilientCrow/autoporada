@@ -52,6 +52,9 @@ export const ITEM_ROW = {
   campus: futureItems.campus,
   place: futureItems.place,
   responsible: futureItems.responsible,
+  organizer: futureItems.organizer,
+  participants: futureItems.participants,
+  note: futureItems.note,
   reportState: futureItems.reportState,
   reportPointId: futureItems.reportPointId,
   submittedAt: futureItems.submittedAt,
@@ -87,6 +90,9 @@ export function toRecord(row: ItemRow): FutureItemRecord {
       campus: row.campus,
       place: row.place,
       responsible: parsedResponsible(row.responsible),
+      organizer: row.organizer,
+      participants: row.participants,
+      note: row.note,
     },
     reportState,
     reportPointId,
@@ -106,6 +112,9 @@ const contentColumns = (content: FutureContent) => ({
   campus: content.campus,
   place: content.place,
   responsible: parsedResponsible(content.responsible),
+  organizer: content.organizer,
+  participants: content.participants,
+  note: content.note,
 });
 
 const ITEM_SCOPE = {

@@ -166,6 +166,9 @@ describe('PointRepo (port contract)', () => {
           timeTo: null,
           campus: null,
           place: null,
+          organizer: null,
+          participants: null,
+          note: null,
           responsible: null,
         },
       });

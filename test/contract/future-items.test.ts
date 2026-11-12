@@ -33,6 +33,9 @@ const EMPTY: FutureContent = {
   timeTo: null,
   campus: null,
   place: null,
+  organizer: null,
+  participants: null,
+  note: null,
   responsible: null,
 };
 
@@ -45,6 +48,9 @@ const FULL: FutureContent = {
   timeTo: wallTime(14, 30),
   campus: 'radlice',
   place: 'v Národním muzeu',
+  organizer: null,
+  participants: null,
+  note: null,
   responsible: {
     verb: 'zajišťuje',
     behalfOf: '2.A',

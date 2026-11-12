@@ -103,6 +103,9 @@ describe('futureContentToWire', () => {
       timeTo: null,
       campus: 'radlice',
       place: 'v muzeu',
+      organizer: null,
+      participants: null,
+      note: null,
       responsible: { verb: 'vede', people: [{ ...person, salutation: 'pan' }] },
     };
     const out = futureContentToWire(content);

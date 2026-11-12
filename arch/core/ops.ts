@@ -116,6 +116,9 @@ const futureWire = (f: Future) => ({
   campus: f.campus,
   place: f.place.trim() ? f.place : null,
   responsible: f.responsible.people.length || f.responsible.behalfOf ? f.responsible : null,
+  organizer: f.organizer.trim() || null,
+  participants: f.participants.trim() || null,
+  note: f.remark.trim() || null,
 });
 const uuid = () => crypto.randomUUID();
 

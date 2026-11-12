@@ -24,6 +24,10 @@ export const POINT_LIMITS = {
   bodyBytes: RICH_LIMITS.maxBytes,
   title: 200,
   opening: 1000,
+  /** An akce's Organizátor, Účastníci and Poznámka: free text printed as typed (ADR 0060). */
+  organizer: 1000,
+  participants: 2000,
+  futureNote: 1000,
   place: 120,
   textBullet: 2000,
   quote: 1500,

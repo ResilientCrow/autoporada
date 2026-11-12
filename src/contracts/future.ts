@@ -91,6 +91,9 @@ const futureContentSchema = z
     campus: campusSchema.nullable(),
     place: capped(POINT_LIMITS.place).nullable(),
     responsible: responsibleSchema.nullable(),
+    organizer: capped(POINT_LIMITS.organizer).nullable(),
+    participants: capped(POINT_LIMITS.participants).nullable(),
+    note: capped(POINT_LIMITS.futureNote).nullable(),
   })
   .superRefine(({ startDate, endDate }, ctx) => {
     if (endDate && (!startDate || compareDates(endDate, startDate) < 0)) {
@@ -108,6 +111,9 @@ const futureContentWire = z.strictObject({
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
   responsible: responsibleSchema.nullable(),
+  organizer: z.string().nullable(),
+  participants: z.string().nullable(),
+  note: z.string().nullable(),
 });
 
 /** What the stored content is made of, as the domain has it. */
@@ -120,6 +126,9 @@ export interface FutureContentValue {
   readonly campus: Campus | null;
   readonly place: string | null;
   readonly responsible: Responsible | null;
+  readonly organizer: string | null;
+  readonly participants: string | null;
+  readonly note: string | null;
 }
 
 const dateText = (date: CalDate | null) => date && toIsoDate(date);
@@ -159,6 +168,9 @@ export const futureView = z.strictObject({
       names: z.array(z.string()),
     })
     .nullable(),
+  organizer: z.string().nullable(),
+  participants: z.string().nullable(),
+  note: z.string().nullable(),
 });
 
 /** The stored content as `futureView`: the wire conversion, with the people reduced to names. */

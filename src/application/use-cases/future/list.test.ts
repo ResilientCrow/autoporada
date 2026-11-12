@@ -20,6 +20,9 @@ const EMPTY_CONTENT: FutureContent = {
   timeTo: null,
   campus: null,
   place: null,
+  organizer: null,
+  participants: null,
+  note: null,
   responsible: null,
 };
 const { start, moveTo } = futureFixtures(world);

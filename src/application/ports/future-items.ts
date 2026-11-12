@@ -16,6 +16,10 @@ export interface FutureContent {
   /** A locative phrase: „v učebně S206“. */
   readonly place: string | null;
   readonly responsible: Responsible | null;
+  /** Free text printed as typed (ADR 0060). */
+  readonly organizer: string | null;
+  readonly participants: string | null;
+  readonly note: string | null;
 }
 
 /** A future item as its author wrote it, with where it stands in review. */
