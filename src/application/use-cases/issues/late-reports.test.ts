@@ -49,7 +49,7 @@ describe('lateReportsExpected', () => {
     expect((await expectedAs(head)).map((e) => e.id)).toEqual([kept]);
   });
 
-  it('counts a multi-day akce from its last day', async () => {
+  it('counts a multi-day akce from its last day, at 20.00: it carries no time (ADR 0060)', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const author = await world.seed.user({ role: 'submitter' });
     const id = await late.akce(author, {
@@ -58,7 +58,7 @@ describe('lateReportsExpected', () => {
       timeTo: '21:00',
     });
     expect((await expectedAs(head)).map((e) => [e.id, e.due])).toEqual([
-      [id, new Date('2026-11-01T22:00:00Z')],
+      [id, new Date('2026-11-01T21:00:00Z')],
     ]);
   });
 

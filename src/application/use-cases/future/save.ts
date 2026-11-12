@@ -39,21 +39,18 @@ export const saveFuture = defineUseCase({
     });
     if (revises !== (intent === 'revise')) return notEditable;
 
+    // The editors hide the times of a multi-day item: a change that makes one multi-day drops them.
+    const stored = withoutTimesOnMultiDay(content);
     if (revises) {
-      // The editors hide the times of a multi-day item: a change that makes one multi-day drops them.
-      const revisedContent = withoutTimesOnMultiDay(content);
-      if (sameContent(item.content, revisedContent))
+      if (sameContent(item.content, stored))
         return ok({ version: item.version, state: item.state });
-      const fields = submitIssues(revisedContent);
+      const fields = submitIssues(stored);
       if (hasIssues(fields)) return fail({ code: 'invalid-input', fields });
-      const revised = await move(tx, item, 'revise', {
-        content: revisedContent,
-        submittedAt: now,
-      });
+      const revised = await move(tx, item, 'revise', { content: stored, submittedAt: now });
       return ok({ version: revised.version, state: revised.state });
     }
 
-    const saved = await tx.futureItems.update(item.id, item.version, { content });
+    const saved = await tx.futureItems.update(item.id, item.version, { content: stored });
     tx.audit.exempt('author-autosave', { type: 'future_item', id: item.id });
     return ok({ version: saved.version, state: saved.state });
   },

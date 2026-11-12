@@ -72,6 +72,18 @@ describe('future.save', () => {
       },
     );
 
+    it('drops the times when an autosave makes the item multi-day', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      expect(await save(author, id, readyAkce({ endDate: '2026-11-12' }))).toMatchObject({
+        ok: true,
+      });
+      expect(await get(author, id)).toMatchObject({
+        state: 'draft',
+        content: { endDate: calDate(2026, 11, 12), timeFrom: null, timeTo: null },
+      });
+    });
+
     it('keeps an unfinished item: nothing is required while it is a draft', async () => {
       const author = await user();
       const id = await start(author, 'akce');
