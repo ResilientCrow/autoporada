@@ -21,7 +21,11 @@ export default async function PoradaMissingReportsPage({
   if (model === null) notFound();
   return (
     <Shell viewer={viewer} current="/porada">
-      <MissingReportsPage model={model} action={setPlaceholder} confirmAction={confirmPlaceholder} />
+      <MissingReportsPage
+        model={model}
+        action={setPlaceholder}
+        confirmAction={confirmPlaceholder}
+      />
     </Shell>
   );
 }
