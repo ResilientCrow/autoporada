@@ -1,18 +1,8 @@
-import {
-  addDays,
-  compareDates,
-  instantToWallClock,
-  isSameDate,
-  mondayOf,
-  type CalDate,
-} from '@/domain/time';
+import { addDays, compareDates, instantToWallClock, isSameDate, type CalDate } from '@/domain/time';
 
-import { deadline, type DateRange, type DeadlineRule } from './issue-calendar';
+import { deadline, slotMondayOf, type DateRange, type DeadlineRule } from './issue-calendar';
 import { orderConflicts } from './order';
 import { lastSlotMonday, type IssueSlot } from './slots';
-
-/** The slot a day belongs to: the nearest Monday, so Monday to Thursday keep theirs and Friday to Sunday take the next one. */
-export const slotMondayOf = (date: CalDate): CalDate => mondayOf(addDays(date, 3));
 
 /** The latest day any porada may be held on from `today`: the Thursday after the calendar's last Monday. */
 const horizon = (today: CalDate): CalDate => addDays(lastSlotMonday(today), 3);

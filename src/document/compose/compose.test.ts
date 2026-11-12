@@ -371,17 +371,27 @@ describe('a meeting that is not on the Monday', () => {
     expect(plain(model, 2).join('\n')).toContain('exkurze 2.B do CERNu');
   });
 
-  it('counts the jednání week and the akce weeks from the meeting date', () => {
+  it('starts the windows at the meeting date and ends them where the Monday porada would', () => {
+    const headings = allBlocks(wednesday()).flatMap((b) =>
+      b.kind === 'point' && b.number <= 2 ? [b.text.replaceAll(NB, ' ')] : [],
+    );
+    expect(headings).toEqual([
+      'Zatím známá jednání v týdnu od 14. října do 19. října 2026',
+      'Zatím známé akce v týdnech od 14. října do 26. října 2026',
+    ]);
+  });
+
+  it('lists exactly the items of the shortened windows', () => {
     const model = wednesday((raw) => {
       items(raw).push(
-        { id: 'w1', kind: 'jednani', title: 'jednání za týden', date: '2026-10-21' },
-        { id: 'w4', kind: 'jednani', title: 'jednání po týdnu', date: '2026-10-22' },
+        { id: 'w1', kind: 'jednani', title: 'jednání v pondělí po poradě', date: '2026-10-19' },
+        { id: 'w4', kind: 'jednani', title: 'jednání po týdnu', date: '2026-10-20' },
         { id: 'w5', kind: 'akce', title: 'akce v den porady', date: '2026-10-14' },
-        { id: 'w2', kind: 'akce', title: 'akce za dva týdny', date: '2026-10-28' },
-        { id: 'w3', kind: 'akce', title: 'akce po oknu', date: '2026-10-29' },
+        { id: 'w2', kind: 'akce', title: 'akce za dva týdny', date: '2026-10-26' },
+        { id: 'w3', kind: 'akce', title: 'akce po oknu', date: '2026-10-27' },
       );
     });
-    expect(plain(model, 1).join('\n')).toContain('jednání za týden');
+    expect(plain(model, 1).join('\n')).toContain('jednání v pondělí po poradě');
     expect(allBlocks(model).map(text).join('\n')).not.toContain('jednání po týdnu');
     expect(plain(model, 2).join('\n')).toContain('akce v den porady');
     expect(plain(model, 2).join('\n')).toContain('akce za dva týdny');

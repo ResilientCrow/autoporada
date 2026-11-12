@@ -9,7 +9,17 @@ import {
   toIsoDate,
 } from '@/domain/time';
 
-import { deadline, eventEndedBefore, issuePhase, routeFutureItem, type FutureKind } from './index';
+import {
+  deadline,
+  eventEndedBefore,
+  eventsWindow,
+  issuePhase,
+  meetingsWindow,
+  routeFutureItem,
+  slotMondayOf,
+  type DateRange,
+  type FutureKind,
+} from './index';
 
 describe('deadline', () => {
   it.each([
@@ -93,6 +103,51 @@ describe('routeFutureItem (issue of 12 October 2026)', () => {
     [item('akce', '2026-12-01'), 'later'],
   ])('%o → %s', (future, slot) => {
     expect(routeFutureItem(future, M)).toBe(slot);
+  });
+});
+
+describe('the two agenda windows', () => {
+  const range = (r: DateRange) => `${toIsoDate(r.from)}..${toIsoDate(r.to)}`;
+
+  it.each([
+    ['2026-10-12', '2026-10-12..2026-10-19', '2026-10-12..2026-10-26', 'a Monday porada'],
+    ['2026-11-18', '2026-11-18..2026-11-23', '2026-11-18..2026-11-30', 'moved to Wednesday'],
+    ['2026-11-19', '2026-11-19..2026-11-23', '2026-11-19..2026-11-30', 'moved to Thursday'],
+    ['2026-10-29', '2026-10-29..2026-11-02', '2026-10-29..2026-11-09', 'across a month end'],
+    ['2026-12-31', '2026-12-31..2027-01-04', '2026-12-31..2027-01-11', 'across a year end'],
+    ['2026-09-25', '2026-09-25..2026-10-05', '2026-09-25..2026-10-12', 'Friday before its Monday'],
+  ])('meeting %s: jednání %s, akce %s (%s)', (meeting, meetings, events) => {
+    expect(range(meetingsWindow(d(meeting)))).toBe(meetings);
+    expect(range(eventsWindow(d(meeting)))).toBe(events);
+  });
+
+  it('start at the meeting and end on the Monday one and two weeks after its slot (property)', () => {
+    fc.assert(
+      fc.property(
+        fc.date({ min: new Date('2026-01-01'), max: new Date('2030-12-31'), noInvalidDate: true }),
+        (day) => {
+          const meeting = instantToWallClock(day).date;
+          const slot = slotMondayOf(meeting);
+          expect(meetingsWindow(meeting)).toEqual({ from: meeting, to: addDays(slot, 7) });
+          expect(eventsWindow(meeting)).toEqual({ from: meeting, to: addDays(slot, 14) });
+        },
+      ),
+    );
+  });
+});
+
+describe('routeFutureItem (porada moved to Wednesday 18 November 2026)', () => {
+  const M = d('2026-11-18');
+  it.each([
+    ['jednani', '2026-11-17', 'hidden'],
+    ['jednani', '2026-11-18', 'meetings'],
+    ['jednani', '2026-11-23', 'meetings'],
+    ['jednani', '2026-11-24', 'hidden'],
+    ['akce', '2026-11-30', 'events'],
+    ['akce', '2026-12-01', 'later'],
+    ['akce', '2026-12-02', 'later'],
+  ] as const)('%s on %s → %s', (kind, date, slot) => {
+    expect(routeFutureItem({ kind, date: d(date) }, M)).toBe(slot);
   });
 });
 

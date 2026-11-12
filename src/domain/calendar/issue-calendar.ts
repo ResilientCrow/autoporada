@@ -2,6 +2,7 @@ import {
   addDays,
   compareDates,
   isoWeekday,
+  mondayOf,
   parseWallTime,
   wallClockToInstant,
   type CalDate,
@@ -39,14 +40,30 @@ export interface DateRange {
   readonly to: CalDate;
 }
 
-/** Point 1: „Zatím známá jednání v týdnu od M do M+7“, M the meeting date (both ends inclusive). */
-export function meetingsWindow(meeting: CalDate): DateRange {
-  return { from: meeting, to: addDays(meeting, 7) };
+/** The slot a day belongs to: the nearest Monday, so Monday to Thursday keep theirs and Friday to Sunday take the next one. */
+export const slotMondayOf = (date: CalDate): CalDate => mondayOf(addDays(date, 3));
+
+/** The Monday porada's point 1 runs a week, point 2 two weeks (both ends inclusive). */
+const MEETINGS_WEEKS = 1;
+const EVENTS_WEEKS = 2;
+
+/**
+ * From the meeting date to the Monday `weeks` after its slot (ADR 0059): a Monday porada runs the
+ * full weeks, one moved later in the week ends where its Monday would, one held on the Friday to
+ * Sunday before its Monday runs from that day.
+ */
+function agendaWindow(meeting: CalDate, weeks: number): DateRange {
+  return { from: meeting, to: addDays(slotMondayOf(meeting), 7 * weeks) };
 }
 
-/** Point 2: „Zatím známé akce v týdnech od M do M+14“, M the meeting date. */
+/** Point 1: „Zatím známá jednání v týdnu od M do S+7“, M the meeting date, S its slot Monday. */
+export function meetingsWindow(meeting: CalDate): DateRange {
+  return agendaWindow(meeting, MEETINGS_WEEKS);
+}
+
+/** Point 2: „Zatím známé akce v týdnech od M do S+14“. */
 export function eventsWindow(meeting: CalDate): DateRange {
-  return { from: meeting, to: addDays(meeting, 14) };
+  return agendaWindow(meeting, EVENTS_WEEKS);
 }
 
 export interface Dated {
@@ -72,8 +89,8 @@ export type FutureSlot = 'meetings' | 'events' | 'later' | 'hidden';
 
 /**
  * Where an approved future item appears in the issue whose meeting is on `meeting`:
- * - jednání overlapping the week from the meeting date → point 1;
- * - akce overlapping the next two weeks → point 2;
+ * - jednání overlapping `meetingsWindow` → point 1;
+ * - akce overlapping `eventsWindow` → point 2;
  * - later akce → the last PROVOZ point, „Další doposud známé akce školy“;
  * - finished items, and jednání beyond the week, are not listed (yet).
  * Items therefore move up week by week without anyone touching them.

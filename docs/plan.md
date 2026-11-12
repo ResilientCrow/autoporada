@@ -325,13 +325,13 @@ Each renderer handles every block type exhaustively (a `switch` on `never`), so 
 - **Point numbering is continuous** across all three sections ("1).").
 - Empty optional parts are left out: HOSPODAŘENÍ, ohlasy, Příloha 2, an empty point-4 list line, and an empty "Další doposud známé akce".
 
-**Routing future items** (approved, not cancelled, M = the meeting Monday)
+**Routing future items** (approved, not cancelled, M = the meeting date, S = its slot Monday, `slotMondayOf(M)`; ADR 0059)
 
 | Item | Window | Goes to |
 |---|---|---|
-| jednání | overlaps [M, M+7] | point 1 |
-| akce | overlaps [M, M+14] | point 2 |
-| akce | starts after M+14 | last PROVOZ point, "Další doposud známé akce školy" |
+| jednání | overlaps [M, S+7] | point 1 |
+| akce | overlaps [M, S+14] | point 2 |
+| akce | starts after S+14 | last PROVOZ point, "Další doposud známé akce školy" |
 
 The headings come from the windows, e.g. "v týdnu od 19. října do 26. října 2026", including cross-month and cross-year cases.
 

@@ -39,7 +39,7 @@ record that supersedes it.
 | [0031](0031-rich-text-editor-under-the-nonce-csp.md) | Rich-text editor under the nonce CSP | Accepted |
 | [0032](0032-settings-and-the-meeting-relative-deadline.md) | Settings and the meeting-relative deadline | Accepted; the user's opt-out sentence of item 3 superseded by 0046; calendar edits take the lock in update mode, amended by 0054 |
 | [0033](0033-registry-without-people-ids.md) | Registry without people ids | Accepted |
-| [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted; item 6 (the moved mail) superseded by 0037; item 3 (`issues.move`) and part of item 2 superseded by 0051; item 7 and „non-skipped“ in item 2 superseded by 0054 |
+| [0034](0034-a-porada-is-a-monday-slot-with-a-free-meeting-date.md) | A porada is a Monday slot with a free meeting date | Accepted; item 6 (the moved mail) superseded by 0037; item 3 (`issues.move`) and part of item 2 superseded by 0051; item 7 and „non-skipped“ in item 2 superseded by 0054; item 5 (window ends) superseded in part by 0059 |
 | [0035](0035-late-event-reports.md) | Late-event reports | Accepted; item 9 (the headmaster's late summary) superseded by 0037 |
 | [0036](0036-a-returned-proposal-keeps-its-place.md) | A returned proposal keeps its place in the outline | Accepted |
 | [0037](0037-four-mails-switched-off.md) | Four mails switched off | Accepted |
@@ -64,3 +64,4 @@ record that supersedes it.
 | [0056](0056-a-refused-report-closes-its-akce.md) | A refused report closes its akce | Accepted; supersedes 0049 item 3 in part; builds on 0052 |
 | [0057](0057-the-author-deletes-an-unfinished-akce.md) | The author deletes an unfinished akce or schůzka | Accepted; adds to 0053 |
 | [0058](0058-a-return-names-the-parts-to-rework.md) | A return names the parts to rework | Accepted; adds to 0053 |
+| [0059](0059-the-agenda-windows-end-where-the-monday-porada-would.md) | The agenda windows end where the Monday porada would | Accepted; supersedes 0034 item 5 in part |
