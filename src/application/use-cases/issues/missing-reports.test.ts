@@ -66,6 +66,10 @@ describe('issues.missingReports', () => {
       paragraph: expect.any(String),
       original: expect.any(String),
       own: false,
+      status: 'open',
+      checked: false,
+      dueAt: expect.any(String),
+      akceVersion: expect.any(Number),
       version: 0,
     });
     expect(plain(page.reports[0]!.paragraph)).toBe(

@@ -14,6 +14,12 @@ export {
   type FutureReturnPart,
   type PointReturnPart,
 } from './parts';
+export {
+  placeholderChecked,
+  placeholderStatus,
+  type PlaceholderBasis,
+  type PlaceholderStatus,
+} from './placeholder';
 export { reportPromptStage, reportPromptWindow } from './report-prompt';
 export {
   availableEvents,

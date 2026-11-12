@@ -1,11 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { PERSON_FIELD_MAX } from '@/domain/cs';
+import { PERSON_FIELD_MAX, placeholderParagraph } from '@/domain/cs';
 import { LIMITS as RICH_LIMITS } from '@/domain/richtext';
+import { calDate, parseWallTime } from '@/domain/time';
 
 import { DIRECTORY_LIMITS, POINT_LIMITS, PERSON_FIELD_MAX as REEXPORTED } from './index';
 
 describe('POINT_LIMITS', () => {
+  it('fits the longest paragraph the system writes for a missing report', () => {
+    const paragraph = placeholderParagraph({
+      date: calDate(2026, 12, 28),
+      endDate: calDate(2027, 1, 1),
+      from: parseWallTime('14:00'),
+      campus: 'na-vidouli',
+      place: 'š'.repeat(POINT_LIMITS.place),
+      title: 'ž'.repeat(POINT_LIMITS.title),
+      organizer: 'á'.repeat(POINT_LIMITS.organizer),
+      participants: 'é'.repeat(POINT_LIMITS.participants),
+    });
+    expect(paragraph.length).toBeLessThanOrEqual(POINT_LIMITS.placeholder);
+  });
+
   it('pins the bounds of design section 14', () => {
     expect(POINT_LIMITS).toMatchObject({
       peoplePerBullet: 200,
@@ -15,6 +30,7 @@ describe('POINT_LIMITS', () => {
       bodyBytes: 64 * 1024,
       title: 200,
       opening: 1000,
+      placeholder: 4000,
       place: 120,
       textBullet: 2000,
       quote: 1500,

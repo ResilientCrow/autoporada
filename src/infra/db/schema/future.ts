@@ -145,10 +145,12 @@ export const futureEvents = pgTable(
 );
 
 /**
- * The headmaster's replacement for the paragraph a missing report prints (ADR 0049), one row per
- * akce so it follows the akce across a skip or a move. No row means the paragraph the system
- * writes. Plain text people wrote, so it is never logged or audited; the worker has no grant on
- * it. Migration 0048 attaches the `version_bump` trigger.
+ * What the headmaster did with the paragraph a missing report prints (ADR 0049, 0061), one row per
+ * akce so it follows the akce across a skip or a move. `paragraph` is their replacement (null: the
+ * system's text prints); `confirmed_original` is the system paragraph they confirmed, and the
+ * placeholder is checked while it equals the one the system writes now. Plain text people wrote,
+ * so it is never logged or audited; the worker has no grant on it. Migration 0048 attaches the
+ * `version_bump` trigger.
  */
 export const reportPlaceholders = pgTable(
   'report_placeholders',
@@ -156,14 +158,23 @@ export const reportPlaceholders = pgTable(
     futureItemId: uuid()
       .primaryKey()
       .references(() => futureItems.id, { onDelete: 'cascade' }),
-    paragraph: text().notNull(),
+    paragraph: text(),
+    confirmedOriginal: text(),
     version: integer().notNull().default(1),
     updatedAt: at().notNull().defaultNow(),
   },
   (t) => [
     check(
       'report_placeholders_paragraph',
-      sql`char_length(${t.paragraph}) BETWEEN 1 AND ${sql.raw(String(POINT_LIMITS.opening))}`,
+      sql`${t.paragraph} IS NULL OR char_length(${t.paragraph}) BETWEEN 1 AND ${sql.raw(String(POINT_LIMITS.placeholder))}`,
+    ),
+    check(
+      'report_placeholders_confirmed_original',
+      sql`${t.confirmedOriginal} IS NULL OR char_length(${t.confirmedOriginal}) BETWEEN 1 AND ${sql.raw(String(POINT_LIMITS.placeholder))}`,
+    ),
+    check(
+      'report_placeholders_not_empty',
+      sql`${t.paragraph} IS NOT NULL OR ${t.confirmedOriginal} IS NOT NULL`,
     ),
   ],
 );

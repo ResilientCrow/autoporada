@@ -95,6 +95,8 @@ export {
   queueFutureOutput,
 } from './future-review';
 export {
+  confirmPlaceholderInput,
+  confirmPlaceholderOutput,
   missingReportsInput,
   missingReportsOutput,
   reportTallyInput,

@@ -22,6 +22,8 @@ export const POINT_LIMITS = {
   bodyBytes: RICH_LIMITS.maxBytes,
   title: 200,
   opening: 1000,
+  /** A missing report's paragraph, the system's or the headmaster's (ADR 0061). */
+  placeholder: 4000,
   /** An akce's Organizátor, Účastníci and Poznámka: free text printed as typed (ADR 0060). */
   organizer: 1000,
   participants: 2000,

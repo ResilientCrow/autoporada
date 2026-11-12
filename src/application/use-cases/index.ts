@@ -27,6 +27,7 @@ import {
 import { documentArchive, downloadDocument } from './documents';
 import {
   addIssue,
+  confirmPlaceholder,
   dropIssue,
   generateIssue,
   issueMissingReports,
@@ -104,6 +105,7 @@ export {
 export { documentArchive, downloadDocument } from './documents';
 export {
   addIssue,
+  confirmPlaceholder,
   dropIssue,
   generateIssue,
   issueMissingReports,
@@ -168,6 +170,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   cancelFuture,
   changeUserAccess,
   completeSignIn,
+  confirmPlaceholder,
   createFuture,
   createPoint,
   decideAccess,

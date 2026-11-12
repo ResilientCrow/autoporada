@@ -1,15 +1,17 @@
-import { defineUseCase, fail, ok, readReportsSince } from '@/application/core';
+import { defineUseCase, fail, ok } from '@/application/core';
 import { setPlaceholderInput, setPlaceholderOutput } from '@/contracts';
-import { addDays, compareDates, toIsoDate } from '@/domain/time';
+import { compareDates, toIsoDate } from '@/domain/time';
 
+import { missingReportOf } from './assemble-missing';
 import { mondayOfText, readWindow } from './calendar';
 import { ensureIssue } from './ensure';
 
 /**
  * „Chybějící zprávy“: the headmaster's own paragraph for an akce the porada owes a report for
  * (ADR 0049). A text stores it under the akce, at the version the page read (0: no row yet); null
- * is „Obnovit původní text“ and removes the row, back to the paragraph the system writes. Only an
- * open porada can be edited, and only for an akce owed to it. The text is never audited.
+ * is „Obnovit původní text“ and removes the row, back to the paragraph the system writes. A
+ * save clears the confirmation (ADR 0061). Only an open porada can be edited, and only for an
+ * akce owed to it that has no report. The text is never audited.
  */
 export const setPlaceholder = defineUseCase({
   name: 'issues.setPlaceholder',
@@ -34,9 +36,14 @@ export const setPlaceholder = defineUseCase({
     const issue = await tx.issues.lock(ensured.id);
     if (issue.status !== 'open') return fail({ code: 'rule', rule: 'issue-not-open' });
 
-    const since = await readReportsSince(tx, monday, plannedThrough);
-    const owed = await tx.futureItems.owedTo({ from: since, to: addDays(issue.meetingDate, -1) });
-    if (!owed.some((akce) => akce.id === input.itemId)) {
+    const missing = await missingReportOf(
+      tx,
+      monday,
+      issue.meetingDate,
+      plannedThrough,
+      input.itemId,
+    );
+    if (missing === null) {
       return fail({ code: 'invalid-input', fields: { itemId: 'invalid' } });
     }
 

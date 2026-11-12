@@ -7,10 +7,23 @@ import type { FakeState, FakeTxState } from './state';
 
 const codePoints = (text: string) => [...text].length;
 
-/** What migration 0047 refuses, in PostgreSQL's order: the CHECK by name, then the foreign key. */
-function refuse(state: FakeState, futureItemId: string, paragraph: string): void {
-  const length = codePoints(paragraph);
-  if (length < 1 || length > POINT_LIMITS.opening) throw refusedBy('report_placeholders_paragraph');
+/**
+ * What migrations 0047 and 0055 refuse, in PostgreSQL's order: the CHECKs by name, then the
+ * foreign key.
+ */
+function refuse(
+  state: FakeState,
+  futureItemId: string,
+  paragraph: string | null,
+  confirmedOriginal: string | null,
+): void {
+  const outOfBounds = (text: string | null) =>
+    text !== null && (codePoints(text) < 1 || codePoints(text) > POINT_LIMITS.placeholder);
+  if (outOfBounds(confirmedOriginal)) throw refusedBy('report_placeholders_confirmed_original');
+  if (paragraph === null && confirmedOriginal === null) {
+    throw refusedBy('report_placeholders_not_empty');
+  }
+  if (outOfBounds(paragraph)) throw refusedBy('report_placeholders_paragraph');
   if (!state.futureItems.has(futureItemId)) {
     throw refusedBy('report_placeholders_future_item_id_future_items_id_fk');
   }
@@ -45,11 +58,33 @@ export function fakeReportPlaceholderRepo(tx: FakeTxState, ctx: TxContext): Repo
       mayWrite();
       const current = reportPlaceholders.get(futureItemId);
       // An insert is checked before it meets an existing row; an update only once it matches one.
-      if (expectedVersion === 0) refuse(tx.draft, futureItemId, paragraph);
+      if (expectedVersion === 0) refuse(tx.draft, futureItemId, paragraph, null);
       if ((current?.version ?? 0) !== expectedVersion) return null;
-      refuse(tx.draft, futureItemId, paragraph);
+      refuse(tx.draft, futureItemId, paragraph, null);
       const version = expectedVersion + 1;
-      reportPlaceholders.set(futureItemId, { futureItemId, paragraph, version });
+      reportPlaceholders.set(futureItemId, {
+        futureItemId,
+        paragraph,
+        confirmedOriginal: null,
+        version,
+      });
+      tx.written.push({ type: 'future_item', id: futureItemId });
+      return version;
+    },
+    async confirm(futureItemId, original, expectedVersion) {
+      guard(tx, true);
+      mayWrite();
+      const current = reportPlaceholders.get(futureItemId);
+      if (expectedVersion === 0) refuse(tx.draft, futureItemId, null, original);
+      if ((current?.version ?? 0) !== expectedVersion) return null;
+      refuse(tx.draft, futureItemId, current?.paragraph ?? null, original);
+      const version = expectedVersion + 1;
+      reportPlaceholders.set(futureItemId, {
+        futureItemId,
+        paragraph: current?.paragraph ?? null,
+        confirmedOriginal: original,
+        version,
+      });
       tx.written.push({ type: 'future_item', id: futureItemId });
       return version;
     },

@@ -1,6 +1,7 @@
 export { addIssue } from './add';
 export { readWindow } from './calendar';
 export { ensureIssue } from './ensure';
+export { confirmPlaceholder } from './confirm-placeholder';
 export { dropIssue } from './drop';
 export { generateIssue } from './generate';
 export { issueMissingReports } from './missing-reports';

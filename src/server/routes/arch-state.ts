@@ -121,7 +121,7 @@ export async function archState(
   const placeholderRows = staff ? await db.placeholders(fIds) : [];
   const placeholders: Record<string, string> = {};
   for (const r of placeholderRows) {
-    placeholders[r.futureItemId] = r.paragraph;
+    if (r.paragraph !== null) placeholders[r.futureItemId] = r.paragraph;
     vers[`ph:${r.futureItemId}`] = r.version;
   }
   const docs = staff ? await db.documents() : [];

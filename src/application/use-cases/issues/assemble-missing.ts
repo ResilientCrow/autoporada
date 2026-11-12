@@ -1,4 +1,6 @@
+import { readReportsSince } from '@/application/core';
 import type { FutureItemRecord, PointRecord, Tx } from '@/application/ports';
+import { lateFacts, reportCloses, type PoradaClose } from '@/domain/calendar';
 import { placeholderParagraph } from '@/domain/cs';
 import { richDocFromText, singleLine } from '@/domain/richtext';
 import { addDays, compareDates, toIsoDate, type CalDate } from '@/domain/time';
@@ -38,6 +40,36 @@ export async function missingReports(
     if (report?.state === 'published' || report?.state === 'rejected') return [];
     return [{ akce, report }];
   });
+}
+
+/**
+ * The missing report of `itemId` for the porada of `monday`, or null when that akce is not owed to
+ * it or has a report (the same reading the preview and the generation do). The one check
+ * `issues.setPlaceholder` and `issues.confirmPlaceholder` share.
+ */
+export async function missingReportOf(
+  tx: Pick<Tx, 'issues' | 'points' | 'futureItems'>,
+  monday: CalDate,
+  meetingDate: CalDate,
+  plannedThrough: CalDate,
+  itemId: string,
+): Promise<MissingReport | null> {
+  const since = await readReportsSince(tx, monday, plannedThrough);
+  const eligible = await tx.points.eligibleFor(monday, meetingDate, { since });
+  const owed = await owedAkce(tx, since, meetingDate);
+  const missing = await missingReports(
+    tx,
+    owed.filter((a) => a.id === itemId),
+    eligible,
+  );
+  return missing[0] ?? null;
+}
+
+/** When hand-in closes for the akce at `porada` (ADR 0035); null for an akce without a start date. */
+export function placeholderCloses(akce: FutureItemRecord, porada: PoradaClose): Date | null {
+  const c = akce.content;
+  const facts = lateFacts({ eventDate: c.startDate, endDate: c.endDate, timeTo: c.timeTo });
+  return facts === undefined ? null : reportCloses(porada, facts);
 }
 
 /** An akce's days as the snapshot dates them: the end only when it is after the start. */

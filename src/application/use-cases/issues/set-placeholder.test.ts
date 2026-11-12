@@ -61,7 +61,7 @@ describe('issues.setPlaceholder', () => {
     const id = await owedAkce();
     expect(await send(head, id)).toEqual({ ok: true, value: { version: 1 } });
     expect(await storedOf(id)).toEqual([
-      { futureItemId: id, paragraph: 'Vlastní věta.', version: 1 },
+      { futureItemId: id, paragraph: 'Vlastní věta.', confirmedOriginal: null, version: 1 },
     ]);
   });
 
@@ -197,7 +197,7 @@ describe('issues.setPlaceholder', () => {
   it.each([
     ['empty', '', 'required'],
     ['blank', ' \n\t ', 'required'],
-    ['too long', 'x'.repeat(POINT_LIMITS.opening + 1), 'too-long'],
+    ['too long', 'x'.repeat(POINT_LIMITS.placeholder + 1), 'too-long'],
   ])('refuses a %s paragraph', async (_name, paragraph, code) => {
     const head = await headmaster();
     const id = await owedAkce();
@@ -216,10 +216,10 @@ describe('issues.setPlaceholder', () => {
     expect((await storedOf(id))[0]?.paragraph).toBe('Věta.');
   });
 
-  it('takes a paragraph of POINT_LIMITS.opening characters', async () => {
+  it('takes a paragraph of POINT_LIMITS.placeholder characters', async () => {
     const head = await headmaster();
     const id = await owedAkce();
-    const paragraph = 'ž'.repeat(POINT_LIMITS.opening);
+    const paragraph = 'ž'.repeat(POINT_LIMITS.placeholder);
     expect(await send(head, id, { paragraph })).toEqual({ ok: true, value: { version: 1 } });
   });
 

@@ -26,6 +26,12 @@ const save = (id: string, paragraph: string, version: number, by: Principal = cl
     await tx.audit.record({ action: 'test.seed', target: { type: 'future_item', id } });
     return saved;
   });
+const confirm = (id: string, original: string, version: number, by: Principal = cli) =>
+  world.tx(by, async (tx) => {
+    const confirmed = await tx.reportPlaceholders.confirm(id, original, version);
+    await tx.audit.record({ action: 'test.seed', target: { type: 'future_item', id } });
+    return confirmed;
+  });
 const remove = (id: string, version: number, by: Principal = cli) =>
   world.tx(by, async (tx) => {
     const removed = await tx.reportPlaceholders.remove(id, version);
@@ -49,7 +55,12 @@ describe('ReportPlaceholderRepo (port contract)', () => {
     const id = await akce();
     expect(await save(id, 'Dne 1. 11. 2026 proběhla akce Výlet.', 0)).toBe(1);
     expect(await many([id])).toEqual([
-      { futureItemId: id, paragraph: 'Dne 1. 11. 2026 proběhla akce Výlet.', version: 1 },
+      {
+        futureItemId: id,
+        paragraph: 'Dne 1. 11. 2026 proběhla akce Výlet.',
+        confirmedOriginal: null,
+        version: 1,
+      },
     ]);
   });
 
@@ -58,7 +69,9 @@ describe('ReportPlaceholderRepo (port contract)', () => {
     await save(id, 'První.', 0);
     expect(await save(id, 'Druhá.', 1)).toBe(2);
     expect(await save(id, 'Třetí.', 2)).toBe(3);
-    expect(await many([id])).toEqual([{ futureItemId: id, paragraph: 'Třetí.', version: 3 }]);
+    expect(await many([id])).toEqual([
+      { futureItemId: id, paragraph: 'Třetí.', confirmedOriginal: null, version: 3 },
+    ]);
   });
 
   it('gives null to a stale save and keeps the stored paragraph', async () => {
@@ -83,7 +96,9 @@ describe('ReportPlaceholderRepo (port contract)', () => {
     await save(one, 'Jedna.', 0);
     await save(two, 'Dvě.', 0);
     const got = await many([one, three]);
-    expect(got).toEqual([{ futureItemId: one, paragraph: 'Jedna.', version: 1 }]);
+    expect(got).toEqual([
+      { futureItemId: one, paragraph: 'Jedna.', confirmedOriginal: null, version: 1 },
+    ]);
     expect((await many([one, two, three])).map((r) => r.futureItemId).sort()).toEqual(
       [one, two].sort(),
     );
@@ -110,7 +125,7 @@ describe('ReportPlaceholderRepo (port contract)', () => {
 
   it('keeps Czech text, line-free punctuation and the longest paragraph intact', async () => {
     const id = await akce();
-    const longest = 'ž'.repeat(POINT_LIMITS.opening);
+    const longest = 'ž'.repeat(POINT_LIMITS.placeholder);
     await save(id, longest, 0);
     expect((await many([id]))[0]?.paragraph).toBe(longest);
     await save(id, 'Příloha „č. 1“ – 3 000 Kč.', 1);
@@ -121,7 +136,39 @@ describe('ReportPlaceholderRepo (port contract)', () => {
     const id = await akce();
     const refused = new DatabaseFailure('db.constraint.report_placeholders_paragraph');
     await expect(save(id, '', 0)).rejects.toEqual(refused);
-    await expect(save(id, 'x'.repeat(POINT_LIMITS.opening + 1), 0)).rejects.toEqual(refused);
+    await expect(save(id, 'x'.repeat(POINT_LIMITS.placeholder + 1), 0)).rejects.toEqual(refused);
+    expect(await many([id])).toEqual([]);
+  });
+
+  it('confirms the system paragraph without a paragraph of its own, then keeps and clears it', async () => {
+    const id = await akce();
+    expect(await confirm(id, 'Systém.', 0)).toBe(1);
+    expect(await many([id])).toEqual([
+      { futureItemId: id, paragraph: null, confirmedOriginal: 'Systém.', version: 1 },
+    ]);
+    // A save puts the paragraph in and clears the confirmation; a confirmation keeps the paragraph.
+    expect(await save(id, 'Moje.', 1)).toBe(2);
+    expect((await many([id]))[0]).toMatchObject({ confirmedOriginal: null });
+    expect(await confirm(id, 'Systém 2.', 2)).toBe(3);
+    expect((await many([id]))[0]).toMatchObject({
+      paragraph: 'Moje.',
+      confirmedOriginal: 'Systém 2.',
+    });
+  });
+
+  it('gives null to a stale confirmation and one winner to two first ones', async () => {
+    const id = await akce();
+    expect(await confirm(id, 'A.', 0)).toBe(1);
+    expect(await confirm(id, 'B.', 0)).toBeNull();
+    expect(await confirm(id, 'B.', 4)).toBeNull();
+    expect((await many([id]))[0]?.confirmedOriginal).toBe('A.');
+  });
+
+  it('refuses an empty or over-long confirmation, as the table does', async () => {
+    const id = await akce();
+    const refused = new DatabaseFailure('db.constraint.report_placeholders_confirmed_original');
+    await expect(confirm(id, '', 0)).rejects.toEqual(refused);
+    await expect(confirm(id, 'x'.repeat(POINT_LIMITS.placeholder + 1), 0)).rejects.toEqual(refused);
     expect(await many([id])).toEqual([]);
   });
 

@@ -7,15 +7,15 @@ import { singleLine } from '@/domain/richtext';
 const monday = z.iso.date().max(10);
 
 /**
- * The paragraph a missing report prints (ADR 0049): plain text on one line, 1 to
- * `POINT_LIMITS.opening` characters after the ends are trimmed and the line breaks collapsed (the
+ * The paragraph a missing report prints (ADR 0049, 0061): plain text on one line, 1 to
+ * `POINT_LIMITS.placeholder` characters after the ends are trimmed and the line breaks collapsed (the
  * pipeline has already dropped control characters). An empty one is `required`, a long one
  * `too-long`, before the database's CHECK sees it.
  */
 const paragraph = z
   .string()
   .transform(singleLine)
-  .pipe(z.string().min(1).max(POINT_LIMITS.opening));
+  .pipe(z.string().min(1).max(POINT_LIMITS.placeholder));
 
 /**
  * „Uložit“ on Chybějící zprávy sends the paragraph; „Obnovit původní text“ sends null. The version
@@ -31,6 +31,23 @@ export const setPlaceholderInput = z.strictObject({
 export const setPlaceholderOutput = z.strictObject({
   /** The row's version after the write: what the next save starts from; 0 after a reset. */
   version: z.int().min(0),
+});
+
+/**
+ * „Zkontrolováno“ on a missing report (ADR 0061): the headmaster confirms the paragraph the system
+ * writes now. `expectedVersion` is the placeholder's version the page read (0: no row yet) and
+ * `akceVersion` the akce's, so a confirmation is never given to text the headmaster did not see.
+ */
+export const confirmPlaceholderInput = z.strictObject({
+  monday,
+  itemId: z.uuid(),
+  expectedVersion: z.int().min(0),
+  akceVersion: z.int().min(1),
+});
+
+export const confirmPlaceholderOutput = z.strictObject({
+  /** The row's version after the write: what the next write starts from. */
+  version: z.int().min(1),
 });
 
 export const missingReportsInput = z.strictObject({ monday });
@@ -61,8 +78,16 @@ const missingReport = z.strictObject({
   paragraph: z.string(),
   /** The paragraph the system writes: what „Obnovit původní text“ goes back to. */
   original: z.string(),
-  /** True when the paragraph is the headmaster's own (a row exists). */
+  /** True when the paragraph is the headmaster's own (it is stored). */
   own: z.boolean(),
+  /** Where the placeholder stands (`placeholderStatus`, ADR 0061). */
+  status: z.enum(['checked', 'handed-in', 'open', 'to-check']),
+  /** True when the headmaster confirmed the paragraph the system writes now. */
+  checked: z.boolean(),
+  /** When hand-in closes for the akce (ISO instant). */
+  dueAt: z.iso.datetime(),
+  /** The akce's version: what a confirmation names. */
+  akceVersion: z.int().min(1),
   /** What a save names: 0 when there is no row of its own. */
   version: z.int().min(0),
 });
