@@ -23,6 +23,17 @@ export const WEEKDAY_ACCUSATIVE = [
   'neděli',
 ] as const;
 
+/** „do pondělí“, „od středy“ … — the genitive used after od/do. */
+export const WEEKDAY_GENITIVE = [
+  'pondělí',
+  'úterý',
+  'středy',
+  'čtvrtka',
+  'pátku',
+  'soboty',
+  'neděle',
+] as const;
+
 /** „12. října“ — month names in the genitive, indexed by month - 1. */
 export const MONTH_GENITIVE = [
   'ledna',

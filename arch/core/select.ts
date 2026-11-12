@@ -118,7 +118,7 @@ export function owedTo(s: State, monday: string) {
 export function placeholderText(s: State, f: Future, monday: string): string {
   const custom = issueOf(s, monday)?.placeholders[f.id];
   if (custom) return custom;
-  return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), title: f.title, verb: f.responsible.verb, people: f.responsible.people.filter((p) => p.salutation) as never });
+  return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), ...(f.timeFrom && { from: f.timeFrom }), campus: f.campus, ...(f.place.trim() && { place: singleLine(f.place) }), title: singleLine(f.title), ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }) });
 }
 export const myPoints = (s: State, id: string) => s.points.filter((p) => p.authorId === id && p.state !== 'withdrawn');
 export const myFutures = (s: State, id: string) => s.futures.filter((f) => f.authorId === id && f.state !== 'withdrawn');

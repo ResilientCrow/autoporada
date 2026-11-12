@@ -7,7 +7,7 @@ import {
   type WallTime,
 } from '@/domain/time';
 
-import { MONTH_GENITIVE, WEEKDAY_ACCUSATIVE, WEEKDAY_NOMINATIVE } from './tables';
+import { MONTH_GENITIVE, WEEKDAY_ACCUSATIVE, WEEKDAY_GENITIVE, WEEKDAY_NOMINATIVE } from './tables';
 
 const EN_DASH = '–';
 
@@ -55,6 +55,16 @@ export function onWeekday(d: CalDate, { capitalize = false } = {}): string {
   const preposition = /^(st|čt)/.test(accusative) ? 've' : 'v';
   const phrase = `${preposition} ${accusative}`;
   return capitalize ? phrase[0]?.toUpperCase() + phrase.slice(1) : phrase;
+}
+
+/** „12. října“: the day and the month, no year. */
+export function formatDayMonthName(d: CalDate): string {
+  return `${d.day}. ${monthGenitive(d)}`;
+}
+
+/** „pondělí“, „středy“, „čtvrtka“ — the weekday after od and do. */
+export function weekdayGenitive(d: CalDate): string {
+  return WEEKDAY_GENITIVE[weekdayIndex(d)] ?? '';
 }
 
 function assertOrdered(from: CalDate, to: CalDate): void {

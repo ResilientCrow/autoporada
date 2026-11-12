@@ -3,29 +3,22 @@ import type { FutureContent } from '@/application/ports';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
 import { compareDates, compareTimes } from '@/domain/time';
 
-const blank = (text: string | undefined) => text !== undefined && text.trim() === '';
-
-/** What a handed-in item must hold: the pieces the CHECKs and the issue snapshot ask for. */
+/**
+ * What a handed-in item must hold: the pieces the CHECKs and the issue snapshot ask for. Nobody
+ * has to be named (ADR 0060).
+ */
 function readinessIssues(content: FutureContent): FieldIssues {
   const issues: Record<string, FieldIssueCode> = {};
-  const { title, startDate, endDate, timeFrom, timeTo, responsible } = content;
+  const { title, startDate, endDate, timeFrom, timeTo } = content;
   if (title.trim() === '') issues['content.title'] = 'required';
   if (startDate === null) issues['content.startDate'] = 'required';
+  const oneDay = endDate === null || (startDate !== null && compareDates(endDate, startDate) === 0);
+  // A multi-day item prints no time (ADR 0060): the editors clear it, a submit refuses it.
+  if (!oneDay && (timeFrom !== null || timeTo !== null)) issues['content.timeFrom'] = 'invalid';
   if (timeTo !== null) {
-    const oneDay =
-      endDate === null || (startDate !== null && compareDates(endDate, startDate) === 0);
     if (timeFrom === null || (oneDay && compareTimes(timeTo, timeFrom) <= 0)) {
       issues['content.timeTo'] = 'invalid';
     }
-  }
-  if (responsible) {
-    if (blank(responsible.behalfOf)) issues['content.responsible.behalfOf'] = 'required';
-    if (responsible.people.length === 0) issues['content.responsible.people'] = 'required';
-    responsible.people.forEach((person, i) => {
-      const at = `content.responsible.people.${i}`;
-      if (person.familyName.trim() === '') issues[`${at}.familyName`] = 'required';
-      if (person.salutation === null) issues[`${at}.salutation`] = 'required';
-    });
   }
   return issues;
 }

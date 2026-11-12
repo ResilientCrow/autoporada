@@ -1,16 +1,16 @@
 import { routeFutureItem } from '@/domain/calendar';
-import { csCollator, formatAgendaTimeRange, formatAgendaDays, formatTitleDate } from '@/domain/cs';
+import {
+  campusLabel,
+  csCollator,
+  formatAgendaTimeRange,
+  formatAgendaDays,
+  formatTitleDate,
+} from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
 import type { SnapshotFutureItem } from '@/snapshot';
 
 import type { Block } from '../model';
 import { finalText } from './text';
-
-const CAMPUS_LABEL: Readonly<Record<string, string>> = {
-  smichov: 'areál Smíchov',
-  radlice: 'areál Radlice',
-  'na-vidouli': 'areál Na Vidouli',
-};
 
 export interface RoutedFuture {
   readonly meetings: readonly SnapshotFutureItem[];
@@ -71,7 +71,7 @@ export function futureBullet(item: SnapshotFutureItem): Block {
   const parts = [
     multiDay ? formatAgendaDays(start, end) : formatTitleDate(start),
     time,
-    item.campus && CAMPUS_LABEL[item.campus],
+    campusLabel(item.campus),
     item.place,
     item.title,
     item.note,

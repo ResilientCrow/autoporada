@@ -1,81 +1,51 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseIsoDate as d } from '@/domain/time';
+import { parseIsoDate as d, parseWallTime } from '@/domain/time';
 
-import { placeholderParagraph, type Person, type PlaceholderInput } from '../index';
+import { placeholderParagraph, type PlaceholderInput } from '../index';
 
-const jan: Person = {
-  salutation: 'pan',
-  givenName: 'Jan',
-  familyName: 'Novák',
-  affiliation: '1.A',
-};
-const eva: Person = {
-  salutation: 'slecna',
-  givenName: 'Eva',
-  familyName: 'Malá',
-  affiliation: '3.B',
-};
-const lucie: Person = { salutation: 'pani', givenName: 'Lucie', familyName: 'Králová' };
-
-const base: PlaceholderInput = {
-  date: d('2027-09-18'),
-  title: 'Testovní akce',
-  verb: 'organizuje',
-  people: [jan],
+const full: PlaceholderInput = {
+  date: d('2026-05-05'),
+  from: parseWallTime('14:00'),
+  campus: 'smichov',
+  place: 'Zasedací místnost zastupitelstva Prahy 5',
+  title: 'předání diplomů oceněným studentům',
+  organizer: 'organizuje paní profesorka Jana Nováková',
+  participants: 'účast slečna Eva Malá (2.GA)',
 };
 
-describe('placeholderParagraph', () => {
-  it('writes the sentence of ADR 0049 for a one-day akce', () => {
-    expect(placeholderParagraph(base)).toBe(
-      'Dne 18. 9. 2027 proběhla akce s názvem Testovní akce, kterou organizoval pan Jan Novák (1.A).',
+describe('placeholderParagraph (ADR 0060)', () => {
+  it('writes every piece of a one-day akce', () => {
+    expect(placeholderParagraph(full)).toBe(
+      'V úterý 5. května 2026 od 14.00 hodin proběhla akce předání diplomů oceněným studentům ' +
+        '(areál Smíchov, Zasedací místnost zastupitelstva Prahy 5). ' +
+        'Akci zajišťovali: organizuje paní profesorka Jana Nováková. ' +
+        'Za Smíchovskou střední se zúčastnili: účast slečna Eva Malá (2.GA). ' +
+        'Zpráva o akci nebyla dodána.',
     );
   });
 
-  it('writes a multi-day akce as a range', () => {
-    expect(placeholderParagraph({ ...base, endDate: d('2027-09-18'), people: [] })).toBe(
-      'Dne 18. 9. 2027 proběhla akce s názvem Testovní akce.',
+  it('leaves out what is empty', () => {
+    expect(placeholderParagraph({ date: d('2026-05-06'), title: 'Výlet' })).toBe(
+      'Ve středu 6. května 2026 proběhla akce Výlet. Zpráva o akci nebyla dodána.',
     );
-    expect(placeholderParagraph({ ...base, date: d('2027-09-16'), endDate: d('2027-09-18') })).toBe(
-      'Ve dnech 16.–18. 9. 2027 proběhla akce s názvem Testovní akce, kterou organizoval pan Jan Novák (1.A).',
+    expect(placeholderParagraph({ ...full, campus: 'jinde', place: undefined })).toContain(
+      'studentům. Akci',
     );
+  });
+
+  it('writes a multi-day akce with weekday genitives and no time', () => {
     expect(
-      placeholderParagraph({ ...base, date: d('2027-09-30'), endDate: d('2027-10-02') }),
-    ).toContain('Ve dnech 30. 9. – 2. 10. 2027 proběhla');
+      placeholderParagraph({ ...full, date: d('2026-05-11'), endDate: d('2026-05-20') }),
+    ).toMatch(/^Od pondělí 11\. května do středy 20\. května 2026 proběhla akce předání/);
+    expect(
+      placeholderParagraph({ date: d('2026-12-28'), endDate: d('2027-01-01'), title: 'Lyžák' }),
+    ).toMatch(/^Od pondělí 28\. prosince 2026 do pátku 1\. ledna 2027 proběhla akce Lyžák\./);
   });
 
-  it.each([
-    ['organizuje', [jan], 'organizoval'],
-    ['organizuje', [eva], 'organizovala'],
-    ['organizuje', [jan, eva], 'organizovali'],
-    ['organizuje', [eva, lucie], 'organizovaly'],
-    ['koordinuje', [lucie], 'koordinovala'],
-    ['koordinuje', [jan, eva], 'koordinovali'],
-    ['zajišťuje', [jan], 'zajišťoval'],
-    ['zajišťuje', [eva, lucie], 'zajišťovaly'],
-    ['vede', [jan], 'vedl'],
-    ['vede', [eva], 'vedla'],
-    ['vede', [jan, eva], 'vedli'],
-    ['vede', [eva, lucie], 'vedly'],
-  ] as const)('puts %s with %j into the past tense: %s', (verb, people, word) => {
-    expect(placeholderParagraph({ ...base, verb, people })).toContain(`, kterou ${word} `);
-  });
-
-  it('lists several people as the agenda does', () => {
-    expect(placeholderParagraph({ ...base, people: [eva, jan] })).toContain(
-      'kterou organizovali slečna Eva Malá (3.B) a pan Jan Novák (1.A).',
-    );
-  });
-
-  it('ends after the title with nobody listed', () => {
-    expect(placeholderParagraph({ ...base, people: [] })).toBe(
-      'Dne 18. 9. 2027 proběhla akce s názvem Testovní akce.',
-    );
-  });
-
-  it('trims the title onto one line', () => {
-    expect(placeholderParagraph({ ...base, title: '  Testovní\takce \n', people: [] })).toBe(
-      'Dne 18. 9. 2027 proběhla akce s názvem Testovní akce.',
+  it('does not double a full stop the author typed', () => {
+    expect(placeholderParagraph({ ...full, organizer: 'paní Nováková.' })).toContain(
+      'Akci zajišťovali: paní Nováková. Za',
     );
   });
 });

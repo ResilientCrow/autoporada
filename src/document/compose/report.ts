@@ -37,11 +37,8 @@ function bulletLine(bullet: SnapshotBullet, groupOrder?: readonly Salutation[]):
   };
 }
 
-/** What a placeholder report says besides its paragraph (ADR 0049); the page of the paragraph shows them too. */
-export const MISSING_REPORT_LINES: readonly string[] = [
-  'Seznam účastníků nebyl dodán.',
-  'Vyjádření organizátora nebylo dodáno.',
-];
+/** What a placeholder report says besides its paragraph (ADR 0060): one line; the page of the paragraph shows it too. */
+export const MISSING_REPORT_LINES: readonly string[] = ['vyjádření organizátora: nebylo dodáno'];
 
 /**
  * One report as a numbered point: body, labelled bullets, then statements. The provoz section

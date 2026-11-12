@@ -1,14 +1,10 @@
 import type { FutureItemRecord, PointRecord, Tx } from '@/application/ports';
-import { snapshotPerson } from '@/document';
 import { placeholderParagraph } from '@/domain/cs';
 import { richDocFromText, singleLine } from '@/domain/richtext';
 import { addDays, compareDates, toIsoDate, type CalDate } from '@/domain/time';
 import type { SnapshotReport } from '@/snapshot';
 
 import type { MissingReport } from './assemble-types';
-
-/** Who writes an akce nobody is named for: the verb is unused without people. */
-const DEFAULT_VERB = 'organizuje' as const;
 
 /**
  * The akce this porada owes a report for (ADR 0049): `FutureItemRepo.owedTo` from the previous
@@ -52,7 +48,7 @@ export function akceDays(akce: FutureItemRecord): { start: CalDate; end?: CalDat
 }
 
 /**
- * The paragraph the system writes for a missing akce: its date, title and the people it names. Null
+ * The paragraph the system writes for a missing akce (ADR 0060): its date, time, title, place and the organizer and participants as typed. Null
  * for an akce without a start date, which cannot be dated.
  */
 export function systemParagraph(akce: FutureItemRecord): string | null {
@@ -63,14 +59,17 @@ export function systemParagraph(akce: FutureItemRecord): string | null {
     date: days.start,
     ...(days.end && { endDate: days.end }),
     title: singleLine(c.title),
-    verb: c.responsible?.verb ?? DEFAULT_VERB,
-    people: (c.responsible?.people ?? []).flatMap((p) => snapshotPerson(p) ?? []),
+    ...(c.timeFrom && { from: c.timeFrom }),
+    campus: c.campus,
+    ...(c.place && { place: singleLine(c.place) }),
+    ...(c.organizer && { organizer: singleLine(c.organizer) }),
+    ...(c.participants && { participants: singleLine(c.participants) }),
   });
 }
 
 /**
  * The snapshot's placeholder report of each missing akce: its stored paragraph, else the one the
- * system writes (`systemParagraph`), flagged `missing` so the document adds its two fixed lines, in
+ * system writes (`systemParagraph`), flagged `missing` so the document adds its fixed line, in
  * the order of `missing`. An akce without a start date cannot be dated and is left out.
  */
 export async function placeholderReports(
