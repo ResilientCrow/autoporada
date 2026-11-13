@@ -61,16 +61,3 @@ export const downloadDocumentOutput = z.strictObject({
   bytes: fileBytes,
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
-
-export const documentArchiveInput = z.strictObject({});
-
-/** Every generated porada, the latest meeting first. */
-export const documentArchiveOutput = z.strictObject({
-  documents: z.array(
-    z.strictObject({
-      monday: z.iso.date(),
-      meetingDate: z.iso.date(),
-      ...documentInfo.shape,
-    }),
-  ),
-});

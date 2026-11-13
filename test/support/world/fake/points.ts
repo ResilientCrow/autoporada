@@ -317,17 +317,6 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
           };
         });
     },
-    async ownRecent({ limit, since }) {
-      return own()
-        .filter((p) => p.updatedAt >= since)
-        .sort(newer)
-        .slice(0, limit)
-        .map(({ content: { bullets, statements }, updatedAt }) => ({
-          bullets,
-          statements,
-          updatedAt,
-        }));
-    },
     async mailFacts(id) {
       guard(tx, false);
       if (principal.kind !== 'system') throw new ScopeViolation();

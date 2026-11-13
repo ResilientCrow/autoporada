@@ -1,14 +1,6 @@
-import { randomUUID } from 'node:crypto';
-
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import {
-  DatabaseFailure,
-  system,
-  type Principal,
-  type Tx,
-  type UserPrincipal,
-} from '@/application/ports';
+import { DatabaseFailure, system, type Principal, type Tx } from '@/application/ports';
 
 import { setupTestDatabase } from '../../support/database';
 
@@ -53,14 +45,6 @@ const storeRow = async (jsonb: Jsonb, author = authorId) => {
   return row!.id;
 };
 
-/** An author as a signed-in user: the people memory reads only one's own points. */
-const asUser = (id: string): UserPrincipal => ({
-  kind: 'user',
-  actor: { id, role: 'submitter', status: 'active', isStudent: false },
-  sessionId: randomUUID(),
-  authTime: new Date(),
-});
-
 const read = <T>(
   run: (tx: Tx) => Promise<T>,
   mode: 'read' | 'write' = 'read',
@@ -100,9 +84,6 @@ const PEOPLE_REFUSED: readonly (readonly [string, Jsonb])[] = [
   ],
 ];
 
-const memory = (id: string) =>
-  read((tx) => tx.points.ownRecent({ limit: 30, since: new Date(0) }), 'read', asUser(id));
-
 describe('a stored point the contract refuses', () => {
   it.each<readonly [string, Jsonb]>([
     ...PEOPLE_REFUSED,
@@ -111,17 +92,5 @@ describe('a stored point the contract refuses', () => {
     const id = await storeRow(jsonb);
     expectCodeOnly(await read((tx) => tx.points.get(id)));
     expectCodeOnly(await read((tx) => tx.points.loadForWrite(id), 'write'));
-  });
-
-  it.each(PEOPLE_REFUSED)('fails the people memory with a code only: %s', async (_name, jsonb) => {
-    const own = await newAuthor();
-    await storeRow(jsonb, own);
-    expectCodeOnly(await memory(own));
-  });
-
-  it('reads the people memory past a body it never selects', async () => {
-    const own = await newAuthor();
-    await storeRow({ body: `{"type":"doc","content":[{"type":"${SECRET}"}]}` }, own);
-    expect(await memory(own)).toBeNull();
   });
 });

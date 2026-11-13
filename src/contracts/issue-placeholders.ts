@@ -100,20 +100,3 @@ export const missingReportsOutput = z.strictObject({
   open: z.boolean(),
   reports: z.array(missingReport),
 });
-
-export const reportTallyInput = z.strictObject({});
-
-/**
- * The headmaster's count on Přehled (ADR 0052): of the akce owed to the working porada, how many
- * have no report handed in. Null when no porada is open ahead or it is owed nothing.
- */
-export const reportTallyOutput = z.object({
-  porada: z
-    .strictObject({
-      monday: z.iso.date(),
-      meetingDate: z.iso.date(),
-      owed: z.int().min(1),
-      missing: z.int().min(0),
-    })
-    .nullable(),
-});

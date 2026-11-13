@@ -4,7 +4,6 @@ import {
   desc,
   eq,
   gt,
-  gte,
   inArray,
   isNotNull,
   lt,
@@ -24,7 +23,7 @@ import {
   type PointRepo,
   type TxContext,
 } from '@/application/ports';
-import { parsePointJsonb, parsePointPeople, type PointJsonb } from '@/contracts';
+import { parsePointJsonb, type PointJsonb } from '@/contracts';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
@@ -158,7 +157,6 @@ export function createPointReads(
   | 'loadForWrite'
   | 'listMine'
   | 'queue'
-  | 'ownRecent'
   | 'mailFacts'
   | 'countSubmittedSince'
   | 'handedInFor'
@@ -194,23 +192,6 @@ export function createPointReads(
     },
     async queue(limit) {
       return queuedPoints(db, visiblePoints(ctx), limit);
-    },
-    async ownRecent({ limit, since }) {
-      const rows = await db
-        .select({
-          bullets: points.bullets,
-          statements: points.statements,
-          updatedAt: points.updatedAt,
-        })
-        .from(points)
-        .where(and(ownPoints(ctx), gte(points.updatedAt, since)))
-        .orderBy(...NEWEST_FIRST)
-        .limit(limit);
-      return rows.map((row) => {
-        const people = parsePointPeople(row);
-        if (!people) throw new DatabaseFailure(PARSE_FAILURE);
-        return { ...people, updatedAt: row.updatedAt };
-      });
     },
     async mailFacts(id) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();

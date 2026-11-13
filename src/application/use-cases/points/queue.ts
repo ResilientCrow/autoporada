@@ -1,48 +1,35 @@
-import { defineUseCase, ok } from '@/application/core';
 import type { QueuedPoint, Tx } from '@/application/ports';
-import { QUEUE_LIMIT, queuePointsInput, queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
 import { pointMonday, type IssueSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
-import { pointType, type PointKind } from '@/domain/report';
-import { instantToWallClock, isSameDate, toIsoDate } from '@/domain/time';
+import type { PointKind } from '@/domain/report';
+import { instantToWallClock, toIsoDate } from '@/domain/time';
 
 import { readWindow } from '../issues';
+
+/** The most handed-in points the queue reads: the submitted ones first, each the oldest first. */
+const QUEUE_LIMIT = 500;
 
 /** The kinds in the order of the porada: „Provoz a akce“, „Hospodaření“, „Pokyny“. */
 const KIND_ORDER: readonly PointKind[] = ['report', 'finance', 'pokyn'];
 
-const rowWire = (row: QueuedPoint) => ({
-  id: row.id,
-  kind: row.kind,
-  title: row.title,
-  typeName: row.typeId === null ? null : pointType(row.typeId).name,
-  submittedAt: row.submittedAt.toISOString(),
-  returnedBefore: row.returnedBefore,
-});
-
-/** The ISO Monday the point goes to and the day that porada is held, or nulls when no Monday of the window takes it. */
-const placeOf = (row: QueuedPoint, now: Date, slots: readonly IssueSlot[]) => {
+/** The ISO Monday the point goes to, or null when no Monday of the window takes it. */
+const mondayOfPoint = (row: QueuedPoint, now: Date, slots: readonly IssueSlot[]) => {
   const monday = pointMonday(
     { earliest: row.earliestMonday, handIn: row.handInMonday },
     instantToWallClock(now).date,
     slots,
   );
-  const slot = monday && slots.find((candidate) => isSameDate(candidate.monday, monday));
-  return {
-    monday: monday && toIsoDate(monday),
-    meetingDate: slot ? toIsoDate(slot.meetingDate) : null,
-  };
+  return monday && toIsoDate(monday);
 };
 
 /** Null last; ISO dates sort as text. */
 const byMonday = (a: string | null, b: string | null) =>
   a === b ? 0 : a === null ? 1 : b === null ? -1 : a < b ? -1 : 1;
 
-/** A queued point with the porada it goes to. */
+/** A queued point with the Monday it goes to. */
 interface Placed {
   readonly monday: string | null;
-  readonly meetingDate: string | null;
   readonly row: QueuedPoint;
 }
 
@@ -51,37 +38,22 @@ function grouped(rows: readonly Placed[]) {
   const mondays = [...new Set(rows.map(({ monday }) => monday))].sort(byMonday);
   return mondays.map((monday) => {
     const ofMonday = rows.filter((entry) => entry.monday === monday).map(({ row }) => row);
-    return {
-      monday,
-      meetingDate: rows.find((entry) => entry.monday === monday)?.meetingDate ?? null,
-      kinds: KIND_ORDER.flatMap((kind) => {
-        const points = ofMonday.filter((row) => row.kind === kind).map(rowWire);
-        return points.length === 0 ? [] : [{ kind, points }];
-      }),
-    };
+    return KIND_ORDER.flatMap((kind) => ofMonday.filter((row) => row.kind === kind));
   });
 }
 
 /**
- * The queue as the reviewer's scope holds it now: the submitted points by the Monday they go to
- * (a generated Monday moves them on, as „Moje body“ does) and then by kind, the
- * approved ones still waiting for a porada apart. `keep` leaves rows out after the limit.
+ * The submitted points of the reviewer's scope by the Monday they go to (a generated Monday moves
+ * them on) and then by kind. `keep` leaves rows out after the limit.
  */
-async function readQueue(tx: Tx, now: Date, keep: (row: QueuedPoint) => boolean = () => true) {
-  // One row past the limit tells whether more wait than the queue lists.
+async function readQueue(tx: Tx, now: Date, keep: (row: QueuedPoint) => boolean) {
   const read = await tx.points.queue(QUEUE_LIMIT + 1);
   const { slots } = await readWindow(tx, now);
   const placed = read
     .slice(0, QUEUE_LIMIT)
     .filter(keep)
-    .map((row) => ({ ...placeOf(row, now, slots), row }));
-  return {
-    mondays: grouped(placed.filter(({ row }) => row.state === 'submitted')),
-    approved: placed
-      .filter(({ row }) => row.state === 'approved')
-      .map(({ monday, meetingDate, row }) => ({ ...rowWire(row), monday, meetingDate })),
-    more: read.length > QUEUE_LIMIT,
-  };
+    .map((row) => ({ monday: mondayOfPoint(row, now, slots), row }));
+  return grouped(placed.filter(({ row }) => row.state === 'submitted'));
 }
 
 /**
@@ -97,22 +69,6 @@ export async function nextInQueue(tx: Tx, now: Date, actor: Actor): Promise<stri
       point: { state: 'submitted', authorId },
       event: 'approve',
     });
-  const { mondays } = await readQueue(tx, now, approvable);
-  return mondays[0]?.kinds[0]?.points[0]?.id ?? null;
+  const mondays = await readQueue(tx, now, approvable);
+  return mondays.flat()[0]?.id ?? null;
 }
-
-/**
- * „Kontrola“ (design section 10): the handed-in points in the reviewer's scope, as `readQueue`
- * orders them. Drafts are never in scope for a reviewer, and a returned, rejected, withdrawn or
- * published point is not waiting here.
- */
-export const queuePoints = defineUseCase({
-  name: 'points.queue',
-  mode: 'read',
-  input: queuePointsInput,
-  output: queuePointsOutput,
-  access: { kind: 'gate', check: () => ({ action: 'review.queue' }) },
-  async execute({ tx, now }) {
-    return ok(await readQueue(tx, now));
-  },
-});

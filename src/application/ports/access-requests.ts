@@ -18,8 +18,6 @@ export interface AccessRequestRepo {
   lock(id: string): Promise<AccessRequestRecord | null>;
   /** Newest first (created_at desc, then id desc). */
   forUser(userId: string): Promise<readonly AccessRequestRecord[]>;
-  /** Oldest first. ScopeViolation without `access.decide`. */
-  pending(): Promise<readonly AccessRequestRecord[]>;
   /**
    * How many requests are still pending that were filed after `since`: what the headmaster's
    * digest counts. System principals only (ScopeViolation for a user, a headmaster too).

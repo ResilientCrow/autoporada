@@ -17,7 +17,7 @@ import { POINT_LIMITS } from '@/domain/report';
 import { REPORT_MACHINE } from '@/domain/review';
 import { compareDates, toIsoDate, type CalDate } from '@/domain/time';
 
-import { codePoints, newestFirst } from './events';
+import { codePoints } from './events';
 import { isOwedAkce } from './future-owed';
 import { guard, refusedBy } from './guards';
 import { newId, type FakeFutureItem, type FakeState, type FakeTxState } from './state';
@@ -239,25 +239,6 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         version: before.version + 1,
         updatedAt: now,
       });
-    },
-    async queue(limit) {
-      guard(tx, false);
-      const events = [...tx.draft.futureEvents.values()].sort(newestFirst);
-      const waitingSince = (item: FakeFutureItem) =>
-        (item.cancelRequestedAt ?? item.submittedAt)?.getTime() ?? 0;
-      return [...futureItems.values()]
-        .filter(
-          (item) =>
-            (item.state === 'submitted' ||
-              (item.state === 'approved' && item.cancelRequestedAt !== null)) &&
-            visible(item),
-        )
-        .sort((a, b) => waitingSince(a) - waitingSince(b) || (a.id < b.id ? -1 : 1))
-        .slice(0, limit)
-        .map((item) => ({
-          item: record(item),
-          revised: events.find((e) => e.futureItemId === item.id)?.event === 'revise',
-        }));
     },
     async list(limit, before) {
       guard(tx, false);

@@ -7,14 +7,7 @@ import { DRAFT_CAP } from '@/domain/report';
 
 import { FIRST_MONDAY, pointFixtures, readyProposal } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
-import {
-  getPoint,
-  queuePoints,
-  retractPoint,
-  savePoint,
-  submitPoint,
-  withdrawPoint,
-} from './index';
+import { retractPoint, savePoint, submitPoint, withdrawPoint } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = pointFixtures(world);
@@ -97,12 +90,6 @@ describe('points.retract', () => {
     for (const role of ['reviewer', 'headmaster'] as const) {
       const by = await user(role);
       expect(await get(by, id), role).toBeNull();
-      expect(await world.run(getPoint, world.as(by), { id }), role).toEqual({
-        ok: false,
-        error: { code: 'not-found' },
-      });
-      const queue = await world.run(queuePoints, world.as(by), {});
-      expect(JSON.stringify(queue), role).not.toContain(id);
     }
   });
 

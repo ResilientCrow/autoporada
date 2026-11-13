@@ -6,8 +6,9 @@ import { calDate, parseIsoDate as d, toIsoDate, type CalDate } from '@/domain/ti
 
 import { issueFixtures } from '../../../../test/support/issues';
 import { registryFixtures } from '../../../../test/support/registry';
+import { previewOf } from '../../../../test/support/preview';
 import { setupWorld } from '../../../../test/support/world';
-import { dropIssue, generateIssue, issuePreview, issueWorkspace } from './index';
+import { dropIssue, generateIssue } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
@@ -173,8 +174,8 @@ describe('issues.generate', () => {
       const author = await world.seed.user({ role: 'submitter' });
       const akce = await ended(author);
 
-      const preview = await world.run(issuePreview, world.as(head), { monday: toIsoDate(W1) });
-      expect(preview.ok && preview.value.findings.map((f) => [f.code, f.level])).toContainEqual([
+      const preview = await previewOf(world, W1);
+      expect(preview?.findings.map((f) => [f.code, f.level])).toContainEqual([
         'placeholders-unchecked',
         'warn',
       ]);
@@ -211,11 +212,11 @@ describe('issues.generate', () => {
       await ended(author);
       expect((await generate(head)).ok).toBe(true);
 
-      const next = await world.run(issuePreview, world.as(head), { monday: toIsoDate(W2) });
-      if (!next.ok) throw new Error(JSON.stringify(next.error));
-      const snapshot = JSON.parse(next.value.snapshot ?? 'null') as { reports: unknown[] } | null;
+      const next = await previewOf(world, W2);
+      if (!next) throw new Error('no porada');
+      const snapshot = JSON.parse(next.snapshot ?? 'null') as { reports: unknown[] } | null;
       expect(snapshot?.reports).toEqual([]);
-      expect(next.value.findings.map((f) => f.code)).not.toContain('reports-missing');
+      expect(next.findings.map((f) => f.code)).not.toContain('reports-missing');
     });
 
     it('changes nothing when the akce moves under it after the first writes: a late refusal rolls everything back', async () => {
@@ -317,33 +318,10 @@ describe('issues.generate', () => {
     await fixtures.point({ author, title: 'Jednou' });
     expect((await generate(head)).ok).toBe(true);
 
-    const next = await world.run(issuePreview, world.as(head), { monday: toIsoDate(W2) });
-    if (!next.ok) throw new Error(JSON.stringify(next.error));
-    expect(next.value.origin).toMatchObject({ kind: 'derived', from: toIsoDate(W1) });
-    expect(next.value.snapshot).not.toContain('Jednou');
-  });
-
-  it('previews a generated porada as it was generated, and the workspace names its document', async () => {
-    const head = await headmaster();
-    const author = await world.seed.user({ role: 'submitter' });
-    await fixtures.point({ author, title: 'Vytištěno' });
-    expect((await generate(head)).ok).toBe(true);
-
-    const preview = await world.run(issuePreview, world.as(head), { monday: toIsoDate(W1) });
-    if (!preview.ok) throw new Error(JSON.stringify(preview.error));
-    expect(preview.value).toMatchObject({
-      problems: [],
-      findings: [],
-      origin: { kind: 'stored' },
-      document: { pdfStatus: 'pending' },
-    });
-    expect(preview.value.snapshot).toContain('Vytištěno');
-
-    const workspace = await world.run(issueWorkspace, world.as(head), { monday: toIsoDate(W1) });
-    expect(workspace).toMatchObject({
-      ok: true,
-      value: { slot: { status: 'generated', document: { pdfStatus: 'pending' } } },
-    });
+    const next = await previewOf(world, W2);
+    if (!next) throw new Error('no porada');
+    expect(next.origin).toMatchObject({ kind: 'derived', from: toIsoDate(W1) });
+    expect(next.snapshot).not.toContain('Jednou');
   });
 
   it('refuses everyone but the headmaster', async () => {

@@ -1,4 +1,4 @@
-import { readAccess, writeAccess } from '@/application/core';
+import { writeAccess } from '@/application/core';
 import type { FutureItemRecord } from '@/application/ports';
 import type { Check } from '@/domain/policy';
 
@@ -34,16 +34,3 @@ export const futureView = (item: FutureItemRecord) => ({
   kind: item.kind,
   everSubmitted: item.submittedAt !== null,
 });
-
-/**
- * The access of a read of one item: the scoped repository without the row lock,
- * so an item outside the reader's scope is not-found.
- */
-export const futureReadAccess = <I extends { readonly id: string }>() =>
-  readAccess<I, FutureItemRecord>(
-    (tx, id) => tx.futureItems.get(id),
-    (item): Check => ({
-      action: 'future.view',
-      item: futureView(item),
-    }),
-  );

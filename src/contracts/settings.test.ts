@@ -8,8 +8,6 @@ import { snapshotFixture } from '../../test/support/snapshots';
 
 import {
   SETTINGS,
-  settingsReadInput,
-  settingsReadOutput,
   settingsSaveInput,
   settingsSaveOutput,
   toDeadlineRule,
@@ -153,34 +151,6 @@ describe('the annex 1 schema', () => {
       ],
     };
   }
-});
-
-describe('the read wire', () => {
-  it('takes no input', () => {
-    expect(settingsReadInput.safeParse({}).success).toBe(true);
-    expect(settingsReadInput.safeParse({ key: 'deadline' }).success).toBe(false);
-  });
-
-  it('answers every shown key with its value and version, and nothing else (not the calendar)', () => {
-    const entries = Object.fromEntries(
-      KEYS.filter((key) => key !== 'calendar').map((key) => [
-        key,
-        { value: SETTINGS[key].default, version: 0 },
-      ]),
-    );
-    expect(settingsReadOutput.safeParse(entries).success).toBe(true);
-    expect(settingsReadOutput.safeParse({ ...entries, extra: entries['deadline'] }).success).toBe(
-      false,
-    );
-    const { reminders: _dropped, ...partial } = entries;
-    expect(settingsReadOutput.safeParse(partial).success).toBe(false);
-    expect(
-      settingsReadOutput.safeParse({
-        ...entries,
-        calendar: { value: { plannedThrough: null }, version: 0 },
-      }).success,
-    ).toBe(false);
-  });
 });
 
 describe('the save wire', () => {

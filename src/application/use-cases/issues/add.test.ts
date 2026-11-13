@@ -1,16 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
+import { system } from '@/application/ports';
 import { deadline } from '@/domain/calendar';
-import { calDate } from '@/domain/time';
+import { calDate, toIsoDate } from '@/domain/time';
 
 import { issueFixtures } from '../../../../test/support/issues';
 import { monday, outlineFixtures } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
 import { addOutlineItem } from '../outline';
-import { addIssue, dropIssue, issueWindow } from './index';
+import { addIssue, dropIssue, readWindow } from './index';
 
 const world = setupWorld();
 const fx = outlineFixtures(world);
+
+/** The calendar's boundary as an ISO date. */
+const plannedThrough = async () =>
+  toIsoDate(
+    (await world.tx(system('test.seed'), (tx) => readWindow(tx, world.clock.now()), 'read'))
+      .plannedThrough,
+  );
 const issues = issueFixtures(world);
 
 // Tuesday 3 November 2026: Monday 9 November is the porada the tests drop to make a hole.
@@ -94,8 +102,7 @@ describe('issues.add', () => {
       schoolYear: '2026/2027',
     });
     // The boundary stays where the drop put it, and the week is a porada again.
-    const window = await world.run(issueWindow, world.as(head), {});
-    expect(window).toMatchObject({ ok: true, value: { plannedThrough: '2026-11-16' } });
+    expect(await plannedThrough()).toBe('2026-11-16');
     expect(await add(head, '2026-11-10')).toEqual({
       ok: false,
       error: { code: 'rule', rule: 'porada-exists' },

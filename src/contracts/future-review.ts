@@ -4,8 +4,7 @@ import { POINT_LIMITS } from '@/domain/report';
 import { FUTURE_RETURN_PARTS, REVIEW_DECISIONS } from '@/domain/review';
 
 import { refineDecision, returnPartsSchema } from './decision';
-import { futureKindSchema, futureView, futureWrite, version } from './future';
-import { QUEUE_LIMIT } from './point-read';
+import { futureWrite, version } from './future';
 
 /**
  * „Schválit“, „Vrátit k úpravě“, „Zamítnout“ on an akce or a jednání (design section 12), as a
@@ -43,26 +42,3 @@ export const refuseCancelFutureInput = z.strictObject({
   note: z.string().trim().min(1).max(POINT_LIMITS.note),
 });
 export const refuseCancelFutureOutput = z.object({ version });
-
-/** „Kontrola“, the akce and jednání section: no input; the reviewer's scope decides what is in it. */
-export const queueFutureInput = z.strictObject({});
-export const queueFutureOutput = z.object({
-  /**
-   * The submitted items and the approved ones whose cancel waits, the oldest hand-in or request
-   * first; a past `QUEUE_LIMIT` are left out.
-   */
-  items: z
-    .array(
-      futureView.pick({ title: true, startDate: true, endDate: true }).extend({
-        id: z.uuid(),
-        kind: futureKindSchema,
-        submittedAt: z.iso.datetime(),
-        /** „Žádost o zrušení“: when the author asked to cancel the approved item; else null (ADR 0062). */
-        cancelRequestedAt: z.iso.datetime().nullable(),
-        /** „Změna schválené akce“: the author changed it after it was approved. */
-        revised: z.boolean(),
-      }),
-    )
-    .max(QUEUE_LIMIT),
-  more: z.boolean(),
-});

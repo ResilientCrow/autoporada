@@ -90,46 +90,22 @@ describe('AccessRequestRepo (port contract)', () => {
     expect(await sees(head)).toEqual({ own: mine.id, other: theirs.id, ofOther: [theirs.id] });
   });
 
-  it('lists a user’s requests newest first and the pending ones oldest first', async () => {
+  it('lists a user’s requests newest first', async () => {
     const me = await world.seed.user({ role: 'pending' });
     const other = await world.seed.user({ role: 'pending' });
     const head = await world.seed.user({ role: 'headmaster' });
     const first = await request(me);
     await move(world.as(me), first, 'cancelled');
     world.clock.advance(60_000);
-    const second = await request(other);
+    await request(other);
     world.clock.advance(60_000);
     const third = await request(me);
-    const read = await world.tx(
+    const history = await world.tx(
       world.as(head),
-      async (tx) => ({
-        history: (await tx.accessRequests.forUser(me.id)).map((r) => r.id),
-        pending: (await tx.accessRequests.pending()).map((r) => r.id),
-      }),
+      async (tx) => (await tx.accessRequests.forUser(me.id)).map((r) => r.id),
       'read',
     );
-    expect(read).toEqual({ history: [third.id, first.id], pending: [second.id, third.id] });
-  });
-
-  it('breaks ties on the creation instant by id', async () => {
-    const a = await world.seed.user({ role: 'pending' });
-    const b = await world.seed.user({ role: 'pending' });
-    const head = await world.seed.user({ role: 'headmaster' });
-    const one = await request(a);
-    const two = await request(b);
-    const ids = await world.tx(
-      world.as(head),
-      async (tx) => (await tx.accessRequests.pending()).map((r) => r.id),
-      'read',
-    );
-    expect(ids).toEqual([one.id, two.id].sort());
-  });
-
-  it('lists the queue only for those who may decide', async () => {
-    const user = await world.seed.user({ role: 'pending' });
-    await expect(
-      world.tx(world.as(user), (tx) => tx.accessRequests.pending(), 'read'),
-    ).rejects.toBeInstanceOf(ScopeViolation);
+    expect(history).toEqual([third.id, first.id]);
   });
 
   it('records the decision, who made it and when, and raises the version', async () => {

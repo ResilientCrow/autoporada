@@ -56,16 +56,14 @@ describe('RegistryRepo (port contract)', () => {
       expect(await read((tx) => tx.registry.counts())).toEqual([]);
     });
 
-    it('gives every list, inactive ones too, by position, and finds one by id or key', async () => {
+    it('gives every list, inactive ones too, by position, and finds one by id', async () => {
       const b = await list('B', { position: 2 });
-      const a = await list('A', { position: 1, active: false });
+      await list('A', { position: 1, active: false });
       expect((await read((tx) => tx.registry.lists())).map((l) => l.title)).toEqual(['A', 'B']);
       expect(await read((tx) => tx.registry.list(b.id))).toEqual(b);
-      expect(await read((tx) => tx.registry.listByKey(a.key))).toEqual(a);
       expect(
         await read((tx) => tx.registry.list('0198f000-0000-7000-8000-00000000ffff')),
       ).toBeNull();
-      expect(await read((tx) => tx.registry.listByKey('nic'))).toBeNull();
     });
 
     it('creates a point-4 list last, active, at version 1', async () => {
@@ -172,22 +170,6 @@ describe('RegistryRepo (port contract)', () => {
           (l) => [listTarget(l)],
         ),
       ).rejects.toMatchObject(refusedBy('registry_lists_annex1_active'));
-    });
-
-    it('writes the positions 1..n in the order given and raises the versions', async () => {
-      const a = await list('A', { position: 3 });
-      const b = await list('B', { position: 7 });
-      const c = await list('C', { position: 8 });
-      await write(
-        (tx) => tx.registry.orderLists([c.id, a.id, b.id]),
-        () => [a, b, c].map(listTarget),
-      );
-      const after = await read((tx) => tx.registry.lists());
-      expect(after.map((l) => [l.title, l.position, l.version])).toEqual([
-        ['C', 1, 2],
-        ['A', 2, 2],
-        ['B', 3, 2],
-      ]);
     });
   });
 
@@ -436,7 +418,6 @@ describe('RegistryRepo (port contract)', () => {
       for (const call of [
         (tx: Tx) => tx.registry.lists(),
         (tx: Tx) => tx.registry.list(a.id),
-        (tx: Tx) => tx.registry.listByKey(a.key),
         (tx: Tx) => tx.registry.counts(),
         (tx: Tx) => tx.registry.entries(a.id),
         (tx: Tx) => tx.registry.entry('0198f000-0000-7000-8000-00000000ffff'),
@@ -457,7 +438,6 @@ describe('RegistryRepo (port contract)', () => {
         (tx) => tx.registry.archiveLists([a.id], '2025/2026'),
         (tx) => tx.registry.createList('b', { title: 'B', docLabel: 'b', active: true }),
         (tx) => tx.registry.updateList(a.id, 1, { title: 'A2', docLabel: 'a', active: true }),
-        (tx) => tx.registry.orderLists([a.id]),
       ];
       for (const attempt of attempts) {
         await expect(world.tx(reviewer, attempt)).rejects.toBeInstanceOf(ScopeViolation);

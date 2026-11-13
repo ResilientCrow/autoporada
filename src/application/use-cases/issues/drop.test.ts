@@ -2,16 +2,23 @@ import { describe, expect, it } from 'vitest';
 
 import { system } from '@/application/ports';
 import { SEED_OUTLINE } from '@/domain/outline';
-import { calDate } from '@/domain/time';
+import { calDate, toIsoDate } from '@/domain/time';
 
 import { seedAnnexes } from '../../../../test/support/annexes';
 import { monday, outlineFixtures, richText } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
 import { addOutlineItem } from '../outline';
-import { dropIssue, issueWindow, setIssueAnnex2, setIssueDetails } from './index';
+import { dropIssue, readWindow, setIssueAnnex2, setIssueDetails } from './index';
 
 const world = setupWorld();
 const fx = outlineFixtures(world);
+
+/** The calendar's boundary as an ISO date. */
+const plannedThrough = async () =>
+  toIsoDate(
+    (await world.tx(system('test.seed'), (tx) => readWindow(tx, world.clock.now()), 'read'))
+      .plannedThrough,
+  );
 
 // Tuesday 3 November 2026: this week's Monday 2 November has no row, 9 November is the porada
 // that does not take place, 16 November its heir.
@@ -63,8 +70,7 @@ describe('issues.drop', () => {
       ok: true,
       value: { heir: { monday: '2026-11-16', meetingDate: '2026-11-16' } },
     });
-    const window = await world.run(issueWindow, world.as(head), {});
-    expect(window).toMatchObject({ ok: true, value: { plannedThrough: '2026-11-16' } });
+    expect(await plannedThrough()).toBe('2026-11-16');
     expect(await fx.issueOf(DROPPED)).toBeNull();
     expect(await fx.issueOf(HEIR)).toMatchObject({ status: 'open' });
     // The week before has no row yet: it gets one, to stay a porada.
@@ -276,10 +282,7 @@ describe('issues.drop', () => {
   it('raises the boundary to the heir and never lowers it', async () => {
     world.clock.set(NOW);
     const head = await world.seed.user({ role: 'headmaster' });
-    const through = async () => {
-      const window = await world.run(issueWindow, world.as(head), {});
-      return window.ok ? (window.value as { plannedThrough: string }).plannedThrough : null;
-    };
+    const through = plannedThrough;
     expect((await drop(head, { monday: '2026-11-23' })).ok).toBe(true);
     expect(await through()).toBe('2026-11-30');
     // An earlier Monday dropped afterwards: its heir is below the boundary, which stays.

@@ -4,31 +4,6 @@ import { normalizeClass } from '@/domain/cs';
 import { isClassCode, PASTE_LIMITS } from '@/domain/registry';
 import { hasForbiddenCharacters } from '@/domain/richtext';
 
-const problem = z.enum(['name-missing', 'class-missing', 'class-unknown', 'duplicate']);
-
-/** The paste form: the pasted text (never stored or logged), the list it is for and the name order. */
-export const previewPasteInput = z.strictObject({
-  listId: z.uuid(),
-  text: z.string().max(PASTE_LIMITS.chars),
-  order: z.enum(['given-family', 'family-given']),
-});
-
-/** The rows the preview table shows; a row with a problem arrives unticked. */
-export const previewPasteOutput = z.strictObject({
-  rows: z.array(
-    z.strictObject({
-      source: z.string(),
-      givenName: z.string(),
-      familyName: z.string(),
-      classCode: z.string().nullable(),
-      problems: z.array(problem).readonly(),
-      warnings: z
-        .array(z.strictObject({ code: z.literal('group-count'), word: z.string() }))
-        .readonly(),
-    }),
-  ),
-});
-
 /** A name of a student: trimmed, 1 to 60 characters, none of the invisible or control ones. */
 const studentName = z
   .string()
@@ -137,13 +112,6 @@ export const saveListOutput = z.strictObject({
   version: z.int().positive(),
   changed: z.boolean(),
 });
-
-/** One step up or down in the order of the lists. */
-export const moveListInput = z.strictObject({
-  id: z.uuid(),
-  direction: z.enum(['up', 'down']),
-});
-export const moveListOutput = z.strictObject({ moved: z.boolean() });
 
 /**
  * „Nový školní rok“: the lists ticked, the school year they are archived under (`YYYY/YYYY`, the

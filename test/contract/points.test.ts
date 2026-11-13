@@ -448,51 +448,6 @@ describe('PointRepo (port contract)', () => {
     });
   });
 
-  describe('ownRecent', () => {
-    const people = ({ content, updatedAt }: PointRecord) => ({
-      bullets: content.bullets,
-      statements: content.statements,
-      updatedAt,
-    });
-    const recent = (by: Principal, limit: number, since: Date) =>
-      read(by, (tx) => tx.points.ownRecent({ limit, since }));
-
-    it('gives the people parts of the user’s own points changed since, newest first', async () => {
-      // A reviewer reads others' submitted points, yet the memory is their own.
-      const author = await world.seed.user({ role: 'reviewer' });
-      const colleague = await world.seed.user({ role: 'submitter' });
-      const old = await create(world.as(author), { content: FULL });
-      world.clock.advance(60_000);
-      const since = world.clock.now();
-      const submitted = await update(
-        world.as(author),
-        (await create(world.as(author))).point,
-        SUBMIT,
-      );
-      world.clock.advance(60_000);
-      const draft = await create(world.as(author), { content: { ...EMPTY, bullets: [PEOPLE] } });
-      const tied = await create(world.as(author));
-      const theirs = await create(world.as(colleague), { content: FULL });
-      const theirsSubmitted = await update(world.as(colleague), theirs.point, SUBMIT);
-      const [high, low] = [draft.point, tied.point].sort((a, b) => (a.id < b.id ? 1 : -1));
-
-      expect(await recent(world.as(author), 10, since)).toEqual([
-        people(high!),
-        people(low!),
-        people(submitted),
-      ]);
-      expect(await recent(world.as(author), 2, since)).toEqual([people(high!), people(low!)]);
-      // Changed at `since` itself counts.
-      const before = new Date(since.getTime() - 60_000);
-      expect((await recent(world.as(author), 10, before)).at(-1)).toEqual(people(old.point));
-      expect(await recent(world.as(colleague), 10, since)).toEqual([people(theirsSubmitted)]);
-    });
-
-    it('refuses the system, which has no points of its own', async () => {
-      expect(await failure(recent(cli, 10, new Date(0)))).toBeInstanceOf(ScopeViolation);
-    });
-  });
-
   it('refuses bullets or statements the contract refuses, before writing', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const twice: PointContent = { ...FULL, bullets: [PEOPLE, PEOPLE] };

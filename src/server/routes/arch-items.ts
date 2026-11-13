@@ -111,7 +111,7 @@ export function archItems({
     vers[f.id] = f.version;
     const evs = fEvents.filter((e) => e.futureItemId === f.id);
     const ct = f.content;
-    // A cancel request is the author's and the vedení's business, as in `future.get`.
+    // A cancel request is the author's and the vedení's business.
     const involved = staff || f.authorId === viewerId;
     return {
       id: f.id,

@@ -20,7 +20,7 @@ const deadlineTime = z
   .refine((time) => time >= '08:00' && time <= '22:00');
 
 /** `DeadlineRule` on the wire: days from the meeting date (-2 = the Saturday before a Monday) and the time. */
-export const deadlineSchema = z.strictObject({
+const deadlineSchema = z.strictObject({
   dayOffset: z.int().min(-4).max(-1),
   time: deadlineTime,
 });
@@ -113,18 +113,6 @@ export const SETTINGS: { readonly [K in SettingKey]: Setting<SettingValues[K]> }
   calendar: { schema: calendarSchema, default: { plannedThrough: null } },
   'texts.annex1': { schema: annex1Schema, default: ANNEX1_DEFAULT },
 };
-
-export const settingsReadInput = z.strictObject({});
-
-/** A key's value and the version a save must name; 0 means no row is stored and the default applies. */
-const entry = <S extends z.ZodType>(value: S) => z.strictObject({ value, version: z.int().min(0) });
-
-/** Every setting as the form shows it. */
-export const settingsReadOutput = z.strictObject({
-  deadline: entry(deadlineSchema),
-  reminders: entry(remindersSchema),
-  'texts.annex1': entry(z.strictObject({ heading: annexHeading, intro: richDocWire })),
-});
 
 /** A version of 0 names a key that has no row yet; any other is the version the form read. */
 const version = z.int().min(0);

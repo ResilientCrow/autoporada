@@ -5,7 +5,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { cancelFuture, listFuture, requestCancelFuture } from './index';
+import { cancelFuture, requestCancelFuture } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = futureFixtures(world);
@@ -27,11 +27,8 @@ async function refuses(id: string, run: () => Promise<unknown>, error: unknown) 
   expect(await run()).toEqual({ ok: false, error });
   expect(await snapshot(id)).toEqual(before);
 }
-const listed = async (by: UserRecord) => {
-  const result = await world.run(listFuture, world.as(by), {});
-  if (!result.ok) throw new Error('list refused');
-  return result.value.items.map((i) => [i.id, i.state]);
-};
+/** The state of the akce as `by` may read it, null when their scope hides it. */
+const seenBy = async (by: UserRecord, id: string) => (await get(by, id))?.state ?? null;
 
 describe('future.cancel', () => {
   it('lets a reviewer cancel an approved akce, with the states in the audit only', async () => {
@@ -161,14 +158,11 @@ describe('future.cancel', () => {
       const colleague = await user();
       const student = await world.seed.user({ role: 'submitter', isStudent: true });
       const reviewer = await user('reviewer');
-      expect((await listed(colleague)).map(([i]) => i)).toContain(id);
+      expect(await seenBy(colleague, id)).toBe('approved');
       await cancel(reviewer, id);
-      expect(await listed(author)).toContainEqual([id, 'cancelled']);
-      expect(await listed(reviewer)).toContainEqual([id, 'cancelled']);
-      for (const reader of [colleague, student]) {
-        expect((await listed(reader)).map(([i]) => i)).not.toContain(id);
-        expect(await get(reader, id)).toBeNull();
-      }
+      expect(await seenBy(author, id)).toBe('cancelled');
+      expect(await seenBy(reviewer, id)).toBe('cancelled');
+      for (const reader of [colleague, student]) expect(await seenBy(reader, id)).toBeNull();
     });
   });
 });

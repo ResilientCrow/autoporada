@@ -1,17 +1,16 @@
 import { z } from 'zod';
 
 import type { FutureKind } from '@/domain/calendar';
-import { ORGANIZER_ROLES, type Campus, type OrganizerRole } from '@/domain/cs';
+import { ORGANIZER_ROLES } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
-import type { FutureEvent, FutureState, ReportState } from '@/domain/review';
-import { compareDates, toIsoDate, toIsoTime, type CalDate, type WallTime } from '@/domain/time';
+import type { FutureState } from '@/domain/review';
+import { compareDates } from '@/domain/time';
 
-import { CURSOR_MAX, cursorSchema } from './cursor';
 import { campusSchema, isoDate, wallTime } from './point';
 
 /** Every `FutureKind` once: the compiler refuses a missing or an unknown one. */
 const FUTURE_KINDS: Readonly<Record<FutureKind, FutureKind>> = { jednani: 'jednani', akce: 'akce' };
-export const futureKindSchema = z.enum(FUTURE_KINDS);
+const futureKindSchema = z.enum(FUTURE_KINDS);
 
 /** Every `FutureState` once. */
 const FUTURE_STATES: Readonly<Record<FutureState, FutureState>> = {
@@ -24,32 +23,6 @@ const FUTURE_STATES: Readonly<Record<FutureState, FutureState>> = {
   cancelled: 'cancelled',
 };
 const futureStateSchema = z.enum(FUTURE_STATES);
-
-/** Every `ReportState` once. */
-const REPORT_STATES: Readonly<Record<ReportState, ReportState>> = {
-  none: 'none',
-  prompted: 'prompted',
-  written: 'written',
-  missed: 'missed',
-};
-const reportStateSchema = z.enum(REPORT_STATES);
-
-/** Every event of an item's history once: a transition, or a reviewer's edit. */
-const FUTURE_EVENTS: Readonly<Record<FutureEvent | 'edit', FutureEvent | 'edit'>> = {
-  submit: 'submit',
-  retract: 'retract',
-  withdraw: 'withdraw',
-  approve: 'approve',
-  return: 'return',
-  reject: 'reject',
-  revise: 'revise',
-  cancel: 'cancel',
-  'request-cancel': 'request-cancel',
-  'refuse-cancel': 'refuse-cancel',
-  'retract-cancel': 'retract-cancel',
-  edit: 'edit',
-};
-const futureEventSchema = z.enum(FUTURE_EVENTS);
 
 /** What the organizer does (ADR 0063). */
 const organizerRoleSchema = z.enum(ORGANIZER_ROLES);
@@ -80,70 +53,6 @@ const futureContentSchema = z
       ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'invalid' });
     }
   });
-
-/** The content as a read gives it to the editor: dates and times as the ISO text the save takes. */
-const futureContentWire = z.strictObject({
-  title: z.string(),
-  startDate: z.iso.date().nullable(),
-  endDate: z.iso.date().nullable(),
-  timeFrom: z.iso.time({ precision: -1 }).nullable(),
-  timeTo: z.iso.time({ precision: -1 }).nullable(),
-  campus: campusSchema.nullable(),
-  place: z.string().nullable(),
-  organizer: z.string().nullable(),
-  organizerRole: organizerRoleSchema.nullable(),
-  participants: z.string().nullable(),
-  note: z.string().nullable(),
-});
-
-/** What the stored content is made of, as the domain has it. */
-export interface FutureContentValue {
-  readonly title: string;
-  readonly startDate: CalDate | null;
-  readonly endDate: CalDate | null;
-  readonly timeFrom: WallTime | null;
-  readonly timeTo: WallTime | null;
-  readonly campus: Campus | null;
-  readonly place: string | null;
-  readonly organizer: string | null;
-  /** What the organizer does (ADR 0063); null for an item typed before the role existed. */
-  readonly organizerRole: OrganizerRole | null;
-  readonly participants: string | null;
-  readonly note: string | null;
-}
-
-const dateText = (date: CalDate | null) => date && toIsoDate(date);
-const timeText = (time: WallTime | null) => time && toIsoTime(time);
-
-/** The stored content in the wire shape of `futureContentWire`. */
-export const futureContentToWire = (
-  content: FutureContentValue,
-): z.input<typeof futureContentWire> => ({
-  ...content,
-  startDate: dateText(content.startDate),
-  endDate: dateText(content.endDate),
-  timeFrom: timeText(content.timeFrom),
-  timeTo: timeText(content.timeTo),
-});
-
-/** What a reader who is not the author sees of an item: the list row's content, as typed. */
-export const futureView = z.strictObject({
-  title: z.string(),
-  startDate: z.iso.date().nullable(),
-  endDate: z.iso.date().nullable(),
-  timeFrom: z.iso.time({ precision: -1 }).nullable(),
-  timeTo: z.iso.time({ precision: -1 }).nullable(),
-  campus: campusSchema.nullable(),
-  place: z.string().nullable(),
-  organizer: z.string().nullable(),
-  organizerRole: organizerRoleSchema.nullable(),
-  participants: z.string().nullable(),
-  note: z.string().nullable(),
-});
-
-/** The stored content as `futureView`: the wire conversion. */
-export const futureContentToView = (content: FutureContentValue): z.input<typeof futureView> =>
-  futureContentToWire(content);
 
 /** „Nový bod do přehledu“: `clientRef` is the draft's id in the browser, so a retry returns the same one. */
 export const createFutureInput = z.strictObject({ clientRef: z.uuid(), kind: futureKindSchema });
@@ -176,68 +85,3 @@ export const retractFutureOutput = z.object({ version });
 /** „Smazat akci / schůzku“: a draft, returned or submitted item gone; `confirmed` is the dialog's yes. */
 export const withdrawFutureInput = z.strictObject({ ...futureWrite, confirmed: z.boolean() });
 export const withdrawFutureOutput = z.object({ version });
-
-const instant = z.iso.datetime();
-
-/** One item, by id: a read sees it only inside the reader's scope. */
-export const getFutureInput = z.strictObject({ id: z.uuid() });
-export const getFutureOutput = z.object({
-  id: z.uuid(),
-  kind: futureKindSchema,
-  state: futureStateSchema,
-  version,
-  /** The reader wrote it. */
-  isAuthor: z.boolean(),
-  /** The reader may change it in the editor: its author, while it is theirs to change. */
-  editable: z.boolean(),
-  updatedAt: instant,
-  submittedAt: instant.nullable(),
-  reportState: reportStateSchema,
-  reportPointId: z.uuid().nullable(),
-  /**
-   * When the author asked the vedení to cancel the approved item („Zrušení čeká na vedení“, ADR
-   * 0062): for the author and reviewers only, null for anyone else and when none waits.
-   */
-  cancelRequestedAt: instant.nullable(),
-  /** For the author only, who edits it; everyone else gets `view`. */
-  content: futureContentWire.nullable(),
-  view: futureView,
-  /** For the author and reviewers only; naming no one. */
-  timeline: z.array(
-    z.object({
-      event: futureEventSchema,
-      fromState: futureStateSchema,
-      toState: futureStateSchema,
-      note: z.string().nullable(),
-      /** A return's parts to rework (FUTURE_RETURN_PARTS); null when it names none. */
-      parts: z.array(z.string()).nullable(),
-      editedFields: z.array(z.string()).nullable(),
-      createdAt: instant,
-    }),
-  ),
-});
-
-/** The items a page lists: one page, the newest changes first. */
-export const FUTURE_LIST_PAGE = 200;
-
-/** „Akce“: what the reader may see, a page at a time. */
-export const listFutureInput = z.strictObject({ before: cursorSchema.optional() });
-export const listFutureOutput = z.object({
-  items: z
-    .array(
-      futureView.extend({
-        id: z.uuid(),
-        kind: futureKindSchema,
-        state: futureStateSchema,
-        isAuthor: z.boolean(),
-        /** The author's cancel waits for the vedení (ADR 0062): told to the author and reviewers only. */
-        cancelRequested: z.boolean(),
-        /** Where the report of an akce stands: the home page offers it once it is due. */
-        reportState: reportStateSchema,
-        updatedAt: instant,
-      }),
-    )
-    .max(FUTURE_LIST_PAGE),
-  /** Where the older items start: set only when there are older items than this page holds. */
-  next: z.string().max(CURSOR_MAX).nullable(),
-});

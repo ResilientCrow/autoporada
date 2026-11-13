@@ -1,6 +1,6 @@
 import type { AnyUseCase } from '@/application/core';
 
-import { cancelAccess, decideAccess, myAccess, pendingAccess, requestAccess } from './access';
+import { cancelAccess, decideAccess, requestAccess } from './access';
 import {
   beginLogin,
   beginStepUp,
@@ -14,10 +14,6 @@ import {
   cancelFuture,
   createFuture,
   decideFuture,
-  getFuture,
-  listFuture,
-  owedReports,
-  queueFuture,
   refuseCancelFuture,
   requestCancelFuture,
   retractCancelFuture,
@@ -27,19 +23,15 @@ import {
   submitFuture,
   withdrawFuture,
 } from './future';
-import { documentArchive, downloadDocument } from './documents';
+import { downloadDocument } from './documents';
 import {
   addIssue,
   confirmPlaceholder,
   dropIssue,
   generateIssue,
   issueMissingReports,
-  issuePreview,
-  issueWindow,
-  issueWorkspace,
   moveIssue,
   readIssueTexts,
-  reportTally,
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
@@ -52,35 +44,28 @@ import {
   removeOutlineItem,
   saveOutlineItem,
 } from './outline';
-import { recentPeopleOf, searchGate } from './people';
+import { searchGate } from './people';
 import {
   createPoint,
   decidePoint,
-  getPoint,
-  listMyPoints,
-  pointStatus,
-  queuePoints,
   retractPoint,
   reviewEditPoint,
   savePoint,
   submitPoint,
   withdrawPoint,
 } from './points';
-import { me } from './profile';
 import {
   addEntries,
-  moveList,
   newSchoolYear,
-  previewPaste,
   readRegistry,
   removeEntry,
   saveEntry,
   saveList,
 } from './registry';
-import { readSettings, saveSettings } from './settings';
-import { changeUserAccess, getUser, listUsers } from './users';
+import { saveSettings } from './settings';
+import { changeUserAccess } from './users';
 
-export { cancelAccess, decideAccess, myAccess, pendingAccess, requestAccess } from './access';
+export { cancelAccess, decideAccess, requestAccess } from './access';
 export {
   beginLogin,
   beginStepUp,
@@ -94,10 +79,6 @@ export {
   cancelFuture,
   createFuture,
   decideFuture,
-  getFuture,
-  listFuture,
-  owedReports,
-  queueFuture,
   refuseCancelFuture,
   requestCancelFuture,
   retractCancelFuture,
@@ -107,19 +88,15 @@ export {
   submitFuture,
   withdrawFuture,
 } from './future';
-export { documentArchive, downloadDocument } from './documents';
+export { downloadDocument } from './documents';
 export {
   addIssue,
   confirmPlaceholder,
   dropIssue,
   generateIssue,
   issueMissingReports,
-  issuePreview,
-  issueWindow,
-  issueWorkspace,
   moveIssue,
   readIssueTexts,
-  reportTally,
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,
@@ -133,33 +110,26 @@ export {
   removeOutlineItem,
   saveOutlineItem,
 } from './outline';
-export { recentPeopleOf, searchGate } from './people';
+export { searchGate } from './people';
 export {
   createPoint,
   decidePoint,
-  getPoint,
-  listMyPoints,
-  pointStatus,
-  queuePoints,
   retractPoint,
   reviewEditPoint,
   savePoint,
   submitPoint,
   withdrawPoint,
 } from './points';
-export { me } from './profile';
 export {
   addEntries,
-  moveList,
   newSchoolYear,
-  previewPaste,
   readRegistry,
   removeEntry,
   saveEntry,
   saveList,
 } from './registry';
-export { readSettings, saveSettings } from './settings';
-export { changeUserAccess, getUser, listUsers } from './users';
+export { saveSettings } from './settings';
+export { changeUserAccess } from './users';
 
 /**
  * Every use case of the app. The inventory test proves this list is
@@ -181,43 +151,21 @@ export const USE_CASES: readonly AnyUseCase[] = [
   decideAccess,
   decideFuture,
   decidePoint,
-  documentArchive,
   dropIssue,
   downloadDocument,
-  getFuture,
-  getPoint,
   generateIssue,
-  getUser,
   issueMissingReports,
-  issuePreview,
-  issueWindow,
-  issueWorkspace,
-  listFuture,
-  listMyPoints,
-  listUsers,
-  me,
   moveIssue,
-  moveList,
   moveOutlineItem,
-  myAccess,
   newSchoolYear,
-  owedReports,
-  pendingAccess,
-  pointStatus,
-  previewPaste,
-  queueFuture,
-  queuePoints,
   readIssueTexts,
   readOutline,
   readOutlineItem,
   readRegistry,
-  readSettings,
-  recentPeopleOf,
   recordRejection,
   refuseCancelFuture,
   removeEntry,
   removeOutlineItem,
-  reportTally,
   requestAccess,
   requestCancelFuture,
   resolveSession,

@@ -55,8 +55,6 @@ export interface RegistryRepo {
   lists(): Promise<readonly RegistryListRecord[]>;
   /** The list, or null for an unknown id. */
   list(id: string): Promise<RegistryListRecord | null>;
-  /** The list, or null for an unknown key. */
-  listByKey(key: string): Promise<RegistryListRecord | null>;
   /** The counts of active entries per list, for the lists that have any. */
   counts(): Promise<readonly RegistryListCount[]>;
   /** The list's active entries (`removed_at IS NULL`), in no particular order. */
@@ -107,6 +105,4 @@ export interface RegistryRepo {
     expectedVersion: number,
     values: RegistryListValues,
   ): Promise<RegistryListRecord>;
-  /** Writes the positions 1..n in the order of `ids`, all lists named once. */
-  orderLists(ids: readonly string[]): Promise<void>;
 }

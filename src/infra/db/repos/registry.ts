@@ -76,7 +76,6 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
         .orderBy(asc(registryLists.position), asc(registryLists.id));
     },
     list: (id) => oneList(eq(registryLists.id, id)),
-    listByKey: (key) => oneList(eq(registryLists.key, key)),
     async counts() {
       mayView();
       const rows = await db
@@ -212,19 +211,6 @@ export function createRegistryRepo(db: TxDatabase, ctx: TxContext): RegistryRepo
         .returning(LIST_ROW);
       if (!row) throw new StaleVersion();
       return row;
-    },
-    async orderLists(ids) {
-      mayEdit();
-      for (const [index, id] of ids.entries()) {
-        await db
-          .update(registryLists)
-          .set({
-            position: index + 1,
-            updatedAt: ctx.now,
-            version: sql`${registryLists.version} + 1`,
-          })
-          .where(eq(registryLists.id, id));
-      }
     },
   };
 }

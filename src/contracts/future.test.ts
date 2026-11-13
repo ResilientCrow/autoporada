@@ -3,12 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { POINT_LIMITS } from '@/domain/report';
 import { calDate, wallTime } from '@/domain/time';
 
-import {
-  createFutureInput,
-  futureContentToWire,
-  saveFutureInput,
-  type FutureContentValue,
-} from './future';
+import { createFutureInput, saveFutureInput } from './future';
 
 const id = '00000000-0000-4000-8000-000000000001';
 const wire = (over: Record<string, unknown> = {}) => ({
@@ -104,26 +99,5 @@ describe('saveFutureInput', () => {
   it('takes a known campus and no stray keys', () => {
     expect(save({ campus: 'jinde-nekde' }).success).toBe(false);
     expect(save({ extra: 1 }).success).toBe(false);
-  });
-});
-
-describe('futureContentToWire', () => {
-  it('writes dates and times as the ISO text the save takes back', () => {
-    const content: FutureContentValue = {
-      title: 'Výlet',
-      startDate: calDate(2026, 11, 10),
-      endDate: null,
-      timeFrom: wallTime(8, 0),
-      timeTo: null,
-      campus: 'radlice',
-      place: 'v muzeu',
-      organizer: null,
-      organizerRole: null,
-      participants: null,
-      note: null,
-    };
-    const out = futureContentToWire(content);
-    expect(out).toMatchObject({ startDate: '2026-11-10', endDate: null, timeFrom: '08:00' });
-    expect(saveFutureInput.safeParse({ id, expectedVersion: 1, content: out }).success).toBe(true);
   });
 });

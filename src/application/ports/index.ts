@@ -50,7 +50,6 @@ export type {
   EndingAkce,
   FutureMailFacts,
   NewFutureItem,
-  QueuedFuture,
   ReportPromptItem,
 } from './future-items';
 export type {

@@ -9,7 +9,7 @@ import { calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { setupWorld } from '../../../../test/support/world';
 import { readWindow } from '../issues';
-import { readSettings, saveSettings } from './index';
+import { saveSettings } from './index';
 
 const world = setupWorld();
 
@@ -26,12 +26,10 @@ const reminders = (version: number, value = REMINDERS) => ({ key: 'reminders', v
 const stored = (key: string) => world.tx(system('test.seed'), (tx) => tx.settings.get(key), 'read');
 
 describe('settings.save', () => {
-  it('stores the first value at version 1 and shows it to settings.read', async () => {
+  it('stores the first value at version 1', async () => {
     const head = await headmaster();
     expect(await save(head, reminders(0))).toEqual({ ok: true, value: { version: 1 } });
     expect(await stored('reminders')).toEqual({ value: REMINDERS, version: 1 });
-    const read = await world.run(readSettings, world.as(head), {});
-    expect(read.ok && read.value.reminders).toEqual({ value: REMINDERS, version: 1 });
   });
 
   it('replaces a value at the version it names and gives the next', async () => {

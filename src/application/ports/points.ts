@@ -1,4 +1,3 @@
-import type { RecentSource } from '@/domain/people';
 import type { PointContent, PointKind, PointTypeId } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import type { CalDate, WallTime } from '@/domain/time';
@@ -185,16 +184,6 @@ export interface PointRepo {
    * first, then each the oldest submission first, ties to the lower id, at most `limit`.
    */
   queue(limit: number): Promise<readonly QueuedPoint[]>;
-  /**
-   * The people memory's read (design section 4): the bullets, statements and
-   * change instant of the user's own points changed at or after `since`, in
-   * any state, in `listMine`'s order, at most `limit`. Own whatever the read scope, so a
-   * reviewer remembers only whom they named. ScopeViolation for the system.
-   */
-  ownRecent(query: {
-    readonly limit: number;
-    readonly since: Date;
-  }): Promise<readonly RecentSource[]>;
   /**
    * The worker's read: only the columns migration 0017 grants it, null for an unknown
    * point. ScopeViolation for a user.

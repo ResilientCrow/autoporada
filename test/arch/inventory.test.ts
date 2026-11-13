@@ -57,12 +57,7 @@ describe('inventory of entry points', () => {
   it('puts the same use cases under the autosave and submission limits as ADR 0017 says', () => {
     const msg = (set: string) =>
       `The ${set} set of the Arch run endpoint changed: update ADR 0017 and src/server/routes/arch-run.ts together.`;
-    expect([...AUTOSAVE].sort(), msg('autosave')).toEqual([
-      'future.get',
-      'future.save',
-      'points.save',
-      'points.status',
-    ]);
+    expect([...AUTOSAVE].sort(), msg('autosave')).toEqual(['future.save', 'points.save']);
     expect([...SUBMISSION].sort(), msg('submission')).toEqual([
       'access.cancel',
       'access.request',

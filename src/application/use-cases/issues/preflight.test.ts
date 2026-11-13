@@ -8,15 +8,14 @@ import { calDate, parseIsoDate as d } from '@/domain/time';
 import { parseIssueSnapshot, type IssueSnapshot } from '@/snapshot';
 
 import { issueFixtures } from '../../../../test/support/issues';
-import { lateReportFixtures } from '../../../../test/support/late-reports';
+import { previewOf } from '../../../../test/support/preview';
 import { START } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { assembleIssueSnapshot } from './assemble';
-import { confirmPlaceholder, dropIssue, issueMissingReports, issuePreview } from './index';
+import { confirmPlaceholder, dropIssue, issueMissingReports } from './index';
 
 const world = setupWorld();
 const fixtures = issueFixtures(world);
-const lateReports = lateReportFixtures(world);
 const seeder = system('test.seed');
 
 // The clock starts Monday 19 October 2026 10.00 Prague; the deadline of 26 October is still ahead.
@@ -29,10 +28,10 @@ const iso = (day: ReturnType<typeof calDate>) =>
 const headmaster = () => world.seed.user({ role: 'headmaster' });
 const submitter = () => world.seed.user({ role: 'submitter' });
 
-async function preview(by: UserRecord, monday = W1) {
-  const result = await world.run(issuePreview, world.as(by), { monday: iso(monday) });
-  if (!result.ok) throw new Error(`refused: ${JSON.stringify(result.error)}`);
-  const { snapshot, ...rest } = result.value;
+async function preview(_by: UserRecord, monday = W1) {
+  const result = await previewOf(world, monday);
+  if (!result) throw new Error('not a porada');
+  const { snapshot, ...rest } = result;
   let parsed: IssueSnapshot | null = null;
   if (snapshot !== null) {
     const check = parseIssueSnapshot(JSON.parse(snapshot));
@@ -81,39 +80,8 @@ const row = (n: number, over: Partial<OutlineRow> = {}): OutlineRow => ({
 const titlesOf = (snapshot: IssueSnapshot | null, section: 'pokyny' | 'hospodareni' = 'pokyny') =>
   (snapshot?.[section] ?? []).map((i) => i.title);
 
-describe('issues.preview', () => {
-  describe('gate and input', () => {
-    it('lets the headmaster and a staff reviewer read, refuses a submitter and a student', async () => {
-      const head = await headmaster();
-      const reviewer = await world.seed.user({ role: 'reviewer' });
-      const student = await world.seed.user({ role: 'submitter', isStudent: true });
-      expect((await preview(head)).snapshot).not.toBeNull();
-      expect((await preview(reviewer)).snapshot).not.toBeNull();
-      for (const user of [await submitter(), student]) {
-        expect(await world.run(issuePreview, world.as(user), { monday: iso(W1) })).toEqual({
-          ok: false,
-          error: { code: 'forbidden' },
-        });
-      }
-    });
-
-    it.each(['2026-10-27', '2026-02-30', 'soon', '12026-10-26'])(
-      'refuses %j as an invalid monday',
-      async (monday) => {
-        const head = await headmaster();
-        const result = await world.run(issuePreview, world.as(head), { monday });
-        expect(result.ok).toBe(false);
-      },
-    );
-
-    it('refuses a date that is not a Monday as invalid-input with the field named', async () => {
-      const head = await headmaster();
-      expect(await world.run(issuePreview, world.as(head), { monday: '2026-10-27' })).toEqual({
-        ok: false,
-        error: { code: 'invalid-input', fields: { monday: 'invalid' } },
-      });
-    });
-
+describe('preflight and assembly', () => {
+  describe('input', () => {
     it('writes nothing: a Monday without a row stays without one', async () => {
       const head = await headmaster();
       const before = await world.inspect.audit();
@@ -124,17 +92,11 @@ describe('issues.preview', () => {
       expect(await world.inspect.audit()).toEqual(before);
     });
 
-    it('answers not-found for a dropped porada, as for any Monday up to the boundary with no row', async () => {
+    it('finds no porada for a dropped one, nor for a Monday up to the boundary with no row', async () => {
       const head = await headmaster();
       await drop(head, W1);
-      expect(await world.run(issuePreview, world.as(head), { monday: iso(W1) })).toEqual({
-        ok: false,
-        error: { code: 'not-found' },
-      });
-      // A past Monday nobody touched is no porada either (ADR 0054 item 1).
-      expect(await world.run(issuePreview, world.as(head), { monday: '2026-10-12' })).toMatchObject(
-        { ok: false, error: { code: 'not-found' } },
-      );
+      expect(await previewOf(world, W1)).toBeNull();
+      expect(await previewOf(world, '2026-10-12')).toBeNull();
     });
   });
 
@@ -326,19 +288,18 @@ describe('issues.preview', () => {
     });
 
     it('reports a text the snapshot refuses as snapshot-invalid with the path only, and no snapshot', async () => {
-      const head = await headmaster();
       const issue = await fixtures.issue(W1);
       await texts(issue, { present: 'Jan\u202eNovák' });
-      const result = await world.run(issuePreview, world.as(head), { monday: iso(W1) });
-      if (!result.ok) throw new Error('refused');
-      expect(result.value.snapshot).toBeNull();
-      expect(result.value.problems).toEqual([{ code: 'snapshot-invalid', paths: ['presentText'] }]);
-      expect(result.value.findings.find((f) => f.code === 'snapshot-invalid')).toEqual({
+      const result = await previewOf(world, W1);
+      if (!result) throw new Error('refused');
+      expect(result.snapshot).toBeNull();
+      expect(result.problems).toEqual([{ code: 'snapshot-invalid', paths: ['presentText'] }]);
+      expect(result.findings.find((f) => f.code === 'snapshot-invalid')).toEqual({
         code: 'snapshot-invalid',
         level: 'block',
         paths: ['presentText'],
       });
-      expect(JSON.stringify(result.value)).not.toContain('Novák');
+      expect(JSON.stringify(result)).not.toContain('Novák');
     });
   });
 
@@ -667,14 +628,6 @@ describe('issues.preview', () => {
       expect(found?.refs).toEqual([
         { id, title: 'Víkendová akce', of: 'akce', due: '2026-10-25T22:00:00.000Z' },
       ]);
-    });
-
-    it('counts other authors’ late report drafts without naming them', async () => {
-      const head = await headmaster();
-      const author = await submitter();
-      await lateReports.report(author, { day: '2026-10-25', timeTo: '21:00' });
-      const found = (await preview(head)).findings.find((f) => f.code === 'late-reports-expected');
-      expect(found).toEqual({ code: 'late-reports-expected', level: 'warn', count: 1 });
     });
   });
 

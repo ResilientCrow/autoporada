@@ -5,13 +5,11 @@ import {
   contentBytes,
   POINT_LIMITS,
   POINT_TYPE_IDS,
-  type BulletSpec,
   type PointKind,
   type DraftBullet,
   type DraftPerson,
   type DraftStatement,
   type PointContent,
-  type PointFieldValues,
 } from '@/domain/report';
 import { POINT_RETURN_PARTS, REVIEW_DECISIONS } from '@/domain/review';
 import {
@@ -42,21 +40,6 @@ const bulletKeySchema = z
 const uniqueKeys = (bullets: readonly { readonly key: string }[]) =>
   new Set(bullets.map((b) => b.key)).size === bullets.length;
 
-/** A bullet a report type offers. */
-const bulletSpecSchema = z.strictObject({
-  key: bulletKeySchema,
-  label: z.string().trim().min(1).max(POINT_LIMITS.bulletLabel),
-  kind: z.enum(['people', 'text']),
-  required: z.boolean(),
-  role: z.literal('organisers').optional(),
-}) satisfies z.ZodType<BulletSpec>;
-
-/** The bullets a report type starts a draft with. */
-export const defaultBulletsSchema = z
-  .array(bulletSpecSchema)
-  .max(POINT_LIMITS.bullets)
-  .refine(uniqueKeys, { message: 'duplicate-key' });
-
 /** Bounds the text before the list is checked; any text up to it that is not a key is `invalid`. */
 const TYPE_KEY_INPUT_MAX = 64;
 
@@ -81,7 +64,7 @@ const schoolYearSchema = capped(POINT_LIMITS.affiliationYear)
   .regex(/^\d{4}\/\d{4}$/)
   .refine((year) => Number(year.slice(5)) === Number(year.slice(0, 4)) + 1);
 
-export const draftPersonSchema = z.strictObject({
+const draftPersonSchema = z.strictObject({
   // The directory's id: a GUID, as Graph and the dev directory give it (`directoryHit`).
   graphId: z.guid().max(POINT_LIMITS.graphId).optional(),
   salutation: salutationSchema.nullable(),
@@ -160,11 +143,7 @@ export function parsePointPeople(value: {
  * draft's id in the browser, so a retry returns the same draft. A report
  * names its type; finance and pokyn name none (the use case checks the pair).
  */
-export const pointKindSchema = z.enum([
-  'report',
-  'finance',
-  'pokyn',
-]) satisfies z.ZodType<PointKind>;
+const pointKindSchema = z.enum(['report', 'finance', 'pokyn']) satisfies z.ZodType<PointKind>;
 export const createPointInput = z.strictObject({
   clientRef: z.uuid(),
   kind: pointKindSchema,
@@ -307,32 +286,6 @@ export const contentWire = (content: PointContent): z.input<typeof pointContentW
   bullets: bulletsWire(content.bullets),
   statements: [...content.statements],
 });
-
-/** Some of a content's fields in the wire shape (a review edit's „Původní znění“): no flag, any field may be missing. */
-export const pointFieldsWire = pointContentWire.omit({ openingEdited: true }).partial();
-
-/** Stored field values, as a review edit keeps them, in the wire shape of `pointFieldsWire`. */
-export function fieldValuesWire({
-  eventDate,
-  endDate,
-  timeFrom,
-  timeTo,
-  body,
-  bullets,
-  statements,
-  ...text
-}: Partial<PointFieldValues>): z.input<typeof pointFieldsWire> {
-  return {
-    ...text,
-    ...(eventDate !== undefined && { eventDate: dateText(eventDate) }),
-    ...(endDate !== undefined && { endDate: dateText(endDate) }),
-    ...(timeFrom !== undefined && { timeFrom: timeText(timeFrom) }),
-    ...(timeTo !== undefined && { timeTo: timeText(timeTo) }),
-    ...(body !== undefined && { body: bodyWire(body) }),
-    ...(bullets !== undefined && { bullets: bulletsWire(bullets) }),
-    ...(statements !== undefined && { statements: [...statements] }),
-  };
-}
 
 /** A write to a point names the point and the version the page showed. */
 const pointWrite = { id: z.uuid(), expectedVersion: z.number().int().positive() };

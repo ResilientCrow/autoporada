@@ -1,20 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  getTableName,
-  gt,
-  gte,
-  isNotNull,
-  lt,
-  lte,
-  ne,
-  or,
-  sql,
-  type SQL,
-} from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, lt, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 
 import {
   futureReviewScopeOf,
@@ -32,7 +16,7 @@ import type { FutureState } from '@/domain/review';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 
 import { scopeWhere } from '../scope-sql';
-import { futureEvents, futureItems } from '../schema';
+import { futureItems } from '../schema';
 import type { TxDatabase } from './database';
 import { dateOrNull, isoDate, isoTime, timeOrNull } from './wall-columns';
 
@@ -126,18 +110,6 @@ export const reviewableFutureItems = (ctx: TxContext): SQL | undefined =>
 /** The rows the principal may lock and change: the author's own (futureWriteScopeOf). */
 const writableFutureItems = (ctx: TxContext): SQL | undefined =>
   scopeWhere(futureWriteScopeOf(ctx.principal), ITEM_SCOPE);
-
-/**
- * True when the item's newest event is `revise`: its author changed it once it was approved, and
- * it has not been decided or handed in again since. Events list newest first, ties to the higher id.
- * The item's id is named with its table: a select from one table leaves column names bare, and a
- * bare `id` here would be the event's.
- */
-const revised = sql<boolean>`coalesce((
-  select ${futureEvents.event} from ${futureEvents}
-  where ${futureEvents.futureItemId} = ${sql.identifier(getTableName(futureItems))}.${sql.identifier('id')}
-  order by ${futureEvents.createdAt} desc, ${futureEvents.id} desc limit 1
-) = 'revise', false)`;
 
 /** The rows after `before` in the list's order: an older change, or the same instant and a lower id. */
 const after = (before: FutureCursor | undefined): SQL | undefined =>
@@ -240,25 +212,6 @@ export function createFutureItemRepo(
     },
     async markCancelRequest(id, expectedVersion, at) {
       return versioned(id, expectedVersion, reviewableFutureItems(ctx), { cancelRequestedAt: at });
-    },
-    async queue(limit) {
-      const waiting = or(
-        eq(futureItems.state, 'submitted'),
-        and(eq(futureItems.state, 'approved'), isNotNull(futureItems.cancelRequestedAt)),
-      );
-      const rows = await db
-        .select({ ...ITEM_ROW, revised })
-        .from(futureItems)
-        .where(and(visibleFutureItems(ctx), waiting))
-        .orderBy(
-          asc(sql`coalesce(${futureItems.cancelRequestedAt}, ${futureItems.submittedAt})`),
-          asc(futureItems.id),
-        )
-        .limit(limit);
-      return rows.map(({ revised: wasRevised, ...row }) => ({
-        item: toRecord(row),
-        revised: wasRevised,
-      }));
     },
     async list(limit, before) {
       const rows = await db

@@ -67,11 +67,6 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
       policy('registry.view');
       return lists.get(id) ?? null;
     },
-    async listByKey(key) {
-      guard(tx, false);
-      policy('registry.view');
-      return [...lists.values()].find((l) => l.key === key) ?? null;
-    },
     async counts() {
       guard(tx, false);
       policy('registry.view');
@@ -205,16 +200,6 @@ export function fakeRegistryRepo(tx: FakeTxState, ctx: TxContext): RegistryRepo 
       const current = lists.get(id);
       if (!current || current.version !== expectedVersion) throw new StaleVersion();
       return checkList({ ...current, ...values, version: current.version + 1 });
-    },
-    async orderLists(ids) {
-      guard(tx, true);
-      policy('registry.edit');
-      for (const [index, id] of ids.entries()) {
-        const current = lists.get(id);
-        if (!current) continue;
-        lists.set(id, { ...current, position: index + 1, version: current.version + 1 });
-        tx.written.push({ type: 'registry_list', id });
-      }
     },
   };
 }

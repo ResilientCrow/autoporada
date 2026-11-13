@@ -22,7 +22,7 @@ const json = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
 
-export const AUTOSAVE = new Set(['points.save', 'points.status', 'future.save', 'future.get']);
+export const AUTOSAVE = new Set(['points.save', 'future.save']);
 export const SUBMISSION = new Set([
   'points.create',
   'points.submit',

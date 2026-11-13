@@ -44,16 +44,6 @@ export interface FutureItemRecord {
 }
 
 /**
- * A row of the review queue (design section 12): a submitted item as its author handed it in.
- * `revised` is true when the item came back to review by its author's change to it once it was
- * approved (its newest event is `revise`): the queue marks it „Změna schválené akce“.
- */
-export interface QueuedFuture {
-  readonly item: FutureItemRecord;
-  readonly revised: boolean;
-}
-
-/**
  * What the report prompt reads of an akce at send time and in its daily run (migration 0022's
  * columns): who wrote it and where it stands, never what is in it.
  */
@@ -162,12 +152,6 @@ export interface FutureItemRepo {
     expectedVersion: number,
     at: Date | null,
   ): Promise<FutureItemRecord>;
-  /**
-   * The review queue: the `submitted` items in the read scope and the approved ones whose cancel
-   * request waits, by the instant each was handed in or asked for, the oldest first, ties to the
-   * lower id, at most `limit`.
-   */
-  queue(limit: number): Promise<readonly QueuedFuture[]>;
   /**
    * The items in scope, last changed first, ties to the higher id, at most `limit`; with `before`,
    * those after that row in this order. `updated_at` keeps milliseconds, as a cursor carries them.

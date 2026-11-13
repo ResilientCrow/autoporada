@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { UserRecord } from '@/application/ports';
 import type { PointState } from '@/domain/review';
 
-import { issuePreview } from '../issues';
 import { moveOutlineItem } from './index';
 
+import { previewOf } from '../../../../test/support/preview';
 import { monday, outlineFixtures, WEEK_1 } from '../../../../test/support/outline';
 import { setupWorld } from '../../../../test/support/world';
 
@@ -17,10 +17,10 @@ import { setupWorld } from '../../../../test/support/world';
 const world = setupWorld();
 const fx = outlineFixtures(world);
 
-const codes = async (head: UserRecord) => {
-  const preview = await world.run(issuePreview, world.as(head), { monday: monday(WEEK_1) });
-  if (!preview.ok) throw new Error(`preview refused: ${JSON.stringify(preview.error)}`);
-  return preview.value.findings.map((f) => f.code);
+const codes = async (_head: UserRecord) => {
+  const preview = await previewOf(world, monday(WEEK_1));
+  if (!preview) throw new Error('no porada');
+  return preview.findings.map((f) => f.code);
 };
 
 const pokyny = async (head: UserRecord) => {

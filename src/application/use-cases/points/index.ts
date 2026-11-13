@@ -1,11 +1,7 @@
 export { createPoint } from './create';
 export { decidePoint } from './decide';
-export { getPoint } from './get';
-export { listMyPoints } from './list-mine';
 export { retractPoint } from './retract';
 export { reviewEditPoint } from './review-edit';
 export { savePoint } from './save';
-export { pointStatus } from './status';
-export { queuePoints } from './queue';
 export { submitPoint } from './submit';
 export { withdrawPoint } from './withdraw';
