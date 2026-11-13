@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRoute, useStore, Sheet } from '../core/react';
 import * as Q from '../core/select';
+import { POINT_LIMITS } from '@/domain/report';
 import { autosave } from '@/ui/copy/autosave';
 import logo from './logo-dark.svg';
 
@@ -45,9 +46,11 @@ export function App({ col, desk, dock, nar, full, over, noNav }: { col: ReactNod
     </div>
   );
 }
-/** A title may be long: it grows instead of hiding its start, and Enter moves on. */
-export function TitleField({ value, onChange, onEnter, placeholder, autoFocus }: { value: string; onChange: (v: string) => void; onEnter?: () => void; placeholder?: string; autoFocus?: boolean }) {
-  return <><textarea className="in bigi ttl" rows={1} maxLength={200} {...(autoFocus ? { autoFocus } : {})} {...(placeholder ? { placeholder } : {})} value={value} onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }} />{200 - value.length < 40 ? <small role="status">{Q.charsLeft(200 - value.length)}</small> : null}</>;
+/** „Zbývá 12 znaků.“ once a field nears the limit the server holds it to. */
+export const Left = ({ max, value }: { max: number; value: string }) => (max - value.length < 40 ? <small role="status">{Q.charsLeft(max - value.length)}</small> : null);
+/** One line that may be long (a title, names): it grows instead of hiding its start, and Enter moves on. */
+export function TitleField({ value, onChange, onEnter, placeholder, autoFocus, max = POINT_LIMITS.title }: { value: string; onChange: (v: string) => void; onEnter?: () => void; placeholder?: string; autoFocus?: boolean; max?: number }) {
+  return <><textarea className="in bigi ttl" rows={1} maxLength={max} {...(autoFocus ? { autoFocus } : {})} {...(placeholder ? { placeholder } : {})} value={value} onChange={(e) => onChange(e.target.value.replace(/\n/g, ' '))} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter?.(); } }} /><Left max={max} value={value} /></>;
 }
 export function useNarrow() {
   const [n, set] = useState(() => matchMedia('(max-width:900px)').matches);
