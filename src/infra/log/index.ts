@@ -40,7 +40,6 @@ const SENSITIVE_KEYS = [
   'claims',
   'databaseUrl',
   'smtpUrl',
-  'serverActionsKey',
   'body',
   // Drizzle's query errors list the bound values; infra strips them, this is the backstop.
   'params',

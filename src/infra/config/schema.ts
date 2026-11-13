@@ -16,11 +16,6 @@ const origin = httpUrl.refine(
   { message: 'must be an origin like https://autoporada.ssps.cz (no path, no trailing slash)' },
 );
 
-/** Next.js decodes this key with atob(), so only standard padded base64 works. */
-const serverActionsKey = z
-  .string()
-  .regex(/^[A-Za-z0-9+/]{43}=$/, 'must be 32 random bytes in standard base64 (44 chars)');
-
 /** How often the worker asks the queue for work: seconds, 0.5 to 30. */
 const POLL_SECONDS = 'must be a number of seconds from 0.5 to 30';
 const pollSeconds = z
@@ -66,7 +61,6 @@ const shape = z.object({
   /** Not `*_FILE`: readEnv would read that as the Docker-secret form of a DIRECTORY_DEV. */
   DIRECTORY_DEV_PATH: z.string().startsWith('/', 'must be an absolute path').optional(),
   GOTENBERG_URL: httpUrl,
-  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: serverActionsKey.optional(),
   BOOTSTRAP_HEADMASTER_OID: z.guid().optional(),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   WORKER_POLL_SECONDS: pollSeconds.default(2),

@@ -24,7 +24,6 @@ fail() {
 # The command of docs/ENTRA-SETUP.md §6, for one day.
 openssl req -x509 -newkey rsa:3072 -sha256 -days 1 -nodes \
   -keyout "$work/entra_key" -out "$work/entra_cert" -subj '/CN=autoporada-check' 2>/dev/null
-openssl rand -base64 32 >"$work/server_actions_key"
 # Throwaway files; the container's user must be able to read them.
 chmod 0755 "$work"
 chmod 0444 "$work"/*
@@ -43,7 +42,6 @@ docker run -d --name "$name" \
   --env OIDC_CLIENT_ID=autoporada-check \
   --env OIDC_CLIENT_KEY_FILE=/run/secrets/entra_key \
   --env OIDC_CLIENT_CERT_FILE=/run/secrets/entra_cert \
-  --env NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_FILE=/run/secrets/server_actions_key \
   --env MAIL_TRANSPORT=graph \
   --env MAIL_FROM=autoporada@example.org \
   --env GOTENBERG_URL=http://gotenberg:3000 \

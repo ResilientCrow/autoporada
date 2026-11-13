@@ -19,7 +19,7 @@ const ENV = {
   LOG_LEVEL: 'error',
 };
 
-/** A production configuration with a certificate and without the Server Actions key. */
+/** A production configuration with a certificate. */
 const PRODUCTION = () => {
   const pair = testCertificate();
   const tenant = '00000000-0000-4000-8000-000000000001';
@@ -114,7 +114,6 @@ describe('web container', () => {
     for (const [name, value] of Object.entries(PRODUCTION())) {
       if (value !== undefined) vi.stubEnv(name, value);
     }
-    vi.stubEnv('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY', Buffer.alloc(32, 1).toString('base64'));
     const { getContainer } = await import('./container');
     expect(getContainer().describe).toBeUndefined();
   });
@@ -216,17 +215,8 @@ describe('web container', () => {
     expect(String(error)).not.toContain('secret-place');
   });
 
-  it('refuses to serve in production without the Server Actions key', async () => {
-    for (const [name, value] of Object.entries(PRODUCTION())) vi.stubEnv(name, value);
-    const { getContainer } = await import('./container');
-    expect(() => getContainer()).toThrow(/NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required/);
-  });
-
   it('logs an expired certificate at error at boot', async () => {
-    const production = {
-      ...PRODUCTION(),
-      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
-    };
+    const production = PRODUCTION();
     for (const [name, value] of Object.entries(production)) vi.stubEnv(name, value);
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(Date.now() + 800 * 86_400_000));

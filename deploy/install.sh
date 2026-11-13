@@ -36,7 +36,6 @@ generate pg_superuser_password openssl rand -hex 24
 generate pg_owner_password openssl rand -hex 24
 generate pg_web_password openssl rand -hex 24
 generate pg_worker_password openssl rand -hex 24
-generate server_actions_key openssl rand -base64 32
 
 # Derived, so rewritten every time to stay in step with the passwords.
 url() { printf 'postgres://%s:%s@postgres:5432/autoporada\n' "$1" "$(cat "secrets/$2")"; }
@@ -68,7 +67,7 @@ if [ -n "$same_pair" ]; then
 fi
 
 chown "$PG_UID:$PG_UID" secrets/pg_*
-for file in owner_database_url web_database_url worker_database_url server_actions_key entra_key entra_cert web_entra_key web_entra_cert; do
+for file in owner_database_url web_database_url worker_database_url entra_key entra_cert web_entra_key web_entra_cert; do
   [ ! -e "secrets/$file" ] || chown "$APP_UID:$APP_UID" "secrets/$file"
 done
 chmod 0400 secrets/*

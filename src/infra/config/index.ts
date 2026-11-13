@@ -37,7 +37,6 @@ export interface Config {
     | { readonly kind: 'graph' }
     | { readonly kind: 'dev'; readonly path: string };
   readonly gotenbergUrl: string;
-  readonly serverActionsKey: string | undefined;
   readonly bootstrapHeadmasterOid: string | undefined;
   readonly logLevel: LogLevel;
   readonly worker: { readonly pollSeconds: number };
@@ -87,33 +86,10 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
         : { transport: 'graph', from: c.MAIL_FROM },
     directory: directoryOf(c),
     gotenbergUrl: c.GOTENBERG_URL.replace(/\/$/, ''),
-    serverActionsKey: c.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,
     bootstrapHeadmasterOid: c.BOOTSTRAP_HEADMASTER_OID?.toLowerCase(),
     logLevel: c.LOG_LEVEL,
     worker: { pollSeconds: c.WORKER_POLL_SECONDS },
   };
-}
-
-/**
- * Next.js reads the Server Actions key from process.env only, at first use.
- * A key supplied as a Docker secret (NAME_FILE) is copied there at boot, so
- * Next never falls back to the random key baked into the build output.
- */
-export function publishNextRuntimeEnv(config: Config, env: Record<string, string | undefined>) {
-  if (config.serverActionsKey && !env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY']) {
-    env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY'] = config.serverActionsKey;
-  }
-}
-
-/**
- * The web process signs Server Action ids with this key, and without a
- * fixed one every restart breaks the forms of open pages. Only web serves
- * actions, so the CLI runs without it (deploy/compose.yaml).
- */
-export function requireServerActionsKey(config: Config): void {
-  if (config.environment === 'production' && !config.serverActionsKey) {
-    throw new ConfigError(['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required in production']);
-  }
 }
 
 /**
@@ -136,14 +112,12 @@ const CONFIG = Symbol.for('autoporada.config');
 /**
  * The process configuration, validated once. Composition roots call this.
  * Kept on globalThis: Next loads instrumentation and the app as separate
- * module instances, and a second load would find the Server Actions key
- * both published and in its file.
+ * module instances.
  */
 export function getConfig(): Config {
   const holder = globalThis as { [CONFIG]?: Config };
   if (!holder[CONFIG]) {
     holder[CONFIG] = loadConfig(process.env, (path) => readFileSync(path, 'utf8'));
-    publishNextRuntimeEnv(holder[CONFIG], process.env);
   }
   return holder[CONFIG];
 }

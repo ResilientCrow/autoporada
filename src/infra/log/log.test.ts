@@ -93,11 +93,10 @@ describe('createLogger', () => {
         databaseUrl: 'postgres://u:DBPASS@db/x',
         mail: { smtpUrl: 'smtp://u:SMTPPASS@relay' },
         oidc: { credential: { kind: 'secret', secret: 'OIDC', privateKeyPem: 'PEM' } },
-        serverActionsKey: 'SAKEY',
       },
     });
     const line = JSON.stringify(lines[0]);
-    for (const secret of ['DBPASS', 'SMTPPASS', '"OIDC"', '"PEM"', 'SAKEY']) {
+    for (const secret of ['DBPASS', 'SMTPPASS', '"OIDC"', '"PEM"']) {
       expect(line).not.toContain(secret);
     }
   });

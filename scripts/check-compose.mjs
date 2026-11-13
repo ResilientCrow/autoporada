@@ -43,13 +43,12 @@ const SECRET_HOLDERS = {
   owner_database_url: ['migrate', 'cli'],
   worker_database_url: ['worker'],
   web_database_url: ['web'],
-  server_actions_key: ['web'],
   entra_key: ['worker', 'cli'],
   entra_cert: ['worker', 'cli'],
   web_entra_key: ['web'],
   web_entra_cert: ['web'],
 };
-const WEB_SECRETS = ['web_database_url', 'server_actions_key', 'web_entra_key', 'web_entra_cert'];
+const WEB_SECRETS = ['web_database_url', 'web_entra_key', 'web_entra_cert'];
 const WORKER_SECRETS = ['worker_database_url', 'entra_key', 'entra_cert'];
 /** The host-side handle of the egress network, for a DOCKER-USER or nftables rule. */
 const EGRESS_BRIDGE = 'ap-egress';

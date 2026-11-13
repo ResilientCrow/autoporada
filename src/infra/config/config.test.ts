@@ -1,16 +1,6 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  ConfigError,
-  loadConfig,
-  loadDatabaseUrl,
-  publishNextRuntimeEnv,
-  requireServerActionsKey,
-} from './index';
+import { ConfigError, loadConfig, loadDatabaseUrl } from './index';
 
 const DEV_ENV = {
   APP_ORIGIN: 'http://localhost:3000',
@@ -40,7 +30,6 @@ const PROD_ENV = {
   OIDC_CLIENT_CERT_THUMBPRINT: 'A'.repeat(40),
   MAIL_TRANSPORT: 'graph',
   SMTP_URL: undefined,
-  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 };
 
 const noFiles = (path: string): string => {
@@ -158,7 +147,6 @@ describe('loadConfig', () => {
       OIDC_CLIENT_SECRET: 'oops',
       MAIL_TRANSPORT: 'smtp',
       SMTP_URL: 'smtp://relay',
-      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: undefined,
     };
     const problems = problemsOf(() =>
       loadConfig(
@@ -171,19 +159,6 @@ describe('loadConfig', () => {
       'OIDC_CLIENT_SECRET: is not allowed in production; use the certificate',
       'MAIL_TRANSPORT: must be graph in production',
     ]);
-  });
-
-  it('leaves the Server Actions key to the web process, which needs it in production', () => {
-    const files = secretFiles({
-      '/run/secrets/entra_key': KEY_PEM,
-      '/run/secrets/entra_cert': CERT_PEM,
-    });
-    const cli = loadConfig({ ...PROD_ENV, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: undefined }, files);
-    expect(problemsOf(() => requireServerActionsKey(cli))).toEqual([
-      'NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: is required in production',
-    ]);
-    expect(() => requireServerActionsKey(loadConfig(PROD_ENV, files))).not.toThrow();
-    expect(() => requireServerActionsKey(loadConfig(DEV_ENV, noFiles))).not.toThrow();
   });
 
   it('never echoes secret values in error messages', () => {
@@ -233,17 +208,6 @@ describe('loadConfig hardening', () => {
     expect(problems).toEqual(['GOTENBERG_URL: must be an http(s) URL']);
   });
 
-  it.each([
-    ['base64url', 'bCY8-zSOx-8vlAxeA0Qybi5SPnxa4iM913JkdmTMjUw='],
-    ['junk around a valid key', `!!${Buffer.alloc(32, 1).toString('base64')}$$`],
-    ['16 bytes', Buffer.alloc(16, 1).toString('base64')],
-  ])('rejects a Server Actions key that Next cannot decode (%s)', (_case, key) => {
-    const env = { ...DEV_ENV, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: key };
-    expect(problemsOf(() => loadConfig(env, noFiles))).toEqual([
-      expect.stringMatching(/^NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: must be 32 random bytes/),
-    ]);
-  });
-
   it('reports a malformed origin as a ConfigError without echoing it', () => {
     const problems = problemsOf(() =>
       loadConfig({ ...DEV_ENV, APP_ORIGIN: 'skola.example.cz' }, noFiles),
@@ -255,23 +219,6 @@ describe('loadConfig hardening', () => {
   it('ignores *_FILE variables that are not app settings', () => {
     const env = { ...DEV_ENV, SSL_CERT_FILE: '/missing/ca.pem', OTHER_FILE: '/x' };
     expect(() => loadConfig(env, noFiles)).not.toThrow();
-  });
-});
-
-describe('publishNextRuntimeEnv', () => {
-  const key = Buffer.alloc(32, 9).toString('base64');
-  const config = loadConfig({ ...DEV_ENV, NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: key }, noFiles);
-
-  it('copies a key that came from a secret file into the runtime env', () => {
-    const env: Record<string, string | undefined> = {};
-    publishNextRuntimeEnv(config, env);
-    expect(env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY']).toBe(key);
-  });
-
-  it('never overrides a key that is already set', () => {
-    const env: Record<string, string | undefined> = { NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: 'x' };
-    publishNextRuntimeEnv(config, env);
-    expect(env['NEXT_SERVER_ACTIONS_ENCRYPTION_KEY']).toBe('x');
   });
 });
 
@@ -290,19 +237,12 @@ describe('getConfig', () => {
     expect(getConfig()).toBe(first);
   });
 
-  it('is the same in every module instance, after publishing a key from its file', async () => {
+  it('is the same in every module instance', async () => {
     for (const [key, value] of Object.entries(DEV_ENV)) vi.stubEnv(key, value);
-    const dir = mkdtempSync(join(tmpdir(), 'autoporada-config-'));
-    writeFileSync(join(dir, 'key'), `${'k'.repeat(43)}=\n`);
-    vi.stubEnv('NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_FILE', join(dir, 'key'));
-    try {
-      const first = (await import('./index')).getConfig();
-      // Next loads instrumentation and the app as two module instances.
-      vi.resetModules();
-      expect((await import('./index')).getConfig()).toBe(first);
-    } finally {
-      rmSync(dir, { recursive: true });
-    }
+    const first = (await import('./index')).getConfig();
+    // Next loads instrumentation and the app as two module instances.
+    vi.resetModules();
+    expect((await import('./index')).getConfig()).toBe(first);
   });
 });
 

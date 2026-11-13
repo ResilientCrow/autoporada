@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import type { AnyUseCase } from '@/application/core';
 import type { AppDeps, DirectoryPort, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
-import { getConfig, requireServerActionsKey, type Config } from '@/infra/config';
+import { getConfig, type Config } from '@/infra/config';
 import {
   createArchStore,
   databaseOn,
@@ -102,7 +102,6 @@ function shared(config: Config, log: Logger): Shared {
  * only when `startProducer()` is called.
  */
 function buildWeb(config: Config): WebContainer {
-  requireServerActionsKey(config);
   const log = createLogger({ service: 'web', level: config.logLevel });
   const { pool, producer, limiter } = shared(config, log);
   const handle = databaseOn(pool, { jobsOn: producer.jobsOn });

@@ -81,11 +81,10 @@ services:
       OIDC_CLIENT_KEY_FILE: /run/secrets/web_entra_key
       OIDC_CLIENT_CERT_FILE: /run/secrets/web_entra_cert
       DATABASE_URL_FILE: /run/secrets/web_database_url
-      NEXT_SERVER_ACTIONS_ENCRYPTION_KEY_FILE: /run/secrets/server_actions_key
       BOOTSTRAP_HEADMASTER_OID: ${BOOTSTRAP_HEADMASTER_OID:-}
       # `off` until the smoke test shows the tenant answers the search (SMOKE-TEST step 29).
       DIRECTORY: ${DIRECTORY:-off}
-    secrets: [web_database_url, server_actions_key, web_entra_key, web_entra_cert]
+    secrets: [web_database_url, web_entra_key, web_entra_cert]
     tmpfs: ['/tmp:size=64m', '/app/.next/cache']
     # edge: Caddy, and the way out to login.microsoftonline.com and graph.microsoft.com.
     networks: [edge, data]
@@ -228,7 +227,6 @@ secrets:
   owner_database_url: { file: ./secrets/owner_database_url }
   web_database_url: { file: ./secrets/web_database_url }
   worker_database_url: { file: ./secrets/worker_database_url }
-  server_actions_key: { file: ./secrets/server_actions_key }
   # The certificate pairs of docs/ENTRA-SETUP.md §6: the mail registration's (worker and cli) and
   # the web's own (ADR 0021). No service holds both.
   entra_key: { file: ./secrets/entra_key }
