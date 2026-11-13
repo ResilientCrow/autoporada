@@ -270,6 +270,7 @@ test.describe('the author’s and the reviewer’s screens', () => {
     expect((await page.goto('/kontrola'))?.status()).toBe(404);
 
     const other = await signInElsewhere(newContext, new RegExp(`^Test – ${reviewer.subject}`));
+    await other.goto('/klasicke');
     await hydrated(other);
     await expect(other.getByRole('link', { name: /^Ke kontrole: \d+$/ })).toBeVisible();
     await expectAccessible(other);

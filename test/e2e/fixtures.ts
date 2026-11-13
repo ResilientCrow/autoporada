@@ -386,8 +386,7 @@ export async function signInElsewhere(
   persona: RegExp,
 ): Promise<Page> {
   const other = await (await newContext()).newPage();
-  // Branch arch-ui: the classic home, so the callers' next page is a Next page.
-  await other.goto('/klasicke');
+  await other.goto('/');
   await other.getByRole('link', { name: cs.signIn.button }).click();
   await showAllPersonas(other);
   await other.getByRole('button', { name: persona }).click();

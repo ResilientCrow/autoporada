@@ -8,7 +8,7 @@ async function serveViolatingPage(
   page: Page,
   target: BrowserContext = page.context(),
 ): Promise<void> {
-  const real = await page.request.get('/prihlaseni');
+  const real = await page.request.get('/');
   const policy = real.headers()['content-security-policy'] ?? '';
   expect(policy).not.toBe('');
   await target.route('**/__guard', (route) =>
@@ -47,7 +47,7 @@ test('the CSP guard fails a test that leaves a violation behind', async ({
 /** The same page, opened as a popup of an app page: only a context-level guard sees it. */
 async function openViolatingPopup(page: Page): Promise<void> {
   await serveViolatingPage(page);
-  await page.goto('/prihlaseni');
+  await page.goto('/');
   const popup = page.waitForEvent('popup');
   await page.evaluate(() => void window.open('/__guard'));
   await (await popup).waitForLoadState();

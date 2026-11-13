@@ -1,5 +1,6 @@
 import { cs } from '@/ui/copy';
 
+import { signInAsRe } from './akce-steps';
 import { expect, test } from './fixtures';
 
 const nonceOf = (policy: string | undefined) => /'nonce-([^']+)'/.exec(policy ?? '')?.[1];
@@ -12,26 +13,38 @@ const SECURITY_HEADERS = {
   'x-frame-options': 'DENY',
 };
 
+/** The Arch client at `/`: one nonced script, which draws the sign-in or the home screen. */
+const ARCH = true;
+
 const NONCED_PAGES = [
-  ['the sign-in page', '/prihlaseni?chyba=idp-refused&aadsts=AADSTS50011', null],
-  ['the privacy notice', '/ochrana-osobnich-udaju', null],
-  ['the gallery', '/vzornik', null],
-  ['the 404 page', '/tato-stranka-neexistuje', null],
-  ['the signed-in home page', '/klasicke', /^Učitelka/],
+  ['the Arch sign-in screen', '/?chyba=idp-refused&aadsts=AADSTS50011', null, ARCH],
+  ['the privacy notice', '/ochrana-osobnich-udaju', null, !ARCH],
+  ['the gallery', '/vzornik', null, !ARCH],
+  ['the 404 page', '/tato-stranka-neexistuje', null, !ARCH],
+  ['the signed-in Arch home', '/', 'archa', ARCH],
 ] as const;
 
-for (const [name, url, persona] of NONCED_PAGES) {
+for (const [name, url, persona, arch] of NONCED_PAGES) {
   test(`${name} runs only its own nonced scripts`, async ({
     page,
     hydrated,
     expectAccessible,
     signInAs,
-  }) => {
-    if (persona) await signInAs(persona);
+  }, testInfo) => {
+    if (persona) await signInAs(signInAsRe(persona, testInfo.project.name));
     const response = await page.goto(url);
     const nonce = nonceOf(response?.headers()['content-security-policy']);
     expect(nonce).toBeTruthy();
-    await hydrated();
+    if (arch) {
+      // Drawn by its own script: the sign-in button or the greeting is there once it ran.
+      await expect(
+        persona
+          ? page.getByRole('heading', { level: 1, name: 'Dobrý den.' })
+          : page.getByRole('link', { name: cs.signIn.button }),
+      ).toBeVisible();
+    } else {
+      await hydrated();
+    }
     const all = await page.locator('script').evaluateAll((list) =>
       list.map((s) => ({
         nonce: (s as HTMLScriptElement).nonce,
@@ -44,6 +57,7 @@ for (const [name, url, persona] of NONCED_PAGES) {
     const own = `${new URL(page.url()).origin}/_next/static/`;
     const bare = all.filter((s) => s.nonce === '');
     expect(bare.filter((s) => !s.src.startsWith(own))).toEqual([]);
+    if (arch) expect(all.map((s) => new URL(s.src).pathname)).toEqual(['/arch/app.js']);
     expect(new Set(all.filter((s) => s.nonce !== '').map((s) => s.nonce))).toEqual(
       new Set([nonce]),
     );
@@ -74,23 +88,25 @@ test('an unknown page answers 404', async ({ page, hydrated, expectAccessible })
 test('every response gets a fresh nonce', async ({ request }) => {
   const nonces = new Set<string | undefined>();
   for (let i = 0; i < 3; i++) {
-    nonces.add(nonceOf((await request.get('/prihlaseni')).headers()['content-security-policy']));
+    nonces.add(nonceOf((await request.get('/')).headers()['content-security-policy']));
   }
   expect(nonces.size).toBe(3);
 });
 
 test('pages, routes and static files carry the security headers', async ({ page, request }) => {
-  await page.goto('/prihlaseni');
-  const chunk = await page.locator('script[src^="/_next/static/"]').first().getAttribute('src');
+  await page.goto('/');
+  const asset = await page.locator('script[src^="/arch/"]').first().getAttribute('src');
+  // The build stamps the script's address with a version.
+  expect(asset).toMatch(/^\/arch\/app\.js(\?|$)/);
   const responses = await Promise.all([
-    request.get('/prihlaseni'),
+    request.get('/'),
     request.get('/auth/login', { maxRedirects: 0 }),
-    request.get(chunk ?? ''),
+    request.get(asset ?? ''),
   ]);
   for (const response of responses) {
     expect(response.headers()).toMatchObject(SECURITY_HEADERS);
     expect(response.headers()['permissions-policy']).toContain('camera=()');
   }
-  // Static files need no policy of their own.
-  expect(responses[2]?.headers()['content-security-policy']).toBeUndefined();
+  // Unlike a Next chunk, the Arch bundle is served through the proxy and carries a policy too;
+  // it is the page's policy that counts, so only the headers above are asserted for the bundle.
 });

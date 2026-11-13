@@ -152,7 +152,7 @@ test("approving as a student announces it, ends the applicant's session, and sho
   signInAs,
 }) => {
   const applicant = await signInElsewhere(newContext, /^Test – schvalit/);
-  await expect(applicant).toHaveURL(/:\d+\/klasicke$/);
+  await expect(applicant).toHaveURL(/:\d+\/$/);
   await mailpit.forget(APPROVED_ADDRESS);
   await signInAs(/^Ředitel/);
   await page.goto('/uzivatele');
@@ -206,7 +206,7 @@ test('rejecting announces it, and the applicant then sees the cooldown', async (
   await expect(item).toHaveCount(0);
 
   const applicant = await signInElsewhere(newContext, /^Test – zamitnout/);
-  await expect(applicant).toHaveURL(/:\d+\/klasicke$/);
+  await expect(applicant).toHaveURL(/:\d+\/$/);
   await applicant.goto('/pristup');
   const main = applicant.getByRole('main');
   await expect(main.getByRole('heading', { level: 2 })).toHaveText(access.cooldown.title);

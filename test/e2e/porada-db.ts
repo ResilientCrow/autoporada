@@ -9,7 +9,7 @@ import { withClient } from './db';
 const DAY_MS = 86_400_000;
 
 /** Today's date in Prague as ISO. */
-function pragueToday(): string {
+export function pragueToday(): string {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Prague' }).format(new Date());
 }
 
@@ -19,6 +19,38 @@ export function mondayIn(weeks: number): string {
   const sinceMonday = (today.getUTCDay() + 6) % 7;
   const monday = new Date(today.getTime() - sinceMonday * DAY_MS + weeks * 7 * DAY_MS);
   return monday.toISOString().slice(0, 10);
+}
+
+/**
+ * Gives the porada of this Monday a meeting date, making its row if it has none (the school year
+ * and the deadline a day before the meeting are the row's own, as `ensureIssue` would write them
+ * roughly). Arch previews and generates only the working porada, the first open one whose meeting
+ * is today or later: a past date makes a later porada the working one and this one an earlier one.
+ */
+export async function setMeetingDate(monday: string, meetingDate: string): Promise<void> {
+  await withClient(async (client) => {
+    await client.query(
+      `INSERT INTO issues (monday, meeting_date, school_year, deadline_at)
+       VALUES ($1::date, $2::date,
+               CASE WHEN extract(month FROM $1::date) >= 9
+                    THEN extract(year FROM $1::date)::int || '/' || (extract(year FROM $1::date)::int + 1)
+                    ELSE (extract(year FROM $1::date)::int - 1) || '/' || extract(year FROM $1::date)::int END,
+               $2::date - 1)
+       ON CONFLICT (monday) DO UPDATE SET meeting_date = EXCLUDED.meeting_date, version = issues.version + 1`,
+      [monday, meetingDate],
+    );
+  });
+}
+
+/** Whether the porada of this Monday has its generated document stored. */
+export async function hasDocument(monday: string): Promise<boolean> {
+  return withClient(async (client) => {
+    const { rowCount } = await client.query(
+      'SELECT 1 FROM generated_documents d JOIN issues i ON i.id = d.issue_id WHERE i.monday = $1::date',
+      [monday],
+    );
+    return rowCount === 1;
+  });
 }
 
 /** An ISO date `days` after another. */
