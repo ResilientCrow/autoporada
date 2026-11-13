@@ -45,7 +45,7 @@ passwords; pick one of the two accounts:
 
 `pnpm dev:seed` makes both ready and can be rerun at any time; it resets only those
 two roles. The other personas, folded under „Další testovací osoby“, belong to the
-e2e tests; without the seed they land on „Zatím nemáte přístup“.
+e2e tests; without the seed they land on „Zatím tu nemáte přístup“.
 
 The worker sends the e-mails and runs the scheduled jobs. In another terminal,
 with `pnpm dev:services` up and `pnpm db:migrate` done (it also installs

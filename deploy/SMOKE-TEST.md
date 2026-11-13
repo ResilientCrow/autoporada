@@ -59,8 +59,8 @@ docker compose exec postgres psql -U pgadmin -d autoporada
          certificate's thumbprint and days left, and the warning that
          `BOOTSTRAP_HEADMASTER_OID` is set.
 5. **Headers.**
-   - [ ] `curl -sI http://autoporada.ssps.cz/prihlaseni` answers 308 to https.
-   - [ ] `curl -sI https://autoporada.ssps.cz/prihlaseni` shows
+   - [ ] `curl -sI http://autoporada.ssps.cz/` answers 308 to https.
+   - [ ] `curl -sI https://autoporada.ssps.cz/` shows
          `Strict-Transport-Security`, a `Content-Security-Policy` with a
          nonce, `Cache-Control: no-store`, `X-Content-Type-Options`,
          `Referrer-Policy`, `Cross-Origin-Opener-Policy`,
@@ -102,7 +102,7 @@ docker compose exec postgres psql -U pgadmin -d autoporada
     - [ ] If it answers `step-up-stale` instead, single sign-on (a PRT or
           Windows Hello) skipped the password: record it for M6.
 14. **Expiry.** `psql`: `UPDATE sessions SET idle_expires_at = now();`
-    - [ ] The next request goes to `/prihlaseni`.
+    - [ ] The next request goes to `/` (the sign-in screen).
 15. **Logs.**
     - [ ] `docker compose logs caddy` shows real client addresses, not 172.x
           (otherwise everyone shares one rate-limit bucket).
@@ -168,12 +168,12 @@ the headmaster (step 25).
     returns it with a note.
     - [ ] The author gets one mail through Graph within a minute. The subject
           is „Autoporada: bod byl vrácen k úpravě“.
-    - [ ] The body links to `https://autoporada.ssps.cz/body`, and neither the
+    - [ ] The body links to `https://autoporada.ssps.cz/#/moje`, and neither the
           title of the point nor the note appears in it.
 24. **An approval and a rejection each mail the author.** Approve one point and
     reject another.
     - [ ] The subjects are „Autoporada: bod byl schválen“ and
-          „Autoporada: bod nebyl přijat“, each with the `/body` link and no
+          „Autoporada: bod nebyl přijat“, each with the `/#/moje` link and no
           title or note.
     - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
 25. **A decision on one's own point mails nobody.** The headmaster hands in a
@@ -208,7 +208,9 @@ the headmaster (step 25).
           class), `network`, `body` (an answer that is not a name list), or `token:` with the stage
           and the AADSTS code. Note it down: it tells a wrong `$search` grammar (`http-4xx` with
           `unavailable`) from a refused consent (`denied`).
-    - [ ] In the point editor a search for three letters of a colleague's surname
+    - [ ] Arch has no people picker yet (ADR 0065 item 7), so call the route as the
+          signed-in author instead (`POST /api/adresar/hledat`, same-site, from the
+          browser console): a search for three letters of a colleague's surname
           lists them by name; guests and rooms are absent.
     - [ ] If `$search` answers 403 (`directory.denied`) under `User.ReadBasic.All`,
           set `DIRECTORY=off` again: the fallback `User.Read.All` needs a new ADR
@@ -240,7 +242,7 @@ now; the handler works from the clock and the data, so it sends only what is due
     its last day, so use an akce whose last day was yesterday, or wait a day. Then
     `docker compose run --rm cli jobs:run future.report-prompt`.
     - [ ] The author gets one mail with the subject „Autoporada: napište zprávu z akce“ and the
-          `/body` link; it does not name the akce. A second `jobs:run` sends nothing.
+          `/#/moje` link; it does not name the akce. A second `jobs:run` sends nothing.
     - [ ] On the home page and in „Moje body“ the card „Akce čekající na zprávu“ offers
           „Napsat zprávu“, which opens a draft prefilled from the akce, and no way to
           decline it.
@@ -256,13 +258,13 @@ now; the handler works from the clock and the data, so it sends only what is due
 32. **The reviewer digest.** Hand in a point and an akce, then at 7.00 or 15.00 (or
     `jobs:run reviewer.digest morning` or `afternoon`):
     - [ ] Each reviewer and the headmaster gets „Autoporada: novinky ke kontrole“ with counts
-          only („Nové položky ke kontrole: 2.“) and no title or name; it links `/kontrola`.
-    - [ ] With only a pending access request the headmaster's digest links `/uzivatele`.
+          only („Nové položky ke kontrole: 2.“) and no title or name; it links `/#/kontrola`.
+    - [ ] With only a pending access request the headmaster's digest links `/#/lide`.
     - [ ] A second run in the same slot sends nothing.
 33. **The headmaster summary.** Five minutes after a deadline (or `jobs:run headmaster.summary`
     inside the two hours after it):
     - [ ] Each headmaster gets „Autoporada: uzávěrka porady proběhla“ with approved, waiting and
-          returned counts, linking `/kontrola`; none for a skipped meeting; sent once.
+          returned counts, linking `/#/kontrola`; none for a skipped meeting; sent once.
     - [ ] `docker compose run --rm cli jobs:status` shows `dead: 0`.
 
 ## Headmaster tools (M9)
@@ -280,7 +282,7 @@ headmaster.
     porada („Přesunout poradu“) to a date that makes its deadline earlier (the job is enqueued
     by the move, so there is no `jobs:run`; watch `docker compose run --rm cli jobs:status`).
     - [ ] Each author with a draft or returned point (and each active submitter the rule names) gets one
-          „Autoporada: porada se přesouvá na <datum>“ with the new deadline and the `/body` link,
+          „Autoporada: porada se přesouvá na <datum>“ with the new deadline and the `/#/moje` link,
           and no title or name; moving the same porada to the same deadline again sends nothing.
     - [ ] A move that makes the deadline later sends no mail.
     - [ ] Known limit: authors of late event reports are not mailed (features.md, Known limits).
@@ -294,10 +296,11 @@ headmaster.
     - [ ] `SELECT has_any_column_privilege('autoporada_jobs', t::regclass, 'SELECT') FROM unnest(ARRAY['registry_lists', 'registry_entries', 'issue_items']) AS t;`
           answers `f` three times: the jobs role cannot read the students' names or the outline.
     - [ ] `jobs:run reports.late` ends `sent` or with nothing due, never with a database code.
-37. **Paste into the editor on the school's own Office and browsers.** In a point and in the
-    outline item editor, paste a Word paragraph with a list, bold and a table, and a Google
-    Docs paragraph with a link, in the browsers the school uses.
-    - [ ] Headings, lists, bold and links survive; fonts, colours, sizes and classes do not.
+37. **Paste into the editors on the school's own Office and browsers.** In the outline item
+    editor (Pokyny a hospodaření), paste a Word list and a Google Docs paragraph with a link,
+    in the browsers the school uses.
+    - [ ] Arch keeps plain text only: one line per list item, and no formatting, fonts, colours
+          or links survive.
     - [ ] The browser console shows no Content-Security-Policy violation while pasting.
     - [ ] Pasting a list of students into the registry shows a preview that counts the lines it
           could not read, and nothing is stored until it is confirmed.

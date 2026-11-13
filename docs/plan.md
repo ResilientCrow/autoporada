@@ -1,5 +1,7 @@
 # Autoporada — plan of record
 
+> Note, 2026-11-13: the classic Next.js UI (pages, server actions, `src/ui` apart from `ui/copy`) was removed; Arch is the only UI. Page paths, UI libraries and `ui/` layer rules named below describe the plan as written. See [ADR 0065](adr/0065-the-classic-ui-is-removed.md).
+
 ## Context
 
 Every Monday the headmaster of Smíchovská střední (ssps.cz) assembles the

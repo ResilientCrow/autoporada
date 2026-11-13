@@ -33,9 +33,7 @@ in v1 unless the [plan of record](plan.md) changes first.
     sentence and its labelled bullets; there is no setting for them;
   - at least one participant list and one vyjádření, both mandatory;
   - a live document preview.
-- People picker that searches the M365 directory (when the search is switched
-  on; production starts with it off) and offers the people from the author's
-  own earlier points, with their salutation, class and genitive form. Nothing
+- People memory: the people from the author's own earlier points, with their salutation, class and genitive form. Nothing
   is shared between authors. A list of people can be pasted. Class codes are
   saved in the school's form ("1. a" becomes "1.A").
 - Genitive suggestion with a confidence indicator. The submitter can correct it.
@@ -95,7 +93,7 @@ in v1 unless the [plan of record](plan.md) changes first.
   „Zrušit akci“ only asks: the akce stays approved until vedení confirms or
   refuses the cancel (a note is required), and the author can take the request
   back (ADR 0062). A reviewer cannot approve their own point.
-- Staff reviewers see the full preview of the porada (`/porada/[datum]/nahled`,
+- Staff reviewers see the full preview of the porada („Náhled porady“,
   read-only); it names students, so students never see it.
 - A reviewer sees a colleague's point only after the author handed it in; a
   draft stays private. A returned point stays visible to reviewers.
@@ -112,7 +110,7 @@ in v1 unless the [plan of record](plan.md) changes first.
   meeting date: by default two days before, at 20:00, which is Saturday 20:00
   for a Monday meeting. Submissions after the deadline go to the next porada,
   except the late reports above.
-- Settings (`/nastaveni`, headmaster): the deadline (1 to 4 days before the
+- Settings („Nastavení“, headmaster): the deadline (1 to 4 days before the
   meeting, 8:00 to 22:00 on a quarter hour), the two deadline reminders on or
   off, and the heading and intro of Příloha 1. The form shows its effect before
   saving. A deadline already shown to an author never moves: saving freezes the
@@ -130,15 +128,15 @@ in v1 unless the [plan of record](plan.md) changes first.
 - No summary mail for the headmaster after the deadline or after the late
   reports (switched off, ADR 0037): the preflight of the porada shows where
   its points stand.
-- The porada pages (`/porada`, headmaster): the working slot is the first open
+- The porada screens („Porada“, headmaster): the working slot is the first open
   porada whose meeting date is today or later, with steps for the outline,
   „Údaje“, Příloha 2 and the preview.
 - Přítomni, Hosté and Příloha 2 carry from the latest earlier porada that has
   a value, and the headmaster edits them in „Údaje“ and „Příloha 2“. An
   empty value clears and carries as cleared; „Odebrat přílohu“ removes Příloha 2.
-- A POKYNY outline editor with carry-over (`/porada/[datum]/pokyny`). Each item
-  is standing or one-time, items can be reordered, edited, added with text and
-  removed, and the text is restricted rich text with three indent levels. The
+- A POKYNY outline editor with carry-over („Pokyny a hospodaření“). Each item
+  is standing or one-time, and items can be edited, added with text and
+  removed. The
   first write copies the outline that was derived from the earlier porada, or
   from the school's starting content. The meetings, events and partner slots are
   generated or restricted (partners keep their quotes, at most 20). Approved
@@ -146,15 +144,10 @@ in v1 unless the [plan of record](plan.md) changes first.
   the headmaster places them; a proposal's wording is changed through the
   reviewer's edit. A placed proposal that goes back to its author keeps its
   place: the editor hides it, and it comes back there once approved again.
-- The rich-text editor: bold, italic, undo, and four indent levels (plain,
-  then the o / o / ■ levels). Text pasted from Word or Google Docs is cleaned
-  in the browser to paragraphs, bold, italic and levels; nothing else is kept.
-  Every M9 editor saves with „Uložit“ and asks before leaving with unsaved
-  changes.
 - Ohlasy v médiích and ohlasy sociálních partnerů (headmaster only), in the
   outline.
 - Příloha 2, optional free-form content.
-- Student registry (`/registr`, headmaster edits, staff reviewers read): the
+- Student registry („Seznamy studentů“, headmaster edits, staff reviewers read): the
   lists of Příloha 1 and point 4, more can be added, each entry with given
   name, family name and class, sorted by class, with students added since the
   last document in bold („NOVÉ“). Bulk paste reads the document's own list
@@ -177,15 +170,15 @@ in v1 unless the [plan of record](plan.md) changes first.
   koordinovali:“ for a coordinated akce, „Akci zajišťovali:“ for one saved
   without a role) and the line
   „vyjádření organizátora: nebylo dodáno“. The headmaster can rewrite the paragraph on
-  „Chybějící zprávy“ (`/porada/[datum]/zpravy`) and restore the system's text.
+  „Chybějící zprávy“ and restore the system's text.
   Each paragraph is reviewed (ADR 0061): „Zkontrolováno“ confirms the system's
   text, and the paragraph counts as checked only while that confirmed original
   equals the paragraph the system would write now, so an edit of the akce or the
   headmaster's own save un-checks it. The status is checked, handed-in (a report
-  waits for a decision), open (the author can still hand in) or to-check. In the
-  Arch UI the headmaster sees the to-check ones in Ke kontrole, marked
+  waits for a decision), open (the author can still hand in) or to-check. The
+  headmaster sees the to-check ones in Ke kontrole, marked
   „Vygenerováno automaticky (zpráva nedodána)“, with „Zkontrolováno“; Chybějící
-  zprávy there is an overview. The classic page has „Zkontrolováno“ too.
+  zprávy there is an overview.
   Generation shows a bold warning while any paragraph is unchecked, and
   „Vygenerovat“ then opens a confirm dialog („Zkontrolovat“ / „Vygenerovat i
   tak“). It is never blocked.
@@ -197,7 +190,7 @@ in v1 unless the [plan of record](plan.md) changes first.
   confirmation tick; held off while the preflight blocks) stores a DOCX in the
   exact template look and publishes the points it prints. The worker then makes
   the PDF with Gotenberg. Both stay downloadable from the porada and from
-  „Archiv porad“ for the headmaster and the staff reviewers, and every download
+  „Archiv“ for the headmaster and the staff reviewers, and every download
   is audited. A generated porada cannot be reopened or regenerated yet (ADR
   0038).
 - „Porada se nekoná“, before or after its deadline, asks for the day the next
@@ -232,12 +225,14 @@ in v1 unless the [plan of record](plan.md) changes first.
 - CLI commands for the queue: `jobs:status` lists jobs and the dead-letter
   queue, `jobs:redrive` replays dead jobs, and `mail:test` sends a test e-mail
   to a reviewer or headmaster.
-- Privacy notice page.
+- A short privacy text, „Jak s údaji zacházíme“ (`#/soukromi`), open without
+  signing in. The full privacy notice is not built (ADR 0065).
 
 ### Known limits
 
-- The editor's unsaved-changes guard catches closing the tab and clicking a
-  link of the app, but not the browser's Back button.
+- Arch needs JavaScript; there is no fallback without it (ADR 0065).
+- Registry lists keep their stored order; they cannot be reordered (ADR 0065).
+- Arch has no people picker over the directory search yet (ADR 0065).
 - Moving a porada notifies nobody: a late report's first mail already sent
   keeps the old close, and the last call carries the new one.
 

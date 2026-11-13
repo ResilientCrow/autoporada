@@ -4,11 +4,11 @@ Read this before touching anything in `arch/`. Everything below is taken from th
 
 ## 1. What it is
 
-- „Arch" is the school's interface for the weekly Porada vedení školy: a hash-routed React SPA in `arch/`, served at `/` by `server/routes/arch-page.ts`. The classic Next.js UI stays at `/klasicke` (and its old paths). See `docs/adr/0053-the-arch-ui-at-the-root.md`.
+- „Arch" is the school's interface for the weekly Porada vedení školy: a hash-routed React SPA in `arch/`, served at `/` by `server/routes/arch-page.ts`. It is the only UI: the classic Next.js pages were removed. See `docs/adr/0053-the-arch-ui-at-the-root.md` and `docs/adr/0065-the-classic-ui-is-removed.md`.
 - Source: `arch/a/*.tsx` (screens and kit), `arch/core/*` (state, ops, shared parts), CSS in `arch/a/base.css` (system) and `arch/a/app.css` (additions), fonts in `arch/a/fonts/` via `arch/a/fonts.css` (self-hosted, no request leaves; CSP stays closed), logos `arch/a/logo-dark.svg` and `arch/a/sign-dark.svg`.
 - Build: `pnpm build:arch` (`node arch/build-real.mjs`) writes the gitignored `public/arch`. `pnpm dev` and `pnpm build` run it first. `pnpm typecheck` covers `arch/` through `arch/tsconfig.json`; `@/...` imports `src`.
 - Visual reference: the prototype in `/work/ssps/app` (app under `/work/ssps/app/a`), school colours in `/work/brand/barvy.pdf`.
-- Data: `GET /api/arch/state` (read) and `POST /api/arch/run` (write), same use cases as the classic UI.
+- Data: `GET /api/arch/state` (read) and `POST /api/arch/run` (write), which run the use cases in `src/application`.
 
 ## 2. Tokens
 
@@ -166,7 +166,7 @@ To add a write: a state function in `store.ts`, a tagged op in `ops.ts`, a branc
 1. **Style is 1:1 with the prototype**: font, colour, spacing, radii, shadows and icons, on desktop and phone. Structure may differ where it is better; style may not. After any UI change, compare screenshots side by side with the prototype (`/work/ssps/app`) at the same viewport.
 2. **Backend changes are allowed when a feature needs them.** Prefer an existing use case; when none fits, change `src/` (domain, contracts, application, infra, server, document) and `drizzle/` by the rules in `CLAUDE.md`: the layers in `.dependency-cruiser.cjs`, a new use case in `USE_CASES` with its colocated test, schema changes through `pnpm db:generate` (never edit a committed migration), a grants migration for any new column the worker reads, and a new ADR (never an edited one) for a decision. The classic UI at `/klasicke` runs on the same use cases, so a backend change must keep it working.
 3. **No slanted edges or rotated elements. No gradients, no cards with a coloured left border, no emoji.**
-4. **Copy is Czech** (live in the screen files; the classic copy is `src/ui/copy`). No em dashes, no all-caps labels, no middle dots, no eyebrow labels. Sentences that address a person avoid gendered forms where they can. Use ` ` for non-breaking spaces (see the hint „v Národním muzeu“ in `write.tsx`).
+4. **Copy is Czech** (live in the screen files; the sentences shared with the server, such as failures, sign-in and downloads, are in `src/ui/copy`). No em dashes, no all-caps labels, no middle dots, no eyebrow labels. Sentences that address a person avoid gendered forms where they can. Use ` ` for non-breaking spaces (see the hint „v Národním muzeu“ in `write.tsx`).
 5. **Real porada documents in `/work/ssps/porady` hold real names.** Never copy content or names from them into the repo; use fictional samples.
 6. **Every UI change**: check 375 px and desktop for horizontal overflow, and keep labels accessible. The e2e tests in `test/e2e/arch.spec.ts` find controls by role and name (for example `getByRole('button', { name: 'Nová akce' })`, `getByLabel('Den', { exact: true })`), so renaming a label breaks them.
 7. Only the headmaster sees management screens; there are two roles in the user's eyes (headmaster and everyone else), plus the reviewer for Ke kontrole.
