@@ -29,8 +29,10 @@ import { parseIsoDate, toIsoDate } from '@/domain/time';
 import { scopeWhere } from '../scope-sql';
 import { pointEvents, points } from '../schema';
 import type { TxDatabase } from './database';
-import { PARSE_FAILURE, queuedPoints } from './points-queue';
 import { dateOrNull, timeOrNull } from './wall-columns';
+
+/** The failure code of a row the database should not hold; it never carries the payload (ADR 0015). */
+const PARSE_FAILURE = 'db.parse.points';
 
 /** The columns a PointRecord is made of; new columns stay out until named here. */
 export const POINT_ROW = {
@@ -153,13 +155,7 @@ export function createPointReads(
   ctx: TxContext,
 ): Pick<
   PointRepo,
-  | 'get'
-  | 'loadForWrite'
-  | 'listMine'
-  | 'queue'
-  | 'mailFacts'
-  | 'countSubmittedSince'
-  | 'handedInFor'
+  'get' | 'loadForWrite' | 'listMine' | 'mailFacts' | 'countSubmittedSince' | 'handedInFor'
 > {
   const byId = (id: string) =>
     db
@@ -189,9 +185,6 @@ export function createPointReads(
         earliestMonday: dateOrNull(row.earliestMonday),
         handInMonday: dateOrNull(row.handInMonday),
       }));
-    },
-    async queue(limit) {
-      return queuedPoints(db, visiblePoints(ctx), limit);
     },
     async mailFacts(id) {
       if (ctx.principal.kind !== 'system') throw new ScopeViolation();

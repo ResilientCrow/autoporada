@@ -104,7 +104,7 @@ export function Soukromi() { return <div className="work solo"><main className="
 function Entry({ children }: { children: React.ReactNode }) {
   return <div className="lay"><div className="work"><header className="bar"><span className="logo"><img src={logo} alt="Smíchovská střední" /></span></header><main className="col mid" tabIndex={-1} data-focus-top>{children}</main></div><Desk cls="tall"><div className="wrapm wrapn"><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div></div></div></Desk></div>;
 }
-/** What the address says about the last sign-in or sign-out, checked as `server/pages/sign-in.ts` checks it. */
+/** What the address says about the last sign-in or sign-out. */
 function signInOutcome() {
   const q = new URLSearchParams(location.search); const chyba = q.get('chyba'); const aadsts = q.get('aadsts'); const pricina = q.get('pricina'); const out = q.get('odhlaseno');
   const error = isSignInError(chyba) ? chyba : null;

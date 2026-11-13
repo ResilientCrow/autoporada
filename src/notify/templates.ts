@@ -101,7 +101,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         'vedení školy schválilo vaši žádost o\u00A0přístup do Autoporady. Přihlaste se prosím znovu.',
       ],
-      link: '/prihlaseni',
+      link: '/',
     },
   }),
   'access.rejected': ({ retryFrom }) => ({
@@ -124,7 +124,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: byl vám přidělen přístup',
     body: {
       paragraphs: ['vedení školy vám přidělilo přístup do Autoporady. Přihlaste se prosím znovu.'],
-      link: '/prihlaseni',
+      link: '/',
     },
   }),
   'mail.check': () => ({
@@ -143,18 +143,18 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         'váš bod pro poradu vedení byl vrácen k\u00A0úpravě. Poznámku kontroly najdete v\u00A0aplikaci:',
       ],
-      link: '/body',
+      link: '/#/moje',
     },
   }),
   'point.approved': () => ({
     subject: 'Autoporada: bod byl schválen',
-    body: { paragraphs: ['váš bod pro poradu vedení byl schválen.'], link: '/body' },
+    body: { paragraphs: ['váš bod pro poradu vedení byl schválen.'], link: '/#/moje' },
   }),
   'point.rejected': () => ({
     subject: 'Autoporada: bod nebyl přijat',
     body: {
       paragraphs: ['váš bod pro poradu vedení nebyl přijat. Důvod najdete v\u00A0aplikaci:'],
-      link: '/body',
+      link: '/#/moje',
     },
   }),
   // The akce is not named: its title is in the app, where /body lists what is waiting for a report.
@@ -164,7 +164,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         'akce, kterou jste zapsali do přehledu, proběhla. Zprávu do porady můžete napsat v\u00A0aplikaci:',
       ],
-      link: '/body',
+      link: '/#/moje',
     },
   }),
   // Neither can be switched off by the reader (ADR 0046): each is about the reader's own work, a report owed or a point.
@@ -174,7 +174,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} je za dva dny a\u00A0porada čeká na vaši zprávu z\u00A0akce, která proběhla. Odevzdejte ji v\u00A0aplikaci:`,
       ],
-      link: '/body',
+      link: '/#/moje',
     },
   }),
   'reminder.hard': ({ meetingDate }) => ({
@@ -183,7 +183,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         `máte rozpracovaný nebo vrácený bod pro poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dnes.`,
       ],
-      link: '/body',
+      link: '/#/moje',
     },
   }),
   // Counts, not titles or names (D3 (a)); a count of zero is left out. The colon keeps every noun clear of the number.
@@ -196,7 +196,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       subject: 'Autoporada: novinky ke kontrole',
       body: {
         paragraphs: counts.map(([what, n], i) => `${i === 0 ? 'nové' : 'Nové'} ${what}: ${n}.`),
-        link: submitted > 0 ? '/kontrola' : '/uzivatele',
+        link: submitted > 0 ? '/#/kontrola' : '/#/lide',
       },
     };
   },
@@ -219,7 +219,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     }
     return {
       subject: 'Autoporada: uzávěrka porady proběhla',
-      body: { paragraphs, link: '/kontrola' },
+      body: { paragraphs, link: '/#/kontrola' },
     };
   },
   // Counts only (F2): the titles are in the preflight of the porada.
@@ -229,7 +229,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
       paragraphs: [
         `poslední uzávěrka pozdních zpráv k\u00A0poradě z\u00A0${typographizeText(formatLongDate(meetingDate))} proběhla. Odevzdáno: ${handedIn}, chybí: ${missing}.`,
       ],
-      link: '/kontrola',
+      link: '/#/kontrola',
     },
   }),
   // A date and a time, no names (D21); sent only when the deadline came earlier, so the reader has less time.
@@ -241,7 +241,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
         paragraphs: [
           `porada se přesouvá na ${typographizeText(formatLongDate(meetingDate))}. Uzávěrka je dřív: ${weekdayName(date)} ${formatDayMonth(date)} v\u00A0${formatClock(time)}.`,
         ],
-        link: '/body',
+        link: '/#/moje',
       },
     };
   },
@@ -254,7 +254,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
         paragraphs: [
           `akce, kterou jste zapsali do přehledu, skončila. Zprávu odevzdejte do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
         ],
-        link: '/body',
+        link: '/#/moje',
       },
     };
   },
@@ -267,7 +267,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
         paragraphs: [
           `zpráva o\u00A0akci ještě není odevzdaná. Odevzdejte ji do ${when}, půjde na poradu z\u00A0${typographizeText(formatLongDate(meetingDate))}.`,
         ],
-        link: '/body',
+        link: '/#/moje',
       },
     };
   },

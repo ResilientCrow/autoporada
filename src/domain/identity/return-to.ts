@@ -5,7 +5,7 @@ const MAX_LENGTH = 512;
 const PRINTABLE_ASCII = /^[\x20-\x7e]*$/;
 const SAME_ORIGIN_PATH = /^\/(?![/\\])/;
 /** Pages a sign-in must never come back to: they would start another one. */
-const AUTH_PAGES = /^\/(?:auth(?:\/|$)|prihlaseni(?:[/?]|$))/;
+const AUTH_PAGES = /^\/auth(?:\/|$)/;
 const PROBE_ORIGIN = 'https://x.invalid';
 
 /**

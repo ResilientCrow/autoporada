@@ -41,7 +41,7 @@ const answersAkce = (...extra: (SQL | undefined)[]) => sql`EXISTS (
   SELECT 1 FROM ${futureItems}
   WHERE ${and(eq(futureItems.reportPointId, points.id), owedAkce, ...extra)})`;
 
-/** The order handed in, as `queue`: oldest submission first, ties to the lower id. */
+/** The order handed in: oldest submission first, ties to the lower id. */
 const HANDED_IN_FIRST = [asc(points.submittedAt), asc(points.id)];
 
 /**

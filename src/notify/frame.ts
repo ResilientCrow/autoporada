@@ -10,21 +10,13 @@ const FOOTER = 'Tuto zprávu poslala aplikace Autoporada automaticky. Neodpovíd
 
 export interface Body {
   readonly paragraphs: readonly string[];
-  /** Ends the body with a link to this page on the app origin (ADR 0020, 0028): sign-in, the author's points, the review queue or the users page. */
-  readonly link?: '/prihlaseni' | '/body' | '/kontrola' | '/uzivatele';
+  /** Ends the body with a link to this address of the Arch UI on the app origin (ADR 0020, 0028): sign-in, the author's points, the review queue or the users page. */
+  readonly link?: '/' | '/#/moje' | '/#/kontrola' | '/#/lide';
   /** Paragraphs that follow the link, before the footer. */
   readonly after?: readonly string[];
 }
 
-/** Branch arch-ui: the app's pages live at hash addresses of the Arch UI. */
-const ARCH_ADDRESS = {
-  '/prihlaseni': '/',
-  '/body': '/#/moje',
-  '/kontrola': '/#/kontrola',
-  '/uzivatele': '/#/lide',
-} as const;
-
 export function frame(origin: string, body: Body): string {
-  const link = body.link ? [`${origin}${ARCH_ADDRESS[body.link]}`] : [];
+  const link = body.link ? [`${origin}${body.link}`] : [];
   return [GREETING, ...body.paragraphs, ...link, ...(body.after ?? []), FOOTER].join('\n\n') + '\n';
 }

@@ -52,7 +52,7 @@ export function runRegistered<In, Out>(deps: ActionDeps, useCase: UseCase<In, Ou
 }
 
 /**
- * A server action (ADR 0011): session (1), rate limit (1a), then the use
+ * One call of a use case (ADR 0011): session (1), rate limit (1a), then the use
  * case's pipeline. A bug or an outage reaches the client as `unavailable`
  * with its classified cause, and the log gets the cause and the error
  * without any input; the request id stays in the log (ADR 0044).

@@ -56,7 +56,7 @@ export async function archPlaceholders(
 /**
  * The headmaster's checks with the server's own reading of every missing report in the open poradas
  * (`issues.missingReports`, read for each by `readReports`): the status Arch shows and counts, so it
- * never differs from the one the generate screen and the classic page give (ADR 0061). An akce with
+ * never differs from the one the generate screen gives (ADR 0061). An akce with
  * no stored row gets an entry too.
  */
 export async function withServerStatus(

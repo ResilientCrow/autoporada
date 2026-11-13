@@ -93,7 +93,7 @@ export const signOutInput = z.strictObject({ everywhere: z.boolean() });
 export const signOutOutput = z.object({ ended: z.number().int() });
 
 /**
- * Why a sign-in, or a sign-out, did not finish, as /prihlaseni?chyba=… names it (ADR 0044);
+ * Why a sign-in, or a sign-out, did not finish, as `/?chyba=…` names it (ADR 0044);
  * Czech copy in ui/copy. Entra's answers have their own kinds, and anything that broke in the app
  * is its failure cause, so a new cause is a sign-in error too.
  */

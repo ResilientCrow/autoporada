@@ -1,6 +1,6 @@
 /**
  * Branch arch-ui only: the Arch UI's two endpoints. GET answers the viewer's state, POST runs one
- * use case by name through the same pipeline a server action takes (session, rate limit, access,
+ * use case by name through `runAction`'s pipeline (session, rate limit, access,
  * validation). The one write that is not a use case is the annexes of a porada (`arch.annexes`),
  * kept in the branch's own table `arch_annexes`, headmaster only.
  */

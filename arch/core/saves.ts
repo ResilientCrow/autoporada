@@ -1,11 +1,11 @@
 /**
- * When a queued save may go to the server. A save goes once the typing pauses, as the classic
- * editors' autosave does (`ui/form/autosave`), so typing never runs into the `autosave` rate limit
- * (120 a minute); typing that never pauses still saves after `MAX_WAIT_MS`.
+ * When a queued save may go to the server. A save goes once the typing pauses, so typing never
+ * runs into the `autosave` rate limit (120 a minute); typing that never pauses still saves after
+ * `MAX_WAIT_MS`.
  */
 import type { Op } from './ops';
 
-/** The pause after the last keystroke, as `DEBOUNCE_MS` in `ui/form/autosave/machine.ts`. */
+/** The pause after the last keystroke. */
 export const DEBOUNCE_MS = 1_500;
 /** The longest a save waits for a pause. */
 export const MAX_WAIT_MS = 10_000;

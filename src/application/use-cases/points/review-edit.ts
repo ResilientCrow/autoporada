@@ -13,7 +13,7 @@ import { pointView, pointWriteAccess } from './access';
 import { kindIssues, readinessIssues, typeSpec } from './checks';
 
 /**
- * „Uložit úpravy“ of a reviewer on /kontrola/[id] (design section 10, D13 (a)): the whole content
+ * „Uložit úpravy“ of a reviewer in the review (design section 10, D13 (a)): the whole content
  * against the version the page showed. A stale page is a conflict before anything else. The author
  * never edits here, their own draft included: they change their point through the autosave, or
  * retract it first (SSU-6). Anyone else needs `point.edit` on the locked row: a reviewer edits what

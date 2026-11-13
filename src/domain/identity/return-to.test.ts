@@ -17,13 +17,12 @@ describe('safeReturnTo', () => {
     ['/' + 'x'.repeat(600), '/'],
     ['/auth/logout', '/'],
     ['/auth', '/'],
-    ['/prihlaseni?returnTo=/x', '/'],
+    ['/auth/login?returnTo=/x', '/'],
     ['', '/'],
     [undefined, '/'],
     [42, '/'],
     ['/porada/2026-10-19?tab=body#part', '/porada/2026-10-19?tab=body'],
     ['/a/../b', '/b'],
-    ['/prihlasenix', '/prihlasenix'],
     ['/authors', '/authors'],
   ])('%j → %j', (raw, path) => {
     expect(safeReturnTo(raw)).toBe(path);

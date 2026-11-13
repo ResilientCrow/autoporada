@@ -47,7 +47,7 @@ describe('points.decide', () => {
       const reviewer = await user('reviewer');
       expect(await decide(reviewer, { id, event: 'approve' })).toEqual({
         ok: true,
-        value: { version: 3, next: null },
+        value: { version: 3 },
       });
       const { point, events, audit } = await snapshot(id);
       expect(point).toMatchObject({ state: 'approved', version: 3 });
@@ -112,7 +112,7 @@ describe('points.decide', () => {
       const reviewer = await user('reviewer');
       expect(await decide(reviewer, { id, event, note: `  ${NOTE}  ` })).toEqual({
         ok: true,
-        value: { version: 3, next: null },
+        value: { version: 3 },
       });
       const { point, events, audit } = await snapshot(id);
       expect(point).toMatchObject({ state: to, version: 3 });
@@ -176,7 +176,7 @@ describe('points.decide', () => {
       const parts = ['people', 'heading'];
       expect(await decide(reviewer, { id, event: 'return', parts })).toEqual({
         ok: true,
-        value: { version: 3, next: null },
+        value: { version: 3 },
       });
       const { point, events, audit } = await snapshot(id);
       expect(point).toMatchObject({ state: 'returned' });
@@ -275,60 +275,6 @@ describe('points.decide', () => {
       await expect(world.run(decidePoint, system('cli:test'), input)).rejects.toThrow(
         'points.decide: runs as a signed-in user',
       );
-    });
-  });
-
-  describe('the next point', () => {
-    it('is the queue’s next submitted point after the decision, in the queue’s order', async () => {
-      const author = await user();
-      const pokyn = await handedIn(author);
-      const finance = await handedIn(author, 'submitted', 'finance');
-      const report = await handedIn(author, 'submitted', 'report');
-      await handedIn(author, 'approved');
-      const reviewer = await user('reviewer');
-      // By kind first: the report goes before the older finance and pokyn points.
-      expect(await decide(reviewer, { id: report, event: 'approve' })).toMatchObject({
-        value: { next: finance },
-      });
-      expect(await decide(reviewer, { id: finance, event: 'reject', note: NOTE })).toMatchObject({
-        value: { next: pokyn },
-      });
-      expect(await decide(reviewer, { id: pokyn, event: 'approve' })).toMatchObject({
-        value: { next: null },
-      });
-    });
-
-    it('skips the reviewer’s own points, which they may not approve', async () => {
-      const reviewer = await user('reviewer');
-      const own = await handedIn(reviewer, 'submitted', 'report');
-      const colleague = await handedIn(await user());
-      const decided = await handedIn(await user());
-      expect(await decide(reviewer, { id: decided, event: 'approve' })).toMatchObject({
-        value: { next: colleague },
-      });
-      expect(await decide(reviewer, { id: colleague, event: 'approve' })).toMatchObject({
-        value: { next: null },
-      });
-      expect((await snapshot(own)).point?.state).toBe('submitted');
-    });
-
-    it('names the headmaster’s own point to the headmaster', async () => {
-      const headmaster = await user('headmaster');
-      const own = await handedIn(headmaster, 'submitted', 'report');
-      const id = await handedIn(await user());
-      expect(await decide(headmaster, { id, event: 'approve' })).toMatchObject({
-        value: { next: own },
-      });
-    });
-
-    it('never names a draft', async () => {
-      const author = await user();
-      await start(author, 'pokyn');
-      const id = await handedIn(author);
-      const headmaster = await user('headmaster');
-      expect(await decide(headmaster, { id, event: 'approve' })).toMatchObject({
-        value: { next: null },
-      });
     });
   });
 

@@ -78,25 +78,6 @@ export type PointSummary = Pick<
 > &
   Pick<PointContent, 'title' | 'eventDate'> & { readonly returnNote: string | null };
 
-/**
- * A row of the review queue (design section 10): what `/kontrola` shows of a submitted or
- * approved point. Both states are handed in, so the Monday and the submission are always set. The
- * author never reaches the page: it tells which points the reviewer may approve (`points.decide`).
- */
-export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
-  Pick<PointContent, 'title'> & {
-    /** The queue lists only these. */
-    readonly state: Extract<PointState, 'submitted' | 'approved'>;
-    readonly earliestMonday: CalDate;
-    readonly submittedAt: Date;
-    /** The Monday it was last handed in for; the queue places it by this and `earliestMonday`. */
-    readonly handInMonday: CalDate;
-    /** A report's type; null for finance and pokyn. */
-    readonly typeId: PointTypeId | null;
-    /** True once the point was ever returned: „Vráceno dříve“. */
-    readonly returnedBefore: boolean;
-  };
-
 /** A point the summary of a meeting counts: where it stands and what placement reads of it. */
 interface HandedInPoint {
   readonly state: Extract<PointState, 'submitted' | 'approved' | 'returned'>;
@@ -179,11 +160,6 @@ export interface PointRepo {
    * ScopeViolation for the system.
    */
   listMine(limit: number, before?: PointCursor): Promise<readonly PointSummary[]>;
-  /**
-   * The review queue: the points in scope that are `submitted` or `approved`, the submitted ones
-   * first, then each the oldest submission first, ties to the lower id, at most `limit`.
-   */
-  queue(limit: number): Promise<readonly QueuedPoint[]>;
   /**
    * The worker's read: only the columns migration 0017 grants it, null for an unknown
    * point. ScopeViolation for a user.

@@ -336,8 +336,7 @@ export const decidePointInput = z
     parts: returnPartsSchema(POINT_RETURN_PARTS).optional(),
   })
   .superRefine(refineDecision);
-/** The new version, and the next submitted point of the queue the actor may approve (null: none waits). */
+/** The new version. */
 export const decidePointOutput = z.object({
   version: z.number().int().positive(),
-  next: z.uuid().nullable(),
 });
