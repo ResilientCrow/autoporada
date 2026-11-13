@@ -206,7 +206,7 @@ html{scroll-padding-bottom:150px}
 .tl svg.i{width:30px;height:30px;stroke-width:1.6}
 .tl:focus-visible{border-radius:12px}
 .tl:active{transform:translateY(1px)}
-.tl-t{font-weight:600;font-size:16px;line-height:1.2;overflow-wrap:break-word;hyphens:auto}
+.tl-t{font-weight:600;font-size:16px;line-height:1.2;overflow-wrap:break-word;hyphens:manual}
 .tl-n{position:absolute;top:12px;right:12px;min-width:28px;height:28px;padding:0 7px;border-radius:14px;background:var(--gold);color:var(--ink);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center}
 /* barvy podle manuálu školy: řádek určuje stupeň, sloupec barvu */
 .t-core0{background:#161837;color:#fff}.t-core0:hover{background:#292D67}
