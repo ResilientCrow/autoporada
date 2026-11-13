@@ -83,7 +83,7 @@ export function Domu() {
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
   const waits: Tile = { t: 'Čeká na vás', ic: 'bell', tone: 'browse', to: '/tyden', n: tasks.length };
-  const start: Tile[] = [{ t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Schůzka s\u00a0partnery', ic: 'talk', tone: 'act', act: () => future('jednani') }];
+  const start: Tile[] = [{ t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Nové jednání', ic: 'talk', tone: 'act', act: () => future('jednani') }];
   // Most reports answer an akce from „Čeká na vás“; a report of one's own is the exception, so it sits lighter.
   const write: Tile = { t: 'Napsat zprávu', ic: 'pen', tone: 'browse', act: report };
   const mine: Tile[] = [{ t: 'Přehled', ic: 'doc', tone: 'browse', to: '/moje' }, { t: 'Akce školy', ic: 'cal', tone: 'browse', to: '/akce' }];
