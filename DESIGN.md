@@ -73,7 +73,7 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 | Grid | Desktop `.lay`: `minmax(0,560px) minmax(0,1fr)`; `.lay.nar` 420px; `.lay.full` one column. Background `--desk`, column `.work` is white. |
 | `Desk` (`ui.tsx`) | The dark document desk (`aside.desk`, sticky, full height, scrolls itself) holding the white sheet (`.arch`, `.sheet`). Props `note`, `right`, `cls`, `fold`. With `fold` on a phone the document waits behind one button. |
 | `Sheet`, `WholeDesk`, `DocNav` | Sheet renders the built document; `WholeDesk` (`porada.tsx`) is the whole-porada desk; `DocNav` (`core/parts.tsx`) is the outline navigator. Margin notes `.mn` sit left of the sheet on desktop and become inline chips on phone. |
-| `Pane` (`admin.tsx`) | Single-column management page (`.work.solo` > `main.pane` with `Tabs`) for headmaster screens (Lidé, Seznamy, Typy, Nastavení). Non-headmasters get `NotFound`. |
+| `Pane` (`admin.tsx`) | Single-column management page (`.work.solo` > `main.pane` with `Tabs`) for headmaster screens (Lidé, Seznamy, Nastavení). Non-headmasters get `NotFound`. |
 | `Bar` | Top: logo, `.nav` links (hidden under 900px), account icon `.uu`. Nav items differ per role in `useNav`. |
 | `PhoneBar` | Bottom bar `.pb`: sticky, `min-height:62px`, same items as `Bar`, gold count badge `.n`. Displayed only on phone, and only when the screen has no dock. |
 | Dock `.dock` | Sticky bottom action area of a screen (primary `.btn` row, hint text). Phone: padding respects `env(safe-area-inset-bottom)`, order places it above `PhoneBar`. |
