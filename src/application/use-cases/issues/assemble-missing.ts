@@ -117,6 +117,7 @@ export function systemParagraph(akce: FutureItemRecord): string | null {
     campus: c.campus,
     ...(c.place && { place: singleLine(c.place) }),
     ...(c.organizer && { organizer: singleLine(c.organizer) }),
+    organizerRole: c.organizerRole,
     ...(c.participants && { participants: singleLine(c.participants) }),
   });
 }

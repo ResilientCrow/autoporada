@@ -38,6 +38,7 @@ const CONTENT: FutureContent = {
   campus: null,
   place: null,
   organizer: null,
+  organizerRole: null,
   participants: null,
   note: null,
 };

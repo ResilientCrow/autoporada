@@ -231,6 +231,25 @@ describe('free-text akce lines (ADR 0060)', () => {
     ]);
   });
 
+  it("puts the organizer's verb in front of the names by role (ADR 0063)", () => {
+    const organizerLine = (over: Record<string, unknown>) =>
+      lines([akce('f-1', 'Stáž', over)])[0]!.replace(/^.*?Stáž, /, '');
+    expect(organizerLine({ organizer: 'Jana Nováková', organizerRole: 'organizes' })).toBe(
+      'organizuje Jana Nováková',
+    );
+    expect(
+      organizerLine({ organizer: 'Jana Nováková, Petr Malý', organizerRole: 'organizes' }),
+    ).toBe('organizují Jana Nováková, Petr Malý');
+    expect(organizerLine({ organizer: 'pan Petr Malý', organizerRole: 'coordinates' })).toBe(
+      'koordinuje pan Petr Malý',
+    );
+    expect(organizerLine({ organizer: 'A, B', organizerRole: 'coordinates' })).toBe(
+      'koordinují A, B',
+    );
+    // No role: an item typed with its verb in it prints as typed.
+    expect(organizerLine({ organizer: 'zajišťuje paní Nováková' })).toBe('zajišťuje paní Nováková');
+  });
+
   it('prints a multi-day akce as a range across months and years, and no time', () => {
     expect(
       lines([

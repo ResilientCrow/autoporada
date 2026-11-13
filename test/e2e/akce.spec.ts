@@ -80,7 +80,7 @@ test.describe('the akce journey', () => {
     await hydrated(reader);
     await reader.getByRole('link', { name: TITLE }).click();
     await expect(reader.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
-    await expect(reader.getByText('Jana Nováková')).toBeVisible();
+    await expect(reader.getByText('organizuje paní Jana Nováková')).toBeVisible();
     await expect(reader.getByText(future.state.approved, { exact: true }).first()).toBeVisible();
     await expectAccessible(reader);
 

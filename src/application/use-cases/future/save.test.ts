@@ -25,16 +25,26 @@ async function refuses(id: string, run: () => Promise<unknown>, error: unknown) 
   expect(await snapshot(id)).toEqual(before);
 }
 
-/** An approved akce of the author's with `readyAkce` content, at version 3. */
-async function approved(author: UserRecord): Promise<string> {
+/** An approved akce of the author's with `readyAkce` content (or `content`), at version 3. */
+async function approved(author: UserRecord, content: unknown = readyAkce()): Promise<string> {
   const id = await start(author, 'akce');
-  expect(await save(author, id, readyAkce())).toMatchObject({ ok: true });
+  expect(await save(author, id, content)).toMatchObject({ ok: true });
   await moveTo(author, id, 'approved');
   return id;
 }
 
 describe('future.save', () => {
   describe('a draft or a returned item', () => {
+    it('saves an organizer without a role: a draft may be unfinished', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      const content = readyAkce({ organizer: 'Jana Nováková', organizerRole: null });
+      expect(await save(author, id, content, 1)).toMatchObject({ ok: true });
+      expect(await get(author, id)).toMatchObject({
+        content: { organizer: 'Jana Nováková', organizerRole: null },
+      });
+    });
+
     it.each(['draft', 'returned'] as const)(
       'stores the whole content of a %s unaudited and keeps its state',
       async (state) => {
@@ -59,7 +69,8 @@ describe('future.save', () => {
             timeTo: wallTime(14, 30),
             campus: 'radlice',
             place: 'v Národním muzeu',
-            organizer: 'zajišťuje 2.A paní učitelka Jana Nováková',
+            organizer: '2.A paní učitelka Jana Nováková',
+            organizerRole: 'organizes',
             participants: null,
             note: null,
           },
@@ -265,6 +276,36 @@ describe('future.save', () => {
         fields: { 'content.title': 'required' },
       });
       expect(await get(author, id)).toMatchObject({ state: 'approved', version: 3 });
+    });
+
+    it('is a change when only the organizer role differs, and asks for a role once an organizer is named', async () => {
+      const author = await user();
+      const id = await approved(author);
+      expect(await revise(author, id, readyAkce({ organizerRole: 'coordinates' }))).toEqual({
+        ok: true,
+        value: { version: 4, state: 'submitted' },
+      });
+      expect(await get(author, id)).toMatchObject({ content: { organizerRole: 'coordinates' } });
+      const other = await approved(author);
+      await refuses(other, () => revise(author, other, readyAkce({ organizerRole: null })), {
+        code: 'invalid-input',
+        fields: { 'content.organizerRole': 'required' },
+      });
+    });
+
+    it('keeps an organizer typed before the role existed without a role, until the names change (ADR 0063)', async () => {
+      const author = await user();
+      const legacy = readyAkce({ organizer: 'zajišťuje paní Nováková', organizerRole: null });
+      const id = await approved(author, legacy);
+      expect(await revise(author, id, { ...legacy, place: 'Brno' })).toEqual({
+        ok: true,
+        value: { version: 4, state: 'submitted' },
+      });
+      const other = await approved(author, legacy);
+      await refuses(other, () => revise(author, other, { ...legacy, organizer: 'paní Nováková' }), {
+        code: 'invalid-input',
+        fields: { 'content.organizerRole': 'required' },
+      });
     });
 
     it('asks for the start date of a change to an approved akce', async () => {

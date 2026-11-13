@@ -59,8 +59,15 @@ export const future = {
   editor: {
     type: 'Druh',
     organizer: 'Organizátor',
+    organizerRole: {
+      organizes: 'Organizuje',
+      coordinates: 'Koordinuje',
+    },
+    /** Under a role with names typed and none chosen (a submit is refused). */
+    organizerRoleRequired: 'Vyberte, jestli organizuje, nebo koordinuje.',
+    organizerNames: 'Jména organizátorů',
     organizerHint:
-      'Vypíše se tak, jak ho napíšete. Po schválení ho uvidí všichni přihlášení, i\u00A0studenti.',
+      'Jména oddělte čárkou, například paní zástupkyně Jana Nováková. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',
     participants: 'Účastníci',
     participantsHint:
       'Můžete uvést jména a\u00A0třídy. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',

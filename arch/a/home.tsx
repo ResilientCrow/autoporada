@@ -4,7 +4,7 @@ import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future, Point } from '../core/types';
 import { App, Back, Desk, Dialog, focusOn, Hash, Ic, Item, Sec, Seg, Sheet, Stamp, Top, Track, TrailMore, WHEN, diffWords, Note, Todo } from './ui';
-import { foldForSearch } from '@/domain/cs';
+import { foldForSearch, organizerPhrase } from '@/domain/cs';
 import { DocNav } from '../core/parts';
 import { toText } from '../core/react';
 
@@ -67,7 +67,7 @@ export function Tyden() {
         <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : u.role === 'reviewer' ? 'Přidat zprávu, akci nebo návrh' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
         {draftProposals.length ? <Sec h="Rozepsané návrhy">{draftProposals.map((p) => <Item key={p.id} to={`/navrh/${p.id}`} t={p.content.title || 'Návrh bez názvu'} st="Do pokynů nebo hospodaření" mk="o" />)}</Sec> : null}
         {sent.length ? <Sec h="Už jste poslali" right={<a href="#/moje">Všechny</a>}>{sent.slice(0, 4).map((p) => <Item key={p.id} to={pointTo(p)} t={p.content.title} st={pointLine(s, p)} mk={p.state === 'approved' ? 'c' : 'o'} />)}</Sec> : null}
-        {events.length ? <Sec h="Co se chystá ve škole" right={<a href="#/akce">Všechny akce</a>}>{events.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title} st={[Q.dm(f.date), f.organizer.trim()].filter(Boolean).join(', ')} />)}</Sec> : null}
+        {events.length ? <Sec h="Co se chystá ve škole" right={<a href="#/akce">Všechny akce</a>}>{events.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title} st={[Q.dm(f.date), organizerPhrase(f.organizerRole, f.organizer)].filter(Boolean).join(', ')} />)}</Sec> : null}
       </>} />
   );
 }
@@ -155,7 +155,7 @@ export function Udalosti() {
   const MONTH = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
   return <App desk={deskFor(s, s.userId!)} col={<><Back to="/" t="Zpět" /><Top h="Co se chystá ve škole" lead={`Schválené akce a schůzky, které teprve budou: ${all.length}.`} />
     <div className="stack st8"><label className="l"><span className="vh">Hledat</span><input className="in" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hledat název, jméno nebo místo" /></label><Seg label="Co ukázat" value={kind} options={[['all', 'Všechno'], ['akce', 'Akce'], ['jednani', 'Schůzky']]} onChange={setKind} /></div>
-    {list.length ? months.map((mo) => <Sec key={mo} h={`${MONTH[Number(mo.slice(5)) - 1]} ${mo.slice(0, 4)}`}>{list.filter((f) => Q.toIsoDate(f.date).startsWith(mo)).map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={Q.cap(f.title)} st={`${Q.dm(f.date)}${f.timeFrom ? ` v ${f.timeFrom.hour}:${String(f.timeFrom.minute).padStart(2, '0')}` : ''}${f.organizer.trim() ? `, ${f.organizer.trim()}` : ''}`} />)}</Sec>) : <Note>Nic takového se nechystá. Zkuste jiné slovo.</Note>}
+    {list.length ? months.map((mo) => <Sec key={mo} h={`${MONTH[Number(mo.slice(5)) - 1]} ${mo.slice(0, 4)}`}>{list.filter((f) => Q.toIsoDate(f.date).startsWith(mo)).map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={Q.cap(f.title)} st={`${Q.dm(f.date)}${f.timeFrom ? ` v ${f.timeFrom.hour}:${String(f.timeFrom.minute).padStart(2, '0')}` : ''}${f.organizer.trim() ? `, ${organizerPhrase(f.organizerRole, f.organizer)}` : ''}`} />)}</Sec>) : <Note>Nic takového se nechystá. Zkuste jiné slovo.</Note>}
     {!more && !f0 && hits.length > near.length ? <button type="button" className="btn lg w" onClick={() => setMore(true)}>Ukázat i pozdější: {hits.length - near.length}</button> : null}</>} />;
 }
 export function NotFound() {

@@ -89,6 +89,11 @@ describe('future.submit', () => {
   describe('what a handed-in item must hold', () => {
     const cases: readonly (readonly [string, Record<string, unknown>, Record<string, string>])[] = [
       ['a title', { title: '  ' }, { 'content.title': 'required' }],
+      [
+        'a role when an organizer is named',
+        { organizer: 'Jana Nováková', organizerRole: null },
+        { 'content.organizerRole': 'required' },
+      ],
       ['a start date', { startDate: null, endDate: null }, { 'content.startDate': 'required' }],
       ['a start time with an end time', { timeFrom: null }, { 'content.timeTo': 'invalid' }],
       [
@@ -107,6 +112,15 @@ describe('future.submit', () => {
       const author = await user();
       const id = await start(author, 'akce');
       await refuses(id, () => submit(author, id, readyAkce(over)), invalid(fields));
+    });
+
+    it('asks for no role when nobody is named', async () => {
+      const author = await user();
+      for (const organizer of [null, '', '   ']) {
+        const id = await start(author, 'akce');
+        const over = { organizer, organizerRole: null };
+        expect(await submit(author, id, readyAkce(over))).toMatchObject({ ok: true });
+      }
     });
 
     it('refuses a time on a multi-day akce: it prints none', async () => {

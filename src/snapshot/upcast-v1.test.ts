@@ -44,6 +44,8 @@ describe('upcasting a schema 1 snapshot', () => {
   it('turns the stored people into the organizer text the old document printed', () => {
     const result = parseIssueSnapshot(rawReplica());
     expect(result.ok && result.snapshot.schema).toBe(2);
+    // The old text carries its verb, so no role: it prints as typed (ADR 0063).
+    expect(result.ok && result.snapshot.futureItems.some((f) => f.organizerRole)).toBe(false);
     const byId = Object.fromEntries(
       result.ok
         ? result.snapshot.futureItems.map((f) => [f.id, f.organizer?.replaceAll('\u00a0', ' ')])

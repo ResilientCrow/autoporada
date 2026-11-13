@@ -24,6 +24,7 @@ const item = (state: FutureState, cancelRequestedAt: Date | null = null): Future
     campus: null,
     place: null,
     organizer: null,
+    organizerRole: null,
     participants: null,
     note: null,
   },

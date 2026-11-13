@@ -68,6 +68,30 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
     expect(publish.missing[0]?.report).toBeNull();
   });
 
+  it.each([
+    ['organizes', 'Akci organizovali: Jana Nováková, Petr Malý.'],
+    ['coordinates', 'Akci za školu koordinovali: Jana Nováková, Petr Malý.'],
+    [null, 'Akci zajišťovali: Jana Nováková, Petr Malý.'],
+  ] as const)(
+    'words the organizer sentence by the role %s (ADR 0063)',
+    async (organizerRole, sentence) => {
+      const head = await headmaster();
+      const author = await submitter();
+      await fixtures.future({
+        author,
+        title: 'Seminář',
+        startDate: d('2026-10-22'),
+        content: { organizer: 'Jana Nováková, Petr Malý', organizerRole },
+      });
+
+      const { snapshot } = await assemble(head);
+
+      expect(paragraphOf(snapshot!.reports[0]!)).toBe(
+        `Ve čtvrtek 22. října 2026 proběhla akce Seminář. ${sentence} Zpráva o akci nebyla dodána.`,
+      );
+    },
+  );
+
   it('writes a multi-day akce as a range with no time, and leaves out the sentences of an empty organizer', async () => {
     const head = await headmaster();
     const author = await submitter();

@@ -21,6 +21,7 @@ const EMPTY_CONTENT: FutureContent = {
   campus: null,
   place: null,
   organizer: null,
+  organizerRole: null,
   participants: null,
   note: null,
 };
@@ -92,7 +93,8 @@ describe('future.list', () => {
           {
             state: 'approved',
             isAuthor: false,
-            organizer: 'zajišťuje 2.A paní učitelka Jana Nováková',
+            organizer: '2.A paní učitelka Jana Nováková',
+            organizerRole: 'organizes',
           },
         ],
       },

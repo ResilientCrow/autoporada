@@ -189,7 +189,8 @@ describe('future.get', () => {
       const author = await user();
       const id = await start(author, 'akce');
       const content = readyAkce({
-        organizer: 'organizuje pan Mgr. Jan Novák',
+        organizer: 'pan Mgr. Jan Novák',
+        organizerRole: 'coordinates',
         participants: 'účast 2.A',
         note: 'téma stáže',
       });
@@ -213,7 +214,8 @@ describe('future.get', () => {
           view: {
             title: 'Výlet do Prahy',
             startDate: '2026-11-10',
-            organizer: 'organizuje pan Mgr. Jan Novák',
+            organizer: 'pan Mgr. Jan Novák',
+            organizerRole: 'coordinates',
             participants: 'účast 2.A',
             note: 'téma stáže',
           },
@@ -226,7 +228,7 @@ describe('future.get', () => {
       const result = await open(author, id);
       expect(result).toMatchObject({
         ok: true,
-        value: { content: { organizer: 'organizuje pan Mgr. Jan Novák' } },
+        value: { content: { organizer: 'pan Mgr. Jan Novák', organizerRole: 'coordinates' } },
       });
     });
   });

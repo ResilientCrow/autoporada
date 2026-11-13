@@ -121,6 +121,7 @@ const futureWire = (f: Future) => ({
   campus: f.campus,
   place: f.place.trim() ? f.place : null,
   organizer: f.organizer.trim() || null,
+  organizerRole: f.organizerRole,
   participants: f.participants.trim() || null,
   note: f.remark.trim() || null,
 });

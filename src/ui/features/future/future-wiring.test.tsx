@@ -74,6 +74,7 @@ function page(phase: string, readOnly: boolean, sending = false): string {
         campus: null,
         place: null,
         organizer: null,
+        organizerRole: null,
         participants: null,
         note: null,
       }}

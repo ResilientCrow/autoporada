@@ -17,6 +17,7 @@ const view = (over: Partial<FutureView> = {}): FutureView => ({
   campus: 'radlice',
   place: 'Špindlerův Mlýn',
   organizer: 'organizuje paní zástupkyně Jana Nováková',
+  organizerRole: null,
   participants: 'účast 8.A',
   note: 'téma stáže',
   ...over,
@@ -49,6 +50,9 @@ describe('FutureRead', () => {
     expect(html).toContain(points.campus.radlice);
     expect(html).toContain('Špindlerův Mlýn');
     expect(html).toContain('organizuje paní zástupkyně Jana Nováková');
+    expect(
+      render({ view: view({ organizer: 'Jan Malý, Eva Nová', organizerRole: 'coordinates' }) }),
+    ).toContain('koordinují Jan Malý, Eva Nová');
     expect(html).toContain('účast 8.A');
     expect(html).toContain('téma stáže');
     expect(html).not.toContain('zpráva do porady');

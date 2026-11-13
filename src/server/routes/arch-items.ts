@@ -126,6 +126,7 @@ export function archItems({
       campus: ct.campus,
       place: ct.place ?? '',
       organizer: ct.organizer ?? '',
+      organizerRole: ct.organizerRole,
       participants: ct.participants ?? '',
       remark: ct.note ?? '',
       state: f.state,

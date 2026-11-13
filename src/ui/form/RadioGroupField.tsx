@@ -24,6 +24,7 @@ export function RadioGroupField({
   onChange,
   readOnly = false,
   description,
+  issue,
 }: {
   readonly name: string;
   readonly options: readonly RadioOption[];
@@ -34,8 +35,10 @@ export function RadioGroupField({
   /** Shown, but a press changes nothing, controlled or not (an autosaving editor waiting on its banner). */
   readonly readOnly?: boolean;
   readonly description?: string;
+  /** A message of the page's own (an autosave refused the value), shown in place of the form's. */
+  readonly issue?: string;
 }) {
-  const field = useNativeField(name, { description });
+  const field = useNativeField(name, { description, ...(issue === undefined ? {} : { issue }) });
 
   return (
     <fieldset

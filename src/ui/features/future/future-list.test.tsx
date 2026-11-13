@@ -20,6 +20,7 @@ const row = (over: Partial<FutureRow> = {}): FutureRow => ({
   campus: 'smichov',
   place: 'Špindlerův Mlýn',
   organizer: 'organizuje pan Malý',
+  organizerRole: null,
   participants: null,
   note: null,
   reportState: 'none',
@@ -62,6 +63,17 @@ describe('FutureList', () => {
     expect(item).toContain('Špindlerův Mlýn');
     expect(item).toContain(points.campus.smichov);
     expect(item).toContain('organizuje pan Malý');
+  });
+
+  it('prints the organizer with the verb of its role, plural for a comma', () => {
+    const [one, many] = itemsOf(
+      render([
+        row({ id: 'a', organizer: 'pan Malý', organizerRole: 'coordinates' }),
+        row({ id: 'b', organizer: 'pan Malý, paní Nová', organizerRole: 'organizes' }),
+      ]),
+    );
+    expect(one).toContain('koordinuje pan Malý');
+    expect(many).toContain('organizují pan Malý, paní Nová');
   });
 
   it('marks the state of the reader’s own items only, as a student sees the list', () => {

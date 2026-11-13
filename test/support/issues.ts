@@ -228,6 +228,7 @@ export function issueFixtures(world: World) {
       campus: null,
       place: null,
       organizer: null,
+      organizerRole: null,
       participants: null,
       note: null,
       ...seed.content,

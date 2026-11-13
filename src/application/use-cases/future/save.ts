@@ -51,7 +51,7 @@ export const saveFuture = defineUseCase({
     if (revises) {
       if (sameContent(item.content, stored))
         return ok({ version: item.version, state: item.state });
-      const fields = submitIssues(stored);
+      const fields = submitIssues(stored, item.content);
       if (hasIssues(fields)) return fail({ code: 'invalid-input', fields });
       const revised = await move(tx, item, 'revise', { content: stored, submittedAt: now });
       return ok({ version: revised.version, state: revised.state });

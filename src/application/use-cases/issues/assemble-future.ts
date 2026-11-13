@@ -24,6 +24,7 @@ export function futureItemOf(item: FutureItemRecord): SnapshotFutureItem[] {
       ...(c.campus && { campus: c.campus }),
       ...(place && { place }),
       ...(organizer && { organizer }),
+      ...(organizer && c.organizerRole && { organizerRole: c.organizerRole }),
       ...(participants && { participants }),
       ...(note && { note }),
     },

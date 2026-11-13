@@ -133,7 +133,10 @@ test.describe('the Arch UI', () => {
     await expect(
       page.getByRole('heading', { name: 'Kdo to organizuje a kdo se zúčastní?' }),
     ).toBeVisible();
-    await page.getByLabel(/^Organizátor/).fill('organizuje paní zástupkyně Jana Nováková');
+    // Names with no role are not enough: the step asks which it is.
+    await page.getByLabel('Jména organizátorů').fill('paní zástupkyně Jana Nováková');
+    await expect(page.getByText('Vyberte, jestli organizuje, nebo koordinuje.')).toBeVisible();
+    await page.getByRole('radio', { name: 'Organizuje' }).click();
     await page.getByLabel(/^Účastníci/).fill('účast slečna Tereza Malá (3.B)');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(
@@ -149,13 +152,14 @@ test.describe('the Arch UI', () => {
     // The draft and the submit reached the server, not only the page's store.
     await expect.poll(async () => (await futureOf(email, title))?.state).toBe('submitted');
     const typed = await withClient((c) =>
-      c.query<{ organizer: string; participants: string }>(
-        `SELECT organizer, participants FROM future_items WHERE title = $1`,
+      c.query<{ organizer: string; organizer_role: string; participants: string }>(
+        `SELECT organizer, organizer_role, participants FROM future_items WHERE title = $1`,
         [title],
       ),
     );
     expect(typed.rows[0]).toEqual({
-      organizer: 'organizuje paní zástupkyně Jana Nováková',
+      organizer: 'paní zástupkyně Jana Nováková',
+      organizer_role: 'organizes',
       participants: 'účast slečna Tereza Malá (3.B)',
     });
     const id = (await futureOf(email, title))!.id;
@@ -332,7 +336,8 @@ test.describe('the Arch UI', () => {
     await onward(page).click();
     await onward(page).click();
     // Anyone can be named, as free text.
-    await page.getByLabel(/^Organizátor/).fill('organizuje Tereza Malá (3.B)');
+    await page.getByRole('radio', { name: 'Koordinuje' }).click();
+    await page.getByLabel('Jména organizátorů').fill('Tereza Malá (3.B)');
     await onward(page).click();
     await onward(page).click();
     await page.getByRole('button', { name: 'Zařadit do porady' }).click();

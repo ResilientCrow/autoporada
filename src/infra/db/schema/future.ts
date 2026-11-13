@@ -13,7 +13,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import type { FutureEventName } from '@/application/ports';
-import type { Campus } from '@/domain/cs';
+import { ORGANIZER_ROLES, type Campus, type OrganizerRole } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import { MAX_RETURN_PARTS, type FutureState, type ReportState } from '@/domain/review';
 
@@ -38,6 +38,7 @@ export const reportState = pgEnum('report_state', ['none', 'prompted', 'written'
 
 const CAMPUSES = ['smichov', 'radlice', 'na-vidouli', 'jinde'] as const satisfies readonly Campus[];
 const campusList = sql.raw(CAMPUSES.map((campus) => `'${campus}'`).join(','));
+const roleList = sql.raw(ORGANIZER_ROLES.map((role) => `'${role}'`).join(','));
 
 /**
  * A jednání or an akce that can appear in a coming issue (design §2, §12). It
@@ -66,6 +67,8 @@ export const futureItems = pgTable(
     place: text(),
     /** Free text printed as typed (ADR 0060). */
     organizer: text(),
+    /** Organizes or coordinates (ADR 0063); null before the role existed. */
+    organizerRole: text().$type<OrganizerRole>(),
     participants: text(),
     note: text(),
     reportState: reportState().$type<ReportState>().notNull().default('none'),
@@ -91,6 +94,10 @@ export const futureItems = pgTable(
     check(
       'future_items_dates',
       sql`${t.endDate} IS NULL OR (${t.startDate} IS NOT NULL AND ${t.endDate} >= ${t.startDate})`,
+    ),
+    check(
+      'future_items_organizer_role',
+      sql`${t.organizerRole} IS NULL OR ${t.organizerRole} IN (${roleList})`,
     ),
     check('future_items_campus', sql`${t.campus} IS NULL OR ${t.campus} IN (${campusList})`),
     check(

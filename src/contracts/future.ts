@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { FutureKind } from '@/domain/calendar';
-import type { Campus } from '@/domain/cs';
+import { ORGANIZER_ROLES, type Campus, type OrganizerRole } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import type { FutureEvent, FutureState, ReportState } from '@/domain/review';
 import { compareDates, toIsoDate, toIsoTime, type CalDate, type WallTime } from '@/domain/time';
@@ -51,6 +51,9 @@ const FUTURE_EVENTS: Readonly<Record<FutureEvent | 'edit', FutureEvent | 'edit'>
 };
 const futureEventSchema = z.enum(FUTURE_EVENTS);
 
+/** What the organizer does (ADR 0063). */
+const organizerRoleSchema = z.enum(ORGANIZER_ROLES);
+
 const capped = (max: number) => z.string().max(max);
 
 /**
@@ -68,6 +71,7 @@ const futureContentSchema = z
     campus: campusSchema.nullable(),
     place: capped(POINT_LIMITS.place).nullable(),
     organizer: capped(POINT_LIMITS.organizer).nullable(),
+    organizerRole: organizerRoleSchema.nullable(),
     participants: capped(POINT_LIMITS.participants).nullable(),
     note: capped(POINT_LIMITS.futureNote).nullable(),
   })
@@ -87,6 +91,7 @@ const futureContentWire = z.strictObject({
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
   organizer: z.string().nullable(),
+  organizerRole: organizerRoleSchema.nullable(),
   participants: z.string().nullable(),
   note: z.string().nullable(),
 });
@@ -101,6 +106,8 @@ export interface FutureContentValue {
   readonly campus: Campus | null;
   readonly place: string | null;
   readonly organizer: string | null;
+  /** What the organizer does (ADR 0063); null for an item typed before the role existed. */
+  readonly organizerRole: OrganizerRole | null;
   readonly participants: string | null;
   readonly note: string | null;
 }
@@ -129,6 +136,7 @@ export const futureView = z.strictObject({
   campus: campusSchema.nullable(),
   place: z.string().nullable(),
   organizer: z.string().nullable(),
+  organizerRole: organizerRoleSchema.nullable(),
   participants: z.string().nullable(),
   note: z.string().nullable(),
 });

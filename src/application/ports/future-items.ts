@@ -1,4 +1,4 @@
-import type { Campus } from '@/domain/cs';
+import type { Campus, OrganizerRole } from '@/domain/cs';
 import type { FutureKind } from '@/domain/calendar';
 import type { FutureState, ReportState } from '@/domain/review';
 import type { CalDate, WallTime } from '@/domain/time';
@@ -16,6 +16,8 @@ export interface FutureContent {
   readonly place: string | null;
   /** Free text printed as typed (ADR 0060). */
   readonly organizer: string | null;
+  /** Whether our person organizes or coordinates (ADR 0063); null is an item typed before the role existed. */
+  readonly organizerRole: OrganizerRole | null;
   readonly participants: string | null;
   readonly note: string | null;
 }

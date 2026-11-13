@@ -1,11 +1,16 @@
 'use client';
 
+import { ORGANIZER_ROLES, organizerOnOneLine } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import { future, points } from '@/ui/copy';
 import { DateField, RadioGroupField, TextField } from '@/ui/form';
 
 import { CAMPUSES, isMultiDay, type FutureEdit, type PatchName } from './edit';
 
+const ROLE_OPTIONS = ORGANIZER_ROLES.map((role) => ({
+  value: role,
+  label: future.editor.organizerRole[role],
+}));
 const CAMPUS_OPTIONS = CAMPUSES.map((campus) => ({ value: campus, label: points.campus[campus] }));
 
 /**
@@ -70,12 +75,21 @@ export function FutureFields({
         value={content.place ?? ''}
         autoComplete="off"
       />
+      <RadioGroupField
+        name="organizerRole"
+        options={ROLE_OPTIONS}
+        value={content.organizerRole ?? ''}
+        onChange={bound('organizerRole').onChange}
+        readOnly={readOnly}
+        {...(bound('organizerRole').issue === undefined
+          ? {}
+          : { issue: bound('organizerRole').issue })}
+      />
       <TextField
         {...bound('organizer')}
         description={future.editor.organizerHint}
-        multiline
         maxLength={POINT_LIMITS.organizer}
-        value={content.organizer ?? ''}
+        value={organizerOnOneLine(content.organizer ?? '')}
       />
       <TextField
         {...bound('participants')}

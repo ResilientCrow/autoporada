@@ -34,6 +34,7 @@ const EMPTY: FutureContent = {
   campus: null,
   place: null,
   organizer: null,
+  organizerRole: null,
   participants: null,
   note: null,
 };
@@ -47,7 +48,8 @@ const FULL: FutureContent = {
   timeTo: wallTime(14, 30),
   campus: 'radlice',
   place: 'v Národním muzeu',
-  organizer: 'zajišťuje 2.A pan Mgr. Jan Novák',
+  organizer: '2.A pan Mgr. Jan Novák',
+  organizerRole: 'coordinates',
   participants: null,
   note: null,
 };
@@ -175,10 +177,18 @@ describe('FutureItemRepo (port contract)', () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author), { content: FULL });
     const cleared = await update(world.as(author), item, {
-      content: { ...FULL, endDate: null, timeTo: null, place: null, organizer: null },
+      content: {
+        ...FULL,
+        endDate: null,
+        timeTo: null,
+        place: null,
+        organizer: null,
+        organizerRole: null,
+      },
     });
     expect(cleared.content).toMatchObject({ endDate: null, timeTo: null, place: null });
     expect(cleared.content.organizer).toBeNull();
+    expect(cleared.content.organizerRole).toBeNull();
   });
 
   it('refuses a stale version and an unknown item with StaleVersion, writing nothing', async () => {

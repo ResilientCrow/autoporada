@@ -68,3 +68,4 @@ record that supersedes it.
 | [0060](0060-akce-and-jednani-as-free-text.md) | Akce and jednání are free text | Accepted; supersedes 0009 in part, 0049 item 4, 0058 item 1, 0018 item 9; amends 0049 item 3 |
 | [0061](0061-missing-report-placeholders-are-checked-before-generation.md) | Missing-report placeholders are checked before generation | Accepted; amends 0049 items 5 and 7, 0060 item 7, 0053 |
 | [0062](0062-cancelling-an-approved-akce-waits-for-vedeni.md) | Cancelling an approved akce waits for vedení | Accepted; adds to 0057 |
+| [0063](0063-the-organizer-organizes-or-coordinates.md) | The organizer organizes or coordinates | Accepted; amends 0060 items 1 and 7 |

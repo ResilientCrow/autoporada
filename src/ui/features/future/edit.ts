@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { ActionResult, FieldIssueCode, FieldIssues, saveFutureInput } from '@/contracts';
-import type { Campus } from '@/domain/cs';
+import { ORGANIZER_ROLES, type Campus, type OrganizerRole } from '@/domain/cs';
 import { fieldIssues, future, points } from '@/ui/copy';
 import { pickedTime, typedDate, type FormSpec } from '@/ui/form';
 
@@ -24,6 +24,9 @@ export const CAMPUSES = [
   'jinde',
 ] as const satisfies readonly Campus[];
 
+const roleOf = (value: string): OrganizerRole | null =>
+  ORGANIZER_ROLES.find((role) => role === value) ?? null;
+
 const campusOf = (value: string): Campus | null =>
   CAMPUSES.find((campus) => campus === value) ?? null;
 
@@ -45,6 +48,7 @@ export type PatchName =
   | 'timeTo'
   | 'campus'
   | 'place'
+  | 'organizerRole'
   | 'organizer'
   | 'participants'
   | 'note';
@@ -76,6 +80,8 @@ export function patchFor(
       return { [name]: pickedTime(value, content[name]) };
     case 'campus':
       return { campus: campusOf(value) };
+    case 'organizerRole':
+      return { organizerRole: roleOf(value) };
     case 'place':
     case 'organizer':
     case 'participants':
@@ -102,7 +108,11 @@ export const FUTURE_SPEC: FormSpec = {
   timeTo: { label: points.facts.timeTo, messages: { invalid: future.editor.timeTo } },
   campus: { label: points.facts.campus },
   place: { label: points.facts.place },
-  organizer: { label: future.editor.organizer },
+  organizerRole: {
+    label: future.editor.organizer,
+    messages: { required: future.editor.organizerRoleRequired },
+  },
+  organizer: { label: future.editor.organizerNames },
   participants: { label: future.editor.participants },
   note: { label: future.editor.note },
 };
@@ -141,7 +151,7 @@ export function messagesOf(
         return [name, missing ? future.editor.endWithoutStart : future.editor.endBeforeStart];
       }
       if (name === 'timeTo') return [name, future.editor.timeTo];
-      return [name, fieldIssues[code]];
+      return [name, FUTURE_SPEC[name]?.messages?.[code] ?? fieldIssues[code]];
     }),
   );
 }

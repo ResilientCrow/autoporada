@@ -187,6 +187,29 @@ describe('IssueSnapshot', () => {
     expect(errorsOf(variant(['reports', 0, 'missing'], value))).not.toEqual([]);
   });
 
+  describe('the organizer role of a future item (ADR 0063)', () => {
+    // The replica is stored as schema 1; its upcast is a schema 2 snapshot without any role.
+    const upcast = parseIssueSnapshot(replica);
+    const v2: unknown = upcast.ok ? structuredClone(upcast.snapshot) : null;
+    const withRole = (value: unknown) => {
+      const copy = structuredClone(v2) as { futureItems: Record<string, unknown>[] };
+      copy.futureItems[0]!['organizerRole'] = value;
+      return copy;
+    };
+
+    it('is read, and a snapshot without one stays schema 2 and role-free', () => {
+      expect(errorsOf(withRole('organizes'))).toEqual([]);
+      expect(errorsOf(withRole('coordinates'))).toEqual([]);
+      expect(errorsOf(v2)).toEqual([]);
+      expect(upcast.ok && upcast.snapshot.schema).toBe(2);
+      expect(upcast.ok && upcast.snapshot.futureItems.some((f) => f.organizerRole)).toBe(false);
+    });
+
+    it.each(['organizing', '', null])('rejects the role %j', (value) => {
+      expect(errorsOf(withRole(value))).not.toEqual([]);
+    });
+  });
+
   it('rejects a future schema version', () => {
     expect(errorsOf(variant(['schema'], 3))).toContainEqual(expect.stringMatching(/^schema:/));
   });

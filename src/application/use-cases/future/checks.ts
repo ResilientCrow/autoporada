@@ -5,7 +5,7 @@ import { compareDates, compareTimes } from '@/domain/time';
 
 /**
  * What a handed-in item must hold: the pieces the CHECKs and the issue snapshot ask for. Nobody
- * has to be named (ADR 0060).
+ * has to be named (ADR 0060), but a named organizer needs a role (ADR 0063).
  */
 const isOneDay = ({ startDate, endDate }: FutureContent): boolean =>
   endDate === null || (startDate !== null && compareDates(endDate, startDate) === 0);
@@ -19,11 +19,24 @@ export function withoutTimesOnMultiDay(content: FutureContent): FutureContent {
   return { ...content, timeFrom: null, timeTo: null };
 }
 
-function readinessIssues(content: FutureContent): FieldIssues {
+const namesOf = ({ organizer }: FutureContent): string => (organizer ?? '').trim();
+
+/**
+ * An item approved before the role existed (ADR 0063) keeps its organizer as typed, with no role,
+ * through a change that leaves the names alone.
+ */
+const keepsTypedOrganizer = (content: FutureContent, stored: FutureContent | undefined): boolean =>
+  stored !== undefined && stored.organizerRole === null && namesOf(stored) === namesOf(content);
+
+function readinessIssues(content: FutureContent, stored?: FutureContent): FieldIssues {
   const issues: Record<string, FieldIssueCode> = {};
-  const { title, startDate, timeFrom, timeTo } = content;
+  const { title, startDate, timeFrom, timeTo, organizerRole } = content;
   if (title.trim() === '') issues['content.title'] = 'required';
   if (startDate === null) issues['content.startDate'] = 'required';
+  // Whoever is named, the document says whether they organize or coordinate (ADR 0063).
+  if (namesOf(content) !== '' && organizerRole === null && !keepsTypedOrganizer(content, stored)) {
+    issues['content.organizerRole'] = 'required';
+  }
   const oneDay = isOneDay(content);
   // A multi-day item prints no time (ADR 0060): the editors clear it, a submit refuses it.
   if (!oneDay && (timeFrom !== null || timeTo !== null)) issues['content.timeFrom'] = 'invalid';
@@ -35,9 +48,12 @@ function readinessIssues(content: FutureContent): FieldIssues {
   return issues;
 }
 
-/** The issues of a submit, and of a change to an approved item, which goes back to review: at most MAX_FIELDS. */
-export function submitIssues(content: FutureContent): FieldIssues {
-  return Object.fromEntries(Object.entries(readinessIssues(content)).slice(0, MAX_FIELDS));
+/**
+ * The issues of a submit, and of a change to an approved item (`stored`: what it held), which goes
+ * back to review: at most MAX_FIELDS.
+ */
+export function submitIssues(content: FutureContent, stored?: FutureContent): FieldIssues {
+  return Object.fromEntries(Object.entries(readinessIssues(content, stored)).slice(0, MAX_FIELDS));
 }
 
 export const hasIssues = (issues: FieldIssues): boolean => Object.keys(issues).length > 0;

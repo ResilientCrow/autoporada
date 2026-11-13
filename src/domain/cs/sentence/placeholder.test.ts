@@ -48,4 +48,20 @@ describe('placeholderParagraph (ADR 0060)', () => {
       'Akci zajišťovali: paní Nováková. Za',
     );
   });
+
+  it('follows the role of the organizer (ADR 0063)', () => {
+    expect(placeholderParagraph({ ...full, organizerRole: 'organizes' })).toContain(
+      'Akci organizovali: organizuje paní profesorka',
+    );
+    expect(placeholderParagraph({ ...full, organizerRole: 'coordinates' })).toContain(
+      'Akci za školu koordinovali: organizuje paní profesorka',
+    );
+    expect(placeholderParagraph({ ...full, organizerRole: null })).toContain('Akci zajišťovali: ');
+  });
+
+  it('writes no organizer sentence for an empty organizer, whatever the role', () => {
+    expect(
+      placeholderParagraph({ date: d('2026-05-06'), title: 'Výlet', organizerRole: 'organizes' }),
+    ).toBe('Ve středu 6. května 2026 proběhla akce Výlet. Zpráva o akci nebyla dodána.');
+  });
 });

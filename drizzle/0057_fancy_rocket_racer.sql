@@ -1,0 +1,2 @@
+ALTER TABLE "future_items" ADD COLUMN "organizer_role" text;--> statement-breakpoint
+ALTER TABLE "future_items" ADD CONSTRAINT "future_items_organizer_role" CHECK ("future_items"."organizer_role" IS NULL OR "future_items"."organizer_role" IN ('organizes','coordinates'));

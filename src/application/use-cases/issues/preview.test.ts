@@ -609,6 +609,37 @@ describe('issues.preview', () => {
       });
     });
 
+    it('carries the organizer role into the snapshot only with a named organizer (ADR 0063)', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      await fixtures.future({
+        author,
+        title: 'S rolí',
+        startDate: d('2026-10-28'),
+        content: { organizer: 'Jana Nováková', organizerRole: 'coordinates' },
+      });
+      await fixtures.future({
+        author,
+        title: 'Starší',
+        startDate: d('2026-10-28'),
+        content: { organizer: 'zajišťuje paní Nováková' },
+      });
+      await fixtures.future({
+        author,
+        title: 'Bez jmen',
+        startDate: d('2026-10-28'),
+        content: { organizerRole: 'organizes' },
+      });
+      const items = (await preview(head)).snapshot?.futureItems ?? [];
+      const byTitle = Object.fromEntries(items.map((i) => [i.title, i]));
+      expect(byTitle['S rolí']).toMatchObject({
+        organizer: 'Jana Nováková',
+        organizerRole: 'coordinates',
+      });
+      expect(byTitle['Starší']?.organizerRole).toBeUndefined();
+      expect(byTitle['Bez jmen']?.organizerRole).toBeUndefined();
+    });
+
     it('reads the items from the meeting date, so a moved porada sees later ones', async () => {
       const head = await headmaster();
       const author = await submitter();

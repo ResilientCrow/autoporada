@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { FutureKind } from '@/domain/calendar';
+import { organizerPhrase } from '@/domain/cs';
 import type { FutureState } from '@/domain/review';
 import { future, points } from '@/ui/copy';
 import { ArrowLink } from '@/ui/kit';
@@ -25,7 +26,7 @@ function factRows(view: FutureView): readonly (readonly [string, string])[] {
     [future.facts.when, whenText(view)],
     [points.facts.campus, view.campus && points.campus[view.campus]],
     [points.facts.place, view.place?.trim() || null],
-    [future.facts.organizer, view.organizer?.trim() || null],
+    [future.facts.organizer, organizerPhrase(view.organizerRole, view.organizer ?? '') || null],
     [future.facts.participants, view.participants?.trim() || null],
     [future.facts.note, view.note?.trim() || null],
   ];

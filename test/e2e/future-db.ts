@@ -23,14 +23,14 @@ export async function seedFuture(
 ): Promise<string> {
   return withClient(async (client) => {
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO future_items (kind, author_id, client_ref, state, title, start_date, end_date, organizer,
+      `INSERT INTO future_items (kind, author_id, client_ref, state, title, start_date, end_date, organizer, organizer_role,
                                 submitted_at)
        SELECT $2::future_kind, u.id, gen_random_uuid(), $3::future_state, $4, current_date + $5::int,
-              current_date + $5::int, $6,
+              current_date + $5::int, $6, 'organizes',
               CASE WHEN $3 = 'draft' THEN NULL ELSE now() END
          FROM users u WHERE u.email = $1
        RETURNING id`,
-      [email, kind, state, title, startInDays, 'organizuje paní Jana Nováková (8. A)'],
+      [email, kind, state, title, startInDays, 'paní Jana Nováková (8. A)'],
     );
     const made = rows[0];
     if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);

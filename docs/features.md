@@ -40,7 +40,9 @@ in v1 unless the [plan of record](plan.md) changes first.
 - Future items (jednání / akce). They are placed into points 1 and 2 and the
   last PROVOZ point by date. An approved akce is visible to every signed-in
   user, students included, with its free-text Organizátor, Účastníci and Poznámka
-  as typed (ADR 0060). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
+  as typed (ADR 0060). Organizátor first asks „Organizuje“ or „Koordinuje“, then
+  the names; the line prints „organizuje …“ / „koordinuje …“, or „organizují …“ /
+  „koordinují …“ when the names hold a comma (ADR 0063). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
   Poznámka); only Název and Den are required. The printed line is date, time,
   areál, místo, název, poznámka, organizátor, účastníci, joined by commas, with
   empty pieces left out; multi-day items print „neděle 3. května až čtvrtek
@@ -166,10 +168,12 @@ in v1 unless the [plan of record](plan.md) changes first.
 - A missing report: every akce owed to the porada whose report is not approved
   at generation is printed among the reports as its title, a paragraph the
   system writes from the akce („V úterý 5. května 2026 od 14.00 hodin proběhla
-  akce předání diplomů (areál Smíchov, Zasedací místnost). Akci zajišťovali:
-  organizuje paní profesorka Jana Nováková. Za Smíchovskou střední se
+  akce předání diplomů (areál Smíchov, Zasedací místnost). Akci organizovali:
+  paní profesorka Jana Nováková. Za Smíchovskou střední se
   zúčastnili: účast slečna Eva Malá (2.GA). Zpráva o akci nebyla dodána.“, the
-  Organizátor and Účastníci texts as typed, empty pieces left out) and the line
+  names and Účastníci as typed, empty pieces left out; „Akci za školu
+  koordinovali:“ for a coordinated akce, „Akci zajišťovali:“ for one saved
+  without a role) and the line
   „vyjádření organizátora: nebylo dodáno“. The headmaster can rewrite the paragraph on
   „Chybějící zprávy“ (`/porada/[datum]/zpravy`) and restore the system's text.
   Each paragraph is reviewed (ADR 0061): „Zkontrolováno“ confirms the system's

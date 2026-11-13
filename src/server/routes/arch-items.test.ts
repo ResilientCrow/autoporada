@@ -205,3 +205,33 @@ describe('a cancel request, as Arch reads it (ADR 0062)', () => {
     });
   });
 });
+
+describe('the organizer of an akce, as Arch reads it (ADR 0063)', () => {
+  const withContent = (content: Record<string, unknown>) =>
+    archItems({
+      pointRows: [],
+      futureRows: [{ ...(futureRow('approved') as object), content } as never],
+      pEvents: [],
+      fEvents: [],
+      vers: {},
+      today: calDate(2026, 11, 2),
+      poradas: [],
+      viewerId: AUTHOR,
+      staff: false,
+    }).archFutures[0];
+
+  it('carries the names and the role', () => {
+    expect(
+      withContent({ title: 'Výlet', organizer: 'Jana Nováková', organizerRole: 'coordinates' }),
+    ).toMatchObject({ organizer: 'Jana Nováková', organizerRole: 'coordinates' });
+  });
+
+  it('gives no role for an item typed before the role existed', () => {
+    expect(
+      withContent({ title: 'Výlet', organizer: 'zajišťuje paní Nováková', organizerRole: null }),
+    ).toMatchObject({
+      organizer: 'zajišťuje paní Nováková',
+      organizerRole: null,
+    });
+  });
+});

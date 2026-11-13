@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 
 import type { listFutureOutput } from '@/contracts';
+import { organizerPhrase } from '@/domain/cs';
 import { future, points } from '@/ui/copy';
 import { ArrowLink, ButtonLink, ItemLink, SlantLabel } from '@/ui/kit';
 import { Chip, FUTURE_LOOK } from '@/ui/status';
@@ -11,9 +12,11 @@ import { campusAndPlace, whenText } from './facts';
 export type FutureRow = z.output<typeof listFutureOutput>['items'][number];
 
 function Row({ row }: { readonly row: FutureRow }) {
-  const lines = [whenText(row), campusAndPlace(row), row.organizer?.trim() || null].filter(
-    (line): line is string => line !== null,
-  );
+  const lines = [
+    whenText(row),
+    campusAndPlace(row),
+    organizerPhrase(row.organizerRole, row.organizer ?? '') || null,
+  ].filter((line): line is string => line !== null);
   return (
     <li className="space-y-1">
       <p className="flex flex-wrap items-center gap-2">

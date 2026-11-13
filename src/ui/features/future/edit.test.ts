@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ActionError } from '@/contracts';
-import { cs } from '@/ui/copy';
+import { cs, future } from '@/ui/copy';
 
 import {
   FUTURE_SPEC,
@@ -24,6 +24,7 @@ const content = (patch: Partial<FutureContentWire> = {}): FutureContentWire => (
   campus: null,
   place: null,
   organizer: null,
+  organizerRole: null,
   participants: null,
   note: null,
   ...patch,
@@ -45,7 +46,9 @@ describe('changes', () => {
     ['place', 'S206', { place: 'S206' }],
     ['campus', 'radlice', { campus: 'radlice' }],
     ['campus', 'nikde', { campus: null }],
-    ['organizer', 'organizuje pan Malý', { organizer: 'organizuje pan Malý' }],
+    ['organizerRole', 'coordinates', { organizerRole: 'coordinates' }],
+    ['organizerRole', '', { organizerRole: null }],
+    ['organizer', 'pan Malý', { organizer: 'pan Malý' }],
     ['participants', '', { participants: null }],
     ['note', 'téma stáže', { note: 'téma stáže' }],
     ['startDate', '2027-02-01', { startDate: '2027-02-01', endDate: null }],
@@ -84,6 +87,18 @@ describe('FUTURE_SPEC', () => {
     expect(FUTURE_SPEC['title']?.required).toBe(true);
     expect(FUTURE_SPEC['startDate']?.required).toBe(true);
     expect(Object.keys(FUTURE_SPEC)).not.toContain('expectsReport');
+  });
+});
+
+describe('organizerRole', () => {
+  it('is a field of the spec and a refused submit shows its own sentence', () => {
+    expect(issuesOf({ 'content.organizerRole': 'required' })).toEqual({
+      known: { organizerRole: 'required' },
+      unknown: false,
+    });
+    expect(messagesOf({ organizerRole: 'required' }, content())).toEqual({
+      organizerRole: future.editor.organizerRoleRequired,
+    });
   });
 });
 

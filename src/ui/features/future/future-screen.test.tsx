@@ -42,6 +42,7 @@ const content = (over: Partial<FutureContentWire> = {}): FutureContentWire => ({
   campus: 'radlice',
   place: 'Špindlerův Mlýn',
   organizer: null,
+  organizerRole: null,
   participants: null,
   note: null,
   ...over,
@@ -70,6 +71,7 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
     campus: 'radlice',
     place: 'Špindlerův Mlýn',
     organizer: null,
+    organizerRole: null,
     participants: null,
     note: null,
   },
@@ -100,8 +102,23 @@ describe('the editor of a draft', () => {
     expect(html).toContain('10. listopadu 2026');
   });
 
-  it('has the organizer, participants and note as text areas', () => {
-    expect(html).toMatch(/<textarea [^>]*name="organizer"/);
+  it('asks Organizuje or Koordinuje first with none chosen, then the names in a single line', () => {
+    expect(html).toMatch(/<input [^>]*name="organizerRole"[^>]*value="organizes"/);
+    expect(html).toMatch(/<input [^>]*name="organizerRole"[^>]*value="coordinates"/);
+    expect(html).not.toMatch(/<input [^>]*name="organizerRole"[^>]*checked=""/);
+    expect(html).toContain(future.editor.organizerRole.organizes);
+    expect(html).toContain(future.editor.organizerRole.coordinates);
+    expect(html).toMatch(/<input [^>]*name="organizer"/);
+    expect(html).not.toMatch(/<textarea [^>]*name="organizer"/);
+    expect(html.indexOf('name="organizerRole"')).toBeLessThan(html.indexOf('name="organizer"'));
+  });
+
+  it('shows names typed on several lines before the field was one line on one line', () => {
+    const legacy = render({ editor: editorOf({ organizer: 'Jana Nováková\nPetr Malý' }) });
+    expect(legacy).toMatch(/<input [^>]*name="organizer"[^>]*value="Jana Nováková Petr Malý"/);
+  });
+
+  it('has the participants and note as text areas', () => {
     expect(html).toMatch(/<textarea [^>]*name="participants"/);
     expect(html).toMatch(/<textarea [^>]*name="note"/);
   });

@@ -65,4 +65,10 @@ export {
   TITLE_GENDERS,
   type TitleGender,
 } from './sentence/opening';
+export {
+  ORGANIZER_ROLES,
+  organizerOnOneLine,
+  organizerPhrase,
+  type OrganizerRole,
+} from './sentence/organizer';
 export { campusLabel, placeholderParagraph, type PlaceholderInput } from './sentence/placeholder';

@@ -20,6 +20,7 @@ const wire = (over: Record<string, unknown> = {}) => ({
   campus: null,
   place: null,
   organizer: null,
+  organizerRole: null,
   participants: null,
   note: null,
   ...over,
@@ -88,6 +89,18 @@ describe('saveFutureInput', () => {
     ]);
   });
 
+  it('takes the two organizer roles and null, and nothing else (ADR 0063)', () => {
+    expect(save({ organizerRole: 'organizes' }).success).toBe(true);
+    expect(save({ organizerRole: 'coordinates' }).success).toBe(true);
+    expect(save({ organizerRole: null }).success).toBe(true);
+    expect(refusedPaths(save({ organizerRole: 'leads' }))).toEqual(['content.organizerRole']);
+    expect(refusedPaths(save({ organizerRole: '' }))).toEqual(['content.organizerRole']);
+    const { organizerRole: _omitted, ...without } = wire();
+    expect(saveFutureInput.safeParse({ id, expectedVersion: 1, content: without }).success).toBe(
+      false,
+    );
+  });
+
   it('takes a known campus and no stray keys', () => {
     expect(save({ campus: 'jinde-nekde' }).success).toBe(false);
     expect(save({ extra: 1 }).success).toBe(false);
@@ -105,6 +118,7 @@ describe('futureContentToWire', () => {
       campus: 'radlice',
       place: 'v muzeu',
       organizer: null,
+      organizerRole: null,
       participants: null,
       note: null,
     };

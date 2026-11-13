@@ -21,6 +21,7 @@ const akce = (id: string, over: Partial<FutureItemRecord['content']> = {}): Futu
     campus: null,
     place: null,
     organizer: null,
+    organizerRole: null,
     participants: null,
     note: null,
     ...over,
@@ -80,6 +81,22 @@ describe('archPlaceholders (ADR 0061)', () => {
       [changed],
       {},
     );
+    expect(placeholderChecks).toEqual({ 'f-a': { checked: false, was } });
+  });
+
+  it('un-checks a confirmation once a role is chosen for the akce’s organizer (ADR 0063)', async () => {
+    const typed = akce('f-a', { organizer: 'paní Nováková' });
+    const was = systemParagraph(typed)!;
+    const withRole = akce('f-a', { organizer: 'paní Nováková', organizerRole: 'coordinates' });
+    const { db } = dbWith([row('f-a', { confirmedOriginal: was })]);
+    const { placeholderChecks } = await archPlaceholders(
+      db,
+      { staff: true, head: true },
+      [withRole],
+      {},
+    );
+    expect(was).toContain('Akci zajišťovali: paní Nováková.');
+    expect(systemParagraph(withRole)).toContain('Akci za školu koordinovali: paní Nováková.');
     expect(placeholderChecks).toEqual({ 'f-a': { checked: false, was } });
   });
 

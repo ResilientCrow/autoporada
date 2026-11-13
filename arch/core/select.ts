@@ -122,7 +122,7 @@ export function owedTo(s: State, monday: string) {
 }
 /** The paragraph the system writes for an akce (ADR 0060), whatever the headmaster wrote instead. */
 export function systemText(f: Future): string {
-  return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), ...(f.timeFrom && { from: f.timeFrom }), campus: f.campus, ...(f.place.trim() && { place: singleLine(f.place) }), title: singleLine(f.title), ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }) });
+  return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), ...(f.timeFrom && { from: f.timeFrom }), campus: f.campus, ...(f.place.trim() && { place: singleLine(f.place) }), title: singleLine(f.title), ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), organizerRole: f.organizerRole, ...(f.participants.trim() && { participants: singleLine(f.participants) }) });
 }
 export function placeholderText(s: State, f: Future, monday: string): string {
   return issueOf(s, monday)?.placeholders[f.id] || systemText(f);
@@ -225,7 +225,7 @@ const isoO = (x: Future) => ({ date: toIsoDate(x.date), ...(x.endDate && { endDa
 /** The akce as the document's composer reads it. */
 export const futureSnap = (f: Future) => ({
     id: f.id, kind: f.kind, title: f.title, ...isoO(f), ...(f.campus && { campus: f.campus }), ...(f.place && { place: f.place }),
-    ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }), ...(f.remark.trim() && { note: singleLine(f.remark) }),
+    ...(f.organizer.trim() && { organizer: singleLine(f.organizer), ...(f.organizerRole && { organizerRole: f.organizerRole }) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }), ...(f.remark.trim() && { note: singleLine(f.remark) }),
 });
 // ponytail: last few builds only; every action makes new state, so this just spares repeats within one render.
 const buildCache: { k: unknown[]; v: Built }[] = [];

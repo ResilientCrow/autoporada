@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ORGANIZER_ROLES } from '@/domain/cs';
+
 import { campus, dated, refineSnapshot, required, snapshotFields, text, title } from './shape';
 import { upcastV1 } from './upcast-v1';
 
@@ -22,6 +24,12 @@ const futureItem = z.strictObject({
   place: text.optional(),
   /** Free texts, printed as the author typed them (ADR 0060). */
   organizer: text.optional(),
+  /**
+   * What the organizer does (ADR 0063): the document puts „organizuje“ or „koordinuje“ before the
+   * names. Left out, the names print as typed, so a snapshot stored before the role existed
+   * renders as it did and stays schema 2.
+   */
+  organizerRole: z.enum(ORGANIZER_ROLES).optional(),
   participants: text.optional(),
   note: text.optional(),
 });

@@ -26,7 +26,7 @@ export const idOfUrl = (page: Page): string => {
 
 /**
  * Fills the editor of a new akce with everything a hand-in needs: the title, the first day,
- * and the three free texts (organizer, participants, note).
+ * and the three free texts (organizer with its role, participants, note).
  */
 export async function fillAkce(
   page: Page,
@@ -36,7 +36,8 @@ export async function fillAkce(
   await field(page, points.facts.eventDate).fill(start);
   await page.getByRole('radio', { name: points.campus.smichov }).check();
   await field(page, points.facts.place).fill('v učebně S206');
-  await field(page, future.editor.organizer).fill('organizuje paní Jana Nováková');
+  await page.getByRole('radio', { name: future.editor.organizerRole.organizes }).check();
+  await field(page, future.editor.organizerNames).fill('paní Jana Nováková');
   await field(page, future.editor.participants).fill('účast 8. A');
   await field(page, future.editor.note).fill('téma stáže');
   await expect(page.getByText(/^Uloženo v/)).toBeVisible();
