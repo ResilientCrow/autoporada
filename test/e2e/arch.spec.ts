@@ -106,6 +106,29 @@ test.describe('the Arch UI', () => {
   test.beforeEach(({}, testInfo) => forget(testInfo.project.name));
   test.afterEach(({}, testInfo) => forget(testInfo.project.name));
 
+  test('a failed step-up says why to someone still signed in, once, and clears the address', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    await signInAs(signInAsRe('archa', testInfo.project.name));
+    await expect(page.getByRole('heading', { level: 1, name: 'Dobrý den.' })).toBeVisible();
+
+    await page.goto('/?chyba=step-up-stale');
+    await expect(page.getByText(cs.signIn.errors['step-up-stale'])).toBeVisible();
+    await expect(page).toHaveURL(/:\d+\/$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Dobrý den.' })).toBeVisible();
+
+    // Another error and the address kept: only the sign-in parameters go, the place stays.
+    await page.goto('/?chyba=step-up-mismatch&pricina=bug#/moje');
+    await expect(page.getByText(cs.signIn.errors['step-up-mismatch'])).toBeVisible();
+    await expect(page).toHaveURL(/:\d+\/#\/moje$/);
+
+    // A reload shows nothing more: the address no longer carries the error.
+    await page.reload();
+    await expect(page.getByRole('link', { name: 'Čeká na vás' }).first()).toBeVisible();
+    await expect(page.getByText(cs.signIn.errors['step-up-mismatch'])).toHaveCount(0);
+  });
+
   test('an author sends a new akce through the wizard, and the headmaster approves it', async ({
     page,
     signInAs,

@@ -6,9 +6,8 @@ const ORIGIN = 'https://autoporada.ssps.cz';
 const query = (href: string) => {
   const url = new URL(href);
   expect(url.origin).toBe(ORIGIN);
-  // Branch arch-ui: the Arch sign-in screen says it, except a failed step-up (still signed in).
-  const stepUp = url.searchParams.get('chyba')?.startsWith('step-up');
-  expect(url.pathname).toBe(stepUp ? '/prihlaseni' : '/');
+  // The Arch client at `/` says it, signed out on its sign-in screen and signed in as a notice.
+  expect(url.pathname).toBe('/');
   return [...url.searchParams];
 };
 
@@ -16,6 +15,14 @@ describe('signInFailed', () => {
   it('names the error alone, never a request id', () => {
     for (const error of ['unavailable', 'bug', 'signout-failed', 'claims'] as const) {
       expect(query(signInFailed(ORIGIN, error))).toEqual([['chyba', error]]);
+    }
+  });
+
+  it('sends a failed step-up to the Arch client too, which says it to someone signed in', () => {
+    for (const error of ['step-up-mismatch', 'step-up-stale'] as const) {
+      const url = new URL(signInFailed(ORIGIN, error));
+      expect(url.pathname).toBe('/');
+      expect([...url.searchParams]).toEqual([['chyba', error]]);
     }
   });
 

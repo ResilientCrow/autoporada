@@ -115,10 +115,9 @@ test('a step-up answered with an old sign-in is refused and the session stays', 
 }) => {
   await signInAs(ACTOR);
   await stepUpAs(page, ACTOR, true);
-  await expect(page).toHaveURL(/\/prihlaseni\?chyba=step-up-stale$/);
-  await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-    cs.signIn.errors['step-up-stale'],
-  );
+  // The Arch client at `/` says it to someone still signed in, then clears the address.
+  await expect(page.getByText(cs.signIn.errors['step-up-stale'])).toBeVisible();
+  await expect(page).toHaveURL(/:\d+\/$/);
   const response = await page.goto('/uzivatele');
   expect(response?.status()).toBe(200);
   await expect(page).toHaveURL(/\/uzivatele$/);
@@ -130,10 +129,9 @@ test('a step-up answered by another person is refused and the session stays', as
 }) => {
   await signInAs(ACTOR);
   await stepUpAs(page, /^Učitelka/, false);
-  await expect(page).toHaveURL(/\/prihlaseni\?chyba=step-up-mismatch$/);
-  await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-    cs.signIn.errors['step-up-mismatch'],
-  );
+  // The Arch client at `/` says it to someone still signed in, then clears the address.
+  await expect(page.getByText(cs.signIn.errors['step-up-mismatch'])).toBeVisible();
+  await expect(page).toHaveURL(/:\d+\/$/);
   const response = await page.goto('/uzivatele');
   expect(response?.status()).toBe(200);
   await expect(page).toHaveURL(/\/uzivatele$/);

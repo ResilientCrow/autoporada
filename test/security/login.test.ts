@@ -146,8 +146,6 @@ describe('GET /auth/step-up', () => {
     const { routes, browser } = harness.h;
     const response = await browser().send(routes.stepUp, '/auth/step-up?returnTo=%2Fuzivatele');
     expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toMatch(
-      /^https:\/\/autoporada\.ssps\.cz\/prihlaseni\?returnTo=/,
-    );
+    expect(response.headers.get('location')).toBe('https://autoporada.ssps.cz/');
   });
 });

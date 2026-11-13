@@ -6,7 +6,7 @@ import './app.css';
 import { StoreProvider, useRoute, useStore } from '../core/react';
 import * as Q from '../core/select';
 import { AkceDetail, Navrh, NovaAkce } from './akce';
-import { Clovek, Lide, Login, Nastaveni, NovyRok, Pristup, Seznam, Seznamy, Soukromi, Ucet } from './admin';
+import { Clovek, Lide, Login, Nastaveni, NovyRok, Pristup, Seznam, Seznamy, SignInNotice, Soukromi, Ucet } from './admin';
 import { Domu, Moje, NotFound, Tyden, Udalosti, Zprava } from './home';
 import { Archiv, ArchivDoc, Hotovo, Nahled, Pokyny, Porada, Pridat, Prilohy, Udaje, Zpravy } from './porada';
 import { Kontrola } from './review';
@@ -49,4 +49,9 @@ function Router() {
     default: return <NotFound />;
   }
 }
-createRoot(document.getElementById('root')!).render(<StoreProvider ns="a"><Router /></StoreProvider>);
+/** Signed in, an address that still carries a sign-in error is said once (a failed step-up). */
+function App() {
+  const { s } = useStore();
+  return <>{Q.me(s) ? <SignInNotice /> : null}<Router /></>;
+}
+createRoot(document.getElementById('root')!).render(<StoreProvider ns="a"><App /></StoreProvider>);

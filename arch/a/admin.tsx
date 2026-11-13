@@ -2,7 +2,7 @@ import { isAadstsCode, isFailureCause, isSignInError } from '@/contracts';
 import { foldForSearch, normalizeClass } from '@/domain/cs';
 import { failures } from '@/ui/copy/failures';
 import { signIn } from '@/ui/copy/sign-in';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { isClassCode, parsePaste, sortForDocument, type PasteRow } from '@/domain/registry';
 import { go, useStore } from '../core/react';
 import * as Q from '../core/select';
@@ -111,6 +111,20 @@ function signInOutcome() {
   const failed = error === null ? null : error === 'idp-refused' && isAadstsCode(aadsts) ? signIn.refusedWithCode(aadsts) : error === 'signout-failed' && isFailureCause(pricina) ? `${signIn.errors[error]} ${failures[pricina]}` : signIn.errors[error];
   const gone = out === 'vsude' ? signIn.loggedOut.everywhere : out === '1' ? signIn.loggedOut.here : null;
   return { failed, gone, shared: gone !== null || error === 'signout-failed' };
+}
+/** The sign-in's own parameters; a notice that has said its piece takes them off the address. */
+const SIGN_IN_PARAMS = ['chyba', 'aadsts', 'pricina'] as const;
+/** A failed step-up lands on someone still signed in: say what the address says, once, and clear it. */
+export function SignInNotice() {
+  const [failed, setFailed] = useState(() => signInOutcome().failed);
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (!SIGN_IN_PARAMS.some((k) => q.has(k))) return;
+    for (const k of SIGN_IN_PARAMS) q.delete(k);
+    const rest = q.toString();
+    history.replaceState(history.state, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`);
+  }, []);
+  return failed ? <Toast onDone={() => setFailed(null)}>{failed}</Toast> : null;
 }
 const LOGIN = '/auth/login?returnTo=%2F'; const SWITCH = `${LOGIN}&account=select`;
 export function Login() {

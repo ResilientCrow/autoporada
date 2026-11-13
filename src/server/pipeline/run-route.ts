@@ -1,7 +1,6 @@
 import { classifyFailure, type UseCase } from '@/application/core';
 import type { SystemPrincipal, UserPrincipal } from '@/application/ports';
 import type { ActionResult, FailureCause } from '@/contracts';
-import { safeReturnTo } from '@/domain/identity';
 
 import { clientIp, LIMITS, type LimitName } from '../rate-limit';
 import { errorSummary } from '../log';
@@ -60,7 +59,6 @@ export interface Segment {
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
-const LOGIN_PAGE = '/prihlaseni';
 
 function finish(response: Response, requestId: string): Response {
   const out = new Response(response.body, response);
@@ -117,10 +115,11 @@ export async function runRoute(
     if (principal) line.actorId = principal.actor.id;
     if (spec.access === 'session' && !principal) {
       if (!SAFE_METHODS.has(request.method)) return refuse('unauthenticated', status(401));
-      const login = new URL(LOGIN_PAGE, deps.appOrigin);
-      const url = new URL(request.url);
-      login.searchParams.set('returnTo', safeReturnTo(`${url.pathname}${url.search}`));
-      return refuse('unauthenticated', status(303, { Location: login.toString() }));
+      // `/` is the Arch client, whose signed-out screen is the sign-in; it takes no return address.
+      return refuse(
+        'unauthenticated',
+        status(303, { Location: new URL('/', deps.appOrigin).toString() }),
+      );
     }
     if (limit?.key === 'user' && principal) {
       const refused = limited(principal.actor.id);

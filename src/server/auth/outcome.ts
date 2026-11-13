@@ -23,7 +23,7 @@ export interface SignInExtra {
 }
 
 /**
- * The sign-in page naming what failed (ADR 0044). No request id: it stays in the log. A refusal
+ * The Arch client naming what failed (ADR 0044). No request id: it stays in the log. A refusal
  * may carry its AADSTS number and a failed sign-out its cause, each only when it is exactly that;
  * nothing else from Entra or the database reaches the URL.
  */
@@ -32,9 +32,9 @@ export function signInFailed(
   error: SignInError,
   extra: SignInExtra = {},
 ): string {
-  // Branch arch-ui: the Arch sign-in screen says it. A failed step-up comes to someone still
-  // signed in, whom `/` would greet with the home page, so that one keeps the classic page.
-  const url = new URL(error.startsWith('step-up') ? '/prihlaseni' : '/', appOrigin);
+  // The Arch client at `/` says it: on its sign-in screen, or, for a failed step-up that comes to
+  // someone still signed in, as a notice it shows once and then clears from the address.
+  const url = new URL('/', appOrigin);
   url.searchParams.set('chyba', error);
   if (error === 'idp-refused' && isAadstsCode(extra.aadsts)) {
     url.searchParams.set('aadsts', extra.aadsts);

@@ -84,9 +84,7 @@ describe('runRoute', () => {
     const { routeDeps } = deps();
     const get = await runRoute(routeDeps, route(), request('/porada/2026-10-19?tab=body'), segment);
     expect(get.status).toBe(303);
-    expect(get.headers.get('location')).toBe(
-      `${ORIGIN}/prihlaseni?returnTo=%2Fporada%2F2026-10-19%3Ftab%3Dbody`,
-    );
+    expect(get.headers.get('location')).toBe(`${ORIGIN}/`);
     const post = request('/x', { method: 'POST', origin: ORIGIN });
     expect((await runRoute(routeDeps, route(), post, segment)).status).toBe(401);
   });

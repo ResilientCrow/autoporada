@@ -97,11 +97,11 @@ describe('GET /porada/[datum]/dokument/[format]', () => {
     expect(response.headers.get('location')).toBe(archiveWith('not-found'));
   });
 
-  it('sends a signed-out reader to sign in, back to the download', async () => {
+  it('sends a signed-out reader to the Arch client, whose signed-out screen is the sign-in', async () => {
     await generated();
     const signedOut = await setup(null)('docx');
     expect(signedOut.status).toBe(303);
-    expect(signedOut.headers.get('location')).toContain('/prihlaseni');
+    expect(signedOut.headers.get('location')).toBe(`${ORIGIN}/`);
   });
 
   describe('what each refusal of the use case becomes', () => {
