@@ -118,6 +118,16 @@ describe('the editor of a draft', () => {
     expect(legacy).toMatch(/<input [^>]*name="organizer"[^>]*value="Jana Nováková Petr Malý"/);
   });
 
+  it('lets the place be typed once an areál is chosen, and says so until then', () => {
+    const place = (markup: string) => /<input [^>]*name="place"[^>]*>/.exec(markup)?.[0] ?? '';
+    expect(place(html)).not.toContain(' disabled=""');
+    expect(html).not.toContain(future.editor.placeNeedsCampus);
+    const none = render({ editor: editorOf({ campus: null, place: 'ředitelna' }) });
+    expect(place(none)).toContain(' disabled=""');
+    expect(place(none)).toContain('value="ředitelna"');
+    expect(none).toContain(future.editor.placeNeedsCampus);
+  });
+
   it('has the participants and note as text areas', () => {
     expect(html).toMatch(/<textarea [^>]*name="participants"/);
     expect(html).toMatch(/<textarea [^>]*name="note"/);

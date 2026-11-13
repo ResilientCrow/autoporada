@@ -98,6 +98,18 @@ describe('Form and TextField', () => {
     expect(bad).toContain(cs.form.errorPrefix);
   });
 
+  it('disables a field until something else is chosen, and only then', () => {
+    const field = (disabled?: boolean) =>
+      renderToStaticMarkup(
+        <Form id="f" spec={spec} state={idle(null)}>
+          <TextField name="title" {...(disabled === undefined ? {} : { disabled })} />
+        </Form>,
+      );
+    expect(field(true)).toMatch(/<input [^>]* disabled=""/);
+    expect(field(false)).not.toMatch(/<input [^>]* disabled=""/);
+    expect(field()).not.toMatch(/<input [^>]* disabled=""/);
+  });
+
   it('throws for a name the spec does not declare', () => {
     expect(() =>
       renderToStaticMarkup(

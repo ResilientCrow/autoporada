@@ -70,7 +70,8 @@ export function FutureFields({
       />
       <TextField
         {...bound('place')}
-        description={points.editor.placeHint}
+        description={content.campus ? points.editor.placeHint : future.editor.placeNeedsCampus}
+        disabled={!content.campus}
         maxLength={POINT_LIMITS.place}
         value={content.place ?? ''}
         autoComplete="off"

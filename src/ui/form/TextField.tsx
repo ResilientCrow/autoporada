@@ -37,6 +37,7 @@ export function TextField({
   min,
   max,
   readOnly = false,
+  disabled = false,
   describedBy,
   after,
   issue,
@@ -58,6 +59,8 @@ export function TextField({
   readonly max?: string;
   /** Shown and focusable, but not editable (an autosaving editor waiting on its banner). */
   readonly readOnly?: boolean;
+  /** Not usable until something else is chosen; the description says what. */
+  readonly disabled?: boolean;
   /** The id of text the page renders after the control, which describes it (the date echo). */
   readonly describedBy?: string;
   /** Rendered after the control, inside the field. */
@@ -92,6 +95,7 @@ export function TextField({
       autoComplete={autoComplete}
       type={type}
       isReadOnly={readOnly}
+      isDisabled={disabled}
       aria-describedby={describedBy}
       className="flex flex-col gap-1"
     >

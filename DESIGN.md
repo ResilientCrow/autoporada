@@ -119,7 +119,7 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 | `.q` | Text-style button/link (underlined, `--mut`); `.q.r` red destructive. 44px tap height. |
 | `.add` | Pill action „Přidat do porady" with a gold round plus. |
 | `.ch` | Choice card (bordered, 14px radius) with `.tx`, `b`, `span`. `button.ch` is the button form. |
-| `.l` | `label.l`: stacked label with optional `small` help; `.in` is the text input (50px, 10px radius, gold-soft focus halo). |
+| `.l` | `label.l`: stacked label with optional `small` help; `.in` is the text input (50px, 10px radius, gold-soft focus halo; `:disabled` has a `--wash` background, `--line` border and `#6A6B84` text, as Místo before an areál is chosen). |
 | `.stack`, `.st8`, `.st6` | Vertical flex gaps 18, 8, 6px. |
 | `.row`, `.wr` | Horizontal flex row (children `.btn` grow); `.wr` wraps. |
 | `.mz` | Section with top hairline and 17px `h2`. |

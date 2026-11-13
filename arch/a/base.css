@@ -105,7 +105,7 @@ a.bl{display:block;text-decoration:none}a.bl:hover{background:#F2F2F8}a.bl.uu:ho
 label.l{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:15px}
 label.l small{font-weight:400;color:var(--mut);font-size:14px}
 .in{width:100%;min-height:50px;padding:10px 14px;border:1.5px solid #B9BACB;border-radius:10px;font:400 16px/1.4 var(--ui);color:var(--ink);background:#fff}
-.in:focus{outline:0;border-color:var(--ink);box-shadow:0 0 0 3px var(--gold-soft)}
+.in:focus{outline:0;border-color:var(--ink);box-shadow:0 0 0 3px var(--gold-soft)}.in:disabled{background:var(--wash);border-color:var(--line);color:#6A6B84;cursor:not-allowed}
 textarea.in{min-height:96px;resize:vertical}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .two>*{min-width:0}.two input{width:100%;min-width:0}

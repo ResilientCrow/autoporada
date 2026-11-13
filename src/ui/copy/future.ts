@@ -65,6 +65,8 @@ export const future = {
     },
     /** Under a role with names typed and none chosen (a submit is refused). */
     organizerRoleRequired: 'Vyberte, jestli organizuje, nebo koordinuje.',
+    /** Místo says where within the areál, so it waits for one. */
+    placeNeedsCampus: 'Nejdřív vyberte areál.',
     organizerNames: 'Jména organizátorů',
     organizerHint:
       'Jména oddělte čárkou, například paní zástupkyně Jana Nováková. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',
