@@ -106,7 +106,7 @@ export function AddDialog({ onClose }: { onClose: () => void }) {
   return <Dialog title="Co chcete udělat?" onClose={onClose}>
     <button type="button" className="ch" onClick={report}><span className="tx"><b>Napsat zprávu z akce, která proběhla</b><span>Provedeme vás tím krok za krokem.</span></span><Ic n="chev" /></button>
     <button type="button" className="ch" onClick={() => future('akce')}><span className="tx"><b>Přidat akci, která se chystá</b><span>Po schválení ji uvidí celá škola.</span></span><Ic n="chev" /></button>
-    <button type="button" className="ch" onClick={() => future('jednani')}><span className="tx"><b>Přidat schůzku s partnery</b><span>Objeví se v poradě, zprávu po ní nepíšete.</span></span><Ic n="chev" /></button>
+    <button type="button" className="ch" onClick={() => future('jednani')}><span className="tx"><b>Přidat jednání</b><span>Objeví se v poradě, zprávu po ní nepíšete.</span></span><Ic n="chev" /></button>
     {Q.atLeast(u.role, 'reviewer') ? <button type="button" className="ch" onClick={proposal}><span className="tx"><b>Navrhnout něco do pokynů nebo hospodaření</b><span>Po schválení to ředitel zařadí do dokumentu.</span></span><Ic n="chev" /></button> : null}
   </Dialog>;
 }
