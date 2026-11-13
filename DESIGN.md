@@ -38,7 +38,7 @@ The index (0, 1, 2) is `i % 3` of the tile's position, so a row cycles through t
 |---|---|---|---|---|
 | `core` | headmaster's main areas (Porada, Ke kontrole, Archiv) | `#161837` on white text | `#292D67` | `#3A4092` |
 | `act` | what you do most (Čeká na vás first for everyone but the headmaster, Nová akce) | `#075A92` hover `#00233F` | `#6C12A1` hover `#35064C` | `#8A0F28` hover `#3F000F` |
-| `browse` | things you look at, and Napsat zprávu, a report nobody asked for (Moje, Akce školy) | `#CCE8FF` text `#00233F` | `#ECCCFF` text `#35064C` | `#FFCDD6` text `#3F000F` |
+| `browse` | things you look at, and Napsat zprávu, a report nobody asked for (Přehled, Akce školy) | `#CCE8FF` text `#00233F` | `#ECCCFF` text `#35064C` | `#FFCDD6` text `#3F000F` |
 | `admin` | management, quiet | `#F7FBFF` + inset 1px `#CCE8FF` | `#FCF7FF` + `#ECCCFF` | `#FFF5F7` + `#FFCDD6` |
 
 Tile grid `.tiles`: 3 columns, gap 10px (8px on phone), `.tl` min-height 132px (116px), padding 16px (12px), radius 12px, icon 30px. Count badge `.tl-n` is gold, 28px high. Title `.tl-t` is 16px/600.

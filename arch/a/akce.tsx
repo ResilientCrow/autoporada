@@ -78,7 +78,7 @@ export function AkceDetail({ id, fresh }: { id: string; fresh?: boolean }) {
   return <App nar over={over}
     desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch-wrap rise"><Stamp t={stamp} /><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl me"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><Line f={v} /></div></div></div></div></Desk>}
     col={<>
-      <Back to={mine ? '/moje' : '/akce'} t={mine ? 'Zpět na Moje' : 'Zpět na akce'} />
+      <Back to={mine ? '/moje' : '/akce'} t={mine ? 'Zpět na přehled' : 'Zpět na akce'} />
       <Top h={!fresh ? Q.cap(f.title) : f.state === 'approved' ? 'Hotovo, je to v poradě' : 'Hotovo, je to u vedení'} lead={!fresh ? `${[whenText(f), organizerPhrase(f.organizerRole, f.organizer)].filter(Boolean).join(', ')}. ${futureLine(f)}.` : f.state === 'approved' ? 'Datum určí, ve kterém seznamu to vyjde.' : 'Po schválení ji uvidí celá škola.'} />
       {f.state === 'returned' ? <Rework labels={Q.partLabels(f, f.parts)} note={f.note} /> : f.note ? <Note h="Poznámka vedení">{f.note}</Note> : null}
       {mine && f.cancelRefusal ? <Note h="Vedení zrušení zamítlo">{f.cancelRefusal}</Note> : null}
@@ -105,7 +105,7 @@ export function Navrh({ id }: { id: string }) {
   const editable = p.state === 'draft' || p.state === 'returned';
   const can = !!c.title.trim() && !!toText(c.body).trim();
   return <App nar col={<>
-    <Back to="/moje" t="Zpět na Moje" />
+    <Back to="/moje" t="Zpět na přehled" />
     <Top h={editable ? 'Co navrhujete?' : c.title} lead={editable ? 'Napište to tak, jak to má stát v dokumentu. Po schválení to ředitel zařadí na správné místo.' : p.state === 'submitted' ? 'Návrh je u kontroly.' : p.state === 'approved' ? 'Schváleno. Ředitel ho zařadí do dokumentu.' : p.state === 'published' ? 'Vyšlo v poradě.' : p.note ?? ''} />
     {p.state === 'returned' ? <Rework labels={Q.partLabels(p, p.parts)} note={p.note} /> : null}
     {editable ? <div className="stack"><div className="stack st6"><span className="lb">Kam to patří</span><Seg label="Kam to patří" value={p.kind as 'finance' | 'pokyn'} options={[['finance', 'Hospodaření'], ['pokyn', 'Pokyny']]} onChange={(v) => apply(A.retype(id, { kind: v }))} /></div><label className="l">Název<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} /></label><label className="l">Text<textarea className="in big" value={toText(c.body)} onChange={(e) => set({ body: fromText(e.target.value) })} /></label></div> : null}

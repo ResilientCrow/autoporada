@@ -86,7 +86,7 @@ export function Domu() {
   const start: Tile[] = [{ t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Schůzka s\u00a0partnery', ic: 'talk', tone: 'act', act: () => future('jednani') }];
   // Most reports answer an akce from „Čeká na vás“; a report of one's own is the exception, so it sits lighter.
   const write: Tile = { t: 'Napsat zprávu', ic: 'pen', tone: 'browse', act: report };
-  const mine: Tile[] = [{ t: 'Moje', ic: 'doc', tone: 'browse', to: '/moje' }, { t: 'Akce školy', ic: 'cal', tone: 'browse', to: '/akce' }];
+  const mine: Tile[] = [{ t: 'Přehled', ic: 'doc', tone: 'browse', to: '/moje' }, { t: 'Akce školy', ic: 'cal', tone: 'browse', to: '/akce' }];
   const tiles: Tile[] = head
     ? [{ t: 'Porada', ic: 'book', tone: 'core', to: '/porada' }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }, { t: 'Archiv', ic: 'stack', tone: 'core', to: '/archiv' }, { t: 'Přidat do porady', ic: 'plus', tone: 'act', to: '/pridat' }, ...(tasks.length ? [waits] : []), ...mine, { t: 'Lidé', ic: 'ppl', tone: 'browse', to: '/lide', n: req }, { t: 'Seznamy studentů', ic: 'list', tone: 'admin', to: '/seznamy' }, { t: 'Typy zpráv', ic: 'tag', tone: 'admin', to: '/typy' }, { t: 'Nastavení', ic: 'gear', tone: 'admin', to: '/nastaveni' }]
     : [{ ...waits, tone: 'act' }, ...start, ...(staff ? [{ t: 'Návrh do pokynů', ic: 'flag', tone: 'act', act: proposal }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }] : []), write, ...mine, ...(staff ? [{ t: 'Archiv', ic: 'stack', tone: 'browse', to: '/archiv' }] : [])];
@@ -115,7 +115,7 @@ export function Moje() {
   const pts = Q.myPoints(s, u.id); const fs = Q.myFutures(s, u.id);
   const empty = !pts.length && !fs.length;
   return <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={deskFor(s, u.id)} col={<>
-    <Top big h="Moje" lead={empty ? 'Zatím tu nic nemáte. Až napíšete první zprávu, uvidíte ji tady i s tím, kde je.' : 'Všechno, co jste napsali, a kde to zrovna je.'} />
+    <Top big h="Přehled" lead={empty ? 'Zatím tu nic nemáte. Až napíšete první zprávu, uvidíte ji tady i s tím, kde je.' : 'Všechno, co jste napsali, a kde to zrovna je.'} />
     <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
     {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(s, p)} mk={p.state === 'approved' || p.state === 'published' ? 'c' : p.state === 'returned' ? 'n' : p.state === 'rejected' ? 'x' : 'o'} warn={p.state === 'returned'} />)}</Sec> : null}
     {fs.length ? <Sec h="Moje akce a schůzky">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={f.state === 'approved' ? 'c' : f.state === 'returned' ? 'n' : 'o'} />)}</Sec> : null}
