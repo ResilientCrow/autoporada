@@ -11,6 +11,7 @@ import { issueAnnexSchema } from '@/snapshot';
 
 import { getContainer } from '../container';
 import { runAction, sessionTokenFrom, type RouteSpec } from '../pipeline';
+import { retypeRequest } from './arch-retype';
 import { archState } from './arch-state';
 
 type UserLimitName = 'autosave' | 'submission' | 'admin';
@@ -138,25 +139,13 @@ async function saveAnnexes(actor: Parameters<typeof can>[0], input: unknown): Pr
     : json({ ok: false, error: { code: 'conflict' } }, 409);
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** `{ id, expectedVersion, typeId? | kind? }`: the author changes the type of a draft report, or a draft proposal between finance and pokyn. */
+/** The author changes the type of a draft report, or a draft proposal between finance and pokyn. */
 async function retype(userId: string, input: unknown): Promise<Response> {
   if (!getContainer().limiter.take('submission', userId).ok)
     return json({ ok: false, error: { code: 'rate-limited' } }, 429);
-  const { id, expectedVersion, typeId, kind } = (input ?? {}) as Record<string, unknown>;
-  if (typeof id !== 'string' || !UUID.test(id) || typeof expectedVersion !== 'number') {
-    return json({ ok: false, error: { code: 'invalid' } }, 400);
-  }
-  const db = getContainer().arch;
-  let patch: { typeId: string } | { kind: 'finance' | 'pokyn' };
-  if (typeof typeId === 'string' && UUID.test(typeId)) {
-    if (!(await db.activeType(typeId))) return json({ ok: false, error: { code: 'invalid' } }, 400);
-    patch = { typeId };
-  } else if (kind === 'finance' || kind === 'pokyn') {
-    patch = { kind };
-  } else return json({ ok: false, error: { code: 'invalid' } }, 400);
-  const version = await db.retype({ id, authorId: userId, expectedVersion, patch });
+  const request = retypeRequest(input);
+  if (!request) return json({ ok: false, error: { code: 'invalid' } }, 400);
+  const version = await getContainer().arch.retype({ ...request, authorId: userId });
   return version !== null
     ? json({ ok: true, data: { version } })
     : json({ ok: false, error: { code: 'conflict' } }, 409);

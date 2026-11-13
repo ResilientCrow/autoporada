@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 
 import { system, type UserRecord } from '@/application/ports';
 import { createPoint } from '@/application/use-cases';
-import type { BulletSpec, PointKind } from '@/domain/report';
+import type { BulletSpec, PointKind, PointTypeId } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import { calDate, parseIsoDate } from '@/domain/time';
 
@@ -93,11 +93,12 @@ export function startingAs(world: World, author: UserRecord, kind: PointKind) {
 
 export function pointFixtures(world: World) {
   /** A new point of the author's, made through the use case. */
-  async function start(author: UserRecord, kind: PointKind = 'report'): Promise<string> {
-    const typeId =
-      kind === 'report'
-        ? (await world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS })).id
-        : null;
+  async function start(
+    author: UserRecord,
+    kind: PointKind = 'report',
+    reportType: PointTypeId = 'soutez',
+  ): Promise<string> {
+    const typeId = kind === 'report' ? reportType : null;
     const result = await world.run(createPoint, startingAs(world, author, kind), {
       clientRef: randomUUID(),
       kind,

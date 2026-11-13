@@ -1,7 +1,14 @@
 import { MAX_FIELDS } from '@/application/core';
-import type { PointRecord, Tx } from '@/application/ports';
+import type { PointRecord } from '@/application/ports';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
-import type { BulletSpec, PointContent, PointKind, Problem, ProblemCode } from '@/domain/report';
+import {
+  pointType,
+  type BulletSpec,
+  type PointContent,
+  type PointKind,
+  type Problem,
+  type ProblemCode,
+} from '@/domain/report';
 import { parseRichDoc, type RichProfile } from '@/domain/richtext';
 
 /** A report's body is plain paragraphs, as the meeting prints it; proposals may use the outline. */
@@ -19,13 +26,10 @@ const invalid = (failed: Readonly<Record<string, boolean>>): FieldIssues =>
       .map(([field]): [string, FieldIssueCode] => [`content.${field}`, 'invalid']),
   );
 
-/**
- * The bullets a report's type asks for; none for finance and pokyn. A type
- * retired since the point was started still names its bullets.
- */
-export async function typeSpec(tx: Tx, point: PointRecord): Promise<readonly BulletSpec[]> {
+/** The bullets a report's type asks for; none for finance and pokyn. */
+export function typeSpec(point: PointRecord): readonly BulletSpec[] {
   if (point.kind !== 'report' || point.typeId === null) return [];
-  return (await tx.pointTypes.get(point.typeId))?.defaultBullets ?? [];
+  return pointType(point.typeId).defaultBullets;
 }
 
 /**

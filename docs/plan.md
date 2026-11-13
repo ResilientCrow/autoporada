@@ -41,7 +41,7 @@ This plan comes from six interview rounds and a 9-agent design workflow:
 | What submitters may add | Report points (PROVOZ), future items (jednání / akce), HOSPODAŘENÍ items, other POKYNY points. Ohlasy (media and partners) are headmaster-only. |
 | Future items | Placed in the document by date (§6). After an event, its author is prompted to write the report. Each line, in the headmaster's format (checkpoint M2): "úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon". Every part after the date is optional; multi-day items read "neděle 3. května až čtvrtek 14. května 2026" without times. Organizátor, Účastníci and Poznámka are free text printed as typed (ADR 0060, superseding the structured responsible part with its verb, "za …" and people). |
 | Standing POKYNY | Carried over from the previous issue. Edited in a restricted rich-text editor (3 indent levels: o / o / ■). Each item is standing or one-time and can be reordered. |
-| Report point form | Structured fields (title, date, from–to, areál, room, organisers) produce a pre-written opening sentence in the house style, which the submitter can edit freely. Point types are defined by admins, each with default labelled bullets. A participant list and at least one vyjádření are mandatory. No photos. |
+| Report point form | Structured fields (title, date, from–to, areál, room, organisers) produce a pre-written opening sentence in the house style, which the submitter can edit freely. Six point types are fixed in code, each with default labelled bullets (ADR 0064, superseding the admin-defined types). A participant list and at least one vyjádření are mandatory. No photos. |
 | Names | A person is title (pan / paní / slečna) + name + class/role. Lists group people by title with plural forms. The 2nd case is suggested and can be corrected. The picker searches the M365 directory; title, class and 2nd case are remembered locally. |
 | Weekly cycle | One issue per Monday. Configurable deadline, counted back from the meeting date (default two days before at 20:00: Saturday 20:00 for a Monday meeting, ADR 0032); later submissions go to the next issue, except reports on events that end after the deadline (ADR 0035). E-mail reminders and status notifications. Generating locks the issue, archives it and prepares the next one. Reopening and regenerating keep every version. |
 | Which reports go in | Every approved, unpublished report whose event took place before the meeting, oldest first (date, then time). |
@@ -49,7 +49,7 @@ This plan comes from six interview rounds and a 9-agent design workflow:
 | Student lists | One registry of named lists: Příloha 1 (the talent programme) and the point-4 exemptions, with more addable. Sorted by class, then surname. Students added since the last issue are **bold**. "Nový školní rok" resets the lists. |
 | Příloha 1 table | Two columns. **Each column starts with the "Jméno a příjmení \| Třída" header. No padding rows.** |
 | Příloha 2 | Optional free-form admin content, left out when empty. |
-| Go-live content | A **seed** of the template's standing structure (POKYNY headings, standard texts, default lists, point types) with no personal data, all editable in the admin panel. A bulk-paste helper fills the registry. No importer from old files. |
+| Go-live content | A **seed** of the template's standing structure (POKYNY headings, standard texts, default lists) with no personal data, all editable in the admin panel. A bulk-paste helper fills the registry. No importer from old files. |
 | E-mail | Graph `sendMail` as `autoporada@ssps.cz` through the same Entra app. Mail.Send is scoped to that one mailbox through Exchange RBAC for Applications and is never granted in Entra. Mailpit in development. |
 | Hosting | Docker compose on a school-controlled Linux server: Caddy, web, worker, Postgres, Gotenberg and backups. Encrypted backups are copied off the server. |
 | Retention | Issues and their approved points are kept forever. Drafts, rejected points and access requests are purged after the school year ends. The audit log is kept 3 years. |
@@ -259,9 +259,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 **People and point types**
 - `people(graph_id?, salutation, titles_before, given, family, titles_after, affiliation, affiliation_year, genitive_override, last_used_at)`
   - An affiliation from an earlier school year shows "ověřte třídu".
-- `point_types(name, title_gender, default_bullets jsonb[{key,label,kind people|text,required}], active, position)`
-  - The admin sets `title_gender` through a sample sentence: proběhl / proběhla / proběhlo / proběhly.
-  - The "Jiné" type is seeded and locked.
+- Point types are the list `POINT_TYPES` in code (`domain/report`); `points.type_id` holds a key from it (ADR 0064, which dropped the `point_types` table).
 
 **Points**
 - `points(kind report|finance|pokyn, author_id, state, version, type_id, title, event_date, end_date, time_from, time_to, campus, place, body jsonb, earliest_monday, published_issue_id?, future_item_id?, review_note, …)`
@@ -416,7 +414,7 @@ Time style: dot, no leading zero, "hodin" — "7.00 až 14.00 hodin" in agenda b
 | `/porada/[datum]/…` | headmaster | Weekly stepper: Uzávěrka → Kontrola → Přítomni/Hosté → Pokyny → Registr → Náhled → Vygenerovat (with preflight) |
 | `/archiv` | reviewer+ | Versions with DOCX and PDF downloads |
 | `/registr` | reviewer read, headmaster write | Lists, NOVÉ tags, bulk paste (class codes normalised), "Nový školní rok" |
-| `/nastaveni` | headmaster | Deadline, texts, point types, reminders |
+| `/nastaveni` | headmaster | Deadline, texts, reminders |
 | `/uzivatele` | headmaster | Queue of pending access requests (approve as staff or as student, reject); people grouped by role with search by name or e-mail, at most 100 rows |
 | `/uzivatele/[id]` | headmaster | One user: facts, the decision on their request, block further requests, role and type (step-up), block or unblock the account |
 | `/profil`, `/ochrana-osobnich-udaju`, `/napoveda` | all | E-mail preferences, "Odhlásit všude", privacy, house-style guide |

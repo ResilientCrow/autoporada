@@ -8,8 +8,6 @@ export const KNOWN_CONSTRAINTS = [
   'users_active_headmaster',
   'users_student_role',
   'access_requests_one_pending',
-  'point_types_name_key',
-  'points_type_id_point_types_id_fk',
   'registry_entries_active_key',
   'registry_lists_title_key',
   'registry_lists_key_key',

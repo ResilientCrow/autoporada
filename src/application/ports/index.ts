@@ -96,7 +96,6 @@ export type {
   PointEventRecord,
   PointEventRepo,
 } from './point-events';
-export type { PointTypeRecord, PointTypeRepo, PointTypeValues } from './point-types';
 export type {
   ClosedPoint,
   NewPoint,

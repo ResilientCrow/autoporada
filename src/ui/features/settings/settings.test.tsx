@@ -42,7 +42,6 @@ describe('Settings', () => {
     for (const id of ['uzaverka', 'pripominky', 'priloha-1']) expect(html).toContain(`id="${id}"`);
     expect(html.match(/<form /g)).toHaveLength(3);
     expect(html.match(new RegExp(`>${settings.save}<`, 'g'))).toHaveLength(3);
-    expect(html).toContain('href="/nastaveni/typy-bodu"');
     expect(cspMarkupProblems(html)).toEqual([]);
   });
 

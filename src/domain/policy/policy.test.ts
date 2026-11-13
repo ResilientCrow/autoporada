@@ -49,7 +49,6 @@ const MATRIX: Readonly<Record<Simple, readonly Role[]>> = {
   'issue.generate': ['headmaster'],
   'registry.edit': ['headmaster'],
   'registry.newSchoolYear': ['headmaster'],
-  'pointTypes.manage': ['headmaster'],
   'settings.manage': ['headmaster'],
   'users.view': ['headmaster'],
   'users.manage': ['headmaster'],

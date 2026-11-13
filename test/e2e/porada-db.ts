@@ -53,7 +53,7 @@ export async function seedHandedIn(
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
                            bullets, statements, earliest_monday, submitted_at, hand_in_monday)
-       SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = 'Seminář'),
+       SELECT 'report', u.id, gen_random_uuid(), 'seminar',
               $3::point_state, $2, $5::date, 'Proběhl seminář.', '{"type":"doc","content":[]}'::jsonb,
               '[]'::jsonb, '[]'::jsonb, $4::date, $6::timestamptz, $4::date
          FROM users u WHERE u.email = $1

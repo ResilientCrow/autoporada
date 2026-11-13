@@ -8,6 +8,7 @@ import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { TxContext } from '@/application/ports';
 import { SETTINGS } from '@/contracts';
 import { calendarBoundary } from '@/domain/calendar';
+import type { PointTypeId } from '@/domain/report';
 import { compareDates, instantToWallClock, parseIsoDate, type CalDate } from '@/domain/time';
 
 import type { Database } from './client';
@@ -26,7 +27,6 @@ import {
   issues,
   pointEvents,
   points,
-  pointTypes,
   registryEntries,
   registryLists,
   reportPlaceholders,
@@ -86,7 +86,6 @@ export function createArchStore(db: Database) {
       ids === null
         ? db.select().from(users)
         : db.select().from(users).where(inArray(users.id, ids)),
-    types: () => db.select().from(pointTypes).orderBy(asc(pointTypes.position)),
     issues: () => db.select().from(issues).orderBy(asc(issues.monday)),
     placeholders: (futureIds: string[]) =>
       futureIds.length
@@ -166,20 +165,12 @@ export function createArchStore(db: Database) {
       });
     },
 
-    async activeType(id: string): Promise<boolean> {
-      const [type] = await db
-        .select({ id: pointTypes.id })
-        .from(pointTypes)
-        .where(and(eq(pointTypes.id, id), eq(pointTypes.active, true)));
-      return Boolean(type);
-    },
-
     /** The author's own draft or returned point; the new version, or null on a stale version. */
     async retype(input: {
       id: string;
       authorId: string;
       expectedVersion: number;
-      patch: { typeId: string } | { kind: 'finance' | 'pokyn' };
+      patch: { typeId: PointTypeId } | { kind: 'finance' | 'pokyn' };
     }): Promise<number | null> {
       const { id, authorId, expectedVersion, patch } = input;
       const [row] = await db

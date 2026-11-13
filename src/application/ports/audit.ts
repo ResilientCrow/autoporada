@@ -8,7 +8,6 @@ export type AuditTargetType =
   | 'access_request'
   | 'issue'
   | 'point'
-  | 'point_type'
   | 'future_item'
   | 'registry_list'
   | 'registry_entry'

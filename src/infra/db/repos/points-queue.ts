@@ -1,9 +1,9 @@
-import { and, asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, asc, inArray, sql, type SQL } from 'drizzle-orm';
 
 import { DatabaseFailure, type QueuedPoint } from '@/application/ports';
 import { parseIsoDate } from '@/domain/time';
 
-import { pointEvents, points, pointTypes } from '../schema';
+import { pointEvents, points } from '../schema';
 import type { TxDatabase } from './database';
 
 /** Whether the point was ever returned („Vráceno dříve“): one EXISTS per row, no second query. */
@@ -17,7 +17,7 @@ const QUEUE_ROW = {
   authorId: points.authorId,
   state: points.state,
   title: points.title,
-  typeName: pointTypes.name,
+  typeId: points.typeId,
   earliestMonday: points.earliestMonday,
   submittedAt: points.submittedAt,
   handInMonday: points.handInMonday,
@@ -51,7 +51,6 @@ const queueRows = (db: TxDatabase, visible: SQL | undefined, limit: number) =>
   db
     .select(QUEUE_ROW)
     .from(points)
-    .leftJoin(pointTypes, eq(pointTypes.id, points.typeId))
     .where(and(visible, inArray(points.state, ['submitted', 'approved'])))
     .orderBy(sql`${points.state} = 'approved'`, asc(points.submittedAt), asc(points.id))
     .limit(limit);

@@ -10,7 +10,6 @@ import { addDays, calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domai
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
 import { issueFixtures } from '../../../../test/support/issues';
 import {
-  BULLETS,
   doc,
   FIRST_MONDAY,
   START,
@@ -246,14 +245,9 @@ describe('points.submit', () => {
       });
       await akceFixtures.moveTo(author, akce, 'approved');
       world.clock.set(new Date('2026-11-15T10:00:00Z'));
-      const type = await world.seed.pointType({
-        name: 'Seminář',
-        position: 1,
-        defaultBullets: BULLETS,
-      });
       const started = await world.run(startFutureReport, world.as(author), {
         id: akce,
-        typeId: type.id,
+        typeId: 'soutez',
       });
       if (!started.ok) throw new Error(`startReport refused: ${started.error.code}`);
       return { author, akce, id: started.value.pointId };

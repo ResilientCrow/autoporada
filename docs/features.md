@@ -28,7 +28,9 @@ in v1 unless the [plan of record](plan.md) changes first.
 
 - Report points for INFORMACE Z PROVOZU ŠKOLY:
   - structured fields that produce a pre-written opening sentence;
-  - admin-defined point types with labelled bullets;
+  - six report types fixed in code (Seminář, Exkurze, Soutěž, Přednáška,
+    Projektový den, Jiné; ADR 0064), each with the grammar of its opening
+    sentence and its labelled bullets; there is no setting for them;
   - at least one participant list and one vyjádření, both mandatory;
   - a live document preview.
 - People picker that searches the M365 directory (when the search is switched

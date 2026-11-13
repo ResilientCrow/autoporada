@@ -1,9 +1,10 @@
 import type { z } from 'zod';
 
 import type { UserPrincipal } from '@/application/ports';
-import { listPointTypes, owedReports } from '@/application/use-cases';
+import { owedReports } from '@/application/use-cases';
 import type { owedReportsOutput } from '@/contracts';
 import { can } from '@/domain/policy';
+import { POINT_TYPES, type PointTypeId } from '@/domain/report';
 
 import { getContainer } from '../container';
 import { runPage } from './run-page';
@@ -22,7 +23,7 @@ type ReportDueItem = z.output<typeof owedReportsOutput>['items'][number] & {
 /** „Akce čekající na zprávu“: the akce to write a report on, and the types a report can be on. */
 export interface ReportDueModel {
   readonly items: readonly ReportDueItem[];
-  readonly types: readonly { readonly id: string; readonly name: string }[];
+  readonly types: readonly { readonly id: PointTypeId; readonly name: string }[];
 }
 
 /**
@@ -32,27 +33,19 @@ export interface ReportDueModel {
  */
 export async function reportDueOf(viewer: UserPrincipal): Promise<ReportDueModel | null> {
   if (!can(viewer.actor, { action: 'future.create' })) return null;
-  const [owed, listed] = await Promise.all([
-    runPage(owedReports, {
-      principal: viewer,
-      requestId: await requestId(),
-      input: {},
-    }),
-    runPage(listPointTypes, {
-      principal: viewer,
-      requestId: await requestId(),
-      input: {},
-    }),
-  ]);
+  const owed = await runPage(owedReports, {
+    principal: viewer,
+    requestId: await requestId(),
+    input: {},
+  });
   const read = orNotFound('future.owedReports', owed);
-  const types = orNotFound('pointTypes.list', listed);
-  if (read === null || types === null) return null;
+  if (read === null) return null;
   const now = getContainer().app.clock.now().getTime();
   return {
     items: read.items.map((item) => ({
       ...item,
       overdue: new Date(item.closesAt).getTime() <= now,
     })),
-    types: types.types.map(({ id, name }) => ({ id, name })),
+    types: POINT_TYPES.map(({ id, name }) => ({ id, name })),
   };
 }

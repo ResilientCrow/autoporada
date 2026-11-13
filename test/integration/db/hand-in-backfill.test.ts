@@ -20,18 +20,14 @@ const MIGRATION = readFileSync(join(MIGRATIONS_DIR, '0027_hand_in_backfill.sql')
 
 const database = setupTestDatabase();
 let authorId = '';
-let typeId = '';
+const typeId = 'seminar';
 
 beforeAll(async () => {
   const [user] = await database.owner<{ id: string }>(
     `INSERT INTO users (tid, oid, display_name)
      VALUES (gen_random_uuid(), gen_random_uuid(), 'Jana Nováková') RETURNING id`,
   );
-  const [type] = await database.owner<{ id: string }>(
-    `SELECT id FROM point_types WHERE name = 'Seminář'`,
-  );
   authorId = user!.id;
-  typeId = type!.id;
 });
 
 // The template has the CHECK that migration 0027 adds last; the points below are what it found.

@@ -104,20 +104,6 @@ export async function archState(
     vers,
   });
 
-  // ---- types ----
-  const typeRows = await db.types();
-  const archTypes = typeRows.map((t) => {
-    vers[t.id] = t.version;
-    return {
-      id: t.id,
-      name: t.name,
-      titleGender: t.titleGender,
-      bullets: t.defaultBullets,
-      locked: t.locked,
-      active: t.active,
-    };
-  });
-
   const work = workingSlot(today, slots) ?? slots[0];
   const ph = await archPlaceholders(db, { staff, head }, futureRows, vers);
   const docs = staff ? await db.documents() : [];
@@ -307,7 +293,6 @@ export async function archState(
     now: now.toISOString(),
     userId: actor.id,
     users: archUsers,
-    types: archTypes,
     points: archPoints,
     futures: archFutures,
     issues: archIssues,

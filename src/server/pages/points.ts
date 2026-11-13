@@ -1,16 +1,17 @@
 import type { z } from 'zod';
 
-import { getPoint, listMyPoints, listPointTypes } from '@/application/use-cases';
-import {
-  toDeadlineRule,
-  toIssueRows,
-  type listMyPointsOutput,
-  type listPointTypesOutput,
-} from '@/contracts';
+import { getPoint, listMyPoints } from '@/application/use-cases';
+import { toDeadlineRule, toIssueRows, type listMyPointsOutput } from '@/contracts';
 import { issueSlots, pointMonday } from '@/domain/calendar';
 import { schoolYear, type TitleGender } from '@/domain/cs';
 import type { RecentPerson } from '@/domain/people';
-import { PROPOSAL_KINDS, type BulletSpec, type ProposalKind } from '@/domain/report';
+import {
+  POINT_TYPES,
+  PROPOSAL_KINDS,
+  type BulletSpec,
+  type PointTypeId,
+  type ProposalKind,
+} from '@/domain/report';
 import type { Actor } from '@/domain/actor';
 import { can } from '@/domain/policy';
 import { authorEditsPoint, type AuthorMove, type PointState } from '@/domain/review';
@@ -35,22 +36,15 @@ import { getViewer, requestId } from './viewer';
 
 /** What /body/novy offers: the types a new point can start on. */
 export interface NewPointPageModel {
-  readonly types: z.output<typeof listPointTypesOutput>['types'];
+  readonly types: readonly { readonly id: PointTypeId; readonly name: string }[];
 }
 
 /** The types to choose from, or null for a visitor or a viewer who may not start a point (404). */
 export async function newPointPage(): Promise<NewPointPageModel | null> {
   const viewer = await getViewer();
-  if (!viewer) return null;
-  const listed = orNotFound(
-    'pointTypes.list',
-    await runPage(listPointTypes, {
-      principal: viewer,
-      requestId: await requestId(),
-      input: {},
-    }),
-  );
-  return listed && { types: listed.types };
+  // `point.create` is the gate `points.create` itself applies to a report.
+  if (!viewer || !can(viewer.actor, { action: 'point.create' })) return null;
+  return { types: POINT_TYPES.map(({ id, name }) => ({ id, name })) };
 }
 
 /** What /navrhy/novy offers: the kinds of proposal a new point can start as. */

@@ -4,7 +4,7 @@ import { QUEUE_LIMIT, queuePointsInput, queuePointsOutput } from '@/contracts';
 import type { Actor } from '@/domain/actor';
 import { pointMonday, type IssueSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
-import type { PointKind } from '@/domain/report';
+import { pointType, type PointKind } from '@/domain/report';
 import { instantToWallClock, isSameDate, toIsoDate } from '@/domain/time';
 
 import { readWindow } from '../issues';
@@ -16,7 +16,7 @@ const rowWire = (row: QueuedPoint) => ({
   id: row.id,
   kind: row.kind,
   title: row.title,
-  typeName: row.typeName,
+  typeName: row.typeId === null ? null : pointType(row.typeId).name,
   submittedAt: row.submittedAt.toISOString(),
   returnedBefore: row.returnedBefore,
 });

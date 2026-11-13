@@ -5,7 +5,7 @@ import { contentWire } from '@/contracts';
 import type { PointKind } from '@/domain/report';
 import { calDate } from '@/domain/time';
 
-import { pointFixtures, readyProposal, readyReport } from '../../../../test/support/points';
+import { person, pointFixtures, readyProposal, readyReport } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { reviewEditPoint, submitPoint } from './index';
 
@@ -226,10 +226,29 @@ describe('points.reviewEdit', () => {
     });
 
     it('refuses what the submit would refuse: a required people bullet emptied', async () => {
-      const id = await handedIn(await user());
+      // „Seminář“ is the type with required people bullets.
+      const author = await user();
+      const id = await start(author, 'report', 'seminar');
+      const people = (key: string, label: string) => ({
+        key,
+        label,
+        kind: 'people',
+        order: 'input',
+        people: [person],
+      });
+      const content = readyReport({
+        bullets: [people('organisers', 'Organizátoři'), people('participants', 'Účastníci')],
+      });
+      const submitted = await world.run(submitPoint, world.as(author), {
+        id,
+        expectedVersion: 1,
+        content,
+      });
+      if (!submitted.ok) throw new Error(`submit refused: ${submitted.error.code}`);
       const reviewer = await user('reviewer');
       const { bullets } = await edited(id);
-      const emptied = [{ ...(bullets as object[])[0], people: [] }];
+      const [first, ...rest] = bullets as object[];
+      const emptied = [{ ...first, people: [] }, ...rest];
       await refuses(id, async () => edit(reviewer, id, await edited(id, { bullets: emptied })), {
         code: 'invalid-input',
         fields: { 'content.bullets.0.people': 'required' },

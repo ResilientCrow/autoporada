@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import type { ActionResult, saveFutureOutput } from '@/contracts';
 import type { FutureKind } from '@/domain/calendar';
+import type { PointTypeId } from '@/domain/report';
 import {
   NETWORK_FAILED,
   saveAnswerOf,
@@ -54,7 +55,7 @@ export function startReportInput(
   // None ticked is a missing type (the server says „Vyberte druh zprávy.“), not an empty, invalid one.
   const ticked = textOf(data, 'typeId');
   // Typed as the action's input, which it is once a type is ticked; the server checks the rest.
-  return { id, typeId: (only?.id ?? (ticked === '' ? undefined : ticked)) as string };
+  return { id, typeId: (only?.id ?? (ticked === '' ? undefined : ticked)) as PointTypeId };
 }
 
 /** Where the report started for an akce is written. */

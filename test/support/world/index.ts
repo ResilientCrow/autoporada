@@ -15,7 +15,6 @@ import {
   type AccessRequestRecord,
   type AppDeps,
   type Db,
-  type PointTypeRecord,
   type Principal,
   type RegistryEntryRecord,
   type RegistryListRecord,
@@ -35,7 +34,6 @@ import {
   auditRows,
   deleteUser,
   insertAccessRequest,
-  insertPointType,
   insertRegistryEntry,
   insertRegistryList,
   insertSetting,
@@ -68,10 +66,6 @@ interface AccessRequestSeed {
 
 /** A request row as the seed writes it, before the database gives it an id and a version. */
 type AccessRequestRow = Omit<AccessRequestRecord, 'id' | 'version'>;
-
-/** A point type to seed; migration 0014's placeholders are not in either world (resetTables empties them). */
-type PointTypeSeed = Partial<Omit<PointTypeRecord, 'id' | 'version' | 'name' | 'position'>> &
-  Pick<PointTypeRecord, 'name' | 'position'>;
 
 /** A registry list to seed; migration 0032's four lists are in neither world (resetTables truncates them). */
 type RegistryListSeed = Partial<Omit<RegistryListRecord, 'id' | 'version'>> &
@@ -111,8 +105,6 @@ export interface World {
     user(seed?: UserSeed): Promise<UserRecord>;
     /** Written straight into the table, past the repository's rules and the audit log. */
     accessRequest(seed: AccessRequestSeed): Promise<AccessRequestRecord>;
-    /** Written straight into the table: no port writes point types before commit 49. */
-    pointType(seed: PointTypeSeed): Promise<PointTypeRecord>;
     /** Written straight into the table at version 1, whatever the value: no port writes settings yet. */
     setting(key: string, value: unknown): Promise<void>;
     /** A list at version 1, past the repository's rules; `position` defaults to after the last, the purpose to `point4`. */
@@ -154,7 +146,6 @@ interface Backend {
   audit(): Promise<readonly AuditRow[]>;
   jobs(): Promise<readonly JobRow[]>;
   insertAccessRequest(row: AccessRequestRow): Promise<AccessRequestRecord>;
-  insertPointType(row: Omit<PointTypeRecord, 'id' | 'version'>): Promise<PointTypeRecord>;
   insertSetting(key: string, value: unknown): Promise<void>;
   insertRegistryList(row: Omit<RegistryListRecord, 'id' | 'version'>): Promise<RegistryListRecord>;
   /** `printed`: whether to give the entry a first-published issue (a row is made in the database). */
@@ -231,14 +222,6 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             : user;
         }),
       accessRequest: (seed) => backend().insertAccessRequest(accessRequestRow(seed, clock.now())),
-      pointType: (seed) =>
-        backend().insertPointType({
-          titleGender: null,
-          defaultBullets: [],
-          active: true,
-          locked: false,
-          ...seed,
-        }),
       setting: (key, value) => backend().insertSetting(key, value),
       registryList: async (seed) => {
         const position = seed.position ?? (await backend().nextListPosition());
@@ -299,11 +282,6 @@ function fakeBackend(db: FakeDb): Backend {
       accessRequests.set(request.id, request);
       return request;
     },
-    async insertPointType(row) {
-      const type = { ...row, id: newId(db.state()), version: 1 };
-      db.state().pointTypes.set(type.id, type);
-      return type;
-    },
     async insertSetting(key, value) {
       // settings_value: every value is an object
       if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -357,7 +335,6 @@ function pgBackend(database: TestDatabase): Backend {
     audit: () => auditRows(database),
     jobs: () => jobRows(database),
     insertAccessRequest: (row) => insertAccessRequest(database, row),
-    insertPointType: (row) => insertPointType(database, row),
     insertSetting: (key, value) => insertSetting(database, key, value),
     nextListPosition: () => nextListPosition(database),
     insertRegistryList: (row) => insertRegistryList(database, row),

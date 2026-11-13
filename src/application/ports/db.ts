@@ -9,7 +9,6 @@ import type { IssueRepo } from './issues';
 import type { JobPort } from './jobs';
 import type { MailLedgerPort } from './mail-ledger';
 import type { PointEventRepo } from './point-events';
-import type { PointTypeRepo } from './point-types';
 import type { PointRepo } from './points';
 import type { Principal } from './principal';
 import type { RegistryRepo } from './registry';
@@ -47,7 +46,6 @@ export interface Tx {
   readonly sessions: SessionRepo;
   readonly issues: IssueRepo;
   readonly issueItems: IssueItemRepo;
-  readonly pointTypes: PointTypeRepo;
   readonly settings: SettingsRepo;
   readonly registry: RegistryRepo;
   readonly documents: DocumentRepo;

@@ -4,6 +4,7 @@
  * the ids and versions the server knows by then.
  */
 import { contentWire } from '@/contracts/point';
+import type { PointTypeId } from '@/domain/report';
 import { toIsoDate, toIsoTime } from '@/domain/time';
 import { emptyRichDoc, type RichDoc } from '@/domain/richtext';
 import type { CalDate } from '@/domain/time';
@@ -21,18 +22,12 @@ const issueRows = (s: State, m: string) => s.issues.find((i) => i.monday === m)?
 const rowIndex = (s: State, m: string, rid: string) => { const rows = issueRows(s, m); const r = rows.find((x) => x.id === rid); return rows.filter((x) => x.section === r?.section).findIndex((x) => x.id === rid); };
 export interface Ctx { s: State; vers: Record<string, number>; real: (id: string) => string }
 
-const SEED_TYPES: Record<string, string> = { seminar: 'Seminář', exkurze: 'Exkurze', soutez: 'Soutěž', prednaska: 'Přednáška', projektovy: 'Projektový den', jine: 'Jiné' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const realType = (s: State, typeId: string | null) => {
-  if (!typeId || UUID.test(typeId)) return typeId;
-  const name = SEED_TYPES[typeId] ?? 'Jiné';
-  return s.types.find((t) => t.name === name)?.id ?? s.types.find((t) => t.name === 'Jiné')?.id ?? s.types[0]?.id ?? null;
-};
 
 // ---- the actions the screens call ----
-export const createPoint = (kind: PointKind, typeId: string | null, akceId: string | null, onId?: (id: string) => void): Fx => {
+export const createPoint = (kind: PointKind, typeId: PointTypeId | null, akceId: string | null, onId?: (id: string) => void): Fx => {
   const op: Op = { k: 'createPoint', a: [kind, typeId, akceId] };
-  return tag((s) => { const t = realType(s, typeId); op.a = [kind, t, akceId]; return S.createPoint(kind, t, akceId, (id) => { op.tmp = id; onId?.(id); })(s); }, op);
+  return tag(S.createPoint(kind, typeId, akceId, (id) => { op.tmp = id; onId?.(id); }), op);
 };
 export const createFuture = (kind: Future['kind'], onId?: (id: string) => void): Fx => {
   const op: Op = { k: 'createFuture', a: [kind] };
@@ -93,15 +88,13 @@ export const addEntries = simple('addEntries', S.addEntries);
 export const editEntry = simple('editEntry', S.editEntry);
 export const removeEntry = simple('removeEntry', S.removeEntry);
 export const newSchoolYear = simple('newSchoolYear', S.newSchoolYear);
-export const saveType = simple('saveType', S.saveType);
-export const deleteType = simple('deleteType', S.deleteType);
 export const saveSettings = simple('saveSettings', S.saveSettings);
 export const requestAccess = simple('requestAccess', S.requestAccess);
 export const cancelRequest = simple('cancelRequest', S.cancelRequest);
 export const decideRequest = simple('decideRequest', S.decideRequest);
 export const setUser = simple('setUser', S.setUser);
 /** A draft's type or kind; the real app fixes them at the create, the bridge lets the author change a draft's. */
-export const retype = (id: string, patch: { typeId?: string; kind?: PointKind }): Fx => tag((s) => ({ ...s, points: s.points.map((x) => (x.id === id ? { ...x, ...patch } : x)) }), { k: 'retype', a: [id, patch] });
+export const retype = (id: string, patch: { typeId?: PointTypeId; kind?: PointKind }): Fx => tag((s) => ({ ...s, points: s.points.map((x) => (x.id === id ? { ...x, ...patch } : x)) }), { k: 'retype', a: [id, patch] });
 /** The session lives at the server: these leave the app for its sign-out and step-up. */
 export const signOut: Fx = tag((s) => s, { k: 'signOut', a: [] });
 export const signOutAll: Fx = tag((s) => s, { k: 'signOut', a: ['all'] });
@@ -210,14 +203,6 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
       const year = m >= 8 ? `${y}/${y + 1}` : `${y - 1}/${y}`;
       return ids.length ? [{ name: 'registry.newSchoolYear', input: { listIds: ids, year, confirmed: true } }] : [];
     }
-    case 'saveType': {
-      const [tid, patch] = a as unknown as [string | null, Record<string, unknown>];
-      const t = tid ? s.types.find((x) => x.id === tid) : s.types.at(-1);
-      if (!t) return [];
-      const base = { name: t.name, titleGender: t.titleGender, defaultBullets: t.bullets, active: t.active, ...('name' in patch ? {} : {}) };
-      return [{ name: 'pointTypes.save', ...(tid && { key: tid }), input: tid ? { id: tid, expectedVersion: vers[tid] ?? 1, ...base } : base }];
-    }
-    case 'deleteType': { const tid = real(a[0]); return [{ name: 'pointTypes.delete', input: { id: tid, expectedVersion: vers[tid] ?? 1 } }]; }
     case 'saveSettings': {
       const p = a[0] as Partial<State['settings']>; const st = s.settings; const out: Call[] = [];
       if ('dayOffset' in p || 'time' in p) out.push({ name: 'settings.save', key: 'settings:deadline', input: { key: 'deadline', value: { dayOffset: st.dayOffset, time: st.time }, version: vers['settings:deadline'] ?? 0 } });

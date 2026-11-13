@@ -11,7 +11,6 @@ import { fakeIssueRepo } from './issues';
 import { fakeMailLedger } from './mail-ledger';
 import { checkAuditCoverage } from './oracle';
 import { fakePointEventRepo } from './point-events';
-import { fakePointTypeRepo } from './point-types';
 import { fakePointRepo } from './points';
 import { emptyState, type FakeState, type FakeTxState } from './state';
 import { fakeRegistryRepo } from './registry';
@@ -65,7 +64,6 @@ export function createFakeDb(): FakeDb {
       sessions: fakeSessionRepo(tx, ctx),
       issues: fakeIssueRepo(tx, ctx),
       issueItems: fakeIssueItemRepo(tx, ctx),
-      pointTypes: fakePointTypeRepo(tx, ctx),
       settings: fakeSettingsRepo(tx, ctx),
       registry: fakeRegistryRepo(tx, ctx),
       documents: fakeDocumentRepo(tx, ctx),

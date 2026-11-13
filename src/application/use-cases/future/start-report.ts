@@ -3,7 +3,7 @@ import type { FutureItemRecord } from '@/application/ports';
 import { startFutureReportInput, startFutureReportOutput } from '@/contracts';
 import { eventEnd, lateFacts } from '@/domain/calendar';
 import type { Check } from '@/domain/policy';
-import { DRAFT_CAP } from '@/domain/report';
+import { DRAFT_CAP, pointType } from '@/domain/report';
 import { reportDue } from '@/domain/review';
 
 import { pointEvent } from '../points/events';
@@ -64,15 +64,13 @@ export const startFutureReport = defineUseCase({
     const clientRef = item.reportPointId ?? item.id;
     const { drafts } = await tx.points.beginCreate(clientRef);
 
-    const type = await tx.pointTypes.get(typeId);
-    if (!type?.active) return fail({ code: 'invalid-input', fields: { typeId: 'invalid' } });
     if (drafts >= DRAFT_CAP) return fail({ code: 'rule', rule: 'draft-cap' });
 
     const { point } = await tx.points.create({
       clientRef,
       kind: 'report',
       typeId,
-      content: prefilledReport(item.content, type.defaultBullets),
+      content: prefilledReport(item.content, pointType(typeId).defaultBullets),
       futureItemId: item.id,
     });
     await tx.audit.record(pointEvent('point.created', null, point));

@@ -6,12 +6,12 @@ import { renderPeople, type Person } from '../people/list';
 import { searchWords } from '../sort/fold';
 
 /**
- * Grammatical gender and number of an event title, chosen by an admin per
- * point type through a sample: proběhl … který / proběhla … kterou /
+ * Grammatical gender and number of an event title, fixed per report type in
+ * `POINT_TYPES` (ADR 0064): proběhl … který / proběhla … kterou /
  * proběhlo … které / proběhly … které / proběhla … která (neuter plural,
  * „Školní kola olympiády“).
  */
-/** Every title gender, once: the type, the contracts and the admin form all follow this list. */
+/** Every title gender, once: the report types and the contracts follow this list. */
 export const TITLE_GENDERS = ['m', 'f', 'n', 'pl', 'npl'] as const;
 export type TitleGender = (typeof TITLE_GENDERS)[number];
 

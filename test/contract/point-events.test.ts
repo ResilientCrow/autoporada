@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, inject, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import {
   DatabaseFailure,
@@ -21,13 +21,9 @@ const world = setupWorld();
 const cli = system('cli:test');
 const UNKNOWN_ID = '00000000-0000-7000-8000-999999999999';
 
-let typeId = '';
+const typeId = 'seminar';
 let refs = 0;
 const nextRef = () => `00000000-0000-4000-8000-${String(++refs).padStart(12, '0')}`;
-
-beforeEach(async () => {
-  typeId = (await world.seed.pointType({ name: 'Seminář', position: 1 })).id;
-});
 
 const failure = (promise: Promise<unknown>) =>
   promise.then(

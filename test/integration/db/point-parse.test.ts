@@ -17,7 +17,7 @@ const SECRET = 'jana.novakova@ssps.cz';
 const PERSON = `{"salutation":"pan","givenName":"Jan","familyName":"${SECRET}"}`;
 
 let authorId = '';
-let typeId = '';
+const typeId = 'seminar';
 
 const newAuthor = async () => {
   const [user] = await database.owner<{ id: string }>(
@@ -28,11 +28,7 @@ const newAuthor = async () => {
 };
 
 beforeAll(async () => {
-  const [type] = await database.owner<{ id: string }>(
-    `SELECT id FROM point_types WHERE name = 'Seminář'`,
-  );
   authorId = await newAuthor();
-  typeId = type!.id;
 });
 
 interface Jsonb {

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FutureItemPatch, UserRecord } from '@/application/ports';
-import { DRAFT_CAP } from '@/domain/report';
+import { DRAFT_CAP, type PointTypeId } from '@/domain/report';
 import { parseIsoDate } from '@/domain/time';
 
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
-import { BULLETS, pointFixtures } from '../../../../test/support/points';
+import { pointFixtures } from '../../../../test/support/points';
 import { setupWorld } from '../../../../test/support/world';
 import { withdrawPoint } from '../points';
 import { saveFuture, startFutureReport } from './index';
@@ -16,9 +16,7 @@ const points = pointFixtures(world);
 
 const DAY = 86_400_000;
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
-const type = (over: Record<string, unknown> = {}) =>
-  world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS, ...over });
-const startReport = (by: UserRecord, id: string, typeId: string) =>
+const startReport = (by: UserRecord, id: string, typeId: PointTypeId) =>
   world.run(startFutureReport, world.as(by), { id, typeId });
 const patch = (author: UserRecord, id: string, over: FutureItemPatch) =>
   world.tx(world.as(author), async (tx) => {
@@ -52,7 +50,7 @@ describe('future.startReport', () => {
   it('starts a draft report of the chosen type, prefilled from the akce', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     const started = await startReport(author, id, typeId);
     if (!started.ok) throw new Error(`refused: ${started.error.code}`);
     const { pointId } = started.value;
@@ -75,19 +73,37 @@ describe('future.startReport', () => {
       },
     });
     // An akce holds its organizer as text, so no people carry over; the bullets start empty.
-    const [organisers, results] = point!.content.bullets;
+    const [organisers, participants] = point!.content.bullets;
     expect(organisers).toMatchObject({ key: 'organisers', kind: 'people', order: 'input' });
     expect(organisers).toMatchObject({ people: [] });
-    expect(results).toMatchObject({ key: 'results', kind: 'text', text: '' });
+    expect(participants).toMatchObject({ key: 'participants', kind: 'people', people: [] });
 
     const { item } = await snapshot(id);
     expect(item).toMatchObject({ reportPointId: pointId, reportState: 'none' });
   });
 
+  it('refuses a type that is not on the list', async () => {
+    const author = await user();
+    const id = await dueAkce(author);
+    await refuses(id, () => startReport(author, id, 'Seminář' as PointTypeId), {
+      code: 'invalid-input',
+      fields: { typeId: 'invalid' },
+    });
+  });
+
+  it('asks for a type when none is chosen', async () => {
+    const author = await user();
+    const id = await dueAkce(author);
+    await refuses(id, () => startReport(author, id, undefined as unknown as PointTypeId), {
+      code: 'invalid-input',
+      fields: { typeId: 'required' },
+    });
+  });
+
   it('audits the link and the draft, naming no text of the akce', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     const started = await startReport(author, id, typeId);
     const pointId = started.ok ? started.value.pointId : '';
     const { audit } = await snapshot(id);
@@ -105,7 +121,7 @@ describe('future.startReport', () => {
   it('gives the same draft for a second press and writes nothing more', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     const first = await startReport(author, id, typeId);
     const before = await snapshot(id);
     world.clock.advance(60_000);
@@ -122,7 +138,7 @@ describe('future.startReport', () => {
     it('opens a fresh, prefilled draft and relinks the akce to it', async () => {
       const author = await user();
       const id = await dueAkce(author);
-      const { id: typeId } = await type();
+      const typeId = 'seminar';
       const first = await startReport(author, id, typeId);
       const firstId = first.ok ? first.value.pointId : '';
       expect((await withdraw(author, firstId)).ok).toBe(true);
@@ -148,7 +164,7 @@ describe('future.startReport', () => {
     it('gives the same new draft for a second press and writes nothing more', async () => {
       const author = await user();
       const id = await dueAkce(author);
-      const { id: typeId } = await type();
+      const typeId = 'seminar';
       const first = await startReport(author, id, typeId);
       await withdraw(author, first.ok ? first.value.pointId : '');
       const second = await startReport(author, id, typeId);
@@ -160,7 +176,7 @@ describe('future.startReport', () => {
     it('does so again when the new report is withdrawn too', async () => {
       const author = await user();
       const id = await dueAkce(author);
-      const { id: typeId } = await type();
+      const typeId = 'seminar';
       const ids = new Set<string>();
       for (let i = 0; i < 3; i++) {
         const started = await startReport(author, id, typeId);
@@ -175,7 +191,7 @@ describe('future.startReport', () => {
   it('keeps a report the author already edited when it is started again', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     const first = await startReport(author, id, typeId);
     const pointId = first.ok ? first.value.pointId : '';
     await world.tx(world.as(author), async (tx) => {
@@ -193,17 +209,19 @@ describe('future.startReport', () => {
   it('leaves the people out when the type has no organisers bullet', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const bare = await type({ name: 'Jiné', defaultBullets: [BULLETS[1]!] });
-    const started = await startReport(author, id, bare.id);
+    const started = await startReport(author, id, 'prednaska');
     const pointId = started.ok ? started.value.pointId : '';
     const point = await world.tx(world.as(author), (tx) => tx.points.get(pointId), 'read');
-    expect(point?.content.bullets).toEqual([expect.objectContaining({ key: 'results' })]);
+    expect(point?.content.bullets).toEqual([
+      expect.objectContaining({ key: 'speakers' }),
+      expect.objectContaining({ key: 'audience' }),
+    ]);
   });
 
   it('takes an akce without an organizer or dates beyond the start', async () => {
     const author = await user();
     const id = await dueAkce(author, readyAkce({ endDate: null, organizer: null }));
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     const started = await startReport(author, id, typeId);
     const pointId = started.ok ? started.value.pointId : '';
     const point = await world.tx(world.as(author), (tx) => tx.points.get(pointId), 'read');
@@ -213,7 +231,7 @@ describe('future.startReport', () => {
 
   it('finds nothing for a colleague, a reviewer or a student who may read the akce', async () => {
     const id = await dueAkce(await user());
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     const others = [
       await user(),
       await user('reviewer'),
@@ -225,19 +243,6 @@ describe('future.startReport', () => {
     }
   });
 
-  it('refuses a type that is unknown or switched off', async () => {
-    const author = await user();
-    const id = await dueAkce(author);
-    const off = await type({ active: false });
-    const invalid = { code: 'invalid-input', fields: { typeId: 'invalid' } };
-    await refuses(id, () => startReport(author, id, off.id), invalid);
-    await refuses(
-      id,
-      () => startReport(author, id, '00000000-0000-4000-8000-000000000999'),
-      invalid,
-    );
-  });
-
   it('refuses while the akce is still running or has not yet ended on its last day', async () => {
     const author = await user();
     const id = await start(author, 'akce');
@@ -247,7 +252,7 @@ describe('future.startReport', () => {
       content: readyAkce(),
     });
     await moveTo(author, id, 'approved');
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     await refuses(id, () => startReport(author, id, typeId), rule);
     world.clock.advance(22 * DAY);
     // 10 November 2026, 09:00 in Prague: the last day.
@@ -259,7 +264,7 @@ describe('future.startReport', () => {
   it('is owed from the akce’s end on its last day, in Prague time', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     // The akce ends at 14.30 on 10 November 2026 (CET): 13:30 UTC.
     world.clock.set(new Date('2026-11-10T13:29:00Z'));
     await refuses(id, () => startReport(author, id, typeId), rule);
@@ -270,7 +275,7 @@ describe('future.startReport', () => {
   it('is owed from 20.00 on the last day when the akce has no end time', async () => {
     const author = await user();
     const id = await dueAkce(author, readyAkce({ timeTo: null }));
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     world.clock.set(new Date('2026-11-10T18:59:00Z'));
     await refuses(id, () => startReport(author, id, typeId), rule);
     world.clock.set(new Date('2026-11-10T19:00:00Z'));
@@ -291,14 +296,14 @@ describe('future.startReport', () => {
     });
     if (state !== 'draft') await moveTo(author, id, state);
     world.clock.advance(30 * DAY);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     await refuses(id, () => startReport(author, id, typeId), { code: 'forbidden' });
   });
 
   it('refuses a jednání: only an akce owes a report', async () => {
     const author = await user();
     const id = await dueAkce(author, readyAkce(), 'jednani');
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     await refuses(id, () => startReport(author, id, typeId), rule);
   });
 
@@ -306,14 +311,14 @@ describe('future.startReport', () => {
     const author = await user();
     const id = await dueAkce(author);
     await patch(author, id, { reportState: 'written' });
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     await refuses(id, () => startReport(author, id, typeId), rule);
   });
 
   it('refuses a fifty-first draft, as a new point does', async () => {
     const author = await user();
     const id = await dueAkce(author);
-    const { id: typeId } = await type();
+    const typeId = 'seminar';
     for (let i = 0; i < DRAFT_CAP; i++) await points.start(author, 'pokyn');
     await refuses(id, () => startReport(author, id, typeId), { code: 'rule', rule: 'draft-cap' });
   });

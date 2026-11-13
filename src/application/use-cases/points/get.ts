@@ -1,5 +1,6 @@
 import { defineUseCase, ok } from '@/application/core';
 import { contentWire, fieldValuesWire, getPointInput, getPointOutput } from '@/contracts';
+import { pointType } from '@/domain/report';
 import { toIsoDate } from '@/domain/time';
 
 import { pointReadAccess, pointStanding } from './access';
@@ -18,8 +19,7 @@ export const getPoint = defineUseCase({
   output: getPointOutput,
   access: pointReadAccess(),
   async execute({ tx, actor }, _input, point) {
-    // A retired type still names its spec and title gender: the editor needs both.
-    const type = point.typeId === null ? null : await tx.pointTypes.get(point.typeId);
+    const type = point.typeId === null ? null : pointType(point.typeId);
     const events = await tx.pointEvents.list(point.id);
     return ok({
       id: point.id,

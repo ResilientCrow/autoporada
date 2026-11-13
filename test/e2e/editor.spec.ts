@@ -47,7 +47,7 @@ test.describe('the point editor', () => {
     options: { type?: string } = {},
   ): Promise<string> {
     const id = await seedPoint(author(project).email, 'Bod k úpravám', 'draft', {
-      typeName: options.type,
+      typeId: options.type,
     });
     ids.push(id);
     await signInAs(signInRe('ukladani', project));
@@ -100,7 +100,7 @@ test.describe('the point editor', () => {
     signInAs,
   }, testInfo) => {
     // „Projektový den“ has two optional people rows, so every row operation is open to it.
-    await open(page, hydrated, signInAs, testInfo.project.name, { type: 'Projektový den' });
+    await open(page, hydrated, signInAs, testInfo.project.name, { type: 'projektovy' });
 
     await page.getByRole('button', { name: points.bullets.addTextRow }).click();
     await expect(field(page, points.bullets.label)).toBeFocused();
@@ -302,7 +302,7 @@ test.describe('the point editor', () => {
     signInAs,
   }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await open(page, hydrated, signInAs, testInfo.project.name, { type: 'Projektový den' });
+    await open(page, hydrated, signInAs, testInfo.project.name, { type: 'projektovy' });
     // Problems, so that the list under the form has links to Tab onto.
     await field(page, points.editor.title).fill('');
     await field(page, points.opening.label).fill('');

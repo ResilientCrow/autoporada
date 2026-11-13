@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
+import { POINT_TYPES } from '@/domain/report';
 import { calDate, parseWallTime } from '@/domain/time';
 
 import { myPointsPage, newPointPage, newProposalPage, pointPage } from './index';
@@ -28,7 +29,7 @@ const NOW = new Date('2026-10-26T23:30:00.000Z');
 /** The deadline rule `issues.window` carries: the default, as text. */
 const RULE = { dayOffset: -2, time: '20:00' };
 const ID = '0b0c1d2e-3f40-4152-8364-758697a8b9ca';
-const TYPE_ID = '5d0c1d2e-3f40-4152-8364-758697a8b9cb';
+const TYPE_ID = 'exkurze';
 
 const calledWith = () =>
   runRegistered.mock.calls[0] as [unknown, { name: string }, { input: unknown }];
@@ -44,11 +45,7 @@ beforeEach(() => {
 });
 
 describe('newPointPage', () => {
-  const TYPES = [
-    { id: TYPE_ID, name: 'Seminář' },
-    { id: ID, name: 'Jiné' },
-  ];
-  beforeEach(() => runRegistered.mockResolvedValue({ ok: true, value: { types: TYPES } }));
+  const TYPES = POINT_TYPES.map(({ id, name }) => ({ id, name }));
 
   it('is null for a visitor, without asking the use case', async () => {
     resolvePrincipal.mockResolvedValue(null);
@@ -56,20 +53,18 @@ describe('newPointPage', () => {
     expect(runRegistered).not.toHaveBeenCalled();
   });
 
-  it('lists the types the use case offers, in its order', async () => {
+  it('lists the types in the order of the list, without asking a use case', async () => {
     expect(await newPointPage()).toEqual({ types: TYPES });
-    expect(calledWith()[1].name).toBe('pointTypes.list');
-    expect(calledWith()[2].input).toEqual({});
+    expect(runRegistered).not.toHaveBeenCalled();
   });
 
   it('is null when the viewer may not start a point', async () => {
-    runRegistered.mockResolvedValue({ ok: false, error: { code: 'forbidden' } });
+    resolvePrincipal.mockResolvedValue({
+      kind: 'user',
+      actor: { id: 'u1', role: 'pending', status: 'active', isStudent: false },
+    });
     expect(await newPointPage()).toBeNull();
-  });
-
-  it('fails loudly on any other failure', async () => {
-    runRegistered.mockResolvedValue({ ok: false, error: { code: 'unavailable' } });
-    await expect(newPointPage()).rejects.toThrow('pointTypes.list: unavailable');
+    expect(runRegistered).not.toHaveBeenCalled();
   });
 });
 
@@ -660,7 +655,6 @@ describe('myPointsPage', () => {
     runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
       if (useCase.name === 'issues.window') return window;
       if (useCase.name === 'future.owedReports') return { ok: true, value: { items: [] } };
-      if (useCase.name === 'pointTypes.list') return { ok: true, value: { types: [] } };
       return { ok: true, value: { points: rows, next } };
     });
   const askedFor = () => runRegistered.mock.calls.map((call) => (call[1] as { name: string }).name);
@@ -706,12 +700,12 @@ describe('myPointsPage', () => {
       ],
       next: CURSOR,
       first: true,
-      reportDue: { items: [], types: [] },
+      reportDue: { items: [], types: POINT_TYPES.map(({ id, name }) => ({ id, name })) },
       canPropose: false,
     });
   });
 
-  it('carries the akce waiting for a report, from the owed reports and the point types', async () => {
+  it('carries the akce waiting for a report, from the owed reports and the type list', async () => {
     runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
       if (useCase.name === 'future.owedReports') {
         return {
@@ -734,14 +728,11 @@ describe('myPointsPage', () => {
           },
         };
       }
-      if (useCase.name === 'pointTypes.list') {
-        return { ok: true, value: { types: [{ id: TYPE_ID, name: 'Seminář', detail: null }] } };
-      }
       return { ok: true, value: { points: [], next: null } };
     });
     expect((await myPointsPage({}))?.reportDue).toMatchObject({
       items: [{ id: 'a', title: 'Výlet' }],
-      types: [{ id: TYPE_ID, name: 'Seminář' }],
+      types: POINT_TYPES.map(({ id, name }) => ({ id, name })),
     });
   });
 
@@ -770,7 +761,7 @@ describe('myPointsPage', () => {
       rows: [],
       next: null,
       first: true,
-      reportDue: { items: [], types: [] },
+      reportDue: { items: [], types: POINT_TYPES.map(({ id, name }) => ({ id, name })) },
       canPropose: false,
     });
   });

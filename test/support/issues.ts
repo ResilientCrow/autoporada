@@ -149,15 +149,7 @@ export function issueFixtures(world: World) {
   async function point(seed: PointSeed): Promise<string> {
     const kind = seed.kind ?? 'pokyn';
     counter += 1;
-    const typeId =
-      kind === 'report'
-        ? (
-            await world.seed.pointType({
-              name: `Typ ${counter}-${randomUUID()}`,
-              position: counter,
-            })
-          ).id
-        : null;
+    const typeId = kind === 'report' ? 'jine' : null;
     const earliest = seed.earliest ?? calDate(2026, 10, 26);
     const base = kind === 'report' ? FULL_REPORT : EMPTY;
     const content: PointContent = {

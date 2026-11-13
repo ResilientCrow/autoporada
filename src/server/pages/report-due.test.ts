@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { UserPrincipal } from '@/application/ports';
+import { POINT_TYPES } from '@/domain/report';
 
 import { reportDueOf } from './report-due';
 
@@ -36,16 +37,10 @@ const item = (id: string, closesAt: string) => ({
   closesAt,
   report: null,
 });
-const TYPES = [
-  { id: 't1', name: 'Seminář', detail: null },
-  { id: 't2', name: 'Exkurze', detail: null },
-];
 
-/** Answers the two use cases the loader asks for. */
-const serve = (items: unknown[], types: unknown = { ok: true, value: { types: TYPES } }) =>
-  runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) =>
-    useCase.name === 'future.owedReports' ? { ok: true, value: { items } } : types,
-  );
+/** Answers the use case the loader asks for. */
+const serve = (items: unknown[], answer: unknown = { ok: true, value: { items } }) =>
+  runRegistered.mockImplementation(async () => answer);
 
 describe('reportDueOf', () => {
   beforeEach(() => {
@@ -59,14 +54,11 @@ describe('reportDueOf', () => {
         { ...item('a', '2026-11-12T10:00:00.000Z'), overdue: true },
         { ...item('b', '2026-11-14T19:00:00.000Z'), overdue: false },
       ],
-      types: [
-        { id: 't1', name: 'Seminář' },
-        { id: 't2', name: 'Exkurze' },
-      ],
+      types: POINT_TYPES.map(({ id, name }) => ({ id, name })),
     });
   });
 
-  it('asks for the owed reports and the active types, as the viewer', async () => {
+  it('asks for the owed reports, as the viewer', async () => {
     serve([]);
     const who = viewer('submitter');
     await reportDueOf(who);
@@ -75,11 +67,8 @@ describe('reportDueOf', () => {
       { name: string },
       { input: unknown; principal: unknown },
     ][];
-    expect(calls.map(([, useCase]) => useCase.name).sort()).toEqual([
-      'future.owedReports',
-      'pointTypes.list',
-    ]);
-    expect(calls.map(([, , call]) => call.input)).toEqual([{}, {}]);
+    expect(calls.map(([, useCase]) => useCase.name)).toEqual(['future.owedReports']);
+    expect(calls.map(([, , call]) => call.input)).toEqual([{}]);
     expect(calls.every(([, , call]) => call.principal === who)).toBe(true);
   });
 

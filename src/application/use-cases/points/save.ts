@@ -23,7 +23,7 @@ export const savePoint = defineUseCase({
     // in review, their own included, only through the audited review edit.
     // The scoped load already gave a pending or inactive account not-found.
     if (!authorEditsPoint(point.state)) return fail({ code: 'rule', rule: 'point-not-editable' });
-    const fields = kindIssues(point.kind, content, await typeSpec(tx, point));
+    const fields = kindIssues(point.kind, content, typeSpec(point));
     if (Object.keys(fields).length > 0) return fail({ code: 'invalid-input', fields });
 
     const saved = await tx.points.update(point.id, point.version, { content });

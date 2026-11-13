@@ -8,7 +8,6 @@ export { future, type StripSlot } from './future';
 export { gallery } from './gallery';
 export { issues } from './issues';
 export { people } from './people';
-export { pointTypes } from './pointTypes';
 export { points } from './points';
 export { porada } from './porada';
 export { registry } from './registry';

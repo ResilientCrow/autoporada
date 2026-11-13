@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { createPointInput } from '@/contracts';
-import { PROPOSAL_KINDS } from '@/domain/report';
+import { isPointTypeId, PROPOSAL_KINDS } from '@/domain/report';
 import { choiceOf, textOf } from '@/ui/form';
 
 /**
@@ -9,7 +9,8 @@ import { choiceOf, textOf } from '@/ui/form';
  * No choice sends no type, which the server answers with the field issue.
  */
 export function startInput(data: FormData, clientRef: string): z.input<typeof createPointInput> {
-  return { clientRef, kind: 'report', typeId: textOf(data, 'typeId') || null };
+  const typeId = textOf(data, 'typeId');
+  return { clientRef, kind: 'report', typeId: isPointTypeId(typeId) ? typeId : null };
 }
 
 /**

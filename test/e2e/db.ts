@@ -135,7 +135,7 @@ export async function seedPoint(
   email: string,
   title: string,
   state: SeedState,
-  { note = SEED_NOTE, typeName = 'Seminář' }: { note?: string; typeName?: string } = {},
+  { note = SEED_NOTE, typeId = 'seminar' }: { note?: string; typeId?: string } = {},
 ): Promise<string> {
   return withClient(async (client) => {
     const stored = HISTORY[state].at(-1)?.[2] ?? 'draft';
@@ -143,7 +143,7 @@ export async function seedPoint(
     const { rows } = await client.query<{ id: string; author_id: string }>(
       `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
                            bullets, statements, earliest_monday, submitted_at, hand_in_monday)
-       SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = $7),
+       SELECT 'report', u.id, gen_random_uuid(), $7,
               $3::point_state, $2, current_date + 30, 'Proběhl seminář.',
               '{"type":"doc","content":[]}'::jsonb, $4::jsonb, $5::jsonb,
               CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END,
@@ -158,7 +158,7 @@ export async function seedPoint(
         JSON.stringify(PEOPLE_BULLETS),
         JSON.stringify(STATEMENTS),
         handedIn,
-        typeName,
+        typeId,
       ],
     );
     const made = rows[0];
@@ -271,7 +271,7 @@ export async function seedDrafts(email: string, count: number): Promise<void> {
   await withClient(async (client) => {
     const { rowCount } = await client.query(
       `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, body, updated_at)
-       SELECT 'report', u.id, gen_random_uuid(), (SELECT id FROM point_types WHERE name = 'Seminář'),
+       SELECT 'report', u.id, gen_random_uuid(), 'seminar',
               'draft', 'Rozpracovaný bod ' || n, '{"type":"doc","content":[]}'::jsonb,
               date_trunc('milliseconds', now()) - n * interval '1 second'
          FROM users u, generate_series(1, $2::int) AS n WHERE u.email = $1`,

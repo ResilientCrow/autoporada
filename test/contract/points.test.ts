@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, inject, it } from 'vitest';
+import { describe, expect, inject, it } from 'vitest';
 
 import {
-  ConstraintViolation,
   DatabaseFailure,
   ScopeViolation,
   StaleVersion,
@@ -107,10 +106,7 @@ const create = async (by: Principal, over: Partial<NewPoint> = {}) => {
   return { point, inserted };
 };
 
-let typeId = '';
-beforeEach(async () => {
-  typeId = (await world.seed.pointType({ name: 'Seminář', position: 1 })).id;
-});
+const typeId = 'seminar';
 
 const update = (by: Principal, point: PointRecord, patch: PointPatch, version = point.version) =>
   audited(by, (tx) => tx.points.update(point.id, version, patch));
@@ -556,12 +552,10 @@ describe('PointRepo (port contract)', () => {
     expect(await failure(write())).toEqual(new DatabaseFailure(`db.constraint.${constraint}`));
   });
 
-  it('refuses an unknown type as a known constraint, the one that keeps a used type', async () => {
+  it('refuses a type that is not in the list, as points_type', async () => {
     const author = await world.seed.user({ role: 'submitter' });
-    const made = create(world.as(author), { typeId: '00000000-0000-7000-8000-999999999999' });
-    expect(await failure(made)).toEqual(
-      new ConstraintViolation('points_type_id_point_types_id_fk'),
-    );
+    const made = create(world.as(author), { typeId: 'beseda' as never });
+    expect(await failure(made)).toEqual(new DatabaseFailure('db.constraint.points_type'));
   });
 
   it('keeps a user who wrote a point: erasing them is refused', async () => {
@@ -598,13 +592,17 @@ describe('PointRepo queue (the review queue)', () => {
     for (const patch of patches) point = await update(world.as(author), point, patch);
     return point;
   };
-  const queued = (p: PointRecord, typeName: string | null = 'Seminář', returnedBefore = false) => ({
+  const queued = (
+    p: PointRecord,
+    typeId: PointRecord['typeId'] = 'seminar',
+    returnedBefore = false,
+  ) => ({
     id: p.id,
     kind: p.kind,
     authorId: p.authorId,
     state: p.state,
     title: p.content.title,
-    typeName,
+    typeId,
     earliestMonday: p.earliestMonday,
     submittedAt: p.submittedAt,
     handInMonday: p.handInMonday,
@@ -675,7 +673,7 @@ describe('PointRepo queue (the review queue)', () => {
     const back = await made(author, [at('2026-10-19T09:00:00Z'), { state: 'returned' }]);
     await appendEvent(author, back.id, RETURNED);
     const again = await update(world.as(author), back, { state: 'submitted' });
-    expect(await queue(reviewer)).toEqual([queued(first), queued(again, 'Seminář', true)]);
+    expect(await queue(reviewer)).toEqual([queued(first), queued(again, 'seminar', true)]);
   });
 
   it('stops at the limit, keeping the oldest', async () => {

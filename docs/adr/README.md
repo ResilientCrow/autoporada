@@ -23,7 +23,7 @@ record that supersedes it.
 | [0015](0015-worker-and-job-roles.md) | Worker, jobs and database roles | Accepted |
 | [0016](0016-mail-delivery.md) | Mail delivery: ledger, throttle and Graph transport | Accepted; items 10 and 11 superseded in part by 0020 |
 | [0017](0017-autosaving-editors.md) | Autosaving editors: no refresh on save, version-keyed remount, flush on leave | Accepted; items 5 and 7 superseded in part by 0024 |
-| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030; item 1 refined by 0032 and 0034; item 10 superseded by 0046; the skip and unskip of item 1 superseded by 0054 |
+| [0018](0018-points-and-issues.md) | Points and issues: jsonb content, frozen deadlines, before values, draft privacy | Accepted; item 3 (`submitted_at` never cleared) superseded in part by 0026; item 8 superseded in part and item 1 widened by 0030; item 1 refined by 0032 and 0034; item 10 superseded by 0046; the skip and unskip of item 1 superseded by 0054; the `point_types` part of item 3 superseded by 0064 |
 | [0019](0019-people-memory-and-directory-search.md) | People memory from own points, directory search, React Aria audit | Accepted |
 | [0020](0020-submission-mails.md) | Submission mails: counts, links, recipients | Accepted; item 4 (digest and headmaster summary) superseded in part by 0037; items 3 and 5 (soft audience, opt-out) superseded in part by 0046 |
 | [0021](0021-web-access-to-graph.md) | Web access to Graph: a registration of its own, the `ap-edge` bridge | Accepted |
@@ -60,7 +60,7 @@ record that supersedes it.
 | [0052](0052-owed-reports-first-proposals-for-vedeni.md) | Owed reports come first, and only vedení proposes | Accepted; builds on 0049; bounds the report card left open by 0048; amended by 0054 |
 | [0053](0053-the-arch-ui-at-the-root.md) | The Arch UI at the root, on the same backend | Accepted; builds on 0004, 0012, 0017 and 0043 |
 | [0054](0054-a-porada-that-does-not-take-place-does-not-exist.md) | A porada that does not take place does not exist: move, drop, add | Accepted; supersedes 0041, 0051 items 2 to 5, 0047 item 3, 0034 item 7 and parts of 0018, 0029, 0030; amends 0032, 0040, 0046, 0049, 0052 |
-| [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Accepted; adds to 0053 |
+| [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Superseded by 0064 |
 | [0056](0056-a-refused-report-closes-its-akce.md) | A refused report closes its akce | Accepted; supersedes 0049 item 3 in part; builds on 0052 |
 | [0057](0057-the-author-deletes-an-unfinished-akce.md) | The author deletes an unfinished akce or schůzka | Accepted; adds to 0053 |
 | [0058](0058-a-return-names-the-parts-to-rework.md) | A return names the parts to rework | Accepted; adds to 0053 |
@@ -69,3 +69,4 @@ record that supersedes it.
 | [0061](0061-missing-report-placeholders-are-checked-before-generation.md) | Missing-report placeholders are checked before generation | Accepted; amends 0049 items 5 and 7, 0060 item 7, 0053 |
 | [0062](0062-cancelling-an-approved-akce-waits-for-vedeni.md) | Cancelling an approved akce waits for vedení | Accepted; adds to 0057 |
 | [0063](0063-the-organizer-organizes-or-coordinates.md) | The organizer organizes or coordinates | Accepted; amends 0060 items 1 and 7 |
+| [0064](0064-report-types-are-a-fixed-list-in-code.md) | Report types are a fixed list in code | Accepted; supersedes 0055 and the `point_types` part of 0018 item 3 |

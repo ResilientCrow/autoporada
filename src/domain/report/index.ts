@@ -29,3 +29,11 @@ export {
   type Warning,
 } from './readiness';
 export { diffPointFields, pointFieldValues, type PointField, type PointFieldValues } from './diff';
+export {
+  isPointTypeId,
+  POINT_TYPE_IDS,
+  POINT_TYPES,
+  pointType,
+  type PointType,
+  type PointTypeId,
+} from './types';

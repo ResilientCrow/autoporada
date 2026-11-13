@@ -78,9 +78,6 @@ export function Settings({
         <p>
           <ArrowLink href="/uzivatele">{settings.usersLink}</ArrowLink>
         </p>
-        <p>
-          <ArrowLink href="/nastaveni/typy-bodu">{settings.typesLink}</ArrowLink>
-        </p>
       </div>
     </>
   );

@@ -26,17 +26,12 @@ async function startedReport(author: UserRecord) {
   });
   await akce.moveTo(author, itemId, 'approved');
   world.clock.advance(30 * DAY);
-  const type = await world.seed.pointType({
-    name: 'Seminář',
-    position: 1,
-    defaultBullets: BULLETS,
-  });
   const started = await world.run(startFutureReport, world.as(author), {
     id: itemId,
-    typeId: type.id,
+    typeId: 'soutez',
   });
   if (!started.ok) throw new Error(`start refused: ${started.error.code}`);
-  return { itemId, pointId: started.value.pointId, typeId: type.id };
+  return { itemId, pointId: started.value.pointId, typeId: 'soutez' as const };
 }
 const submit = (by: UserRecord, id: string, expectedVersion = 1) =>
   world.run(submitPoint, world.as(by), { id, expectedVersion, content: readyReport() });

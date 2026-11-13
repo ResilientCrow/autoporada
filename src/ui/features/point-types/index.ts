@@ -1,1 +1,0 @@
-export { PointTypes } from './PointTypes';

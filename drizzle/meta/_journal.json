@@ -407,6 +407,13 @@
       "when": 1794577830125,
       "tag": "0057_fancy_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794581069513,
+      "tag": "0058_fixed_point_types",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import type { RecentSource } from '@/domain/people';
-import type { PointContent, PointKind } from '@/domain/report';
+import type { PointContent, PointKind, PointTypeId } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import type { CalDate, WallTime } from '@/domain/time';
 
@@ -9,7 +9,7 @@ export interface PointRecord {
   readonly kind: PointKind;
   readonly authorId: string;
   /** The point type of a report; null for finance and pokyn. */
-  readonly typeId: string | null;
+  readonly typeId: PointTypeId | null;
   readonly state: PointState;
   readonly content: PointContent;
   /** The akce a report answers; null for every other point. Fixed at the create. */
@@ -46,7 +46,7 @@ export interface NewPoint {
   /** The draft's id in the author's browser: a retried create finds the row it made. */
   readonly clientRef: string;
   readonly kind: PointKind;
-  readonly typeId: string | null;
+  readonly typeId: PointTypeId | null;
   readonly content: PointContent;
   /** The akce the report answers. */
   readonly futureItemId?: string;
@@ -93,7 +93,7 @@ export type QueuedPoint = Pick<PointRecord, 'id' | 'kind' | 'authorId'> &
     /** The Monday it was last handed in for; the queue places it by this and `earliestMonday`. */
     readonly handInMonday: CalDate;
     /** A report's type; null for finance and pokyn. */
-    readonly typeName: string | null;
+    readonly typeId: PointTypeId | null;
     /** True once the point was ever returned: „Vráceno dříve“. */
     readonly returnedBefore: boolean;
   };

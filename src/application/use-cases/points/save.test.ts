@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
-import { POINT_LIMITS, type BulletSpec, type PointKind } from '@/domain/report';
+import { POINT_LIMITS, type PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
@@ -13,10 +13,6 @@ import { createPoint, savePoint } from './index';
 
 const world = setupWorld();
 
-const BULLETS: readonly BulletSpec[] = [
-  { key: 'organisers', label: 'Organizátoři', kind: 'people', required: true, role: 'organisers' },
-  { key: 'results', label: 'Výsledky', kind: 'text', required: false },
-];
 const user = (role: UserRecord['role'] = 'submitter') => world.seed.user({ role });
 
 /** What the editor sends for an empty point: dates and times as ISO text. */
@@ -52,10 +48,7 @@ const statement = { speaker: person, speakerGenitive: 'paní Evy Malé', quote: 
 
 /** A new point of the author's, made through the use case. */
 async function start(author: UserRecord, kind: PointKind = 'report'): Promise<string> {
-  const typeId =
-    kind === 'report'
-      ? (await world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS })).id
-      : null;
+  const typeId = kind === 'report' ? 'soutez' : null;
   const result = await world.run(createPoint, startingAs(world, author, kind), {
     clientRef: randomUUID(),
     kind,

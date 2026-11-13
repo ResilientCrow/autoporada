@@ -63,7 +63,6 @@ export type Check =
   | { readonly action: 'registry.view' }
   | { readonly action: 'registry.edit' }
   | { readonly action: 'registry.newSchoolYear' }
-  | { readonly action: 'pointTypes.manage' }
   | { readonly action: 'settings.manage' }
   | { readonly action: 'users.view' }
   | { readonly action: 'users.manage' }
@@ -155,7 +154,6 @@ export function can(subject: Actor, check: Check): boolean {
     case 'issue.generate':
     case 'registry.edit':
     case 'registry.newSchoolYear':
-    case 'pointTypes.manage':
     case 'settings.manage':
     case 'users.view':
     case 'users.manage':

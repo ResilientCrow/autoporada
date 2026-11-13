@@ -4,7 +4,7 @@
  * the akce these screens show, and is cleared around each test; the queue is shared, so the titles carry
  * the project and nothing here asserts that the queue is empty.
  */
-import { cs, future, points, review } from '@/ui/copy';
+import { future, points, review } from '@/ui/copy';
 
 import { emailOf, signInAsRe } from './akce-steps';
 import { forgetFutureOf, seedFuture } from './future-db';
@@ -89,7 +89,7 @@ test.describe('the akce, proposal and settings screens', () => {
     await expectAccessible();
   });
 
-  test('„Nový návrh“, „Typy bodů“ and „Profil“ are accessible', async ({
+  test('„Nový návrh“ and „Profil“ are accessible', async ({
     page,
     hydrated,
     signInAs,
@@ -97,11 +97,6 @@ test.describe('the akce, proposal and settings screens', () => {
   }, testInfo) => {
     const project = testInfo.project.name;
     await signInAs(signInAsRe('rizeni', project));
-    await page.goto('/nastaveni/typy-bodu');
-    await hydrated();
-    await expect(page.getByRole('heading', { level: 1, name: cs.pointTypes.title })).toBeVisible();
-    await expectAccessible();
-
     await page.goto('/navrhy/novy');
     await hydrated();
     await expect(

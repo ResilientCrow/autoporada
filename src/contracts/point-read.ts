@@ -5,8 +5,13 @@ import { POINT_LIMITS } from '@/domain/report';
 import type { PointEvent, PointState } from '@/domain/review';
 
 import { CURSOR_MAX, cursorSchema } from './cursor';
-import { pointContentWire, pointFieldsWire, pointKindSchema } from './point';
-import { defaultBulletsSchema } from './point-type';
+import {
+  defaultBulletsSchema,
+  pointContentWire,
+  pointFieldsWire,
+  pointKindSchema,
+  pointTypeIdSchema,
+} from './point';
 
 /** Every `PointState` once: the compiler refuses a missing or an unknown one. */
 const POINT_STATES: Readonly<Record<PointState, PointState>> = {
@@ -63,10 +68,10 @@ export const getPointOutput = z.object({
   submittedAt: instant.nullable(),
   isAuthor: z.boolean(),
   content: pointContentWire,
-  /** A report's type, retired ones too; null for finance and pokyn. */
+  /** A report's type (ADR 0064); null for finance and pokyn. */
   type: z
     .object({
-      id: z.uuid(),
+      id: pointTypeIdSchema,
       name: z.string(),
       titleGender: z.enum(TITLE_GENDERS).nullable(),
       defaultBullets: defaultBulletsSchema,
@@ -100,7 +105,7 @@ export const listMyPointsOutput = z.object({
       z.object({
         id: z.uuid(),
         kind: pointKindSchema,
-        typeId: z.uuid().nullable(),
+        typeId: pointTypeIdSchema.nullable(),
         state: pointStateSchema,
         title: z.string(),
         eventDate: day.nullable(),

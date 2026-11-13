@@ -6,7 +6,7 @@ import './app.css';
 import { DemoBar, StoreProvider, useRoute, useStore } from '../core/react';
 import * as Q from '../core/select';
 import { AkceDetail, Navrh, NovaAkce } from './akce';
-import { Clovek, Lide, Login, Nastaveni, NovyRok, Pristup, Seznam, Seznamy, Soukromi, Typ, Typy, Ucet } from './admin';
+import { Clovek, Lide, Login, Nastaveni, NovyRok, Pristup, Seznam, Seznamy, Soukromi, Ucet } from './admin';
 import { Domu, Moje, NotFound, Tyden, Udalosti, Zprava } from './home';
 import { Archiv, ArchivDoc, Hotovo, Nahled, Pokyny, Porada, Pridat, Prilohy, Udaje, Zpravy } from './porada';
 import { Kontrola } from './review';
@@ -44,7 +44,6 @@ function Router() {
     case 'lide': return head ? (b ? <Clovek id={b} /> : <Lide />) : <NotFound />;
     case 'seznamy': return staff ? (b ? <Seznam key={b} id={b} /> : <Seznamy />) : <NotFound />;
     case 'novy-rok': return head ? <NovyRok /> : <NotFound />;
-    case 'typy': return head ? (b ? <Typ id={b} /> : <Typy />) : <NotFound />;
     case 'nastaveni': return head ? <NastaveniGate /> : <NotFound />;
     case 'ucet': return <Ucet />;
     default: return <NotFound />;

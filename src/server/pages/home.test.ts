@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
+import { POINT_TYPES } from '@/domain/report';
 
 import { homePage } from './index';
 
@@ -45,7 +46,6 @@ const serve = (answers: {
   list?: unknown;
   queue?: unknown;
   future?: unknown;
-  types?: unknown;
   tally?: unknown;
 }) =>
   runRegistered.mockImplementation(async (_container: unknown, useCase: { name: string }) => {
@@ -55,9 +55,6 @@ const serve = (answers: {
     }
     if (useCase.name === 'issues.reportTally') {
       return answers.tally ?? { ok: true, value: { porada: null } };
-    }
-    if (useCase.name === 'pointTypes.list') {
-      return answers.types ?? { ok: true, value: { types: [] } };
     }
     return useCase.name === 'issues.window' ? answers.window : (answers.list ?? noPoints);
   });
@@ -112,14 +109,13 @@ describe('homePage', () => {
           },
         },
         future: { ok: true, value: { items: [due] } },
-        types: { ok: true, value: { types: [{ id: 't1', name: 'Seminář', detail: null }] } },
       });
       const model = await homePage();
       expect(model).toMatchObject({
         kind: 'member',
         reportDue: {
           items: [{ id: 'a', title: 'Výlet' }],
-          types: [{ id: 't1', name: 'Seminář' }],
+          types: POINT_TYPES.map(({ id, name }) => ({ id, name })),
         },
       });
     });
@@ -311,12 +307,7 @@ describe('homePage', () => {
       as('submitter');
       serve({ window: WINDOW, list: list([]) });
       await homePage();
-      expect(askedFor().sort()).toEqual([
-        'future.owedReports',
-        'issues.window',
-        'pointTypes.list',
-        'points.listMine',
-      ]);
+      expect(askedFor().sort()).toEqual(['future.owedReports', 'issues.window', 'points.listMine']);
       for (const call of runRegistered.mock.calls) {
         expect((call[2] as { input: unknown }).input).toEqual({});
       }
@@ -365,7 +356,10 @@ describe('homePage', () => {
           calendar: null,
           mine: null,
           queue: null,
-          reportDue: { items: [], types: [] },
+          reportDue: {
+            items: [],
+            types: POINT_TYPES.map(({ id, name }) => ({ id, name })),
+          },
           reportTally: null,
         });
       },

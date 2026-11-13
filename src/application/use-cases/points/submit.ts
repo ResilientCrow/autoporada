@@ -127,7 +127,7 @@ export const submitPoint = defineUseCase({
   output: submitPointOutput,
   access: pointWriteAccess(moveCheck('submit')),
   async execute({ tx, now }, { content }, point) {
-    const spec = await typeSpec(tx, point);
+    const spec = typeSpec(point);
     const shape = kindIssues(point.kind, content, spec);
     if (Object.keys(shape).length > 0) return fail({ code: 'invalid-input', fields: shape });
     const year = schoolYear(instantToWallClock(now).date);

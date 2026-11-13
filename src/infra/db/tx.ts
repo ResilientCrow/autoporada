@@ -15,7 +15,6 @@ import { createFutureItemRepo } from './repos/future-items';
 import { createIssueItemRepo } from './repos/issue-items';
 import { createIssueRepo } from './repos/issues';
 import { createMailLedgerRepo } from './repos/mail-ledger';
-import { createPointTypeRepo } from './repos/point-types';
 import { createPointIssueReads } from './repos/points-issue';
 import { createPointReads } from './repos/points-read';
 import { createPointCloseRepo } from './repos/points-close';
@@ -47,7 +46,6 @@ export function buildTx(client: PoolClient, ctx: TxContext, life: TxLife, jobsOn
     sessions: guard(createSessionRepo(db, ctx)),
     issues: guard(createIssueRepo(db, ctx)),
     issueItems: guard(createIssueItemRepo(db, ctx)),
-    pointTypes: guard(createPointTypeRepo(db, ctx)),
     settings: guard(createSettingsRepo(db, ctx)),
     registry: guard(createRegistryRepo(db, ctx)),
     documents: guard(createDocumentRepo(db, ctx)),

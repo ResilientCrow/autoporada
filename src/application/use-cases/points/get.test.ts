@@ -3,11 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
-import { newDraft } from '@/domain/report';
+import { pointType } from '@/domain/report';
 import { calDate, wallTime } from '@/domain/time';
 
 import {
-  BULLETS,
   paragraph,
   pointFixtures,
   readyProposal,
@@ -51,28 +50,6 @@ async function submitted(author: UserRecord): Promise<string> {
   return id;
 }
 
-/** A report started on a type that is no longer on offer, as when an admin retired it since. */
-async function onRetiredType(author: UserRecord) {
-  const type = await world.seed.pointType({
-    name: 'Exkurze',
-    position: 2,
-    titleGender: 'f',
-    defaultBullets: BULLETS,
-    active: false,
-  });
-  const point = await world.tx(world.as(author), async (tx) => {
-    const { point } = await tx.points.create({
-      clientRef: randomUUID(),
-      kind: 'report',
-      typeId: type.id,
-      content: newDraft(type.defaultBullets),
-    });
-    await tx.audit.record({ action: 'point.created', target: { type: 'point', id: point.id } });
-    return point;
-  });
-  return { type, id: point.id };
-}
-
 describe('points.get', () => {
   describe('the author', () => {
     it('gets a draft report with its content as the editor sends it, and its type', async () => {
@@ -101,7 +78,12 @@ describe('points.get', () => {
           isAuthor: true,
           editable: true,
           content,
-          type: { id: point!.typeId, name: 'Seminář', titleGender: null, defaultBullets: BULLETS },
+          type: {
+            id: point!.typeId,
+            name: 'Soutěž',
+            titleGender: 'f',
+            defaultBullets: pointType('soutez').defaultBullets,
+          },
           timeline: [],
         },
       });
@@ -127,17 +109,22 @@ describe('points.get', () => {
       expect((await snapshot(id)).point?.content).toEqual(stored);
     });
 
-    it('gets a proposal without a type, and a report on a retired type with that type', async () => {
+    it('gets a proposal without a type, and a report with its type', async () => {
       const author = await user();
       const pokyn = await read(author, await start(author, 'pokyn'));
       expect(pokyn).toMatchObject({ ok: true, value: { kind: 'pokyn', type: null } });
       expect(pokyn.ok && pokyn.value.content).toEqual(wire());
 
-      const { type, id } = await onRetiredType(author);
+      const id = await start(author);
       expect(await read(author, id)).toMatchObject({
         ok: true,
         value: {
-          type: { id: type.id, name: 'Exkurze', titleGender: 'f', defaultBullets: BULLETS },
+          type: {
+            id: 'soutez',
+            name: 'Soutěž',
+            titleGender: 'f',
+            defaultBullets: pointType('soutez').defaultBullets,
+          },
         },
       });
     });

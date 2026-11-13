@@ -1,5 +1,4 @@
 import {
-  ConstraintViolation,
   DatabaseFailure,
   scopeOf,
   ScopeViolation,
@@ -15,7 +14,7 @@ import {
 import { parsePointJsonb } from '@/contracts';
 import { dueMonday, inIssue, isLateReport, lateFacts, type PoradaClose } from '@/domain/calendar';
 import { admits, can } from '@/domain/policy';
-import type { PointContent } from '@/domain/report';
+import { isPointTypeId, type PointContent } from '@/domain/report';
 import { POINT_MACHINE } from '@/domain/review';
 import { compareDates, isoWeekday, toIsoDate, type CalDate } from '@/domain/time';
 
@@ -68,9 +67,7 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
     throw refusedBy('points_submitted_complete');
   }
   if (!state.users.has(row.authorId)) throw refusedBy('points_author_id_users_id_fk');
-  if (row.typeId !== null && !state.pointTypes.has(row.typeId)) {
-    throw new ConstraintViolation('points_type_id_point_types_id_fk');
-  }
+  if (row.typeId !== null && !isPointTypeId(row.typeId)) throw refusedBy('points_type');
   if (row.futureItemId !== null && !state.futureItems.has(row.futureItemId)) {
     throw refusedBy('points_future_item_id_future_items_id_fk');
   }
@@ -312,7 +309,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
             authorId: p.authorId,
             state,
             title: p.content.title,
-            typeName: (p.typeId && tx.draft.pointTypes.get(p.typeId)?.name) ?? null,
+            typeId: p.typeId,
             earliestMonday: p.earliestMonday,
             submittedAt: p.submittedAt,
             handInMonday: p.handInMonday,

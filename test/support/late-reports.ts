@@ -10,7 +10,7 @@ import type { FutureKind } from '@/domain/calendar';
 import { calDate, parseIsoDate, parseWallTime } from '@/domain/time';
 
 import { futureFixtures, readyAkce } from './future';
-import { BULLETS, pointFixtures } from './points';
+import { pointFixtures } from './points';
 import type { World } from './world';
 
 /** What a report's close depends on, as ISO text. */
@@ -24,17 +24,12 @@ export function lateReportFixtures(world: World) {
   const futures = futureFixtures(world);
   const points = pointFixtures(world);
 
-  /** A new report of the author's; every one gets a type of its own (a type's name is unique). */
+  /** A new report of the author's. */
   async function startReport(author: UserRecord): Promise<string> {
-    const type = await world.seed.pointType({
-      name: `Seminář ${randomUUID()}`,
-      position: 1,
-      defaultBullets: BULLETS,
-    });
     const result = await world.run(createPoint, world.as(author), {
       clientRef: randomUUID(),
       kind: 'report',
-      typeId: type.id,
+      typeId: 'soutez',
     });
     if (!result.ok) throw new Error(`create refused: ${result.error.code}`);
     return result.value.id;

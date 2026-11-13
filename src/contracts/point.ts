@@ -4,6 +4,8 @@ import type { Campus, Salutation } from '@/domain/cs';
 import {
   contentBytes,
   POINT_LIMITS,
+  POINT_TYPE_IDS,
+  type BulletSpec,
   type PointKind,
   type DraftBullet,
   type DraftPerson,
@@ -29,7 +31,40 @@ import {
 } from '@/domain/time';
 
 import { refineDecision, returnPartsSchema } from './decision';
-import { bulletKeySchema, uniqueKeys } from './point-type';
+
+/** A bullet's key: a stable slug that a draft's bullet copies from its type. */
+export const bulletKeySchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]*$/)
+  .max(POINT_LIMITS.bulletKey);
+
+/** Refines a list of bullets: a draft bullet finds its spec by key, so no two share one. */
+const uniqueKeys = (bullets: readonly { readonly key: string }[]) =>
+  new Set(bullets.map((b) => b.key)).size === bullets.length;
+
+/** A bullet a report type offers. */
+const bulletSpecSchema = z.strictObject({
+  key: bulletKeySchema,
+  label: z.string().trim().min(1).max(POINT_LIMITS.bulletLabel),
+  kind: z.enum(['people', 'text']),
+  required: z.boolean(),
+  role: z.literal('organisers').optional(),
+}) satisfies z.ZodType<BulletSpec>;
+
+/** The bullets a report type starts a draft with. */
+export const defaultBulletsSchema = z
+  .array(bulletSpecSchema)
+  .max(POINT_LIMITS.bullets)
+  .refine(uniqueKeys, { message: 'duplicate-key' });
+
+/** Bounds the text before the list is checked; any text up to it that is not a key is `invalid`. */
+const TYPE_KEY_INPUT_MAX = 64;
+
+/**
+ * A report type's key (ADR 0064). A text first, so that an absent type reads as `required` (Zod
+ * reports a missing enum value as `invalid_value`) and a key off the list as `invalid`.
+ */
+export const pointTypeIdSchema = z.string().max(TYPE_KEY_INPUT_MAX).pipe(z.enum(POINT_TYPE_IDS));
 
 /**
  * The jsonb parts of a point, as stored and as the editor sends them. A draft
@@ -123,8 +158,7 @@ export function parsePointPeople(value: {
 /**
  * „Začít“ on the chooser, or a finance or pokyn proposal. `clientRef` is the
  * draft's id in the browser, so a retry returns the same draft. A report
- * names its type; finance and pokyn name none (the use case checks the pair
- * and that the type is on offer).
+ * names its type; finance and pokyn name none (the use case checks the pair).
  */
 export const pointKindSchema = z.enum([
   'report',
@@ -134,7 +168,7 @@ export const pointKindSchema = z.enum([
 export const createPointInput = z.strictObject({
   clientRef: z.uuid(),
   kind: pointKindSchema,
-  typeId: z.uuid().nullable(),
+  typeId: pointTypeIdSchema.nullable(),
 });
 export const createPointOutput = z.object({ id: z.uuid() });
 

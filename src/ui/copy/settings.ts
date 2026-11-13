@@ -2,7 +2,6 @@
 export const settings = {
   title: 'Nastavení',
   usersLink: 'Uživatelé',
-  typesLink: 'Typy bodů',
   said: { changed: 'Nastavení je uloženo.' },
   save: 'Uložit',
   deadline: {

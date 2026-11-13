@@ -8,7 +8,6 @@ import { gallery } from './gallery';
 import { issues } from './issues';
 import { nav } from './nav';
 import { people } from './people';
-import { pointTypes } from './pointTypes';
 import { points } from './points';
 import { porada } from './porada';
 import { registry } from './registry';
@@ -39,7 +38,6 @@ export const cs = {
   issues,
   points,
   future,
-  pointTypes,
   porada,
   settings,
   registry,

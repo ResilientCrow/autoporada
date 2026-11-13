@@ -1,11 +1,11 @@
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
-import { missingForSubmit, newDraft, openingInput, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
+import { missingForSubmit, newDraft, openingInput, submittedContent, type DraftPerson, type PointContent, pointType, type PointKind, type PointTypeId } from '@/domain/report';
 import { openingSentence } from '@/domain/cs';
 import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, userById, yearOf } from './select';
-import type { AccessReq, Annex, Future, Issue, Mail, Point, PointType, Role, Row, State, Trail } from './types';
+import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, specOf, userById, yearOf } from './select';
+import type { AccessReq, Annex, Future, Issue, Mail, Point, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
 const person = (year: string, salutation: DraftPerson['salutation'], givenName: string, familyName: string, affiliation?: string): DraftPerson => ({ salutation, givenName, familyName, ...(affiliation && { affiliation, affiliationYear: year }) });
@@ -42,16 +42,16 @@ export const setClock = (iso: string): Fx => (s) => ({ ...s, now: iso });
 // ---- points ----
 export function refreshOpening(s: State, p: Point, content: PointContent): PointContent {
   if (p.kind !== 'report' || content.openingEdited) return content;
-  const type = s.types.find((t) => t.id === p.typeId);
-  const input = openingInput(content, type?.titleGender ?? null, type?.bullets ?? [], type?.name);
+  const type = p.typeId ? pointType(p.typeId) : null;
+  const input = openingInput(content, type?.titleGender ?? null, type?.defaultBullets ?? [], type?.name);
   return { ...content, opening: input ? openingSentence(input) : '' };
 }
-export function createPoint(kind: PointKind, typeId: string | null, akceId: string | null, onId?: (id: string) => void): Fx {
+export function createPoint(kind: PointKind, typeId: PointTypeId | null, akceId: string | null, onId?: (id: string) => void): Fx {
   return (s0) => {
     const [s, pid] = id(s0, 'p');
-    const type = s.types.find((t) => t.id === typeId);
+    const type = typeId ? pointType(typeId) : null;
     const u = me(s)!; const akce = s.futures.find((f) => f.id === akceId);
-    let content = newDraft(kind === 'report' ? type?.bullets ?? [] : []);
+    let content = newDraft(kind === 'report' ? type?.defaultBullets ?? [] : []);
     if (akce) {
       content = { ...content, title: akce.title, eventDate: akce.date, endDate: akce.endDate, timeFrom: akce.timeFrom, timeTo: akce.timeTo, campus: akce.campus, place: akce.place || null };
     } else if (kind === 'report' && u) {
@@ -67,7 +67,7 @@ export const savePoint = (pid: string, content: PointContent): Fx => (s) => ({ .
 export type SubmitResult = { ok: true; monday: string } | { ok: false; why: 'problems' | 'report-not-due' };
 export function trySubmit(s: State, pid: string): SubmitResult {
   const p = s.points.find((x) => x.id === pid)!;
-  const spec = s.types.find((t) => t.id === p.typeId)?.bullets ?? [];
+  const spec = specOf(p);
   if (missingForSubmit(p.kind, p.content, spec, yearOf(s)).problems.length) return { ok: false, why: 'problems' };
   const akce = s.futures.find((f) => f.id === p.akceId);
   if (akce) {
@@ -83,7 +83,7 @@ export const submitPoint = (pid: string): Fx => (s0) => {
   const akceId = s.points.find((x) => x.id === pid)?.akceId;
   // Handing the report in writes the akce's report (REPORT_MACHINE.write); nothing reopens it after.
   const futures = akceId ? up(s.futures, akceId, (f) => (f.report === 'none' || f.report === 'prompted' ? { ...f, report: 'written' as const } : f)) : s.futures;
-  return { ...s, futures, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? []), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, parts: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
+  return { ...s, futures, points: up(s.points, pid, (p) => ({ ...p, state: 'submitted', content: submittedContent(p.content, specOf(p)), handInMonday: r.monday, poradaMonday: r.monday, submittedAt: s.now, note: null, parts: null, trail: [...p.trail, trail(s, 'Odesláno')] })) };
 };
 export const retractPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => (p.state === 'submitted' ? { ...p, state: 'draft', trail: [...p.trail, trail(s, 'Vzato zpět')] } : p)) });
 export const withdrawPoint = (pid: string): Fx => (s) => ({ ...s, points: up(s.points, pid, (x) => ({ ...x, state: 'withdrawn', trail: [...x.trail, trail(s, 'Zrušeno')] })) });
@@ -281,8 +281,6 @@ export const editEntry = (key: string, e: string, v: { givenName: string; family
 export const removeEntry = (key: string, e: string): Fx => (s) => ({ ...s, registry: s.registry.map((l) => (l.key === key ? { ...l, entries: l.entries.filter((x) => x.id !== e) } : l)) });
 export const newSchoolYear = (keys: string[]): Fx => (s) => audit({ ...s, registry: s.registry.map((l) => (keys.includes(l.key) ? { ...l, entries: l.entries.filter((e) => !e.isNew).map((e) => e) , archived: l.purpose !== 'annex1' } : l)) }, 'Nový školní rok');
 export { parsePaste };
-export const deleteType = (tid: string): Fx => (s) => ({ ...s, types: s.types.filter((t) => t.id !== tid) });
-export const saveType = (tid: string | null, patch: Partial<PointType>): Fx => (s0) => { if (tid) return { ...s0, types: s0.types.map((t) => (t.id === tid ? { ...t, ...patch } : t)) }; const [s, n] = id(s0, 'type'); return { ...s, types: [...s.types, { id: n, name: 'Nový typ', titleGender: 'f', bullets: [{ key: 'participants', label: 'Účastníci', kind: 'people', required: true }], locked: false, active: true, ...patch }] }; };
 export const saveSettings = (patch: Partial<State['settings']>): Fx => (s) => { const n = { ...s, settings: { ...s.settings, ...patch } }; const today = Date.parse(s.now); return { ...n, issues: n.issues.map((i) => (i.status === 'open' && Date.parse(i.deadlineAt) > today + 14 * 864e5 ? { ...i, deadlineAt: deadline(parseIsoDate(i.meetingDate), { dayOffset: n.settings.dayOffset, time: parseWallTime(n.settings.time) }).toISOString() } : i)) }; };
 export const requestAccess = (reason: string): Fx => (s0) => { const u = me(s0)!; const [s, rid] = id(s0, 'req'); const r: AccessReq = { id: rid, name: nameOf(u), email: u.email, reason, at: s.now, state: 'pending', userId: u.id }; return { ...s, requests: [...s.requests, r] }; };
 export const cancelRequest = (rid: string): Fx => (s) => ({ ...s, requests: up(s.requests, rid, (r) => ({ ...r, state: 'cancelled' })) });

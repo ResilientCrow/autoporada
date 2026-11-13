@@ -32,7 +32,6 @@ export {
   submitPoint,
   withdrawPoint,
 } from './points';
-export { savePointType } from './point-types';
 export {
   addEntries,
   moveList,

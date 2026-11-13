@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
 import { QUEUE_LIMIT, toIssueRows } from '@/contracts';
@@ -34,11 +34,7 @@ const NEXT_MONDAY = calDate(2026, 11, 2);
 /** Sunday 25 October 2026, 21.00 in Prague: the deadline of 26 October (Saturday 20.00) has passed. */
 const AFTER_DEADLINE = new Date('2026-10-25T20:00:00Z');
 
-/** One report type for the whole test: its name is unique. */
-let typeId = '';
-beforeEach(async () => {
-  typeId = (await world.seed.pointType({ name: 'Seminář', position: 1 })).id;
-});
+const typeId = 'seminar';
 
 const reviewer = (role: 'reviewer' | 'headmaster' = 'reviewer') => world.seed.user({ role });
 const queue = (by: UserRecord) => world.run(queuePoints, world.as(by), {});

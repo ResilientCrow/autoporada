@@ -14,7 +14,6 @@ import {
   type PendingSignIn,
   type PointEventRecord,
   type PointRecord,
-  type PointTypeRecord,
   type RegistryEntryRecord,
   type RegistryListRecord,
   type StoredPlaceholder,
@@ -43,8 +42,6 @@ export interface FakeState {
   readonly issueItems: Map<string, Outline>;
   /** issues.present_text, guests_text and annex2, by ISO Monday; absent = all three null. */
   readonly issueTexts: Map<string, IssueTexts>;
-  /** point_types, by id. Migration 0014's seeds are not here: a test makes the types it needs. */
-  readonly pointTypes: Map<string, PointTypeRecord>;
   /** settings, by key. */
   readonly settings: Map<string, StoredSetting>;
   /** registry_lists, by id. Migration 0032's seeds are not here: a test makes the lists it needs. */
@@ -109,7 +106,6 @@ export const emptyState = (): FakeState => ({
   issues: new Map(),
   issueItems: new Map(),
   issueTexts: new Map(),
-  pointTypes: new Map(),
   settings: new Map(),
   registryLists: new Map(),
   registryEntries: new Map(),

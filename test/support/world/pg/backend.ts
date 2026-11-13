@@ -1,6 +1,5 @@
 import type {
   AccessRequestRecord,
-  PointTypeRecord,
   RegistryEntryRecord,
   RegistryListRecord,
 } from '@/application/ports';
@@ -98,27 +97,6 @@ export async function jobRows(database: TestDatabase): Promise<readonly JobRow[]
       ...(r.start_after.getTime() !== r.created_on.getTime() && { startAfter: r.start_after }),
     },
   }));
-}
-
-/** Inserts a point type as the owner: the repository is read-only until the admin saves (commit 49). */
-export async function insertPointType(
-  database: TestDatabase,
-  row: Omit<PointTypeRecord, 'id' | 'version'>,
-): Promise<PointTypeRecord> {
-  const [inserted] = await database.owner<{ id: string; version: number }>(
-    `INSERT INTO point_types (name, title_gender, default_bullets, active, locked, position)
-     VALUES ($1, $2, $3::jsonb, $4, $5, $6) RETURNING id, version`,
-    [
-      row.name,
-      row.titleGender,
-      JSON.stringify(row.defaultBullets),
-      row.active,
-      row.locked,
-      row.position,
-    ],
-  );
-  if (!inserted) throw new Error('insertPointType: no row returned');
-  return { ...row, id: inserted.id, version: inserted.version };
 }
 
 /** Inserts a setting as the owner, past the checks of any schema: the repository only reads. */

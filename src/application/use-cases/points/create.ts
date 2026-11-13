@@ -1,28 +1,28 @@
 import { defineUseCase, fail, ok, type Outcome } from '@/application/core';
-import type { Tx } from '@/application/ports';
 import { createPointInput, createPointOutput } from '@/contracts';
-import { DRAFT_CAP, newDraft, type BulletSpec, type PointKind } from '@/domain/report';
+import {
+  DRAFT_CAP,
+  newDraft,
+  pointType,
+  type BulletSpec,
+  type PointKind,
+  type PointTypeId,
+} from '@/domain/report';
 
 import { pointEvent } from './events';
 
-/**
- * The bullets a new point starts with: a report's from its type, which must be
- * on offer; finance and pokyn name no type and have none.
- */
-async function startingBullets(
-  tx: Tx,
+/** The bullets a new point starts with: a report's from its type; finance and pokyn name no type and have none. */
+function startingBullets(
   kind: PointKind,
-  typeId: string | null,
-): Promise<Outcome<readonly BulletSpec[]>> {
+  typeId: PointTypeId | null,
+): Outcome<readonly BulletSpec[]> {
   if (kind !== 'report') {
     return typeId === null
       ? ok([])
       : fail({ code: 'invalid-input', fields: { typeId: 'invalid' } });
   }
   if (typeId === null) return fail({ code: 'invalid-input', fields: { typeId: 'required' } });
-  const type = await tx.pointTypes.get(typeId);
-  if (!type?.active) return fail({ code: 'invalid-input', fields: { typeId: 'invalid' } });
-  return ok(type.defaultBullets);
+  return ok(pointType(typeId).defaultBullets);
 }
 
 /**
@@ -46,7 +46,7 @@ export const createPoint = defineUseCase({
     const { existing, drafts } = await tx.points.beginCreate(clientRef);
     if (existing) return ok({ id: existing.id });
 
-    const bullets = await startingBullets(tx, kind, typeId);
+    const bullets = startingBullets(kind, typeId);
     if (!bullets.ok) return bullets;
     if (drafts >= DRAFT_CAP) return fail({ code: 'rule', rule: 'draft-cap' });
 

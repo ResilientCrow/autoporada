@@ -17,18 +17,14 @@ const MAX_CONTENT = 262_144;
 const { title: TITLE, opening: OPENING, place: PLACE, note: NOTE } = POINT_LIMITS;
 
 let authorId = '';
-let typeId = '';
+const typeId = 'seminar';
 
 beforeAll(async () => {
   const [user] = await database.owner<{ id: string }>(
     `INSERT INTO users (tid, oid, display_name)
      VALUES (gen_random_uuid(), gen_random_uuid(), 'Jana Nováková') RETURNING id`,
   );
-  const [type] = await database.owner<{ id: string }>(
-    `SELECT id FROM point_types WHERE name = 'Seminář'`,
-  );
   authorId = user!.id;
-  typeId = type!.id;
 });
 
 type Row = Record<string, unknown>;

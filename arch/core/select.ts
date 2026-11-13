@@ -1,6 +1,6 @@
 import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, slotMondayOf, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
 import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, suggestGenitive, weekdayName, type Salutation } from '@/domain/cs';
-import { missingForSubmit, reportBody, type DraftPerson, type PointContent } from '@/domain/report';
+import { missingForSubmit, pointType, reportBody, type BulletSpec, type DraftPerson, type PointContent } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
 import { addDays, compareDates, instantToWallClock, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
@@ -158,7 +158,8 @@ export const canDecidePoint = (u: User | null, p: Point) => !!u && (u.role === '
 export const canDecideFuture = (u: User | null, f: Future) => !!u && (u.role === 'headmaster' || (u.role === 'reviewer' && f.authorId !== u.id));
 export const pendingRequests = (s: State) => s.requests.filter((r) => r.state === 'pending');
 export const upcoming = (s: State) => s.futures.filter((f) => f.state === 'approved' && !ownerIsOver(s, f)).sort((a, b) => compareDates(a.date, b.date));
-export const readiness = (s: State, p: Point) => missingForSubmit(p.kind, p.content, s.types.find((t) => t.id === p.typeId)?.bullets ?? [], yearOf(s));
+export const specOf = (p: Point): readonly BulletSpec[] => (p.typeId ? pointType(p.typeId).defaultBullets : []);
+export const readiness = (s: State, p: Point) => missingForSubmit(p.kind, p.content, specOf(p), yearOf(s));
 export const genitive = (x: { salutation: NonNullable<Salutation>; givenName: string; familyName: string }) => suggestGenitive(x);
 export const peopleFor = (s: State, id: string) => recentPeople(myPoints(s, id).map((p) => ({ ...p.content, updatedAt: new Date(p.savedAt) })) as never, 300);
 

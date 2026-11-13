@@ -149,6 +149,7 @@ export {
 export {
   bodyWire,
   contentWire,
+  bulletKeySchema,
   createPointInput,
   createPointOutput,
   decidePointInput,
@@ -193,16 +194,6 @@ export {
   outlineWriteOutput,
 } from './outline';
 export { recentPeopleInput, recentPeopleOutput } from './people';
-export {
-  bulletKeySchema,
-  defaultBulletsSchema,
-  deletePointTypeInput,
-  deletePointTypeOutput,
-  listPointTypesInput,
-  listPointTypesOutput,
-  savePointTypeInput,
-  savePointTypeOutput,
-} from './point-type';
 export {
   addEntriesInput,
   addEntriesOutput,

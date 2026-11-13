@@ -3,28 +3,21 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
-import { DRAFT_CAP, type BulletSpec, type PointKind } from '@/domain/report';
+import { DRAFT_CAP, type PointKind, type PointTypeId } from '@/domain/report';
 
 import { setupWorld } from '../../../../test/support/world';
 import { createPoint } from './index';
 
 const world = setupWorld();
 
-const BULLETS: readonly BulletSpec[] = [
-  { key: 'organisers', label: 'Organizátoři', kind: 'people', required: true, role: 'organisers' },
-  { key: 'results', label: 'Výsledky', kind: 'text', required: false },
-];
-
 const submitter = () => world.seed.user({ role: 'submitter' });
 /** Vedení: may start any kind of point (ADR 0052). */
 const leader = () => world.seed.user({ role: 'reviewer' });
-const seminar = () =>
-  world.seed.pointType({ name: 'Seminář', position: 1, defaultBullets: BULLETS });
 
 interface Start {
   readonly clientRef?: string;
   readonly kind?: PointKind;
-  readonly typeId?: string | null;
+  readonly typeId?: PointTypeId | null;
 }
 const start = (
   by: UserRecord,
@@ -69,13 +62,12 @@ describe('points.create', () => {
   describe('kind and type', () => {
     it('starts an empty report with copies of the type’s bullets', async () => {
       const author = await submitter();
-      const type = await seminar();
-      const id = await created(author, { kind: 'report', typeId: type.id });
+      const id = await created(author, { kind: 'report', typeId: 'seminar' });
       expect(await read(author, id)).toMatchObject({
         id,
         kind: 'report',
         authorId: author.id,
-        typeId: type.id,
+        typeId: 'seminar',
         state: 'draft',
         version: 1,
         content: {
@@ -97,7 +89,13 @@ describe('points.create', () => {
               order: 'input',
               people: [],
             },
-            { key: 'results', label: 'Výsledky', kind: 'text', text: '' },
+            {
+              key: 'participants',
+              label: 'Účastníci',
+              kind: 'people',
+              order: 'input',
+              people: [],
+            },
           ],
           statements: [],
         },
@@ -117,26 +115,29 @@ describe('points.create', () => {
       },
     );
 
-    it('refuses a report with no type, an unknown type or one no longer on offer', async () => {
+    it('refuses a report with no type', async () => {
       const author = await submitter();
-      const inactive = await world.seed.pointType({ name: 'Exkurze', position: 2, active: false });
-      const cases = [
-        [null, 'required'],
-        [randomUUID(), 'invalid'],
-        [inactive.id, 'invalid'],
-      ] as const;
-      for (const [typeId, issue] of cases) {
-        await refuses(author, () => start(author, { kind: 'report', typeId }), {
-          code: 'invalid-input',
-          fields: { typeId: issue },
-        });
-      }
+      await refuses(author, () => start(author, { kind: 'report', typeId: null }), {
+        code: 'invalid-input',
+        fields: { typeId: 'required' },
+      });
     });
+
+    it.each(['Seminář', '0190e5f2-0000-7000-8000-000000000000'])(
+      'refuses a report type that is not on the list: %s',
+      async (typeId) => {
+        const author = await submitter();
+        await refuses(
+          author,
+          () => start(author, { kind: 'report', typeId: typeId as PointTypeId }),
+          { code: 'invalid-input', fields: { typeId: 'invalid' } },
+        );
+      },
+    );
 
     it.each(['finance', 'pokyn'] as const)('refuses a %s that names a type', async (kind) => {
       const author = await leader();
-      const type = await seminar();
-      await refuses(author, () => start(author, { kind, typeId: type.id }), {
+      await refuses(author, () => start(author, { kind, typeId: 'seminar' }), {
         code: 'invalid-input',
         fields: { typeId: 'invalid' },
       });
@@ -146,18 +147,16 @@ describe('points.create', () => {
   describe('idempotency', () => {
     it('answers a retry with the same draft, unchanged, and audits the create once', async () => {
       const author = await submitter();
-      const type = await seminar();
       const clientRef = randomUUID();
-      const id = await created(author, { clientRef, kind: 'report', typeId: type.id });
+      const id = await created(author, { clientRef, kind: 'report', typeId: 'seminar' });
       const before = await snapshot(author);
       world.clock.advance(60_000);
-      expect(await start(author, { clientRef, kind: 'report', typeId: type.id })).toEqual({
+      expect(await start(author, { clientRef, kind: 'report', typeId: 'seminar' })).toEqual({
         ok: true,
         value: { id },
       });
       // The retry is known by its ref alone: what else it names is not looked at again.
-      const inactive = await world.seed.pointType({ name: 'Exkurze', position: 2, active: false });
-      expect(await start(author, { clientRef, kind: 'report', typeId: inactive.id })).toEqual({
+      expect(await start(author, { clientRef, kind: 'report', typeId: 'exkurze' })).toEqual({
         ok: true,
         value: { id },
       });
@@ -259,8 +258,7 @@ describe('points.create', () => {
 
     it('lets a submitter start a report', async () => {
       const user = await submitter();
-      const type = await seminar();
-      expect((await start(user, { kind: 'report', typeId: type.id })).ok).toBe(true);
+      expect((await start(user, { kind: 'report', typeId: 'seminar' })).ok).toBe(true);
     });
 
     it.each(['finance', 'pokyn'] as const)('lets vedení start a %s', async (kind) => {
@@ -282,8 +280,7 @@ describe('points.create', () => {
   describe('audit', () => {
     it('records point.created on the point with its kind, and no content', async () => {
       const author = await submitter();
-      const type = await seminar();
-      const id = await created(author, { kind: 'report', typeId: type.id });
+      const id = await created(author, { kind: 'report', typeId: 'seminar' });
       const { audit } = await snapshot(author);
       expect(audit).toEqual([
         {
@@ -292,7 +289,7 @@ describe('points.create', () => {
           targetType: 'point',
           targetId: id,
           data: {
-            diff: { typeId: { from: null, to: type.id }, state: { from: null, to: 'draft' } },
+            diff: { typeId: { from: null, to: 'seminar' }, state: { from: null, to: 'draft' } },
             meta: { kind: 'report' },
           },
           requestId: 'test',
