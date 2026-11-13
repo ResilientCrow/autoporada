@@ -504,5 +504,6 @@ describe('a calendar under random moves, drops and adds', () => {
       }),
       { numRuns: 400 },
     );
-  });
+    // 400 runs take about 3 s alone; the default 5 s is too tight when the whole suite shares the CPU.
+  }, 20_000);
 });
