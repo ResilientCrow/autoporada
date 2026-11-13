@@ -10,6 +10,8 @@ button.tk.p{background:var(--gold-soft)}
 .sgm button:hover{border-color:var(--ink)}.sgm button.on,.sgm button[aria-checked=true]{background:var(--ink);border-color:var(--ink);color:#fff}
 .dlg .x,.pr .x{border:0;background:none;cursor:pointer;margin-left:auto;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}.pr .x:hover,.dlg .x:hover{background:var(--wash)}
 .dlg:focus{outline:0}.col:focus{outline:0}
+/* Text people typed may hold a word longer than the line: it breaks at the edge, as Word breaks it on the page. */
+.col,.desk,.pv{overflow-wrap:anywhere}
 .st8{gap:8px}.st6{gap:6px}.lb{font-weight:600;font-size:16px}
 .sheet{margin:0 auto;box-shadow:0 24px 60px rgba(0,0,0,.35);max-width:760px;width:100%;flex:none;position:relative}
 .wrapn{max-width:760px;padding-left:0!important}
