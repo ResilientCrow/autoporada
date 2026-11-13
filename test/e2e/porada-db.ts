@@ -3,6 +3,7 @@
  * clean up after them. The issues table is shared by the whole run: each journey works on Mondays of
  * its own (far enough ahead for no seeded point to sit on them) and forgets them again.
  */
+import { snapshotFixture } from '../support/snapshots';
 import { withClient } from './db';
 
 const DAY_MS = 86_400_000;
@@ -68,10 +69,14 @@ export async function seedHandedIn(
 
 /**
  * A generated porada for `monday`, as the archive lists it: an issue with a document whose PDF is
- * pending (so only the DOCX link shows). Nothing reads its snapshot or bytes here. Undo it with
- * `forgetDocument`, which the archive and the download link then both miss.
+ * pending (so only the DOCX link shows). The snapshot is the template replica moved to this Monday,
+ * so the Arch archive can compose it and offers the link; the DOCX bytes are never read. Undo it
+ * with `forgetDocument`, which the archive and the download link then both miss.
  */
 export async function seedDocument(monday: string): Promise<void> {
+  const snapshot = snapshotFixture('template-replica', (raw) => {
+    raw['issue'] = { id: `issue-${monday}`, monday, meetingDate: monday, schoolYear: '2026/2027' };
+  });
   await withClient(async (client) => {
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO issues (monday, meeting_date, school_year, deadline_at, status)
@@ -82,8 +87,8 @@ export async function seedDocument(monday: string): Promise<void> {
     if (!issue) throw new Error('no issue was made');
     await client.query(
       `INSERT INTO generated_documents (issue_id, snapshot, docx, docx_sha256)
-       VALUES ($1, '{}'::jsonb, '\\x00', repeat('0', 64))`,
-      [issue.id],
+       VALUES ($1, $2::jsonb, '\\x00', repeat('0', 64))`,
+      [issue.id, JSON.stringify(snapshot)],
     );
   });
 }

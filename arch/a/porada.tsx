@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { isDownloadError } from '@/contracts';
+import { downloadFailed } from '@/ui/copy/download';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 import { moveBounds } from '@/domain/calendar';
 import { POINT_LIMITS } from '@/domain/report';
@@ -209,10 +211,22 @@ export function Hotovo({ m }: { m: string }) {
     <a className="q" href="#/archiv">Otevřít archiv</a><a className="q" href="#/porada">Na další poradu</a>
   </>} />;
 }
-export function Archiv() {
+/** A download that gave no file lands here with `?chyba=`: say why once, then take it off the address. */
+function DownloadNotice({ q }: { q: URLSearchParams }) {
+  const [text, setText] = useState(() => { const c = q.get('chyba'); return isDownloadError(c) ? downloadFailed[c] : null; });
+  useEffect(() => {
+    const [path = '', qs = ''] = location.hash.split('?'); const rest = new URLSearchParams(qs);
+    if (!rest.has('chyba')) return;
+    rest.delete('chyba');
+    const tail = rest.toString();
+    history.replaceState(history.state, '', `${location.pathname}${location.search}${path}${tail ? `?${tail}` : ''}`);
+  }, []);
+  return text ? <Toast onDone={() => setText(null)}>{text}</Toast> : null;
+}
+export function Archiv({ q }: { q: URLSearchParams }) {
   const { s } = useStore(); const u = Q.me(s)!; const iss = [...s.issues].sort((a, b) => b.monday.localeCompare(a.monday)).filter((i) => i.status !== 'open');
   if (!Q.atLeast(u.role, 'reviewer')) return <NotFound />;
-  return <div className="lay full"><div className="work arch-top"><header /></div><aside className="desk scroll shelfw"><div className="deskhd"><a className="back on-d" href="#/"><Ic n="back" />Zpět</a><h1 className="big m">Archiv porad</h1></div><div className="shelf">{iss.filter((i) => i.status === 'generated').map((i) => { const model = modelOf(s, i.monday); const titles = model ? model.sections.flatMap((x) => x.blocks).filter((b) => b.kind === 'point').slice(-3).map((b) => (b as { text: string }).text) : []; return <div className="bk" key={i.monday}><a className="pg" href={`#/archiv/${i.monday}`} aria-label={`Otevřít poradu ${Q.dm(i.meetingDate)}`}><span>Porada vedení školy</span><span className="ln">{titles.map((t) => <b key={t}>{t}</b>)}</span></a><span><b>{Q.dm(i.meetingDate)} {i.meetingDate.slice(0, 4)}</b><small>{i.doc ? counts(i.doc.points, 'bod', 'body', 'bodů') : ''}</small></span>{model ? <span className="lnks"><DocxBtn m={i.monday}>DOCX</DocxBtn>{i.doc?.pdf === 'ready' ? <a href={`#/archiv/${i.monday}`}>PDF</a> : i.doc?.pdf === 'rendering' ? <span>PDF se dělá</span> : <span>PDF chybí</span>}</span> : null}</div>; })}</div></aside></div>;
+  return <div className="lay full"><DownloadNotice q={q} /><div className="work arch-top"><header /></div><aside className="desk scroll shelfw"><div className="deskhd"><a className="back on-d" href="#/"><Ic n="back" />Zpět</a><h1 className="big m">Archiv porad</h1></div><div className="shelf">{iss.filter((i) => i.status === 'generated').map((i) => { const model = modelOf(s, i.monday); const titles = model ? model.sections.flatMap((x) => x.blocks).filter((b) => b.kind === 'point').slice(-3).map((b) => (b as { text: string }).text) : []; return <div className="bk" key={i.monday}><a className="pg" href={`#/archiv/${i.monday}`} aria-label={`Otevřít poradu ${Q.dm(i.meetingDate)}`}><span>Porada vedení školy</span><span className="ln">{titles.map((t) => <b key={t}>{t}</b>)}</span></a><span><b>{Q.dm(i.meetingDate)} {i.meetingDate.slice(0, 4)}</b><small>{i.doc ? counts(i.doc.points, 'bod', 'body', 'bodů') : ''}</small></span>{model ? <span className="lnks"><DocxBtn m={i.monday}>DOCX</DocxBtn>{i.doc?.pdf === 'ready' ? <a href={`#/archiv/${i.monday}`}>PDF</a> : i.doc?.pdf === 'rendering' ? <span>PDF se dělá</span> : <span>PDF chybí</span>}</span> : null}</div>; })}</div></aside></div>;
 }
 export function ArchivDoc({ m }: { m: string }) {
   const { s } = useStore(); const iss = Q.issueOf(s, m); const model = modelOf(s, m); if (!iss || !model) return <NotFound />;

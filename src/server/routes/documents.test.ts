@@ -47,9 +47,9 @@ function setup(principal: UserPrincipal | null, vary: Variation = {}) {
   return Object.assign(get, { lines });
 }
 
-/** The archive page the download answers send the reader to, with `chyba` naming why. */
-const ARCHIVE = '/porada/archiv';
-const archiveWith = (chyba: string) => `${ARCHIVE}?chyba=${chyba}`;
+/** The archive of the Arch client, where every answer without a file lands; `chyba` names why. */
+const ARCHIVE = '/#/archiv';
+const archiveWith = (chyba: string) => `/#/archiv?chyba=${chyba}`;
 
 async function generated() {
   const head = world.as(await world.seed.user({ role: 'headmaster' }));
@@ -117,12 +117,10 @@ describe('GET /porada/[datum]/dokument/[format]', () => {
       return documentRouteSpec.handle(request, ctx);
     };
 
-    it('sends an ended session to sign in, back to the archive', async () => {
+    it('sends an ended session to the archive, where Arch signs in and keeps the address', async () => {
       const response = await answered({ code: 'unauthenticated' });
       expect(response.status).toBe(303);
-      const location = new URL(response.headers.get('location') ?? '', ORIGIN);
-      expect(location.pathname).toBe('/prihlaseni');
-      expect(location.searchParams.get('returnTo')).toBe(ARCHIVE);
+      expect(response.headers.get('location')).toBe(ARCHIVE);
     });
 
     it.each<[ActionError, string]>([
@@ -190,7 +188,7 @@ describe('GET /porada/[datum]/dokument/[format]', () => {
     const get = setup(await generated());
     const crossSite = await get('docx', MONDAY, { site: 'cross-site' });
     expect(crossSite.status).toBe(303);
-    expect(crossSite.headers.get('location')).toBe('/porada/archiv');
+    expect(crossSite.headers.get('location')).toBe(ARCHIVE);
     const head = await get('docx', MONDAY, { method: 'HEAD' });
     expect(head.status).toBe(405);
     expect(head.headers.get('allow')).toBe('GET');

@@ -29,7 +29,7 @@ function Router() {
     case 'oprava': return b ? <Oprava id={b} /> : <NotFound />;
     case 'zprava': return b ? <Zprava key={b} id={b} fresh={r.q.has('fresh')} /> : <NotFound />;
     case 'kontrola': return staff ? <Kontrola {...(b ? { id: b } : {})} /> : <NotFound />;
-    case 'archiv': return staff ? (b ? <ArchivDoc m={b} /> : <Archiv />) : <NotFound />;
+    case 'archiv': return staff ? (b ? <ArchivDoc m={b} /> : <Archiv q={r.q} />) : <NotFound />;
     case 'hotovo': return head && b ? <Hotovo m={b} /> : <NotFound />;
     case 'pridat': return head ? <Pridat /> : <NotFound />;
     case 'porada':

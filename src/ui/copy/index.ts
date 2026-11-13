@@ -2,6 +2,7 @@ export { access } from './access';
 export { app, appError } from './app';
 export { autosave } from './autosave';
 export { cs, pageTitle } from './cs';
+export { downloadFailed } from './download';
 export { errors, fieldIssues, form, problemActions, rules, stepUpNotice } from './forms';
 export { failures } from './failures';
 export { future, type StripSlot } from './future';

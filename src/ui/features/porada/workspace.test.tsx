@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FAILURE_CAUSES, PDF_FAILURES, type DownloadError, type PdfFailure } from '@/contracts';
 import { DEFAULT_DEADLINE } from '@/domain/calendar';
 import type { DocumentModel } from '@/document';
-import { cs, porada } from '@/ui/copy';
+import { cs, downloadFailed, porada } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
 
@@ -236,11 +236,11 @@ describe('ArchivePage', () => {
     it.each(FAILURE_CAUSES)('names %s after the lead', (cause) => {
       const html = shown(cause);
       expect(html).toContain('role="alert"');
-      expect(html).toContain(`${porada.download.failed} ${cs.failures[cause]}`);
+      expect(html).toContain(downloadFailed[cause]);
     });
 
     it('says a document is not there, or not the reader’s', () => {
-      expect(shown('not-found')).toContain(porada.download['not-found']);
+      expect(shown('not-found')).toContain(downloadFailed['not-found']);
     });
 
     it('says there were too many tries', () => {
