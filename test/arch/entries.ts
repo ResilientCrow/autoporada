@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import { ACTION_MODULE, ROUTE_FILE, scanSource, type ScanResult } from './scan';
+import { ROUTE_FILE, scanSource, type ScanResult } from './scan';
 
 const ROOT = process.cwd();
 /** Every script, JavaScript too: the scanner reports anything that is not TypeScript. */
@@ -23,7 +23,6 @@ export const SCANNED: readonly ScanResult[] = SOURCE_FILES.map((file) =>
   scanSource(file, readFileSync(join(ROOT, file), 'utf8')),
 );
 
-export const ACTION_MODULES = SOURCE_FILES.filter((f) => ACTION_MODULE.test(f));
 export const ROUTE_FILES = SOURCE_FILES.filter((f) => ROUTE_FILE.test(f));
 
 /** Use-case modules: everything under use-cases/ except the registry and tests. */

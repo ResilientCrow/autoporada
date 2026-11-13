@@ -9,7 +9,6 @@ import {
   test as base,
   type BrowserContext,
   type BrowserContextOptions,
-  type Locator,
   type Page,
 } from '@playwright/test';
 
@@ -51,26 +50,14 @@ async function hidingInert<T>(page: Page, check: () => Promise<T>): Promise<T> {
 export interface Fixtures {
   /** The violations seen on the app's own origin; the test fails at teardown if any remain. */
   cspViolations: CspViolation[];
-  /** Waits until Next has hydrated the page: its inline bootstrap and its chunks both ran. */
-  hydrated: (other?: Page) => Promise<void>;
   /** Another context with this project's options and the same CSP guard; closed at teardown. */
   newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
-  /** Waits until no submit is in flight: React Aria marks the pending button with data-pending (in a form; the kit demos show a static one). */
-  settled: () => Promise<void>;
   /** Axe over the page as it is: this test's page, or another one (a second context). */
   expectAccessible: (other?: Page) => Promise<void>;
-  /** Attaches a full-page PNG to the report: the pack for the headmaster's sign-off on the look. */
-  attachScreenshot: (name: string) => Promise<void>;
   /** Tab through the page: every stop shows an outline of 2 px or more. */
   expectFocusRings: () => Promise<void>;
-  /** The first Tab lands on the skip link, and Enter moves focus to the content. */
-  expectSkipLink: () => Promise<void>;
   /** Signs in through the mock IdP as the persona whose button name matches. */
   signInAs: (persona: RegExp) => Promise<void>;
-  /** At 320 px wide nothing scrolls sideways (desktop project only). */
-  expectNoReflow: () => Promise<void>;
-  /** Everything a loaded screen must pass, in order: axe, screenshot, reflow, no style=, skip link, focus rings. */
-  checkScreen: (name: string) => Promise<void>;
 }
 
 /** Reports the violations of every page of the context, popups and new tabs included, into `violations`. */
@@ -163,26 +150,10 @@ export const test = base.extend<Fixtures>({
     }
   },
 
-  hydrated: async ({ page }, provide) => {
-    await provide(async (other = page) => {
-      await expect.poll(() => other.evaluate(() => 'next' in window)).toBe(true);
-    });
-  },
-
-  settled: async ({ page }, provide) => {
-    await provide(async () => {
-      await expect(page.locator('form [data-pending]')).toHaveCount(0);
-    });
-  },
-
   expectAccessible: async ({ page }, provide, testInfo) => {
     await provide(async (other = page) => {
       const result = await hidingInert(other, () =>
-        new AxeBuilder({ page: other })
-          .withTags(AXE_TAGS)
-          // React Aria's live announcer keeps a hidden copy of a pressed button for 7 s, as an image without a text.
-          .exclude('[data-live-announcer] [role="log"]')
-          .analyze(),
+        new AxeBuilder({ page: other }).withTags(AXE_TAGS).analyze(),
       );
       await testInfo.attach('axe', {
         body: JSON.stringify(result, null, 2),
@@ -192,15 +163,6 @@ export const test = base.extend<Fixtures>({
         entries.map((r) => `${r.id}: ${r.nodes.map((n) => n.target.join(' ')).join(', ')}`);
       expect(describe(result.violations)).toEqual([]);
       expect(describe(result.incomplete.filter((r) => MUST_COMPLETE.has(r.id)))).toEqual([]);
-    });
-  },
-
-  attachScreenshot: async ({ page }, provide, testInfo) => {
-    await provide(async (name) => {
-      await testInfo.attach(`${name} (${testInfo.project.name})`, {
-        body: await page.screenshot({ fullPage: true }),
-        contentType: 'image/png',
-      });
     });
   },
 
@@ -253,42 +215,6 @@ export const test = base.extend<Fixtures>({
     });
   },
 
-  expectSkipLink: async ({ page }, provide) => {
-    await provide(async () => {
-      await page.keyboard.press('Tab');
-      await expect(page.getByRole('link', { name: cs.shell.skipLink })).toBeFocused();
-      await page.keyboard.press('Enter');
-      await expect(page.locator('#obsah')).toBeFocused();
-    });
-  },
-
-  expectNoReflow: async ({ page }, provide, testInfo) => {
-    await provide(async () => {
-      if (testInfo.project.name !== 'desktop') return;
-      const original = page.viewportSize();
-      await page.setViewportSize({ width: 320, height: 640 });
-      const width = await page.evaluate(() => document.documentElement.scrollWidth);
-      if (original) await page.setViewportSize(original);
-      expect(width).toBeLessThanOrEqual(320);
-    });
-  },
-
-  checkScreen: async (
-    { page, expectAccessible, attachScreenshot, expectNoReflow, expectSkipLink, expectFocusRings },
-    provide,
-  ) => {
-    await provide(async (name) => {
-      await expectAccessible();
-      await attachScreenshot(name);
-      await expectNoReflow();
-      // The live DOM may carry style attributes (Next's route announcer gets one through the CSSOM).
-      const { pathname, search } = new URL(page.url());
-      expect(await (await page.request.get(pathname + search)).text()).not.toContain('style="');
-      await expectSkipLink();
-      await expectFocusRings();
-    });
-  },
-
   signInAs: async ({ page }, provide) => {
     await provide(async (persona) => {
       // Branch arch-ui: signed out, `/` is the Arch UI's own sign-in, with the same button.
@@ -301,73 +227,11 @@ export const test = base.extend<Fixtures>({
   },
 });
 
-/** Copy as pattern source: its characters taken literally, a no-break space matching any space. */
-const literal = (text: string) =>
-  text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\u00A0/g, '\\s');
-
-/** A copy template with `@1@` and `@2@` where its dates go, as a pattern. */
-export const withDates = (text: (a: string, b: string) => string) =>
-  new RegExp(literal(text('@1@', '@2@')).replace(/@\d@/g, '.+'));
-
-/** A labelled control by its copy; an optional one has „ (nepovinné)“ after its label. */
-export const field = (within: Page | Locator, label: string) =>
-  within.getByLabel(new RegExp(`^${literal(label)}(\\s\\(nepovinné\\))?$`));
-
-/**
- * The autosave's numbers. They are the machine's (`DEBOUNCE_MS` and `RETRY_STEPS`, in seconds, in
- * src/ui/form/autosave/machine.ts, which no index exports): a test that moves Playwright's clock
- * needs them, and a change there must change them here.
- */
-export const DEBOUNCE_MS = 1_500;
-export const LADDER_MS = [5_000, 15_000, 60_000] as const;
-
-/**
- * Stops the page's clock where it is (`page.clock.install()` came before the load), so no
- * debounce and no retry fires until a test moves it: only a flush can save what is typed.
- */
-export const freezeClock = (page: Page) => page.clock.pauseAt(new Date(Date.now() + 1_000));
-
-/** The status line after a save: „Uloženo v 14:05“. */
-export const SAVED = /^Uloženo v/;
-
-/** The banners (`role="alert"`) of a page, not Next's empty route announcer, which has the same role. */
-export const banners = (page: Page) =>
-  page.locator('[role="alert"]:not(#__next-route-announcer__)');
-
-/** Counts the server actions (autosaves and other calls) a page sends from now on, by the header that marks one. */
-export function countActions(page: Page): { readonly count: () => number } {
-  let n = 0;
-  page.on('request', (request) => {
-    if (request.method() === 'POST' && request.headers()['next-action'] !== undefined) n += 1;
-  });
-  return { count: () => n };
-}
-
-/**
- * Opens the header menu when the layout hides the navigation in it (below `lg`, where the
- * „Menu“ summary shows); on a wide screen the navigation is on the page already. It never closes it.
- */
-export async function openNav(page: Page): Promise<void> {
-  const menu = page.locator('summary', { hasText: cs.shell.menu });
-  if (!(await menu.isVisible())) return;
-  const opened = await menu.evaluate(
-    (summary) => (summary.parentElement as HTMLDetailsElement).open,
-  );
-  if (!opened) await menu.click();
-}
-
 /** The value of this context's session cookie: what the sessions table stores a digest of. */
 export async function sessionToken(context: BrowserContext): Promise<string> {
   const cookie = (await context.cookies()).find((c) => c.name === '__Host-ap_session');
   if (!cookie) throw new Error('no session cookie: sign in first');
   return cookie.value;
-}
-
-/** Opens one person's page from the list, found by name as a headmaster would. */
-export async function openUserDetail(page: Page, name: string): Promise<void> {
-  await page.goto(`/uzivatele?hledat=${encodeURIComponent(name)}`);
-  await page.getByRole('main').getByRole('link', { name, exact: true }).click();
-  await expect(page).toHaveURL(/\/uzivatele\/[0-9a-f-]{36}$/);
 }
 
 /** Opens the mock IdP's „Další testovací osoby“: every persona but the two dev accounts is folded there. */

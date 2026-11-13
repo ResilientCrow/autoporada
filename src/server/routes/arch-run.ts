@@ -22,8 +22,8 @@ const json = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
 
-const AUTOSAVE = new Set(['points.save', 'points.status', 'future.save', 'future.get']);
-const SUBMISSION = new Set([
+export const AUTOSAVE = new Set(['points.save', 'points.status', 'future.save', 'future.get']);
+export const SUBMISSION = new Set([
   'points.create',
   'points.submit',
   'points.retract',
@@ -38,7 +38,7 @@ const SUBMISSION = new Set([
   'access.request',
   'access.cancel',
 ]);
-const limitOf = (name: string): UserLimitName =>
+export const limitOf = (name: string): UserLimitName =>
   AUTOSAVE.has(name) ? 'autosave' : SUBMISSION.has(name) ? 'submission' : 'admin';
 
 const MAX_BODY_BYTES = 6_000_000; // annexes with pictures, base64 inflated

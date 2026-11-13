@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { QUEUE_LIMIT, RULE_CODES } from '@/contracts';
+import { RULE_CODES } from '@/contracts';
 import { typographizeText } from '@/domain/cs';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 import { DRAFT_CAP } from '@/domain/report';
@@ -115,15 +115,6 @@ describe('typography', () => {
     expect(all.filter(([, text]) => extraProblems(text).length > 0).map(([path]) => path)).toEqual(
       [],
     );
-  });
-});
-
-describe('review copy', () => {
-  it('names the queue limit, the number held to its word', () => {
-    const capped = cs.review.capped(QUEUE_LIMIT);
-    expect(capped).toBe(`Zobrazeno je jen ${QUEUE_LIMIT}${NBSP}nejstarších bodů.`);
-    expect(typographizeText(capped)).toBe(capped);
-    expect(extraProblems(capped)).toEqual([]);
   });
 });
 

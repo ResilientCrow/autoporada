@@ -20,7 +20,7 @@ describe('GlobalError', () => {
   it('uses no inline style, which the CSP would refuse', () => {
     const html = renderToStaticMarkup(<GlobalError error={undefined} retry={() => {}} />);
     expect(html).toContain(cs.appError.title);
-    expect(html).not.toMatch(/style/i);
+    expect(html).not.toMatch(/\sstyle=/i);
   });
 
   it('names the cause from the digest of the error, and a bug for any other', () => {
@@ -40,10 +40,10 @@ describe('GlobalError', () => {
     expect(html).not.toContain('boom');
   });
 
-  it('uses no React Aria, whose runtime style would find no nonce here', () => {
+  it('uses the classes of Arch’s error screen', () => {
     const html = renderToStaticMarkup(<GlobalError error={undefined} retry={() => {}} />);
-    expect(html).not.toContain('data-rac');
-    expect(html).toMatch(/<button type="button" class="[^"]+">/);
+    expect(html).toContain('class="arch err"');
+    expect(html).toMatch(/<button type="button" class="btn dk lg">/);
   });
 
   it('asks the server again when the user retries', () => {

@@ -2,27 +2,27 @@ import { cs } from '@/ui/copy';
 
 import { expect, test } from './fixtures';
 
-// Branch arch-ui: `/` is the Arch UI, which signs in on its own page; the classic home is `/klasicke`.
+// `/` is the Arch UI, which signs in on its own page.
 test('the Arch home shows an anonymous visitor its sign-in, in Czech', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
   await expect(page.getByRole('link', { name: cs.signIn.button })).toBeVisible();
 });
 
-test('the classic home sends an anonymous visitor to the sign-in page, in Czech', async ({
-  page,
-  expectAccessible,
-}) => {
-  await page.goto('/klasicke');
-  await expect(page).toHaveURL(/\/prihlaseni\?returnTo=%2Fklasicke$/);
-  await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.signIn.title);
-  await expect(page.getByRole('link', { name: cs.signIn.button })).toHaveAttribute(
-    'href',
-    '/auth/login?returnTo=%2Fklasicke',
-  );
-  await expectAccessible();
-});
+// The classic UI is gone (ADR 0053 kept it at `/klasicke` for a while): its addresses are unknown pages.
+for (const path of ['/klasicke', '/body', '/prihlaseni', '/porada/archiv']) {
+  test(`the classic address ${path} answers 404 with the not-found page`, async ({
+    page,
+    expectAccessible,
+  }) => {
+    const response = await page.goto(path);
+    expect(response?.status()).toBe(404);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'cs');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.notFound.title);
+    await expect(page.getByRole('link', { name: cs.notFound.home })).toHaveAttribute('href', '/');
+    await expectAccessible();
+  });
+}
 
 test('the sign-in screen names only known errors, never a code beyond an AADSTS number', async ({
   page,

@@ -33,7 +33,7 @@ import {
 import { refineDecision, returnPartsSchema } from './decision';
 
 /** A bullet's key: a stable slug that a draft's bullet copies from its type. */
-export const bulletKeySchema = z
+const bulletKeySchema = z
   .string()
   .regex(/^[a-z][a-z0-9-]*$/)
   .max(POINT_LIMITS.bulletKey);

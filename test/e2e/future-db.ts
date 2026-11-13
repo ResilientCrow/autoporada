@@ -5,53 +5,6 @@
  */
 import { withClient } from './db';
 
-/** The states a test starts an akce in. */
-export type SeedFutureState = 'draft' | 'submitted' | 'approved';
-
-interface SeedFutureOptions {
-  readonly kind?: 'akce' | 'jednani';
-  /** Days from today to the first day; negative is the past. */
-  readonly startInDays?: number;
-}
-
-/** A complete akce of `email` in `state`, with an organizer. Returns its id. */
-export async function seedFuture(
-  email: string,
-  title: string,
-  state: SeedFutureState,
-  { kind = 'akce', startInDays = 30 }: SeedFutureOptions = {},
-): Promise<string> {
-  return withClient(async (client) => {
-    const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO future_items (kind, author_id, client_ref, state, title, start_date, end_date, organizer, organizer_role,
-                                submitted_at)
-       SELECT $2::future_kind, u.id, gen_random_uuid(), $3::future_state, $4, current_date + $5::int,
-              current_date + $5::int, $6, 'organizes',
-              CASE WHEN $3 = 'draft' THEN NULL ELSE now() END
-         FROM users u WHERE u.email = $1
-       RETURNING id`,
-      [email, kind, state, title, startInDays, 'paní Jana Nováková (8. A)'],
-    );
-    const made = rows[0];
-    if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);
-    return made.id;
-  });
-}
-
-/** Moves the akce `days` days into the past, as time passing would (the version rises with it, as the guard demands). Returns its new day as ISO. */
-export async function moveFutureToPast(id: string, days: number): Promise<string> {
-  return withClient(async (client) => {
-    const { rows } = await client.query<{ day: string }>(
-      `UPDATE future_items SET start_date = current_date - $2::int, end_date = current_date - $2::int,
-                               version = version + 1
-        WHERE id = $1 RETURNING to_char(start_date, 'YYYY-MM-DD') AS day`,
-      [id, days],
-    );
-    if (!rows[0]) throw new Error(`no akce ${id}`);
-    return rows[0].day;
-  });
-}
-
 /** What the table holds of one akce, for a test that checks what was stored. */
 export async function readFuture(id: string): Promise<{
   state: string;

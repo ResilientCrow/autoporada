@@ -4,7 +4,7 @@ import { getContainer } from '../container';
 import { defineRoute } from '../bind';
 import { directoryRouteSpec } from './directory';
 import { documentRouteSpec } from './documents';
-import { archPageSpec } from './arch-page';
+import { ARCH_STYLESHEET, archPageSpec } from './arch-page';
 import { archRunSpec, archStateSpec } from './arch-run';
 
 const auth = authRouteSpecs(() => getContainer().auth);
@@ -22,3 +22,4 @@ export const documentDownload = defineRoute(documentRouteSpec);
 export const archPage = defineRoute(archPageSpec);
 export const archState = defineRoute(archStateSpec);
 export const archRun = defineRoute(archRunSpec);
+export { ARCH_STYLESHEET };

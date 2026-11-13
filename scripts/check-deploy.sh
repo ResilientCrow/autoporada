@@ -68,28 +68,29 @@ hint_file=$(printf '%s\n' "$installed" | sed -n 's/.* -f - <//p')
 compose up -d --no-build >/dev/null 2>&1 || fail 'compose up failed'
 
 i=0
-until curl -fsk -o /dev/null https://localhost/prihlaseni 2>/dev/null; do
+until curl -fsk -o /dev/null https://localhost/ 2>/dev/null; do
   i=$((i + 1))
-  [ "$i" -lt 90 ] || fail 'https://localhost/prihlaseni never answered'
+  [ "$i" -lt 90 ] || fail 'https://localhost/ never answered'
   sleep 2
 done
 
-headers=$(curl -sk -D - -o /dev/null https://localhost/prihlaseni | tr -d '\r' | tr '[:upper:]' '[:lower:]')
-expect() { printf '%s\n' "$headers" | grep -q "$1" || fail "https://localhost/prihlaseni: missing $1"; }
+headers=$(curl -sk -D - -o /dev/null https://localhost/ | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+expect() { printf '%s\n' "$headers" | grep -q "$1" || fail "https://localhost/: missing $1"; }
 expect '^http/2 200'
 expect '^strict-transport-security: max-age=86400$'
 expect "^content-security-policy: default-src 'self'; script-src 'self' 'nonce-"
 expect '^x-content-type-options: nosniff$'
 if printf '%s\n' "$headers" | grep -Eq '^(server|x-powered-by):'; then fail 'server or x-powered-by is sent'; fi
-plain=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost/prihlaseni)
-[ "$plain" = '308 https://localhost/prihlaseni' ] || fail "http is not redirected to https: $plain"
+plain=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost/)
+[ "$plain" = '308 https://localhost/' ] || fail "http is not redirected to https: $plain"
 
 # A well-formed unknown session: web looks it up as autoporada_web and
-# sends the browser to sign in. A missing privilege would be a 500.
+# sends the browser to sign in at /. A missing privilege would be a 500.
+# The Arch state, not /: the page at / is public and reads no session.
 token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-home=$(curl -sk -o /dev/null -w '%{http_code} %{redirect_url}' -H "Cookie: __Host-ap_session=$token" https://localhost/)
+home=$(curl -sk -o /dev/null -w '%{http_code} %{redirect_url}' -H "Cookie: __Host-ap_session=$token" https://localhost/api/arch/state)
 case "$home" in
-  30[37]' https://localhost/prihlaseni?returnTo=%2F') ;;
+  30[37]' https://localhost/') ;;
   *) fail "an unknown session got: $home" ;;
 esac
 

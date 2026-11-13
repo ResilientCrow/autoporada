@@ -2,8 +2,9 @@
 
 import { causeOfError } from '@/contracts';
 import { appError, failures, pageTitle } from '@/ui/copy';
-import { buttonStyles, SlantLabel } from '@/ui/kit';
-import '@/ui/theme';
+
+/** A client file cannot import the server's versioned address; the unversioned one serves the same file. */
+const ARCH_STYLESHEET = '/arch/app.css';
 
 /**
  * The last resort when rendering fails, in place of Next's built-in page,
@@ -12,12 +13,11 @@ import '@/ui/theme';
  * Next's static 500 page, used only when a page module itself fails to
  * load, is still its own and renders unstyled under the CSP.
  *
- * No shell (if it threw, it would throw again) and no React Aria: this page
- * has no csp-nonce meta for React Aria's runtime <style> (ADR 0012).
+ * It takes Arch's stylesheet and the classes of Arch's own error screen, and nothing else
+ * (if it threw, it would throw again).
  *
- * It names the cause the same way `error.tsx` does (ADR 0044), from the digest of
- * the error. A failure of the root layout carries Next's own digest, so it is
- * mostly a bug; one of ours says what broke.
+ * It names the cause from the digest of the error (ADR 0044). A failure of the root layout
+ * carries Next's own digest, so it is mostly a bug; one of ours says what broke.
  */
 export default function GlobalError({
   error,
@@ -32,13 +32,20 @@ export default function GlobalError({
     <html lang="cs" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <title>{pageTitle(appError.title)}</title>
-        <main id="obsah" className="frame flex flex-col items-start gap-8 py-8">
-          <SlantLabel level={1}>{appError.title}</SlantLabel>
-          <p>{failures[cause]}</p>
-          <button type="button" className={buttonStyles('primary')} onClick={() => retry()}>
-            {appError.retry}
-          </button>
-        </main>
+        <link rel="stylesheet" href={ARCH_STYLESHEET} precedence="default" />
+        <div className="lay full">
+          <div className="desk scroll err-w">
+            <main id="obsah" className="arch err">
+              <h1 className="big m">{appError.title}</h1>
+              <p className="lead">{failures[cause]}</p>
+              <div>
+                <button type="button" className="btn dk lg" onClick={() => retry()}>
+                  {appError.retry}
+                </button>
+              </div>
+            </main>
+          </div>
+        </div>
       </body>
     </html>
   );

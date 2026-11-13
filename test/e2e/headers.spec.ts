@@ -14,20 +14,14 @@ const SECURITY_HEADERS = {
 };
 
 /** The Arch client at `/`: one nonced script, which draws the sign-in or the home screen. */
-const ARCH = true;
-
 const NONCED_PAGES = [
-  ['the Arch sign-in screen', '/?chyba=idp-refused&aadsts=AADSTS50011', null, ARCH],
-  ['the privacy notice', '/ochrana-osobnich-udaju', null, !ARCH],
-  ['the gallery', '/vzornik', null, !ARCH],
-  ['the 404 page', '/tato-stranka-neexistuje', null, !ARCH],
-  ['the signed-in Arch home', '/', 'archa', ARCH],
+  ['the Arch sign-in screen', '/?chyba=idp-refused&aadsts=AADSTS50011', null],
+  ['the signed-in Arch home', '/', 'archa'],
 ] as const;
 
-for (const [name, url, persona, arch] of NONCED_PAGES) {
+for (const [name, url, persona] of NONCED_PAGES) {
   test(`${name} runs only its own nonced scripts`, async ({
     page,
-    hydrated,
     expectAccessible,
     signInAs,
   }, testInfo) => {
@@ -35,16 +29,12 @@ for (const [name, url, persona, arch] of NONCED_PAGES) {
     const response = await page.goto(url);
     const nonce = nonceOf(response?.headers()['content-security-policy']);
     expect(nonce).toBeTruthy();
-    if (arch) {
-      // Drawn by its own script: the sign-in button or the greeting is there once it ran.
-      await expect(
-        persona
-          ? page.getByRole('heading', { level: 1, name: 'Dobrý den.' })
-          : page.getByRole('link', { name: cs.signIn.button }),
-      ).toBeVisible();
-    } else {
-      await hydrated();
-    }
+    // Drawn by its own script: the sign-in button or the greeting is there once it ran.
+    await expect(
+      persona
+        ? page.getByRole('heading', { level: 1, name: 'Dobrý den.' })
+        : page.getByRole('link', { name: cs.signIn.button }),
+    ).toBeVisible();
     const all = await page.locator('script').evaluateAll((list) =>
       list.map((s) => ({
         nonce: (s as HTMLScriptElement).nonce,
@@ -52,12 +42,7 @@ for (const [name, url, persona, arch] of NONCED_PAGES) {
       })),
     );
     expect(all.length).toBeGreaterThan(0);
-    // A chunk the page loads later (the rich-text editor's) is added by a nonced script, which
-    // `strict-dynamic` trusts, and carries no nonce itself; it must still be one of the app's own.
-    const own = `${new URL(page.url()).origin}/_next/static/`;
-    const bare = all.filter((s) => s.nonce === '');
-    expect(bare.filter((s) => !s.src.startsWith(own))).toEqual([]);
-    if (arch) expect(all.map((s) => new URL(s.src).pathname)).toEqual(['/arch/app.js']);
+    expect(all.map((s) => new URL(s.src).pathname)).toEqual(['/arch/app.js']);
     expect(new Set(all.filter((s) => s.nonce !== '').map((s) => s.nonce))).toEqual(
       new Set([nonce]),
     );
@@ -65,23 +50,11 @@ for (const [name, url, persona, arch] of NONCED_PAGES) {
   });
 }
 
-test('the nonce is also in a csp-nonce meta in the head, hidden from the DOM attribute', async ({
-  page,
-}) => {
-  const response = await page.goto('/prihlaseni');
-  const nonce = nonceOf(response?.headers()['content-security-policy']);
-  const metas = page.locator('meta[name="csp-nonce"]');
-  await expect(metas).toHaveCount(1);
-  await expect(page.locator('head > meta[name="csp-nonce"]')).toHaveCount(1);
-  expect(await metas.evaluate((m) => (m as HTMLMetaElement).nonce)).toBe(nonce);
-  expect(await metas.getAttribute('nonce')).toBe('');
-});
-
-test('an unknown page answers 404', async ({ page, hydrated, expectAccessible }) => {
+test('an unknown page answers 404, in the look of Arch', async ({ page, expectAccessible }) => {
   const response = await page.goto('/tato-stranka-neexistuje');
   expect(response?.status()).toBe(404);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(cs.notFound.title);
-  await hydrated();
+  await expect(page.getByRole('link', { name: cs.notFound.home })).toHaveAttribute('href', '/');
   await expectAccessible();
 });
 

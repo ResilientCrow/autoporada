@@ -24,7 +24,7 @@ export interface UseCase<In, Out> {
   readonly output: z.ZodType;
   /** Pipeline steps 2–8 with this use case's own types (runUseCase). */
   readonly run: (call: Call, deps: AppDeps) => Promise<Result<Out, PipelineFailure>>;
-  /** Carries the input type to ServerAction<In, Out>; never set. */
+  /** Carries the input type to a caller's `(input: In) => Out`; never set. */
   readonly [types]?: (input: In) => Out;
 }
 

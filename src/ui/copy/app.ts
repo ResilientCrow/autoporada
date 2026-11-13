@@ -5,23 +5,14 @@ export const app = {
   technical: 'Technicky:',
 } as const;
 
+/** The page for an address that does not exist; the wording is the Arch UI's own `NotFound`. */
 export const notFound = {
-  title: 'Stránka nenalezena',
-  text: 'Tato stránka neexistuje, nebo k\u00A0ní nemáte přístup.',
-  home: 'Přejít na úvodní stránku',
+  title: 'Tenhle list tu není',
+  text: 'Odkaz je starý, nebo k\u00a0němu nemáte přístup. Váš přehled je na stejném místě jako vždy.',
+  home: 'Domů',
 } as const;
 
 export const appError = {
   title: 'Něco se nepovedlo',
   retry: 'Zkusit znovu',
-} as const;
-
-export const home = {
-  title: 'Dobrý den.',
-  pending: 'Zatím nemáte přístup k\u00A0podkladům porady.',
-  access: 'Přístup',
-  request: 'Požádat o\u00A0přístup',
-  showRequest: 'Zobrazit žádost',
-  account: 'Váš účet',
-  signOutEverywhere: 'Odhlásit všude',
 } as const;

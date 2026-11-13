@@ -47,7 +47,7 @@ export interface RouteSpec {
 }
 
 /** What a route's `failure` hears of an exception (ADR 0044). */
-export interface RouteFailure {
+interface RouteFailure {
   readonly cause: FailureCause;
   /** Development's technical line; never set in production. */
   readonly detail?: string;

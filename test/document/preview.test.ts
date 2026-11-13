@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { composeDocument } from '@/document';
-import { PaperBlocks, PaperPreview } from '@/document/render-html';
+import { PaperBlocks, PaperPreview } from '@/document/render-html/PaperPreview';
 
 import { VARIANTS } from '../support/variants';
 import { prettyXml } from '../support/xml';

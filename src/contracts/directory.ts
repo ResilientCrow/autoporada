@@ -59,5 +59,4 @@ export const directorySearchResponse = z
     message: 'a detail belongs to a failure',
   });
 
-export type DirectoryHit = z.infer<typeof directoryHit>;
 export type DirectoryNotice = z.infer<typeof directoryNotice>;

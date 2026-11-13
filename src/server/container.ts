@@ -23,12 +23,7 @@ import {
 } from '@/infra/oidc';
 import { systemClock } from '@/infra/system';
 
-import {
-  databaseAddress,
-  technicalDetail,
-  type DescribeFailure,
-  type DevServices,
-} from './pipeline';
+import { databaseAddress, technicalDetail, type DescribeFailure } from './pipeline';
 import { createRateLimiter, LIMITS, type RateLimiter } from './rate-limit';
 import { principalResolver, type AuthDeps } from './auth';
 
@@ -50,7 +45,6 @@ export interface WebContainer {
   /** Development's technical line for a failure; absent in production (ADR 0044). */
   readonly describe?: DescribeFailure;
   /** Where development's services are, for the sign-in page's technical line; absent in production. */
-  readonly devServices?: DevServices;
   readonly appOrigin: string;
   /** Where this process runs; the pattern gallery is closed in production. */
   readonly environment: Config['environment'];
@@ -158,8 +152,6 @@ function buildWeb(config: Config): WebContainer {
   };
   const database = databaseAddress(config.databaseUrl);
   const describe = technicalDetail(config.environment, database);
-  const devServices: DevServices | undefined =
-    config.environment === 'production' ? undefined : { issuer: oidc.issuer, database };
   return {
     app,
     arch: createArchStore(handle.db),
@@ -168,7 +160,6 @@ function buildWeb(config: Config): WebContainer {
     limiter,
     log,
     ...(describe && { describe }),
-    ...(devServices && { devServices }),
     appOrigin: config.appOrigin,
     environment: config.environment,
     requestIdFrom,

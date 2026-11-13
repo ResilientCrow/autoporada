@@ -43,6 +43,3 @@ export const ERROR_CODES = Object.keys(CODE_SET) as readonly ErrorCode[];
 
 export type ActionResult<T> =
   { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: ActionError };
-
-/** A server action as client components call it: one plain object in, a result out. */
-export type ServerAction<In, Out> = (input: In) => Promise<ActionResult<Out>>;

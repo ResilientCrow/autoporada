@@ -1,27 +1,14 @@
-import type { AnyUseCase } from '@/application/core';
-
 import type { LimitName } from '../rate-limit';
 
-/** What defineAction or defineRoute recorded about an entry point (inventory test). */
-export type WrappedInfo =
-  | {
-      readonly kind: 'action';
-      readonly useCase: AnyUseCase;
-      readonly rateLimit: LimitName | 'none';
-      /** Always set: the default is written out (ADR 0017). */
-      readonly refresh: 'page' | 'none';
-    }
-  | {
-      readonly kind: 'route';
-      readonly name: string;
-      readonly access: 'public' | 'session';
-      readonly rateLimit: LimitName | 'none';
-    };
+/** What defineRoute recorded about an entry point (inventory test). */
+export interface WrappedInfo {
+  readonly kind: 'route';
+  readonly name: string;
+  readonly access: 'public' | 'session';
+  readonly rateLimit: LimitName | 'none';
+}
 
-/**
- * A WeakMap, not a property: React defines its own non-configurable
- * properties on server actions, and the functions must stay unfrozen.
- */
+/** A WeakMap, not a property, so the wrapped functions stay unfrozen. */
 const WRAPPED = new WeakMap<object, WrappedInfo>();
 
 export function markWrapped(entry: object, info: WrappedInfo): void {

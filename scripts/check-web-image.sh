@@ -50,7 +50,7 @@ docker run -d --name "$name" \
   "$image" >/dev/null
 
 port=$(docker port "$name" 3000/tcp | head -n 1 | sed 's/.*://')
-url="http://127.0.0.1:$port/prihlaseni"
+url="http://127.0.0.1:$port/"
 i=0
 until curl -fsS -o /dev/null "$url" 2>/dev/null; do
   i=$((i + 1))
@@ -69,5 +69,11 @@ expect '^x-content-type-options: nosniff$'
 expect '^x-frame-options: deny$'
 expect '^cache-control: .*no-store'
 if printf '%s\n' "$headers" | grep -q '^x-powered-by'; then fail 'x-powered-by is sent'; fi
+
+# `/` is a page built by hand: check the client bundle, and Next's own rendering through the 404.
+curl -fsS -o /dev/null "${url}arch/app.js" || fail 'no client bundle at /arch/app.js'
+missing=$(curl -sS -w '\n%{http_code}' "${url}klasicke")
+[ "$(printf '%s\n' "$missing" | tail -n 1)" = 404 ] || fail '/klasicke does not answer 404'
+printf '%s\n' "$missing" | grep -q 'id="obsah"' || fail 'the 404 page did not render'
 if docker logs "$name" 2>&1 | grep -q '"level":"\(error\|fatal\)"'; then fail 'the server logged an error'; fi
 echo "check-web-image: $image answers $url as production would"

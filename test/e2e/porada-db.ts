@@ -60,45 +60,6 @@ export function addDaysIso(iso: string, days: number): string {
     .slice(0, 10);
 }
 
-/** Deletes the issue rows of these Mondays with their outlines, as if nobody had touched them. */
-export async function forgetIssues(mondays: readonly string[]): Promise<void> {
-  await withClient(async (client) => {
-    await client.query(
-      'DELETE FROM issue_items WHERE issue_id IN (SELECT id FROM issues WHERE monday = ANY($1::date[]))',
-      [mondays],
-    );
-    await client.query('DELETE FROM issues WHERE monday = ANY($1::date[])', [mondays]);
-  });
-}
-
-/**
- * A complete „Seminář“ report of `email`, handed in for the porada of `monday` (as `submit` would have
- * stored it) at `submittedAt`, about an event on `eventDate`. The server's clock is the real one, so a
- * hand-in at a given hour is stored here, not made through the form. Returns its id.
- */
-export async function seedHandedIn(
-  email: string,
-  title: string,
-  state: 'submitted' | 'approved',
-  { monday, eventDate, submittedAt }: { monday: string; eventDate: string; submittedAt: string },
-): Promise<string> {
-  return withClient(async (client) => {
-    const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
-                           bullets, statements, earliest_monday, submitted_at, hand_in_monday)
-       SELECT 'report', u.id, gen_random_uuid(), 'seminar',
-              $3::point_state, $2, $5::date, 'Proběhl seminář.', '{"type":"doc","content":[]}'::jsonb,
-              '[]'::jsonb, '[]'::jsonb, $4::date, $6::timestamptz, $4::date
-         FROM users u WHERE u.email = $1
-       RETURNING id`,
-      [email, title, state, monday, eventDate, submittedAt],
-    );
-    const made = rows[0];
-    if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);
-    return made.id;
-  });
-}
-
 /**
  * A generated porada for `monday`, as the archive lists it: an issue with a document whose PDF is
  * pending (so only the DOCX link shows). The snapshot is the template replica moved to this Monday,
@@ -125,6 +86,17 @@ export async function seedDocument(monday: string): Promise<void> {
   });
 }
 
+/** Deletes the issue rows of these Mondays with their outlines, as if nobody had touched them. */
+async function forgetIssues(mondays: readonly string[]): Promise<void> {
+  await withClient(async (client) => {
+    await client.query(
+      'DELETE FROM issue_items WHERE issue_id IN (SELECT id FROM issues WHERE monday = ANY($1::date[]))',
+      [mondays],
+    );
+    await client.query('DELETE FROM issues WHERE monday = ANY($1::date[])', [mondays]);
+  });
+}
+
 /** Deletes the generated document of this Monday and its issue. */
 export async function forgetDocument(monday: string): Promise<void> {
   await withClient(async (client) => {
@@ -134,26 +106,4 @@ export async function forgetDocument(monday: string): Promise<void> {
     );
   });
   await forgetIssues([monday]);
-}
-
-/** The stored `calendar` setting (`plannedThrough`, ADR 0054), or null when there is none. */
-export async function readCalendarSetting(): Promise<unknown> {
-  return withClient(async (client) => {
-    const { rows } = await client.query<{ value: unknown }>(
-      "SELECT value FROM settings WHERE key = 'calendar'",
-    );
-    return rows[0]?.value ?? null;
-  });
-}
-
-/** Puts the `calendar` setting back as `readCalendarSetting` found it; null removes it. */
-export async function restoreCalendarSetting(value: unknown): Promise<void> {
-  await withClient(async (client) => {
-    if (value === null) await client.query("DELETE FROM settings WHERE key = 'calendar'");
-    else {
-      await client.query("UPDATE settings SET value = $1::jsonb WHERE key = 'calendar'", [
-        JSON.stringify(value),
-      ]);
-    }
-  });
 }

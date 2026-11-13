@@ -1,5 +1,5 @@
 // Enforces the colour manual and the Tailwind rules in source code (rules: palette-rules.ts).
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,7 +16,9 @@ function* files(dir: string): Generator<string> {
   }
 }
 
-const manual = manualColours(readFileSync(join(ROOT, 'src/ui/theme/theme.css'), 'utf8'));
+// The Next theme is gone with the classic UI, so the manual is empty until this check is removed.
+const THEME = join(ROOT, 'src/ui/theme/theme.css');
+const manual = manualColours(existsSync(THEME) ? readFileSync(THEME, 'utf8') : '');
 const problems = [...files('src')].flatMap((file) =>
   paletteProblems(file, readFileSync(join(ROOT, file), 'utf8'), manual),
 );

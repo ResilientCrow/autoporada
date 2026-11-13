@@ -7,28 +7,11 @@ import { ACCESS_STATES } from '@/domain/review';
 import { DECISION_EVENTS } from './access';
 
 /** The groups of the users list: a role (among active accounts), everyone, or the inactive. */
-export const USER_GROUPS = [
-  'all',
-  'pending',
-  'submitter',
-  'reviewer',
-  'headmaster',
-  'inactive',
-] as const;
+const USER_GROUPS = ['all', 'pending', 'submitter', 'reviewer', 'headmaster', 'inactive'] as const;
 export type UserGroup = (typeof USER_GROUPS)[number];
 
-/** How each group is written in the address of the users page (`?skupina=`). */
-export const USER_GROUP_SLUGS: Readonly<Record<UserGroup, string>> = {
-  all: 'vsichni',
-  pending: 'cekajici',
-  submitter: 'prispevatele',
-  reviewer: 'vedeni',
-  headmaster: 'reditele',
-  inactive: 'neaktivni',
-};
-
 /** The longest search text the users list takes. */
-export const USER_QUERY_MAX = 100;
+const USER_QUERY_MAX = 100;
 
 export const listUsersInput = z.strictObject({
   q: z.string().trim().max(USER_QUERY_MAX).optional(),

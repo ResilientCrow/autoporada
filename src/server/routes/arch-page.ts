@@ -8,6 +8,9 @@ import type { RouteSpec } from '../pipeline';
 /** Busts the browser cache of the client bundle once per server start. */
 const BUILD = Date.now().toString(36);
 
+/** The Arch stylesheet, which the Next shell's own pages (not-found, global error) link too. */
+export const ARCH_STYLESHEET = `/arch/app.css?v=${BUILD}`;
+
 export const archPageSpec: RouteSpec = {
   name: 'arch.page',
   access: 'public',
@@ -15,7 +18,7 @@ export const archPageSpec: RouteSpec = {
   handle(request) {
     const nonce = request.headers.get(NONCE_HEADER) ?? '';
     const v = BUILD;
-    const html = `<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Autoporada</title><link rel="icon" href="/arch/sign-dark.svg"><link rel="stylesheet" href="/arch/app.css?v=${v}"></head><body><div id="root"></div><script nonce="${nonce}" src="/arch/app.js?v=${v}"></script></body></html>`;
+    const html = `<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Autoporada</title><link rel="icon" href="/arch/sign-dark.svg"><link rel="stylesheet" href="${ARCH_STYLESHEET}"></head><body><div id="root"></div><script nonce="${nonce}" src="/arch/app.js?v=${v}"></script></body></html>`;
     return Promise.resolve(
       new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } }),
     );

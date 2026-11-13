@@ -27,17 +27,6 @@ export async function withClient<T>(run: (client: Client) => Promise<T>): Promis
 }
 
 /**
- * Ends the session of this cookie. It changes neither role nor status, so no
- * trigger signs anyone else out. Returns how many rows went; a test expects 1.
- */
-export async function endSession(token: string): Promise<number> {
-  const result = await withClient((client) =>
-    client.query('DELETE FROM sessions WHERE token_hash = $1', [digestOf(token)]),
-  );
-  return result.rowCount ?? 0;
-}
-
-/**
  * Makes the sign-in of this cookie's session `minutes` older, so step-up sees it stale.
  * It touches neither role nor status. Returns how many rows changed; a test expects 1.
  */
@@ -121,7 +110,7 @@ const HISTORY: Readonly<
 };
 
 /** The default note of a return or a rejection. */
-export const SEED_NOTE = 'Doplňte prosím vyjádření.';
+const SEED_NOTE = 'Doplňte prosím vyjádření.';
 
 /**
  * A complete „Seminář“ of `email` (nothing left to fill in, so it can be handed in again) in the
@@ -210,41 +199,6 @@ export async function readPoint(id: string): Promise<{
   });
 }
 
-/** The Monday a seeded point was first fit for (`earliest_monday`), as ISO. */
-export async function earliestMondayOf(id: string): Promise<string> {
-  return withClient(async (client) => {
-    const { rows } = await client.query<{ day: string }>(
-      "SELECT to_char(earliest_monday, 'YYYY-MM-DD') AS day FROM points WHERE id = $1",
-      [id],
-    );
-    if (!rows[0]?.day) throw new Error(`point ${id} was never handed in`);
-    return rows[0].day;
-  });
-}
-
-/** Withdraws a point behind the page's back, as a second tab would (the version rises with it). */
-export async function withdrawBehindBack(id: string): Promise<void> {
-  await withClient((client) =>
-    client.query("UPDATE points SET state = 'withdrawn', version = version + 1 WHERE id = $1", [
-      id,
-    ]),
-  );
-}
-
-/** Retitles a point behind the page's back, as another tab or a colleague would (the version rises with it). */
-export async function retitleBehindBack(id: string, title: string): Promise<void> {
-  await withClient((client) =>
-    client.query('UPDATE points SET title = $2, version = version + 1 WHERE id = $1', [id, title]),
-  );
-}
-
-/** Deletes these points (and their events): a test that shares its author with others clears only its own. */
-export async function forgetPoints(ids: readonly string[]): Promise<void> {
-  await withClient((client) =>
-    client.query('DELETE FROM points WHERE id = ANY($1::uuid[])', [ids]),
-  );
-}
-
 /** Deletes every point of this author (and, by cascade, their events), so a journey leaves nothing in the shared queue. */
 export async function forgetPointsOf(email: string): Promise<void> {
   await withClient((client) =>
@@ -252,31 +206,4 @@ export async function forgetPointsOf(email: string): Promise<void> {
       email,
     ]),
   );
-}
-
-/** The ids of this author's points, newest first. */
-export async function pointIdsOf(email: string): Promise<string[]> {
-  return withClient(async (client) => {
-    const { rows } = await client.query<{ id: string }>(
-      `SELECT p.id FROM points p JOIN users u ON u.id = p.author_id
-        WHERE u.email = $1 ORDER BY p.created_at DESC`,
-      [email],
-    );
-    return rows.map((row) => row.id);
-  });
-}
-
-/** `count` bare drafts of this author (a title only), made in one statement: enough to need a second page of „Moje body“. */
-export async function seedDrafts(email: string, count: number): Promise<void> {
-  await withClient(async (client) => {
-    const { rowCount } = await client.query(
-      `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, body, updated_at)
-       SELECT 'report', u.id, gen_random_uuid(), 'seminar',
-              'draft', 'Rozpracovaný bod ' || n, '{"type":"doc","content":[]}'::jsonb,
-              date_trunc('milliseconds', now()) - n * interval '1 second'
-         FROM users u, generate_series(1, $2::int) AS n WHERE u.email = $1`,
-      [email, count],
-    );
-    if (rowCount !== count) throw new Error(`no user with the e-mail of this journey: ${email}`);
-  });
 }

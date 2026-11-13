@@ -12,7 +12,7 @@ export interface ScanResult {
   readonly findings: readonly string[];
 }
 
-export const ACTION_MODULE = /^src\/server\/actions\/(?!index\.ts$)[^/]+\.ts$/;
+const ACTION_MODULE = /^src\/server\/actions\/(?!index\.ts$)[^/]+\.ts$/;
 export const ROUTE_FILE = /^src\/app\/(?:.+\/)?route\.tsx?$/;
 const METADATA_FILE =
   /^src\/app\/(?:.+\/)?(?:sitemap|robots|manifest|(?:apple-)?icon\d*|(?:opengraph|twitter)-image\d*)\.[a-z]+$/;
