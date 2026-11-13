@@ -10,6 +10,7 @@ import {
   canEditPoint,
   FUTURE_MACHINE,
   futureEditNeedsReview,
+  fitsCancelRequest,
   ACCESS_EVENTS,
   ACCESS_STATES,
   ISSUE_MACHINE,
@@ -208,10 +209,15 @@ describe('future item lifecycle', () => {
   ] as const)(
     'editing a %s item as %o: allowed %s, back to review %s',
     (state, actor, allowed, review) => {
-      expect(canEditFuture(state, actor)).toBe(allowed);
+      expect(canEditFuture(state, actor, false)).toBe(allowed);
       expect(futureEditNeedsReview(state, actor)).toBe(review);
     },
   );
+
+  it('keeps the author from changing an approved item while its cancel waits; a reviewer still may (ADR 0062)', () => {
+    expect(canEditFuture('approved', author, true)).toBe(false);
+    expect(canEditFuture('approved', reviewer, true)).toBe(true);
+  });
 });
 
 describe('future items', () => {
@@ -223,10 +229,65 @@ describe('future items', () => {
     expect(transition(FUTURE_MACHINE, 'approved', 'revise', reviewer).ok).toBe(false);
   });
 
-  it('lets the author or a reviewer cancel an approved item', () => {
-    expect(transition(FUTURE_MACHINE, 'approved', 'cancel', author).ok).toBe(true);
-    expect(transition(FUTURE_MACHINE, 'approved', 'cancel', reviewer).ok).toBe(true);
+  it('lets only the vedení cancel an approved item, their own included (ADR 0062)', () => {
+    expect(transition(FUTURE_MACHINE, 'approved', 'cancel', reviewer)).toEqual({
+      ok: true,
+      to: 'cancelled',
+    });
+    expect(transition(FUTURE_MACHINE, 'approved', 'cancel', headmaster).ok).toBe(true);
+    expect(transition(FUTURE_MACHINE, 'approved', 'cancel', user('reviewer', true)).ok).toBe(true);
+    expect(transition(FUTURE_MACHINE, 'approved', 'cancel', author)).toMatchObject({
+      reason: 'not-allowed',
+    });
     expect(transition(FUTURE_MACHINE, 'approved', 'cancel', user('submitter')).ok).toBe(false);
+  });
+
+  it('lets an author outside the vedení ask for a cancel, and take the request back', () => {
+    for (const event of ['request-cancel', 'retract-cancel'] as const) {
+      expect(transition(FUTURE_MACHINE, 'approved', event, author)).toEqual({
+        ok: true,
+        to: 'approved',
+      });
+      expect(transition(FUTURE_MACHINE, 'approved', event, reviewer).ok).toBe(false);
+      expect(transition(FUTURE_MACHINE, 'approved', event, user('submitter')).ok).toBe(false);
+      for (const state of ['draft', 'submitted', 'returned', 'cancelled'] as const) {
+        expect(transition(FUTURE_MACHINE, state, event, author).ok).toBe(false);
+      }
+    }
+    // The vedení cancels at once: they never ask themselves.
+    for (const role of ['reviewer', 'headmaster'] as const) {
+      expect(transition(FUTURE_MACHINE, 'approved', 'request-cancel', user(role, true))).toEqual({
+        ok: false,
+        reason: 'not-allowed',
+      });
+    }
+  });
+
+  it('lets the vedení refuse a cancel, with a note', () => {
+    expect(
+      transition(FUTURE_MACHINE, 'approved', 'refuse-cancel', reviewer, 'Akce platí.'),
+    ).toEqual({ ok: true, to: 'approved' });
+    expect(transition(FUTURE_MACHINE, 'approved', 'refuse-cancel', headmaster)).toMatchObject({
+      reason: 'note-required',
+    });
+    expect(transition(FUTURE_MACHINE, 'approved', 'refuse-cancel', author, 'x').ok).toBe(false);
+  });
+
+  it.each([
+    ['request-cancel', false, true],
+    ['request-cancel', true, false],
+    ['refuse-cancel', true, true],
+    ['refuse-cancel', false, false],
+    ['retract-cancel', true, true],
+    ['retract-cancel', false, false],
+    ['revise', false, true],
+    ['revise', true, false],
+    ['cancel', false, true],
+    ['cancel', true, true],
+    ['return', true, true],
+    ['reject', true, true],
+  ] as const)('%s with a cancel request pending %s: fits %s', (event, pending, fits) => {
+    expect(fitsCancelRequest(event, pending)).toBe(fits);
   });
 
   it('prompts for a report, then records it as written, and offers no way out of it', () => {

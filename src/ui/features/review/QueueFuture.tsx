@@ -16,9 +16,13 @@ interface QueueFutureRow {
   readonly submittedAt: string;
   /** An approved akce its author changed. */
   readonly revised: boolean;
+  /** ISO instant the author asked to cancel this approved item; null when no request waits. */
+  readonly cancelRequestedAt: string | null;
 }
 
 /** What `future.queue` answers. */
+const dayOf = (instant: string) => formatDayMonth(instantToWallClock(new Date(instant)).date);
+
 export interface QueueFutureModel {
   readonly items: readonly QueueFutureRow[];
   /** More items wait than the section lists. */
@@ -38,7 +42,7 @@ function days({ startDate, endDate }: QueueFutureRow): string | null {
 /**
  * „Schválení budoucích akcí“ (/kontrola/akce, design section 12): the handed-in akce and jednání
  * in a flat list, the oldest hand-in first, each linking to its page, where the reviewer decides.
- * An approved akce its author changed carries „Změna schválené akce“.
+ * An approved akce its author changed carries „Změna schválené akce“, one whose author asked to cancel it „Žádost o zrušení“.
  */
 export function QueueFuture({ future: waiting }: { readonly future: QueueFutureModel }) {
   return (
@@ -58,8 +62,14 @@ export function QueueFuture({ future: waiting }: { readonly future: QueueFutureM
               {future.kind[row.kind]}
               {days(row) === null ? null : <> · {days(row)}</>}
               {' · '}
-              {review.submitted(formatDayMonth(instantToWallClock(new Date(row.submittedAt)).date))}
-              {row.revised ? <> · {review.future.revised}</> : null}
+              {row.cancelRequestedAt === null ? (
+                <>
+                  {review.submitted(dayOf(row.submittedAt))}
+                  {row.revised ? <> · {review.future.revised}</> : null}
+                </>
+              ) : (
+                review.future.cancelRequestedOn(dayOf(row.cancelRequestedAt))
+              )}
             </p>
           </li>
         ))}

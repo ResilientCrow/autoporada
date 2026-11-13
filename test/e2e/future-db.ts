@@ -59,10 +59,12 @@ export async function readFuture(id: string): Promise<{
   title: string;
   reportState: string;
   reportPointId: string | null;
+  cancelRequested: boolean;
 }> {
   return withClient(async (client) => {
     const { rows } = await client.query(
-      `SELECT state, version, title, report_state AS "reportState", report_point_id AS "reportPointId"
+      `SELECT state, version, title, report_state AS "reportState", report_point_id AS "reportPointId",
+              cancel_requested_at IS NOT NULL AS "cancelRequested"
          FROM future_items WHERE id = $1`,
       [id],
     );

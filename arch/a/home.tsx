@@ -37,7 +37,7 @@ const pointLine = (s: ReturnType<typeof useStore>['s'], p: Point) => {
     case 'withdrawn': return '';
   }
 };
-const futureLine = (f: Future) => ({ draft: 'Rozepsaná, zatím jen u vás', submitted: f.changed ? 'Změna čeká na kontrolu vedení' : 'U vedení', returned: 'Vrácená, čeká na vaši opravu', approved: 'Schválená, vidí ji škola', rejected: 'Zamítnutá', cancelled: 'Zrušená', withdrawn: '' }[f.state]);
+const futureLine = (f: Future) => ({ draft: 'Rozepsaná, zatím jen u vás', submitted: f.changed ? 'Změna čeká na kontrolu vedení' : 'U vedení', returned: 'Vrácená, čeká na vaši opravu', approved: f.cancelRequested ? 'Zrušení čeká na vedení' : 'Schválená, vidí ji škola', rejected: 'Zamítnutá', cancelled: 'Zrušená', withdrawn: '' }[f.state]);
 const pointTo = (p: Point) => (p.state === 'draft' ? `/psat/${p.id}` : p.state === 'returned' ? `/oprava/${p.id}` : `/zprava/${p.id}`);
 
 function deskFor(s: ReturnType<typeof useStore>['s'], meId: string) {

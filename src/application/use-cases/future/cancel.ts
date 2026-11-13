@@ -5,9 +5,11 @@ import { futureDecisionAccess } from './access';
 import { decideMove, moveCheck } from './events';
 
 /**
- * „Zrušit akci“ (design section 12): an approved akce, called off. The author or a reviewer may;
- * the checkbox must be ticked, and nothing is written without it. Afterwards only the author and
- * reviewers see the item, so the colleagues' list drops it.
+ * „Zrušit akci“ (design section 12, ADR 0062): an approved akce, called off by the vedení, their own
+ * included, at once or confirming the author's request („Potvrdit zrušení“), which the move clears.
+ * An author outside the vedení asks instead (`future.requestCancel`). The checkbox must be ticked,
+ * and nothing is written without it. Afterwards only the author and reviewers see the item, so the
+ * colleagues' list drops it.
  */
 export const cancelFuture = defineUseCase({
   name: 'future.cancel',

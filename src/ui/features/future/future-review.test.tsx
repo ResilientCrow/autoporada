@@ -38,6 +38,9 @@ const model = (over: Partial<FutureReviewModel> = {}): FutureReviewModel => ({
   decisions: ['approve', 'return', 'reject'],
   othersApprove: false,
   canCancel: false,
+  canRequestCancel: false,
+  canRetractCancel: false,
+  canRefuseCancel: false,
   ...over,
 });
 const render = (over: Partial<FutureReviewModel> = {}) =>
@@ -49,6 +52,10 @@ const render = (over: Partial<FutureReviewModel> = {}) =>
         bar={model(over)}
         decideFuture={never}
         cancelFuture={never}
+        requestCancelFuture={never}
+        retractCancelFuture={never}
+        refuseCancelFuture={never}
+        cancelRequested={false}
       />
     </FutureHost>,
   );
@@ -117,6 +124,10 @@ describe('FutureReview: the decision bar', () => {
           bar={model()}
           decideFuture={never}
           cancelFuture={never}
+          requestCancelFuture={never}
+          retractCancelFuture={never}
+          refuseCancelFuture={never}
+          cancelRequested={false}
         />,
       );
     expect(lone).toThrow();
@@ -254,7 +265,13 @@ describe('what the bar shows of a failed decision', () => {
 
 describe('FutureCancel', () => {
   const html = renderToStaticMarkup(
-    <FutureCancel id={ID} version={4} cancelFuture={never} onCancelled={() => undefined} />,
+    <FutureCancel
+      id={ID}
+      version={4}
+      cancelFuture={never}
+      pending={false}
+      onCancelled={() => undefined}
+    />,
   );
 
   it('is a box that must be ticked, then „Zrušit položku“', () => {

@@ -198,6 +198,10 @@ describe('future item guards (migrations 0019 and 0020)', () => {
     [{ note: 'x'.repeat(NOTE + 1) }, 'future_events_note'],
     [{ event: 'return', to_state: 'returned' }, 'future_events_note_required'],
     [{ event: 'reject', to_state: 'rejected' }, 'future_events_note_required'],
+    [
+      { event: 'refuse-cancel', from_state: 'approved', to_state: 'approved' },
+      'future_events_note_required',
+    ],
   ])('refuses the event %o by %s', async (row, constraint) => {
     const itemId = await insertItem();
     expect(await pgErrorOf(insertEvent(itemId, row))).toMatchObject({ code: CHECK, constraint });

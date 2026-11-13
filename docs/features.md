@@ -87,7 +87,10 @@ in v1 unless the [plan of record](plan.md) changes first.
 - A queue grouped by section, with a flat queue of akce beside it (oldest
   hand-in first, a mark for a changed approved akce). Reviewers approve, edit,
   return (ticking the parts to rework, a note, or both; ADR 0058) or reject
-  (a note is required); they can also cancel an approved akce. A reviewer cannot approve their own point.
+  (a note is required); they can also cancel an approved akce. A teacher's
+  „Zrušit akci“ only asks: the akce stays approved until vedení confirms or
+  refuses the cancel (a note is required), and the author can take the request
+  back (ADR 0062). A reviewer cannot approve their own point.
 - Staff reviewers see the full preview of the porada (`/porada/[datum]/nahled`,
   read-only); it names students, so students never see it.
 - A reviewer sees a colleague's point only after the author handed it in; a

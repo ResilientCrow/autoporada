@@ -7,6 +7,7 @@ import {
   getTableName,
   gt,
   gte,
+  isNotNull,
   lt,
   lte,
   ne,
@@ -54,6 +55,7 @@ export const ITEM_ROW = {
   reportState: futureItems.reportState,
   reportPointId: futureItems.reportPointId,
   submittedAt: futureItems.submittedAt,
+  cancelRequestedAt: futureItems.cancelRequestedAt,
   version: futureItems.version,
   updatedAt: futureItems.updatedAt,
 };
@@ -61,7 +63,8 @@ export const ITEM_ROW = {
 type ItemRow = Pick<typeof futureItems.$inferSelect, keyof typeof ITEM_ROW>;
 
 export function toRecord(row: ItemRow): FutureItemRecord {
-  const { id, kind, authorId, state, reportState, reportPointId, submittedAt } = row;
+  const { id, kind, authorId, state, reportState, reportPointId, submittedAt, cancelRequestedAt } =
+    row;
   return {
     id,
     kind,
@@ -82,6 +85,7 @@ export function toRecord(row: ItemRow): FutureItemRecord {
     reportState,
     reportPointId,
     submittedAt,
+    cancelRequestedAt,
     version: row.version,
     updatedAt: row.updatedAt,
   };
@@ -169,9 +173,11 @@ export function createFutureItemRepo(
     scope: SQL | undefined,
     set: Partial<typeof futureItems.$inferInsert> & { state?: FutureState },
   ) => {
+    // Any move of the state clears a pending cancel request (ADR 0062).
+    const cleared = set.state === undefined ? {} : { cancelRequestedAt: null };
     const [row] = await db
       .update(futureItems)
-      .set({ ...set, version: sql`${futureItems.version} + 1`, updatedAt: now })
+      .set({ ...set, ...cleared, version: sql`${futureItems.version} + 1`, updatedAt: now })
       .where(and(eq(futureItems.id, id), eq(futureItems.version, expectedVersion), scope))
       .returning(ITEM_ROW);
     if (!row) throw new StaleVersion();
@@ -229,12 +235,22 @@ export function createFutureItemRepo(
     async decide(id, expectedVersion, state) {
       return versioned(id, expectedVersion, reviewableFutureItems(ctx), { state });
     },
+    async markCancelRequest(id, expectedVersion, at) {
+      return versioned(id, expectedVersion, reviewableFutureItems(ctx), { cancelRequestedAt: at });
+    },
     async queue(limit) {
+      const waiting = or(
+        eq(futureItems.state, 'submitted'),
+        and(eq(futureItems.state, 'approved'), isNotNull(futureItems.cancelRequestedAt)),
+      );
       const rows = await db
         .select({ ...ITEM_ROW, revised })
         .from(futureItems)
-        .where(and(visibleFutureItems(ctx), eq(futureItems.state, 'submitted')))
-        .orderBy(asc(futureItems.submittedAt), asc(futureItems.id))
+        .where(and(visibleFutureItems(ctx), waiting))
+        .orderBy(
+          asc(sql`coalesce(${futureItems.cancelRequestedAt}, ${futureItems.submittedAt})`),
+          asc(futureItems.id),
+        )
         .limit(limit);
       return rows.map(({ revised: wasRevised, ...row }) => ({
         item: toRecord(row),

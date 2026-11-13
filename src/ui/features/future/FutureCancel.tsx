@@ -8,7 +8,7 @@ import { CANCEL_FORM_ID, CANCEL_SPEC, cancelInput, type CancelFutureAction } fro
 const HEADING_ID = `${CANCEL_FORM_ID}-nadpis`;
 
 /**
- * „Zrušit položku“ (design section 12): an approved item called off by its author or a reviewer,
+ * „Zrušit položku“ (design section 12): an approved item called off by a reviewer or the headmaster (ADR 0062; the author asks instead),
  * with the box that must be ticked, in a section of its own apart from the decisions (ADR 0013
  * item 10). It sends the version the page showed; the action moves the state and refreshes the
  * page, which then shows the item as „Zrušeno“. A form of its own, so it never nests in the
@@ -18,11 +18,14 @@ export function FutureCancel({
   id,
   version,
   cancelFuture,
+  pending,
   onCancelled,
 }: {
   readonly id: string;
   readonly version: number;
   readonly cancelFuture: CancelFutureAction;
+  /** The author's request waits: the button confirms it (ADR 0062). */
+  readonly pending: boolean;
   /** The host says it was cancelled. */
   readonly onCancelled: () => void;
 }) {
@@ -39,7 +42,9 @@ export function FutureCancel({
       <Form id={CANCEL_FORM_ID} spec={CANCEL_SPEC} state={refusalAsGone(state)}>
         <CheckboxField name="confirmed" optionalMark={false} />
         <div>
-          <SubmitButton variant="secondary">{future.review.cancel.button}</SubmitButton>
+          <SubmitButton variant="secondary">
+            {pending ? future.review.cancel.confirmRequest : future.review.cancel.button}
+          </SubmitButton>
         </div>
       </Form>
     </section>

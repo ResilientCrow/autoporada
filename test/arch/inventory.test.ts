@@ -132,7 +132,11 @@ describe('inventory of entry points', () => {
       'future.submit': ['submission', 'page'],
       'future.retract': ['submission', 'page'],
       'future.decide': ['admin', 'page'],
-      'future.cancel': ['submission', 'page'],
+      // A vedení decision since ADR 0062: the author asks, under their own submission limit.
+      'future.cancel': ['admin', 'page'],
+      'future.requestCancel': ['submission', 'page'],
+      'future.retractCancel': ['submission', 'page'],
+      'future.refuseCancel': ['admin', 'page'],
       'future.startReport': ['submission', 'page'],
     });
   });

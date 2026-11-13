@@ -5,7 +5,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { cancelFuture, listFuture } from './index';
+import { cancelFuture, listFuture, requestCancelFuture } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = futureFixtures(world);
@@ -34,10 +34,10 @@ const listed = async (by: UserRecord) => {
 };
 
 describe('future.cancel', () => {
-  it('lets the author cancel an approved akce, with the states in the audit only', async () => {
-    const author = await user();
-    const id = await approved(author);
-    expect(await cancel(author, id)).toEqual({ ok: true, value: { version: 3 } });
+  it('lets a reviewer cancel an approved akce, with the states in the audit only', async () => {
+    const id = await approved(await user());
+    const reviewer = await user('reviewer');
+    expect(await cancel(reviewer, id)).toEqual({ ok: true, value: { version: 3 } });
     const { item, events, audit } = await snapshot(id);
     expect(item).toMatchObject({ state: 'cancelled', version: 3 });
     expect(events[0]).toMatchObject({
@@ -45,13 +45,62 @@ describe('future.cancel', () => {
       fromState: 'approved',
       toState: 'cancelled',
       note: null,
-      actorId: author.id,
+      actorId: reviewer.id,
     });
     expect(audit.at(-1)).toMatchObject({
       action: 'future.cancelled',
       targetType: 'future_item',
       targetId: id,
       data: { diff: { state: { from: 'approved', to: 'cancelled' } }, meta: { kind: 'akce' } },
+    });
+  });
+
+  // ADR 0062: a teacher asks the vedení (future.requestCancel) instead.
+  it('refuses the author outside the vedení, whose cancel waits for the vedení', async () => {
+    const author = await user();
+    const id = await approved(author);
+    await refuses(id, () => cancel(author, id), { code: 'forbidden' });
+  });
+
+  it.each(['reviewer', 'headmaster'] as const)(
+    'lets a %s cancel their own approved akce at once',
+    async (role) => {
+      const author = await user(role);
+      const id = await approved(author);
+      expect(await cancel(author, id)).toEqual({ ok: true, value: { version: 3 } });
+      expect((await snapshot(id)).item).toMatchObject({ state: 'cancelled' });
+    },
+  );
+
+  it('confirms a waiting request: cancelled, the request cleared, in the history and the audit', async () => {
+    const author = await user();
+    const id = await approved(author);
+    const asked = await world.run(requestCancelFuture, world.as(author), {
+      id,
+      expectedVersion: 2,
+      confirmed: true,
+    });
+    expect(asked.ok).toBe(true);
+    const headmaster = await user('headmaster');
+    world.clock.advance(60_000);
+    expect(await cancel(headmaster, id, { expectedVersion: 3 })).toEqual({
+      ok: true,
+      value: { version: 4 },
+    });
+    const { item, events, audit } = await snapshot(id);
+    expect(item).toMatchObject({ state: 'cancelled', cancelRequestedAt: null });
+    expect(events.map((e) => [e.event, e.fromState, e.toState])).toEqual([
+      ['cancel', 'approved', 'cancelled'],
+      ['request-cancel', 'approved', 'approved'],
+    ]);
+    expect(audit.at(-1)).toMatchObject({
+      action: 'future.cancelled',
+      data: {
+        diff: {
+          state: { from: 'approved', to: 'cancelled' },
+          cancelRequestedAt: { from: expect.any(String), to: null },
+        },
+      },
     });
   });
 
@@ -69,9 +118,9 @@ describe('future.cancel', () => {
   );
 
   it('needs the checkbox ticked', async () => {
-    const author = await user();
-    const id = await approved(author);
-    await refuses(id, () => cancel(author, id, { confirmed: false }), {
+    const id = await approved(await user());
+    const reviewer = await user('reviewer');
+    await refuses(id, () => cancel(reviewer, id, { confirmed: false }), {
       code: 'invalid-input',
       fields: { confirmed: 'required' },
     });
@@ -100,9 +149,9 @@ describe('future.cancel', () => {
   });
 
   it('answers a stale version with conflict', async () => {
-    const author = await user();
-    const id = await approved(author);
-    await refuses(id, () => cancel(author, id, { expectedVersion: 1 }), { code: 'conflict' });
+    const id = await approved(await user());
+    const reviewer = await user('reviewer');
+    await refuses(id, () => cancel(reviewer, id, { expectedVersion: 1 }), { code: 'conflict' });
   });
 
   describe('afterwards', () => {

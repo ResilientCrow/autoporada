@@ -87,12 +87,19 @@ export interface FuturePageModel {
   readonly view: z.output<typeof getFutureOutput>['view'];
   /** The author may take a submitted item back („Stáhnout“). */
   readonly canRetract: boolean;
+  /** A cancel request waits for the vedení (ADR 0062); only the author and reviewers learn it. */
+  readonly cancelRequested: boolean;
   /** The reviewer's decisions and the cancel the viewer may make; null when there are none. */
   readonly review: FutureBarModel | null;
   /** What the reviewer wrote when they returned the item: only while it stands returned, else null. */
   readonly returnNote: string | null;
   /** The parts that return named to rework (ADR 0058), as codes: only while it stands returned. */
   readonly returnParts: readonly string[];
+  /**
+   * Why the vedení refused the author's cancel request: only while the akce stands approved and
+   * the refusal is the latest thing that happened to it, else null.
+   */
+  readonly cancelRefusalNote: string | null;
   /** Only for the author of a draft, returned or approved item: what the editor opens with. */
   readonly editor: FutureEditorModel | null;
   /** Only for the author of an item that is still going somewhere; else null. */
@@ -117,11 +124,15 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
   );
   if (loaded === null) return null;
   const { kind, state, version, isAuthor, editable, view, content, timeline } = loaded;
+  const cancelRequested = loaded.cancelRequestedAt !== null;
+  const item = { isAuthor, state, kind, cancelRequested };
   // Whatever the stored date: a new draft has none, and the editor's strip follows the typing.
   const strip = isAuthor && GOING.includes(state);
   const shows = editable && content !== null;
   // The timeline is newest first: the latest return is the one the author answers.
   const lastReturn = state === 'returned' ? timeline.find((e) => e.event === 'return') : undefined;
+  const latest = timeline[0];
+  const refusal = state === 'approved' && latest?.event === 'refuse-cancel' ? latest : undefined;
   const window = strip ? await readWindow(viewer) : null;
   return {
     id: loaded.id,
@@ -132,15 +143,12 @@ export async function futurePage(id: string): Promise<FuturePageModel | null> {
     editable,
     view,
     canRetract:
-      isAuthor &&
-      can(viewer.actor, {
-        action: 'future.transition',
-        item: { isAuthor, state, kind },
-        event: 'retract',
-      }),
-    review: futureBarOf(viewer.actor, { isAuthor, state, kind }),
+      isAuthor && can(viewer.actor, { action: 'future.transition', item, event: 'retract' }),
+    cancelRequested,
+    review: futureBarOf(viewer.actor, item),
     returnNote: lastReturn?.note ?? null,
     returnParts: lastReturn?.parts ?? [],
+    cancelRefusalNote: refusal?.note ?? null,
     editor: shows ? { version, content } : null,
     window,
   };

@@ -13,6 +13,9 @@ export const WHAT: Record<string, string> = {
   edit: 'Upraveno vedením',
   revise: 'Upraveno',
   publish: 'Vydáno',
+  'request-cancel': 'Požádáno o zrušení',
+  'refuse-cancel': 'Zrušení zamítnuto',
+  'retract-cancel': 'Žádost o zrušení vzata zpět',
 };
 
 function splitName(displayName: string) {

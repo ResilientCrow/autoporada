@@ -5,7 +5,14 @@ import type { FutureKind } from '@/domain/calendar';
 
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { decideFuture, queueFuture, saveFuture, submitFuture } from './index';
+import {
+  decideFuture,
+  queueFuture,
+  refuseCancelFuture,
+  requestCancelFuture,
+  saveFuture,
+  submitFuture,
+} from './index';
 
 const world = setupWorld();
 const { start, moveTo } = futureFixtures(world);
@@ -44,6 +51,7 @@ describe('future.queue', () => {
         startDate: '2026-11-10',
         endDate: null,
         submittedAt: '2026-10-19T08:00:00.000Z',
+        cancelRequestedAt: null,
         revised: false,
       },
       expect.objectContaining({ id: second, kind: 'jednani', title: 'Druhá', revised: false }),
@@ -91,6 +99,33 @@ describe('future.queue', () => {
     });
     expect(again.ok).toBe(true);
     expect((await queue(reviewer)).items.map((i) => [i.id, i.revised])).toEqual([[id, false]]);
+  });
+
+  it('lists an approved akce whose cancel waits, by when it was asked for, until the vedení decides (ADR 0062)', async () => {
+    const author = await user();
+    const id = await start(author, 'akce');
+    await moveTo(author, id, 'approved');
+    const waiting = await submit(author);
+    world.clock.advance(60_000);
+    const asked = await world.run(requestCancelFuture, world.as(author), {
+      id,
+      expectedVersion: 2,
+      confirmed: true,
+    });
+    expect(asked.ok).toBe(true);
+    const reviewer = await user('reviewer');
+    const { items } = await queue(reviewer);
+    expect(items.map((i) => [i.id, i.cancelRequestedAt])).toEqual([
+      [waiting, null],
+      [id, world.clock.now().toISOString()],
+    ]);
+    const refused = await world.run(refuseCancelFuture, world.as(reviewer), {
+      id,
+      expectedVersion: 3,
+      note: 'Akce platí.',
+    });
+    expect(refused.ok).toBe(true);
+    expect((await queue(reviewer)).items.map((i) => i.id)).toEqual([waiting]);
   });
 
   it.each([

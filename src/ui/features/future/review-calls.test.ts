@@ -61,6 +61,9 @@ describe('barChoices', () => {
     decisions: ['approve', 'return', 'reject'] as const,
     othersApprove: false,
     canCancel: false,
+    canRequestCancel: false,
+    canRetractCancel: false,
+    canRefuseCancel: false,
     ...over,
   });
 

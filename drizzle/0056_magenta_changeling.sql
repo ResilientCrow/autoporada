@@ -1,0 +1,4 @@
+ALTER TABLE "future_events" DROP CONSTRAINT "future_events_note_required";--> statement-breakpoint
+ALTER TABLE "future_items" ADD COLUMN "cancel_requested_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "future_events" ADD CONSTRAINT "future_events_note_required" CHECK ("future_events"."event" NOT IN ('return','reject','refuse-cancel') OR "future_events"."note" IS NOT NULL OR ("future_events"."event" = 'return' AND "future_events"."return_parts" IS NOT NULL));--> statement-breakpoint
+ALTER TABLE "future_items" ADD CONSTRAINT "future_items_cancel_request" CHECK ("future_items"."cancel_requested_at" IS NULL OR "future_items"."state" = 'approved');

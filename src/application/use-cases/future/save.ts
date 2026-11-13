@@ -16,8 +16,9 @@ const notEditable = fail({ code: 'rule', rule: 'future-not-editable' });
  * „Uložit změny“ sends `intent: 'revise'`, and that one save, when it changes
  * something, fires `revise`: the item goes back to review and the move is
  * audited, so it is checked as a submit is. Any other state, or a revise on
- * an item that is not approved, is the rule `future-not-editable`, as
- * `points.save` answers. A save that changes nothing writes nothing.
+ * an item that is not approved or whose cancel request waits (ADR 0062), is
+ * the rule `future-not-editable`, as `points.save` answers. A save that
+ * changes nothing writes nothing.
  */
 export const saveFuture = defineUseCase({
   name: 'future.save',
@@ -30,7 +31,13 @@ export const saveFuture = defineUseCase({
     // audited review edit, never this save. The scoped load already gave a
     // pending or inactive account not-found.
     if (item.authorId !== actor.id) return fail({ code: 'forbidden' });
-    const asAuthor = { isAuthor: true, state: item.state, kind: item.kind };
+    // While the author's cancel waits for the vedení, the approved item is not theirs to change.
+    const asAuthor = {
+      isAuthor: true,
+      state: item.state,
+      kind: item.kind,
+      cancelRequested: item.cancelRequestedAt !== null,
+    };
     if (!can(actor, { action: 'future.edit', item: asAuthor })) return notEditable;
     const revises = futureEditNeedsReview(item.state, {
       kind: 'user',

@@ -69,6 +69,9 @@ export const approveFuture = simple('approveFuture', S.approveFuture);
 export const returnFuture = simple('returnFuture', S.returnFuture);
 export const rejectFuture = simple('rejectFuture', S.rejectFuture);
 export const cancelFuture = simple('cancelFuture', S.cancelFuture);
+export const requestCancelFuture = simple('requestCancelFuture', S.requestCancelFuture);
+export const retractCancelFuture = simple('retractCancelFuture', S.retractCancelFuture);
+export const refuseCancelFuture = simple('refuseCancelFuture', S.refuseCancelFuture);
 export const saveIssueTexts = simple('saveIssueTexts', S.saveIssueTexts);
 export const setAnnex2 = simple('setAnnex2', S.setAnnex2);
 export const saveAnnex = simple('annexes', S.saveAnnex);
@@ -158,6 +161,9 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'returnFuture': return decideFuture('return', a[1], a[2]);
     case 'rejectFuture': return decideFuture('reject', a[1]);
     case 'cancelFuture': return [{ name: 'future.cancel', key: real(a[0]), input: { ...pw(a[0]), confirmed: true } }];
+    case 'requestCancelFuture': return [{ name: 'future.requestCancel', key: real(a[0]), input: { ...pw(a[0]), confirmed: true } }];
+    case 'retractCancelFuture': return [{ name: 'future.retractCancel', key: real(a[0]), input: pw(a[0]) }];
+    case 'refuseCancelFuture': return [{ name: 'future.refuseCancel', key: real(a[0]), input: { ...pw(a[0]), note: String(a[1] ?? '').trim() } }];
     case 'saveIssueTexts': return [{ name: 'issues.setDetails', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), present: a[1], guests: a[2] } }];
     case 'setAnnex2': return [{ name: 'issues.setAnnex2', key: `issue:${a[0]}`, input: { monday: a[0], ...issueV(a[0]), body: a[1] ?? emptyRichDoc() } }];
     case 'annexes': { const m = a[0] as string; return [{ name: 'arch.annexes', input: { monday: m, annexes: s.issues.find((i) => i.monday === m)?.annexes ?? [] } }]; }

@@ -16,7 +16,13 @@ import type {
   submitFutureOutput,
 } from '@/contracts';
 
-import type { CancelFutureAction, DecideFutureAction } from './review-calls';
+import type {
+  CancelFutureAction,
+  DecideFutureAction,
+  RefuseCancelFutureAction,
+  RequestCancelFutureAction,
+  RetractCancelFutureAction,
+} from './review-calls';
 
 export type CreateFutureAction = ServerAction<
   z.input<typeof createFutureInput>,
@@ -52,4 +58,7 @@ export interface FutureActions {
   readonly retractFuture: RetractFutureAction;
   readonly decideFuture: DecideFutureAction;
   readonly cancelFuture: CancelFutureAction;
+  readonly requestCancelFuture: RequestCancelFutureAction;
+  readonly retractCancelFuture: RetractCancelFutureAction;
+  readonly refuseCancelFuture: RefuseCancelFutureAction;
 }

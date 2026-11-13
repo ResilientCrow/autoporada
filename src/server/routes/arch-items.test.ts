@@ -24,7 +24,7 @@ const pointRow = (state: string) =>
     version: 3,
   }) as never;
 
-const futureRow = (state: string) =>
+const futureRow = (state: string, cancelRequestedAt: Date | null = null) =>
   ({
     id: ID,
     kind: 'akce',
@@ -42,6 +42,7 @@ const futureRow = (state: string) =>
     reportState: 'none',
     reportPointId: null,
     submittedAt: at(0),
+    cancelRequestedAt,
     updatedAt: at(9),
     version: 3,
   }) as never;
@@ -126,5 +127,81 @@ describe('the parts a return names, as Arch reads them', () => {
     expect(first).not.toHaveProperty('parts');
     expect(second).toMatchObject({ parts: ['heading'] });
     expect(second).not.toHaveProperty('note');
+  });
+});
+
+describe('a cancel request, as Arch reads it (ADR 0062)', () => {
+  const move = (event: string, minutes: number, note: string | null = null) => ({
+    ...decision(event, minutes, { note }),
+    actorId: event === 'refuse-cancel' ? REVIEWER : AUTHOR,
+    fromState: 'approved',
+    toState: 'approved',
+  });
+  const futures = (
+    events: ReturnType<typeof move>[],
+    { pending = false, viewerId = AUTHOR, staff = false } = {},
+  ) =>
+    archItems({
+      pointRows: [],
+      futureRows: [futureRow('approved', pending ? at(5) : null)],
+      pEvents: [],
+      fEvents: events as never,
+      vers: {},
+      today: calDate(2026, 11, 2),
+      poradas: [],
+      viewerId,
+      staff,
+    }).archFutures[0]!;
+
+  it('tells the author and the vedení that a request waits, and nobody else', () => {
+    expect(futures([], { pending: true })).toMatchObject({ cancelRequested: true });
+    expect(futures([], { pending: true, viewerId: REVIEWER, staff: true })).toMatchObject({
+      cancelRequested: true,
+    });
+    expect(futures([], { pending: true, viewerId: REVIEWER })).toMatchObject({
+      cancelRequested: false,
+    });
+    expect(futures([])).toMatchObject({ cancelRequested: false });
+  });
+
+  it('names the three moves in the trail, the refusal with its note', () => {
+    const { trail } = futures([
+      move('request-cancel', 1),
+      move('retract-cancel', 2),
+      move('request-cancel', 3),
+      move('refuse-cancel', 4, 'Akce se koná.'),
+    ]);
+    expect(trail.map((t) => t.what)).toEqual([
+      'Požádáno o zrušení',
+      'Žádost o zrušení vzata zpět',
+      'Požádáno o zrušení',
+      'Zrušení zamítnuto',
+    ]);
+    expect(trail[3]).toMatchObject({ who: 'vedeni', note: 'Akce se koná.' });
+  });
+
+  it('shows a colleague neither the request moves nor the vedení’s notes', () => {
+    const { trail } = futures(
+      [
+        { ...move('return', 1, 'Doplňte místo.'), fromState: 'submitted', toState: 'returned' },
+        move('request-cancel', 2),
+        move('refuse-cancel', 3, 'Akce se koná.'),
+      ],
+      { viewerId: REVIEWER },
+    );
+    expect(trail.map((t) => t.what)).toEqual(['Vráceno k úpravě']);
+    expect(trail[0]).not.toHaveProperty('note');
+  });
+
+  it('gives the author the latest refusal’s note while nothing happened since', () => {
+    const refused = [move('request-cancel', 1), move('refuse-cancel', 2, 'Akce se koná.')];
+    expect(futures(refused)).toMatchObject({ cancelRefusal: 'Akce se koná.', note: null });
+    expect(futures([...refused, move('request-cancel', 3)], { pending: true })).toMatchObject({
+      cancelRefusal: null,
+    });
+    expect(futures(refused, { viewerId: REVIEWER })).toMatchObject({ cancelRefusal: null });
+    expect(futures(refused, { viewerId: REVIEWER, staff: true })).toMatchObject({
+      cancelRefusal: 'Akce se koná.',
+    });
   });
 });

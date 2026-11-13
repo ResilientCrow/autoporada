@@ -7,12 +7,15 @@ import {
   listFutureInput,
   listFutureOutput,
 } from '@/contracts';
+import { can } from '@/domain/policy';
 
-const rowWire = (item: FutureItemRecord, readerId: string) => ({
+const rowWire = (item: FutureItemRecord, readerId: string, reviews: boolean) => ({
   id: item.id,
   kind: item.kind,
   state: item.state,
   isAuthor: item.authorId === readerId,
+  // A waiting cancel is between the author and the vedení (ADR 0062).
+  cancelRequested: (item.authorId === readerId || reviews) && item.cancelRequestedAt !== null,
   reportState: item.reportState,
   // Every reader sees the free-text fields as typed; they print in the document anyway.
   ...futureContentToView(item.content),
@@ -37,7 +40,7 @@ export const listFuture = defineUseCase({
     const rows = read.slice(0, FUTURE_LIST_PAGE);
     const last = read.length > FUTURE_LIST_PAGE ? rows.at(-1) : undefined;
     return ok({
-      items: rows.map((item) => rowWire(item, actor.id)),
+      items: rows.map((item) => rowWire(item, actor.id, can(actor, { action: 'review.queue' }))),
       next: last ? cursorText(last) : null,
     });
   },

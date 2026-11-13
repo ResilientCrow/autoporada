@@ -8,7 +8,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures, readyAkce, readyJednani } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { listFuture, saveFuture } from './index';
+import { listFuture, requestCancelFuture, saveFuture } from './index';
 
 const world = setupWorld();
 
@@ -97,6 +97,25 @@ describe('future.list', () => {
         ],
       },
     });
+  });
+
+  it('tells the author and the vedení that a cancel waits, and not a colleague (ADR 0062)', async () => {
+    const author = await user();
+    const id = await item(author, 'approved');
+    const asked = await world.run(requestCancelFuture, world.as(author), {
+      id,
+      expectedVersion: 3,
+      confirmed: true,
+    });
+    expect(asked.ok).toBe(true);
+    const pending = async (by: UserRecord) => {
+      const result = await list(by);
+      if (!result.ok) throw new Error('list refused');
+      return result.value.items.find((i) => i.id === id)?.cancelRequested;
+    };
+    expect(await pending(author)).toBe(true);
+    expect(await pending(await user('reviewer'))).toBe(true);
+    expect(await pending(await user())).toBe(false);
   });
 
   describe('paging', () => {

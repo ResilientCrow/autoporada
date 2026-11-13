@@ -42,6 +42,7 @@ const loaded = (over: object = {}) => ({
   content: content(),
   view: view(),
   timeline: [],
+  cancelRequestedAt: null,
   ...over,
 });
 const WINDOW = {
@@ -147,9 +148,11 @@ describe('futurePage', () => {
       isAuthor: true,
       editable: true,
       canRetract: false,
+      cancelRequested: false,
       review: null,
       returnNote: null,
       returnParts: [],
+      cancelRefusalNote: null,
       editor: {
         version: 3,
         content: content(),
@@ -284,6 +287,61 @@ describe('futurePage: the return note', () => {
   });
 });
 
+describe('futurePage: a cancel request (ADR 0062)', () => {
+  const refused = (note: string) => ({
+    event: 'refuse-cancel',
+    fromState: 'approved',
+    toState: 'approved',
+    note,
+    parts: null,
+    editedFields: null,
+    createdAt: '2026-11-05T09:00:00.000Z',
+  });
+
+  it('says the author’s request waits for the vedení', async () => {
+    serve({
+      get: {
+        ok: true,
+        value: loaded({
+          state: 'approved',
+          editable: false,
+          cancelRequestedAt: '2026-11-03T09:00:00.000Z',
+        }),
+      },
+    });
+    expect(await futurePage(ID)).toMatchObject({ cancelRequested: true, editor: null });
+  });
+
+  it('carries the note of the latest refusal while the akce stands approved without a request', async () => {
+    const timeline = [refused('Akce se koná, jen jinde.'), refused('Starší.')];
+    serve({ get: { ok: true, value: loaded({ state: 'approved', timeline }) } });
+    expect((await futurePage(ID))?.cancelRefusalNote).toBe('Akce se koná, jen jinde.');
+  });
+
+  it('leaves an older refusal out once something else happened since', async () => {
+    const later = { ...refused('x'), event: 'request-cancel', note: null };
+    serve({
+      get: {
+        ok: true,
+        value: loaded({
+          state: 'approved',
+          cancelRequestedAt: '2026-11-06T09:00:00.000Z',
+          timeline: [later, refused('Starší.')],
+        }),
+      },
+    });
+    expect((await futurePage(ID))?.cancelRefusalNote).toBeNull();
+  });
+
+  it.each(['submitted', 'cancelled'] as const)(
+    'has no refusal note once the akce is %s',
+    async (state) => {
+      serve({ get: { ok: true, value: loaded({ state, timeline: [refused('Ne.')] }) } });
+      expect((await futurePage(ID))?.cancelRefusalNote).toBeNull();
+    },
+  );
+});
+
 describe('futurePage: the retract', () => {
   it('is offered to the author of a submitted item', async () => {
     serve({ get: { ok: true, value: loaded({ state: 'submitted', editable: false }) } });
@@ -306,8 +364,19 @@ describe('futurePage: the review bar', () => {
       kind: 'user',
       actor: { id: 'u1', role, status: 'active', isStudent: false },
     });
-  const bar = async (state: string, isAuthor: boolean, kind = 'akce') => {
-    serve({ get: { ok: true, value: loaded({ state, isAuthor, kind, editable: false }) } });
+  const PENDING = '2026-11-03T09:00:00.000Z';
+  const bar = async (
+    state: string,
+    isAuthor: boolean,
+    kind = 'akce',
+    cancelRequestedAt: string | null = null,
+  ) => {
+    serve({
+      get: {
+        ok: true,
+        value: loaded({ state, isAuthor, kind, editable: false, cancelRequestedAt }),
+      },
+    });
     return (await futurePage(ID))?.review;
   };
 
@@ -317,6 +386,9 @@ describe('futurePage: the review bar', () => {
       decisions: ['approve', 'return', 'reject'],
       othersApprove: false,
       canCancel: false,
+      canRequestCancel: false,
+      canRetractCancel: false,
+      canRefuseCancel: false,
     });
   });
 
@@ -326,6 +398,9 @@ describe('futurePage: the review bar', () => {
       decisions: ['return', 'reject'],
       othersApprove: true,
       canCancel: false,
+      canRequestCancel: false,
+      canRetractCancel: false,
+      canRefuseCancel: false,
     });
   });
 
@@ -340,17 +415,60 @@ describe('futurePage: the review bar', () => {
       decisions: ['return', 'reject'],
       othersApprove: false,
       canCancel: true,
+      canRequestCancel: false,
+      canRetractCancel: false,
+      canRefuseCancel: false,
     });
   });
 
-  it('offers the author of an approved akce the cancel and no decision', async () => {
+  it('offers the author of an approved akce the request to cancel, never the cancel (ADR 0062)', async () => {
     as('submitter');
     expect(await bar('approved', true)).toEqual({
       decisions: [],
       othersApprove: false,
-      canCancel: true,
+      canCancel: false,
+      canRequestCancel: true,
+      canRetractCancel: false,
+      canRefuseCancel: false,
     });
   });
+
+  it('offers the author whose request waits only taking it back', async () => {
+    as('submitter');
+    expect(await bar('approved', true, 'akce', PENDING)).toEqual({
+      decisions: [],
+      othersApprove: false,
+      canCancel: false,
+      canRequestCancel: false,
+      canRetractCancel: true,
+      canRefuseCancel: false,
+    });
+  });
+
+  it('offers a reviewer the confirm and the refuse of a waiting request, and no other decision', async () => {
+    as('reviewer');
+    expect(await bar('approved', false, 'akce', PENDING)).toEqual({
+      decisions: ['return', 'reject'],
+      othersApprove: false,
+      canCancel: true,
+      canRequestCancel: false,
+      canRetractCancel: false,
+      canRefuseCancel: true,
+    });
+  });
+
+  it.each(['reviewer', 'headmaster'])(
+    'lets a %s cancel their own approved akce at once, with no request to make',
+    async (role) => {
+      as(role);
+      expect(await bar('approved', true)).toMatchObject({
+        canCancel: true,
+        canRequestCancel: false,
+        canRetractCancel: false,
+        canRefuseCancel: false,
+      });
+    },
+  );
 
   it('offers nothing to a reader who is neither the author nor a reviewer', async () => {
     as('submitter');
@@ -372,6 +490,9 @@ describe('futurePage: the review bar', () => {
         decisions: [],
         othersApprove: false,
         canCancel: false,
+        canRequestCancel: false,
+        canRetractCancel: false,
+        canRefuseCancel: false,
       });
     },
   );

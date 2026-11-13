@@ -3,8 +3,9 @@ import { futureContentToView, QUEUE_LIMIT, queueFutureInput, queueFutureOutput }
 
 /**
  * „Kontrola“, the akce and jednání section (design section 12): the handed-in items in the
- * reviewer's scope, the oldest hand-in first. Drafts are never in a reviewer's scope, and an
- * approved, returned, rejected, withdrawn or cancelled item is not waiting here.
+ * reviewer's scope and the approved ones whose author asked to cancel them („Žádost o zrušení“,
+ * ADR 0062), the oldest hand-in or request first. Drafts are never in a reviewer's scope, and any
+ * other approved, returned, rejected, withdrawn or cancelled item is not waiting here.
  */
 export const queueFuture = defineUseCase({
   name: 'future.queue',
@@ -27,6 +28,7 @@ export const queueFuture = defineUseCase({
           startDate,
           endDate,
           submittedAt: item.submittedAt.toISOString(),
+          cancelRequestedAt: item.cancelRequestedAt?.toISOString() ?? null,
           revised,
         },
       ];

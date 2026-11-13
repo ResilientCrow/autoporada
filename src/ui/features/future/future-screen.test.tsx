@@ -28,6 +28,9 @@ const ACTIONS = {
   retractFuture: never,
   decideFuture: never,
   cancelFuture: never,
+  requestCancelFuture: never,
+  retractCancelFuture: never,
+  refuseCancelFuture: never,
 };
 
 const content = (over: Partial<FutureContentWire> = {}): FutureContentWire => ({
@@ -55,6 +58,8 @@ const item = (over: Partial<FutureScreenItem> = {}): FutureScreenItem => ({
   canRetract: false,
   returnNote: null,
   returnParts: [],
+  cancelRequested: false,
+  cancelRefusalNote: null,
   review: null,
   view: {
     title: 'Lyžařský kurz',
@@ -213,8 +218,18 @@ describe('the reviewer’s side', () => {
     decisions: ['approve', 'return', 'reject'],
     othersApprove: false,
     canCancel: false,
+    canRequestCancel: false,
+    canRetractCancel: false,
+    canRefuseCancel: false,
   };
-  const cancelOnly: FutureReviewModel = { decisions: [], othersApprove: false, canCancel: true };
+  const cancelOnly: FutureReviewModel = {
+    decisions: [],
+    othersApprove: false,
+    canCancel: true,
+    canRequestCancel: false,
+    canRetractCancel: false,
+    canRefuseCancel: false,
+  };
 
   it('puts the decision bar under the read view of a handed-in item, before the way back', () => {
     const html = render({ state: 'submitted', editor: null, review: { ...all } });
@@ -231,7 +246,14 @@ describe('the reviewer’s side', () => {
     const html = render({
       state: 'approved',
       editor: null,
-      review: { decisions: ['return', 'reject'], othersApprove: false, canCancel: true },
+      review: {
+        decisions: ['return', 'reject'],
+        othersApprove: false,
+        canCancel: true,
+        canRequestCancel: false,
+        canRetractCancel: false,
+        canRefuseCancel: false,
+      },
     });
     expect(buttons(html)).toEqual([
       review.decision.return,
@@ -261,7 +283,14 @@ describe('the reviewer’s side', () => {
     const html = render({
       state: 'cancelled',
       editor: null,
-      review: { decisions: [], othersApprove: false, canCancel: false },
+      review: {
+        decisions: [],
+        othersApprove: false,
+        canCancel: false,
+        canRequestCancel: false,
+        canRetractCancel: false,
+        canRefuseCancel: false,
+      },
     });
     expect(html).toContain(future.state.cancelled);
     expect(buttons(html)).toEqual([]);
@@ -287,11 +316,25 @@ describe('the host above the views (ADR 0013 items 1 and 7)', () => {
       render({ review: null }),
       read({
         state: 'submitted',
-        review: { decisions: ['approve'], othersApprove: false, canCancel: false },
+        review: {
+          decisions: ['approve'],
+          othersApprove: false,
+          canCancel: false,
+          canRequestCancel: false,
+          canRetractCancel: false,
+          canRefuseCancel: false,
+        },
       }),
       render({
         state: 'approved',
-        review: { decisions: [], othersApprove: false, canCancel: true },
+        review: {
+          decisions: [],
+          othersApprove: false,
+          canCancel: true,
+          canRequestCancel: false,
+          canRetractCancel: false,
+          canRefuseCancel: false,
+        },
       }),
     ];
     for (const html of states) expect(html).toMatch(/<div role="status"><\/div><\/div>$/);
@@ -308,5 +351,52 @@ describe('the host above the views (ADR 0013 items 1 and 7)', () => {
       expect(top.type).toBe(FutureHost);
       expect(top.key).toBeNull();
     }
+  });
+});
+
+describe('a cancel request (ADR 0062)', () => {
+  const none: FutureReviewModel = {
+    decisions: [],
+    othersApprove: false,
+    canCancel: false,
+    canRequestCancel: false,
+    canRetractCancel: false,
+    canRefuseCancel: false,
+  };
+  const asked = future.review.cancelRequest;
+
+  it('offers the author „Požádat o zrušení“ under the editor of an approved akce', () => {
+    const html = render({ state: 'approved', review: { ...none, canRequestCancel: true } });
+    expect(buttons(html)).toContain(asked.button);
+    expect(html).not.toContain(future.review.cancel.button);
+  });
+
+  it('shows the waiting author the notice and „Vzít žádost zpět“, and no editor', () => {
+    const html = render({
+      state: 'approved',
+      editor: null,
+      cancelRequested: true,
+      review: { ...none, canRetractCancel: true },
+    });
+    expect(html).toContain(asked.waiting);
+    expect(buttons(html)).toContain(asked.retract);
+  });
+
+  it('gives the vedení „Potvrdit zrušení“ and „Zamítnout zrušení“ on a waiting request', () => {
+    const html = render({
+      state: 'approved',
+      editor: null,
+      cancelRequested: true,
+      review: { ...none, canCancel: true, canRefuseCancel: true },
+    });
+    expect(html).toContain(asked.waiting);
+    expect(buttons(html)).toContain(future.review.cancel.confirmRequest);
+    expect(buttons(html)).toContain(asked.refuse);
+  });
+
+  it('shows the author the vedení’s refusal', () => {
+    const html = render({ state: 'approved', cancelRefusalNote: 'Akce je potřeba.' });
+    expect(html).toContain(asked.refusal);
+    expect(html).toContain('Akce je potřeba.');
   });
 });

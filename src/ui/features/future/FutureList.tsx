@@ -23,6 +23,7 @@ function Row({ row }: { readonly row: FutureRow }) {
         <span>{future.kind[row.kind]}</span>
         {/* An approved item of someone else needs no mark; a reviewer's list holds the rest too. */}
         {row.isAuthor || row.state !== 'approved' ? <Chip look={FUTURE_LOOK[row.state]} /> : null}
+        {row.cancelRequested ? <span>{future.review.cancelRequest.waiting}</span> : null}
       </p>
       {lines.map((line) => (
         <p key={line}>{line}</p>

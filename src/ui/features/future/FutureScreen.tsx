@@ -27,6 +27,10 @@ export interface FutureScreenItem extends FutureReadItem {
   readonly returnNote: string | null;
   /** The parts that return named to rework (ADR 0058), as codes; empty otherwise. */
   readonly returnParts: readonly string[];
+  /** A cancel request waits for the vedení (ADR 0062). */
+  readonly cancelRequested: boolean;
+  /** Why the vedení refused the author's request; null otherwise. */
+  readonly cancelRefusalNote: string | null;
   /** The author may take a submitted item back. */
   readonly canRetract: boolean;
   /** The reviewer's decisions and the cancel the viewer may make; null when there are none. */
@@ -51,7 +55,19 @@ export function FutureScreen({
   readonly item: FutureScreenItem;
   readonly actions: FutureActions;
 }) {
-  const { id, kind, state, view, window, editor, returnNote, returnParts, review } = item;
+  const {
+    id,
+    kind,
+    state,
+    view,
+    window,
+    editor,
+    returnNote,
+    returnParts,
+    review,
+    cancelRequested,
+    cancelRefusalNote,
+  } = item;
   const rework = returnParts.flatMap(
     (c) => future.returnPart[c as keyof typeof future.returnPart] ?? [],
   );
@@ -63,12 +79,32 @@ export function FutureScreen({
         bar={review}
         decideFuture={actions.decideFuture}
         cancelFuture={actions.cancelFuture}
+        requestCancelFuture={actions.requestCancelFuture}
+        retractCancelFuture={actions.retractCancelFuture}
+        refuseCancelFuture={actions.refuseCancelFuture}
+        cancelRequested={cancelRequested}
       />
+    );
+  // The author has their own „Vzít žádost zpět“ section; the vedení and others get the plain line.
+  const waiting =
+    cancelRequested && !review?.canRetractCancel ? (
+      <p role="note" className="font-semibold">
+        {future.review.cancelRequest.waiting}
+      </p>
+    ) : null;
+  const refusal =
+    cancelRefusalNote === null ? null : (
+      <section className="space-y-1">
+        <h2 className="font-semibold">{future.review.cancelRequest.refusal}</h2>
+        <p className="whitespace-pre-line">{cancelRefusalNote}</p>
+      </section>
     );
   if (editor === null) {
     return (
       <FutureHost>
         <FutureRead item={item}>
+          {waiting}
+          {refusal}
           {item.canRetract ? (
             <FutureRetract id={id} version={item.version} retractFuture={actions.retractFuture} />
           ) : null}
@@ -95,6 +131,8 @@ export function FutureScreen({
             {returnNote === null ? null : <p className="whitespace-pre-line">{returnNote}</p>}
           </section>
         )}
+        {waiting}
+        {refusal}
         {state === 'approved' ? (
           <FutureRevise
             key={`${id}:${editor.version}`}

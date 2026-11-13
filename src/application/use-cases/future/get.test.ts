@@ -5,7 +5,7 @@ import type { FutureState } from '@/domain/review';
 
 import { futureFixtures, readyAkce, readyJednani } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { getFuture, saveFuture } from './index';
+import { getFuture, requestCancelFuture, saveFuture } from './index';
 
 const world = setupWorld();
 const { start, moveTo } = futureFixtures(world);
@@ -59,6 +59,7 @@ describe('future.get', () => {
         submittedAt: expect.any(String),
         reportState: 'none',
         reportPointId: null,
+        cancelRequestedAt: null,
         content: readyAkce(),
         view: readyAkce(),
         timeline: [
@@ -124,6 +125,36 @@ describe('future.get', () => {
         editable: false,
         timeline: [{ note: 'Doplňte prosím místo.' }],
       },
+    });
+  });
+
+  it('tells the author and the vedení when a cancel waits, keeps the author out of the editor, and tells a colleague nothing (ADR 0062)', async () => {
+    const author = await user();
+    const id = await item(author, 'approved');
+    world.clock.advance(60_000);
+    const asked = await world.run(requestCancelFuture, world.as(author), {
+      id,
+      expectedVersion: 3,
+      confirmed: true,
+    });
+    expect(asked.ok).toBe(true);
+    const at = world.clock.now().toISOString();
+    expect(await open(author, id)).toMatchObject({
+      ok: true,
+      value: {
+        state: 'approved',
+        editable: false,
+        cancelRequestedAt: at,
+        timeline: [{ event: 'request-cancel', fromState: 'approved', toState: 'approved' }],
+      },
+    });
+    expect(await open(await user('reviewer'), id)).toMatchObject({
+      ok: true,
+      value: { cancelRequestedAt: at },
+    });
+    expect(await open(await user(), id)).toMatchObject({
+      ok: true,
+      value: { state: 'approved', cancelRequestedAt: null, timeline: [] },
     });
   });
 

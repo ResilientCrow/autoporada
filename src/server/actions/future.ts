@@ -5,6 +5,9 @@ import {
   createFuture as createFutureUseCase,
   decideFuture as decideFutureUseCase,
   getFuture as getFutureUseCase,
+  refuseCancelFuture as refuseCancelFutureUseCase,
+  requestCancelFuture as requestCancelFutureUseCase,
+  retractCancelFuture as retractCancelFutureUseCase,
   retractFuture as retractFutureUseCase,
   saveFuture as saveFutureUseCase,
   startFutureReport as startFutureReportUseCase,
@@ -57,11 +60,33 @@ export const decideFuture = defineAction(decideFutureUseCase, {
 });
 
 /**
- * „Zrušit položku“ of an approved item, by its author or a reviewer; the page refreshes as
- * „Zrušeno“. It counts under the submission limit, like the points' withdraw an author makes.
+ * „Zrušit akci“ of an approved item, or „Potvrdit zrušení“ of a waiting request: a vedení
+ * decision since ADR 0062, so it counts under the admin limit like the other decisions. The page
+ * refreshes as „Zrušeno“.
  */
 export const cancelFuture = defineAction(cancelFutureUseCase, {
+  rateLimit: 'admin',
+  refresh: 'page',
+});
+
+/**
+ * „Požádat o zrušení“: the author outside the vedení asks for the cancel (ADR 0062). The akce
+ * stays approved; it counts under the submission limit, like the author's other moves.
+ */
+export const requestCancelFuture = defineAction(requestCancelFutureUseCase, {
   rateLimit: 'submission',
+  refresh: 'page',
+});
+
+/** „Vzít žádost zpět“: the author takes the waiting request back. */
+export const retractCancelFuture = defineAction(retractCancelFutureUseCase, {
+  rateLimit: 'submission',
+  refresh: 'page',
+});
+
+/** „Zamítnout zrušení“: the vedení refuses the waiting request, with a note; the akce stays. */
+export const refuseCancelFuture = defineAction(refuseCancelFutureUseCase, {
+  rateLimit: 'admin',
   refresh: 'page',
 });
 

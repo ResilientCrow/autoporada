@@ -17,6 +17,8 @@ const FUTURE: AuditShape<FutureItemRecord> = {
   reportState: 'value',
   reportPointId: 'value',
   submittedAt: 'value',
+  /** An instant, not what anyone wrote (ADR 0062). */
+  cancelRequestedAt: 'value',
   version: 'omit',
   updatedAt: 'omit',
 };
@@ -45,10 +47,15 @@ const ACTIONS = {
   return: 'future.returned',
   reject: 'future.rejected',
   cancel: 'future.cancelled',
+  'request-cancel': 'future.cancel-requested',
+  'refuse-cancel': 'future.cancel-refused',
+  'retract-cancel': 'future.cancel-retracted',
 } as const;
 type FutureMove = keyof typeof ACTIONS;
-/** The moves a reviewer, or the author of an approved akce (cancel), makes on the decision path. */
+/** The moves a reviewer makes on the decision path, a cancel included (ADR 0062). */
 export type DecisionMove = Extract<FutureMove, 'approve' | 'return' | 'reject' | 'cancel'>;
+/** The moves on a cancel request of an approved item (ADR 0062): the state stays, the flag moves. */
+type CancelRequestMove = Extract<FutureMove, 'request-cancel' | 'refuse-cancel' | 'retract-cancel'>;
 
 /**
  * The access check of a move: the policy folds the item's state and author
@@ -59,7 +66,12 @@ export const moveCheck =
   (event: FutureMove) =>
   (item: FutureItemRecord): Check => ({
     action: 'future.transition',
-    item: { authorId: item.authorId, state: item.state, kind: item.kind },
+    item: {
+      authorId: item.authorId,
+      state: item.state,
+      kind: item.kind,
+      cancelRequested: item.cancelRequestedAt !== null,
+    },
     event,
   });
 
@@ -116,5 +128,22 @@ export async function decideMove(
 ): Promise<FutureItemRecord> {
   const after = await tx.futureItems.decide(item.id, item.version, FUTURE_MACHINE[event].to);
   await record(tx, item, after, event, note, returnParts);
+  return after;
+}
+
+/**
+ * A move on the cancel request of the locked, approved item (ADR 0062): the request is set (asked)
+ * or cleared (refused, taken back) through `markCancelRequest`, which the review scope allows, and
+ * the state stays. A refusal's note goes into the history event, never the audit.
+ */
+export async function cancelRequestMove(
+  tx: Tx,
+  item: FutureItemRecord,
+  event: CancelRequestMove,
+  at: Date | null,
+  note?: string,
+): Promise<FutureItemRecord> {
+  const after = await tx.futureItems.markCancelRequest(item.id, item.version, at);
+  await record(tx, item, after, event, note);
   return after;
 }

@@ -48,22 +48,37 @@ export function NovaAkce({ id, step }: { id: string; step?: string }) {
     <div className="pv"><p className="pvh">Takhle to vyjde</p><div className="arch"><Line f={f} /></div></div>
   </>} dock={<div className="dock">{!can && hint ? <p className="hint a">{hint}</p> : null}<div className="row wzb"><button type="button" className="btn lg" onClick={() => nav(steps[k - 1])}><Ic n="back" />Zpět</button><button type="button" className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (!can) return; if (cur === 'hotovo') { apply(A.submitFuture(id)); if (head) apply(A.approveFuture(id)); goReplace(`/akce/${id}?fresh=1`); } else nav(steps[k + 1]); }}>{nx}</button></div><Saved t={`Uloženo v ${Q.clock(f.savedAt).time}`} /></div>} desk={<AkceDesk f={f} />} />;
 }
+/** „Zamítnout zrušení“: the akce stays approved and its author learns why, so the note is required (ADR 0062). */
+export function RefuseCancel({ onClose, onDone }: { onClose: () => void; onDone: (note: string) => void }) {
+  const [n, set] = useState(''); const ok = !!n.trim();
+  return <Dialog title="Zamítnout zrušení" onClose={onClose}>
+    <label className="l">Co má autor vědět<small>Akce zůstane schválená.</small><textarea className="in" autoFocus value={n} onChange={(e) => set(e.target.value)} placeholder="Proč akce zůstává" /></label>
+    <button type="button" className={`btn lg w ${ok ? 'dk' : 'off'}`} aria-disabled={!ok} onClick={() => ok && onDone(n.trim())}>Zamítnout zrušení</button>
+  </Dialog>;
+}
 /** Everyone's view of an akce; its author and vedení get their own moves. */
 export function AkceDetail({ id, fresh }: { id: string; fresh?: boolean }) {
   const { s, apply } = useStore(); const f = s.futures.find((x) => x.id === id); const u = Q.me(s);
-  const [edit, setEdit] = useState(false); const [draft, setDraft] = useState<Partial<Future>>({}); const [cancel, setCancel] = useState(false);
+  const [edit, setEdit] = useState(false); const [draft, setDraft] = useState<Partial<Future>>({}); const [cancel, setCancel] = useState(false); const [refuse, setRefuse] = useState(false);
   if (!f) return <NotFound />;
   const mine = f.authorId === u?.id; const staff = Q.atLeast(u?.role, 'reviewer');
   const v = { ...f, ...draft };
   if ((f.state === 'draft' || f.state === 'returned') && mine && !fresh && !edit && f.state === 'draft') { go(`/nova-akce/${id}`); return null; }
+  const pending = f.cancelRequested; const asks = mine && !staff;
   const on = f.state === 'approved' ? 2 : f.state === 'submitted' ? 1 : 0;
   const stamp = { submitted: 'U vedení', approved: 'Schváleno', returned: 'Vráceno', rejected: 'Zamítnuto', cancelled: 'Zrušeno', draft: 'Rozepsáno', withdrawn: 'Zrušeno' }[f.state];
-  return <App nar over={cancel ? <Dialog title="Zrušit akci?" onClose={() => setCancel(false)}><p>Akce zmizí z přehledu školy a z porady. Zrušení nejde vrátit.</p><div className="row"><button className="btn lg" onClick={() => setCancel(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.cancelFuture(id)); setCancel(false); }}>Zrušit akci</button></div></Dialog> : null}
+  const over = cancel ? (asks
+    ? <Dialog title="Požádat o zrušení?" onClose={() => setCancel(false)}><p>Zrušení musí schválit vedení. Do té doby akce platí a zůstává v poradě.</p><div className="row"><button className="btn lg" onClick={() => setCancel(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.requestCancelFuture(id)); setCancel(false); }}>Požádat o zrušení</button></div></Dialog>
+    : <Dialog title="Zrušit akci?" onClose={() => setCancel(false)}><p>Akce zmizí z přehledu školy a z porady. Zrušení nejde vrátit.</p><div className="row"><button className="btn lg" onClick={() => setCancel(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.cancelFuture(id)); setCancel(false); }}>{pending ? 'Potvrdit zrušení' : 'Zrušit akci'}</button></div></Dialog>)
+    : refuse ? <RefuseCancel onClose={() => setRefuse(false)} onDone={(n) => { apply(A.refuseCancelFuture(id, n)); setRefuse(false); }} /> : null;
+  return <App nar over={over}
     desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch-wrap rise"><Stamp t={stamp} /><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl me"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><Line f={v} /></div></div></div></div></Desk>}
     col={<>
       <Back to={mine ? '/moje' : '/akce'} t={mine ? 'Zpět na Moje' : 'Zpět na akce'} />
       <Top h={!fresh ? Q.cap(f.title) : f.state === 'approved' ? 'Hotovo, je to v poradě' : 'Hotovo, je to u vedení'} lead={!fresh ? `${[whenText(f), f.organizer.trim()].filter(Boolean).join(', ')}. ${futureLine(f)}.` : f.state === 'approved' ? 'Datum určí, ve kterém seznamu to vyjde.' : 'Po schválení ji uvidí celá škola.'} />
       {f.state === 'returned' ? <Rework labels={Q.partLabels(f, f.parts)} note={f.note} /> : f.note ? <Note h="Poznámka vedení">{f.note}</Note> : null}
+      {mine && f.cancelRefusal ? <Note h="Vedení zrušení zamítlo">{f.cancelRefusal}</Note> : null}
+      {f.state === 'approved' && pending && (mine || staff) ? <Note h="Zrušení čeká na vedení">Do rozhodnutí akce dál platí a zůstává v poradě.</Note> : null}
       {mine && f.state !== 'cancelled' && f.state !== 'rejected' ? <Track on={on} steps={['Napsáno', 'U vedení', 'Vidí ji škola', f.kind === 'akce' ? 'Zpráva po akci' : 'V poradě']} /> : null}
       {edit ? <div className="stack"><label className="l">Název<input className="in" value={v.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label><label className="l">Den<input className="in" type="date" value={toIsoDate(v.date)} onChange={(e) => e.target.value && setDraft({ ...draft, date: parseIsoDate(e.target.value) })} /></label><label className="l">Místo<input className="in" value={v.place} onChange={(e) => setDraft({ ...draft, place: e.target.value })} /></label><Note>{mine ? 'Změna schválené akce jde znovu ke kontrole vedení. Do té doby akce dál platí v původní podobě.' : 'Upravíte to za autora, ke kontrole se to nevrací.'}</Note><div className="row"><button className="btn lg" onClick={() => { setEdit(false); setDraft({}); }}>Zpět</button><button className="btn go lg" onClick={() => { apply(A.reviseFuture(id, draft)); setEdit(false); setDraft({}); }}>Uložit změny</button></div></div> : null}
       {!edit ? <div className="stack st8">
@@ -71,8 +86,10 @@ export function AkceDetail({ id, fresh }: { id: string; fresh?: boolean }) {
         {f.state === 'returned' && mine ? <a className="btn go lg w" href={`#/nova-akce/${id}/${STEP_OF[Q.returnPartsOf(f).find(([c]) => f.parts?.includes(c))?.[0] ?? ''] ?? 'hotovo'}`}>Opravit a poslat znovu</a> : null}
         {f.state === 'submitted' && mine ? <button className="btn lg w" onClick={() => { apply(A.retractFuture(id)); go(`/nova-akce/${id}/hotovo`); }}>Vzít zpět a upravit</button> : null}
         {f.state === 'approved' && u?.role === 'headmaster' ? <button type="button" className="btn lg w" onClick={() => { const nid = createWith(apply, s, (cb) => A.createFuture(f.kind, cb)); apply(A.saveFuture(nid, { title: f.title, timeFrom: f.timeFrom, timeTo: f.timeTo, campus: f.campus, place: f.place, organizer: f.organizer, participants: f.participants, remark: f.remark })); go(`/nova-akce/${nid}/kdy`); }}>Stejné na jiný den</button> : null}
-        {f.state === 'approved' && (mine || staff) ? <button className="btn lg w" onClick={() => setEdit(true)}>Změnit</button> : null}
-        {f.state === 'approved' && (mine || staff) ? <button className="q r" onClick={() => setCancel(true)}>Zrušit akci</button> : null}
+        {f.state === 'approved' && (staff || (mine && !pending)) ? <button className="btn lg w" onClick={() => setEdit(true)}>Změnit</button> : null}
+        {f.state === 'approved' && asks && pending ? <button className="q r" onClick={() => apply(A.retractCancelFuture(id))}>Vzít žádost zpět</button> : null}
+        {f.state === 'approved' && (staff || (asks && !pending)) ? <button className="q r" onClick={() => setCancel(true)}>{staff && pending ? 'Potvrdit zrušení' : 'Zrušit akci'}</button> : null}
+        {f.state === 'approved' && staff && pending ? <button className="q r" onClick={() => setRefuse(true)}>Zamítnout zrušení</button> : null}
       </div> : null}
       {mine && f.trail.length ? <Sec h="Co se dělo"><Todo rows={f.trail.map((t) => ({ k: 'd' as const, t: <>{t.what}, {WHEN(t.at)}<TrailMore labels={Q.partLabels(f, t.parts)} note={t.note} /></> }))} /></Sec> : null}
     </>} />;

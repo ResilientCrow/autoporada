@@ -10,7 +10,7 @@ import { moveCheck } from './events';
 const AUTHOR = '00000000-0000-4000-8000-0000000000a1';
 const actor = (id: string, role: Role): Actor => ({ id, role, status: 'active', isStudent: false });
 
-const item = (state: FutureState): FutureItemRecord => ({
+const item = (state: FutureState, cancelRequestedAt: Date | null = null): FutureItemRecord => ({
   id: '00000000-0000-4000-8000-0000000000b1',
   kind: 'akce',
   authorId: AUTHOR,
@@ -30,6 +30,7 @@ const item = (state: FutureState): FutureItemRecord => ({
   reportState: 'none',
   reportPointId: null,
   submittedAt: new Date(0),
+  cancelRequestedAt,
   version: 2,
   updatedAt: new Date(0),
 });
@@ -84,13 +85,37 @@ describe('moveCheck of the decision path', () => {
     },
   );
 
-  it('lets the author and reviewers cancel an approved akce, and no one else', () => {
-    const check = moveCheck('cancel')(item('approved'));
-    expect(can(actor(AUTHOR, 'submitter'), check)).toBe(true);
-    expect(can(actor(COLLEAGUE, 'reviewer'), check)).toBe(true);
-    expect(can(actor(COLLEAGUE, 'submitter'), check)).toBe(false);
+  it('lets only the vedení cancel an approved akce, a pending request or not (ADR 0062)', () => {
+    for (const pending of [null, new Date(0)]) {
+      const check = moveCheck('cancel')(item('approved', pending));
+      expect(can(actor(COLLEAGUE, 'reviewer'), check)).toBe(true);
+      expect(can(actor(AUTHOR, 'headmaster'), check)).toBe(true);
+      expect(can(actor(AUTHOR, 'submitter'), check)).toBe(false);
+      expect(can(actor(COLLEAGUE, 'submitter'), check)).toBe(false);
+    }
     for (const state of ['draft', 'submitted', 'returned', 'cancelled'] as const) {
       expect(can(actor(AUTHOR, 'headmaster'), moveCheck('cancel')(item(state)))).toBe(false);
     }
+  });
+});
+
+describe('moveCheck of a cancel request (ADR 0062)', () => {
+  const asked = item('approved', new Date(0));
+  const approved = item('approved');
+
+  it('lets the author ask while none waits, and take it back while one does', () => {
+    const author = actor(AUTHOR, 'submitter');
+    expect(can(author, moveCheck('request-cancel')(approved))).toBe(true);
+    expect(can(author, moveCheck('request-cancel')(asked))).toBe(false);
+    expect(can(author, moveCheck('retract-cancel')(asked))).toBe(true);
+    expect(can(author, moveCheck('retract-cancel')(approved))).toBe(false);
+    expect(can(author, moveCheck('revise')(asked))).toBe(false);
+    expect(can(actor(COLLEAGUE, 'submitter'), moveCheck('request-cancel')(approved))).toBe(false);
+  });
+
+  it('lets the vedení refuse only a waiting request', () => {
+    expect(can(actor(COLLEAGUE, 'reviewer'), moveCheck('refuse-cancel')(asked))).toBe(true);
+    expect(can(actor(COLLEAGUE, 'headmaster'), moveCheck('refuse-cancel')(approved))).toBe(false);
+    expect(can(actor(AUTHOR, 'submitter'), moveCheck('refuse-cancel')(asked))).toBe(false);
   });
 });

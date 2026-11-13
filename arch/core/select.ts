@@ -153,7 +153,7 @@ export function placeholderQueue(s: State, u: User | null): PlaceholderItem[] {
 export const myPoints = (s: State, id: string) => s.points.filter((p) => p.authorId === id && p.state !== 'withdrawn');
 export const myFutures = (s: State, id: string) => s.futures.filter((f) => f.authorId === id && f.state !== 'withdrawn');
 export const queuePoints = (s: State) => s.points.filter((p) => p.state === 'submitted').sort((a, b) => (a.submittedAt ?? '').localeCompare(b.submittedAt ?? ''));
-export const queueFutures = (s: State) => s.futures.filter((f) => f.state === 'submitted').sort((a, b) => (a.submittedAt ?? '').localeCompare(b.submittedAt ?? ''));
+export const queueFutures = (s: State) => s.futures.filter((f) => f.state === 'submitted' || (f.state === 'approved' && f.cancelRequested)).sort((a, b) => (a.cancelRequestedAt ?? a.submittedAt ?? '').localeCompare(b.cancelRequestedAt ?? b.submittedAt ?? ''));
 export const canDecidePoint = (u: User | null, p: Point) => !!u && (u.role === 'headmaster' || (u.role === 'reviewer' && p.authorId !== u.id));
 export const canDecideFuture = (u: User | null, f: Future) => !!u && (u.role === 'headmaster' || (u.role === 'reviewer' && f.authorId !== u.id));
 export const pendingRequests = (s: State) => s.requests.filter((r) => r.state === 'pending');
@@ -256,7 +256,7 @@ export function preflight(s: State, monday: string): Check[] {
   if (built.errors.length) c.push({ level: 'block', code: 'invalid', text: 'Dokument teď nejde sestavit. Zkontrolujte přítomné a pokyny.' });
   const here = s.points.filter((p) => p.poradaMonday === monday && p.kind === 'report');
   const wait = here.filter((p) => p.state === 'submitted').length, ret = here.filter((p) => p.state === 'returned').length;
-  const akce = queueFutures(s).length;
+  const akce = s.futures.filter((f) => f.state === 'submitted').length;
   if (wait) c.push({ level: 'warn', code: 'waiting', n: wait, text: `${wait === 1 ? '1 zpráva čeká' : wait < 5 ? `${wait} zprávy čekají` : `${wait} zpráv čeká`} na kontrolu. Bez schválení nevyjde.`, to: 'kontrola' });
   if (akce) c.push({ level: 'warn', code: 'akce-waiting', n: akce, text: `${akce === 1 ? '1 akce čeká' : akce < 5 ? `${akce} akce čekají` : `${akce} akcí čeká`} na kontrolu.`, to: 'kontrola' });
   if (ret) c.push({ level: 'warn', code: 'returned', n: ret, text: `${ret === 1 ? '1 zpráva je vrácená' : `${ret} vrácené zprávy`} autorovi. Bez schválení nevyjde.` });

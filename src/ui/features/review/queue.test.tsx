@@ -61,6 +61,7 @@ const akce = (id: string, over: Record<string, unknown> = {}) => ({
   /** 23.30 UTC is already the 21st in Prague. */
   submittedAt: '2026-10-20T23:30:00.000Z',
   revised: false,
+  cancelRequestedAt: null,
   ...over,
 });
 const FUTURE = {
@@ -169,6 +170,22 @@ describe('QueueCard', () => {
 
   it('is clean for the Content-Security-Policy', () => {
     expect(cspMarkupProblems(html)).toEqual([]);
+  });
+});
+
+describe('QueueFuture: a waiting cancel request', () => {
+  it('is marked „Žádost o zrušení“ with the day it was asked for, not the hand-in', () => {
+    const [first] = FUTURE.items;
+    const asked = {
+      ...FUTURE,
+      items: first ? [{ ...first, cancelRequestedAt: '2026-11-12T08:00:00.000Z' }] : [],
+    };
+    const shown = text(renderToStaticMarkup(<QueueFuture future={asked} />)).replace(
+      /\u00a0/g,
+      ' ',
+    );
+    expect(shown).toContain(review.future.cancelRequestedOn('12. 11.').replace(/\u00a0/g, ' '));
+    expect(shown).not.toContain('Odesláno');
   });
 });
 

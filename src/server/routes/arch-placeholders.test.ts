@@ -28,6 +28,7 @@ const akce = (id: string, over: Partial<FutureItemRecord['content']> = {}): Futu
   reportState: 'none',
   reportPointId: null,
   submittedAt: null,
+  cancelRequestedAt: null,
   version: 1,
   updatedAt: new Date('2026-10-19T08:00:00Z'),
 });

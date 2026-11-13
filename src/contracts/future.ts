@@ -44,6 +44,9 @@ const FUTURE_EVENTS: Readonly<Record<FutureEvent | 'edit', FutureEvent | 'edit'>
   reject: 'reject',
   revise: 'revise',
   cancel: 'cancel',
+  'request-cancel': 'request-cancel',
+  'refuse-cancel': 'refuse-cancel',
+  'retract-cancel': 'retract-cancel',
   edit: 'edit',
 };
 const futureEventSchema = z.enum(FUTURE_EVENTS);
@@ -183,6 +186,11 @@ export const getFutureOutput = z.object({
   submittedAt: instant.nullable(),
   reportState: reportStateSchema,
   reportPointId: z.uuid().nullable(),
+  /**
+   * When the author asked the vedení to cancel the approved item („Zrušení čeká na vedení“, ADR
+   * 0062): for the author and reviewers only, null for anyone else and when none waits.
+   */
+  cancelRequestedAt: instant.nullable(),
   /** For the author only, who edits it; everyone else gets `view`. */
   content: futureContentWire.nullable(),
   view: futureView,
@@ -214,6 +222,8 @@ export const listFutureOutput = z.object({
         kind: futureKindSchema,
         state: futureStateSchema,
         isAuthor: z.boolean(),
+        /** The author's cancel waits for the vedení (ADR 0062): told to the author and reviewers only. */
+        cancelRequested: z.boolean(),
         /** Where the report of an akce stands: the home page offers it once it is due. */
         reportState: reportStateSchema,
         updatedAt: instant,

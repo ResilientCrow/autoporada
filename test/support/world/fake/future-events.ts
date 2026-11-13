@@ -20,7 +20,7 @@ function refuse(state: FakeState, row: FutureEventRecord): void {
     throw refusedBy('future_events_note');
   }
   if (
-    (row.event === 'return' || row.event === 'reject') &&
+    (row.event === 'return' || row.event === 'reject' || row.event === 'refuse-cancel') &&
     row.note === null &&
     !(row.event === 'return' && row.returnParts !== null)
   ) {

@@ -132,7 +132,7 @@ export function createFuture(kind: Future['kind'], onId?: (id: string) => void):
   return (s0) => {
     const [s, fid] = id(s0, 'f'); const u = me(s)!; onId?.(fid);
     const tomorrow = parseIsoDate(toIsoDate(handInTo(s).monday));
-    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: null, place: '', organizer: '', participants: '', remark: '', state: 'draft', changed: false, wasApproved: false, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
+    const f: Future = { id: fid, kind, authorId: u.id, title: '', date: tomorrow, endDate: null, timeFrom: null, timeTo: null, campus: null, place: '', organizer: '', participants: '', remark: '', state: 'draft', changed: false, wasApproved: false, cancelRequested: false, cancelRequestedAt: null, cancelRefusal: null, note: null, parts: null, report: 'none', submittedAt: null, savedAt: s.now, trail: [], dateSet: false };
     return { ...s, futures: [...s.futures, f] };
   };
 }
@@ -161,13 +161,18 @@ export const reviseFuture = (fid: string, patch: Partial<Future>): Fx => (s) => 
   const before = s.futures.find((x) => x.id === fid); if (!before) return s;
   const author = before.authorId === s.userId;
   const merged = patched(before, patch);
-  const after: Future = { ...merged, ...(author ? { state: 'submitted' as const, changed: true, submittedAt: s.now } : {}), trail: [...before.trail, trail(s, author ? 'Změna, znovu ke kontrole' : 'Upraveno vedením')] };
+  const after: Future = { ...merged, ...(author ? { state: 'submitted' as const, changed: true, submittedAt: s.now, cancelRefusal: null } : {}), trail: [...before.trail, trail(s, author ? 'Změna, znovu ke kontrole' : 'Upraveno vedením')] };
   return { ...s, placeholderChecks: uncheckedBy(s, before, after), futures: up(s.futures, fid, () => after) };
 };
 export const approveFuture = (fid: string): Fx => (s) => { const f = s.futures.find((x) => x.id === fid)!; if (!canDecideFuture(me(s), f) || f.state !== 'submitted') return s; return { ...s, futures: up(s.futures, fid, (x) => ({ ...x, state: 'approved', changed: false, wasApproved: true, note: null, parts: null, trail: [...x.trail, trail(s, 'Schváleno')] })) }; };
 export const returnFuture = (fid: string, note: string, parts: readonly string[] = []): Fx => (s) => { const r = returnOf(note, parts); return !r ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'returned', note: r.note, parts: r.parts, trail: [...f.trail, trail(s, 'Vráceno k úpravě', r.trail)] })) }; };
 export const rejectFuture = (fid: string, note: string): Fx => (s) => (!note.trim() ? s : { ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'rejected', note, parts: null, trail: [...f.trail, trail(s, 'Zamítnuto', { note })] })) });
-export const cancelFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'cancelled', trail: [...f.trail, trail(s, 'Zrušeno')] })) });
+/** „Požádat o zrušení“: the author outside the vedení asks; the akce stays approved until the vedení decides (ADR 0062). */
+export const requestCancelFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.state === 'approved' && !f.cancelRequested ? { ...f, cancelRequested: true, cancelRequestedAt: s.now, cancelRefusal: null, trail: [...f.trail, trail(s, 'Požádáno o zrušení')] } : f)) });
+export const retractCancelFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => (f.cancelRequested ? { ...f, cancelRequested: false, cancelRequestedAt: null, trail: [...f.trail, trail(s, 'Žádost o zrušení vzata zpět')] } : f)) });
+/** „Zamítnout zrušení“: the akce stays approved, the note is for its author and required. */
+export const refuseCancelFuture = (fid: string, note: string): Fx => (s) => (!note.trim() ? s : { ...s, futures: up(s.futures, fid, (f) => (f.cancelRequested ? { ...f, cancelRequested: false, cancelRequestedAt: null, cancelRefusal: note.trim(), trail: [...f.trail, trail(s, 'Zrušení zamítnuto', { note: note.trim() })] } : f)) });
+export const cancelFuture = (fid: string): Fx => (s) => ({ ...s, futures: up(s.futures, fid, (f) => ({ ...f, state: 'cancelled', cancelRequested: false, cancelRequestedAt: null, cancelRefusal: null, trail: [...f.trail, trail(s, 'Zrušeno')] })) });
 
 // ---- porada ----
 /** A change to the outline or a text is a write the server stores: the porada then has its own (`Issue.own`). */

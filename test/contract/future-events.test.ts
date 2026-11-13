@@ -325,6 +325,8 @@ describe('FutureEventRepo (port contract)', () => {
       ['future_events_note_required', { event: 'reject' }],
       // Parts stand in for the note of a return only.
       ['future_events_note_required', { event: 'reject', returnParts: [] }],
+      // A refused cancel tells the author why (ADR 0062).
+      ['future_events_note_required', { event: 'refuse-cancel' }],
       ['future_events_return_parts', { event: 'reject', note: 'x', returnParts: ['title'] }],
       ['future_events_return_parts', { event: 'submit', returnParts: ['title'] }],
       ['future_events_return_parts', { event: 'return', returnParts: [] }],

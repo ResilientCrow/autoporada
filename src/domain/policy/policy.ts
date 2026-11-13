@@ -4,6 +4,7 @@ import {
   availableEvents,
   canEditFuture,
   canEditPoint,
+  fitsCancelRequest,
   FUTURE_MACHINE,
   POINT_MACHINE,
   REPORT_MACHINE,
@@ -24,6 +25,8 @@ interface Owned {
 type Owner = Owned | { readonly isAuthor: boolean };
 type PointRef = Owner & { readonly state: PointState };
 type FutureRef = Owner & { readonly state: FutureState; readonly kind: FutureKind };
+/** An item an edit or a move acts on: with whether its author's cancel request waits (ADR 0062). */
+type FutureMoveRef = FutureRef & { readonly cancelRequested: boolean };
 /** `everSubmitted`: handed in and not taken back by a retract (`submitted_at` is set). */
 type Seen<S> = Owned & { readonly state: S; readonly everSubmitted: boolean };
 type PointView = Seen<PointState>;
@@ -42,8 +45,12 @@ export type Check =
   | { readonly action: 'point.transition'; readonly point: PointRef; readonly event: PointEvent }
   | { readonly action: 'future.create' }
   | { readonly action: 'future.view'; readonly item: FutureView }
-  | { readonly action: 'future.edit'; readonly item: FutureRef }
-  | { readonly action: 'future.transition'; readonly item: FutureRef; readonly event: FutureEvent }
+  | { readonly action: 'future.edit'; readonly item: FutureMoveRef }
+  | {
+      readonly action: 'future.transition';
+      readonly item: FutureMoveRef;
+      readonly event: FutureEvent;
+    }
   /** „Napsat zprávu“ on an akce: the author's, once it is approved (no decline, ADR 0048). */
   | { readonly action: 'future.report'; readonly item: FutureRef }
   | { readonly action: 'review.queue' }
@@ -124,13 +131,17 @@ export function can(subject: Actor, check: Check): boolean {
         seen(actor, check.item) || (check.item.kind === 'akce' && check.item.state === 'approved')
       );
     case 'future.edit':
-      return canEditFuture(check.item.state, reviewActor(actor, check.item));
-    case 'future.transition':
-      return availableEvents(
-        FUTURE_MACHINE,
+      return canEditFuture(
         check.item.state,
         reviewActor(actor, check.item),
-      ).includes(check.event);
+        check.item.cancelRequested,
+      );
+    case 'future.transition':
+      return (
+        availableEvents(FUTURE_MACHINE, check.item.state, reviewActor(actor, check.item)).includes(
+          check.event,
+        ) && fitsCancelRequest(check.event, check.item.cancelRequested)
+      );
     case 'future.report':
       return check.item.state === 'approved' && canReport(reviewActor(actor, check.item));
     case 'review.queue':

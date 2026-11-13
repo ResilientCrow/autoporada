@@ -5,6 +5,9 @@ import {
   cancelFuture,
   decideFuture,
   getFuture,
+  refuseCancelFuture,
+  requestCancelFuture,
+  retractCancelFuture,
   retractFuture,
   saveFuture,
   submitFuture,
@@ -41,6 +44,9 @@ export default async function FuturePage({
           retractFuture,
           decideFuture,
           cancelFuture,
+          requestCancelFuture,
+          retractCancelFuture,
+          refuseCancelFuture,
         }}
       />
     </Shell>

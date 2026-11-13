@@ -32,6 +32,10 @@ export const review = {
     empty: 'Žádná akce ani jednání nečeká na schválení.',
     /** An approved akce its author changed: it waits for a new decision. */
     revised: 'Změna schválené akce',
+    /** An approved akce whose author asked to cancel it (ADR 0062). */
+    cancelRequested: 'Žádost o\u00A0zrušení',
+    /** A request row's date: when the cancel was asked for, not the old hand-in. */
+    cancelRequestedOn: (date: string) => `Žádost o\u00A0zrušení ${date}`,
     /** More items wait than the section lists; `n` is its limit. */
     capped: (n: number) => `Zobrazeno je jen ${n}\u00A0nejstarších položek.`,
   },

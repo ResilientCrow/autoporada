@@ -123,6 +123,24 @@ export const future = {
       confirm: 'Rozumím, že položka zmizí z\u00A0přehledu.',
       unconfirmed: 'Potvrďte prosím, že položka zmizí z\u00A0přehledu.',
       said: 'Položka byla zrušena.',
+      /** On an item whose author asked for the cancel (ADR 0062): the vedení confirms it. */
+      confirmRequest: 'Potvrdit zrušení',
+    },
+    /** The author's request to cancel an approved item, which the vedení decides (ADR 0062). */
+    cancelRequest: {
+      heading: 'Žádost o\u00A0zrušení',
+      button: 'Požádat o\u00A0zrušení',
+      confirm: 'Rozumím, že zrušení musí schválit vedení a\u00A0do té doby položka platí.',
+      unconfirmed: 'Potvrďte prosím, že zrušení musí schválit vedení.',
+      said: 'Žádost o\u00A0zrušení byla odeslána vedení.',
+      /** On the item's page and the list while the request waits. */
+      waiting: 'Zrušení čeká na\u00A0vedení',
+      retract: 'Vzít žádost zpět',
+      retracted: 'Žádost o\u00A0zrušení byla vzata zpět.',
+      refuse: 'Zamítnout zrušení',
+      refused: 'Zrušení bylo zamítnuto, položka zůstává schválená.',
+      /** The label above the vedení's note on a refused request, for its author. */
+      refusal: 'Vedení zrušení zamítlo',
     },
   },
   /** Where the item lands in the overview of the next porady (design section 12). */

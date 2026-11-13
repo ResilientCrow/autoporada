@@ -36,6 +36,7 @@ export {
   canEditFuture,
   canEditPoint,
   FUTURE_MACHINE,
+  fitsCancelRequest,
   futureEditNeedsReview,
   ISSUE_MACHINE,
   POINT_MACHINE,

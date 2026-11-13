@@ -113,6 +113,7 @@ describe('FutureItemRepo (port contract)', () => {
       reportState: 'none',
       reportPointId: null,
       submittedAt: null,
+      cancelRequestedAt: null,
       version: 1,
       updatedAt: world.clock.now(),
     });
@@ -583,6 +584,75 @@ describe('FutureItemRepo decision path', () => {
     expect(await read(cli, (tx) => tx.futureItems.get(item.id))).toEqual(first);
   });
 
+  describe('a cancel request (ADR 0062)', () => {
+    const approvedOf = async (author: UserRecord) =>
+      update(world.as(author), await handedIn(author), { state: 'approved' });
+    const mark = (by: Principal, item: FutureItemRecord, at: Date | null, version = item.version) =>
+      audited(by, (tx) => tx.futureItems.markCancelRequest(item.id, version, at));
+
+    it('lets the author mark it and a reviewer clear it, the version rising each time, nothing else moving', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const approved = await approvedOf(author);
+      expect(approved.cancelRequestedAt).toBeNull();
+      world.clock.advance(60_000);
+      const at = world.clock.now();
+      const asked = await mark(world.as(author), approved, at);
+      expect(asked).toEqual({
+        ...approved,
+        cancelRequestedAt: at,
+        version: approved.version + 1,
+        updatedAt: at,
+      });
+      expect(await read(cli, (tx) => tx.futureItems.get(approved.id))).toEqual(asked);
+      const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+      expect(await lock(reviewer, approved.id)).toEqual(asked);
+      world.clock.advance(60_000);
+      const cleared = await mark(reviewer, asked, null);
+      expect(cleared).toEqual({
+        ...asked,
+        cancelRequestedAt: null,
+        version: asked.version + 1,
+        updatedAt: world.clock.now(),
+      });
+    });
+
+    it('refuses a stale version, an unknown item and a colleague outside the scope with StaleVersion', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const approved = await approvedOf(author);
+      const at = world.clock.now();
+      const colleague = world.as(await world.seed.user({ role: 'submitter' }));
+      for (const refused of [
+        mark(world.as(author), approved, at, approved.version + 1),
+        mark(world.as(author), { ...approved, id: UNKNOWN_ID }, at),
+        mark(colleague, approved, at),
+      ]) {
+        expect(await failure(refused)).toBeInstanceOf(StaleVersion);
+      }
+      expect(await read(cli, (tx) => tx.futureItems.get(approved.id))).toEqual(approved);
+    });
+
+    it('future_items_cancel_request: only an approved item holds one', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const submitted = await handedIn(author);
+      const refused = await failure(mark(world.as(author), submitted, world.clock.now()));
+      expect(refused).toEqual(new DatabaseFailure('db.constraint.future_items_cancel_request'));
+    });
+
+    it('is cleared by any move of the state, by a decision or by the author', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+      const asked = async () => mark(world.as(author), await approvedOf(author), world.clock.now());
+      for (const state of ['cancelled', 'returned', 'rejected'] as const) {
+        expect((await decide(reviewer, await asked(), state)).cancelRequestedAt, state).toBeNull();
+      }
+      const revised = await update(world.as(author), await asked(), { state: 'submitted' });
+      expect(revised.cancelRequestedAt).toBeNull();
+      // A write that leaves the state alone keeps the request.
+      const kept = await update(world.as(author), await asked(), { reportState: 'written' });
+      expect(kept.cancelRequestedAt).not.toBeNull();
+    });
+  });
+
   it('refuses loadForDecision in a read transaction', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const item = await handedIn(author);
@@ -674,6 +744,30 @@ describe('FutureItemRepo queue', () => {
     const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
     const [row] = await read(reviewer, (tx) => tx.futureItems.queue(10));
     expect(row?.revised).toBe(false);
+  });
+
+  it('lists an approved item whose cancel waits, by the instant it was asked for (ADR 0062)', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const as = world.as(author);
+    const late = await submitAt(author, '2026-10-20T09:00:00Z');
+    const approved = await update(as, await submitAt(author, '2026-10-01T09:00:00Z'), {
+      state: 'approved',
+    });
+    await update(as, await submitAt(author, '2026-10-02T09:00:00Z'), { state: 'approved' });
+    const asked = await audited(as, (tx) =>
+      tx.futureItems.markCancelRequest(
+        approved.id,
+        approved.version,
+        new Date('2026-10-19T12:00:00Z'),
+      ),
+    );
+    const reviewer = world.as(await world.seed.user({ role: 'reviewer' }));
+    const queued = await read(reviewer, (tx) => tx.futureItems.queue(10));
+    expect(queued.map((q) => [q.item.id, q.revised])).toEqual([
+      [asked.id, false],
+      [late.id, false],
+    ]);
+    expect(queued[0]?.item).toEqual(asked);
   });
 
   it('shows a teacher only their own submitted items, never a colleague’s', async () => {

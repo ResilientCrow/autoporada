@@ -3,6 +3,12 @@ import type { z } from 'zod';
 import type {
   cancelFutureInput,
   cancelFutureOutput,
+  refuseCancelFutureInput,
+  refuseCancelFutureOutput,
+  requestCancelFutureInput,
+  requestCancelFutureOutput,
+  retractCancelFutureInput,
+  retractCancelFutureOutput,
   decideFutureInput,
   decideFutureOutput,
   ServerAction,
@@ -20,6 +26,19 @@ export type CancelFutureAction = ServerAction<
   z.output<typeof cancelFutureOutput>
 >;
 
+export type RequestCancelFutureAction = ServerAction<
+  z.input<typeof requestCancelFutureInput>,
+  z.output<typeof requestCancelFutureOutput>
+>;
+export type RetractCancelFutureAction = ServerAction<
+  z.input<typeof retractCancelFutureInput>,
+  z.output<typeof retractCancelFutureOutput>
+>;
+export type RefuseCancelFutureAction = ServerAction<
+  z.input<typeof refuseCancelFutureInput>,
+  z.output<typeof refuseCancelFutureOutput>
+>;
+
 /** What the page model says the bar may offer (server/pages/future-bar.ts works it out with `can()`). */
 export interface FutureReviewModel {
   readonly decisions: readonly ReviewDecision[];
@@ -27,6 +46,12 @@ export interface FutureReviewModel {
   readonly othersApprove: boolean;
   /** „Zrušit položku“ is offered. */
   readonly canCancel: boolean;
+  /** „Požádat o zrušení“: the author outside the vedení (ADR 0062). */
+  readonly canRequestCancel: boolean;
+  /** „Vzít žádost zpět“: the author whose request waits. */
+  readonly canRetractCancel: boolean;
+  /** „Zamítnout zrušení“: the vedení, while a request waits. */
+  readonly canRefuseCancel: boolean;
 }
 
 export const DECISION_FORM_ID = 'akce-rozhodnuti';
@@ -72,6 +97,13 @@ export const cancelInput = (id: string, version: number, data: FormData) => ({
   id,
   expectedVersion: version,
   confirmed: flagOf(data, 'confirmed'),
+});
+
+/** „Zamítnout zrušení“: the note as typed; an empty one is for the server to refuse. */
+export const refuseCancelInput = (id: string, version: number, data: FormData) => ({
+  id,
+  expectedVersion: version,
+  note: textOf(data, 'note'),
 });
 
 /** Which parts of the bar show. The cancel has a form of its own and is no part of it. */

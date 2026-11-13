@@ -5,7 +5,7 @@ import { calDate, wallTime } from '@/domain/time';
 
 import { futureFixtures, futureWire, readyAkce } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
-import { saveFuture } from './index';
+import { requestCancelFuture, saveFuture } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = futureFixtures(world);
@@ -243,6 +243,18 @@ describe('future.save', () => {
         value: { version: 3, state: 'approved' },
       });
       expect(await snapshot(id)).toEqual(before);
+    });
+
+    it('refuses the revise while the author’s cancel waits for the vedení (ADR 0062)', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const asked = await world.run(requestCancelFuture, world.as(author), {
+        id,
+        expectedVersion: 3,
+        confirmed: true,
+      });
+      expect(asked.ok).toBe(true);
+      await refuses(id, () => revise(author, id, readyAkce({ title: 'Jinam' }), 4), notEditable);
     });
 
     it('refuses a change that would hand in an unfinished item, and stays approved', async () => {

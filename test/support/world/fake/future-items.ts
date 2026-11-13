@@ -57,6 +57,9 @@ function refuse(state: FakeState, row: FakeFutureItem): void {
   if (row.reportState !== 'none' && row.kind !== 'akce')
     throw refusedBy('future_items_report_akce');
   const complete = c.title !== '' && c.startDate !== null && row.submittedAt !== null;
+  if (row.cancelRequestedAt !== null && row.state !== 'approved') {
+    throw refusedBy('future_items_cancel_request');
+  }
   if (['submitted', 'approved', 'cancelled'].includes(row.state) && !complete) {
     throw refusedBy('future_items_submitted_complete');
   }
@@ -172,6 +175,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         reportState: 'none',
         reportPointId: null,
         submittedAt: null,
+        cancelRequestedAt: null,
         version: 1,
         updatedAt: now,
       });
@@ -204,6 +208,7 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
         submittedAt: submittedAt === undefined ? before.submittedAt : submittedAt,
         reportState: reportState ?? before.reportState,
         reportPointId: reportPointId ?? before.reportPointId,
+        cancelRequestedAt: state === undefined ? before.cancelRequestedAt : null,
         version: before.version + 1,
         updatedAt: now,
       });
@@ -214,18 +219,40 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
       if (!before || !reviewable(before) || before.version !== expectedVersion) {
         throw new StaleVersion();
       }
-      return save({ ...before, state, version: before.version + 1, updatedAt: now });
+      return save({
+        ...before,
+        state,
+        cancelRequestedAt: null,
+        version: before.version + 1,
+        updatedAt: now,
+      });
+    },
+    async markCancelRequest(id, expectedVersion, at) {
+      guard(tx, true);
+      const before = futureItems.get(id);
+      if (!before || !reviewable(before) || before.version !== expectedVersion) {
+        throw new StaleVersion();
+      }
+      return save({
+        ...before,
+        cancelRequestedAt: at,
+        version: before.version + 1,
+        updatedAt: now,
+      });
     },
     async queue(limit) {
       guard(tx, false);
       const events = [...tx.draft.futureEvents.values()].sort(newestFirst);
+      const waitingSince = (item: FakeFutureItem) =>
+        (item.cancelRequestedAt ?? item.submittedAt)?.getTime() ?? 0;
       return [...futureItems.values()]
-        .filter((item) => item.state === 'submitted' && visible(item))
-        .sort(
-          (a, b) =>
-            (a.submittedAt?.getTime() ?? 0) - (b.submittedAt?.getTime() ?? 0) ||
-            (a.id < b.id ? -1 : 1),
+        .filter(
+          (item) =>
+            (item.state === 'submitted' ||
+              (item.state === 'approved' && item.cancelRequestedAt !== null)) &&
+            visible(item),
         )
+        .sort((a, b) => waitingSince(a) - waitingSince(b) || (a.id < b.id ? -1 : 1))
         .slice(0, limit)
         .map((item) => ({
           item: record(item),

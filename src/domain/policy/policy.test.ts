@@ -295,11 +295,13 @@ describe('future items', () => {
       authorId,
       kind: 'akce' as const,
       state: 'submitted' as const,
+      cancelRequested: false,
     });
     const approved = (authorId: string) => ({
       authorId,
       kind: 'akce' as const,
       state: 'approved' as const,
+      cancelRequested: false,
     });
     expect(
       can(reviewer, {
@@ -328,15 +330,46 @@ describe('future items', () => {
     ).toBe(false);
   });
 
+  it('folds a pending cancel request into the cancel moves (ADR 0062)', () => {
+    const reviewer = actor('reviewer');
+    const approved = (authorId: string, cancelRequested: boolean) => ({
+      authorId,
+      kind: 'akce' as const,
+      state: 'approved' as const,
+      cancelRequested,
+    });
+    const moves = (a: Actor, authorId: string, cancelRequested: boolean) =>
+      (['cancel', 'request-cancel', 'refuse-cancel', 'retract-cancel', 'revise'] as const).filter(
+        (event) =>
+          can(a, { action: 'future.transition', item: approved(authorId, cancelRequested), event }),
+      );
+    expect(moves(submitter, submitter.id, false)).toEqual(['request-cancel', 'revise']);
+    expect(moves(submitter, submitter.id, true)).toEqual(['retract-cancel']);
+    expect(moves(submitter, 'x', true)).toEqual([]);
+    expect(moves(reviewer, 'x', false)).toEqual(['cancel']);
+    expect(moves(reviewer, 'x', true)).toEqual(['cancel', 'refuse-cancel']);
+    expect(moves(reviewer, reviewer.id, false)).toEqual(['cancel', 'revise']);
+    expect(moves(actor('headmaster'), 'x', true)).toEqual(['cancel', 'refuse-cancel']);
+  });
+
   it('lets authors and reviewers edit at the right moments', () => {
-    expect(
-      can(submitter, { action: 'future.edit', item: item(submitter.id, 'akce', 'approved') }),
-    ).toBe(true);
-    expect(can(submitter, { action: 'future.edit', item: item('x', 'akce', 'approved') })).toBe(
-      false,
+    const editing = (state: FutureState, authorId: string, cancelRequested = false) => ({
+      ...item(authorId, 'akce', state),
+      cancelRequested,
+    });
+    expect(can(submitter, { action: 'future.edit', item: editing('approved', submitter.id) })).toBe(
+      true,
     );
+    expect(can(submitter, { action: 'future.edit', item: editing('approved', 'x') })).toBe(false);
+    expect(can(actor('reviewer'), { action: 'future.edit', item: editing('submitted', 'x') })).toBe(
+      true,
+    );
+    // While the author's cancel waits, the akce is the vedení's to decide, not the author's to change.
     expect(
-      can(actor('reviewer'), { action: 'future.edit', item: item('x', 'akce', 'submitted') }),
+      can(submitter, { action: 'future.edit', item: editing('approved', submitter.id, true) }),
+    ).toBe(false);
+    expect(
+      can(actor('reviewer'), { action: 'future.edit', item: editing('approved', 'x', true) }),
     ).toBe(true);
   });
 });
@@ -421,19 +454,22 @@ describe('owner given as isAuthor', () => {
           ),
         ];
       });
-      const futures = FUTURE_STATES.flatMap((state) => {
-        const item = { ...owner(isAuthor), state, kind: 'akce' as const };
-        return [
-          entry(`future.edit ${who} ${state}`, { action: 'future.edit', item }),
-          ...FUTURE_EVENTS.map((event) =>
-            entry(`future.transition ${who} ${state} ${event}`, {
-              action: 'future.transition',
-              item,
-              event,
-            }),
-          ),
-        ];
-      });
+      const futures = FUTURE_STATES.flatMap((state) =>
+        [false, true].flatMap((cancelRequested) => {
+          const item = { ...owner(isAuthor), state, kind: 'akce' as const, cancelRequested };
+          const pending = cancelRequested ? ' cancel requested' : '';
+          return [
+            entry(`future.edit ${who} ${state}${pending}`, { action: 'future.edit', item }),
+            ...FUTURE_EVENTS.map((event) =>
+              entry(`future.transition ${who} ${state}${pending} ${event}`, {
+                action: 'future.transition',
+                item,
+                event,
+              }),
+            ),
+          ];
+        }),
+      );
       const reports = FUTURE_STATES.map((state) =>
         entry(`future.report ${who} ${state}`, {
           action: 'future.report',

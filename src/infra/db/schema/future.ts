@@ -73,6 +73,11 @@ export const futureItems = pgTable(
     reportPointId: uuid().references(() => points.id),
     /** Set at every submit, cleared by a retract. */
     submittedAt: at(),
+    /**
+     * When the author of an approved item asked the vedení to cancel it (ADR 0062); null when no
+     * request waits. Any move of the state clears it.
+     */
+    cancelRequestedAt: at(),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
     updatedAt: atMs().notNull().defaultNow(),
@@ -94,6 +99,11 @@ export const futureItems = pgTable(
         AND char_length(coalesce(${t.organizer}, '')) <= ${sql.raw(String(POINT_LIMITS.organizer))}
         AND char_length(coalesce(${t.participants}, '')) <= ${sql.raw(String(POINT_LIMITS.participants))}
         AND char_length(coalesce(${t.note}, '')) <= ${sql.raw(String(POINT_LIMITS.futureNote))}`,
+    ),
+    /** A cancel request waits only on an approved item (ADR 0062). */
+    check(
+      'future_items_cancel_request',
+      sql`${t.cancelRequestedAt} IS NULL OR ${t.state} = 'approved'`,
     ),
     check(
       'future_items_submitted_complete',
@@ -135,7 +145,7 @@ export const futureEvents = pgTable(
     ),
     check(
       'future_events_note_required',
-      sql`${t.event} NOT IN ('return','reject') OR ${t.note} IS NOT NULL OR (${t.event} = 'return' AND ${t.returnParts} IS NOT NULL)`,
+      sql`${t.event} NOT IN ('return','reject','refuse-cancel') OR ${t.note} IS NOT NULL OR (${t.event} = 'return' AND ${t.returnParts} IS NOT NULL)`,
     ),
     check(
       'future_events_return_parts',

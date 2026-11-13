@@ -30,6 +30,8 @@ const SUBMISSION = new Set([
   'future.create',
   'future.submit',
   'future.retract',
+  'future.requestCancel',
+  'future.retractCancel',
   'future.withdraw',
   'future.startReport',
   'access.request',

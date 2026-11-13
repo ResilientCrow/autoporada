@@ -86,7 +86,17 @@ export type FutureState =
   'draft' | 'submitted' | 'returned' | 'approved' | 'rejected' | 'withdrawn' | 'cancelled';
 
 export type FutureEvent =
-  'submit' | 'retract' | 'withdraw' | 'approve' | 'return' | 'reject' | 'revise' | 'cancel';
+  | 'submit'
+  | 'retract'
+  | 'withdraw'
+  | 'approve'
+  | 'return'
+  | 'reject'
+  | 'revise'
+  | 'cancel'
+  | 'request-cancel'
+  | 'refuse-cancel'
+  | 'retract-cancel';
 
 export const FUTURE_MACHINE: Machine<FutureState, FutureEvent, ReviewActor> = {
   submit: { from: ['draft', 'returned'], to: 'submitted', allowed: author },
@@ -103,8 +113,42 @@ export const FUTURE_MACHINE: Machine<FutureState, FutureEvent, ReviewActor> = {
   },
   /** An author's change to an approved item goes back to review. */
   revise: { from: ['approved'], to: 'submitted', allowed: author },
-  cancel: { from: ['approved'], to: 'cancelled', allowed: (a) => author(a) || reviewer(a) },
+  /**
+   * „Zrušit akci“ by the vedení, their own items included: at once, or confirming an author's
+   * request (ADR 0062).
+   */
+  cancel: { from: ['approved'], to: 'cancelled', allowed: reviewer },
+  /**
+   * An author outside the vedení asks for the cancel: the item stays approved, prints and owes its
+   * report until the vedení decides (ADR 0062). The pending request is a flag beside the state.
+   */
+  'request-cancel': {
+    from: ['approved'],
+    to: 'approved',
+    allowed: (a) => author(a) && !reviewer(a),
+  },
+  /** „Zamítnout zrušení“: the vedení keeps the item and tells the author why. */
+  'refuse-cancel': { from: ['approved'], to: 'approved', allowed: reviewer, requiresNote: true },
+  /** „Vzít žádost zpět“: the author before the vedení decides. */
+  'retract-cancel': { from: ['approved'], to: 'approved', allowed: author },
 };
+
+/**
+ * What a move needs of a pending cancel request (ADR 0062): asking needs none, refusing or taking
+ * one back needs one, and the author's change of an approved item (`revise`) waits while one is
+ * pending. Every other move works either way: a cancel confirms a request or cancels at once, and
+ * a return or a reject supersedes it.
+ */
+const CANCEL_REQUEST: Partial<Record<FutureEvent, boolean>> = {
+  'request-cancel': false,
+  'refuse-cancel': true,
+  'retract-cancel': true,
+  revise: false,
+};
+
+/** True when `event` may be made with a cancel request pending (`cancelRequested`) or not. */
+export const fitsCancelRequest = (event: FutureEvent, cancelRequested: boolean): boolean =>
+  CANCEL_REQUEST[event] === undefined || CANCEL_REQUEST[event] === cancelRequested;
 
 /**
  * True when an item's history holds a move into or out of `approved`: it was approved once, even if
@@ -117,11 +161,19 @@ export const wasApproved = (
 
 /**
  * Authors edit drafts, returned items and approved ones — an author's change
- * to an approved item sends it back to review (see futureEditNeedsReview).
+ * to an approved item sends it back to review (see futureEditNeedsReview),
+ * so it waits while the author's cancel request does (ADR 0062).
  * Other reviewers edit what is waiting or approved.
  */
-export function canEditFuture(state: FutureState, actor: ReviewActor): boolean {
-  if (author(actor)) return state === 'draft' || state === 'returned' || state === 'approved';
+export function canEditFuture(
+  state: FutureState,
+  actor: ReviewActor,
+  cancelRequested: boolean,
+): boolean {
+  if (author(actor)) {
+    if (state === 'approved') return fitsCancelRequest('revise', cancelRequested);
+    return state === 'draft' || state === 'returned';
+  }
   return reviewer(actor) && (state === 'submitted' || state === 'approved');
 }
 

@@ -93,6 +93,12 @@ export {
   decideFutureOutput,
   queueFutureInput,
   queueFutureOutput,
+  refuseCancelFutureInput,
+  refuseCancelFutureOutput,
+  requestCancelFutureInput,
+  requestCancelFutureOutput,
+  retractCancelFutureInput,
+  retractCancelFutureOutput,
 } from './future-review';
 export {
   confirmPlaceholderInput,

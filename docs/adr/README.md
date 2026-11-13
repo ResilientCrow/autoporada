@@ -67,3 +67,4 @@ record that supersedes it.
 | [0059](0059-the-agenda-windows-end-where-the-monday-porada-would.md) | The agenda windows end where the Monday porada would | Accepted; supersedes 0034 item 5 in part |
 | [0060](0060-akce-and-jednani-as-free-text.md) | Akce and jednání are free text | Accepted; supersedes 0009 in part, 0049 item 4, 0058 item 1, 0018 item 9; amends 0049 item 3 |
 | [0061](0061-missing-report-placeholders-are-checked-before-generation.md) | Missing-report placeholders are checked before generation | Accepted; amends 0049 items 5 and 7, 0060 item 7, 0053 |
+| [0062](0062-cancelling-an-approved-akce-waits-for-vedeni.md) | Cancelling an approved akce waits for vedení | Accepted; adds to 0057 |

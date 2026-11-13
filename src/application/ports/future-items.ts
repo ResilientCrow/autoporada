@@ -32,6 +32,11 @@ export interface FutureItemRecord {
   readonly reportPointId: string | null;
   /** Set at every submit, cleared by a retract: the item is handed in, or was until a decision. */
   readonly submittedAt: Date | null;
+  /**
+   * When the author of an approved item asked the vedení to cancel it (ADR 0062); null when no
+   * request waits. Only an approved item holds one, and any move of the state clears it.
+   */
+  readonly cancelRequestedAt: Date | null;
   readonly version: number;
   readonly updatedAt: Date;
 }
@@ -136,14 +141,29 @@ export interface FutureItemRepo {
    */
   loadForDecision(id: string): Promise<FutureItemRecord | null>;
   /**
-   * A decision: moves the item to `state` and nothing else (its content and hand-in time stay),
+   * A decision: moves the item to `state` and nothing else (its content and hand-in time stay; a
+   * pending cancel request is cleared),
    * version-checked, within the review scope. StaleVersion when the version moved or the item is
    * unknown or outside it. The caller checks the move against FUTURE_MACHINE.
    */
   decide(id: string, expectedVersion: number, state: FutureState): Promise<FutureItemRecord>;
   /**
-   * The review queue: the `submitted` items in the read scope, the oldest hand-in first, ties
-   * to the lower id, at most `limit`.
+   * Sets (an instant) or clears (null) the cancel request of an approved item (ADR 0062) and
+   * nothing else, version-checked, the version rising by one, within the review scope as `decide`
+   * (the author asks or takes it back, a reviewer refuses it). StaleVersion when the version moved
+   * or the item is unknown or outside it; `future_items_cancel_request` refuses one on an item
+   * that is not approved. The caller checks the move against FUTURE_MACHINE. `update` and `decide`
+   * clear it whenever they set a state.
+   */
+  markCancelRequest(
+    id: string,
+    expectedVersion: number,
+    at: Date | null,
+  ): Promise<FutureItemRecord>;
+  /**
+   * The review queue: the `submitted` items in the read scope and the approved ones whose cancel
+   * request waits, by the instant each was handed in or asked for, the oldest first, ties to the
+   * lower id, at most `limit`.
    */
   queue(limit: number): Promise<readonly QueuedFuture[]>;
   /**
