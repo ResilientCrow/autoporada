@@ -20,6 +20,7 @@ export default defineConfig({
             'test/contract/**/*.test.ts',
             'test/arch/**/*.test.ts',
             'test/security/**/*.test.ts',
+            'arch/**/*.test.ts',
           ],
           environment: 'node',
           // Port contracts and use cases run against in-memory fakes (ADR 0011).

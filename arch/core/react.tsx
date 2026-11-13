@@ -5,11 +5,14 @@ import paper from '@/document/render-html/paper.module.css';
 import { richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import * as A from './ops';
 import type * as Q from './select';
+import { COALESCED, headWait, type Queued } from './saves';
 import type { State } from './types';
 import { rules } from '@/ui/copy/forms';
 
 type Fx = ((s: State) => State) & { op?: A.Op };
-const Ctx = createContext<{ s: State; apply: (f: Fx) => void; replace: (s: State) => void } | null>(null);
+/** What the footer says: every typed change is on the server, one is still waiting, or the server refused one. */
+export type SaveState = 'saved' | 'saving' | 'failed';
+const Ctx = createContext<{ s: State; apply: (f: Fx) => void; replace: (s: State) => void; saving: SaveState } | null>(null);
 type Srv = State & { vers?: Record<string, number> };
 interface Problem { code: string; name: string; rule?: string; keep?: boolean }
 const PROBLEM: Record<string, string> = {
@@ -27,8 +30,6 @@ const PROBLEM: Record<string, string> = {
   unavailable: 'Server teď neodpovídá. Zkuste to za chvíli.',
 };
 
-const COALESCED = new Set<string>(['savePoint', 'saveFuture', 'annexes', 'setAnnex2']);
-
 /** The state comes from the server; an action shows at once and goes to the server in order. */
 export function StoreProvider({ children }: { ns?: string; children: ReactNode }) {
   const [s, set] = useState<State | null>(null);
@@ -36,8 +37,13 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
   const cur = useRef<State | null>(null);
   const vers = useRef<Record<string, number>>({});
   const ids = useRef<Record<string, string>>({});
-  const queue = useRef<A.Op[]>([]);
+  const queue = useRef<Queued[]>([]);
   const busy = useRef(false);
+  const [saving, setSaving] = useState<SaveState>('saved');
+  const refused = useRef(false); // the last save of typed text was refused; it stays until a save lands
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const again = useRef<() => void>(() => undefined); // the pump, for the timer that waits for a pause
+  const hidden = useRef(false); // the tab is hidden: what waits for a pause goes now, it may be closed
   const real = (id: string) => ids.current[id] ?? id;
   const writes = useRef(0); // a state read that began before a later write must not overwrite it
   const load = useCallback(async () => {
@@ -57,8 +63,13 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
     if (busy.current) return;
     busy.current = true;
     let keepLocal = false;
+    let waiting = false;
+    clearTimeout(timer.current);
     try {
       while (queue.current.length) {
+        // A save waits for the typing to pause: the next pump is due when it does.
+        const wait = headWait(queue.current, Date.now(), hidden.current);
+        if (wait > 0) { timer.current = setTimeout(() => again.current(), wait); waiting = true; break; }
         const op = queue.current[0]!;
         // A newer save of the same thing makes this one pointless.
         const later = queue.current.slice(1).some((x) => x.k === op.k && COALESCED.has(op.k) && op.a[0] !== null && x.a[0] === op.a[0]);
@@ -73,10 +84,12 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
               if (code === 'step-up-required') { location.href = '/auth/step-up?returnTo=%2F'; return; }
               // Text typed into a refused save stays on the screen; only this thing's later writes go.
               keepLocal = code !== 'conflict' && COALESCED.has(op.k);
+              if (keepLocal) refused.current = true;
               setProblem({ code, name: c.name, ...(out.error?.rule && { rule: out.error.rule }), keep: keepLocal });
               queue.current = queue.current.filter((x, i) => i === 0 || x.a[0] !== op.a[0]);
               break;
             }
+            if (COALESCED.has(op.k)) refused.current = false;
             const d = out.data ?? {};
             if (c.key && typeof d['version'] === 'number') vers.current[c.key] = d['version'];
             const made = (d['id'] ?? d['pointId'] ?? d['lineageId']) as string | undefined;
@@ -98,14 +111,16 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
       }
     } finally {
       busy.current = false;
+      setSaving(refused.current ? 'failed' : queue.current.some((x) => COALESCED.has(x.k)) ? 'saving' : 'saved');
     }
-    if (!keepLocal) await load();
+    if (!keepLocal && !waiting) await load();
   }, [load]);
+  useEffect(() => { again.current = () => void pump(); }, [pump]);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the first fetch of the server state, on mount
     void load();
     // Back to the tab: fresh clock and data. Leaving it: send what is waiting for its debounce.
-    const seen = () => { if (document.visibilityState === 'visible') void load(); else void pump(); };
+    const seen = () => { hidden.current = document.visibilityState !== 'visible'; if (hidden.current) void pump(); else void load(); };
     document.addEventListener('visibilitychange', seen);
     return () => document.removeEventListener('visibilitychange', seen);
   }, [load, pump]);
@@ -125,12 +140,14 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
       if (op.k === 'signOut') { const form = document.createElement('form'); form.method = 'post'; form.action = '/auth/logout'; if (op.a[0] === 'all') { const scope = document.createElement('input'); scope.type = 'hidden'; scope.name = 'scope'; scope.value = 'all'; form.append(scope); } document.body.append(form); form.submit(); return; }
       if (op.k === 'stepUp') { location.href = '/auth/step-up?returnTo=%2F'; return; }
       writes.current++;
-      queue.current.push(op);
-      const saving = COALESCED.has(op.k);
-      if (saving) setTimeout(() => void pump(), 600); else void pump();
+      const typed = COALESCED.has(op.k);
+      queue.current.push(typed ? { ...op, at: Date.now() } : op);
+      if (typed) setSaving('saving');
+      void pump();
     },
     replace: (x: State) => { cur.current = x; set(x); },
-  }), [s, pump]);
+    saving,
+  }), [s, pump, saving]);
   // eslint-disable-next-line react-hooks/refs -- the refs are read only inside apply and replace, which run in handlers
   if (!v) return <div className="store-load" role="status" aria-live="polite">Načítám…</div>;
   return <Ctx.Provider value={v}>{problem ? <div className="store-full" role="alert">{(problem.rule && rules[problem.rule as keyof typeof rules]) || PROBLEM[problem.code] || 'Tohle se nepovedlo. Zkuste to znovu.'} <button type="button" onClick={() => { setProblem(null); if (!problem.keep) void load(); }}>Zavřít</button></div> : null}{children}</Ctx.Provider>;
