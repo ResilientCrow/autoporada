@@ -1,1 +1,1 @@
-export type { Block, BlockKind, DocumentModel, Run, Section, StudentRow } from './blocks';
+export type { Block, DocumentModel, Run, Section, StudentRow } from './blocks';

@@ -99,9 +99,6 @@ export const retype = (id: string, patch: { typeId?: PointTypeId; kind?: PointKi
 export const signOut: Fx = tag((s) => s, { k: 'signOut', a: [] });
 export const signOutAll: Fx = tag((s) => s, { k: 'signOut', a: ['all'] });
 export const stepUp: Fx = tag((s) => s, { k: 'stepUp', a: [] });
-export const signIn = (_id: string): Fx => tag((s) => s, { k: 'none', a: [] });
-/** The worker renders the PDF; the screen only waits for it. */
-export const finishPdf = (_m: string, _ok = true): Fx => tag((s) => s, { k: 'none', a: [] });
 
 // ---- what each tag asks of the server ----
 const wireDate = (d: CalDate | null) => (d ? toIsoDate(d) : null);

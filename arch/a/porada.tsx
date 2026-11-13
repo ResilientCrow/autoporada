@@ -11,7 +11,7 @@ import { NotFound } from './home';
 import type { Row } from '../core/types';
 import { OUTLINE_LIMITS, type Statement } from '@/domain/outline';
 import { AnnexEditor, annexDoc, annexToText, DocNav, OutlineField, TextPart } from '../core/parts';
-import { App, Back, Desk, Dialog, goReplace, Ic, Item, Note, Saved, Sec, Seg, Stamp, Todo, Toast, Top, useNarrow, WHEN } from './ui';
+import { App, Back, Desk, Dialog, goReplace, Ic, Item, Note, Sec, Seg, Stamp, Todo, Toast, Top, useNarrow, WHEN } from './ui';
 
 const notYet = (n: number) => (n === 1 ? '1 zatím nevyjde, protože čeká na schválení' : n < 5 ? `${n} zatím nevyjdou, protože čekají na schválení` : `${n} zatím nevyjde, protože čeká na schválení`);
 const useM = () => { const { s } = useStore(); return Q.workingMonday(s); };
@@ -62,21 +62,21 @@ export function Porada() {
 function PoradaVirtual({ m }: { m: string }) { return <App col={<Top big h={`Porada ${Q.dm(m)}`} lead="Tato porada se začne připravovat, až do ní někdo něco pošle." />} />; }
 const REFUSE: Record<string, string> = { early: 'Ten den už patří dřívější poradě.', late: 'Tak daleko dopředu kalendář nesahá.', same: 'Na ten den porada už je.', 'porada-exists': 'V tom týdnu už porada je. Přesuňte ji, nebo zvolte jiný týden.', 'not-open': 'Tato porada už není otevřená.', 'later-generated': 'Pozdější porada už je vygenerovaná.', 'deadline-past': 'Uzávěrka by tím už minula, a teď je ještě otevřená.', 'meeting-order': 'Pořadí porad by tím přestalo sedět.' };
 const Confirm = ({ ok, label, onClick }: { ok: boolean; label: string; onClick: () => void }) => <button type="button" className={`btn lg w ${ok ? 'dk' : 'off'}`} aria-disabled={!ok} onClick={() => { if (ok) onClick(); }}>{label}</button>;
-export function MoveDialog({ m, onClose }: { m: string; onClose: () => void }) {
+function MoveDialog({ m, onClose }: { m: string; onClose: () => void }) {
   const { s, apply } = useStore(); const [d, set] = useState('');
   const slot = Q.slotsOf(s).find((x) => toIsoDate(x.monday) === m); const bounds = slot ? moveBounds(Q.slotsOf(s), slot, Q.todayOf(s)) : null;
   const plan = useMemo(() => { try { return d ? A.planMoveOf(s, m, parseIsoDate(d)) : null; } catch { return null; } }, [s, m, d]);
   const effect = !plan ? 'Vyberte den.' : !plan.ok ? REFUSE[plan.refusal] : `Porada bude ${Q.dm(d)}, uzávěrka ${WHEN(plan.moved.deadlineAt)}.`;
   return <Dialog title="Přesunout poradu" onClose={onClose}><p>Vyberte nový den porady. Body, pokyny i přílohy zůstanou u ní.</p><label className="l">Den<input className="in bigi" type="date" value={d} {...(bounds && { min: toIsoDate(bounds.from), max: toIsoDate(bounds.to) })} onChange={(e) => set(e.target.value)} /></label><div className={`fx${plan && !plan.ok ? ' bad' : ''}`} role="status">{effect}</div><Confirm ok={!!plan?.ok} label="Přesunout" onClick={() => { apply(A.movePorada(m, parseIsoDate(d))); onClose(); }} /></Dialog>;
 }
-export function DropDialog({ m, onClose }: { m: string; onClose: () => void }) {
+function DropDialog({ m, onClose }: { m: string; onClose: () => void }) {
   const { s, apply } = useStore(); const [tick, setTick] = useState(false); const iss = Q.issueOf(s, m);
   const plan = A.planDropOf(s, m);
   const prepared = !!iss && (iss.rows.some((r) => !!r.pointId || r.isNew) || iss.annexes.length > 0 || !!iss.present || !!iss.guests);
   const effect = !plan ? 'Tuto poradu nejde zrušit.' : !plan.ok ? REFUSE[plan.refusal] : <>Porada {Q.dm(iss?.meetingDate ?? m)} se nebude konat a zmizí z kalendáře. Odevzdané body přejdou na poradu {Q.dm(plan.heir.meetingDate)} {plan.heir.status !== 'open' ? 'Ta porada je už vygenerovaná, proto se připravený program smaže.' : prepared ? 'Připravený program (pokyny, přílohy, přítomní) půjde s nimi.' : 'Nic připraveného tu zatím není.'}</>;
   return <Dialog title="Porada se nekoná" onClose={onClose}><div className={`fx${plan && !plan.ok ? ' bad' : ''}`} role="status">{effect}</div><label className="chk"><input type="checkbox" checked={tick} onChange={(e) => setTick(e.target.checked)} />Rozumím, poradu pak nelze vrátit.</label><Confirm ok={!!plan?.ok && tick} label="Porada se nekoná" onClick={() => { apply(A.dropPorada(m)); onClose(); }} /></Dialog>;
 }
-export function AddDialog({ onClose }: { onClose: () => void }) {
+function AddDialog({ onClose }: { onClose: () => void }) {
   const { s, apply } = useStore(); const [d, set] = useState('');
   const plan = useMemo(() => { try { return d ? A.planAddOf(s, parseIsoDate(d)) : null; } catch { return null; } }, [s, d]);
   const effect = !plan ? 'Vyberte den.' : !plan.ok ? REFUSE[plan.refusal] : `Nová porada ${Q.dm(d)}, uzávěrka ${WHEN(plan.added.deadlineAt)}.${plan.closed ? ' Uzávěrka už minula, učitelé do ní nic nepošlou.' : ''}`;
@@ -218,4 +218,3 @@ export function ArchivDoc({ m }: { m: string }) {
   const { s } = useStore(); const iss = Q.issueOf(s, m); const model = modelOf(s, m); if (!iss || !model) return <NotFound />;
   return <div className="lay full"><aside className="desk scroll"><div className="deskhd"><a className="back on-d" href="#/archiv"><Ic n="back" />Zpět na archiv</a><h1 className="big m">Porada {Q.dm(iss.meetingDate)}</h1><div className="row wr"><DocxBtn cls="btn go" m={m}>Stáhnout DOCX</DocxBtn>{iss.doc?.pdf === 'ready' ? <PdfBtn cls="btn" m={m} /> : null}</div><DocNav built={Q.builtOfModel(model)} /></div><Sheet built={Q.builtOfModel(model)} /></aside></div>;
 }
-export { Saved, toIsoDate, parseIsoDate };

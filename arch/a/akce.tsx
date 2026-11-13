@@ -3,7 +3,7 @@ import { compareDates, parseIsoDate, parseWallTime, toIsoDate, toIsoTime } from 
 import { organizerOnOneLine, organizerPhrase } from '@/domain/cs';
 import { futureBullet } from '@/document/compose/future';
 import { POINT_LIMITS } from '@/domain/report';
-import { createWith, fromText, go, Sheet, toText, useStore } from '../core/react';
+import { createWith, fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future } from '../core/types';
@@ -115,4 +115,3 @@ export function Navrh({ id }: { id: string }) {
   </>} dock={editable ? <div className="dock">{!can ? <p className="hint a">Napište název a text.</p> : null}<div className="row"><button className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (can) { apply(A.submitPoint(id)); go('/moje'); } }}>Odeslat ke kontrole</button></div><Saved /></div> : undefined}
     desk={<Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn"><div className="arch"><div className="s">{p.kind === 'finance' ? 'Informace z hospodaření' : 'Pokyny pro zaměstnance, organizační záležitosti'}</div><div className="bl cur live"><span className="h">{c.title || <span className="nw" data-ph="Název" />}</span><p>{toText(c.body) || <span className="nw" data-ph="Text návrhu" />}</p></div></div></div></Desk>} />;
 }
-export { Sheet };

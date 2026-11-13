@@ -55,7 +55,7 @@ Then, when the change warrants it:
 - The template `.docx` is never committed (only `test/fixtures/template/format-facts.json`, from `pnpm facts:extract <template.docx>`).
 - Untracked `AGENTS.md` is rewritten by `next dev`; keep it uncommitted.
 
-- Arch UI (ADR 0053): `/` serves the client in `arch/` (built into `public/arch` by `pnpm build:arch`, part of `dev` and `build`), which reads `GET /api/arch/state` and writes `POST /api/arch/run`. Read `DESIGN.md` before changing it: the tokens, components, and the rules (style 1:1 with the prototype; backend changes allowed under the rules above). The classic pages stay at `/klasicke` and their old paths. Its style follows the prototype, so `arch/` is outside Prettier; ESLint and `tsc -p arch` still check it.
+- Arch UI (ADR 0053): `/` serves the client in `arch/` (built into `public/arch` by `pnpm build:arch`, part of `dev` and `build`), which reads `GET /api/arch/state` and writes `POST /api/arch/run`. Read `DESIGN.md` before changing it: the tokens, components, and the rules (style 1:1 with the prototype; backend changes allowed under the rules above). The classic pages stay at `/klasicke` and their old paths. Its style follows the prototype, so `arch/` is outside Prettier; ESLint, `tsc -p arch` and knip (`lint:unused`, entry `arch/a/main.tsx`) still check it.
 
 ## Where to look
 

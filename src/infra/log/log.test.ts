@@ -2,7 +2,7 @@ import { Writable } from 'node:stream';
 
 import { describe, expect, it } from 'vitest';
 
-import { createLogger, forRequest, requestIdFrom } from './index';
+import { createLogger, requestIdFrom } from './index';
 
 function capture() {
   const lines: Record<string, unknown>[] = [];
@@ -119,13 +119,6 @@ describe('createLogger', () => {
     logger.info('noise');
     logger.warn('kept');
     expect(lines.map((l) => l['msg'])).toEqual(['kept']);
-  });
-
-  it('tags request-scoped loggers with the request id', () => {
-    const { lines, destination } = capture();
-    const logger = createLogger({ service: 'web', level: 'info', destination });
-    forRequest(logger, 'req-12345678').info('handled');
-    expect(lines[0]).toMatchObject({ reqId: 'req-12345678' });
   });
 });
 

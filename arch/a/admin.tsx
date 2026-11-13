@@ -7,7 +7,7 @@ import { isClassCode, parsePaste, sortForDocument, type PasteRow } from '@/domai
 import { go, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
-import { App, Back, Bar, Desk, Dialog, Ic, Item, Note, PhoneBar, Sec, Seg, Toast, Top, WHEN } from './ui';
+import { Back, Bar, Desk, Dialog, Ic, Item, Note, PhoneBar, Sec, Seg, Toast, Top, WHEN } from './ui';
 import { NotFound } from './home';
 import logo from './logo-dark.svg';
 
@@ -101,7 +101,7 @@ export function Ucet() {
 const rememberAddress = () => { try { sessionStorage.setItem('arch-after-login', location.hash); } catch { /* soukromé okno */ } };
 export function Soukromi() { return <div className="work solo"><main className="pane narrow"><Back to="/" t="Zpět" /><Top h="Jak s údaji zacházíme" /><div className="prose"><p>Autoporada slouží k přípravě týdenní porady vedení školy. Zpracovává jména a e-maily zaměstnanců a studentů a texty, které do ní napíšete.</p><p>Hesla neukládáme, přihlašujete se školním účtem Microsoft. Rozepsané zprávy a žádosti se mažou na konci školního roku. Záznam o tom, kdo co udělal, držíme 3 roky.</p><p>Studenti vidí jen své zprávy a schválené akce. Celou poradu vidí jen zaměstnanci ve vedení.</p></div></main></div>; }
 /** Sign-in and access: the only screens before you have a place on the desk. */
-export function Entry({ children }: { children: React.ReactNode }) {
+function Entry({ children }: { children: React.ReactNode }) {
   return <div className="lay"><div className="work"><header className="bar"><span className="logo"><img src={logo} alt="Smíchovská střední" /></span></header><main className="col mid" tabIndex={-1} data-focus-top>{children}</main></div><Desk cls="tall"><div className="wrapm wrapn"><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div></div></div></Desk></div>;
 }
 /** What the address says about the last sign-in or sign-out, checked as `server/pages/sign-in.ts` checks it. */
@@ -133,4 +133,3 @@ export function Pristup() {
   if (req?.state === 'rejected') { const when = new Date(new Date(req.decidedAt!).getTime() + 30 * 864e5).toISOString(); return <Entry><Top h="Žádost nebyla schválena" lead={`Znovu požádat můžete od ${Q.fromDay(WHEN(when))}. Potřebujete-li přístup dřív, domluvte se s ředitelem.`} />{out}</Entry>; }
   return <Entry><Top h="Zatím tu nemáte přístup" lead="Napište řediteli, proč ho potřebujete. Rozhodnutí vám přijde e-mailem." /><label className="l">Proč přístup potřebujete<textarea className="in" autoFocus value={r} onChange={(e) => setR(e.target.value)} /></label><button className={`btn lg w ${r.trim() ? 'go' : 'off'}`} aria-disabled={!r.trim()} onClick={() => r.trim() && apply(A.requestAccess(r))}>Odeslat žádost</button>{out}</Entry>;
 }
-export { App };

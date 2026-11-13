@@ -9,7 +9,7 @@ const I: Record<string, string> = { plus: 'M12 5v14M5 12h14', chk: 'M5 12.5l4.5 
 export const Ic = ({ n }: { n: keyof typeof I | string }) => <svg className="i" viewBox="0 0 24 24" aria-hidden="true"><path d={I[n]} /></svg>;
 export const Hash = (to: string) => `#${to}`;
 
-export function useNav() {
+function useNav() {
   const { s } = useStore(); const u = Q.me(s);
   const q = Q.queuePoints(s).length + Q.queueFutures(s).length + Q.placeholderQueue(s, u).length;
   const req = Q.pendingRequests(s).length;
@@ -32,7 +32,7 @@ export function PhoneBar() {
   const nav = useNav(); const r = useRoute();
   return <nav className="pb" aria-label="Hlavní">{nav.map(([to, ic, t, n]) => { const on = r.path === to || (to !== '/' && r.path.startsWith(`${to}/`)); return <a key={to} href={Hash(to)} className={on ? 'on' : ''} {...(on ? { 'aria-current': 'page' as const } : {})}><Ic n={ic} /><span>{t}</span>{n ? <span className="n">{n}</span> : null}</a>; })}</nav>;
 }
-export function Offline() {
+function Offline() {
   const [off, set] = useState(!navigator.onLine);
   useEffect(() => { const a = () => set(false), b = () => set(true); addEventListener('online', a); addEventListener('offline', b); return () => { removeEventListener('online', a); removeEventListener('offline', b); }; }, []);
   return off ? <div className="offl" role="status">Jste bez připojení. Co napíšete, zůstává v tomto prohlížeči.</div> : null;

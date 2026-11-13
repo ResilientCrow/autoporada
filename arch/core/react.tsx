@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { DocumentModel } from '@/document/model';
 import { BlockView } from '@/document/render-html/PaperPreview';
 import paper from '@/document/render-html/paper.module.css';
 import { richDocToPlainText, type RichDoc } from '@/domain/richtext';
@@ -182,26 +181,7 @@ export function Sheet({ built, cls, onSeg, label, marginNote, empty }: { built: 
     </article>
   );
 }
-export const SegBlocks = BlockView;
-export function SavedModel({ model }: { model: DocumentModel }) { return <article className={`${paper['paper']} ${paper['blocks']} sheet`}>{model.sections.flatMap((x, si) => x.blocks.map((b, i) => <BlockView key={`${si}-${i}`} block={b} />))}</article>; }
 
 export const toText = (d: RichDoc) => richDocToPlainText(d);
 /** Keeps the spaces as typed: the domain's richDocFromText trims each line, which would swallow a space at the end while typing. */
 export const fromText = (t: string): RichDoc => ({ type: 'doc', content: t.split(/\r\n|[\r\n]/).map((line) => ({ type: 'paragraph' as const, attrs: { indent: 0 as const }, ...(line && { content: [{ type: 'text' as const, text: line }] }) })) });
-
-/** A real DOCX from the real renderer. False when nothing was saved: the viewer declined it in the Claude viewer, which offers files only through its own prompt. */
-export async function downloadDocx(model: DocumentModel, name: string): Promise<boolean> {
-  const { renderDocx } = await import('@/document/render-docx');
-  const blob = new Blob([await renderDocx(model) as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-  const claude = (window as unknown as { claude?: { use(n: 'downloads'): Promise<{ save(r: { filename: string; data: Blob }): Promise<unknown> } | null> } }).claude;
-  const viewer = await claude?.use('downloads');
-  if (viewer) {
-    try { await viewer.save({ filename: name, data: blob }); return true; } catch (e) { if ((e as { code?: string }).code === 'declined') return false; throw e; }
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 2000);
-  return true;
-}
-
-/** The prototype's demo controls have no place in the real app. */
-export function DemoBar() { return null; }

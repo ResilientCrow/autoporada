@@ -3,16 +3,16 @@ import { useStore, createWith, go } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future, Point } from '../core/types';
-import { App, Back, Desk, Dialog, focusOn, Hash, Ic, Item, Sec, Seg, Sheet, Stamp, Top, Track, TrailMore, WHEN, diffWords, Note, Todo } from './ui';
+import { App, Back, Desk, Dialog, focusOn, Ic, Item, Sec, Seg, Sheet, Stamp, Top, Track, TrailMore, WHEN, diffWords, Note, Todo } from './ui';
 import { foldForSearch, organizerPhrase } from '@/domain/cs';
 import { DocNav } from '../core/parts';
 import { toText } from '../core/react';
 
-export const guessType = (t: string) => { const x = t.toLowerCase(); return x.startsWith('exkurz') ? 'exkurze' : x.startsWith('soutěž') ? 'soutez' : x.startsWith('seminář') ? 'seminar' : x.startsWith('přednášk') ? 'prednaska' : x.startsWith('projektový den') ? 'projektovy' : 'jine'; };
+const guessType = (t: string) => { const x = t.toLowerCase(); return x.startsWith('exkurz') ? 'exkurze' : x.startsWith('soutěž') ? 'soutez' : x.startsWith('seminář') ? 'seminar' : x.startsWith('přednášk') ? 'prednaska' : x.startsWith('projektový den') ? 'projektovy' : 'jine'; };
 const Task = ({ t, why, a, prim, onClick }: { t: string; why: string; a: string; prim?: boolean; onClick: () => void }) => (
   <button type="button" className={`tk${prim ? ' p' : ''}`} onClick={onClick}><span className="tx"><b>{t}</b><span>{why}</span></span><span className={`btn${prim ? ' go' : ''} lg`}>{a}</span></button>
 );
-export function useOwedTasks() {
+function useOwedTasks() {
   const { s, apply } = useStore(); const u = Q.me(s)!;
   return Q.owedBy(s, u.id).map((o) => {
     const when = o.pastClose ? `Termín byl ${Q.dm(o.close.toISOString().slice(0, 10))}, ale porada na zprávu ještě čeká.` : o.late ? `Odevzdejte do ${WHEN(o.close)}, vyjde v poradě ${Q.dm(o.monday)}` : `Akce skončila. Napište, jak to dopadlo.`;
@@ -25,7 +25,7 @@ export function useOwedTasks() {
     return { key: o.akce.id, t: o.akce.title, why, a: o.point?.state === 'returned' ? 'Opravit' : o.point ? 'Pokračovat' : 'Napsat zprávu', act };
   });
 }
-const pointLine = (s: ReturnType<typeof useStore>['s'], p: Point) => {
+const pointLine = (p: Point) => {
   const m = p.poradaMonday ? Q.dm(p.poradaMonday) : '';
   switch (p.state) {
     case 'draft': return 'Rozepsané, zatím jen u vás';
@@ -67,7 +67,7 @@ export function Tyden() {
         {tasks.length ? <div className="tks">{tasks.map((t, i) => <Task key={t.key} t={t.t} why={t.why} a={t.a} prim={i === 0 && !review} onClick={t.act} />)}</div> : null}
         <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : u.role === 'reviewer' ? 'Přidat zprávu, akci nebo návrh' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
         {draftProposals.length ? <Sec h="Rozepsané návrhy">{draftProposals.map((p) => <Item key={p.id} to={`/navrh/${p.id}`} t={p.content.title || 'Návrh bez názvu'} st="Do pokynů nebo hospodaření" mk="o" />)}</Sec> : null}
-        {sent.length ? <Sec h="Už jste poslali" right={<a href="#/moje">Všechny</a>}>{sent.slice(0, 4).map((p) => <Item key={p.id} to={pointTo(p)} t={p.content.title} st={pointLine(s, p)} mk={p.state === 'approved' ? 'c' : 'o'} />)}</Sec> : null}
+        {sent.length ? <Sec h="Už jste poslali" right={<a href="#/moje">Všechny</a>}>{sent.slice(0, 4).map((p) => <Item key={p.id} to={pointTo(p)} t={p.content.title} st={pointLine(p)} mk={p.state === 'approved' ? 'c' : 'o'} />)}</Sec> : null}
         {events.length ? <Sec h="Co se chystá ve škole" right={<a href="#/akce">Všechny akce</a>}>{events.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title} st={[Q.dm(f.date), organizerPhrase(f.organizerRole, f.organizer)].filter(Boolean).join(', ')} />)}</Sec> : null}
       </>} />
   );
@@ -99,7 +99,7 @@ export function Domu() {
     <ul className="tiles">{tiles.map((x, i) => <li key={x.t}>{x.to ? <a className={`tl t-${x.tone}${i % 3}`} href={`#${x.to}`}>{inner(x)}</a> : <button type="button" className={`tl t-${x.tone}${i % 3}`} onClick={x.act}>{inner(x)}</button>}</li>)}</ul>
   </>} />;
 }
-export function AddDialog({ onClose }: { onClose: () => void }) {
+function AddDialog({ onClose }: { onClose: () => void }) {
   const { s, apply } = useStore(); const u = Q.me(s)!;
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
@@ -118,7 +118,7 @@ export function Moje() {
   return <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={deskFor(s, u.id)} col={<>
     <Top big h="Přehled" lead={empty ? 'Zatím tu nic nemáte. Až napíšete první zprávu, uvidíte ji tady i s tím, kde je.' : 'Všechno, co jste napsali, a kde to zrovna je.'} />
     <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
-    {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(s, p)} mk={p.state === 'approved' || p.state === 'published' ? 'c' : p.state === 'returned' ? 'n' : p.state === 'rejected' ? 'x' : 'o'} warn={p.state === 'returned'} />)}</Sec> : null}
+    {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(p)} mk={p.state === 'approved' || p.state === 'published' ? 'c' : p.state === 'returned' ? 'n' : p.state === 'rejected' ? 'x' : 'o'} warn={p.state === 'returned'} />)}</Sec> : null}
     {fs.length ? <Sec h="Moje akce a jednání">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={f.state === 'approved' ? 'c' : f.state === 'returned' ? 'n' : 'o'} />)}</Sec> : null}
     <a className="q" href="#/akce">Všechny akce školy</a>
   </>} />;
@@ -162,4 +162,4 @@ export function Udalosti() {
 export function NotFound() {
   return <div className="lay full"><aside className="desk scroll err-w"><div className="arch err"><h1 className="big m">Tenhle list tu není</h1><p className="lead">Odkaz je starý, nebo k němu nemáte přístup. Váš přehled je na stejném místě jako vždy.</p><div><a className="btn dk lg" href="#/">Domů</a></div></div></aside></div>;
 }
-export { Hash, pointLine, pointTo, futureLine };
+export { futureLine };

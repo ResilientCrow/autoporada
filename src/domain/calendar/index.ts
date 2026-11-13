@@ -4,7 +4,6 @@ export {
   DEFAULT_DEADLINE,
   eventEndedBefore,
   eventsWindow,
-  issuePhase,
   meetingsWindow,
   routeFutureItem,
   slotMondayOf,
@@ -13,7 +12,6 @@ export {
   type DeadlineRule,
   type FutureKind,
   type FutureSlot,
-  type IssuePhase,
 } from './issue-calendar';
 export { orderConflicts, type OrderConflict } from './order';
 export {

@@ -98,7 +98,3 @@ const REQUEST_ID = /^[A-Za-z0-9-]{8,64}$/;
 export function requestIdFrom(header: string | null | undefined): string {
   return header && REQUEST_ID.test(header) ? header : randomUUID();
 }
-
-export function forRequest(logger: Logger, requestId: string): Logger {
-  return logger.child({ reqId: requestId });
-}

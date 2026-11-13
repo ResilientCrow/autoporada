@@ -6,7 +6,7 @@ import { points as copy } from '@/ui/copy/points';
 import { fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
-import type { Point, State } from '../core/types';
+import type { Point } from '../core/types';
 import { App, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, WHEN } from './ui';
 import { NotFound } from './home';
 
@@ -16,7 +16,7 @@ type Statement = PointContent['statements'][number];
 /** A place in the opening sentence starts with a preposition: „na Pražském hradě“, „v Národním muzeu“. */
 const PREP = /^(?:v|ve|na|u|do|z|ze|při|před|za|mezi|pod|nad|po|k|ke|o|s|se|vedle|kolem|okolo|poblíž|uvnitř)\s/i;
 /** The people bullet the opening sentence names (the type's organisers role), or -1 when the draft has none. */
-function orgAt(s: State, p: Point): number {
+function orgAt(p: Point): number {
   const keys = new Set(Q.specOf(p).filter((b) => b.role === 'organisers').map((b) => b.key));
   return p.content.bullets.findIndex((b) => b.kind === 'people' && (keys.has(b.key) || b.key === 'organisers' || b.key === 'speakers'));
 }
@@ -44,7 +44,7 @@ function stepsFor(p: Point, org: number): Step[] {
 }
 function Dots({ n, of }: { n: number; of: number }) { return <div className="steps" role="img" aria-label={`Krok ${n} z ${of}`}>{Array.from({ length: of }, (_, k) => <span key={k} className={k < n ? 'on' : ''} />)}</div>; }
 
-export function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson[]; onAdd: (p: DraftPerson[]) => void; placeholder: string; autoFocus?: boolean }) {
+function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson[]; onAdd: (p: DraftPerson[]) => void; placeholder: string; autoFocus?: boolean }) {
   const { s } = useStore(); const [v, set] = useState(''); const me = Q.me(s)!;
   const year = Q.yearOf(s);
   const known = useMemo(() => {
@@ -64,7 +64,7 @@ export function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: Draf
     {parsed?.rejected.length ? <p className="sm w-err" role="alert">Nerozumíme: {parsed.rejected.map((r) => r.source).join(', ')}. Chybí příjmení.</p> : null}
   </div>;
 }
-export function PersonRow({ p, onChange, onRemove }: { p: DraftPerson; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
+function PersonRow({ p, onChange, onRemove }: { p: DraftPerson; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
   const { s } = useStore(); const year = Q.yearOf(s);
   return <li className="pr"><div className="pr-h"><b>{displayName(p)}</b><input className="in cls" aria-label={`Třída nebo organizace: ${displayName(p)}`} placeholder="Třída" value={p.affiliation ?? ''} onChange={(e) => onChange({ ...p, affiliation: e.target.value, affiliationYear: year })} onBlur={(e) => { const c = normalizeClass(e.target.value); if (c) onChange({ ...p, affiliation: c, affiliationYear: year }); }} /><button type="button" className="x" aria-label={`Odebrat: ${displayName(p)}`} onClick={onRemove}><Ic n="x" /></button></div>
     <Seg label={`Oslovení: ${displayName(p)}`} value={p.salutation} options={SAL} onChange={(v) => onChange({ ...p, salutation: v })} /></li>;
@@ -76,7 +76,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   if (!p) return <NotFound />;
   if (p.authorId !== s.userId) return <NotFound />;
   if (p.state !== 'draft' && p.state !== 'returned') { if (location.hash.includes('/psat/')) goReplace(`/zprava/${id}`); return null; }
-  const org = orgAt(s, p); const steps = stepsFor(p, org); const key = step && steps.some((x) => x.key === step) ? step : steps[p.akceId ? 0 : 0]!.key;
+  const org = orgAt(p); const steps = stepsFor(p, org); const key = step && steps.some((x) => x.key === step) ? step : steps[p.akceId ? 0 : 0]!.key;
   const k = steps.findIndex((x) => x.key === key); const cur = steps[k]!;
   const next = steps[k + 1]?.key, prev = steps[k - 1]?.key;
   const c = p.content; const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
@@ -204,7 +204,7 @@ export function Oprava({ id }: { id: string }) {
   if (!p || p.authorId !== s.userId) return <NotFound />;
   const last = p.trail.filter((t) => t.what.startsWith('Vráceno')).at(-1);
   const name = Q.nameOf(Q.userById(s, last?.who ?? ''));
-  const c = p.content; const sts = c.statements; const org = orgAt(s, p);
+  const c = p.content; const sts = c.statements; const org = orgAt(p);
   // A named part with nothing to show here (a people list, when the organisers are the only one) opens none.
   const shown = (p.parts ?? []).filter((x) => x !== 'people' || c.bullets.some((b, i) => b.kind === 'people' && i !== org));
   const open = shown.length ? shown : NOTE_ONLY;

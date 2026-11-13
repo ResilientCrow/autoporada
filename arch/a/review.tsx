@@ -102,4 +102,3 @@ export function Kontrola({ id }: { id?: string }) {
     {list}
   </>} />;
 }
-export function Moje2() { return null; }

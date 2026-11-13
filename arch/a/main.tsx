@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './fonts.css';
 import './base.css';
 import './app.css';
-import { DemoBar, StoreProvider, useRoute, useStore } from '../core/react';
+import { StoreProvider, useRoute, useStore } from '../core/react';
 import * as Q from '../core/select';
 import { AkceDetail, Navrh, NovaAkce } from './akce';
 import { Clovek, Lide, Login, Nastaveni, NovyRok, Pristup, Seznam, Seznamy, Soukromi, Ucet } from './admin';
@@ -44,10 +44,9 @@ function Router() {
     case 'lide': return head ? (b ? <Clovek id={b} /> : <Lide />) : <NotFound />;
     case 'seznamy': return staff ? (b ? <Seznam key={b} id={b} /> : <Seznamy />) : <NotFound />;
     case 'novy-rok': return head ? <NovyRok /> : <NotFound />;
-    case 'nastaveni': return head ? <NastaveniGate /> : <NotFound />;
+    case 'nastaveni': return head ? <Nastaveni /> : <NotFound />;
     case 'ucet': return <Ucet />;
     default: return <NotFound />;
   }
 }
-const NastaveniGate = () => <Nastaveni />;
-createRoot(document.getElementById('root')!).render(<StoreProvider ns="a"><Router /><DemoBar /></StoreProvider>);
+createRoot(document.getElementById('root')!).render(<StoreProvider ns="a"><Router /></StoreProvider>);

@@ -1,5 +1,5 @@
 import type { Campus, OrganizerRole, Salutation } from '@/domain/cs';
-import type { DraftPerson, PointContent, PointKind, PointTypeId } from '@/domain/report';
+import type { PointContent, PointKind, PointTypeId } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import type { Statement, SystemSlot } from '@/domain/outline';
 import type { RichDoc } from '@/domain/richtext';
@@ -41,14 +41,14 @@ export interface Issue {
   doc?: { at: string; by: string; pdf: 'rendering' | 'ready' | 'failed'; model: unknown; points: number; pdfFailure?: string; left?: { moved: string[]; missed: string[] } };
 }
 /** The headmaster's check of an akce's missing-report paragraph (ADR 0061): `was` is the paragraph they confirmed. */
-export interface PlaceholderCheck { checked: boolean; was: string | null; /** Where the server put the placeholder when it sent the state (`placeholderStatus`); dropped by a local edit that makes it stale. */ status?: 'checked' | 'handed-in' | 'open' | 'to-check' }
-export interface RegistryEntry { id: string; givenName: string; familyName: string; classCode: string; isNew: boolean }
-export interface RegistryList { key: string; purpose: 'annex1' | 'point4'; docLabel: string; name: string; archived: boolean; entries: RegistryEntry[] }
+interface PlaceholderCheck { checked: boolean; was: string | null; /** Where the server put the placeholder when it sent the state (`placeholderStatus`); dropped by a local edit that makes it stale. */ status?: 'checked' | 'handed-in' | 'open' | 'to-check' }
+interface RegistryEntry { id: string; givenName: string; familyName: string; classCode: string; isNew: boolean }
+interface RegistryList { key: string; purpose: 'annex1' | 'point4'; docLabel: string; name: string; archived: boolean; entries: RegistryEntry[] }
 export interface AccessReq { id: string; name: string; email: string; reason: string; at: string; state: 'pending' | 'approved' | 'rejected' | 'blocked' | 'cancelled'; decidedAt?: string; userId?: string }
 export interface Mail { id: string; at: string; to: string; subject: string; body: string }
-export interface Settings { dayOffset: number; time: string; remindSoft: boolean; remindHard: boolean; annex1Heading: string; annex1Intro: RichDoc }
+interface Settings { dayOffset: number; time: string; remindSoft: boolean; remindHard: boolean; annex1Heading: string; annex1Intro: RichDoc }
 export interface State {
   v: number; now: string; userId: string | null; users: User[]; points: Point[]; futures: Future[];
   issues: Issue[]; /** By akce id; the headmaster's only. */ placeholderChecks: Record<string, PlaceholderCheck>; plannedThrough: string; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
 }
-export type { Campus, DraftPerson, PointContent, PointKind, Salutation };
+export type { PointKind };

@@ -1,6 +1,6 @@
-import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, slotMondayOf, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
-import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, suggestGenitive, weekdayName, type Salutation } from '@/domain/cs';
-import { missingForSubmit, pointType, reportBody, type BulletSpec, type DraftPerson, type PointContent } from '@/domain/report';
+import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
+import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
+import { missingForSubmit, pointType, type BulletSpec, type DraftPerson } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
 import { addDays, compareDates, instantToWallClock, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
@@ -12,7 +12,7 @@ import { future as futureCopy } from '@/ui/copy/future';
 import { points as pointCopy } from '@/ui/copy/points';
 import type { Future, Issue, Point, Role, State, User } from './types';
 
-export const nowOf = (s: State) => new Date(s.now);
+const nowOf = (s: State) => new Date(s.now);
 /** The parts a return may name (ADR 0058), as [code, label] in the order the form asks them: a report's four, a proposal's title and text, an akce's or jednání's four. */
 export const returnPartsOf = (it: Point | Future): (readonly [string, string])[] =>
   'content' in it ? pointReturnPartsFor(it.kind).map((c) => [c, pointCopy.timeline.part(c, it.kind) ?? c] as const) : FUTURE_RETURN_PARTS.map((c) => [c, futureCopy.returnPart[c]] as const);
@@ -36,7 +36,7 @@ export const yearOf = (s: State) => schoolYear(todayOf(s));
 export const mePerson = (s: State): DraftPerson => { const u = me(s)!; return { salutation: u.salutation, givenName: u.givenName, familyName: u.familyName, ...(u.affiliation && { affiliation: u.affiliation, affiliationYear: yearOf(s) }) }; };
 
 const row = (i: Issue) => ({ monday: parseIsoDate(i.monday), meetingDate: parseIsoDate(i.meetingDate), deadlineAt: new Date(i.deadlineAt), status: i.status });
-export const rowsOf = (s: State) => s.issues.map(row);
+const rowsOf = (s: State) => s.issues.map(row);
 /** The calendar's boundary (ADR 0054): up to it a Monday with no row is no porada. */
 export const plannedOf = (s: State): CalDate => calendarBoundary(s.plannedThrough ? parseIsoDate(s.plannedThrough) : null, todayOf(s));
 export const slotsOf = (s: State): IssueSlot[] => [...issueSlots(rowsOf(s), todayOf(s), ruleOf(s), plannedOf(s))];
@@ -77,12 +77,12 @@ export const guessSalutation = (p: { givenName: string; familyName: string; affi
   const woman = /(ová|á)$/i.test(p.familyName) || (/a$/i.test(p.givenName) && !/^(jan|honz|mich|luk|nikol|jir|kub|mis|sas)a$/i.test(p.givenName));
   return !woman ? 'pan' : p.affiliation ? 'slecna' : 'pani';
 };
-export const lastDayOf = (f: Future) => f.endDate ?? f.date;
-export const futureEnd = (f: Future) => eventEnd({ lastDay: lastDayOf(f), timeTo: f.timeTo });
-export const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).getTime();
+const lastDayOf = (f: Future) => f.endDate ?? f.date;
+const futureEnd = (f: Future) => eventEnd({ lastDay: lastDayOf(f), timeTo: f.timeTo });
+const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).getTime();
 export const owedMonday = (s: State, f: Future) => toIsoDate(owedPorada(lastDayOf(f), rowsOf(s), plannedOf(s)));
 /** The report an akce started and still has: any but a withdrawn one, so a refused report too (it closes the akce, ADR 0056). */
-export const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn');
+const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn');
 /** Deleting this report brings its akce back to „Čeká na vás“: only while the report was never handed in. */
 export const asksAgain = (s: State, p: Point) => { const f = p.akceId ? s.futures.find((x) => x.id === p.akceId) : undefined; return !!f && (f.report === 'none' || f.report === 'prompted'); };
 const closeFor = (s: State, f: Future, monday: string) => {
@@ -128,8 +128,8 @@ export function placeholderText(s: State, f: Future, monday: string): string {
   return issueOf(s, monday)?.placeholders[f.id] || systemText(f);
 }
 /** Where an akce's missing-report paragraph stands (ADR 0061); as the server's `placeholderStatus`. */
-export type PlaceholderStatus = 'checked' | 'handed-in' | 'open' | 'to-check';
-export function placeholderStatusOf(s: State, f: Future, monday: string): PlaceholderStatus {
+type PlaceholderStatus = 'checked' | 'handed-in' | 'open' | 'to-check';
+function placeholderStatusOf(s: State, f: Future, monday: string): PlaceholderStatus {
   const known = s.placeholderChecks[f.id];
   if (known?.checked) return 'checked';
   // The headmaster's state carries the server's status; a local edit drops it, and then the rule is mirrored here.
@@ -160,13 +160,12 @@ export const pendingRequests = (s: State) => s.requests.filter((r) => r.state ==
 export const upcoming = (s: State) => s.futures.filter((f) => f.state === 'approved' && !ownerIsOver(s, f)).sort((a, b) => compareDates(a.date, b.date));
 export const specOf = (p: Point): readonly BulletSpec[] => (p.typeId ? pointType(p.typeId).defaultBullets : []);
 export const readiness = (s: State, p: Point) => missingForSubmit(p.kind, p.content, specOf(p), todayOf(s));
-export const genitive = (x: { salutation: NonNullable<Salutation>; givenName: string; familyName: string }) => suggestGenitive(x);
 export const peopleFor = (s: State, id: string) => recentPeople(myPoints(s, id).map((p) => ({ ...p.content, updatedAt: new Date(p.savedAt) })) as never, 300);
 
 // ---- the document ----
 /** The first three pokyny fill themselves from akce and the student list: they keep their place and have nothing to edit. */
 const FIXED_SLOTS = new Set(['meetings', 'events', 'talent']);
-export const isFixedRow = (r: Issue['rows'][number]) => !!r.slot && FIXED_SLOTS.has(r.slot);
+const isFixedRow = (r: Issue['rows'][number]) => !!r.slot && FIXED_SLOTS.has(r.slot);
 /** Rows the document fills by itself; the pokyny page does not list them. */
 const AUTO_SLOTS = new Set([...FIXED_SLOTS, 'exemptions']);
 export const isAutoRow = (r: Issue['rows'][number]) => !!r.slot && AUTO_SLOTS.has(r.slot);
@@ -174,7 +173,7 @@ export interface Segment { key: string; kind: 'head' | 'report' | 'missing' | 'i
 export interface Built { model: DocumentModel | null; errors: string[]; segments: Segment[]; points: number; printed: string[] }
 
 /** The real snapshot of a porada. `extra` adds points not yet decided (preview) or the draft being typed. */
-export function snapshotOf(s: State, monday: string, opts: { pending?: boolean; draft?: Point | null } = {}) {
+function snapshotOf(s: State, monday: string, opts: { pending?: boolean; draft?: Point | null } = {}) {
   const iss = issueOf(s, monday) ?? s.issues[s.issues.length - 1]!;
   const meeting = parseIsoDate(iss.meetingDate);
   const reports: Record<string, unknown>[] = []; const refs: Record<string, Segment['state']> = {};
@@ -309,6 +308,4 @@ export function pagesOf(b: Built): number {
 }
 export const pagesText = (n: number) => (n === 1 ? 'asi 1 strana' : n < 5 ? `asi ${n} strany` : `asi ${n} stran`);
 export const cap = (t: string) => t.charAt(0).toLocaleUpperCase('cs') + t.slice(1);
-export const printsAny = (b: Built) => b.segments.some((x) => x.kind === 'report' || x.kind === 'missing');
-export { slotMondayOf, addDays, toIsoDate, parseIsoDate, isRichDocEmpty, reportBody };
-export type { PointContent };
+export { addDays, toIsoDate };

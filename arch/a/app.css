@@ -99,11 +99,10 @@ button.pick:hover{border-color:var(--ink);background:var(--wash)}
  .dec2 .btn{min-height:44px}
  .tk{align-items:stretch}
  .rowi .btn{padding:0 10px}
- .demo{bottom:calc(70px + env(safe-area-inset-bottom))}
 }
 @media (min-width:901px){.pv{display:none}}
 @media print{
- .work,.dhd,.deskhd,.toast,.veil,.demo,.stamp{display:none!important}
+ .work,.dhd,.deskhd,.toast,.veil,.stamp{display:none!important}
  html,body,.lay,.desk{background:#fff!important;display:block!important;height:auto!important;overflow:visible!important;padding:0!important;position:static!important}
  .wrapm{padding:0!important;max-width:none!important}
  .sheet{box-shadow:none;max-width:none}
@@ -111,22 +110,13 @@ button.pick:hover{border-color:var(--ink);background:var(--wash)}
 }
 /* opravy po první prohlídce */
 .sheet h2,.sheet h3{text-align:left}
-body .demo{left:auto;right:12px;bottom:12px}
-body .demo-p{left:auto;right:0}
 @media (max-width:900px){
  .pb{order:5}
- body .demo{top:14px;bottom:auto;right:64px}
- body .demo-p{bottom:auto;top:38px}
 }
 .sheet hr{margin-left:0!important;margin-right:0!important;max-width:100%}
 .seg-head>p:first-child{text-align:left}
 .mg .wrapm:not(.wrapn):not(:has(.mn)){padding-left:0;max-width:760px}
 .bk .lnks{display:flex;align-items:center;gap:16px}
-@media (max-width:900px){
- body .demo{top:0;right:auto;left:50%;transform:translateX(-50%)}
- body .demo-b{height:20px;padding:0 10px;font-size:11px;border-radius:0 0 8px 8px;border-top:0}
- body .demo-p{top:24px;left:50%;right:auto;transform:translateX(-50%)}
-}
 .diff ins,.diff del{margin-right:.22em}
 .toast{pointer-events:none}
 .pane{outline:0}

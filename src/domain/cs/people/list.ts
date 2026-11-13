@@ -29,11 +29,6 @@ export function withAffiliation(text: string, affiliation: string | undefined): 
   return trimmed ? `${text} (${trimmed})` : text;
 }
 
-/** „Mgr. Jana Nováková (1.A)“ */
-export function renderPerson(p: Person, showAffiliation = true): string {
-  return showAffiliation ? withAffiliation(formatName(p), p.affiliation) : formatName(p);
-}
-
 /** The person's class code („1.A“, „L1B“), if their affiliation is one; jobs are not. */
 function classOf(p: Person): string | undefined {
   const affiliation = p.affiliation?.trim();

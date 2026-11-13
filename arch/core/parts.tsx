@@ -7,7 +7,7 @@ import type { Annex, AnnexPart } from './types';
 // ---- text with levels -------------------------------------------------------
 type OLine = { lv: number; t: string };
 /** Lines from Word or Excel: levels from their own indent, and the bullets go, because the document draws its own. */
-export const pastedLines = (raw: string): OLine[] => {
+const pastedLines = (raw: string): OLine[] => {
   const rows = raw.replace(/\r/g, '').split('\n').filter((x) => x.trim()).map((x) => { const ws = /^[\t \u00a0]*/.exec(x)![0]; const width = [...ws].reduce((n, ch) => n + (ch === '\t' ? 4 : 1), 0); return { width, t: x.trim().replace(/^(?:[-\u2013\u2022\u00b7*\u25a0\u25aa\u25cf]|o(?=\s))\s*/, '') }; });
   const widths = [...new Set(rows.map((r) => r.width))].sort((a, b) => a - b);
   return rows.filter((r) => r.t).map((r) => ({ lv: widths.indexOf(r.width), t: r.t }));
@@ -50,7 +50,7 @@ function useCurrent(items: Q.OutlineItem[]) {
   }, [items]);
   return cur;
 }
-export const scrollToSeg = (key: string) => {
+const scrollToSeg = (key: string) => {
   const el = document.getElementById(`seg-${key}`); if (!el) return;
   el.scrollIntoView({ block: 'start' }); // No smooth scrolling: across 19 pages it disorients, and late layout could strand it mid-way.
   el.classList.remove('jump'); void el.offsetWidth; el.classList.add('jump');
@@ -80,14 +80,14 @@ export function DocNav({ built, attention, notes }: { built: Q.Built; attention?
 
 // ---- annexes ------------------------------------------------------------------
 const pid = () => `part-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
-export const parseTable = (raw: string): string[][] => {
+const parseTable = (raw: string): string[][] => {
   const lines = raw.split(/\r?\n/).filter((l) => l.trim());
   const sep = lines.some((l) => l.includes('\t')) ? '\t' : lines.every((l) => l.includes(';')) ? ';' : null;
   return lines.map((l) => (sep ? l.split(sep) : [l]).map((c) => c.trim()));
 };
 const MAX_SIDE = 1400;
 /** A photo straight from a phone is megabytes: shrink it before it goes anywhere. */
-export function readImage(file: File): Promise<{ src: string; w: number; h: number }> {
+function readImage(file: File): Promise<{ src: string; w: number; h: number }> {
   return new Promise((ok, no) => {
     if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { no(new Error('type')); return; }
     const url = URL.createObjectURL(file); const img = new Image();

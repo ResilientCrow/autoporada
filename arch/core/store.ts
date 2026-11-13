@@ -3,8 +3,7 @@ import { missingForSubmit, newDraft, openingInput, submittedContent, type DraftP
 import { openingSentence } from '@/domain/cs';
 import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
-import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, specOf, todayOf, userById, yearOf } from './select';
+import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, preflight, ruleOf, slotsOf, specOf, todayOf, userById, yearOf } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
@@ -32,15 +31,8 @@ const ensureIssue = (s: State, monday: string): State => {
 };
 export const needsReauth = (s: State) => !s.stepUpAt || new Date(s.now).getTime() - new Date(s.stepUpAt).getTime() > 600_000;
 
-// ---- session ----
-export const signIn = (userId: string): Fx => (s) => ({ ...s, userId });
-export const signOut: Fx = (s) => ({ ...s, userId: null, stepUpAt: null });
-export const signOutAll: Fx = (s) => audit({ ...s, userId: null, stepUpAt: null }, 'Odhlášení všude');
-export const stepUp: Fx = (s) => ({ ...s, stepUpAt: s.now });
-export const setClock = (iso: string): Fx => (s) => ({ ...s, now: iso });
-
 // ---- points ----
-export function refreshOpening(s: State, p: Point, content: PointContent): PointContent {
+function refreshOpening(p: Point, content: PointContent): PointContent {
   if (p.kind !== 'report' || content.openingEdited) return content;
   const type = p.typeId ? pointType(p.typeId) : null;
   const input = openingInput(content, type?.titleGender ?? null, type?.defaultBullets ?? [], type?.name);
@@ -58,12 +50,12 @@ export function createPoint(kind: PointKind, typeId: PointTypeId | null, akceId:
       content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
     }
     const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, parts: null, savedAt: s.now, trail: [] };
-    p.content = refreshOpening(s, p, content);
+    p.content = refreshOpening(p, content);
     onId?.(pid);
     return { ...s, points: [...s.points, p] };
   };
 }
-export const savePoint = (pid: string, content: PointContent): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => ({ ...p, content: refreshOpening(s, p, content), savedAt: s.now })) });
+export const savePoint = (pid: string, content: PointContent): Fx => (s) => ({ ...s, points: up(s.points, pid, (p) => ({ ...p, content: refreshOpening(p, content), savedAt: s.now })) });
 export type SubmitResult = { ok: true; monday: string } | { ok: false; why: 'problems' | 'report-not-due' };
 export function trySubmit(s: State, pid: string): SubmitResult {
   const p = s.points.find((x) => x.id === pid)!;
@@ -271,7 +263,6 @@ export const generate = (m: string): Fx => (s) => {
     registry: s.registry.map((l) => ({ ...l, entries: l.entries.map((e) => ({ ...e, isNew: false })) })),
   }, `Vygenerováno: ${m}`);
 };
-export const finishPdf = (m: string, ok = true): Fx => (s) => patchIssue(s, m, (i) => (i.doc ? { ...i, doc: { ...i.doc, pdf: ok ? 'ready' : 'failed', ...(ok ? {} : { pdfFailure: 'convert' }) } } : i));
 
 // ---- registry, types, settings, access ----
 export const addList = (name: string, docLabel: string): Fx => (s0) => { const [s, k] = id(s0, 'list'); return { ...s, registry: [...s.registry, { key: k, purpose: 'point4', docLabel, name, archived: false, entries: [] }] }; };
@@ -280,7 +271,6 @@ export const addEntries = (key: string, rows: { givenName: string; familyName: s
 export const editEntry = (key: string, e: string, v: { givenName: string; familyName: string; classCode: string }, _version: number): Fx => (s) => ({ ...s, registry: s.registry.map((l) => (l.key === key ? { ...l, entries: l.entries.map((x) => (x.id === e ? { ...x, ...v } : x)) } : l)) });
 export const removeEntry = (key: string, e: string): Fx => (s) => ({ ...s, registry: s.registry.map((l) => (l.key === key ? { ...l, entries: l.entries.filter((x) => x.id !== e) } : l)) });
 export const newSchoolYear = (keys: string[]): Fx => (s) => audit({ ...s, registry: s.registry.map((l) => (keys.includes(l.key) ? { ...l, entries: l.entries.filter((e) => !e.isNew).map((e) => e) , archived: l.purpose !== 'annex1' } : l)) }, 'Nový školní rok');
-export { parsePaste };
 export const saveSettings = (patch: Partial<State['settings']>): Fx => (s) => { const n = { ...s, settings: { ...s.settings, ...patch } }; const today = Date.parse(s.now); return { ...n, issues: n.issues.map((i) => (i.status === 'open' && Date.parse(i.deadlineAt) > today + 14 * 864e5 ? { ...i, deadlineAt: deadline(parseIsoDate(i.meetingDate), { dayOffset: n.settings.dayOffset, time: parseWallTime(n.settings.time) }).toISOString() } : i)) }; };
 export const requestAccess = (reason: string): Fx => (s0) => { const u = me(s0)!; const [s, rid] = id(s0, 'req'); const r: AccessReq = { id: rid, name: nameOf(u), email: u.email, reason, at: s.now, state: 'pending', userId: u.id }; return { ...s, requests: [...s.requests, r] }; };
 export const cancelRequest = (rid: string): Fx => (s) => ({ ...s, requests: up(s.requests, rid, (r) => ({ ...r, state: 'cancelled' })) });
@@ -295,4 +285,3 @@ export const setUser = (uid: string, patch: { role?: Role; status?: 'active' | '
   if (uid === s.userId || needsReauth(s)) return s;
   return audit({ ...s, users: up(s.users, uid, (u) => { const n = { ...u, ...patch }; return n.isStudent && (n.role === 'reviewer' || n.role === 'headmaster') ? { ...n, role: 'submitter' } : n; }) }, `Změna uživatele ${uid}`);
 };
-export { pointOfAkce };

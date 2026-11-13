@@ -17,8 +17,8 @@ export const DEFAULT_TAB_STOP = 708;
 
 /**
  * SHA-256 of the headmaster's template the formatting was taken from
- * (test/fixtures/template/format-facts.json). Stored with every generated
- * version, so the archive says which template it follows.
+ * (test/fixtures/template/format-facts.json). The template parity test
+ * (test/document/template-parity.test.ts) checks it against those facts.
  */
 export const TEMPLATE_SHA256 = '9c082b1215cf0913532c25195dcbfdca7eb805e65fa7fb27f8d5b03f58ab5d8f';
 

@@ -58,7 +58,7 @@ UI scale: `.lead` 18px, item title `.it .tt` 16.5px/600, item sub-line `.it .st`
 - Column `.col`: padding 32px 40px 40px, gap 36px (narrow `.nar .col`: 28px 32px, gap 28px; phone: 20px 16px 28px, gap 28px). Form stack `.stack` gap 18px, `.st8` gap 8px, `.st6` gap 6px. Items `.it` padding 14px 0, min-height 64px.
 - Radii: buttons 10px (`.btn.lg` 12px), inputs 10px, notes and `.fx` 12px, choice cards `.ch` 14px, dialog 20px (phone: 20px 20px 0 0), pills and `.add` 999px, tags 4px, sheet blocks 2px.
 - Borders: hairline `1px solid var(--line)` between list rows; controls use `1.5px solid var(--line)`, hover `var(--ink)`. Focus: `:focus-visible` 3px `--gold` outline, 2px offset.
-- Shadows: sheet `0 24px 60px rgba(0,0,0,.35)` (none on phone); dialog `0 30px 80px rgba(0,0,0,.4)`; `.add` `0 6px 20px rgba(22,24,55,.08)`; popover `.pop` `0 14px 44px rgba(22,24,55,.28)`. Veil: `rgba(22,24,55,.55)`.
+- Shadows: sheet `0 24px 60px rgba(0,0,0,.35)` (none on phone); dialog `0 30px 80px rgba(0,0,0,.4)`; `.add` `0 6px 20px rgba(22,24,55,.08)`. Veil: `rgba(22,24,55,.55)`.
 - Motion: `.btn` press `scale(.98)`, tiles `translateY(1px)`; `prefers-reduced-motion` turns transitions off.
 
 ### Breakpoints
@@ -190,7 +190,5 @@ Visual: run `responsive-shots <url> [outdir]`, read the PNGs, and compare agains
 ## 8. Known inconsistencies in the code
 
 - The document sheet uses `text-transform:uppercase` (`.arch .s`, `.bl .h`) because the printed porada does; interface labels must not.
-- `.grip` uses a `radial-gradient` for its drag dots; it is a texture, not a gradient surface.
 - `.slot` and `.chk-it` use dashed or full borders in gold, not a coloured left border.
 - `.btn.off` is defined in both `base.css` (`#8A8BA3`) and `app.css` (`#6A6B84`); the later one wins.
-- `Moje2` in `review.tsx` is an empty stub.

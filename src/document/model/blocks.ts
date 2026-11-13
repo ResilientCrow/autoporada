@@ -62,8 +62,6 @@ export type Block =
       readonly alt: string;
     };
 
-export type BlockKind = Block['kind'];
-
 export interface Section {
   /** `twoColumn` holds the Příloha 1 table; `nextPage` starts Příloha 2 on a fresh page. */
   readonly layout: 'single' | 'twoColumn' | 'nextPage';

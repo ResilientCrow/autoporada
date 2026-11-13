@@ -13,7 +13,6 @@ import {
   deadline,
   eventEndedBefore,
   eventsWindow,
-  issuePhase,
   meetingsWindow,
   routeFutureItem,
   slotMondayOf,
@@ -71,14 +70,6 @@ describe('deadline', () => {
   it('follows a configured rule', () => {
     const friday = { dayOffset: -3, time: t('12:00') };
     expect(deadline(d('2026-10-19'), friday).toISOString()).toBe('2026-10-16T10:00:00.000Z');
-  });
-});
-
-describe('issuePhase', () => {
-  const closes = new Date('2026-10-17T18:00:00Z');
-  it('collects before the deadline and reviews from it on', () => {
-    expect(issuePhase(new Date('2026-10-17T17:59:59Z'), closes)).toBe('collecting');
-    expect(issuePhase(closes, closes)).toBe('review');
   });
 });
 

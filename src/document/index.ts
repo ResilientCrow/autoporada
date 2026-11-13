@@ -9,4 +9,4 @@ export {
   snapshotPerson,
   type Omitted,
 } from './compose';
-export type { Block, BlockKind, DocumentModel, Run, Section, StudentRow } from './model';
+export type { Block, DocumentModel, Run, Section, StudentRow } from './model';

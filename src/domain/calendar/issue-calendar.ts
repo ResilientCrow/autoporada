@@ -28,13 +28,6 @@ export function deadline(meetingDate: CalDate, rule: DeadlineRule = DEFAULT_DEAD
   return wallClockToInstant(addDays(meetingDate, rule.dayOffset), rule.time);
 }
 
-export type IssuePhase = 'collecting' | 'review';
-
-/** Before the deadline people submit; after it reviewers and the headmaster finish the issue. */
-export function issuePhase(now: Date, deadlineAt: Date): IssuePhase {
-  return now.getTime() < deadlineAt.getTime() ? 'collecting' : 'review';
-}
-
 export interface DateRange {
   readonly from: CalDate;
   readonly to: CalDate;
