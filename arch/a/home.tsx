@@ -37,7 +37,8 @@ const pointLine = (s: ReturnType<typeof useStore>['s'], p: Point) => {
     case 'withdrawn': return '';
   }
 };
-const futureLine = (f: Future) => ({ draft: 'Rozepsaná, zatím jen u vás', submitted: f.changed ? 'Změna čeká na kontrolu vedení' : 'U vedení', returned: 'Vrácená, čeká na vaši opravu', approved: f.cancelRequested ? 'Zrušení čeká na vedení' : 'Schválená, vidí ji škola', rejected: 'Zamítnutá', cancelled: 'Zrušená', withdrawn: '' }[f.state]);
+// An akce is feminine, a jednání neuter: the status agrees with it.
+const futureLine = (f: Future, a = f.kind === 'akce') => ({ draft: `${a ? 'Rozepsaná' : 'Rozepsané'}, zatím jen u vás`, submitted: f.changed ? 'Změna čeká na kontrolu vedení' : 'U vedení', returned: `${a ? 'Vrácená' : 'Vrácené'}, čeká na vaši opravu`, approved: f.cancelRequested ? 'Zrušení čeká na vedení' : a ? 'Schválená, vidí ji škola' : 'Schválené, vidí ho škola', rejected: a ? 'Zamítnutá' : 'Zamítnuté', cancelled: a ? 'Zrušená' : 'Zrušené', withdrawn: '' }[f.state]);
 const pointTo = (p: Point) => (p.state === 'draft' ? `/psat/${p.id}` : p.state === 'returned' ? `/oprava/${p.id}` : `/zprava/${p.id}`);
 
 function deskFor(s: ReturnType<typeof useStore>['s'], meId: string) {
@@ -118,7 +119,7 @@ export function Moje() {
     <Top big h="Přehled" lead={empty ? 'Zatím tu nic nemáte. Až napíšete první zprávu, uvidíte ji tady i s tím, kde je.' : 'Všechno, co jste napsali, a kde to zrovna je.'} />
     <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
     {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(s, p)} mk={p.state === 'approved' || p.state === 'published' ? 'c' : p.state === 'returned' ? 'n' : p.state === 'rejected' ? 'x' : 'o'} warn={p.state === 'returned'} />)}</Sec> : null}
-    {fs.length ? <Sec h="Moje akce a schůzky">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={f.state === 'approved' ? 'c' : f.state === 'returned' ? 'n' : 'o'} />)}</Sec> : null}
+    {fs.length ? <Sec h="Moje akce a jednání">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={f.state === 'approved' ? 'c' : f.state === 'returned' ? 'n' : 'o'} />)}</Sec> : null}
     <a className="q" href="#/akce">Všechny akce školy</a>
   </>} />;
 }
@@ -153,8 +154,8 @@ export function Udalosti() {
   const limit = Q.toIsoDate(Q.addDays(Q.todayOf(s), 21)); const near = hits.filter((f) => Q.toIsoDate(f.date) <= limit);
   const list = more || f0 ? hits : near; const months = [...new Set(list.map((f) => Q.toIsoDate(f.date).slice(0, 7)))];
   const MONTH = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
-  return <App desk={deskFor(s, s.userId!)} col={<><Back to="/" t="Zpět" /><Top h="Co se chystá ve škole" lead={`Schválené akce a schůzky, které teprve budou: ${all.length}.`} />
-    <div className="stack st8"><label className="l"><span className="vh">Hledat</span><input className="in" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hledat název, jméno nebo místo" /></label><Seg label="Co ukázat" value={kind} options={[['all', 'Všechno'], ['akce', 'Akce'], ['jednani', 'Schůzky']]} onChange={setKind} /></div>
+  return <App desk={deskFor(s, s.userId!)} col={<><Back to="/" t="Zpět" /><Top h="Co se chystá ve škole" lead={`Schválené akce a jednání, které teprve budou: ${all.length}.`} />
+    <div className="stack st8"><label className="l"><span className="vh">Hledat</span><input className="in" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hledat název, jméno nebo místo" /></label><Seg label="Co ukázat" value={kind} options={[['all', 'Všechno'], ['akce', 'Akce'], ['jednani', 'Jednání']]} onChange={setKind} /></div>
     {list.length ? months.map((mo) => <Sec key={mo} h={`${MONTH[Number(mo.slice(5)) - 1]} ${mo.slice(0, 4)}`}>{list.filter((f) => Q.toIsoDate(f.date).startsWith(mo)).map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={Q.cap(f.title)} st={`${Q.dm(f.date)}${f.timeFrom ? ` v ${f.timeFrom.hour}:${String(f.timeFrom.minute).padStart(2, '0')}` : ''}${f.organizer.trim() ? `, ${organizerPhrase(f.organizerRole, f.organizer)}` : ''}`} />)}</Sec>) : <Note>Nic takového se nechystá. Zkuste jiné slovo.</Note>}
     {!more && !f0 && hits.length > near.length ? <button type="button" className="btn lg w" onClick={() => setMore(true)}>Ukázat i pozdější: {hits.length - near.length}</button> : null}</>} />;
 }

@@ -13,7 +13,7 @@ import { points as pointCopy } from '@/ui/copy/points';
 import type { Future, Issue, Point, Role, State, User } from './types';
 
 export const nowOf = (s: State) => new Date(s.now);
-/** The parts a return may name (ADR 0058), as [code, label] in the order the form asks them: a report's four, a proposal's title and text, an akce's or schůzka's four. */
+/** The parts a return may name (ADR 0058), as [code, label] in the order the form asks them: a report's four, a proposal's title and text, an akce's or jednání's four. */
 export const returnPartsOf = (it: Point | Future): (readonly [string, string])[] =>
   'content' in it ? pointReturnPartsFor(it.kind).map((c) => [c, pointCopy.timeline.part(c, it.kind) ?? c] as const) : FUTURE_RETURN_PARTS.map((c) => [c, futureCopy.returnPart[c]] as const);
 /** The labels of the parts a return named, in the form's order. */
@@ -257,9 +257,11 @@ export function preflight(s: State, monday: string): Check[] {
   if (built.errors.length) c.push({ level: 'block', code: 'invalid', text: 'Dokument teď nejde sestavit. Zkontrolujte přítomné a pokyny.' });
   const here = s.points.filter((p) => p.poradaMonday === monday && p.kind === 'report');
   const wait = here.filter((p) => p.state === 'submitted').length, ret = here.filter((p) => p.state === 'returned').length;
-  const akce = s.futures.filter((f) => f.state === 'submitted').length;
+  const waitA = s.futures.filter((f) => f.state === 'submitted' && f.kind === 'akce').length, waitJ = s.futures.filter((f) => f.state === 'submitted' && f.kind !== 'akce').length, akce = waitA + waitJ;
+  // Czech agreement: 1 and 5+ take a singular verb, 2 to 4 and a pair of kinds a plural one.
+  const waitWho = [waitA ? `${waitA} ${waitA < 5 ? 'akce' : 'akcí'}` : '', waitJ ? `${waitJ} jednání` : ''].filter(Boolean).join(' a '), waitVerb = waitA && waitJ ? 'čekají' : akce === 1 || akce >= 5 ? 'čeká' : 'čekají';
   if (wait) c.push({ level: 'warn', code: 'waiting', n: wait, text: `${wait === 1 ? '1 zpráva čeká' : wait < 5 ? `${wait} zprávy čekají` : `${wait} zpráv čeká`} na kontrolu. Bez schválení nevyjde.`, to: 'kontrola' });
-  if (akce) c.push({ level: 'warn', code: 'akce-waiting', n: akce, text: `${akce === 1 ? '1 akce čeká' : akce < 5 ? `${akce} akce čekají` : `${akce} akcí čeká`} na kontrolu.`, to: 'kontrola' });
+  if (akce) c.push({ level: 'warn', code: 'akce-waiting', n: akce, text: `${waitWho} ${waitVerb} na kontrolu.`, to: 'kontrola' });
   if (ret) c.push({ level: 'warn', code: 'returned', n: ret, text: `${ret === 1 ? '1 zpráva je vrácená' : `${ret} vrácené zprávy`} autorovi. Bez schválení nevyjde.` });
   const miss = owedTo(s, monday).filter((o) => !o.delivered && !o.notYetOver);
   if (miss.length) c.push({ level: 'warn', code: 'reports-missing', n: miss.length, text: `${miss.length === 1 ? 'Z 1 akce chybí zpráva' : `Ze ${miss.length} akcí chybí zpráva`}. Vytiskne se jen odstavec o akci.`, to: 'zpravy' });
