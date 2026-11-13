@@ -73,7 +73,7 @@ export function inputProblems(schema: z.ZodType): string[] {
 
 /**
  * The one closed exception to the credential rule: system use cases that hand
- * protocol state to the sign-in code on the server. defineAction refuses
+ * protocol state to the sign-in code on the server. No route exposes
  * system use cases, so these values never reach a client.
  */
 export const PROTOCOL_OUTPUTS: Readonly<Record<string, readonly string[]>> = {

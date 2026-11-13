@@ -18,7 +18,6 @@
     "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p arch",
     "lint": "eslint .",
     "lint:arch": "depcruise src --config .dependency-cruiser.cjs",
-    "lint:palette": "tsx scripts/check-palette.ts",
     "lint:unused": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

@@ -19,7 +19,7 @@
   // openssl for the test certificate (made as docs/ENTRA-SETUP.md §6 says).
   "ignoreBinaries": ["pdftotext", "pdffonts", "pdftohtml", "openssl"],
   "project": [
-    "src/**/*.{ts,tsx,css}",
+    "src/**/*.{ts,tsx}",
     "arch/**/*.{ts,tsx,mjs}",
     "scripts/**/*.{mjs,ts}",
     "test/**/*.ts",

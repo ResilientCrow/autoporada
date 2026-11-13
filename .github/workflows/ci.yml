@@ -30,7 +30,6 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm lint:arch
-      - run: pnpm lint:palette
       - run: pnpm lint:chars
       - run: pnpm lint:unused
       - run: pnpm format:check

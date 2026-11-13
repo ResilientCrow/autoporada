@@ -1,5 +1,5 @@
 /**
- * Layer rules from docs/adr/0004-module-boundaries.md (ui/ modules: 0012).
+ * Layer rules from docs/adr/0004-module-boundaries.md.
  * Changing a rule here is an architecture change: update the ADR as well.
  * @type {import('dependency-cruiser').IConfiguration}
  */
@@ -9,8 +9,6 @@ const npm = (...names) => `(^|/)node_modules/(${names.join('|')})/`;
 
 const TESTS = ['\\.test\\.tsx?$', '^test/'];
 const INDEX = '^src/[^/]+/[^/]+/index\\.tsx?$';
-/** The modules of ui/ (ADR 0012); status/ is reserved for domain status maps. */
-const UI_MODULES = 'theme|copy|kit|form|shell|status|features';
 
 module.exports = {
   forbidden: [
@@ -177,26 +175,26 @@ module.exports = {
     },
     {
       name: 'app-uses-server-entries',
-      comment: 'Routes reach the server only through its actions, routes and pages entry modules.',
+      comment: 'Routes reach the server only through its routes entry module.',
       severity: 'error',
       from: { path: '^src/app/' },
-      to: { path: '^src/server/', pathNot: '^src/server/(actions|routes|pages)/index\\.ts$' },
+      to: { path: '^src/server/', pathNot: '^src/server/routes/index\\.ts$' },
     },
     {
       name: 'container-bound-only-at-the-edges',
       comment:
-        'The pipeline, auth and the rest of server/ take their dependencies as arguments. The container, and every module bound to it (bind, pages, routes, actions), is reached only by those modules, app/ and instrumentation.',
+        'The pipeline, auth and the rest of server/ take their dependencies as arguments. The container, and every module bound to it (bind, routes), is reached only by those modules, app/ and instrumentation.',
       severity: 'error',
       from: {
         path: '^src/',
         pathNot: [
           '^src/app/',
-          '^src/server/(bind|pages|routes|actions)/',
+          '^src/server/(bind|routes)/',
           '^src/server/container(\\.test)?\\.ts$',
           '^src/instrumentation\\.ts$',
         ],
       },
-      to: { path: '^src/server/(container\\.ts$|bind/|pages/|routes/|actions/)' },
+      to: { path: '^src/server/(container\\.ts$|bind/|routes/)' },
     },
     {
       name: 'instrumentation-client-is-light',
@@ -228,80 +226,10 @@ module.exports = {
     },
     {
       name: 'ui-deps',
+      comment: 'ui/ is the Czech copy: it imports only contracts, domain and itself.',
       severity: 'error',
-      from: { path: '^src/ui/' },
-      to: {
-        path: [
-          '^src/(server|infra|application|app|worker|cli|notify|snapshot)/',
-          '^src/document/render-docx/',
-        ],
-      },
-    },
-    {
-      name: 'ui-known-modules',
-      comment:
-        'ui/ has a fixed set of modules (ADR 0012); a new one changes this rule and needs an ADR.',
-      severity: 'error',
-      from: {},
-      to: { path: `^src/ui/(?!(${UI_MODULES})/)` },
-    },
-    {
-      name: 'ui-leaves',
-      comment: 'theme, copy and kit import nothing else in ui/ (kit gets its text as props).',
-      severity: 'error',
-      from: { path: '^src/ui/(theme|copy|kit)/', pathNot: TESTS },
-      to: { path: '^src/ui/', pathNot: '^src/ui/$1/' },
-    },
-    {
-      name: 'ui-form-shell-status',
-      comment: 'form, shell and status build on kit and copy only.',
-      severity: 'error',
-      from: { path: '^src/ui/(form|shell|status)/', pathNot: TESTS },
-      to: { path: '^src/ui/', pathNot: ['^src/ui/$1/', '^src/ui/(kit|copy)/'] },
-    },
-    {
-      name: 'ui-features-no-shell-theme',
-      comment: 'Pages put features inside the shell; only the root layouts load the theme.',
-      severity: 'error',
-      from: { path: '^src/ui/features/', pathNot: TESTS },
-      to: { path: '^src/ui/(theme|shell)/' },
-    },
-    {
-      name: 'ui-features-isolated',
-      severity: 'error',
-      from: { path: '^src/ui/features/([^/]+)/', pathNot: TESTS },
-      to: { path: '^src/ui/features/', pathNot: '^src/ui/features/$1/' },
-    },
-    {
-      name: 'theme-only-from-root-layouts',
-      comment:
-        'The stylesheet is loaded once, by the root layout and the error page that replaces it.',
-      severity: 'error',
-      from: { pathNot: ['^src/app/(layout|global-error)\\.tsx$', '^src/ui/theme/', ...TESTS] },
-      to: { path: '^src/ui/theme/' },
-    },
-    {
-      name: 'react-aria-only-in-kit-and-form',
-      comment: 'React Aria is wrapped once, in the audited kit and form modules (ADR 0012).',
-      severity: 'error',
-      from: { pathNot: ['^src/ui/(kit|form)/', ...TESTS] },
-      to: { path: npm('react-aria-components', 'react-aria', 'react-stately') },
-    },
-    {
-      name: 'tiptap-only-in-rich-text',
-      comment:
-        'TipTap and ProseMirror stay in the editor chunk: only rich-text/{editor,indent,paste}.ts import them (ADR 0031, items 2 and 9).',
-      severity: 'error',
-      from: { pathNot: ['^src/ui/form/rich-text/(editor|indent|paste)\\.ts$', ...TESTS] },
-      to: { path: npm('@tiptap/[^/]+', 'prosemirror-[a-z-]+') },
-    },
-    {
-      name: 'editor-chunk-only-lazy',
-      comment:
-        'The editor chunk is reached with import() after hydration, never statically (ADR 0031, item 2).',
-      severity: 'error',
-      from: { pathNot: TESTS },
-      to: { path: '^src/ui/form/rich-text/editor\\.ts$', dependencyTypesNot: ['dynamic-import'] },
+      from: { path: '^src/ui/', pathNot: TESTS },
+      to: { pathNot: ['^src/(ui|contracts|domain)/', npm('zod')] },
     },
     {
       name: 'server-not-into-delivery',
@@ -311,12 +239,13 @@ module.exports = {
     },
     {
       name: 'jsx-only-in-react-layers',
-      comment: 'JSX compiles to an invisible react/jsx-runtime import, so ban .tsx files outright.',
+      comment:
+        'JSX compiles to an invisible react/jsx-runtime import, so ban .tsx files outright outside src/app and document/render-html.',
       severity: 'error',
       from: {},
       to: {
         path: [
-          '^src/(domain|snapshot|contracts|notify|application|infra|server|worker|cli)/.+\\.tsx$',
+          '^src/(domain|snapshot|contracts|notify|application|infra|server|worker|cli|ui)/.+\\.tsx$',
           '^src/document/.+\\.tsx$',
         ],
         pathNot: '^src/document/render-html/',
@@ -329,7 +258,7 @@ module.exports = {
       from: { path: '^src/([^/]+)/([^/]+)/', pathNot: TESTS },
       to: {
         path: '^src/[^/]+/[^/]+/.+',
-        pathNot: ['^src/$1/$2/', INDEX, '^src/ui/features/[^/]+/index\\.tsx?$', '^src/app/'],
+        pathNot: ['^src/$1/$2/', INDEX, '^src/app/'],
       },
     },
     {
@@ -339,7 +268,7 @@ module.exports = {
       from: { path: '^src/([^/]+)/[^/]+$', pathNot: TESTS },
       to: {
         path: '^src/[^/]+/[^/]+/.+',
-        pathNot: ['^src/$1/', INDEX, '^src/ui/features/[^/]+/index\\.tsx?$', '^src/app/'],
+        pathNot: ['^src/$1/', INDEX, '^src/app/'],
       },
     },
     {
@@ -350,16 +279,6 @@ module.exports = {
       to: {
         path: '^src/(snapshot|contracts|notify)/[^/]+$',
         pathNot: ['^src/$1/', '^src/[^/]+/index\\.tsx?$'],
-      },
-    },
-    {
-      name: 'features-via-index',
-      comment: 'ui/features/<feature>/ are modules of their own.',
-      severity: 'error',
-      from: { path: '^src/ui/features/([^/]+)/', pathNot: TESTS },
-      to: {
-        path: '^src/ui/features/[^/]+/',
-        pathNot: ['^src/ui/features/$1/', '^src/ui/features/[^/]+/index\\.tsx?$'],
       },
     },
   ],

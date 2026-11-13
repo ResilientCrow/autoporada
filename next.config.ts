@@ -15,10 +15,6 @@ const config: NextConfig = {
   cacheComponents: false,
   // The nonce CSP is set per request by src/proxy.ts.
   headers: async () => [{ source: '/:path*', headers: [...STATIC_HEADERS] }],
-  experimental: {
-    // Matches INPUT_LIMITS in src/application/core (ADR 0011).
-    serverActions: { bodySizeLimit: '512kb' },
-  },
 };
 
 export default config;
