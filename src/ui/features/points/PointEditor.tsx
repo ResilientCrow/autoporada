@@ -65,7 +65,6 @@ export function PointEditor({
   titleGender,
   typeName,
   today,
-  readinessSchoolYear,
   previewSchoolYear,
   standing,
   moves,
@@ -87,10 +86,8 @@ export function PointEditor({
   /** The type's grammatical gender for the opening sentence; null where it is not known („Jiné“). */
   readonly titleGender: TitleGender | null;
   readonly typeName: string | null;
-  /** The day the people's classes are worked out for. */
+  /** The Prague day: the people's classes are worked out for it, and the readiness list checks as of it, as the submit does (use-cases/points/submit.ts). */
   readonly today: CalDate;
-  /** Today's school year („2026/2027“): the one the submit checks the classes against (use-cases/points/submit.ts), so the readiness list must too. */
-  readonly readinessSchoolYear: string;
   /** The school year of the porada the point goes to: the paper's {skolniRok}. Differs from today's around 1 September. */
   readonly previewSchoolYear: string;
   /** Where the point goes and when that closes, shown with the submit button; null while no porada is open. */
@@ -150,7 +147,7 @@ export function PointEditor({
     id,
     kind,
     spec,
-    schoolYear: readinessSchoolYear,
+    today,
     latest: report.latest,
     submitPoint,
     afterLanded: autosave.afterLanded,
@@ -191,7 +188,7 @@ export function PointEditor({
           kind={kind}
           content={content}
           spec={spec}
-          schoolYear={readinessSchoolYear}
+          today={today}
           standing={standing}
           summary={submit.summary}
           attempt={submit.summaryAttempt}

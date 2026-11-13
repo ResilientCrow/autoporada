@@ -1,4 +1,5 @@
 import { missingForSubmit, type BulletSpec, type PointKind, type Readiness } from '@/domain/report';
+import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
 import { fieldId, type FormSpec } from '@/ui/form';
 
@@ -25,9 +26,9 @@ export function readinessOf(
   kind: PointKind,
   content: PointContentWire,
   spec: readonly BulletSpec[],
-  schoolYear: string,
+  today: CalDate,
 ): Readiness {
-  return missingForSubmit(kind, pointContentOf(content), spec, schoolYear);
+  return missingForSubmit(kind, pointContentOf(content), spec, today);
 }
 
 /** The name of the editor control a readiness path leads to, or null where the form has none (a removed row, the statements as a whole). */

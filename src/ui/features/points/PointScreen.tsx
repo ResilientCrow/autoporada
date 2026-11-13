@@ -127,7 +127,6 @@ export function PointScreen({
           titleGender={editor.titleGender}
           typeName={editor.typeName}
           today={editor.today}
-          readinessSchoolYear={editor.readinessSchoolYear}
           previewSchoolYear={placementYear(standing, editor.readinessSchoolYear)}
           standing={point.standing}
           moves={moves}

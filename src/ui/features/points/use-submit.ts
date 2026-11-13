@@ -5,6 +5,7 @@ import type { z } from 'zod';
 
 import type { ServerAction, submitPointInput, submitPointOutput } from '@/contracts';
 import type { BulletSpec, PointKind } from '@/domain/report';
+import type { CalDate } from '@/domain/time';
 import { NETWORK_FAILED, type SaveAnswer } from '@/ui/form';
 
 import { saveAnswer } from './answers';
@@ -28,7 +29,7 @@ export function useSubmit({
   id,
   kind,
   spec,
-  schoolYear,
+  today,
   latest,
   submitPoint,
   afterLanded,
@@ -36,7 +37,8 @@ export function useSubmit({
   readonly id: string;
   readonly kind: PointKind;
   readonly spec: readonly BulletSpec[];
-  readonly schoolYear: string;
+  /** The Prague day the submit is checked for, as the server checks it. */
+  readonly today: CalDate;
   /** The editor's latest edit, for a press that follows a change before the page renders again. */
   readonly latest: RefObject<Edit>;
   readonly submitPoint: SubmitPointAction;
@@ -59,7 +61,7 @@ export function useSubmit({
     const form = pointFormSpec(kind, bullets, spec, content.statements.length);
     return runPress({
       sending: busy.current,
-      problems: readinessItems(readinessOf(kind, content, spec, schoolYear), form).problems,
+      problems: readinessItems(readinessOf(kind, content, spec, today), form).problems,
       show,
       setSending,
       send: () =>

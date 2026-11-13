@@ -15,6 +15,8 @@ import {
 } from './index';
 
 const YEAR = '2026/2027';
+/** A day in YEAR after every event date below: readiness takes today and counts the school year from it. */
+const TODAY = d('2026-11-13');
 
 function person(
   givenName: string,
@@ -81,7 +83,7 @@ const ready: PointContent = {
 };
 
 const check = (content: PointContent, spec: readonly BulletSpec[] = SPEC) =>
-  missingForSubmit('report', content, spec, YEAR);
+  missingForSubmit('report', content, spec, TODAY);
 const withBullets = (...bullets: DraftBullet[]): PointContent => ({ ...ready, bullets });
 
 describe('missingForSubmit: report', () => {
@@ -320,6 +322,30 @@ describe('missingForSubmit: report', () => {
     expect(check({ ...ready, timeFrom: null, timeTo: null }).problems).toEqual([]);
   });
 
+  describe('an akce that has not ended yet', () => {
+    it('refuses a report on an akce that starts after today', () => {
+      expect(check({ ...ready, eventDate: d('2026-11-14') }).problems).toEqual([
+        { code: 'event-not-over', path: 'content.eventDate', params: {} },
+      ]);
+    });
+
+    it('refuses a report on an akce whose last day is after today', () => {
+      expect(
+        check({ ...ready, eventDate: d('2026-11-12'), endDate: d('2026-11-14') }).problems,
+      ).toEqual([{ code: 'event-not-over', path: 'content.endDate', params: {} }]);
+    });
+
+    it('takes a report on the day the akce ends', () => {
+      expect(check({ ...ready, eventDate: TODAY }).problems).toEqual([]);
+      expect(check({ ...ready, eventDate: d('2026-11-11'), endDate: TODAY }).problems).toEqual([]);
+    });
+
+    it('never asks a finance or pokyn point about its date', () => {
+      const doc = { ...ready, body: richDocFromText('Text.'), eventDate: d('2027-01-01') };
+      expect(missingForSubmit('finance', doc, [], TODAY).problems).toEqual([]);
+    });
+  });
+
   it('lists every stale name once, in bullet order, on the first one', () => {
     const old = { affiliationYear: '2025/2026' };
     const content = withBullets(
@@ -517,7 +543,7 @@ describe('missingForSubmit: finance and pokyn', () => {
   };
 
   it.each(['finance', 'pokyn'] as const)('%s passes with a title and text', (kind) => {
-    expect(missingForSubmit(kind, doc, [], YEAR)).toEqual({ problems: [], warnings: [] });
+    expect(missingForSubmit(kind, doc, [], TODAY)).toEqual({ problems: [], warnings: [] });
   });
 
   it.each(['finance', 'pokyn'] as const)('%s needs a title and text, in that order', (kind) => {
@@ -525,14 +551,14 @@ describe('missingForSubmit: finance and pokyn', () => {
       kind,
       { ...doc, title: ' ', body: richDocFromText(' ') },
       [],
-      YEAR,
+      TODAY,
     );
     expect(result.problems).toEqual([
       { code: 'title-required', path: 'content.title', params: {} },
       { code: 'body-required', path: 'content.body', params: {} },
     ]);
     expect(
-      missingForSubmit(kind, { ...doc, body: emptyRichDoc() }, [], YEAR).problems.map(
+      missingForSubmit(kind, { ...doc, body: emptyRichDoc() }, [], TODAY).problems.map(
         (p) => p.code,
       ),
     ).toEqual(['body-required']);
@@ -542,7 +568,7 @@ describe('missingForSubmit: finance and pokyn', () => {
     '%s does not ask for a date, an opening or people',
     (kind) => {
       expect(
-        missingForSubmit(kind, { ...doc, timeFrom: null, timeTo: t('09:00') }, [], YEAR).problems,
+        missingForSubmit(kind, { ...doc, timeFrom: null, timeTo: t('09:00') }, [], TODAY).problems,
       ).toEqual([]);
     },
   );

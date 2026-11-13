@@ -3,6 +3,7 @@
 import { useDeferredValue, useMemo, type MouseEvent } from 'react';
 
 import type { BulletSpec, PointKind } from '@/domain/report';
+import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
 import { revealAndFocus } from '@/ui/form';
 import { InPageLink } from '@/ui/kit';
@@ -48,21 +49,21 @@ export function ReadinessList({
   kind,
   content,
   spec,
-  schoolYear,
+  today,
 }: {
   readonly kind: PointKind;
   readonly content: PointContentWire;
   readonly spec: readonly BulletSpec[];
-  readonly schoolYear: string;
+  readonly today: CalDate;
 }) {
   const deferred = useDeferredValue(content);
   const { problems, warnings } = useMemo(
     () =>
       readinessItems(
-        readinessOf(kind, deferred, spec, schoolYear),
+        readinessOf(kind, deferred, spec, today),
         pointFormSpec(kind, deferred.bullets, spec, deferred.statements.length),
       ),
-    [kind, deferred, spec, schoolYear],
+    [kind, deferred, spec, today],
   );
   return (
     <section aria-labelledby="bod-readiness" className="space-y-2">

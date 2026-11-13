@@ -74,7 +74,7 @@ describe('points.submit', () => {
         submittedAt: world.clock.now(),
         content: {
           ...sent,
-          eventDate: parseIsoDate('2027-01-14'),
+          eventDate: parseIsoDate('2026-10-15'),
           bullets: [sent.bullets[0]],
         },
       });
@@ -411,9 +411,10 @@ describe('points.submit', () => {
       );
     });
 
-    /** The ready report with its organiser's class confirmed for `year`. */
+    /** The ready report, on an akce over before every clock below, with its organiser's class confirmed for `year`. */
     const classOf = (year: string) =>
       readyReport({
+        eventDate: '2026-08-27',
         bullets: [
           {
             key: 'organisers',
@@ -424,6 +425,23 @@ describe('points.submit', () => {
           },
         ],
       });
+
+    it('refuses a report on an akce that has not ended by today in Prague', async () => {
+      const author = await user();
+      const id = await start(author);
+      // 2026-10-19 08.00 UTC: the Prague day is the 19th.
+      await refuses(
+        id,
+        () => submit(author, id, readyReport({ eventDate: '2026-10-20' })),
+        invalid({ 'content.eventDate': 'invalid' }),
+      );
+      await refuses(
+        id,
+        () => submit(author, id, readyReport({ eventDate: '2026-10-18', endDate: '2026-10-20' })),
+        invalid({ 'content.endDate': 'invalid' }),
+      );
+      expect((await submit(author, id, readyReport({ eventDate: '2026-10-19' }))).ok).toBe(true);
+    });
 
     it('refuses a class confirmed for an earlier school year', async () => {
       const author = await user();

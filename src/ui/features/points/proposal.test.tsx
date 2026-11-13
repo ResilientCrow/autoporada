@@ -170,7 +170,6 @@ describe('PointEditor for a proposal', () => {
         titleGender={null}
         typeName={null}
         today={TODAY}
-        readinessSchoolYear="2026/2027"
         previewSchoolYear="2026/2027"
         standing={null}
         moves={{ events: ['withdraw'], retractPoint: never, withdrawPoint: never }}

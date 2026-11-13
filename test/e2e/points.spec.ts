@@ -71,8 +71,8 @@ test.describe('the author', () => {
     expect(await pointIdsOf(email)).toHaveLength(1);
 
     const TITLE = 'Seminář o čtenářství';
-    await field(page, points.facts.eventDate).fill('2027-01-12');
-    await field(page, points.facts.endDate).fill('2027-01-13');
+    await field(page, points.facts.eventDate).fill('2026-01-12');
+    await field(page, points.facts.endDate).fill('2026-01-13');
     await field(page, points.editor.title).fill(TITLE);
     await field(page, points.facts.timeFrom).fill('09:00');
     await field(page, points.facts.timeTo).fill('11:30');
@@ -135,8 +135,8 @@ test.describe('the author', () => {
     await page.reload();
     await hydrated();
     await expect(field(page, points.editor.title)).toHaveValue(TITLE);
-    await expect(field(page, points.facts.eventDate)).toHaveValue('2027-01-12');
-    await expect(field(page, points.facts.endDate)).toHaveValue('2027-01-13');
+    await expect(field(page, points.facts.eventDate)).toHaveValue('2026-01-12');
+    await expect(field(page, points.facts.endDate)).toHaveValue('2026-01-13');
     await expect(field(page, points.facts.timeFrom)).toHaveValue('09:00');
     await expect(field(page, points.facts.timeTo)).toHaveValue('11:30');
     await expect(field(page, points.facts.place)).toHaveValue('v učebně S206');

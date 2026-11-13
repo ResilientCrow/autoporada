@@ -159,7 +159,7 @@ export const canDecideFuture = (u: User | null, f: Future) => !!u && (u.role ===
 export const pendingRequests = (s: State) => s.requests.filter((r) => r.state === 'pending');
 export const upcoming = (s: State) => s.futures.filter((f) => f.state === 'approved' && !ownerIsOver(s, f)).sort((a, b) => compareDates(a.date, b.date));
 export const specOf = (p: Point): readonly BulletSpec[] => (p.typeId ? pointType(p.typeId).defaultBullets : []);
-export const readiness = (s: State, p: Point) => missingForSubmit(p.kind, p.content, specOf(p), yearOf(s));
+export const readiness = (s: State, p: Point) => missingForSubmit(p.kind, p.content, specOf(p), todayOf(s));
 export const genitive = (x: { salutation: NonNullable<Salutation>; givenName: string; familyName: string }) => suggestGenitive(x);
 export const peopleFor = (s: State, id: string) => recentPeople(myPoints(s, id).map((p) => ({ ...p.content, updatedAt: new Date(p.savedAt) })) as never, 300);
 

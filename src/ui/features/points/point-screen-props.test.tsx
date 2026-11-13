@@ -74,7 +74,7 @@ describe('the two school years of the editor', () => {
     render(AFTER);
     expect(seen.props[0]).toMatchObject({
       previewSchoolYear: '2027/2028',
-      readinessSchoolYear: '2026/2027',
+      today: calDate(2027, 8, 29),
     });
   });
 
@@ -82,7 +82,7 @@ describe('the two school years of the editor', () => {
     render(null);
     expect(seen.props[0]).toMatchObject({
       previewSchoolYear: '2026/2027',
-      readinessSchoolYear: '2026/2027',
+      today: calDate(2027, 8, 29),
     });
   });
 

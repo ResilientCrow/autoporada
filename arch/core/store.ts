@@ -4,7 +4,7 @@ import { openingSentence } from '@/domain/cs';
 import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { parsePaste } from '@/domain/registry';
-import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, specOf, userById, yearOf } from './select';
+import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, pointOfAkce, preflight, ruleOf, slotsOf, specOf, todayOf, userById, yearOf } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
@@ -68,7 +68,7 @@ export type SubmitResult = { ok: true; monday: string } | { ok: false; why: 'pro
 export function trySubmit(s: State, pid: string): SubmitResult {
   const p = s.points.find((x) => x.id === pid)!;
   const spec = specOf(p);
-  if (missingForSubmit(p.kind, p.content, spec, yearOf(s)).problems.length) return { ok: false, why: 'problems' };
+  if (missingForSubmit(p.kind, p.content, spec, todayOf(s)).problems.length) return { ok: false, why: 'problems' };
   const akce = s.futures.find((f) => f.id === p.akceId);
   if (akce) {
     const m = owedMonday(s, akce);

@@ -1,6 +1,7 @@
 'use client';
 
 import { POINT_LIMITS } from '@/domain/report';
+import { toIsoDate, type CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
 import { DateField, RadioGroupField, TextField } from '@/ui/form';
 
@@ -34,12 +35,15 @@ const CAMPUS_OPTIONS = CAMPUSES.map((campus) => ({ value: campus, label: points.
 export function ReportFields({
   content,
   issues,
+  today,
   readOnly,
   onChange,
   onBlur,
 }: FieldProps & {
   readonly content: PointContentWire;
   readonly issues: Issues;
+  /** The Prague day: a report is about an akce that is over, so the pickers offer no later day. */
+  readonly today: CalDate;
   readonly onChange: (patch: Patch) => void;
 }) {
   /** A field's name with the change that belongs to it, so the two cannot drift apart. */
@@ -59,8 +63,8 @@ export function ReportFields({
         autoComplete="off"
       />
       <div className="grid gap-4 sm:grid-cols-2">
-        <DateField {...bound('eventDate')} initial={content.eventDate} />
-        <DateField {...bound('endDate')} initial={content.endDate} />
+        <DateField {...bound('eventDate')} initial={content.eventDate} max={toIsoDate(today)} />
+        <DateField {...bound('endDate')} initial={content.endDate} max={toIsoDate(today)} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField {...bound('timeFrom')} type="time" value={content.timeFrom ?? ''} />

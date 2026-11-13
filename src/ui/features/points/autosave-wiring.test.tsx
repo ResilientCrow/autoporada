@@ -122,7 +122,6 @@ function page(phase: Phase, readOnly: boolean, sending = false): string {
       titleGender="f"
       typeName={null}
       today={calDate(2026, 10, 27)}
-      readinessSchoolYear="2026/2027"
       previewSchoolYear="2026/2027"
       standing={null}
       moves={{ events: ['withdraw'], retractPoint: never, withdrawPoint: never }}

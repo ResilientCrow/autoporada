@@ -15,7 +15,6 @@ import {
   type DeadlineRule,
   type IssueSlot,
 } from '@/domain/calendar';
-import { schoolYear } from '@/domain/cs';
 import { missingForSubmit, submittedContent, type PointContent } from '@/domain/report';
 import { addDays, instantToWallClock, isSameDate, type CalDate } from '@/domain/time';
 
@@ -130,8 +129,8 @@ export const submitPoint = defineUseCase({
     const spec = typeSpec(point);
     const shape = kindIssues(point.kind, content, spec);
     if (Object.keys(shape).length > 0) return fail({ code: 'invalid-input', fields: shape });
-    const year = schoolYear(instantToWallClock(now).date);
-    const { problems } = missingForSubmit(point.kind, content, spec, year);
+    const today = instantToWallClock(now).date;
+    const { problems } = missingForSubmit(point.kind, content, spec, today);
     if (problems.length > 0) {
       return fail({ code: 'invalid-input', fields: readinessIssues(problems) });
     }

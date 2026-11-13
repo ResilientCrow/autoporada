@@ -69,6 +69,7 @@ const ISSUE: Readonly<Record<ProblemCode, FieldIssueCode>> = {
   'body-required': 'required',
   'body-too-long': 'too-long',
   'event-date-required': 'required',
+  'event-not-over': 'invalid',
   'time-to-without-from': 'invalid',
   'time-to-before-from': 'invalid',
   'opening-required': 'required',

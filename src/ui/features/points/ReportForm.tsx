@@ -45,6 +45,7 @@ export function ReportForm({
       <ReportFields
         content={content}
         issues={issues}
+        today={today}
         readOnly={readOnly}
         onChange={edit.change}
         onBlur={onBlur}

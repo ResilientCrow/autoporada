@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { BulletSpec, ProblemCode } from '@/domain/report';
+import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 import { fieldId } from '@/ui/form';
 
 import { EDITOR_FORM_ID, editorSpec } from './editor-form';
 import { readinessItems, readinessOf, readinessTarget } from './readiness';
 import type { PointContentWire } from './fields';
+
+const TODAY = calDate(2026, 11, 13);
 
 const { points } = cs;
 
@@ -54,7 +57,7 @@ describe('readinessTarget', () => {
 describe('readinessItems', () => {
   it('links each problem to its control in the order of the form, in the copy of its code', () => {
     const { problems, warnings } = readinessItems(
-      readinessOf('report', EMPTY, SPEC, '2026/2027'),
+      readinessOf('report', EMPTY, SPEC, TODAY),
       form(EMPTY),
     );
     expect(problems.map((p) => p.text)).toEqual([
@@ -86,10 +89,7 @@ describe('readinessItems', () => {
         },
       ],
     };
-    const { warnings } = readinessItems(
-      readinessOf('report', content, SPEC, '2026/2027'),
-      form(content),
-    );
+    const { warnings } = readinessItems(readinessOf('report', content, SPEC, TODAY), form(content));
     expect(warnings).toEqual([
       { id: idOf('statements.0.speaker'), text: 'Mluvčí Jana Nováková není mezi účastníky.' },
     ]);
@@ -101,6 +101,7 @@ describe('readinessItems', () => {
       'body-required': {},
       'body-too-long': {},
       'event-date-required': {},
+      'event-not-over': {},
       'time-to-without-from': {},
       'time-to-before-from': {},
       'opening-required': {},
@@ -136,6 +137,7 @@ describe('readinessItems', () => {
   const PINNED: Record<ProblemCode, [Record<string, string | number | string[]>, string]> = {
     'title-required': [{}, 'Vyplňte název.'],
     'event-date-required': [{}, 'Vyplňte datum začátku.'],
+    'event-not-over': [{}, 'Akce ještě neskončila. Zprávu pošlete, až proběhne.'],
     'opening-required': [{}, 'Úvodní věta nesmí být prázdná.'],
     'body-required': [{}, 'Vyplňte text návrhu.'],
     'body-too-long': [{}, 'Text je příliš dlouhý.'],

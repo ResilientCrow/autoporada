@@ -53,7 +53,7 @@ export const wire = (over: Record<string, unknown> = {}) => ({
 export const readyReport = (over: Record<string, unknown> = {}) =>
   wire({
     title: 'Den otevřených dveří',
-    eventDate: '2027-01-14',
+    eventDate: '2026-10-15',
     opening: 'Ve čtvrtek se konal den otevřených dveří.',
     bullets: [
       {

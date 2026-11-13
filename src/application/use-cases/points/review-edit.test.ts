@@ -57,7 +57,7 @@ describe('points.reviewEdit', () => {
     it('lets a reviewer change a colleague’s submitted point, keeping the old values', async () => {
       const id = await handedIn(await user());
       const reviewer = await user('reviewer');
-      const content = await edited(id, { title: 'Školní ples', eventDate: '2027-01-15' });
+      const content = await edited(id, { title: 'Školní ples', eventDate: '2026-10-16' });
       expect(await edit(reviewer, id, content)).toEqual({
         ok: true,
         value: { version: 3, changed: true },
@@ -66,7 +66,7 @@ describe('points.reviewEdit', () => {
       expect(point).toMatchObject({ state: 'submitted', version: 3 });
       expect(point?.content).toMatchObject({
         title: 'Školní ples',
-        eventDate: calDate(2027, 1, 15),
+        eventDate: calDate(2026, 10, 16),
       });
       expect(events[0]).toMatchObject({
         event: 'edit',
@@ -75,7 +75,7 @@ describe('points.reviewEdit', () => {
         actorId: reviewer.id,
         note: null,
         editedFields: ['title', 'eventDate'],
-        before: { title: 'Den otevřených dveří', eventDate: calDate(2027, 1, 14) },
+        before: { title: 'Den otevřených dveří', eventDate: calDate(2026, 10, 15) },
       });
     });
 

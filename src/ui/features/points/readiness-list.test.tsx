@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { BulletSpec } from '@/domain/report';
+import { calDate } from '@/domain/time';
 import { cs } from '@/ui/copy';
 
 import { cspMarkupProblems } from '../../../../test/support/markup';
@@ -12,6 +13,8 @@ import { editorSpec } from './editor-form';
 import { ReadinessList } from './ReadinessList';
 import { SubmitPanel } from './SubmitPanel';
 
+const TODAY = calDate(2026, 11, 13);
+
 const { points, form } = cs;
 
 const SPEC: readonly BulletSpec[] = [
@@ -19,7 +22,7 @@ const SPEC: readonly BulletSpec[] = [
 ];
 const READY: PointContentWire = {
   title: 'Exkurze do Terezína',
-  eventDate: '2027-01-14',
+  eventDate: '2026-10-14',
   endDate: null,
   timeFrom: null,
   timeTo: null,
@@ -53,9 +56,7 @@ const SPEAKER_OUT: PointContentWire = {
 };
 
 const list = (content: PointContentWire) =>
-  renderToStaticMarkup(
-    <ReadinessList kind="report" content={content} spec={SPEC} schoolYear="2026/2027" />,
-  );
+  renderToStaticMarkup(<ReadinessList kind="report" content={content} spec={SPEC} today={TODAY} />);
 
 describe('ReadinessList', () => {
   it('links each problem to its field by the editor’s field id, in the form’s order', () => {
@@ -108,7 +109,7 @@ describe('SubmitPanel', () => {
         kind="report"
         content={EMPTY}
         spec={SPEC}
-        schoolYear="2026/2027"
+        today={TODAY}
         standing={null}
         summary={null}
         attempt={0}
@@ -182,7 +183,7 @@ describe('a row with two people who miss the same thing', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       const { problems } = readinessItems(
-        readinessOf('report', TWO, SPEC, '2026/2027'),
+        readinessOf('report', TWO, SPEC, TODAY),
         editorSpec(TWO.bullets, SPEC, 0),
       );
       const salutations = problems.filter((p) => p.text.includes('zvolte oslovení'));
@@ -195,7 +196,7 @@ describe('a row with two people who miss the same thing', () => {
           kind="report"
           content={TWO}
           spec={SPEC}
-          schoolYear="2026/2027"
+          today={TODAY}
           standing={null}
           summary={problems}
           attempt={1}

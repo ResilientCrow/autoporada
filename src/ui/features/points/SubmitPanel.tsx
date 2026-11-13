@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 
 import type { BulletSpec, PointKind } from '@/domain/report';
+import type { CalDate } from '@/domain/time';
 import { points } from '@/ui/copy';
 import { ErrorSummary, useFocusOnRise, type SummaryEntry } from '@/ui/form';
 import { Button } from '@/ui/kit';
@@ -24,7 +25,7 @@ export function SubmitPanel({
   kind,
   content,
   spec,
-  schoolYear,
+  today,
   standing,
   summary,
   attempt,
@@ -35,7 +36,7 @@ export function SubmitPanel({
   readonly kind: PointKind;
   readonly content: PointContentWire;
   readonly spec: readonly BulletSpec[];
-  readonly schoolYear: string;
+  readonly today: CalDate;
   /** Where the point goes and when that closes; null while no porada is open or the calendar is unknown. */
   readonly standing: StandingInput | null;
   /** What the last press found wrong; null before a press and after a send that went through. */
@@ -54,7 +55,7 @@ export function SubmitPanel({
       {summary === null || summary.length === 0 ? null : (
         <ErrorSummary items={summary} summaryRef={lead} />
       )}
-      <ReadinessList kind={kind} content={content} spec={spec} schoolYear={schoolYear} />
+      <ReadinessList kind={kind} content={content} spec={spec} today={today} />
       {standing === null ? null : (
         <StandingLine standing={standing} report={reportFactsOf(kind, content)} />
       )}

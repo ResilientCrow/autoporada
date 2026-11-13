@@ -1,5 +1,6 @@
+import { schoolYear } from '@/domain/cs';
 import { exceedsLimits, isRichDocEmpty } from '@/domain/richtext';
-import { compareDates, compareTimes } from '@/domain/time';
+import { compareDates, compareTimes, type CalDate } from '@/domain/time';
 
 import type { BulletSpec, DraftBullet, DraftPerson, PointContent, PointKind } from './content';
 import { displayName, isParticipant } from './people';
@@ -10,6 +11,7 @@ export type ProblemCode =
   | 'body-required'
   | 'body-too-long'
   | 'event-date-required'
+  | 'event-not-over'
   | 'time-to-without-from'
   | 'time-to-before-from'
   | 'opening-required'
@@ -71,10 +73,20 @@ function timeProblems(content: PointContent): Problem[] {
     : [];
 }
 
-function headProblems(content: PointContent): Problem[] {
+/** A report is written about an akce that has happened: one that starts or ends after today is not over yet. */
+function overProblems({ eventDate, endDate }: PointContent, today: CalDate): Problem[] {
+  if (eventDate !== null && compareDates(eventDate, today) > 0)
+    return [problem('event-not-over', 'content.eventDate')];
+  if (endDate !== null && compareDates(endDate, today) > 0)
+    return [problem('event-not-over', 'content.endDate')];
+  return [];
+}
+
+function headProblems(content: PointContent, today: CalDate): Problem[] {
   return [
     ...(blank(content.title) ? [problem('title-required', 'content.title')] : []),
     ...(content.eventDate === null ? [problem('event-date-required', 'content.eventDate')] : []),
+    ...overProblems(content, today),
     ...timeProblems(content),
   ];
 }
@@ -198,7 +210,8 @@ function speakerWarnings(content: PointContent): Warning[] {
  * What stops a point from being submitted, in form order (title, dates,
  * times, bullets, opening, statements), and what is only worth a look.
  * `spec` is the type's default bullets (empty for finance and pokyn);
- * `schoolYear` is `schoolYear(today)`. Text is trimmed everywhere, so
+ * `today` is the Prague day: a report on an akce that has not ended by then is
+ * refused (`event-not-over`), and classes count in its school year. Text is trimmed everywhere, so
  * a blank title or opening fails here before the database's
  * `points_submitted_complete` CHECK could.
  *
@@ -218,7 +231,7 @@ export function missingForSubmit(
   kind: PointKind,
   content: PointContent,
   spec: readonly BulletSpec[],
-  schoolYear: string,
+  today: CalDate,
 ): Readiness {
   if (kind !== 'report') {
     const title = blank(content.title) ? [problem('title-required', 'content.title')] : [];
@@ -227,8 +240,8 @@ export function missingForSubmit(
   }
   return {
     problems: [
-      ...headProblems(content),
-      ...bulletProblems(content, spec, schoolYear),
+      ...headProblems(content, today),
+      ...bulletProblems(content, spec, schoolYear(today)),
       ...openingProblems(content),
       ...bodyProblems(content),
       ...statementProblems(content),

@@ -14,6 +14,7 @@ const PROBLEM: Readonly<Record<ProblemCode, (params: Params) => string>> = {
   'body-required': () => 'Vyplňte text návrhu.',
   'body-too-long': () => 'Text je příliš dlouhý.',
   'event-date-required': () => 'Vyplňte datum začátku.',
+  'event-not-over': () => 'Akce ještě neskončila. Zprávu pošlete, až proběhne.',
   'time-to-without-from': () => 'Vyplňte také čas od.',
   'time-to-before-from': () => 'Čas do musí být později než čas od.',
   'opening-required': () => 'Úvodní věta nesmí být prázdná.',

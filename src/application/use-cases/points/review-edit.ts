@@ -1,6 +1,5 @@
 import { defineUseCase, fail, ok } from '@/application/core';
 import { reviewEditPointInput, reviewEditPointOutput } from '@/contracts';
-import { schoolYear } from '@/domain/cs';
 import { can } from '@/domain/policy';
 import {
   diffPointFields,
@@ -38,10 +37,10 @@ export const reviewEditPoint = defineUseCase({
     const spec = typeSpec(point);
     const shape = kindIssues(point.kind, content, spec);
     if (Object.keys(shape).length > 0) return fail({ code: 'invalid-input', fields: shape });
-    // Today's school year, as the submit's: a point handed in before the summer and edited in
-    // September goes to a September porada, so its classes must be this year's.
-    const year = schoolYear(instantToWallClock(now).date);
-    const { problems } = missingForSubmit(point.kind, content, spec, year);
+    // Today, as the submit's: a point handed in before the summer and edited in September goes
+    // to a September porada, so its classes must be this year's.
+    const today = instantToWallClock(now).date;
+    const { problems } = missingForSubmit(point.kind, content, spec, today);
     if (problems.length > 0) {
       return fail({ code: 'invalid-input', fields: readinessIssues(problems) });
     }

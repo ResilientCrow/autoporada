@@ -73,7 +73,6 @@ const editorPage = (
       titleGender="f"
       typeName={null}
       today={TODAY}
-      readinessSchoolYear="2026/2027"
       previewSchoolYear="2026/2027"
       standing={standing}
       moves={{ events: ['withdraw'], retractPoint: never, withdrawPoint: never }}
@@ -101,6 +100,7 @@ const fields = (
       <ReportFields
         content={content}
         issues={issues}
+        today={TODAY}
         readOnly={readOnly}
         onChange={() => undefined}
         onBlur={() => undefined}
@@ -353,6 +353,14 @@ describe('the date echo', () => {
   it('never shows an example of the format', () => {
     const html = editor();
     expect(html).not.toMatch(/dd\.? ?mm|rrrr|yyyy|dd\/mm|např\. \d/i);
+  });
+});
+
+describe('ReportFields dates', () => {
+  it('offers no day after today: a report is about an akce that is over', () => {
+    const html = fields();
+    for (const label of [points.facts.eventDate, points.facts.endDate])
+      expect(controlOf(html, label)).toContain('max="2026-10-27"');
   });
 });
 
