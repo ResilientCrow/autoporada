@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRoute, useStore, Sheet } from '../core/react';
 import * as Q from '../core/select';
+import type { Mark } from '../core/marks';
 import { POINT_LIMITS } from '@/domain/report';
 import { autosave } from '@/ui/copy/autosave';
 import logo from './logo-dark.svg';
 
-const I: Record<string, string> = { plus: 'M12 5v14M5 12h14', chk: 'M5 12.5l4.5 4.5L19 7.5', chev: 'M9 6l6 6-6 6', back: 'M15 6l-6 6 6 6', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c1-4 4-6 8-6s7 2 8 6', x: 'M6 6l12 12M18 6L6 18', up: 'M12 19V5M6 11l6-6 6 6', down: 'M12 5v14M6 13l6 6 6-6', home: 'M3 11l9-8 9 8M5 9.5V21h14V9.5', doc: 'M14 3H6v18h12V7zM14 3v4h4', rev: 'M9 12l2 2 4-4M4 4h16v16H4z', stack: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4', gear: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4', pen: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4', cal: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4', calp: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4M12 13v5M9.5 15.5h5', talk: 'M4 5h16v11H10l-5 4v-4H4z', ppl: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20c.8-3.5 3.3-5 6.5-5s5.7 1.5 6.5 5M16 4.5a3.5 3.5 0 010 6.5M18 15c2 .6 3.2 2.2 3.5 5', list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01', tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01', bell: 'M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4', flag: 'M5 21V4h12l-2.5 4 2.5 4H5', book: 'M4 4h6a2 2 0 012 2v15a2 2 0 00-2-2H4zM20 4h-6a2 2 0 00-2 2v15a2 2 0 012-2h6z' };
+const I: Record<string, string> = { plus: 'M12 5v14M5 12h14', chk: 'M5 12.5l4.5 4.5L19 7.5', chev: 'M9 6l6 6-6 6', back: 'M15 6l-6 6 6 6', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c1-4 4-6 8-6s7 2 8 6', x: 'M6 6l12 12M18 6L6 18', ban: 'M12 20a8 8 0 100-16 8 8 0 000 16zM6.35 6.35l11.3 11.3', up: 'M12 19V5M6 11l6-6 6 6', down: 'M12 5v14M6 13l6 6 6-6', home: 'M3 11l9-8 9 8M5 9.5V21h14V9.5', doc: 'M14 3H6v18h12V7zM14 3v4h4', rev: 'M9 12l2 2 4-4M4 4h16v16H4z', stack: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4', gear: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4', pen: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4', cal: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4', calp: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4M12 13v5M9.5 15.5h5', talk: 'M4 5h16v11H10l-5 4v-4H4z', ppl: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20c.8-3.5 3.3-5 6.5-5s5.7 1.5 6.5 5M16 4.5a3.5 3.5 0 010 6.5M18 15c2 .6 3.2 2.2 3.5 5', list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01', tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01', bell: 'M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4', flag: 'M5 21V4h12l-2.5 4 2.5 4H5', book: 'M4 4h6a2 2 0 012 2v15a2 2 0 00-2-2H4zM20 4h-6a2 2 0 00-2 2v15a2 2 0 012-2h6z' };
 export const Ic = ({ n }: { n: keyof typeof I | string }) => <svg className="i" viewBox="0 0 24 24" aria-hidden="true"><path d={I[n]} /></svg>;
 export const Hash = (to: string) => `#${to}`;
 
@@ -66,8 +67,8 @@ export function Desk({ note, children, cls = '', right, fold }: { note?: ReactNo
 export function Top({ h, lead, big }: { h: ReactNode; lead?: ReactNode; big?: boolean }) { return <div className="top"><h1 className={big ? 'big' : 'big m'}>{h}</h1>{lead ? <p className="lead">{lead}</p> : null}</div>; }
 export const Back = ({ to, t }: { to: string; t: string }) => <a className="back" href={Hash(to)}><Ic n="back" />{t}</a>;
 export const Sec = ({ h, right, children }: { h: string; right?: ReactNode; children: ReactNode }) => <section className="grp"><h2>{h}{right}</h2>{children}</section>;
-export function Item({ to, act, t, st, mk, end, warn }: { to?: string; act?: () => void; t: ReactNode; st?: ReactNode; mk?: 'c' | 'o' | 'n' | 'x'; end?: ReactNode; warn?: boolean }) {
-  const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : <i />}</span> : null}<span className="tx"><span className="tt">{t}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{st}</span> : null}</span>{end ?? (to || act ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
+export function Item({ to, act, t, st, mk, end, warn }: { to?: string; act?: () => void; t: ReactNode; st?: ReactNode; mk?: Mark; end?: ReactNode; warn?: boolean }) {
+  const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : mk === 'z' ? <Ic n="ban" /> : <i />}</span> : null}<span className="tx"><span className="tt">{t}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{st}</span> : null}</span>{end ?? (to || act ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
   if (act) return <button type="button" className="it" onClick={act}>{inner}</button>;
   return to ? <a className="it" href={Hash(to)}>{inner}</a> : <div className="it">{inner}</div>;
 }

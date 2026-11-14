@@ -170,6 +170,7 @@ a.f{text-decoration:none;color:inherit}
 /* Celé UI */
 .note.err{background:#F8E9EC;color:var(--red)}
 .mk.x i{background:var(--red)}
+.mk.z{color:#8A8BA3}
 .sv.err{color:var(--red);font-weight:600}
 .sgm a{min-height:40px;padding:0 14px;display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:999px;font-weight:500;font-size:15px;text-decoration:none}.sgm a:hover{border-color:var(--ink)}.sgm a.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .sm{font-size:14px;color:var(--mut)}

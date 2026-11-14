@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore, createWith, go } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
+import { futureMark, pointMark } from '../core/marks';
 import type { Future, Point } from '../core/types';
 import { App, Back, Desk, Dialog, focusOn, Ic, Item, Sec, Seg, Sheet, Stamp, Top, Track, TrailMore, WHEN, diffWords, Note, Todo } from './ui';
 import { foldForSearch, organizerPhrase } from '@/domain/cs';
@@ -118,8 +119,8 @@ export function Moje() {
   return <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={deskFor(s, u.id)} col={<>
     <Top big h="Přehled" lead={empty ? 'Zatím tu nic nemáte. Až napíšete první zprávu, uvidíte ji tady i s tím, kde je.' : 'Všechno, co jste napsali, a kde to zrovna je.'} />
     <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
-    {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(p)} mk={p.state === 'approved' || p.state === 'published' ? 'c' : p.state === 'returned' ? 'n' : p.state === 'rejected' ? 'x' : 'o'} warn={p.state === 'returned'} />)}</Sec> : null}
-    {fs.length ? <Sec h="Moje akce a jednání">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={f.state === 'approved' ? 'c' : f.state === 'returned' ? 'n' : 'o'} />)}</Sec> : null}
+    {pts.length ? <Sec h="Zprávy a návrhy">{pts.map((p) => <Item key={p.id} to={p.kind === 'report' ? pointTo(p) : `/navrh/${p.id}`} t={p.content.title || 'Bez názvu'} st={pointLine(p)} mk={pointMark(p)} warn={p.state === 'returned'} />)}</Sec> : null}
+    {fs.length ? <Sec h="Moje akce a jednání">{fs.map((f) => <Item key={f.id} to={`/akce/${f.id}`} t={f.title || 'Bez názvu'} st={`${Q.dm(f.date)}, ${futureLine(f)}`} mk={futureMark(f)} />)}</Sec> : null}
     <a className="q" href="#/akce">Všechny akce školy</a>
   </>} />;
 }
