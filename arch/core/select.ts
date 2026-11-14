@@ -1,5 +1,5 @@
 import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
-import { formatClose, formatDayMonth, formatWeekdayNumeric, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
+import { formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
 import { missingForSubmit, pointType, type BulletSpec, type DraftPerson } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
@@ -51,6 +51,11 @@ export function handInTo(s: State): IssueSlot {
 }
 export const clock = (at: string | Date) => { const c = formatClose(typeof at === 'string' ? new Date(at) : at); return { ...c, day: formatDayMonth(c.date), weekday: weekdayName(c.date), full: `${formatWeekdayNumeric(c.date)} v ${c.time}` }; };
 export const dm = (x: string | CalDate) => formatDayMonth(typeof x === 'string' ? parseIsoDate(x) : x);
+/** The day a porada meets and its uzávěrka, apart, so a line never names the uzávěrka as the porada's date: „ve středu 18. 11.“, „v pondělí 16. 11. v 20:00“. */
+export function poradaDates(slot: Pick<IssueSlot, 'meetingDate' | 'deadlineAt'>, now: Date) {
+  const c = clock(slot.deadlineAt);
+  return { meets: `${onWeekday(slot.meetingDate)} ${dm(slot.meetingDate)}`, close: `${onWeekday(c.date)} ${c.day} v ${c.time}`, closed: slot.deadlineAt.getTime() <= now.getTime() };
+}
 export function untilText(s: State, at: string | Date): string {
   const ms = new Date(at).getTime() - nowOf(s).getTime();
   if (ms <= 0) return 'termín minul';

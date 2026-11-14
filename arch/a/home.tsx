@@ -56,7 +56,7 @@ export function Tyden() {
   const draftProposals = Q.myPoints(s, u.id).filter((p) => p.kind !== 'report' && p.state === 'draft');
   const dl = WHEN(wk.deadlineAt);
   const lead = after
-    ? <>Termín porady {Q.dm(wk.meetingDate)} minul. Nová zpráva půjde na poradu <b>{Q.dm(iss.meetingDate)}</b>.</>
+    ? <>Uzávěrka porady {Q.dm(wk.meetingDate)} minula. Nová zpráva půjde na poradu <b>{Q.dm(iss.meetingDate)}</b>.</>
     : review ? <><b>{review} {review === 1 ? 'položka čeká' : review < 5 ? 'položky čekají' : 'položek čeká'}</b> na vaše rozhodnutí. Termín je <b>{dl}</b>.</>
       : tasks.length ? <>Čeká na vás <b>{tasks.length === 1 ? '1 věc' : tasks.length < 5 ? `${tasks.length} věci` : `${tasks.length} věcí`}</b>. Termín je <b>{dl}</b>, to je za {Q.untilText(s, wk.deadlineAt)}.</> : <>Teď na vás nic nečeká.</>;
   return (
@@ -79,7 +79,7 @@ export function Domu() {
   const head = u.role === 'headmaster'; const staff = Q.atLeast(u.role, 'reviewer');
   const q = staff ? Q.queuePoints(s).filter((p) => Q.canDecidePoint(u, p)).length + Q.queueFutures(s).filter((f) => Q.canDecideFuture(u, f)).length + Q.placeholderQueue(s, u).length : 0;
   const req = head ? Q.pendingRequests(s).length : 0;
-  const wk = Q.working(s); const dl = WHEN(wk.deadlineAt);
+  const wk = Q.working(s); const dl = WHEN(wk.deadlineAt); const next = Q.poradaDates(wk, new Date(s.now));
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
@@ -92,7 +92,7 @@ export function Domu() {
     ? [{ t: 'Porada', ic: 'book', tone: 'core', to: '/porada' }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }, { t: 'Archiv', ic: 'stack', tone: 'core', to: '/archiv' }, { t: 'Přidat do porady', ic: 'plus', tone: 'act', to: '/pridat' }, ...(tasks.length ? [waits] : []), ...mine, { t: 'Lidé', ic: 'ppl', tone: 'browse', to: '/lide', n: req }, { t: 'Seznamy studentů', ic: 'list', tone: 'admin', to: '/seznamy' }, { t: 'Nastavení', ic: 'gear', tone: 'admin', to: '/nastaveni' }]
     : [{ ...waits, tone: 'act' }, ...start, ...(staff ? [{ t: 'Návrh do pokynů', ic: 'flag', tone: 'act', act: proposal }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }] : []), write, ...mine, ...(staff ? [{ t: 'Archiv', ic: 'stack', tone: 'browse', to: '/archiv' }] : [])];
   const waiting = q + tasks.length + req;
-  const lead = waiting ? <>Na vás {waiting === 1 ? <>čeká <b>1 věc</b></> : waiting < 5 ? <>čekají <b>{waiting} věci</b></> : <>čeká <b>{waiting} věcí</b></>}, poznáte je podle žlutých čísel. Termín je <b>{dl}</b>.</> : <>Teď na vás nic nečeká. Termín příští porady je <b>{dl}</b>.</>;
+  const lead = waiting ? <>Na vás {waiting === 1 ? <>čeká <b>1 věc</b></> : waiting < 5 ? <>čekají <b>{waiting} věci</b></> : <>čeká <b>{waiting} věcí</b></>}, poznáte je podle žlutých čísel. Termín je <b>{dl}</b>.</> : <>Teď na vás nic nečeká. Příští porada je <b>{next.meets}</b>, uzávěrka {next.closed ? 'byla ' : ''}<b>{next.close}</b>.</>;
   const inner = (x: Tile) => <><Ic n={x.ic} />{x.n ? <span className="tl-n" aria-label={`${x.n} čeká`}>{x.n}</span> : null}<span className="tl-t">{x.t}</span></>;
   return <App desk={deskFor(s, u.id)} col={<>
     <Top big h="Dobrý den." lead={lead} />
