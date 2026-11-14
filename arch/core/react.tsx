@@ -6,6 +6,7 @@ import * as A from './ops';
 import type * as Q from './select';
 import { COALESCED, headWait, type Queued } from './saves';
 import type { State } from './types';
+import { rateLimitedText } from './wait';
 import { rules } from '@/ui/copy/forms';
 
 type Fx = ((s: State) => State) & { op?: A.Op };
@@ -13,7 +14,7 @@ type Fx = ((s: State) => State) & { op?: A.Op };
 export type SaveState = 'saved' | 'saving' | 'failed';
 const Ctx = createContext<{ s: State; apply: (f: Fx) => void; replace: (s: State) => void; saving: SaveState } | null>(null);
 type Srv = State & { vers?: Record<string, number> };
-interface Problem { code: string; name: string; rule?: string; keep?: boolean }
+interface Problem { code: string; name: string; rule?: string; keep?: boolean; wait?: number }
 const PROBLEM: Record<string, string> = {
   conflict: 'Mezitím to změnil někdo jiný. Načetli jsme aktuální stav.',
   forbidden: 'Na tohle nemáte oprávnění.',
@@ -23,7 +24,6 @@ const PROBLEM: Record<string, string> = {
   'too-long': 'Je to moc velké, zkuste menší obrázek.',
   busy: 'Server je zrovna zaneprázdněný. Zkuste to za chvíli.',
   rule: 'Tohle teď nejde.',
-  'rate-limited': 'Moc rychle za sebou. Chvíli počkejte.',
   unauthenticated: 'Přihlášení vypršelo. Přihlaste se znovu.',
   'step-up-required': 'Tohle je citlivý krok, nejdřív ověříme, že jste to Vy.',
   unavailable: 'Server teď neodpovídá. Zkuste to za chvíli.',
@@ -76,7 +76,7 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
           const calls = A.toCalls(op, { s: cur.current!, vers: vers.current, real });
           for (const c of calls) {
             const r = await fetch('/api/arch/run', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: c.name, input: c.input }) });
-            const out = (await r.json().catch(() => ({ ok: false, error: { code: 'unavailable' } }))) as { ok: boolean; data?: Record<string, unknown>; error?: { code: string; rule?: string } };
+            const out = (await r.json().catch(() => ({ ok: false, error: { code: 'unavailable' } }))) as { ok: boolean; data?: Record<string, unknown>; error?: { code: string; rule?: string; retryAfterSeconds?: number } };
             if (!out.ok) {
               const code = out.error?.code ?? 'unavailable';
               if (code === 'unauthenticated') { location.href = '/'; return; }
@@ -84,7 +84,7 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
               // Text typed into a refused save stays on the screen; only this thing's later writes go.
               keepLocal = code !== 'conflict' && COALESCED.has(op.k);
               if (keepLocal) refused.current = true;
-              setProblem({ code, name: c.name, ...(out.error?.rule && { rule: out.error.rule }), keep: keepLocal });
+              setProblem({ code, name: c.name, ...(out.error?.rule && { rule: out.error.rule }), ...(out.error?.retryAfterSeconds !== undefined && { wait: out.error.retryAfterSeconds }), keep: keepLocal });
               queue.current = queue.current.filter((x, i) => i === 0 || x.a[0] !== op.a[0]);
               break;
             }
@@ -149,7 +149,7 @@ export function StoreProvider({ children }: { ns?: string; children: ReactNode }
   }), [s, pump, saving]);
   // eslint-disable-next-line react-hooks/refs -- the refs are read only inside apply and replace, which run in handlers
   if (!v) return <div className="store-load" role="status" aria-live="polite">Načítám…</div>;
-  return <Ctx.Provider value={v}>{problem ? <div className="store-full" role="alert">{(problem.rule && rules[problem.rule as keyof typeof rules]) || PROBLEM[problem.code] || 'Tohle se nepovedlo. Zkuste to znovu.'} <button type="button" onClick={() => { setProblem(null); if (!problem.keep) void load(); }}>Zavřít</button></div> : null}{children}</Ctx.Provider>;
+  return <Ctx.Provider value={v}>{problem ? <div className="store-full" role="alert">{(problem.rule && rules[problem.rule as keyof typeof rules]) || (problem.code === 'rate-limited' ? rateLimitedText(problem.wait) : PROBLEM[problem.code]) || 'Tohle se nepovedlo. Zkuste to znovu.'} <button type="button" onClick={() => { setProblem(null); if (!problem.keep) void load(); }}>Zavřít</button></div> : null}{children}</Ctx.Provider>;
 }
 export function useStore() { const c = useContext(Ctx); if (!c) throw new Error('no store'); return c; }
 /** Runs an action that creates something and hands back its id. */

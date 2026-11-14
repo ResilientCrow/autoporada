@@ -22,6 +22,16 @@ const json = (body: unknown, status = 200) =>
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   });
 
+/** A refused write says how long to wait, as `runAction` does, so the client can name it. */
+const rateLimited = (retryAfterMs: number): Response =>
+  json(
+    {
+      ok: false,
+      error: { code: 'rate-limited', retryAfterSeconds: Math.ceil(retryAfterMs / 1000) },
+    },
+    429,
+  );
+
 export const AUTOSAVE = new Set(['points.save', 'future.save']);
 export const SUBMISSION = new Set([
   'points.create',
@@ -110,8 +120,8 @@ async function saveAnnexes(actor: Parameters<typeof can>[0], input: unknown): Pr
   if (!can(actor, { action: 'issue.edit' }))
     return json({ ok: false, error: { code: 'forbidden' } }, 403);
   const c = getContainer();
-  if (!c.limiter.take('admin', actor.id).ok)
-    return json({ ok: false, error: { code: 'rate-limited' } }, 429);
+  const decision = c.limiter.take('admin', actor.id);
+  if (!decision.ok) return rateLimited(decision.retryAfterMs);
   const { monday, annexes } = (input ?? {}) as { monday?: unknown; annexes?: unknown };
   const list = Array.isArray(annexes) ? annexes : null;
   const parsed = list ? z.array(issueAnnexSchema).safeParse(withoutIds(list)) : null;
@@ -141,8 +151,8 @@ async function saveAnnexes(actor: Parameters<typeof can>[0], input: unknown): Pr
 
 /** The author changes the type of a draft report, or a draft proposal between finance and pokyn. */
 async function retype(userId: string, input: unknown): Promise<Response> {
-  if (!getContainer().limiter.take('submission', userId).ok)
-    return json({ ok: false, error: { code: 'rate-limited' } }, 429);
+  const decision = getContainer().limiter.take('submission', userId);
+  if (!decision.ok) return rateLimited(decision.retryAfterMs);
   const request = retypeRequest(input);
   if (!request) return json({ ok: false, error: { code: 'invalid' } }, 400);
   const version = await getContainer().arch.retype({ ...request, authorId: userId });
