@@ -12,7 +12,7 @@ import { cs } from '@/ui/copy';
 import { emailOf, isoInDays, signInAsRe } from './akce-steps';
 import { expect, showAllPersonas, signInElsewhere, test } from './fixtures';
 import { forgetFutureOf, readFuture } from './future-db';
-import { forgetPointsOf, readPoint, seedPoint, withClient } from './db';
+import { forgetPointsOf, readPoint, seedPoint, seedProposal, withClient } from './db';
 
 const headmaster = (project: string) => signInAsRe('rizeni', project);
 
@@ -207,6 +207,26 @@ test.describe('the Arch UI', () => {
     await page.goto('/#/tato-adresa-neexistuje');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: 'Dobrý den.' })).toHaveCount(0);
+  });
+
+  test('a teacher opens and finishes a proposal they started while they could propose', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    const project = testInfo.project.name;
+    const id = await seedProposal(emailOf('archa', project), 'pokyn');
+    await signInAs(signInAsRe('archa', project));
+    await page.goto('/#/moje');
+    await page.getByRole('link', { name: /^Bez názvu/ }).click();
+    await expect(page).toHaveURL(new RegExp(`#/navrh/${id}$`));
+    await expect(page.getByRole('heading', { level: 1, name: 'Co navrhujete?' })).toBeVisible();
+
+    const title = `Návrh učitelky ${project}`;
+    await page.getByRole('textbox', { name: 'Název' }).fill(title);
+    await page.getByRole('textbox', { name: 'Text' }).fill('Prosíme o nové židle do učebny.');
+    await expect.poll(async () => (await readPoint(id)).title, { timeout: 15_000 }).toBe(title);
+    await page.getByRole('button', { name: 'Odeslat ke kontrole' }).click();
+    await expect.poll(async () => (await readPoint(id)).state).toBe('submitted');
   });
 
   test('a teacher sees no directory and an author no name of the vedení', async ({

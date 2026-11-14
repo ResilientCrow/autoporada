@@ -24,7 +24,8 @@ function Router() {
     case 'moje': return <Moje />;
     case 'akce': return b ? <AkceDetail key={b} id={b} fresh={r.q.has('fresh')} /> : <Udalosti />;
     case 'nova-akce': return b ? <NovaAkce id={b} {...(c ? { step: c } : {})} /> : <NotFound />;
-    case 'navrh': return b && staff ? <Navrh id={b} /> : <NotFound />;
+    // Only vedení starts a proposal, but whoever started one keeps it (ADR 0052 item 1): `Navrh` opens it for its author alone.
+    case 'navrh': return b ? <Navrh id={b} /> : <NotFound />;
     case 'psat': return b ? <Wizard key={`${b}-${c}`} id={b} {...(c ? { step: c } : {})} /> : <NotFound />;
     case 'oprava': return b ? <Oprava id={b} /> : <NotFound />;
     case 'zprava': return b ? <Zprava key={b} id={b} fresh={r.q.has('fresh')} /> : <NotFound />;

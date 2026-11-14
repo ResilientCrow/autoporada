@@ -173,6 +173,26 @@ export async function seedPoint(
   });
 }
 
+/**
+ * An empty draft proposal of `email`, as `points.create` starts one. Only vedení may start one
+ * (ADR 0052), so a teacher holds it only from before that rule or from a time they were vedení;
+ * their own proposal stays theirs to edit and hand in. Returns its id.
+ */
+export async function seedProposal(email: string, kind: 'finance' | 'pokyn'): Promise<string> {
+  return withClient(async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO points (kind, author_id, client_ref, body)
+       SELECT $2::point_kind, u.id, gen_random_uuid(), '{"type":"doc","content":[]}'::jsonb
+         FROM users u WHERE u.email = $1
+       RETURNING id`,
+      [email, kind],
+    );
+    const made = rows[0];
+    if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);
+    return made.id;
+  });
+}
+
 /** What the table holds of one point, for a test that checks what was stored. */
 export async function readPoint(id: string): Promise<{
   version: number;
