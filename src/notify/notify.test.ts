@@ -59,25 +59,25 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
   'access.approved': {
     subject: 'Autoporada: přístup byl schválen',
     text: letter(
-      `vedení školy schválilo vaši žádost o${NB}přístup do Autoporady. Přihlaste se prosím znovu.\n\n${LINK}`,
+      `vedení školy schválilo Vaši žádost o${NB}přístup do Autoporady. Přihlaste se prosím znovu.\n\n${LINK}`,
     ),
   },
   'access.rejected': {
     subject: `Autoporada: žádost o${NB}přístup byla zamítnuta`,
     text: letter(
-      `vedení školy vaši žádost o${NB}přístup do Autoporady zamítlo. Novou žádost lze podat od 31.${NB}října 2026. Pokud jde podle vás o${NB}omyl, obraťte se přímo na vedení školy.`,
+      `vedení školy Vaši žádost o${NB}přístup do Autoporady zamítlo. Novou žádost lze podat od 31.${NB}října 2026. Pokud jde podle Vás o${NB}omyl, obraťte se přímo na vedení školy.`,
     ),
   },
   'access.blocked': {
     subject: `Autoporada: další žádosti o${NB}přístup nelze podat`,
     text: letter(
-      `vedení školy vaši žádost o${NB}přístup do Autoporady neschválilo a${NB}další žádosti už nelze podat. Pokud přístup potřebujete, obraťte se prosím přímo na vedení školy.`,
+      `vedení školy Vaši žádost o${NB}přístup do Autoporady neschválilo a${NB}další žádosti už nelze podat. Pokud přístup potřebujete, obraťte se prosím přímo na vedení školy.`,
     ),
   },
   'access.granted': {
-    subject: 'Autoporada: byl vám přidělen přístup',
+    subject: 'Autoporada: byl Vám přidělen přístup',
     text: letter(
-      `vedení školy vám přidělilo přístup do Autoporady. Přihlaste se prosím znovu.\n\n${LINK}`,
+      `vedení školy Vám přidělilo přístup do Autoporady. Přihlaste se prosím znovu.\n\n${LINK}`,
     ),
   },
   'mail.check': {
@@ -89,17 +89,17 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
   'point.returned': {
     subject: `Autoporada: bod byl vrácen k${NB}úpravě`,
     text: letter(
-      `váš bod pro poradu vedení byl vrácen k${NB}úpravě. Poznámku kontroly najdete v${NB}aplikaci:\n\n${POINTS}`,
+      `Váš bod pro poradu vedení byl vrácen k${NB}úpravě. Poznámku kontroly najdete v${NB}aplikaci:\n\n${POINTS}`,
     ),
   },
   'point.approved': {
     subject: 'Autoporada: bod byl schválen',
-    text: letter(`váš bod pro poradu vedení byl schválen.\n\n${POINTS}`),
+    text: letter(`Váš bod pro poradu vedení byl schválen.\n\n${POINTS}`),
   },
   'point.rejected': {
     subject: 'Autoporada: bod nebyl přijat',
     text: letter(
-      `váš bod pro poradu vedení nebyl přijat. Důvod najdete v${NB}aplikaci:\n\n${POINTS}`,
+      `Váš bod pro poradu vedení nebyl přijat. Důvod najdete v${NB}aplikaci:\n\n${POINTS}`,
     ),
   },
   'report.prompt': {
@@ -111,7 +111,7 @@ const EXPECTED: Record<TemplateName, { subject: string; text: string }> = {
   'reminder.soft': {
     subject: `Autoporada: odevzdejte zprávu z${NB}akce`,
     text: letter(
-      `uzávěrka porady z${NB}26.${NB}října 2026 je za dva dny a${NB}porada čeká na vaši zprávu z${NB}akce, která proběhla. Odevzdejte ji v${NB}aplikaci:\n\n${POINTS}`,
+      `uzávěrka porady z${NB}26.${NB}října 2026 je za dva dny a${NB}porada čeká na Vaši zprávu z${NB}akce, která proběhla. Odevzdejte ji v${NB}aplikaci:\n\n${POINTS}`,
     ),
   },
   'reminder.hard': {

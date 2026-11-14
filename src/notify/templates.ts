@@ -99,7 +99,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: přístup byl schválen',
     body: {
       paragraphs: [
-        'vedení školy schválilo vaši žádost o\u00A0přístup do Autoporady. Přihlaste se prosím znovu.',
+        'vedení školy schválilo Vaši žádost o\u00A0přístup do Autoporady. Přihlaste se prosím znovu.',
       ],
       link: '/',
     },
@@ -108,7 +108,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: žádost o\u00A0přístup byla zamítnuta',
     body: {
       paragraphs: [
-        `vedení školy vaši žádost o\u00A0přístup do Autoporady zamítlo. Novou žádost lze podat od ${typographizeText(formatLongDate(retryFrom))}. Pokud jde podle vás o\u00A0omyl, obraťte se přímo na vedení školy.`,
+        `vedení školy Vaši žádost o\u00A0přístup do Autoporady zamítlo. Novou žádost lze podat od ${typographizeText(formatLongDate(retryFrom))}. Pokud jde podle Vás o\u00A0omyl, obraťte se přímo na vedení školy.`,
       ],
     },
   }),
@@ -116,14 +116,14 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: další žádosti o\u00A0přístup nelze podat',
     body: {
       paragraphs: [
-        'vedení školy vaši žádost o\u00A0přístup do Autoporady neschválilo a\u00A0další žádosti už nelze podat. Pokud přístup potřebujete, obraťte se prosím přímo na vedení školy.',
+        'vedení školy Vaši žádost o\u00A0přístup do Autoporady neschválilo a\u00A0další žádosti už nelze podat. Pokud přístup potřebujete, obraťte se prosím přímo na vedení školy.',
       ],
     },
   }),
   'access.granted': () => ({
-    subject: 'Autoporada: byl vám přidělen přístup',
+    subject: 'Autoporada: byl Vám přidělen přístup',
     body: {
-      paragraphs: ['vedení školy vám přidělilo přístup do Autoporady. Přihlaste se prosím znovu.'],
+      paragraphs: ['vedení školy Vám přidělilo přístup do Autoporady. Přihlaste se prosím znovu.'],
       link: '/',
     },
   }),
@@ -141,19 +141,19 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: bod byl vrácen k\u00A0úpravě',
     body: {
       paragraphs: [
-        'váš bod pro poradu vedení byl vrácen k\u00A0úpravě. Poznámku kontroly najdete v\u00A0aplikaci:',
+        'Váš bod pro poradu vedení byl vrácen k\u00A0úpravě. Poznámku kontroly najdete v\u00A0aplikaci:',
       ],
       link: '/#/moje',
     },
   }),
   'point.approved': () => ({
     subject: 'Autoporada: bod byl schválen',
-    body: { paragraphs: ['váš bod pro poradu vedení byl schválen.'], link: '/#/moje' },
+    body: { paragraphs: ['Váš bod pro poradu vedení byl schválen.'], link: '/#/moje' },
   }),
   'point.rejected': () => ({
     subject: 'Autoporada: bod nebyl přijat',
     body: {
-      paragraphs: ['váš bod pro poradu vedení nebyl přijat. Důvod najdete v\u00A0aplikaci:'],
+      paragraphs: ['Váš bod pro poradu vedení nebyl přijat. Důvod najdete v\u00A0aplikaci:'],
       link: '/#/moje',
     },
   }),
@@ -172,7 +172,7 @@ const TEMPLATES: { [T in TemplateName]: (view: TemplateViews[T]) => Template } =
     subject: 'Autoporada: odevzdejte zprávu z\u00A0akce',
     body: {
       paragraphs: [
-        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} je za dva dny a\u00A0porada čeká na vaši zprávu z\u00A0akce, která proběhla. Odevzdejte ji v\u00A0aplikaci:`,
+        `uzávěrka porady z\u00A0${typographizeText(formatLongDate(meetingDate))} je za dva dny a\u00A0porada čeká na Vaši zprávu z\u00A0akce, která proběhla. Odevzdejte ji v\u00A0aplikaci:`,
       ],
       link: '/#/moje',
     },
