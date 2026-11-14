@@ -31,7 +31,7 @@ export function Clovek({ id }: { id: string }) {
   const set = (p: Parameters<typeof A.setUser>[1]) => { apply(A.setUser(id, p)); setOk(true); };
   return <Pane on="/lide"><Back to="/lide" t="Zpět na lidi" /><Top h={Q.nameOf(u)} lead={u.email} />
     {ok ? <Toast onDone={() => setOk(false)}>Uloženo</Toast> : null}
-    {self ? <Note h="Tohle jste vy">Svou roli ani účet si sami nezměníte. Jediný ředitel nejdřív povýší zástupce.</Note> : need ? <section className="stack st8"><Note h="Nejdřív ověříme, že jste to vy">Změna role patří k citlivým věcem, proto vás Microsoft požádá o nové přihlášení. Ověření platí 10 minut.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section> : <>
+    {self ? <Note h="Tohle jste Vy">Svou roli ani účet si sami nezměníte. Jediný ředitel nejdřív povýší zástupce.</Note> : need ? <section className="stack st8"><Note h="Nejdřív ověříme, že jste to Vy">Změna role patří k citlivým věcem, proto Vás Microsoft požádá o nové přihlášení. Ověření platí 10 minut.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section> : <>
       <section className="stack st8"><h2>Co smí</h2><Seg label="Role" value={u.role} options={(u.isStudent ? (['submitter', 'pending'] as const) : (['submitter', 'reviewer', 'headmaster', 'pending'] as const)).map((r) => [r, ROLE[r]] as const)} onChange={(v) => set({ role: v })} />{u.isStudent ? <p className="sm">Student může jen psát zprávy.</p> : null}</section>
       <label className="chk"><input type="checkbox" checked={u.isStudent} onChange={(e) => set({ isStudent: e.target.checked })} />Je to student</label>
       <section className="stack st8"><h2>Účet</h2><button className="btn" onClick={() => set({ status: u.status === 'blocked' ? 'active' : 'blocked' })}>{u.status === 'blocked' ? 'Odblokovat účet' : 'Zablokovat účet'}</button></section>
@@ -81,7 +81,7 @@ export function Seznam({ id }: { id: string }) {
 export function NovyRok() {
   const { s, apply } = useStore(); const [keys, setKeys] = useState<string[]>(s.registry.map((l) => l.key)); const [done, setDone] = useState(false); const need = A.needsReauth(s);
   return <Pane on="/seznamy"><Back to="/seznamy" t="Zpět na seznamy" /><Top h="Nový školní rok" lead="Vybrané seznamy se uloží k končícímu roku. Studenti, kteří se nikdy nevytiskli, se smažou." />
-    {done ? <Note h="Hotovo">Seznamy jsou uložené k minulému roku.</Note> : need ? <section className="stack st8"><Note h="Nejdřív ověříme, že jste to vy">Tohle je citlivý krok, proto vás Microsoft požádá o nové přihlášení.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section> : <><ul className="stack st8">{s.registry.map((l) => <li key={l.key}><label className="chk"><input type="checkbox" checked={keys.includes(l.key)} onChange={(e) => setKeys(e.target.checked ? [...keys, l.key] : keys.filter((k) => k !== l.key))} />{l.name}</label></li>)}</ul><button className="btn dk lg" onClick={() => { apply(A.newSchoolYear(keys)); setDone(true); }}>Začít nový školní rok</button></>}
+    {done ? <Note h="Hotovo">Seznamy jsou uložené k minulému roku.</Note> : need ? <section className="stack st8"><Note h="Nejdřív ověříme, že jste to Vy">Tohle je citlivý krok, proto Vás Microsoft požádá o nové přihlášení.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section> : <><ul className="stack st8">{s.registry.map((l) => <li key={l.key}><label className="chk"><input type="checkbox" checked={keys.includes(l.key)} onChange={(e) => setKeys(e.target.checked ? [...keys, l.key] : keys.filter((k) => k !== l.key))} />{l.name}</label></li>)}</ul><button className="btn dk lg" onClick={() => { apply(A.newSchoolYear(keys)); setDone(true); }}>Začít nový školní rok</button></>}
   </Pane>;
 }
 export function Nastaveni() {
@@ -95,7 +95,7 @@ export function Nastaveni() {
 }
 export function Ucet() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const [all, setAll] = useState(false);
-  return <div className="work solo"><Bar /><main className="pane narrow"><Back to="/" t="Zpět" /><Top h={Q.nameOf(u)} lead={`${u.email}. Přihlašujete se školním účtem, heslo u nás nemáte.`} /><div className="stack st8"><button className="btn lg w" onClick={() => { apply(A.signOut); go('/'); }}>Odhlásit se</button><button className="btn lg w" onClick={() => setAll(true)}>Odhlásit všude</button><a className="q" href="#/soukromi">Jak s údaji zacházíme</a></div>{all ? <Dialog title="Odhlásit všude?" onClose={() => setAll(false)}><p>Odhlásíme vás na všech zařízeních.</p><button className="btn dk lg w" onClick={() => { apply(A.signOutAll); go('/'); }}>Odhlásit všude</button></Dialog> : null}</main><PhoneBar /></div>;
+  return <div className="work solo"><Bar /><main className="pane narrow"><Back to="/" t="Zpět" /><Top h={Q.nameOf(u)} lead={`${u.email}. Přihlašujete se školním účtem, heslo u nás nemáte.`} /><div className="stack st8"><button className="btn lg w" onClick={() => { apply(A.signOut); go('/'); }}>Odhlásit se</button><button className="btn lg w" onClick={() => setAll(true)}>Odhlásit všude</button><a className="q" href="#/soukromi">Jak s údaji zacházíme</a></div>{all ? <Dialog title="Odhlásit všude?" onClose={() => setAll(false)}><p>Odhlásíme Vás na všech zařízeních.</p><button className="btn dk lg w" onClick={() => { apply(A.signOutAll); go('/'); }}>Odhlásit všude</button></Dialog> : null}</main><PhoneBar /></div>;
 }
 /** The sign-in leaves through the server, which never sees the #address a mail link opened. */
 const rememberAddress = () => { try { sessionStorage.setItem('arch-after-login', location.hash); } catch { /* soukromé okno */ } };
@@ -129,7 +129,7 @@ export function SignInNotice() {
 const LOGIN = '/auth/login?returnTo=%2F'; const SWITCH = `${LOGIN}&account=select`;
 export function Login() {
   const { failed, gone, shared } = signInOutcome();
-  return <Entry><div className="top"><h1 className="big">Porada vedení školy</h1><p className="lead">Tady se každý týden skládá dokument. Přihlaste se a uvidíte, co čeká na vás.</p></div>
+  return <Entry><div className="top"><h1 className="big">Porada vedení školy</h1><p className="lead">Tady se každý týden skládá dokument. Přihlaste se a uvidíte, co čeká na Vás.</p></div>
     {failed ? <p className="note err" role="alert">{failed}</p> : null}
     {gone ? <p className="note" role="status">{gone}</p> : null}
     {shared ? <p className="sm">{signIn.loggedOut.sharedComputer}</p> : null}
@@ -142,8 +142,8 @@ export function Pristup() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const [r, setR] = useState('');
   const req = [...s.requests].reverse().find((x) => x.email === u.email);
   const out = <button className="q" onClick={() => { apply(A.signOut); go('/'); }}>Zpět na přihlášení</button>;
-  if (u.status === 'blocked' || req?.state === 'blocked') return <Entry><Top h="Přístup není možný" lead="Další žádosti z tohoto účtu jsou zablokované. Když si myslíte, že jde o omyl, promluvte si s ředitelem. Přístup vám může dát ručně." />{out}</Entry>;
-  if (req?.state === 'pending') return <Entry><Top h="Žádost je u ředitele" lead={`Rozhodnutí vám přijde e-mailem na ${u.email}. Mezitím nemusíte nic dělat.`} /><button className="btn lg w" onClick={() => apply(A.cancelRequest(req.id))}>Zrušit žádost</button>{out}</Entry>;
+  if (u.status === 'blocked' || req?.state === 'blocked') return <Entry><Top h="Přístup není možný" lead="Další žádosti z tohoto účtu jsou zablokované. Když si myslíte, že jde o omyl, promluvte si s ředitelem. Přístup Vám může dát ručně." />{out}</Entry>;
+  if (req?.state === 'pending') return <Entry><Top h="Žádost je u ředitele" lead={`Rozhodnutí Vám přijde e-mailem na ${u.email}. Mezitím nemusíte nic dělat.`} /><button className="btn lg w" onClick={() => apply(A.cancelRequest(req.id))}>Zrušit žádost</button>{out}</Entry>;
   if (req?.state === 'rejected') { const when = new Date(new Date(req.decidedAt!).getTime() + 30 * 864e5).toISOString(); return <Entry><Top h="Žádost nebyla schválena" lead={`Znovu požádat můžete od ${Q.fromDay(WHEN(when))}. Potřebujete-li přístup dřív, domluvte se s ředitelem.`} />{out}</Entry>; }
-  return <Entry><Top h="Zatím tu nemáte přístup" lead="Napište řediteli, proč ho potřebujete. Rozhodnutí vám přijde e-mailem." /><label className="l">Proč přístup potřebujete<textarea className="in" autoFocus value={r} onChange={(e) => setR(e.target.value)} /></label><button className={`btn lg w ${r.trim() ? 'go' : 'off'}`} aria-disabled={!r.trim()} onClick={() => r.trim() && apply(A.requestAccess(r))}>Odeslat žádost</button>{out}</Entry>;
+  return <Entry><Top h="Zatím tu nemáte přístup" lead="Napište řediteli, proč ho potřebujete. Rozhodnutí Vám přijde e-mailem." /><label className="l">Proč přístup potřebujete<textarea className="in" autoFocus value={r} onChange={(e) => setR(e.target.value)} /></label><button className={`btn lg w ${r.trim() ? 'go' : 'off'}`} aria-disabled={!r.trim()} onClick={() => r.trim() && apply(A.requestAccess(r))}>Odeslat žádost</button>{out}</Entry>;
 }

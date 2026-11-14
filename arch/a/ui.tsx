@@ -15,7 +15,7 @@ function useNav() {
   const req = Q.pendingRequests(s).length;
   if (u?.role === 'headmaster') return [['/', 'home', 'Domů', 0], ['/porada', 'book', 'Porada', 0], ['/kontrola', 'rev', 'Ke kontrole', q], ['/archiv', 'stack', 'Archiv', 0], ['/lide', 'gear', 'Správa', req]] as const;
   if (u?.role === 'reviewer') return [['/', 'home', 'Domů', 0], ['/kontrola', 'rev', 'Ke kontrole', q], ['/moje', 'doc', 'Přehled', 0], ['/archiv', 'stack', 'Archiv', 0]] as const;
-  return [['/', 'home', 'Domů', 0], ['/tyden', 'bell', 'Čeká na vás', 0], ['/moje', 'doc', 'Přehled', 0]] as const;
+  return [['/', 'home', 'Domů', 0], ['/tyden', 'bell', 'Čeká na Vás', 0], ['/moje', 'doc', 'Přehled', 0]] as const;
 }
 export function Bar() {
   const nav = useNav(); const r = useRoute();

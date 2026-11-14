@@ -13,11 +13,11 @@ const failedBecause = Object.fromEntries(
 export const signIn = {
   title: 'Přihlášení',
   intro: 'Přihlaste se svým školním účtem Microsoft.',
-  data: 'Při přihlášení si Autoporada uloží vaše jméno, e-mail a\u00A0zařazení ve\u00A0škole.',
+  data: 'Při přihlášení si Autoporada uloží Vaše jméno, e-mail a\u00A0zařazení ve\u00A0škole.',
   privacyLink: 'Jak s\u00A0údaji zacházíme',
   accounts: 'Účty hostů a\u00A0soukromé účty Microsoft nefungují.',
   button: 'Přihlásit se školním účtem',
-  redirect: 'Přesměrujeme vás na\u00A0přihlašovací stránku Microsoftu a\u00A0zpět.',
+  redirect: 'Přesměrujeme Vás na\u00A0přihlašovací stránku Microsoftu a\u00A0zpět.',
   switchAccount: 'Přihlásit se jiným účtem',
   errors: {
     expired: 'Přihlášení vypršelo nebo už bylo použito. Přihlaste se prosím znovu.',

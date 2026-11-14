@@ -37,7 +37,7 @@ const roleOf = (page: Page, id: string) =>
   }, id);
 
 const roleControl = (page: Page) => page.getByRole('radiogroup', { name: 'Role' });
-const note = (page: Page) => page.getByText('Nejdřív ověříme, že jste to vy', { exact: true });
+const note = (page: Page) => page.getByText('Nejdřív ověříme, že jste to Vy', { exact: true });
 
 /** The mock IdP's step-up page, answered by the actor. */
 async function answerStepUp(page: Page): Promise<void> {

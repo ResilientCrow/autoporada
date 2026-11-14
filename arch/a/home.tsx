@@ -28,9 +28,9 @@ function useOwedTasks() {
 const pointLine = (p: Point) => {
   const m = p.poradaMonday ? Q.dm(p.poradaMonday) : '';
   switch (p.state) {
-    case 'draft': return 'Rozepsané, zatím jen u vás';
+    case 'draft': return 'Rozepsané, zatím jen u Vás';
     case 'submitted': return `U vedení, poslali jste ${p.submittedAt ? Q.dm(new Date(p.submittedAt).toISOString().slice(0, 10)) : ''}`;
-    case 'returned': return 'Vráceno, čeká na vaši opravu';
+    case 'returned': return 'Vráceno, čeká na Vaši opravu';
     case 'approved': return `Schváleno, vyjde v poradě ${m}`;
     case 'published': return `Vyšlo v poradě ${m}`;
     case 'rejected': return 'Zamítnuto';
@@ -38,7 +38,7 @@ const pointLine = (p: Point) => {
   }
 };
 // An akce is feminine, a jednání neuter: the status agrees with it.
-const futureLine = (f: Future, a = f.kind === 'akce') => ({ draft: `${a ? 'Rozepsaná' : 'Rozepsané'}, zatím jen u vás`, submitted: f.changed ? 'Změna čeká na kontrolu vedení' : 'U vedení', returned: `${a ? 'Vrácená' : 'Vrácené'}, čeká na vaši opravu`, approved: f.cancelRequested ? 'Zrušení čeká na vedení' : a ? 'Schválená, vidí ji škola' : 'Schválené, vidí ho škola', rejected: a ? 'Zamítnutá' : 'Zamítnuté', cancelled: a ? 'Zrušená' : 'Zrušené', withdrawn: '' }[f.state]);
+const futureLine = (f: Future, a = f.kind === 'akce') => ({ draft: `${a ? 'Rozepsaná' : 'Rozepsané'}, zatím jen u Vás`, submitted: f.changed ? 'Změna čeká na kontrolu vedení' : 'U vedení', returned: `${a ? 'Vrácená' : 'Vrácené'}, čeká na Vaši opravu`, approved: f.cancelRequested ? 'Zrušení čeká na vedení' : a ? 'Schválená, vidí ji škola' : 'Schválené, vidí ho škola', rejected: a ? 'Zamítnutá' : 'Zamítnuté', cancelled: a ? 'Zrušená' : 'Zrušené', withdrawn: '' }[f.state]);
 const pointTo = (p: Point) => (p.state === 'draft' ? `/psat/${p.id}` : p.state === 'returned' ? `/oprava/${p.id}` : `/zprava/${p.id}`);
 
 function deskFor(s: ReturnType<typeof useStore>['s'], meId: string) {
@@ -57,12 +57,12 @@ export function Tyden() {
   const dl = WHEN(wk.deadlineAt);
   const lead = after
     ? <>Uzávěrka porady {Q.dm(wk.meetingDate)} minula. Nová zpráva půjde na poradu <b>{Q.dm(iss.meetingDate)}</b>.</>
-    : review ? <><b>{review} {review === 1 ? 'položka čeká' : review < 5 ? 'položky čekají' : 'položek čeká'}</b> na vaše rozhodnutí. Termín je <b>{dl}</b>.</>
+    : review ? <><b>{review} {review === 1 ? 'položka čeká' : review < 5 ? 'položky čekají' : 'položek čeká'}</b> na Vaše rozhodnutí. Termín je <b>{dl}</b>.</>
       : tasks.length ? <>Čeká na Vás <b>{tasks.length === 1 ? '1 věc' : tasks.length < 5 ? `${tasks.length} věci` : `${tasks.length} věcí`}</b>. Termín je <b>{dl}</b>, to je za {Q.untilText(s, wk.deadlineAt)}.</> : <>Teď na Vás nic nečeká.</>;
   return (
-    <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={u.isStudent ? <Desk cls="mg clip" note={<b>Vaše části porady.</b>}>{(() => { const mine = Q.myPoints(s, u.id).filter((p) => p.kind === 'report' && p.state !== 'draft')[0]; const b = Q.buildDoc(s, Q.workingMonday(s), { pending: true }); return <div className="wrapm wrapn">{mine ? <Sheet built={focusOn(b, mine.id)} cls={(x) => (x.key === mine.id ? 'me' : '')} /> : <div className="arch"><p className="center">Tady uvidíte, jak bude vypadat vaše zpráva.</p></div>}</div>; })()}</Desk> : deskFor(s, u.id)}
+    <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={u.isStudent ? <Desk cls="mg clip" note={<b>Vaše části porady.</b>}>{(() => { const mine = Q.myPoints(s, u.id).filter((p) => p.kind === 'report' && p.state !== 'draft')[0]; const b = Q.buildDoc(s, Q.workingMonday(s), { pending: true }); return <div className="wrapm wrapn">{mine ? <Sheet built={focusOn(b, mine.id)} cls={(x) => (x.key === mine.id ? 'me' : '')} /> : <div className="arch"><p className="center">Tady uvidíte, jak bude vypadat Vaše zpráva.</p></div>}</div>; })()}</Desk> : deskFor(s, u.id)}
       col={<>
-        <Back to="/" t="Domů" /><Top big h="Čeká na vás" lead={lead} />
+        <Back to="/" t="Domů" /><Top big h="Čeká na Vás" lead={lead} />
         {review ? <a className="btn go lg w" href="#/kontrola">Začít kontrolu</a> : null}
         {tasks.length ? <div className="tks">{tasks.map((t, i) => <Task key={t.key} t={t.t} why={t.why} a={t.a} prim={i === 0 && !review} onClick={t.act} />)}</div> : null}
         <button type="button" className="add" onClick={() => (u.role === 'headmaster' ? go('/pridat') : setAdd(true))}><span>{u.role === 'headmaster' ? 'Přidat do porady' : u.role === 'reviewer' ? 'Přidat zprávu, akci nebo návrh' : 'Přidat zprávu nebo akci'}</span><b><Ic n="plus" /></b></button>
@@ -83,9 +83,9 @@ export function Domu() {
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
-  const waits: Tile = { t: 'Čeká na vás', ic: 'bell', tone: 'browse', to: '/tyden', n: tasks.length };
+  const waits: Tile = { t: 'Čeká na Vás', ic: 'bell', tone: 'browse', to: '/tyden', n: tasks.length };
   const start: Tile[] = [{ t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Nové jednání', ic: 'talk', tone: 'act', act: () => future('jednani') }];
-  // Most reports answer an akce from „Čeká na vás“; a report of one's own is the exception, so it sits lighter.
+  // Most reports answer an akce from „Čeká na Vás“; a report of one's own is the exception, so it sits lighter.
   const write: Tile = { t: 'Napsat zprávu', ic: 'pen', tone: 'browse', act: report };
   const mine: Tile[] = [{ t: 'Přehled', ic: 'doc', tone: 'browse', to: '/moje' }, { t: 'Akce školy', ic: 'cal', tone: 'browse', to: '/akce' }];
   const tiles: Tile[] = head
@@ -105,7 +105,7 @@ function AddDialog({ onClose }: { onClose: () => void }) {
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
   return <Dialog title="Co chcete udělat?" onClose={onClose}>
-    <button type="button" className="ch" onClick={report}><span className="tx"><b>Napsat zprávu z akce, která proběhla</b><span>Provedeme vás tím krok za krokem.</span></span><Ic n="chev" /></button>
+    <button type="button" className="ch" onClick={report}><span className="tx"><b>Napsat zprávu z akce, která proběhla</b><span>Provedeme Vás tím krok za krokem.</span></span><Ic n="chev" /></button>
     <button type="button" className="ch" onClick={() => future('akce')}><span className="tx"><b>Přidat akci, která se chystá</b><span>Po schválení ji uvidí celá škola.</span></span><Ic n="chev" /></button>
     <button type="button" className="ch" onClick={() => future('jednani')}><span className="tx"><b>Přidat jednání</b><span>Objeví se v poradě, zprávu po ní nepíšete.</span></span><Ic n="chev" /></button>
     {Q.atLeast(u.role, 'reviewer') ? <button type="button" className="ch" onClick={proposal}><span className="tx"><b>Navrhnout něco do pokynů nebo hospodaření</b><span>Po schválení to ředitel zařadí do dokumentu.</span></span><Ic n="chev" /></button> : null}
@@ -135,9 +135,9 @@ export function Zprava({ id, fresh }: { id: string; fresh?: boolean }) {
   const edited = p.trail.filter((t) => t.original);
   const b = focusOn(Q.buildDoc(s, m, { draft: p }), p.id);
   const head = !fresh ? p.content.title : p.state === 'submitted' ? 'Hotovo, je to u vedení' : p.state === 'approved' ? 'Hotovo, je to v poradě' : p.content.title;
-  const lead = p.state === 'submitted' ? `Až to přečtou, přijde vám e-mail. Teď už nemusíte nic dělat.` : p.state === 'approved' ? `Vyjde v poradě ${Q.dm(meet)}${edited.length ? ' Vedení text mírně upravilo.' : ''}` : p.state === 'published' ? `Vyšlo v poradě ${Q.dm(meet)}` : p.state === 'rejected' ? (p.note ?? 'Zpráva nevyjde.') : '';
+  const lead = p.state === 'submitted' ? `Až to přečtou, přijde Vám e-mail. Teď už nemusíte nic dělat.` : p.state === 'approved' ? `Vyjde v poradě ${Q.dm(meet)}${edited.length ? ' Vedení text mírně upravilo.' : ''}` : p.state === 'published' ? `Vyšlo v poradě ${Q.dm(meet)}` : p.state === 'rejected' ? (p.note ?? 'Zpráva nevyjde.') : '';
   return <App nar desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch-wrap rise"><Stamp t={stamp} /><Sheet built={b} cls={(x) => (x.key === p.id ? 'me' : '')} /></div></div></Desk>}
-    over={confirmDel ? <Dialog title="Smazat zprávu?" onClose={() => setDel(false)}><p>Zpráva z poslaných zmizí a vedení ji už neuvidí. {Q.asksAgain(s, p) ? 'O zprávu z akce vás znovu požádáme.' : ''}</p><div className="row"><button className="btn lg" onClick={() => setDel(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.withdrawPoint(p.id)); go('/'); }}>Smazat</button></div></Dialog> : null}
+    over={confirmDel ? <Dialog title="Smazat zprávu?" onClose={() => setDel(false)}><p>Zpráva z poslaných zmizí a vedení ji už neuvidí. {Q.asksAgain(s, p) ? 'O zprávu z akce Vás znovu požádáme.' : ''}</p><div className="row"><button className="btn lg" onClick={() => setDel(false)}>Nechat</button><button className="btn dk lg" onClick={() => { apply(A.withdrawPoint(p.id)); go('/'); }}>Smazat</button></div></Dialog> : null}
     col={<>
       <Back to={mine ? '/' : '/kontrola'} t={mine ? 'Zpět domů' : 'Zpět na kontrolu'} />
       <Top h={head} lead={lead} />

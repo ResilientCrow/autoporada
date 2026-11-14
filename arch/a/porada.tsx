@@ -18,7 +18,7 @@ import { App, Back, Desk, Dialog, goReplace, Ic, Item, Note, Sec, Seg, Stamp, To
 const notYet = (n: number) => (n === 1 ? '1 zatím nevyjde, protože čeká na schválení' : n < 5 ? `${n} zatím nevyjdou, protože čekají na schválení` : `${n} zatím nevyjde, protože čeká na schválení`);
 const useM = () => { const { s } = useStore(); return Q.workingMonday(s); };
 const { counts } = Q;
-const ATT = { label: 'Čeká na vás', test: (i: Q.OutlineItem) => i.state === 'submitted' || (i.kind === 'missing' && i.state !== 'checked') };
+const ATT = { label: 'Čeká na Vás', test: (i: Q.OutlineItem) => i.state === 'submitted' || (i.kind === 'missing' && i.state !== 'checked') };
 let deskTop = 0;
 function WholeDesk({ pending = true, note, focus }: { pending?: boolean; note?: string; focus?: (x: Q.Segment) => boolean }) {
   const { s } = useStore(); const m = useM(); const b = Q.buildDoc(s, m, { pending });
@@ -55,7 +55,7 @@ export function Porada() {
     <Top big h={`Porada ${Q.dm(iss.meetingDate)}`} lead={<>Termín pro učitele je <b>{WHEN(iss.deadlineAt)}</b>{new Date(iss.deadlineAt) < new Date(s.now) ? ', už minul' : ''}. V dokumentu {whole.points >= 2 && whole.points <= 4 ? 'jsou' : 'je'} {counts(whole.points, 'bod', 'body', 'bodů')}, {Q.pagesText(Q.pagesOf(whole))}{whole.points > Q.buildDoc(s, m).points ? `. Z toho ${notYet(whole.points - Q.buildDoc(s, m).points)}` : ''}.</>} />
     <ol className="jr">{steps.map((x, i) => <Jr key={x.t} n={steps.slice(0, i + 1).filter((y) => !y.done).length} t={x.t} why={x.why} to={x.to} {...(x.a ? { a: x.a } : {})} st={x.done ? 'd' : i === first ? 'c' : ''} />)}</ol>
     <button type="button" className="add" onClick={() => go('/pridat')}><span>Přidat do porady</span><b><Ic n="plus" /></b></button>
-    {reqs.length ? <Sec h="Žádosti o přístup"><Item to="/lide" t={reqs.map((r) => r.name).join(' a ')} st="Čekají na vaše rozhodnutí" mk="o" /></Sec> : null}
+    {reqs.length ? <Sec h="Žádosti o přístup"><Item to="/lide" t={reqs.map((r) => r.name).join(' a ')} st="Čekají na Vaše rozhodnutí" mk="o" /></Sec> : null}
     <Sec h="Další porady">{Q.slotsOf(s).filter((x) => Q.toIsoDate(x.monday) > m).slice(0, 3).map((x) => <Item key={Q.toIsoDate(x.monday)} t={Q.dm(x.meetingDate)} st={`Uzávěrka ${WHEN(x.deadlineAt)}`} />)}</Sec>
     {u.role === 'headmaster' ? <button type="button" className="q" onClick={() => setDlg('add')}>Přidat poradu</button> : null}
     {sl.status === 'open' ? <><button type="button" className="q" onClick={() => setDlg('move')}>Přesunout poradu</button><button type="button" className="q" onClick={() => setDlg('drop')}>Porada se nekoná</button></> : null}
@@ -171,7 +171,7 @@ export function Pokyny({ rowId, adding, section }: { rowId?: string; adding?: bo
   return <App desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." />} col={<><Back to="/porada" t="Zpět na poradu" /><Top h="Pokyny a hospodaření" lead="Pořadí je pořadí v dokumentu. Klikněte na bod a upravte ho." />{SECT('pokyny', 'Pokyny')}{SECT('hospodareni', 'Hospodaření')}<a className="btn lg w" href="#/porada/pokyny-novy"><Ic n="plus" />Přidat bod</a></>} />;
 }
 /** What each placeholder waits for (ADR 0061); the detail is in Ke kontrole. */
-const phLine = (h: Q.PlaceholderItem) => h.status === 'checked' ? 'Zkontrolováno' : h.status === 'to-check' ? 'Čeká na vaši kontrolu' : h.status === 'handed-in' ? 'Zpráva je odevzdaná a čeká na rozhodnutí' : `Autor může zprávu odevzdat do ${Q.clock(h.close).full}`;
+const phLine = (h: Q.PlaceholderItem) => h.status === 'checked' ? 'Zkontrolováno' : h.status === 'to-check' ? 'Čeká na Vaši kontrolu' : h.status === 'handed-in' ? 'Zpráva je odevzdaná a čeká na rozhodnutí' : `Autor může zprávu odevzdat do ${Q.clock(h.close).full}`;
 export function Zpravy() {
   const { s } = useStore(); const m = useM(); const list = Q.placeholdersOf(s, m);
   const todo = list.filter((h) => h.status !== 'checked').length;

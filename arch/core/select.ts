@@ -88,7 +88,7 @@ const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).
 export const owedMonday = (s: State, f: Future) => toIsoDate(owedPorada(lastDayOf(f), rowsOf(s), plannedOf(s)));
 /** The report an akce started and still has: any but a withdrawn one, so a refused report too (it closes the akce, ADR 0056). */
 const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn');
-/** Deleting this report brings its akce back to „Čeká na vás“: only while the report was never handed in. */
+/** Deleting this report brings its akce back to „Čeká na Vás“: only while the report was never handed in. */
 export const asksAgain = (s: State, p: Point) => { const f = p.akceId ? s.futures.find((x) => x.id === p.akceId) : undefined; return !!f && (f.report === 'none' || f.report === 'prompted'); };
 const closeFor = (s: State, f: Future, monday: string) => {
   const sl = slotsOf(s).find((x) => toIsoDate(x.monday) === monday);

@@ -125,7 +125,7 @@ test.describe('the Arch UI', () => {
 
     // A reload shows nothing more: the address no longer carries the error.
     await page.reload();
-    await expect(page.getByRole('link', { name: 'Čeká na vás' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Čeká na Vás' }).first()).toBeVisible();
     await expect(page.getByText(cs.signIn.errors['step-up-mismatch'])).toHaveCount(0);
   });
 

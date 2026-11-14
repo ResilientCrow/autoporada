@@ -25,7 +25,7 @@ const PROBLEM: Record<string, string> = {
   rule: 'Tohle teď nejde.',
   'rate-limited': 'Moc rychle za sebou. Chvíli počkejte.',
   unauthenticated: 'Přihlášení vypršelo. Přihlaste se znovu.',
-  'step-up-required': 'Tohle je citlivý krok, nejdřív ověříme, že jste to vy.',
+  'step-up-required': 'Tohle je citlivý krok, nejdřív ověříme, že jste to Vy.',
   unavailable: 'Server teď neodpovídá. Zkuste to za chvíli.',
 };
 

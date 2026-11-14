@@ -8,7 +8,7 @@ import { signIn } from './sign-in';
 
 /**
  * Czech UI copy. Every user-facing string lives in this directory, one file per
- * area, so wording can be reviewed in one place (formal "vy", Czech typography).
+ * area, so wording can be reviewed in one place (formal "Vy", Czech typography).
  */
 export const cs = {
   app,

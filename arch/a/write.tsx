@@ -104,7 +104,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   const body0 = toText(c.body);
   const banner = owed?.late ? <Note h={`Odevzdejte do ${Q.fromDay(WHEN(owed.close))}`}>Akce skončila až po uzávěrce, proto má zpráva vlastní čas. Vyjde v poradě {Q.dm(owed.monday)}</Note> : owed?.pastClose ? <Note h="Termín už minul">Porada {Q.dm(owed.monday)} na zprávu ještě čeká, takže se stihne.</Note> : !p.akceId && Q.toIsoDate(Q.handInTo(s).monday) !== Q.workingMonday(s) ? <Note h={`Půjde na poradu ${Q.dm(Q.handInTo(s).meetingDate)}`}>Uzávěrka porady {Q.dm(Q.working(s).meetingDate)} už minula.</Note> : null;
   if (cur.key === 'zaklad') {
-    ask = 'O čem bude zpráva?'; help = 'Vyplňte základ a úvodní větu napíšeme za vás.';
+    ask = 'O čem bude zpráva?'; help = 'Vyplňte základ a úvodní větu napíšeme za Vás.';
     const jinde = (c.campus ?? 'jinde') === 'jinde'; const place = c.place ?? '';
     const notOver = !!c.eventDate && compareDates(c.eventDate, Q.todayOf(s)) > 0;
     can = !!c.title.trim() && !!c.eventDate && !notOver && (!jinde || !!place.trim()); hint = !c.title.trim() || !c.eventDate ? 'Napište název a datum.' : notOver ? copy.readiness.problem('event-not-over', {}) : 'Napište, kde to bylo.';
@@ -116,11 +116,11 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     </div>;
   } else if (cur.key === 'org') {
     const noSal = orgPeople.filter((x) => !x.salutation).length;
-    ask = orgBul?.key === 'speakers' ? 'Kdo přednášel?' : 'Kdo to organizoval?'; help = 'Většinou to jste vy. Když to organizoval někdo jiný nebo víc lidí, přidejte je. Jeden z nich se pak ke zprávě vyjádří.';
+    ask = orgBul?.key === 'speakers' ? 'Kdo přednášel?' : 'Kdo to organizoval?'; help = 'Většinou to jste Vy. Když to organizoval někdo jiný nebo víc lidí, přidejte je. Jeden z nich se pak ke zprávě vyjádří.';
     can = orgPeople.length > 0 && noSal === 0; hint = orgPeople.length ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení.` : 'Přidejte aspoň jednoho člověka.';
     body = <>{!orgPeople.some((x) => samePerson(x, meP)) ? <button type="button" className="btn lg w" onClick={() => setOrg([meP, ...orgPeople])}><Ic n="plus" />Přidat sebe: {displayName(meP)}</button> : null}<PeoplePick list={[...orgPeople]} placeholder="Někdo jiný? Začněte psát jméno" onAdd={(x) => setOrg([...orgPeople, ...x])} />{orgPeople.length ? <ul className="prs">{orgPeople.map((x, j) => <PersonRow key={j} p={x} onChange={(n) => setOrg(orgPeople.map((y, q) => (q === j ? n : y)))} onRemove={() => setOrg(orgPeople.filter((_, q) => q !== j))} />)}</ul> : null}</>;
   } else if (cur.key === 'co') {
-    ask = 'Jak to dopadlo?'; help = 'Stačí pár vět. Úvodní větu o tom, kdy a kde akce byla, jsme napsali za vás.';
+    ask = 'Jak to dopadlo?'; help = 'Stačí pár vět. Úvodní větu o tom, kdy a kde akce byla, jsme napsali za Vás.';
     can = !!body0.trim(); hint = 'Napište aspoň jednu větu.';
     body = <><label className="l"><span className="vh">Jak to dopadlo</span><textarea className="in big" autoFocus value={body0} onChange={(e) => set({ body: fromText(e.target.value) })} placeholder="Například: Tým ze 3.B postoupil do celostátního kola." /></label>
       <details className="op"><summary>Upravit úvodní větu</summary><label className="l"><span className="vh">Úvodní věta</span><textarea className="in" value={c.opening} onChange={(e) => set({ opening: e.target.value, openingEdited: true })} /></label>{c.openingEdited ? <button type="button" className="q" onClick={() => apply(A.savePoint(id, { ...c, openingEdited: false }))}>Vrátit větu podle údajů o akci</button> : null}</details></>;
@@ -130,7 +130,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     const setPeople = (people: readonly DraftPerson[]) => set({ bullets: c.bullets.map((b, j) => (j === i ? { ...bul, people } : b)) });
     const noSal = bul.people.filter((x) => !x.salutation).length;
     ask = bul.key === 'participants' ? 'Kdo se účastnil?' : `${bul.label}?`; help = 'Napište jména, nebo vložte seznam třeba z Excelu. Třídu napište do závorky, například Tereza Malá (3.B).';
-    can = (bul.people.length > 0 || !req) && noSal === 0; hint = bul.people.length === 0 && req ? 'Přidejte aspoň jednoho člověka.' : noSal ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení. Nehádáme ho za vás.` : '';
+    can = (bul.people.length > 0 || !req) && noSal === 0; hint = bul.people.length === 0 && req ? 'Přidejte aspoň jednoho člověka.' : noSal ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení. Nehádáme ho za Vás.` : '';
     nextText = bul.people.length === 0 && !req ? 'Přeskočit' : 'Pokračovat';
     body = <>{noSal > 1 ? <button type="button" className="btn lg w" onClick={() => setPeople(bul.people.map((x) => (x.salutation ? x : { ...x, salutation: Q.guessSalutation(x) })))}>Doplnit oslovení podle jmen</button> : null}{noSal > 1 ? <p className="sm">Je to jen odhad, po doplnění je prosím zkontrolujte.</p> : null}<PeoplePick list={[...bul.people]} autoFocus placeholder="Například: Tereza Malá (3.B), Jakub Veselý (3.B)" onAdd={(x) => setPeople([...bul.people, ...x])} />{bul.people.length ? <ul className="prs">{bul.people.map((x, j) => <PersonRow key={j} p={x} onChange={(n) => setPeople(bul.people.map((y, q) => (q === j ? n : y)))} onRemove={() => setPeople(bul.people.filter((_, q) => q !== j))} />)}</ul> : null}</>;
   } else if (cur.key.startsWith('text-')) {
@@ -166,7 +166,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
       {can && c.statements.length < POINT_LIMITS.statements && si === c.statements.length - 1 ? <button type="button" className="btn lg w" onClick={() => { set({ statements: [...c.statements, { speaker: null, speakerGenitive: '', quote: '' }] }); go(`/psat/${id}/kdo-${c.statements.length}`); }}><Ic n="plus" />Přidat další vyjádření</button> : null}</>;
   } else {
     const r = Q.readiness(s, p); const try_ = A.trySubmit(s, id);
-    ask = 'Takhle to vyjde. Můžeme to poslat?'; help = 'Vedení si to přečte a když bude něco chybět, ozve se vám. Do té doby to můžete vzít zpět.';
+    ask = 'Takhle to vyjde. Můžeme to poslat?'; help = 'Vedení si to přečte a když bude něco chybět, ozve se Vám. Do té doby to můžete vzít zpět.';
     can = try_.ok && leadOk; nextText = Q.me(s)?.role === 'headmaster' ? 'Zařadit do porady' : 'Odeslat vedení';
     const ans = (t: string, v: ReactNode, to: string) => <div className="ans" key={`${t}${to}`}><span className="tx"><span className="st">{t}</span><span className="tt">{v}</span></span><a className="btn" href={Hash(`/psat/${id}/${to}`)} aria-label={`Změnit: ${t}`}>Změnit</a></div>;
     body = <>
@@ -184,7 +184,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   }
   const n = k + 1; const of = steps.length;
   return <App nar noNav
-    over={del ? <Dialog title={p.state === 'returned' ? 'Smazat vrácenou zprávu?' : 'Smazat rozepsanou zprávu?'} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.{Q.asksAgain(s, p) ? ' O zprávu z akce vás znovu požádáme.' : ''}</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawPoint(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null}
+    over={del ? <Dialog title={p.state === 'returned' ? 'Smazat vrácenou zprávu?' : 'Smazat rozepsanou zprávu?'} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.{Q.asksAgain(s, p) ? ' O zprávu z akce Vás znovu požádáme.' : ''}</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawPoint(id)); goReplace('/'); }}>Smazat</button></div></Dialog> : null}
     col={<>
       <div className="wzh"><a className="q" href="#/">Odejít, rozepsané zůstane uložené</a><button type="button" className="q r" onClick={() => setDel(true)}>Smazat zprávu</button></div>
       <p className="stn">{c.title || 'Nová zpráva'}, krok {n} z {of}</p><Dots n={n} of={of} />

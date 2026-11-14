@@ -146,7 +146,7 @@ export const points = {
     label: 'Úvodní věta',
     changed: 'Údaje se změnily. Úvodní větu jste upravili ručně.',
     recreate: 'Vytvořit znovu',
-    confirm: 'Nahradit vaši větu novou?',
+    confirm: 'Nahradit Vaši větu novou?',
     replace: 'Ano, nahradit',
     keep: 'Ponechat',
   },
