@@ -58,7 +58,7 @@ export function Tyden() {
   const lead = after
     ? <>Uzávěrka porady {Q.dm(wk.meetingDate)} minula. Nová zpráva půjde na poradu <b>{Q.dm(iss.meetingDate)}</b>.</>
     : review ? <><b>{review} {review === 1 ? 'položka čeká' : review < 5 ? 'položky čekají' : 'položek čeká'}</b> na vaše rozhodnutí. Termín je <b>{dl}</b>.</>
-      : tasks.length ? <>Čeká na vás <b>{tasks.length === 1 ? '1 věc' : tasks.length < 5 ? `${tasks.length} věci` : `${tasks.length} věcí`}</b>. Termín je <b>{dl}</b>, to je za {Q.untilText(s, wk.deadlineAt)}.</> : <>Teď na vás nic nečeká.</>;
+      : tasks.length ? <>Čeká na Vás <b>{tasks.length === 1 ? '1 věc' : tasks.length < 5 ? `${tasks.length} věci` : `${tasks.length} věcí`}</b>. Termín je <b>{dl}</b>, to je za {Q.untilText(s, wk.deadlineAt)}.</> : <>Teď na Vás nic nečeká.</>;
   return (
     <App over={add ? <AddDialog onClose={() => setAdd(false)} /> : null} desk={u.isStudent ? <Desk cls="mg clip" note={<b>Vaše části porady.</b>}>{(() => { const mine = Q.myPoints(s, u.id).filter((p) => p.kind === 'report' && p.state !== 'draft')[0]; const b = Q.buildDoc(s, Q.workingMonday(s), { pending: true }); return <div className="wrapm wrapn">{mine ? <Sheet built={focusOn(b, mine.id)} cls={(x) => (x.key === mine.id ? 'me' : '')} /> : <div className="arch"><p className="center">Tady uvidíte, jak bude vypadat vaše zpráva.</p></div>}</div>; })()}</Desk> : deskFor(s, u.id)}
       col={<>
@@ -92,7 +92,7 @@ export function Domu() {
     ? [{ t: 'Porada', ic: 'book', tone: 'core', to: '/porada' }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }, { t: 'Archiv', ic: 'stack', tone: 'core', to: '/archiv' }, { t: 'Přidat do porady', ic: 'plus', tone: 'act', to: '/pridat' }, ...(tasks.length ? [waits] : []), ...mine, { t: 'Lidé', ic: 'ppl', tone: 'browse', to: '/lide', n: req }, { t: 'Seznamy studentů', ic: 'list', tone: 'admin', to: '/seznamy' }, { t: 'Nastavení', ic: 'gear', tone: 'admin', to: '/nastaveni' }]
     : [{ ...waits, tone: 'act' }, ...start, ...(staff ? [{ t: 'Návrh do pokynů', ic: 'flag', tone: 'act', act: proposal }, { t: 'Ke kontrole', ic: 'rev', tone: 'core', to: '/kontrola', n: q }] : []), write, ...mine, ...(staff ? [{ t: 'Archiv', ic: 'stack', tone: 'browse', to: '/archiv' }] : [])];
   const waiting = q + tasks.length + req;
-  const lead = waiting ? <>Na vás {waiting === 1 ? <>čeká <b>1 věc</b></> : waiting < 5 ? <>čekají <b>{waiting} věci</b></> : <>čeká <b>{waiting} věcí</b></>}, poznáte je podle žlutých čísel. Termín je <b>{dl}</b>.</> : <>Teď na vás nic nečeká. Příští porada je <b>{next.meets}</b>, uzávěrka {next.closed ? 'byla ' : ''}<b>{next.close}</b>.</>;
+  const lead = waiting ? <>Na Vás {waiting === 1 ? <>čeká <b>1 věc</b></> : waiting < 5 ? <>čekají <b>{waiting} věci</b></> : <>čeká <b>{waiting} věcí</b></>}, poznáte je podle žlutých čísel. Termín je <b>{dl}</b>.</> : <>Teď na Vás nic nečeká. Příští porada vedení je <b>{next.meets}</b></>;
   const inner = (x: Tile) => <><Ic n={x.ic} />{x.n ? <span className="tl-n" aria-label={`${x.n} čeká`}>{x.n}</span> : null}<span className="tl-t">{x.t}</span></>;
   return <App desk={deskFor(s, u.id)} col={<>
     <Top big h="Dobrý den." lead={lead} />
