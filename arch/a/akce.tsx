@@ -101,7 +101,7 @@ export function AkceDetail({ id, fresh }: { id: string; fresh?: boolean }) {
     </>} />;
 }
 export function Navrh({ id }: { id: string }) {
-  const { s, apply } = useStore(); const p = s.points.find((x) => x.id === id);
+  const { s, apply } = useStore(); const p = s.points.find((x) => x.id === id); const [del, setDel] = useState(false);
   if (!p || p.authorId !== s.userId) return <NotFound />;
   const c = p.content; const set = (x: Partial<typeof c>) => apply(A.savePoint(id, { ...c, ...x }));
   const editable = p.state === 'draft' || p.state === 'returned';
@@ -110,8 +110,9 @@ export function Navrh({ id }: { id: string }) {
     <Back to="/moje" t="Zpět na přehled" />
     <Top h={editable ? 'Co navrhujete?' : c.title} lead={editable ? 'Napište to tak, jak to má stát v dokumentu. Po schválení to ředitel zařadí na správné místo.' : p.state === 'submitted' ? 'Návrh je u kontroly.' : p.state === 'approved' ? 'Schváleno. Ředitel ho zařadí do dokumentu.' : p.state === 'published' ? 'Vyšlo v poradě.' : p.note ?? ''} />
     {p.state === 'returned' ? <Rework labels={Q.partLabels(p, p.parts)} note={p.note} /> : null}
-    {editable ? <div className="stack"><div className="stack st6"><span className="lb">Kam to patří</span><Seg label="Kam to patří" value={p.kind as 'finance' | 'pokyn'} options={[['finance', 'Hospodaření'], ['pokyn', 'Pokyny']]} onChange={(v) => apply(A.retype(id, { kind: v }))} /></div><label className="l">Název<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} /></label><label className="l">Text<textarea className="in big" value={toText(c.body)} onChange={(e) => set({ body: fromText(e.target.value) })} /></label></div> : null}
+    {editable ? <div className="stack"><div className="stack st6"><span className="lb">Kam to patří</span><Seg label="Kam to patří" value={p.kind as 'finance' | 'pokyn'} options={[['finance', 'Hospodaření'], ['pokyn', 'Pokyny']]} onChange={(v) => apply(A.retype(id, { kind: v }))} /></div><label className="l">Název<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} /></label><label className="l">Text<textarea className="in big" value={toText(c.body)} onChange={(e) => set({ body: fromText(e.target.value) })} /></label><button type="button" className="q r" onClick={() => setDel(true)}>Smazat návrh</button></div> : null}
     {p.state === 'submitted' ? <button className="btn lg w" onClick={() => apply(A.retractPoint(id))}>Vzít zpět a upravit</button> : null}
-  </>} dock={editable ? <div className="dock">{!can ? <p className="hint a">Napište název a text.</p> : null}<div className="row"><button className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (can) { apply(A.submitPoint(id)); go('/moje'); } }}>Odeslat ke kontrole</button></div><Saved /></div> : undefined}
+  </>} over={del ? <Dialog title={p.state === 'returned' ? 'Smazat vrácený návrh?' : 'Smazat rozepsaný návrh?'} onClose={() => setDel(false)}><p>Smaže se i všechno, co jste napsali, a vrátit to nepůjde.</p><div className="row"><button type="button" className="btn lg" onClick={() => setDel(false)}>Nechat</button><button type="button" className="btn dk lg" onClick={() => { apply(A.withdrawPoint(id)); goReplace('/moje'); }}>Smazat</button></div></Dialog> : null}
+    dock={editable ? <div className="dock">{!can ? <p className="hint a">Napište název a text.</p> : null}<div className="row"><button className={`btn lg ${can ? 'go' : 'off'}`} aria-disabled={!can} onClick={() => { if (can) { apply(A.submitPoint(id)); go('/moje'); } }}>Odeslat ke kontrole</button></div><Saved /></div> : undefined}
     desk={<Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn"><div className="arch"><div className="s">{p.kind === 'finance' ? 'Informace z hospodaření' : 'Pokyny pro zaměstnance, organizační záležitosti'}</div><div className="bl cur live"><span className="h">{c.title || <span className="nw" data-ph="Název" />}</span><p>{toText(c.body) || <span className="nw" data-ph="Text návrhu" />}</p></div></div></div></Desk>} />;
 }

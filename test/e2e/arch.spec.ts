@@ -229,6 +229,27 @@ test.describe('the Arch UI', () => {
     await expect.poll(async () => (await readPoint(id)).state).toBe('submitted');
   });
 
+  test('an author deletes a draft proposal after confirming it', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    const project = testInfo.project.name;
+    const id = await seedProposal(emailOf('archa', project), 'finance');
+    await signInAs(signInAsRe('archa', project));
+    await page.goto(`/#/navrh/${id}`);
+    await page.getByRole('button', { name: 'Smazat návrh' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Smazat rozepsaný návrh?' });
+    await dialog.getByRole('button', { name: 'Nechat' }).click();
+    await expect(dialog).toHaveCount(0);
+    expect((await readPoint(id)).state).toBe('draft');
+
+    await page.getByRole('button', { name: 'Smazat návrh' }).click();
+    await dialog.getByRole('button', { name: 'Smazat', exact: true }).click();
+    await expect(page).toHaveURL(/#\/moje$/);
+    await expect.poll(async () => (await readPoint(id)).state).toBe('withdrawn');
+    await expect(page.getByRole('link', { name: /^Bez názvu/ })).toHaveCount(0);
+  });
+
   test('a teacher sees no directory and an author no name of the vedení', async ({
     page,
     signInAs,
