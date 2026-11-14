@@ -23,9 +23,9 @@ export const LIMITS = {
   state: { max: 300, windowMs: MINUTE, key: 'user' },
   /**
    * Creating, submitting, proposing and an author's retract, withdraw or cancel; never
-   * autosave.
+   * autosave. Deleting old drafts counts too, so it leaves room to tidy up and still hand in.
    */
-  submission: { max: 30, windowMs: HOUR, key: 'user' },
+  submission: { max: 60, windowMs: HOUR, key: 'user' },
   /**
    * An abuse guard for the headmaster's and reviewers' writes (deciding access requests and
    * points, reviewer edits, skipping a meeting): a person never reaches it.

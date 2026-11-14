@@ -213,7 +213,7 @@ An inventory test fails the build if any action or route handler is not wrapped.
 |---|---|
 | `/auth/*` | per IP, loose (the school is behind one NAT address) |
 | directory search | 30/min per user |
-| submissions | 30/h per user |
+| submissions | 60/h per user |
 | headmaster `admin` writes (deciding requests, changing access) | 600/h per user, an abuse guard a person never reaches |
 | access requests | 3/day; the 30-day cooldown after rejection is computed from the database, so it survives restarts |
 
