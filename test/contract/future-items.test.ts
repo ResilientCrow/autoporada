@@ -631,12 +631,13 @@ describe('FutureItemRepo decision path', () => {
       const approved = await approvedOf(author);
       const at = world.clock.now();
       const colleague = world.as(await world.seed.user({ role: 'submitter' }));
+      // One at a time: a promise made before the loop awaits it could reject unhandled.
       for (const refused of [
-        mark(world.as(author), approved, at, approved.version + 1),
-        mark(world.as(author), { ...approved, id: UNKNOWN_ID }, at),
-        mark(colleague, approved, at),
+        () => mark(world.as(author), approved, at, approved.version + 1),
+        () => mark(world.as(author), { ...approved, id: UNKNOWN_ID }, at),
+        () => mark(colleague, approved, at),
       ]) {
-        expect(await failure(refused)).toBeInstanceOf(StaleVersion);
+        expect(await failure(refused())).toBeInstanceOf(StaleVersion);
       }
       expect(await read(cli, (tx) => tx.futureItems.get(approved.id))).toEqual(approved);
     });
