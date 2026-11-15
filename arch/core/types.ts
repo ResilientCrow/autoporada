@@ -1,5 +1,5 @@
 import type { Campus, OrganizerRole, Salutation } from '@/domain/cs';
-import type { PointContent, PointKind, PointTypeId } from '@/domain/report';
+import type { PointContent, PointKind } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import type { Statement, SystemSlot } from '@/domain/outline';
 import type { RichDoc } from '@/domain/richtext';
@@ -12,7 +12,7 @@ export interface User {
 }
 export interface Trail { at: string; who: string; what: string; note?: string; parts?: string[]; original?: Record<string, string> }
 export interface Point {
-  id: string; kind: PointKind; typeId: PointTypeId | null; authorId: string; akceId: string | null;
+  id: string; kind: PointKind; authorId: string; akceId: string | null;
   content: PointContent; state: PointState; handInMonday: string | null; submittedAt: string | null;
   /** The porada it is in: the hand-in Monday's, or after a drop the next open one (the server's `poradaMondayOf`). */
   poradaMonday: string | null;

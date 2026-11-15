@@ -91,7 +91,6 @@ export function archItems({
     return {
       id: p.id,
       kind: p.kind,
-      typeId: p.typeId,
       authorId: p.authorId,
       akceId: p.futureItemId ?? akceOfPoint.get(p.id) ?? null,
       content: p.content,

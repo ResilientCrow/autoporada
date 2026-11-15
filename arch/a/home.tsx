@@ -9,7 +9,6 @@ import { foldForSearch, organizerPhrase } from '@/domain/cs';
 import { DocNav } from '../core/parts';
 import { toText } from '../core/react';
 
-const guessType = (t: string) => { const x = t.toLowerCase(); return x.startsWith('exkurz') ? 'exkurze' : x.startsWith('soutěž') ? 'soutez' : x.startsWith('seminář') ? 'seminar' : x.startsWith('přednášk') ? 'prednaska' : x.startsWith('projektový den') ? 'projektovy' : 'jine'; };
 const Task = ({ t, why, a, prim, onClick }: { t: string; why: string; a: string; prim?: boolean; onClick: () => void }) => (
   <button type="button" className={`tk${prim ? ' p' : ''}`} onClick={onClick}><span className="tx"><b>{t}</b><span>{why}</span></span><span className={`btn${prim ? ' go' : ''} lg`}>{a}</span></button>
 );
@@ -20,7 +19,7 @@ function useOwedTasks() {
     const why = o.point?.state === 'returned' ? `${Q.nameOf(Q.userById(s, o.point.trail.at(-1)?.who ?? ''))} prosí o doplnění.` : o.point && toText(o.point.content.body).trim() ? `Máte rozepsáno. ${when}` : when;
     const act = () => {
       if (o.point) { go(o.point.state === 'returned' ? `/oprava/${o.point.id}` : `/psat/${o.point.id}`); return; }
-      const id = createWith(apply, s, (cb) => A.createPoint('report', guessType(o.akce.title), o.akce.id, cb));
+      const id = createWith(apply, s, (cb) => A.createPoint('report', o.akce.id, cb));
       go(`/psat/${id}`);
     };
     return { key: o.akce.id, t: o.akce.title, why, a: o.point?.state === 'returned' ? 'Opravit' : o.point ? 'Pokračovat' : 'Napsat zprávu', act };
@@ -81,9 +80,9 @@ export function Domu() {
   const q = staff ? Q.queuePoints(s).filter((p) => Q.canDecidePoint(u, p)).length + Q.queueFutures(s).filter((f) => Q.canDecideFuture(u, f)).length + Q.placeholderQueue(s, u).length : 0;
   const req = head ? Q.pendingRequests(s).length : 0;
   const wk = Q.working(s); const dl = WHEN(wk.deadlineAt); const next = Q.poradaDates(wk, new Date(s.now));
-  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
+  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', null, cb)); go(`/psat/${id}/zaklad`); };
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
-  const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
+  const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, cb)); go(`/navrh/${id}`); };
   const waits: Tile = { t: 'Čeká na Vás', ic: 'bell', tone: 'browse', to: '/tyden', n: tasks.length };
   const start: Tile[] = [{ t: 'Nová akce', ic: 'calp', tone: 'act', act: () => future('akce') }, { t: 'Nové jednání', ic: 'talk', tone: 'act', act: () => future('jednani') }];
   // Most reports answer an akce from „Čeká na Vás“; a report of one's own is the exception, so it sits lighter.
@@ -102,9 +101,9 @@ export function Domu() {
 }
 function AddDialog({ onClose }: { onClose: () => void }) {
   const { s, apply } = useStore(); const u = Q.me(s)!;
-  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
+  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', null, cb)); go(`/psat/${id}/zaklad`); };
   const future = (k: Future['kind']) => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
-  const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, null, cb)); go(`/navrh/${id}`); };
+  const proposal = () => { const id = createWith(apply, s, (cb) => A.createPoint('finance', null, cb)); go(`/navrh/${id}`); };
   return <Dialog title="Co chcete udělat?" onClose={onClose}>
     <button type="button" className="ch" onClick={report}><span className="tx"><b>Napsat zprávu z akce, která proběhla</b><span>Provedeme Vás tím krok za krokem.</span></span><Ic n="chev" /></button>
     <button type="button" className="ch" onClick={() => future('akce')}><span className="tx"><b>Přidat akci, která se chystá</b><span>Po schválení ji uvidí celá škola.</span></span><Ic n="chev" /></button>

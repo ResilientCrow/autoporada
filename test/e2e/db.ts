@@ -124,15 +124,15 @@ export async function seedPoint(
   email: string,
   title: string,
   state: SeedState,
-  { note = SEED_NOTE, typeId = 'seminar' }: { note?: string; typeId?: string } = {},
+  { note = SEED_NOTE }: { note?: string } = {},
 ): Promise<string> {
   return withClient(async (client) => {
     const stored = HISTORY[state].at(-1)?.[2] ?? 'draft';
     const handedIn = HISTORY[state].some(([event]) => event === 'submit');
     const { rows } = await client.query<{ id: string; author_id: string }>(
-      `INSERT INTO points (kind, author_id, client_ref, type_id, state, title, event_date, opening, body,
+      `INSERT INTO points (kind, author_id, client_ref, state, title, event_date, opening, body,
                            bullets, statements, earliest_monday, submitted_at, hand_in_monday)
-       SELECT 'report', u.id, gen_random_uuid(), $7,
+       SELECT 'report', u.id, gen_random_uuid(),
               $3::point_state, $2, current_date - 30, 'Proběhl seminář.',
               '{"type":"doc","content":[]}'::jsonb, $4::jsonb, $5::jsonb,
               CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END,
@@ -140,15 +140,7 @@ export async function seedPoint(
               CASE WHEN $6 THEN date_trunc('week', current_date + 14)::date END
          FROM users u WHERE u.email = $1
        RETURNING id, author_id`,
-      [
-        email,
-        title,
-        stored,
-        JSON.stringify(PEOPLE_BULLETS),
-        JSON.stringify(STATEMENTS),
-        handedIn,
-        typeId,
-      ],
+      [email, title, stored, JSON.stringify(PEOPLE_BULLETS), JSON.stringify(STATEMENTS), handedIn],
     );
     const made = rows[0];
     if (!made) throw new Error(`no user with the e-mail of this journey: ${email}`);

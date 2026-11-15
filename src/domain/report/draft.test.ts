@@ -9,7 +9,6 @@ const ORGANISERS: BulletSpec = {
   label: 'Organizátoři',
   kind: 'people',
   required: true,
-  role: 'organisers',
 };
 const RESULTS: BulletSpec = { key: 'results', label: 'Výsledky', kind: 'text', required: false };
 

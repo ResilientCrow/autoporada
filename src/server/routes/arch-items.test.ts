@@ -13,7 +13,6 @@ const pointRow = (state: string) =>
   ({
     id: ID,
     kind: 'report',
-    typeId: null,
     authorId: AUTHOR,
     futureItemId: null,
     content: {},

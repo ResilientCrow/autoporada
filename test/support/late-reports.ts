@@ -29,7 +29,6 @@ export function lateReportFixtures(world: World) {
     const result = await world.run(createPoint, world.as(author), {
       clientRef: randomUUID(),
       kind: 'report',
-      typeId: 'soutez',
     });
     if (!result.ok) throw new Error(`create refused: ${result.error.code}`);
     return result.value.id;

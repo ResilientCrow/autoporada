@@ -414,6 +414,13 @@
       "when": 1794581069513,
       "tag": "0058_fixed_point_types",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1794785111415,
+      "tag": "0059_burly_tinkerer",
+      "breakpoints": true
     }
   ]
 }

@@ -7,16 +7,16 @@ import { randomUUID } from 'node:crypto';
 
 import { system, type UserRecord } from '@/application/ports';
 import { createPoint } from '@/application/use-cases';
-import type { BulletSpec, PointKind, PointTypeId } from '@/domain/report';
+import type { BulletSpec, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import { calDate, parseIsoDate } from '@/domain/time';
 
 import type { World } from './world';
 import { CLOCK_START } from './world/clock';
 
-/** A required people bullet and an optional text bullet, as a report type's spec. */
+/** A required people bullet and an optional text bullet, as a spec for the readiness tests. */
 export const BULLETS: readonly BulletSpec[] = [
-  { key: 'organisers', label: 'Organizátoři', kind: 'people', required: true, role: 'organisers' },
+  { key: 'organisers', label: 'Organizátoři', kind: 'people', required: true },
   { key: 'results', label: 'Výsledky', kind: 'text', required: false },
 ];
 
@@ -93,16 +93,10 @@ export function startingAs(world: World, author: UserRecord, kind: PointKind) {
 
 export function pointFixtures(world: World) {
   /** A new point of the author's, made through the use case. */
-  async function start(
-    author: UserRecord,
-    kind: PointKind = 'report',
-    reportType: PointTypeId = 'soutez',
-  ): Promise<string> {
-    const typeId = kind === 'report' ? reportType : null;
+  async function start(author: UserRecord, kind: PointKind = 'report'): Promise<string> {
     const result = await world.run(createPoint, startingAs(world, author, kind), {
       clientRef: randomUUID(),
       kind,
-      typeId,
     });
     if (!result.ok) throw new Error(`create refused: ${result.error.code}`);
     return result.value.id;

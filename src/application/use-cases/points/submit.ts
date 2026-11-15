@@ -22,7 +22,7 @@ import { ensureIssue, readWindow } from '../issues';
 import { pointWriteAccess } from './access';
 import { akceTarget, answeredAkce, writeReport } from './answered-akce';
 import { move, moveCheck } from './append-event';
-import { kindIssues, readinessIssues, typeSpec } from './checks';
+import { kindIssues, readinessIssues, reportSpec } from './checks';
 
 interface HandIn {
   readonly patch: Pick<PointPatch, 'earliestMonday' | 'handInMonday'>;
@@ -126,7 +126,7 @@ export const submitPoint = defineUseCase({
   output: submitPointOutput,
   access: pointWriteAccess(moveCheck('submit')),
   async execute({ tx, now }, { content }, point) {
-    const spec = typeSpec(point);
+    const spec = reportSpec(point.kind);
     const shape = kindIssues(point.kind, content, spec);
     if (Object.keys(shape).length > 0) return fail({ code: 'invalid-input', fields: shape });
     const today = instantToWallClock(now).date;

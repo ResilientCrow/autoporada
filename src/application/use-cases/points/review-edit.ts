@@ -10,7 +10,7 @@ import {
 import { instantToWallClock } from '@/domain/time';
 
 import { pointView, pointWriteAccess } from './access';
-import { kindIssues, readinessIssues, typeSpec } from './checks';
+import { kindIssues, readinessIssues, reportSpec } from './checks';
 
 /**
  * „Uložit úpravy“ of a reviewer in the review (design section 10, D13 (a)): the whole content
@@ -34,7 +34,7 @@ export const reviewEditPoint = defineUseCase({
     if (point.authorId === actor.id) return fail({ code: 'rule', rule: 'point-not-editable' });
     const target = { authorId: point.authorId, state: point.state };
     if (!can(actor, { action: 'point.edit', point: target })) return fail({ code: 'forbidden' });
-    const spec = typeSpec(point);
+    const spec = reportSpec(point.kind);
     const shape = kindIssues(point.kind, content, spec);
     if (Object.keys(shape).length > 0) return fail({ code: 'invalid-input', fields: shape });
     // Today, as the submit's: a point handed in before the summer and edited in September goes

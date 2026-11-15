@@ -48,14 +48,12 @@ export interface DraftStatement {
   readonly quote: string;
 }
 
-/** A bullet a point type offers; the draft's bullets start as copies of these. */
+/** A row a new report starts with (`REPORT_BULLETS`); the draft's bullets start as copies of these. */
 export interface BulletSpec {
   readonly key: string;
   readonly label: string;
   readonly kind: 'people' | 'text';
   readonly required: boolean;
-  /** The people of this bullet are named in the opening sentence. */
-  readonly role?: 'organisers';
 }
 
 /** The text and structure of a point, as the editor and the preview see it. */

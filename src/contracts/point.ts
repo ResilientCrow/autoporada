@@ -4,7 +4,6 @@ import type { Campus, Salutation } from '@/domain/cs';
 import {
   contentBytes,
   POINT_LIMITS,
-  POINT_TYPE_IDS,
   type PointKind,
   type DraftBullet,
   type DraftPerson,
@@ -41,14 +40,6 @@ const uniqueKeys = (bullets: readonly { readonly key: string }[]) =>
   new Set(bullets.map((b) => b.key)).size === bullets.length;
 
 /** Bounds the text before the list is checked; any text up to it that is not a key is `invalid`. */
-const TYPE_KEY_INPUT_MAX = 64;
-
-/**
- * A report type's key (ADR 0064). A text first, so that an absent type reads as `required` (Zod
- * reports a missing enum value as `invalid_value`) and a key off the list as `invalid`.
- */
-export const pointTypeIdSchema = z.string().max(TYPE_KEY_INPUT_MAX).pipe(z.enum(POINT_TYPE_IDS));
-
 /**
  * The jsonb parts of a point, as stored and as the editor sends them. A draft
  * may be unfinished, so only the bounds and the shape are checked here;
@@ -140,14 +131,12 @@ export function parsePointPeople(value: {
 
 /**
  * „Začít“ on the chooser, or a finance or pokyn proposal. `clientRef` is the
- * draft's id in the browser, so a retry returns the same draft. A report
- * names its type; finance and pokyn name none (the use case checks the pair).
+ * draft's id in the browser, so a retry returns the same draft.
  */
 const pointKindSchema = z.enum(['report', 'finance', 'pokyn']) satisfies z.ZodType<PointKind>;
 export const createPointInput = z.strictObject({
   clientRef: z.uuid(),
   kind: pointKindSchema,
-  typeId: pointTypeIdSchema.nullable(),
 });
 export const createPointOutput = z.object({ id: z.uuid() });
 

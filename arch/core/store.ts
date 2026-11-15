@@ -1,5 +1,5 @@
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
-import { missingForSubmit, newDraft, openingInput, submittedContent, type DraftPerson, type PointContent, pointType, type PointKind, type PointTypeId } from '@/domain/report';
+import { missingForSubmit, newDraft, openingInput, REPORT_BULLETS, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
 import { openingSentence } from '@/domain/cs';
 import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
@@ -34,22 +34,20 @@ export const needsReauth = (s: State) => !s.stepUpAt || new Date(s.now).getTime(
 // ---- points ----
 function refreshOpening(p: Point, content: PointContent): PointContent {
   if (p.kind !== 'report' || content.openingEdited) return content;
-  const type = p.typeId ? pointType(p.typeId) : null;
-  const input = openingInput(content, type?.defaultBullets ?? []);
+  const input = openingInput(content);
   return { ...content, opening: input ? openingSentence(input) : '' };
 }
-export function createPoint(kind: PointKind, typeId: PointTypeId | null, akceId: string | null, onId?: (id: string) => void): Fx {
+export function createPoint(kind: PointKind, akceId: string | null, onId?: (id: string) => void): Fx {
   return (s0) => {
     const [s, pid] = id(s0, 'p');
-    const type = typeId ? pointType(typeId) : null;
     const u = me(s)!; const akce = s.futures.find((f) => f.id === akceId);
-    let content = newDraft(kind === 'report' ? type?.defaultBullets ?? [] : []);
+    let content = newDraft(kind === 'report' ? REPORT_BULLETS : []);
     if (akce) {
       content = { ...content, title: akce.title, eventDate: akce.date, endDate: akce.endDate, timeFrom: akce.timeFrom, timeTo: akce.timeTo, campus: akce.campus, place: akce.place || null };
     } else if (kind === 'report' && u) {
       content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
     }
-    const p: Point = { id: pid, kind, typeId, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, parts: null, savedAt: s.now, trail: [] };
+    const p: Point = { id: pid, kind, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, parts: null, savedAt: s.now, trail: [] };
     p.content = refreshOpening(p, content);
     onId?.(pid);
     return { ...s, points: [...s.points, p] };

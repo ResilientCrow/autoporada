@@ -43,7 +43,7 @@ This plan comes from six interview rounds and a 9-agent design workflow:
 | What submitters may add | Report points (PROVOZ), future items (jednání / akce), HOSPODAŘENÍ items, other POKYNY points. Ohlasy (media and partners) are headmaster-only. |
 | Future items | Placed in the document by date (§6). After an event, its author is prompted to write the report. Each line, in the headmaster's format (checkpoint M2): "úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon". Every part after the date is optional; multi-day items read "neděle 3. května až čtvrtek 14. května 2026" without times. Organizátor, Účastníci and Poznámka are free text printed as typed (ADR 0060, superseding the structured responsible part with its verb, "za …" and people). |
 | Standing POKYNY | Carried over from the previous issue. Edited in a restricted rich-text editor (3 indent levels: o / o / ■). Each item is standing or one-time and can be reordered. |
-| Report point form | Structured fields (title, date, from–to, areál, room, organisers) produce a pre-written opening sentence in the house style, which the submitter can edit freely. Six point types are fixed in code, each with default labelled bullets (ADR 0064, superseding the admin-defined types). A participant list and at least one vyjádření are mandatory. No photos. |
+| Report point form | Structured fields (title, date, from–to, areál, room, organisers) produce a pre-written opening sentence in the house style, which the submitter can edit freely. There are no report types: the opening reads its grammar from the title and every report starts with the same rows (ADR 0067, superseding ADR 0064). A participant list and at least one vyjádření are mandatory. No photos. |
 | Names | A person is title (pan / paní / slečna) + name + class/role. Lists group people by title with plural forms. The 2nd case is suggested and can be corrected. The picker searches the M365 directory; title, class and 2nd case are remembered locally. |
 | Weekly cycle | One issue per Monday. Configurable deadline, counted back from the meeting date (default two days before at 20:00: Saturday 20:00 for a Monday meeting, ADR 0032); later submissions go to the next issue, except reports on events that end after the deadline (ADR 0035). E-mail reminders and status notifications. Generating locks the issue, archives it and prepares the next one. Reopening and regenerating keep every version. |
 | Which reports go in | Every approved, unpublished report whose event took place before the meeting, oldest first (date, then time). |
@@ -258,13 +258,13 @@ An inventory test fails the build if any action or route handler is not wrapped.
   - One pending request per user.
 - `sessions(token_sha256, user_id, auth_time, idle_expires_at, abs_expires_at)`, `auth_tx`
 
-**People and point types**
+**People and report rows**
 - `people(graph_id?, salutation, titles_before, given, family, titles_after, affiliation, affiliation_year, genitive_override, last_used_at)`
   - An affiliation from an earlier school year shows "ověřte třídu".
-- Point types are the list `POINT_TYPES` in code (`domain/report`); `points.type_id` holds a key from it (ADR 0064, which dropped the `point_types` table).
+- Every report starts with `REPORT_BULLETS` (`domain/report`); `points.type_id` was dropped by migration 0059 (ADR 0067).
 
 **Points**
-- `points(kind report|finance|pokyn, author_id, state, version, type_id, title, event_date, end_date, time_from, time_to, campus, place, body jsonb, earliest_monday, published_issue_id?, future_item_id?, review_note, …)`
+- `points(kind report|finance|pokyn, author_id, state, version, title, event_date, end_date, time_from, time_to, campus, place, body jsonb, earliest_monday, published_issue_id?, future_item_id?, review_note, …)`
   - CHECK `(state='published') = (published_issue_id IS NOT NULL)`.
   - `earliest_monday` is set at first submit and kept across returns, which gives deterministic late roll-over.
 - `point_bullets`, `point_people` (frozen copy plus `person_id`), `point_statements(speaker_genitive, affiliation, quote)`
@@ -395,7 +395,7 @@ The DOCX can be downloaded immediately.
 |---|---|
 | `suggestGenitive(person)` | Titles: pan → pana, paní → paní, slečna → slečny. Each name part is declined by ordered suffix rules: -ek → -ka, -ec → -ce, -el → -la (lexical exceptions), -a (masc.) → -y, -ová → -ové, -á → -é, -ý → -ého, -í → -ího, consonant → +a. Academic titles pass through. Result `{text, confidence high/medium/low}`: low keeps the nominative and asks the submitter to check. Foreign surnames ending in a vowel stay undeclined ("pana Johna Doe"). Corrections are saved per person. **300+ test cases** built from public Czech name-frequency lists, including every example from the requirements word for word. |
 | `renderPeople(list)` | Groups by title, with each label once per group: slečna / slečny, paní, pan / pánové; default order slečna → paní → pan. Class or job in parentheses, as stored. Neighbouring classmates share one "(oba / obě / všichni / všechny X)"; a class shared by the whole list goes once at the end; jobs never merge (ADR 0009). |
-| `openingSentence(fields, type)` | Template: "V {weekday} {date} od {10.00} do {12.00} hodin v areálu {Smíchov} v {učebně S206} {proběhl} {Název}, {který} {organizovali} …". The verb agrees with the type's grammatical gender and the organisers' number. Multi-day: "Ve dnech 27.–29. října 2026 proběhla …". Neutral fallback when the gender is unknown. |
+| `openingSentence(fields)` | Template: "V {weekday} {date} od {10.00} do {12.00} hodin v areálu {Smíchov} v {učebně S206} {proběhl} {Název}, {který} {organizovali} …". The verb agrees with the gender `titleGender` reads from the title (unknown: „akce „…““) and the organisers' number. Multi-day: "Ve dnech 27.–29. října 2026 proběhla …". Neutral fallback when the gender is unknown. |
 | Dates | Own `CalDate` type plus Europe/Prague conversion (DST tested on 25 Oct and 28 Mar). Formats "pondělí 19. 10. 2026", "19. října", "27.–29. 10. 2026", "30. 10. – 2. 11. 2026". `windowHeading`, `schoolYear` (switches in September), `targetMonday`, `deadline`. |
 | `typographize(runs)` | Quotes, dashes, NBSP; idempotent across run boundaries. URLs, e-mails and class codes untouched. |
 | `compareClass` / `compareStudents` | Year, then programme, then letter (L1B sits among the first years; programme rank is configurable), then surname with `Intl.Collator('cs')`; an ICU guard test checks that ch sorts after h. |

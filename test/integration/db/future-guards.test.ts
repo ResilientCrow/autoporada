@@ -24,7 +24,6 @@ const {
 } = POINT_LIMITS;
 
 let authorId = '';
-const typeId = 'seminar';
 
 beforeAll(async () => {
   const [user] = await database.owner<{ id: string }>(
@@ -84,7 +83,6 @@ const insertReport = (row: Row = {}) =>
     kind: 'report',
     author_id: authorId,
     client_ref: randomUUID(),
-    type_id: typeId,
     body: '{"type":"doc","content":[]}',
     ...row,
   });

@@ -3,7 +3,7 @@ import { savePointInput, savePointOutput } from '@/contracts';
 import { authorEditsPoint } from '@/domain/review';
 
 import { pointView, pointWriteAccess } from './access';
-import { kindIssues, typeSpec } from './checks';
+import { kindIssues, reportSpec } from './checks';
 
 /**
  * The author's autosave (design section 8, ADR 0017): the whole content
@@ -23,7 +23,7 @@ export const savePoint = defineUseCase({
     // in review, their own included, only through the audited review edit.
     // The scoped load already gave a pending or inactive account not-found.
     if (!authorEditsPoint(point.state)) return fail({ code: 'rule', rule: 'point-not-editable' });
-    const fields = kindIssues(point.kind, content, typeSpec(point));
+    const fields = kindIssues(point.kind, content, reportSpec(point.kind));
     if (Object.keys(fields).length > 0) return fail({ code: 'invalid-input', fields });
 
     const saved = await tx.points.update(point.id, point.version, { content });

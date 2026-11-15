@@ -1,8 +1,7 @@
 import { MAX_FIELDS } from '@/application/core';
-import type { PointRecord } from '@/application/ports';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
 import {
-  pointType,
+  REPORT_BULLETS,
   type BulletSpec,
   type PointContent,
   type PointKind,
@@ -26,11 +25,9 @@ const invalid = (failed: Readonly<Record<string, boolean>>): FieldIssues =>
       .map(([field]): [string, FieldIssueCode] => [`content.${field}`, 'invalid']),
   );
 
-/** The bullets a report's type asks for; none for finance and pokyn. */
-export function typeSpec(point: PointRecord): readonly BulletSpec[] {
-  if (point.kind !== 'report' || point.typeId === null) return [];
-  return pointType(point.typeId).defaultBullets;
-}
+/** The rows a report asks for (ADR 0067); none for finance and pokyn. */
+export const reportSpec = (kind: PointKind): readonly BulletSpec[] =>
+  kind === 'report' ? REPORT_BULLETS : [];
 
 /**
  * What the content may hold for the point's kind, checked by the save and the

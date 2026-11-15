@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { foldForSearch, normalizeClass, parsePeopleList, roomLocative, suggestGenitive, type Salutation } from '@/domain/cs';
-import { displayName, isPointTypeId, pointType, POINT_LIMITS, POINT_TYPES, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
+import { displayName, organiserAt, POINT_LIMITS, REPORT_BULLETS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
 import { compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
 import { fromText, go, toText, useStore } from '../core/react';
@@ -15,11 +15,6 @@ type Step = { key: string; title: string };
 type Statement = PointContent['statements'][number];
 /** A place in the opening sentence starts with a preposition: „na Pražském hradě“, „v Národním muzeu“. */
 const PREP = /^(?:v|ve|na|u|do|z|ze|při|před|za|mezi|pod|nad|po|k|ke|o|s|se|vedle|kolem|okolo|poblíž|uvnitř)\s/i;
-/** The people bullet the opening sentence names (the type's organisers role), or -1 when the draft has none. */
-function orgAt(p: Point): number {
-  const keys = new Set(Q.specOf(p).filter((b) => b.role === 'organisers').map((b) => b.key));
-  return p.content.bullets.findIndex((b) => b.kind === 'people' && (keys.has(b.key) || b.key === 'organisers' || b.key === 'speakers'));
-}
 function statementOf(x: DraftPerson, quote: string): Statement {
   const g = x.salutation ? suggestGenitive({ salutation: x.salutation, givenName: x.givenName, familyName: x.familyName }) : null;
   return { speaker: x, speakerGenitive: g?.text ?? '', ...(x.affiliation && { affiliation: x.affiliation }), quote };
@@ -76,7 +71,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
   if (!p) return <NotFound />;
   if (p.authorId !== s.userId) return <NotFound />;
   if (p.state !== 'draft' && p.state !== 'returned') { if (location.hash.includes('/psat/')) goReplace(`/zprava/${id}`); return null; }
-  const org = orgAt(p); const steps = stepsFor(p, org); const key = step && steps.some((x) => x.key === step) ? step : steps[p.akceId ? 0 : 0]!.key;
+  const org = organiserAt(p.content); const steps = stepsFor(p, org); const key = step && steps.some((x) => x.key === step) ? step : steps[p.akceId ? 0 : 0]!.key;
   const k = steps.findIndex((x) => x.key === key); const cur = steps[k]!;
   const next = steps[k + 1]?.key, prev = steps[k - 1]?.key;
   const c = p.content; const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
@@ -112,7 +107,6 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
       <label className="l">Jak se to jmenovalo<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} placeholder="Například: Robotiáda" /></label>
       <div className="two"><label className="l">Kdy<input className="in bigi" type="date" max={toIsoDate(Q.todayOf(s))} value={c.eventDate ? toIsoDate(c.eventDate) : ''} onChange={(e) => set({ eventDate: e.target.value ? parseIsoDate(e.target.value) : null })} /></label><label className="l">Kde<select className="in bigi" value={c.campus ?? 'jinde'} onChange={(e) => set({ campus: e.target.value as PointContent['campus'] })}><option value="smichov">Smíchov</option><option value="radlice">Radlice</option><option value="na-vidouli">Na Vidouli</option><option value="jinde">Jinde</option></select></label></div>
       <label className="l">{jinde ? 'Kde přesně' : 'Kde přesně (nepovinné)'}<small>{jinde ? 'Tak, jak to bude ve větě: „na Pražském hradě“, „v\u00a0Národním muzeu“.' : 'Třeba číslo učebny, například S206.'}</small><input className="in bigi" maxLength={POINT_LIMITS.place} value={place} placeholder={jinde ? 'Například: na Pražském hradě' : 'Například: S206'} onChange={(e) => set({ place: e.target.value || null })} onBlur={(e) => { const v = roomLocative(e.target.value); if (v !== e.target.value) set({ place: v || null }); }} />{place.trim() && !PREP.test(place.trim()) ? <small className="w-err">Začněte předložkou, třeba „v“ nebo „na“, ať věta dává smysl.</small> : null}</label>
-      <div className="stack st6"><span className="lb">Co to bylo</span><Seg label="Co to bylo" value={p.typeId} options={POINT_TYPES.map((t) => [t.id, t.name] as const)} onChange={(v) => { if (!isPointTypeId(v)) return; const t = pointType(v); apply(A.retype(id, { typeId: v })); const keep = new Map(c.bullets.map((b) => [b.key, b])); const was = orgPeople.length ? orgPeople : [meP]; apply(A.savePoint(id, { ...c, bullets: t.defaultBullets.map((b) => keep.get(b.key) ?? (b.kind === 'people' ? { key: b.key, label: b.label, kind: 'people', order: 'input', people: b.role === 'organisers' ? was : [] } : { key: b.key, label: b.label, kind: 'text', text: '' })) as DraftBullet[] })); }} /></div>
     </div>;
   } else if (cur.key === 'org') {
     const noSal = orgPeople.filter((x) => !x.salutation).length;
@@ -126,7 +120,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
       <details className="op"><summary>Upravit úvodní větu</summary><label className="l"><span className="vh">Úvodní věta</span><textarea className="in" value={c.opening} onChange={(e) => set({ opening: e.target.value, openingEdited: true })} /></label>{c.openingEdited ? <button type="button" className="q" onClick={() => apply(A.savePoint(id, { ...c, openingEdited: false }))}>Vrátit větu podle údajů o akci</button> : null}</details></>;
   } else if (cur.key.startsWith('lide-')) {
     const i = Number(cur.key.split('-')[1]); const bul = c.bullets[i] as Extract<DraftBullet, { kind: 'people' }>;
-    const req = Q.specOf(p).find((b) => b.key === bul.key)?.required ?? false;
+    const req = REPORT_BULLETS.find((b) => b.key === bul.key)?.required ?? false;
     const setPeople = (people: readonly DraftPerson[]) => set({ bullets: c.bullets.map((b, j) => (j === i ? { ...bul, people } : b)) });
     const noSal = bul.people.filter((x) => !x.salutation).length;
     ask = bul.key === 'participants' ? 'Kdo se účastnil?' : `${bul.label}?`; help = 'Napište jména, nebo vložte seznam třeba z Excelu. Třídu napište do závorky, například Tereza Malá (3.B).';
@@ -204,7 +198,7 @@ export function Oprava({ id }: { id: string }) {
   if (!p || p.authorId !== s.userId) return <NotFound />;
   const last = p.trail.filter((t) => t.what.startsWith('Vráceno')).at(-1);
   const name = Q.nameOf(Q.userById(s, last?.who ?? ''));
-  const c = p.content; const sts = c.statements; const org = orgAt(p);
+  const c = p.content; const sts = c.statements; const org = organiserAt(p.content);
   // A named part with nothing to show here (a people list, when the organisers are the only one) opens none.
   const shown = (p.parts ?? []).filter((x) => x !== 'people' || c.bullets.some((b, i) => b.kind === 'people' && i !== org));
   const open = shown.length ? shown : NOTE_ONLY;

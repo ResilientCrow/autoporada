@@ -167,11 +167,7 @@ export const points = {
     addPeopleRow: 'Přidat řádek s\u00A0osobami',
     addTextRow: 'Přidat řádek s\u00A0textem',
     remove: 'Odebrat řádek',
-    removeLabel: (label: string) => `Odebrat řádek „${label}“`,
-    removeUnnamed: (n: number) => `Odebrat řádek č.\u00A0${n}`,
     full: (limit: number) => `Bod může mít nejvýše ${limit}\u00A0řádků.`,
-    /** Brings back a row of the type the author took out; `label` is the type's. */
-    restore: (label: string) => `Vrátit řádek „${label}“`,
     /** Under a people row the contract refused. */
     tooManyPeople: 'Řádek má příliš mnoho osob.',
   },

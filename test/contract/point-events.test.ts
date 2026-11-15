@@ -21,7 +21,6 @@ const world = setupWorld();
 const cli = system('cli:test');
 const UNKNOWN_ID = '00000000-0000-7000-8000-999999999999';
 
-const typeId = 'seminar';
 let refs = 0;
 const nextRef = () => `00000000-0000-4000-8000-${String(++refs).padStart(12, '0')}`;
 
@@ -37,7 +36,6 @@ async function makePoint(author: UserRecord, submitted: boolean): Promise<PointR
     const { point } = await tx.points.create({
       clientRef: nextRef(),
       kind: 'report',
-      typeId,
       content: {
         title: 'Seminář o vodě',
         eventDate: calDate(2026, 10, 20),

@@ -48,11 +48,9 @@ const statement = { speaker: person, speakerGenitive: 'paní Evy Malé', quote: 
 
 /** A new point of the author's, made through the use case. */
 async function start(author: UserRecord, kind: PointKind = 'report'): Promise<string> {
-  const typeId = kind === 'report' ? 'soutez' : null;
   const result = await world.run(createPoint, startingAs(world, author, kind), {
     clientRef: randomUUID(),
     kind,
-    typeId,
   });
   if (!result.ok) throw new Error(`create refused: ${result.error.code}`);
   return result.value.id;

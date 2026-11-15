@@ -14,7 +14,7 @@ import {
 import { parsePointJsonb } from '@/contracts';
 import { dueMonday, inIssue, isLateReport, lateFacts, type PoradaClose } from '@/domain/calendar';
 import { admits, can } from '@/domain/policy';
-import { isPointTypeId, type PointContent } from '@/domain/report';
+import type { PointContent } from '@/domain/report';
 import { POINT_MACHINE } from '@/domain/review';
 import { compareDates, isoWeekday, toIsoDate, type CalDate } from '@/domain/time';
 
@@ -53,7 +53,6 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
   if ((row.submittedAt === null) !== (row.handInMonday === null)) {
     throw refusedBy('points_hand_in_set');
   }
-  if ((row.kind === 'report') !== (row.typeId !== null)) throw refusedBy('points_kind_type');
   if (codePoints(c.title) > 200 || codePoints(c.opening) > 1000 || codePoints(c.place) > 120) {
     throw refusedBy('points_lengths');
   }
@@ -67,7 +66,6 @@ function refuse(state: FakeState, row: FakePoint, before?: FakePoint): void {
     throw refusedBy('points_submitted_complete');
   }
   if (!state.users.has(row.authorId)) throw refusedBy('points_author_id_users_id_fk');
-  if (row.typeId !== null && !isPointTypeId(row.typeId)) throw refusedBy('points_type');
   if (row.futureItemId !== null && !state.futureItems.has(row.futureItemId)) {
     throw refusedBy('points_future_item_id_future_items_id_fk');
   }
@@ -196,7 +194,7 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
   };
 
   return {
-    async create({ clientRef, kind, typeId, content, futureItemId }) {
+    async create({ clientRef, kind, content, futureItemId }) {
       guard(tx, true);
       if (principal.kind !== 'user') throw new ScopeViolation();
       const authorId = principal.actor.id;
@@ -210,7 +208,6 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         kind,
         authorId,
         clientRef,
-        typeId,
         futureItemId: futureItemId ?? null,
         state: 'draft',
         content: checked,
@@ -271,7 +268,6 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         .map((p) => ({
           id: p.id,
           kind: p.kind,
-          typeId: p.typeId,
           state: p.state,
           title: p.content.title,
           eventDate: p.content.eventDate,

@@ -1,21 +1,18 @@
-import { isPointTypeId, type PointTypeId } from '@/domain/report';
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface RetypeRequest {
   readonly id: string;
   readonly expectedVersion: number;
-  readonly patch: { typeId: PointTypeId } | { kind: 'finance' | 'pokyn' };
+  readonly kind: 'finance' | 'pokyn';
 }
 
 /**
- * Arch's `{ id, expectedVersion, typeId? | kind? }`: a draft report takes one of the coded types
- * by key (ADR 0064), a draft proposal switches between finance and pokyn. Anything else is null.
+ * Arch's `{ id, expectedVersion, kind }`: a draft proposal switches between finance and pokyn
+ * (a report has no type, ADR 0067). Anything else is null.
  */
 export function retypeRequest(input: unknown): RetypeRequest | null {
-  const { id, expectedVersion, typeId, kind } = (input ?? {}) as Record<string, unknown>;
+  const { id, expectedVersion, kind } = (input ?? {}) as Record<string, unknown>;
   if (typeof id !== 'string' || !UUID.test(id) || typeof expectedVersion !== 'number') return null;
-  if (isPointTypeId(typeId)) return { id, expectedVersion, patch: { typeId } };
-  if (kind === 'finance' || kind === 'pokyn') return { id, expectedVersion, patch: { kind } };
+  if (kind === 'finance' || kind === 'pokyn') return { id, expectedVersion, kind };
   return null;
 }

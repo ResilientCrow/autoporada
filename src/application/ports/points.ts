@@ -1,4 +1,4 @@
-import type { PointContent, PointKind, PointTypeId } from '@/domain/report';
+import type { PointContent, PointKind } from '@/domain/report';
 import type { PointState } from '@/domain/review';
 import type { CalDate, WallTime } from '@/domain/time';
 
@@ -7,8 +7,6 @@ export interface PointRecord {
   readonly id: string;
   readonly kind: PointKind;
   readonly authorId: string;
-  /** The point type of a report; null for finance and pokyn. */
-  readonly typeId: PointTypeId | null;
   readonly state: PointState;
   readonly content: PointContent;
   /** The akce a report answers; null for every other point. Fixed at the create. */
@@ -45,7 +43,6 @@ export interface NewPoint {
   /** The draft's id in the author's browser: a retried create finds the row it made. */
   readonly clientRef: string;
   readonly kind: PointKind;
-  readonly typeId: PointTypeId | null;
   readonly content: PointContent;
   /** The akce the report answers. */
   readonly futureItemId?: string;
@@ -74,7 +71,7 @@ export interface PointPatch {
  */
 export type PointSummary = Pick<
   PointRecord,
-  'id' | 'kind' | 'typeId' | 'state' | 'earliestMonday' | 'handInMonday' | 'version' | 'updatedAt'
+  'id' | 'kind' | 'state' | 'earliestMonday' | 'handInMonday' | 'version' | 'updatedAt'
 > &
   Pick<PointContent, 'title' | 'eventDate'> & { readonly returnNote: string | null };
 

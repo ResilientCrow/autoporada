@@ -16,13 +16,7 @@ import {
 
 import type { PointEventName } from '@/application/ports';
 import type { Campus } from '@/domain/cs';
-import {
-  POINT_TYPE_IDS,
-  type DraftBullet,
-  type DraftStatement,
-  type PointFieldValues,
-  type PointTypeId,
-} from '@/domain/report';
+import { type DraftBullet, type DraftStatement, type PointFieldValues } from '@/domain/report';
 import { MAX_RETURN_PARTS } from '@/domain/review';
 import type { RichDoc } from '@/domain/richtext';
 
@@ -55,7 +49,6 @@ const campusList = sql.raw(
     .join(','),
 );
 /** The keys of the report types fixed in code (ADR 0064). */
-const typeList = sql.raw(POINT_TYPE_IDS.map((type) => `'${type}'`).join(','));
 
 /**
  * A point for the meeting: a report, or a HOSPODAŘENÍ or POKYNY proposal
@@ -74,8 +67,6 @@ export const points = pgTable(
       .references(() => users.id),
     /** The draft's id in the author's browser: a retried create finds the row it made. */
     clientRef: uuid().notNull(),
-    /** A report's type, by its key in `POINT_TYPES` (ADR 0064); null for finance and pokyn. */
-    typeId: text().$type<PointTypeId>(),
     state: pointState().notNull().default('draft'),
     title: text().notNull().default(''),
     eventDate: date({ mode: 'string' }),
@@ -116,12 +107,10 @@ export const points = pgTable(
     index('points_eligible_idx')
       .on(t.state, t.handInMonday)
       .where(sql`${t.state} = 'approved'`),
-    check('points_kind_type', sql`(${t.kind} = 'report') = (${t.typeId} IS NOT NULL)`),
     check(
       'points_dates',
       sql`${t.endDate} IS NULL OR (${t.eventDate} IS NOT NULL AND ${t.endDate} >= ${t.eventDate})`,
     ),
-    check('points_type', sql`${t.typeId} IS NULL OR ${t.typeId} IN (${typeList})`),
     check('points_campus', sql`${t.campus} IS NULL OR ${t.campus} IN (${campusList})`),
     check(
       'points_monday',

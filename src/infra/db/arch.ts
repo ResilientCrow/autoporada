@@ -8,7 +8,6 @@ import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { TxContext } from '@/application/ports';
 import { SETTINGS } from '@/contracts';
 import { calendarBoundary } from '@/domain/calendar';
-import type { PointTypeId } from '@/domain/report';
 import { compareDates, instantToWallClock, parseIsoDate, type CalDate } from '@/domain/time';
 
 import type { Database } from './client';
@@ -165,26 +164,24 @@ export function createArchStore(db: Database) {
       });
     },
 
-    /** The author's own draft or returned point; the new version, or null on a stale version. */
+    /** The author's own finance or pokyn draft or returned point, moved to the other kind; the new version, or null on a stale version. */
     async retype(input: {
       id: string;
       authorId: string;
       expectedVersion: number;
-      patch: { typeId: PointTypeId } | { kind: 'finance' | 'pokyn' };
+      kind: 'finance' | 'pokyn';
     }): Promise<number | null> {
-      const { id, authorId, expectedVersion, patch } = input;
+      const { id, authorId, expectedVersion, kind } = input;
       const [row] = await db
         .update(points)
-        .set({ ...patch, version: sql`${points.version} + 1`, updatedAt: sql`now()` })
+        .set({ kind, version: sql`${points.version} + 1`, updatedAt: sql`now()` })
         .where(
           and(
             eq(points.id, id),
             eq(points.authorId, authorId),
             eq(points.version, expectedVersion),
             inArray(points.state, ['draft', 'returned']),
-            'kind' in patch
-              ? inArray(points.kind, ['finance', 'pokyn'])
-              : eq(points.kind, 'report'),
+            inArray(points.kind, ['finance', 'pokyn']),
           ),
         )
         .returning({ version: points.version });

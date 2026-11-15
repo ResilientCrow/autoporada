@@ -4,7 +4,6 @@
  * the ids and versions the server knows by then.
  */
 import { contentWire } from '@/contracts/point';
-import type { PointTypeId } from '@/domain/report';
 import { toIsoDate, toIsoTime } from '@/domain/time';
 import { emptyRichDoc, type RichDoc } from '@/domain/richtext';
 import type { CalDate } from '@/domain/time';
@@ -25,9 +24,9 @@ export interface Ctx { s: State; vers: Record<string, number>; real: (id: string
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ---- the actions the screens call ----
-export const createPoint = (kind: PointKind, typeId: PointTypeId | null, akceId: string | null, onId?: (id: string) => void): Fx => {
-  const op: Op = { k: 'createPoint', a: [kind, typeId, akceId] };
-  return tag(S.createPoint(kind, typeId, akceId, (id) => { op.tmp = id; onId?.(id); }), op);
+export const createPoint = (kind: PointKind, akceId: string | null, onId?: (id: string) => void): Fx => {
+  const op: Op = { k: 'createPoint', a: [kind, akceId] };
+  return tag(S.createPoint(kind, akceId, (id) => { op.tmp = id; onId?.(id); }), op);
 };
 export const createFuture = (kind: Future['kind'], onId?: (id: string) => void): Fx => {
   const op: Op = { k: 'createFuture', a: [kind] };
@@ -94,7 +93,7 @@ export const cancelRequest = simple('cancelRequest', S.cancelRequest);
 export const decideRequest = simple('decideRequest', S.decideRequest);
 export const setUser = simple('setUser', S.setUser);
 /** A draft's type or kind; the real app fixes them at the create, the bridge lets the author change a draft's. */
-export const retype = (id: string, patch: { typeId?: PointTypeId; kind?: PointKind }): Fx => tag((s) => ({ ...s, points: s.points.map((x) => (x.id === id ? { ...x, ...patch } : x)) }), { k: 'retype', a: [id, patch] });
+export const retype = (id: string, patch: { kind: PointKind }): Fx => tag((s) => ({ ...s, points: s.points.map((x) => (x.id === id ? { ...x, ...patch } : x)) }), { k: 'retype', a: [id, patch] });
 /** The session lives at the server: these leave the app for its sign-out and step-up. */
 export const signOut: Fx = tag((s) => s, { k: 'signOut', a: [] });
 export const signOutAll: Fx = tag((s) => s, { k: 'signOut', a: ['all'] });
@@ -130,9 +129,9 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
   const content = (id: string) => contentWire(pt(id)!.content);
   switch (op.k) {
     case 'createPoint': {
-      const [kind, typeId, akceId] = a as unknown as [PointKind, string | null, string | null];
-      if (akceId) return [{ name: 'future.startReport', tmp: op.tmp!, input: { id: real(akceId), typeId } }];
-      return [{ name: 'points.create', tmp: op.tmp!, input: { clientRef: uuid(), kind, typeId: kind === 'report' ? typeId : null } }];
+      const [kind, akceId] = a as unknown as [PointKind, string | null];
+      if (akceId) return [{ name: 'future.startReport', tmp: op.tmp!, input: { id: real(akceId) } }];
+      return [{ name: 'points.create', tmp: op.tmp!, input: { clientRef: uuid(), kind } }];
     }
     case 'savePoint': return pt(a[0]) ? [{ name: 'points.save', key: real(a[0]), input: { ...pw(a[0]), content: content(a[0]) } }] : [];
     case 'submitPoint': return [{ name: 'points.submit', key: real(a[0]), input: { ...pw(a[0]), content: content(a[0]) } }];

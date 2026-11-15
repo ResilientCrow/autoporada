@@ -9,7 +9,6 @@ const SECRET = 'jana.novakova@ssps.cz';
 const PERSON = `{"salutation":"pan","givenName":"Jan","familyName":"${SECRET}"}`;
 
 let authorId = '';
-const typeId = 'seminar';
 
 const newAuthor = async () => {
   const [user] = await database.owner<{ id: string }>(
@@ -32,11 +31,10 @@ interface Jsonb {
 /** A draft as the owner, past the repository, with jsonb the contract refuses. */
 const storeRow = async (jsonb: Jsonb, author = authorId) => {
   const [row] = await database.owner<{ id: string }>(
-    `INSERT INTO points (kind, author_id, client_ref, type_id, title, body, bullets, statements)
-     VALUES ('report', $1, gen_random_uuid(), $2, 'Tajný název', $3, $4, $5) RETURNING id`,
+    `INSERT INTO points (kind, author_id, client_ref, title, body, bullets, statements)
+     VALUES ('report', $1, gen_random_uuid(), 'Tajný název', $2, $3, $4) RETURNING id`,
     [
       author,
-      typeId,
       jsonb.body ?? '{"type":"doc","content":[]}',
       jsonb.bullets ?? '[]',
       jsonb.statements ?? '[]',

@@ -28,9 +28,9 @@ in v1 unless the [plan of record](plan.md) changes first.
 
 - Report points for INFORMACE Z PROVOZU ŠKOLY:
   - structured fields that produce a pre-written opening sentence;
-  - six report types fixed in code (Seminář, Exkurze, Soutěž, Přednáška,
-    Projektový den, Jiné; ADR 0064), each with the grammar of its opening
-    sentence and its labelled bullets; there is no setting for them;
+  - no report types: the opening sentence reads its grammar from the
+    title (ADR 0067), and every report starts with the same rows
+    (Organizátoři, Účastníci);
   - at least one participant list and one vyjádření, both mandatory;
   - a live document preview.
 - People memory: the people from the author's own earlier points, with their salutation, class and genitive form. Nothing

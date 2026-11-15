@@ -133,7 +133,7 @@ export function Pridat() {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const rows = iss?.rows ?? [];
   const narrow = useNarrow(); const [hot, setHot] = useState<string | null>(null);
   const future = (k: 'akce' | 'jednani') => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
-  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
+  const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', null, cb)); go(`/psat/${id}/zaklad`); };
   const { points, partners, meetings } = Q.addable(rows, iss ? Q.outlineOf(Q.buildDoc(s, m, { pending: true })) : []);
   // On a desktop the desk glides to the point a row adds to, and a row with no point clears the mark; on a phone the document is folded away.
   const hv = (id?: string) => (narrow ? {} : { hot: () => setHot(id ?? null) });

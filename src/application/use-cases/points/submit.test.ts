@@ -247,7 +247,6 @@ describe('points.submit', () => {
       world.clock.set(new Date('2026-11-15T10:00:00Z'));
       const started = await world.run(startFutureReport, world.as(author), {
         id: akce,
-        typeId: 'soutez',
       });
       if (!started.ok) throw new Error(`startReport refused: ${started.error.code}`);
       return { author, akce, id: started.value.pointId };

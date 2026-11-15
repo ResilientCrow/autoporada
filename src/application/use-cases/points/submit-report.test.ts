@@ -28,10 +28,9 @@ async function startedReport(author: UserRecord) {
   world.clock.advance(30 * DAY);
   const started = await world.run(startFutureReport, world.as(author), {
     id: itemId,
-    typeId: 'soutez',
   });
   if (!started.ok) throw new Error(`start refused: ${started.error.code}`);
-  return { itemId, pointId: started.value.pointId, typeId: 'soutez' as const };
+  return { itemId, pointId: started.value.pointId };
 }
 const submit = (by: UserRecord, id: string, expectedVersion = 1) =>
   world.run(submitPoint, world.as(by), { id, expectedVersion, content: readyReport() });
@@ -95,12 +94,11 @@ describe('points.submit for a report that answers an akce', () => {
 
   it('leaves the akce alone for a second point that names it but is not its report', async () => {
     const author = await user();
-    const { itemId, typeId } = await startedReport(author);
+    const { itemId } = await startedReport(author);
     const stray = await world.tx(world.as(author), async (tx) => {
       const { point } = await tx.points.create({
         clientRef: '00000000-0000-4000-8000-0000000000aa',
         kind: 'report',
-        typeId,
         content: newDraft(BULLETS),
         futureItemId: itemId,
       });

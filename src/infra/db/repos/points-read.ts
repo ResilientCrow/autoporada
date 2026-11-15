@@ -39,7 +39,6 @@ export const POINT_ROW = {
   id: points.id,
   kind: points.kind,
   authorId: points.authorId,
-  typeId: points.typeId,
   state: points.state,
   title: points.title,
   eventDate: points.eventDate,
@@ -71,12 +70,11 @@ export function parseJsonb(value: { [K in keyof PointJsonb]: unknown }): PointJs
 }
 
 export function toRecord(row: PointRow): PointRecord {
-  const { id, kind, authorId, typeId, state, version, updatedAt, submittedAt } = row;
+  const { id, kind, authorId, state, version, updatedAt, submittedAt } = row;
   return {
     id,
     kind,
     authorId,
-    typeId,
     state,
     content: {
       title: row.title,
@@ -139,7 +137,6 @@ const returnNote = sql<string | null>`(
 const SUMMARY_ROW = {
   id: points.id,
   kind: points.kind,
-  typeId: points.typeId,
   state: points.state,
   title: points.title,
   eventDate: points.eventDate,

@@ -96,7 +96,6 @@ const create = async (by: Principal, over: Partial<NewPoint> = {}) => {
     const result = await tx.points.create({
       clientRef: nextRef(),
       kind: 'report',
-      typeId,
       content: EMPTY,
       ...over,
     });
@@ -105,8 +104,6 @@ const create = async (by: Principal, over: Partial<NewPoint> = {}) => {
   });
   return { point, inserted };
 };
-
-const typeId = 'seminar';
 
 const update = (by: Principal, point: PointRecord, patch: PointPatch, version = point.version) =>
   audited(by, (tx) => tx.points.update(point.id, version, patch));
@@ -131,7 +128,6 @@ describe('PointRepo (port contract)', () => {
       id: first.point.id,
       kind: 'report',
       authorId: author.id,
-      typeId,
       state: 'draft',
       content: FULL,
       futureItemId: null,
@@ -184,15 +180,15 @@ describe('PointRepo (port contract)', () => {
 
   it('reads back finance and pokyn points, which have no type', async () => {
     const author = await world.seed.user({ role: 'submitter' });
-    const { point } = await create(world.as(author), { kind: 'pokyn', typeId: null });
+    const { point } = await create(world.as(author), { kind: 'pokyn' });
     expect(await read(world.as(author), (tx) => tx.points.get(point.id))).toEqual(point);
-    expect(point).toMatchObject({ kind: 'pokyn', typeId: null, content: EMPTY });
+    expect(point).toMatchObject({ kind: 'pokyn', content: EMPTY });
   });
 
   it('refuses the system as an author', async () => {
     const refused = failure(
       world.tx(cli, (tx) =>
-        tx.points.create({ clientRef: nextRef(), kind: 'report', typeId, content: EMPTY }),
+        tx.points.create({ clientRef: nextRef(), kind: 'report', content: EMPTY }),
       ),
     );
     expect(await refused).toBeInstanceOf(ScopeViolation);
@@ -203,7 +199,7 @@ describe('PointRepo (port contract)', () => {
     const colleague = await world.seed.user({ role: 'submitter' });
     const clientRef = nextRef();
     const mine = await create(world.as(author), { clientRef });
-    await create(world.as(author), { kind: 'finance', typeId: null });
+    await create(world.as(author), { kind: 'finance' });
     const returned = await create(world.as(author));
     await update(world.as(author), returned.point, { state: 'returned' });
     const theirRef = nextRef();
@@ -236,7 +232,6 @@ describe('PointRepo (port contract)', () => {
       const { point } = await tx.points.create({
         clientRef: nextRef(),
         kind: 'pokyn',
-        typeId: null,
         content: EMPTY,
       });
       order.push('first created');
@@ -483,7 +478,6 @@ describe('PointRepo (port contract)', () => {
 
   /** Each case makes a draft from `created`, then applies `patches`; the last write is refused. */
   it.each<[string, Partial<NewPoint>, PointPatch[]]>([
-    ['points_kind_type', { typeId: null }, []],
     ['points_dates', { content: { ...FULL, endDate: calDate(2026, 10, 19) } }, []],
     ['points_lengths', { content: { ...FULL, title: 'x'.repeat(201) } }, []],
     ['points_monday', {}, [{ ...SUBMIT, earliestMonday: calDate(2026, 10, 27) }]],
@@ -507,12 +501,6 @@ describe('PointRepo (port contract)', () => {
     expect(await failure(write())).toEqual(new DatabaseFailure(`db.constraint.${constraint}`));
   });
 
-  it('refuses a type that is not in the list, as points_type', async () => {
-    const author = await world.seed.user({ role: 'submitter' });
-    const made = create(world.as(author), { typeId: 'beseda' as never });
-    expect(await failure(made)).toEqual(new DatabaseFailure('db.constraint.points_type'));
-  });
-
   it('keeps a user who wrote a point: erasing them is refused', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { point } = await create(world.as(author));
@@ -527,7 +515,6 @@ describe('PointRepo (port contract)', () => {
 const summary = (p: PointRecord) => ({
   id: p.id,
   kind: p.kind,
-  typeId: p.typeId,
   state: p.state,
   title: p.content.title,
   eventDate: p.content.eventDate,
@@ -855,7 +842,7 @@ describe.runIf(inject('world') === 'fake')('point audit coverage in the fake wor
     const author = await world.seed.user({ role: 'submitter' });
     const unaudited = (work: (tx: Tx) => Promise<unknown>) =>
       failure(world.tx(world.as(author), work));
-    const newPoint = { clientRef: nextRef(), kind: 'report', typeId, content: EMPTY } as const;
+    const newPoint = { clientRef: nextRef(), kind: 'report', content: EMPTY } as const;
     expect(await unaudited((tx) => tx.points.create(newPoint))).toBeInstanceOf(UnauditedWrite);
     const { point } = await create(world.as(author));
     expect(await unaudited((tx) => tx.points.update(point.id, 1, {}))).toBeInstanceOf(

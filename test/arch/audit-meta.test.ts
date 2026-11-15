@@ -48,7 +48,7 @@ const TEXT_FIELDS = new Set([
   'email',
   'jobTitle',
   'department',
-  'defaultBullets',
+  'bullets',
   'organizer',
   'participants',
   'paragraph',
@@ -220,17 +220,17 @@ describe('the audit shape scan itself', () => {
     expect(shapeTextFields(file(text))).toEqual([]);
   });
 
-  it("reports a text field shown as its value or through a function (a point type's name and bullets)", () => {
+  it("reports a text field shown as its value or through a function (a name and rows)", () => {
     const text = [
       'export const S: AuditShape<R> = {',
       "  name: 'value',",
-      '  defaultBullets: (bullets) => bullets.map((b) => ({ ...b })),',
+      '  bullets: (rows) => rows.map((b) => ({ ...b })),',
       "  active: 'value',",
       '};',
     ].join('\n');
     expect(shapeTextFields(file(text))).toEqual([
       'x.ts:2: audit shape field name',
-      'x.ts:3: audit shape field defaultBullets',
+      'x.ts:3: audit shape field bullets',
     ]);
   });
 

@@ -3,7 +3,7 @@ import type { FutureItemRecord } from '@/application/ports';
 import { startFutureReportInput, startFutureReportOutput } from '@/contracts';
 import { eventEnd, lateFacts } from '@/domain/calendar';
 import type { Check } from '@/domain/policy';
-import { DRAFT_CAP, pointType } from '@/domain/report';
+import { DRAFT_CAP, REPORT_BULLETS } from '@/domain/report';
 import { reportDue } from '@/domain/review';
 
 import { pointEvent } from '../points/events';
@@ -57,7 +57,7 @@ export const startFutureReport = defineUseCase({
   input: startFutureReportInput,
   output: startFutureReportOutput,
   access: reportAccess,
-  async execute({ tx, now }, { typeId }, item) {
+  async execute({ tx, now }, _input, item) {
     if (!owed(item, now)) return fail({ code: 'rule', rule: 'report-not-due' });
     const linked = item.reportPointId === null ? null : await tx.points.get(item.reportPointId);
     if (linked && linked.state !== 'withdrawn') return ok({ pointId: linked.id });
@@ -69,8 +69,7 @@ export const startFutureReport = defineUseCase({
     const { point } = await tx.points.create({
       clientRef,
       kind: 'report',
-      typeId,
-      content: prefilledReport(item.content, pointType(typeId).defaultBullets),
+      content: prefilledReport(item.content, REPORT_BULLETS),
       futureItemId: item.id,
     });
     await tx.audit.record(pointEvent('point.created', null, point));

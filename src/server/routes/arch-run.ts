@@ -149,7 +149,7 @@ async function saveAnnexes(actor: Parameters<typeof can>[0], input: unknown): Pr
     : json({ ok: false, error: { code: 'conflict' } }, 409);
 }
 
-/** The author changes the type of a draft report, or a draft proposal between finance and pokyn. */
+/** The author moves a draft proposal between finance and pokyn. */
 async function retype(userId: string, input: unknown): Promise<Response> {
   const decision = getContainer().limiter.take('submission', userId);
   if (!decision.ok) return rateLimited(decision.retryAfterMs);

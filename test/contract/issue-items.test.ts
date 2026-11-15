@@ -135,7 +135,6 @@ describe('IssueItemRepo (port contract)', () => {
         const { point } = await tx.points.create({
           clientRef: uuid(900),
           kind: 'pokyn',
-          typeId: null,
           content: {
             title: '',
             eventDate: null,

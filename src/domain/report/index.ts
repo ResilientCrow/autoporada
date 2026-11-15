@@ -8,6 +8,7 @@ export {
   type PointKind,
   type ProposalKind,
 } from './content';
+export { OPENING_KEYS, organiserAt, REPORT_BULLETS } from './bullets';
 export { draftBullet, newDraft } from './draft';
 export {
   contentBytes,
@@ -29,11 +30,3 @@ export {
   type Warning,
 } from './readiness';
 export { diffPointFields, pointFieldValues, type PointField, type PointFieldValues } from './diff';
-export {
-  isPointTypeId,
-  POINT_TYPE_IDS,
-  POINT_TYPES,
-  pointType,
-  type PointType,
-  type PointTypeId,
-} from './types';

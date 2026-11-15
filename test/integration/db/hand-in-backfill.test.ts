@@ -20,7 +20,6 @@ const MIGRATION = readFileSync(join(MIGRATIONS_DIR, '0027_hand_in_backfill.sql')
 
 const database = setupTestDatabase();
 let authorId = '';
-const typeId = 'seminar';
 
 beforeAll(async () => {
   const [user] = await database.owner<{ id: string }>(
@@ -41,9 +40,9 @@ beforeEach(() =>
 /** A draft report handed in at `at` before the backfill: the state a deployed database is in. */
 async function handedIn(at: Date): Promise<string> {
   const [row] = await database.owner<{ id: string }>(
-    `INSERT INTO points (kind, author_id, client_ref, type_id, body, submitted_at)
-     VALUES ('report', $1, $2, $3, '{"type":"doc","content":[]}', $4) RETURNING id`,
-    [authorId, randomUUID(), typeId, at],
+    `INSERT INTO points (kind, author_id, client_ref, body, submitted_at)
+     VALUES ('report', $1, $2, '{"type":"doc","content":[]}', $3) RETURNING id`,
+    [authorId, randomUUID(), at],
   );
   return row!.id;
 }
@@ -91,9 +90,9 @@ describe('the hand-in Monday backfill (migration 0027)', () => {
 
   it('leaves a point nobody handed in without a Monday, and bumps the version of the others', async () => {
     const [draft] = await database.owner<{ id: string }>(
-      `INSERT INTO points (kind, author_id, client_ref, type_id, body)
-       VALUES ('report', $1, $2, $3, '{"type":"doc","content":[]}') RETURNING id`,
-      [authorId, randomUUID(), typeId],
+      `INSERT INTO points (kind, author_id, client_ref, body)
+       VALUES ('report', $1, $2, '{"type":"doc","content":[]}') RETURNING id`,
+      [authorId, randomUUID()],
     );
     const id = await handedIn(new Date('2026-10-21T08:00:00Z'));
     await migrate();

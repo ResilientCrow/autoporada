@@ -17,7 +17,6 @@ const MAX_CONTENT = 262_144;
 const { title: TITLE, opening: OPENING, place: PLACE, note: NOTE } = POINT_LIMITS;
 
 let authorId = '';
-const typeId = 'seminar';
 
 beforeAll(async () => {
   const [user] = await database.owner<{ id: string }>(
@@ -49,7 +48,6 @@ const insertPoint = async (row: Row = {}) => {
     kind: 'report',
     author_id: authorId,
     client_ref: randomUUID(),
-    type_id: typeId,
     body: '{"type":"doc","content":[]}',
     ...row,
   });
@@ -91,7 +89,7 @@ describe('point guards (migrations 0015 and 0016)', () => {
     await insertPoint();
     await insertPoint(SUBMITTED);
     await insertPoint({
-      ...{ kind: 'finance', type_id: null, state: 'approved', title: 'Nákup tabulí' },
+      ...{ kind: 'finance', state: 'approved', title: 'Nákup tabulí' },
       ...{ earliest_monday: '2026-11-02', submitted_at: '2026-10-21T08:00:00Z' },
       hand_in_monday: '2026-11-02',
     });
@@ -112,8 +110,6 @@ describe('point guards (migrations 0015 and 0016)', () => {
   });
 
   it.each([
-    [{ kind: 'report', type_id: null }, 'points_kind_type'],
-    [{ kind: 'finance' }, 'points_kind_type'],
     [{ campus: 'karlin' }, 'points_campus'],
     [{ earliest_monday: '2026-10-27' }, 'points_monday'],
     [{ title: 'x'.repeat(TITLE + 1) }, 'points_lengths'],
