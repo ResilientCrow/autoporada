@@ -140,16 +140,16 @@ export function Pridat() {
     <Sec h="Nové">
       <Item act={() => future('akce')} t="Akce" st="Podle data se zařadí sama" end={PLUS} />
       <Item act={() => future('jednani')} t="Jednání" st={meetRow ? until(meetings, meetRow.title) : 'Zařadí se mezi jednání'} end={PLUS} />
-      {iss ? <Item to="/porada/pokyny-novy" t="Bod" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} /> : null}
+      {iss ? <Item to="/porada/pokyny-novy?z=pridat" t="Bod" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} /> : null}
       <Item act={report} t="Zpráva o tom, co proběhlo" st="Do Provozu školy, s účastníky a vyjádřením" end={PLUS} />
-      {partners ? <Item to={`/porada/pokyny/${partners.row.id}`} t="Ohlas sociálního partnera" st={`${until(partners.n, partners.row.title)}, teď ${partners.row.quotes.length}`} end={PLUS} /> : null}
+      {partners ? <Item to={`/porada/pokyny/${partners.row.id}?z=pridat`} t="Ohlas sociálního partnera" st={`${until(partners.n, partners.row.title)}, teď ${partners.row.quotes.length}`} end={PLUS} /> : null}
       <Item to="/seznamy" t="Student do seznamu" st="Talentovaní studenti nebo uvolnění z výuky" />
       {iss ? <Item to="/porada/prilohy" t="Příloha" st="Text, tabulka nebo obrázek" /> : null}
     </Sec>
-    {points.length ? <Sec h="Doplnit do bodu, který v poradě už je">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} />)}</Sec> : null}
+    {points.length ? <Sec h="Doplnit do bodu, který v poradě už je">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}?z=pridat`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} />)}</Sec> : null}
   </>} />;
 }
-export function Pokyny({ rowId, adding, section }: { rowId?: string; adding?: boolean; section?: 'pokyny' | 'hospodareni' }) {
+export function Pokyny({ rowId, adding, section, from }: { rowId?: string; adding?: boolean; section?: 'pokyny' | 'hospodareni'; from?: 'pridat' }) {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m)!;
   const row = iss.rows.find((r) => r.id === rowId);
   const [title, setT] = useState(row?.title ?? ''); const [body, setB] = useState(row ? annexToText(row.body) : ''); const [per, setP] = useState<'standing' | 'once'>(row?.persistence ?? 'once'); const [sec, setSec] = useState<'pokyny' | 'hospodareni'>(row?.section ?? section ?? 'pokyny');
@@ -164,9 +164,10 @@ export function Pokyny({ rowId, adding, section }: { rowId?: string; adding?: bo
   if (row || adding) {
     const proposal = row?.pointId ?? null;
     const gen = row && (proposal || row.slot === 'meetings' || row.slot === 'events' || row.slot === 'talent' || row.slot === 'exemptions');
-    const done = () => go('/porada/pokyny');
+    const back = from === 'pridat' ? { to: '/pridat', t: 'Zpět na přidávání' } : { to: '/porada/pokyny', t: 'Zpět na pokyny' };
+    const done = () => go(back.to);
     return <App nar desk={<WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." {...(row ? { focus: (x: Q.Segment) => x.refId === row.id } : {})} />} dock={gen ? undefined : <div className="dock">{!qOk ? <p className="hint a">U každého ohlasu vyplňte, kdo ho napsal, a jeho text.</p> : null}<div className="row"><button type="button" className={`btn lg ${canSave ? 'go' : 'off'}`} aria-disabled={!canSave} onClick={() => { if (!canSave) return; if (row && partners) apply(A.saveRow(m, row.id, { title, quotes: cleanQ(), persistence: per })); else if (row) apply(A.saveRow(m, row.id, { title, body: annexDoc(body), persistence: per })); else apply(A.addRow(m, sec, title, annexDoc(body), per)); done(); }}>Uložit</button></div></div>} col={<>
-      <Back to="/porada/pokyny" t="Zpět na pokyny" /><Top h={adding ? 'Nový bod' : row!.title} {...(gen ? { lead: proposal ? 'Text schváleného návrhu se upravuje v kontrole, tady ho lze jen přesunout.' : row!.slot === 'talent' || row!.slot === 'exemptions' ? 'Tento bod se plní ze seznamů studentů.' : 'Tento bod se plní sám ze schválených akcí.' } : {})} />
+      <Back to={back.to} t={back.t} /><Top h={adding ? 'Nový bod' : row!.title} {...(gen ? { lead: proposal ? 'Text schváleného návrhu se upravuje v kontrole, tady ho lze jen přesunout.' : row!.slot === 'talent' || row!.slot === 'exemptions' ? 'Tento bod se plní ze seznamů studentů.' : 'Tento bod se plní sám ze schválených akcí.' } : {})} />
       {proposal ? <a className="btn lg w" href={`#/navrh/${proposal}`}>Otevřít návrh</a> : gen ? <a className="btn lg w" href={row!.slot === 'talent' || row!.slot === 'exemptions' ? '#/seznamy' : '#/akce'}>{row!.slot === 'talent' || row!.slot === 'exemptions' ? 'Otevřít seznamy' : 'Otevřít akce'}</a> : <div className="stack">
         {adding ? <Seg label="Sekce" value={sec} options={[['pokyny', 'Pokyny'], ['hospodareni', 'Hospodaření']]} onChange={setSec} /> : null}
         <label className="l">Název<input className="in" autoFocus={!!adding} value={title} onChange={(e) => setT(e.target.value)} /></label>

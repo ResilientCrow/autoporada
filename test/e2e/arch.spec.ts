@@ -412,18 +412,21 @@ test.describe('the Arch UI', () => {
     // A partner's words, kept after a reload.
     await page.goto('/#/pridat');
     await page.getByRole('link', { name: /Ohlas sociálního partnera/ }).click();
+    // Opened from here, the point leads back here.
+    await expect(page.getByRole('link', { name: 'Zpět na přidávání' })).toBeVisible();
     await page.getByRole('button', { name: 'Přidat ohlas' }).click();
     await page.getByLabel(/Kdo ho napsal/).fill('pana Jana Nováka');
     await page.getByLabel(/Text ohlasu/).fill('Děkujeme za spolupráci.');
     await page.getByRole('button', { name: 'Uložit', exact: true }).click();
     await expect(page.getByRole('alert')).toHaveCount(0);
-    await page.goto('/#/pridat');
+    await expect(page).toHaveURL(/#\/pridat$/);
     await page.reload();
     await page.getByRole('link', { name: /Ohlas sociálního partnera.*teď 1/ }).click();
     await expect(page.getByLabel(/Kdo ho napsal/)).toHaveValue('pana Jana Nováka');
     await page.getByRole('button', { name: 'Odebrat ohlas' }).click();
     await page.getByRole('button', { name: 'Uložit', exact: true }).click();
     await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page).toHaveURL(/#\/pridat$/);
 
     // A new list of students, and its line in the bod o uvolnění renamed.
     const list = `Němčina ${Date.now()}`;

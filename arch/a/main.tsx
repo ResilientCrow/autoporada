@@ -18,6 +18,8 @@ function Router() {
   if (!u) return <Login />;
   if (u.role === 'pending' || u.status === 'blocked') return <Pristup />;
   const head = u.role === 'headmaster'; const staff = Q.atLeast(u.role, 'reviewer');
+  // A point opened from Přidat do porady returns there once saved.
+  const fromPridat = r.q.get('z') === 'pridat' ? { from: 'pridat' as const } : {};
   switch (a) {
     case undefined: return <Domu />;
     case 'tyden': return <Tyden />;
@@ -37,8 +39,8 @@ function Router() {
       if (!head) return <NotFound />;
       if (b === 'udaje') return <Udaje />;
       if (b === 'prilohy') return <Prilohy key={c ?? 'list'} {...(c ? { id: c } : {})} />;
-      if (b === 'pokyny') return <Pokyny key={c ?? 'list'} {...(c ? { rowId: c } : {})} />;
-      if (b === 'pokyny-novy') return <Pokyny key="new" adding section={r.q.get('sekce') === 'hospodareni' ? 'hospodareni' : 'pokyny'} />;
+      if (b === 'pokyny') return <Pokyny key={c ?? 'list'} {...(c ? { rowId: c } : {})} {...fromPridat} />;
+      if (b === 'pokyny-novy') return <Pokyny key="new" adding section={r.q.get('sekce') === 'hospodareni' ? 'hospodareni' : 'pokyny'} {...fromPridat} />;
       if (b === 'zpravy') return <Zpravy />;
       if (b === 'nahled') return <Nahled />;
       return <Porada />;
