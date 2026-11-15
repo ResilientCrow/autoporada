@@ -7,30 +7,16 @@
 import { z } from 'zod';
 
 import { can } from '@/domain/policy';
+import { ANNEXES_MAX_BYTES } from '@/domain/report';
 import { issueAnnexSchema } from '@/snapshot';
 
 import { getContainer } from '../container';
 import { runAction, sessionTokenFrom, type RouteSpec } from '../pipeline';
+import { json, rateLimited } from './arch-http';
 import { retypeRequest } from './arch-retype';
 import { archState } from './arch-state';
 
 type UserLimitName = 'autosave' | 'submission' | 'admin';
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
-
-/** A refused write says how long to wait, as `runAction` does, so the client can name it. */
-const rateLimited = (retryAfterMs: number): Response =>
-  json(
-    {
-      ok: false,
-      error: { code: 'rate-limited', retryAfterSeconds: Math.ceil(retryAfterMs / 1000) },
-    },
-    429,
-  );
 
 export const AUTOSAVE = new Set(['points.save', 'future.save']);
 export const SUBMISSION = new Set([
@@ -51,7 +37,10 @@ export const SUBMISSION = new Set([
 export const limitOf = (name: string): UserLimitName =>
   AUTOSAVE.has(name) ? 'autosave' : SUBMISSION.has(name) ? 'submission' : 'admin';
 
-const MAX_BODY_BYTES = 6_000_000; // annexes with pictures, base64 inflated
+/** The headmaster's annexes with pictures: the 3.5 MB annex cap and their ids; Caddy's `@run` matches it. */
+export const MAX_BODY_BYTES = 4_000_000;
+/** Every other body is a few fields; anyone without `issue.edit` is refused above this before it is parsed. */
+export const SMALL_BODY_BYTES = 1_000_000;
 
 /** GET /api/arch/state: the viewer's state. Signed out, the pipeline redirects; the client then shows its sign-in. */
 export const archStateSpec: RouteSpec = {
@@ -70,10 +59,14 @@ export const archRunSpec: RouteSpec = {
   rateLimit: 'none',
   async handle(request, ctx) {
     const principal = ctx.principal!;
-    const c = getContainer();
     const size = Number(request.headers.get('content-length'));
-    if (!size || size > MAX_BODY_BYTES)
+    if (
+      !size ||
+      size > MAX_BODY_BYTES ||
+      (size > SMALL_BODY_BYTES && !can(principal.actor, { action: 'issue.edit' }))
+    )
       return json({ ok: false, error: { code: 'too-long' } }, 413);
+    const c = getContainer();
     const body = (await request.json().catch(() => null)) as {
       name?: unknown;
       input?: unknown;
@@ -96,7 +89,6 @@ export const archRunSpec: RouteSpec = {
 };
 
 const annexImage = /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/;
-const MAX_ANNEX_BYTES = 3_500_000; // below the table's CHECK, which also counts jsonb's spacing
 
 /** The ids the client keys its annexes and parts by; the snapshot keeps the content only. */
 const withoutIds = (annexes: unknown[]): unknown[] =>
@@ -138,7 +130,7 @@ async function saveAnnexes(actor: Parameters<typeof can>[0], input: unknown): Pr
   ) {
     return json({ ok: false, error: { code: 'invalid' } }, 400);
   }
-  if (Buffer.byteLength(JSON.stringify(list)) > MAX_ANNEX_BYTES) {
+  if (Buffer.byteLength(JSON.stringify(list)) > ANNEXES_MAX_BYTES) {
     return json({ ok: false, error: { code: 'too-long' } }, 400);
   }
   const saved = await c.arch.saveAnnexes(monday, list!, actor.id, c.app.clock.now());

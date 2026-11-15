@@ -87,12 +87,15 @@ export type ConvertCode =
   | 'convert.too-large'
   | `convert.http.${number}`;
 
-/** DOCX to PDF (Gotenberg, LibreOffice). Called outside any transaction. */
+/** A conversion's outcome: the PDF, or a code for the log. */
+export type ConvertResult =
+  | { readonly ok: true; readonly pdf: Uint8Array }
+  | { readonly ok: false; readonly code: ConvertCode };
+
+/** Word to PDF (Gotenberg, LibreOffice). Called outside any transaction. */
 export interface DocumentConverter {
-  docxToPdf(
-    docx: Uint8Array,
-  ): Promise<
-    | { readonly ok: true; readonly pdf: Uint8Array }
-    | { readonly ok: false; readonly code: ConvertCode }
-  >;
+  /** A porada's DOCX (the worker). */
+  docxToPdf(docx: Uint8Array): Promise<ConvertResult>;
+  /** An old Word `.doc` an annex is imported from (the web, ADR 0066). */
+  docToPdf(doc: Uint8Array): Promise<ConvertResult>;
 }

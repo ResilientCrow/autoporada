@@ -16,7 +16,8 @@
 // pair and a client id other than the worker's, and never the mail registration's entra_*
 // pair. The egress and edge networks keep fixed bridge names so a host firewall rule can
 // target them (docs/ENTRA-SETUP.md §4). Gotenberg (ADR 0038) sits on internal
-// networks only and shares them with no service but the worker.
+// networks only and shares them with no service but the worker; the second instance for the web's
+// uploads (ADR 0066) does the same on a network of its own.
 import { execFileSync } from 'node:child_process';
 import { lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve } from 'node:path';
@@ -256,14 +257,32 @@ if (postgres.length === 0 || postgres.some((n) => config.networks[n]?.internal !
   problems.push('postgres: must be on internal networks only');
 }
 
-const gotenberg = networksOf(config.services.gotenberg ?? {});
-if (gotenberg.length === 0 || gotenberg.some((n) => config.networks[n]?.internal !== true)) {
-  problems.push('gotenberg: must be on internal networks only');
+// Gotenberg (ADR 0038) converts the porada for the worker; a second instance (ADR 0066) parses the
+// files people upload for the web. Each sits on internal networks only, shared with that one service.
+for (const [name, only] of [
+  ['gotenberg', 'worker'],
+  ['gotenberg-import', 'web'],
+]) {
+  const nets = networksOf(config.services[name] ?? {});
+  if (nets.length === 0 || nets.some((n) => config.networks[n]?.internal !== true)) {
+    problems.push(`${name}: must be on internal networks only`);
+  }
+  for (const [other, service] of Object.entries(config.services)) {
+    if (other === name || other === only) continue;
+    const shared = networksOf(service).filter((n) => nets.includes(n));
+    if (shared.length > 0) problems.push(`${other}: shares ${shared.join(', ')} with ${name}`);
+  }
+  if (config.services[only] && !networksOf(config.services[only]).some((n) => nets.includes(n))) {
+    problems.push(`${only}: must reach ${name}`);
+  }
 }
-for (const [name, service] of Object.entries(config.services)) {
-  if (name === 'gotenberg' || name === 'worker') continue;
-  const shared = networksOf(service).filter((n) => gotenberg.includes(n));
-  if (shared.length > 0) problems.push(`${name}: shares ${shared.join(', ')} with gotenberg`);
+{
+  // The two instances share no network, so the upload never reaches the porada's converter.
+  const render = networksOf(config.services.gotenberg ?? {});
+  const upload = networksOf(config.services['gotenberg-import'] ?? {});
+  if (render.some((n) => upload.includes(n))) {
+    problems.push('gotenberg and gotenberg-import: must not share a network');
+  }
 }
 
 if (problems.length > 0) {

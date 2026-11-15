@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
 
 import type { AnyUseCase } from '@/application/core';
-import type { AppDeps, DirectoryPort, UserPrincipal } from '@/application/ports';
+import type { AppDeps, DirectoryPort, DocumentConverter, UserPrincipal } from '@/application/ports';
 import { USE_CASES } from '@/application/use-cases';
 import { getConfig, type Config } from '@/infra/config';
+import { createGotenbergConverter } from '@/infra/convert';
 import {
   createArchStore,
   databaseOn,
@@ -53,6 +54,8 @@ export interface WebContainer {
   readonly auth: AuthDeps;
   /** People search for the search route; answers `directory.off` unless the configuration turns it on. */
   readonly directory: DirectoryPort;
+  /** Turns an annex's old `.doc` into a PDF the browser reads (ADR 0066). */
+  readonly converter: DocumentConverter;
   /**
    * What the pages tell the people picker: whether the school directory is searched at all
    * (`off` under `DIRECTORY=off`, so the picker says so up front and never calls the route).
@@ -101,6 +104,19 @@ function shared(config: Config, log: Logger): Shared {
  * connection: the pool connects on the first query, and the job producer
  * only when `startProducer()` is called.
  */
+/** An annex import's 30 s: the headmaster waits at the editor. */
+const IMPORT_BUDGET_MS = 30_000;
+
+/**
+ * The web's own Gotenberg (ADR 0066), never the worker's: it parses a file anyone with the
+ * headmaster's session can send. With no address the import answers `convert.unavailable`.
+ */
+function importConverter(url: string | undefined): DocumentConverter {
+  if (url) return createGotenbergConverter({ url, budgetMs: IMPORT_BUDGET_MS });
+  const unavailable = () => Promise.resolve({ ok: false, code: 'convert.unavailable' } as const);
+  return { docxToPdf: unavailable, docToPdf: unavailable };
+}
+
 function buildWeb(config: Config): WebContainer {
   const log = createLogger({ service: 'web', level: config.logLevel });
   const { pool, producer, limiter } = shared(config, log);
@@ -164,6 +180,7 @@ function buildWeb(config: Config): WebContainer {
     requestIdFrom,
     auth,
     directory,
+    converter: importConverter(config.gotenbergImportUrl),
     directoryMode: config.directory.kind === 'off' ? 'off' : 'on',
     bootReport: (now) => {
       const { facts, errors, warnings } = describeCredential(credential, now);

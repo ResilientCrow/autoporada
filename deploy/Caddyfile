@@ -36,14 +36,28 @@
 		protocols h1 h2
 		timeouts {
 			read_header 10s
+			# A body that trickles in holds a connection (the largest, 10 MB, takes seconds).
+			read_body 60s
 			idle 2m
 		}
 	}
 }
 
 {$APP_HOST} {
-	request_body {
+	# Bodies are 1 MB, but for the annexes with pictures (the 3.5 MB annex cap and their ids,
+	# arch-run.ts MAX_BODY_BYTES) and an old .doc for the annex import (10 MB, ADR 0066). One limit
+	# applies to each path. The annex ones were 1 MB before ADR 0066: an annex with pictures never saved.
+	@small not path /api/arch/run /api/arch/convert
+	request_body @small {
 		max_size 1MB
+	}
+	@run path /api/arch/run
+	request_body @run {
+		max_size 4MB
+	}
+	@convert path /api/arch/convert
+	request_body @convert {
+		max_size 10MB
 	}
 	# Always Caddy's own: the app trusts this header for its logs.
 	request_header X-Request-Id {http.request.uuid}

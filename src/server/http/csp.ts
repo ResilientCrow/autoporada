@@ -28,6 +28,8 @@ export function contentSecurityPolicy(nonce: string, options: { readonly dev: bo
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",
+    // The annex import reads a PDF in pdf.js's module worker, served from /arch/ (ADR 0066).
+    "worker-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
     "form-action 'self'",

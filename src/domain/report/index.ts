@@ -11,6 +11,7 @@ export {
 export { OPENING_KEYS, organiserAt, REPORT_BULLETS } from './bullets';
 export { draftBullet, newDraft } from './draft';
 export {
+  ANNEXES_MAX_BYTES,
   contentBytes,
   DIRECTORY_LIMITS,
   DRAFT_CAP,

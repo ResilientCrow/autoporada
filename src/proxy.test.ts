@@ -76,6 +76,17 @@ describe('proxy matcher', () => {
     },
   );
 
+  it.each(['/api/arch/run', '/api/arch/convert'])(
+    'skips %s: Next would buffer its big body for the proxy (ADR 0066)',
+    (path) => {
+      expect(matches({ config, url: path, nextConfig })).toBe(false);
+    },
+  );
+
+  it.each(['/api/arch/state', '/api/arch/running'])('runs for %s', (path) => {
+    expect(matches({ config, url: path, nextConfig })).toBe(true);
+  });
+
   it.each([{ 'next-router-prefetch': '1' }, { purpose: 'prefetch' }])(
     'skips a prefetch (%o)',
     (headers) => {

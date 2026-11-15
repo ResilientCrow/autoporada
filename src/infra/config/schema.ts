@@ -61,6 +61,8 @@ const shape = z.object({
   /** Not `*_FILE`: readEnv would read that as the Docker-secret form of a DIRECTORY_DEV. */
   DIRECTORY_DEV_PATH: z.string().startsWith('/', 'must be an absolute path').optional(),
   GOTENBERG_URL: httpUrl,
+  /** The web's own Gotenberg for an annex's old .doc (ADR 0066); the worker never reads it. */
+  GOTENBERG_IMPORT_URL: httpUrl.optional(),
   BOOTSTRAP_HEADMASTER_OID: z.guid().optional(),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   WORKER_POLL_SECONDS: pollSeconds.default(2),

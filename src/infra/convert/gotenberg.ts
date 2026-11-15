@@ -1,4 +1,4 @@
-import type { ConvertCode, DocumentConverter } from '@/application/ports';
+import type { ConvertCode, ConvertResult, DocumentConverter } from '@/application/ports';
 import { assertOutsideTransaction } from '@/infra/system';
 
 /** LibreOffice converts a porada in a few seconds; past this the job tries again later. */
@@ -45,7 +45,7 @@ async function readCapped(response: Response, max: number): Promise<Uint8Array |
 }
 
 /**
- * DOCX to PDF through Gotenberg's LibreOffice route (ADR 0038). An answer that is not a PDF is a
+ * DOCX (and an annex's old `.doc`, ADR 0066) to PDF through Gotenberg's LibreOffice route (ADR 0038). An answer that is not a PDF is a
  * failure too. Never throws for the converter's outcome, and never keeps its text: only a code. A
  * redirect is an answer, not followed: it would post the porada to another host (ADR 0039).
  */
@@ -57,35 +57,37 @@ export function createGotenbergConverter(options: {
 }): DocumentConverter {
   const fetch: ConvertFetch = options.fetch ?? globalThis.fetch;
   const endpoint = `${options.url}/forms/libreoffice/convert`;
-  return {
-    async docxToPdf(docx) {
-      assertOutsideTransaction('convert');
-      const form = new FormData();
-      // LibreOffice picks the importer by extension, so the upload is always named .docx.
-      form.append('files', new Blob([docx as BlobPart]), 'porada.docx');
-      const fail = (code: ConvertCode) => ({ ok: false as const, code });
-      try {
-        const signal = AbortSignal.timeout(options.budgetMs ?? CONVERT_BUDGET_MS);
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          body: form,
-          signal,
-          redirect: 'manual',
-        });
-        if (!response.ok) {
-          await response.body?.cancel();
-          return fail(`convert.http.${response.status}`);
-        }
-        const pdf = await readCapped(response, options.maxBytes ?? PDF_MAX_BYTES);
-        if (pdf === null) return fail('convert.too-large');
-        return isPdf(pdf) ? { ok: true as const, pdf } : fail('convert.not-pdf');
-      } catch (error) {
-        return fail(
-          error instanceof DOMException && error.name === 'TimeoutError'
-            ? 'convert.timeout'
-            : 'convert.unavailable',
-        );
+  // LibreOffice picks the importer by extension, so the upload's name carries the format.
+  async function convert(bytes: Uint8Array, name: string): Promise<ConvertResult> {
+    assertOutsideTransaction('convert');
+    const form = new FormData();
+    form.append('files', new Blob([bytes as BlobPart]), name);
+    const fail = (code: ConvertCode) => ({ ok: false as const, code });
+    try {
+      const signal = AbortSignal.timeout(options.budgetMs ?? CONVERT_BUDGET_MS);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: form,
+        signal,
+        redirect: 'manual',
+      });
+      if (!response.ok) {
+        await response.body?.cancel();
+        return fail(`convert.http.${response.status}`);
       }
-    },
+      const pdf = await readCapped(response, options.maxBytes ?? PDF_MAX_BYTES);
+      if (pdf === null) return fail('convert.too-large');
+      return isPdf(pdf) ? { ok: true as const, pdf } : fail('convert.not-pdf');
+    } catch (error) {
+      return fail(
+        error instanceof DOMException && error.name === 'TimeoutError'
+          ? 'convert.timeout'
+          : 'convert.unavailable',
+      );
+    }
+  }
+  return {
+    docxToPdf: (docx) => convert(docx, 'porada.docx'),
+    docToPdf: (doc) => convert(doc, 'annex.doc'),
   };
 }

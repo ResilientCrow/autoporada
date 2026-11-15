@@ -28,6 +28,35 @@ describe('the Gotenberg converter', () => {
     expect(new Uint8Array(await calls[0]!.file.arrayBuffer())).toEqual(DOCX);
   });
 
+  it('posts a .doc as annex.doc, so LibreOffice picks the Word importer', async () => {
+    const doc = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0]);
+    const { calls, fetch } = answering(async () => new Response(PDF));
+    const converter = createGotenbergConverter({ url: 'http://gotenberg:3000', fetch });
+
+    await expect(converter.docToPdf(doc)).resolves.toEqual({ ok: true, pdf: PDF });
+    expect(calls[0]?.url).toBe('http://gotenberg:3000/forms/libreoffice/convert');
+    expect(calls[0]?.file.name).toBe('annex.doc');
+    expect(new Uint8Array(await calls[0]!.file.arrayBuffer())).toEqual(doc);
+  });
+
+  it('gives a .doc the same codes: error answer, not a PDF, unreachable', async () => {
+    const doc = new Uint8Array([1]);
+    const codeOf = (fetch: ConvertFetch) =>
+      createGotenbergConverter({ url: 'http://g', fetch }).docToPdf(doc);
+    await expect(codeOf(async () => new Response('no', { status: 500 }))).resolves.toEqual({
+      ok: false,
+      code: 'convert.http.500',
+    });
+    await expect(codeOf(async () => new Response('<html>'))).resolves.toEqual({
+      ok: false,
+      code: 'convert.not-pdf',
+    });
+    await expect(codeOf(() => Promise.reject(new TypeError('x')))).resolves.toEqual({
+      ok: false,
+      code: 'convert.unavailable',
+    });
+  });
+
   it('gives a code, never the text, for an error answer', async () => {
     const { fetch } = answering(async () => new Response('LibreOffice said no', { status: 503 }));
     const converter = createGotenbergConverter({ url: 'http://g', fetch });

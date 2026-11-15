@@ -30,6 +30,7 @@ describe('contentSecurityPolicy', () => {
       'img-src': ["'self'", 'data:', 'blob:'],
       'font-src': ["'self'"],
       'connect-src': ["'self'"],
+      'worker-src': ["'self'"],
       'object-src': ["'none'"],
       'base-uri': ["'none'"],
       'form-action': ["'self'"],

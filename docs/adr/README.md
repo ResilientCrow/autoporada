@@ -71,4 +71,5 @@ record that supersedes it.
 | [0063](0063-the-organizer-organizes-or-coordinates.md) | The organizer organizes or coordinates | Accepted; amends 0060 items 1 and 7 |
 | [0064](0064-report-types-are-a-fixed-list-in-code.md) | Report types are a fixed list in code | Superseded by 0067; it had superseded 0055 and the `point_types` part of 0018 item 3 |
 | [0065](0065-the-classic-ui-is-removed.md) | The classic UI is removed | Accepted; supersedes 0013, 0024, 0025, 0027, 0031, 0043, most of 0012 and parts of 0004, 0017, 0019, 0044, 0045, 0047 and 0053 |
+| [0066](0066-an-annex-from-a-file.md) | An annex from a file | Accepted; adds to 0039 |
 | [0067](0067-report-grammar-comes-from-the-title.md) | Report grammar comes from the title | Accepted; supersedes 0064; amends 0061 |

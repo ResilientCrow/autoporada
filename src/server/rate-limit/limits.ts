@@ -31,6 +31,11 @@ export const LIMITS = {
    * points, reviewer edits, skipping a meeting): a person never reaches it.
    */
   admin: { max: 600, windowMs: HOUR, key: 'user' },
+  /**
+   * An annex import of an old .doc (POST /api/arch/convert, ADR 0066): each one parses a file in
+   * LibreOffice, so it has a bucket apart from the headmaster's writes. A school imports a few a week.
+   */
+  import: { max: 20, windowMs: HOUR, key: 'user' },
   accessRequest: { max: 3, windowMs: 24 * HOUR, key: 'user' },
 } as const satisfies Record<string, Limit>;
 

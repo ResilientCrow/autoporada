@@ -30,10 +30,18 @@ export function proxy(request: NextRequest) {
   return response;
 }
 
+/**
+ * The two JSON/PDF endpoints that take big bodies stay out: Next buffers a matched request's body
+ * for the proxy (and cuts it at `proxyClientMaxBodySize`, 10 MB), and they answer no page, so
+ * a nonce and a CSP mean nothing there. They read the raw Cookie header with `sessionTokenFrom`,
+ * which already counts a repeated cookie as none, and the request id is Caddy's header. The matcher
+ * must be a plain string literal: Next parses `config` statically and refuses a template literal.
+ */
+
 export const config = {
   matcher: [
     {
-      source: '/((?!_next/static|_next/image|favicon.ico).*)',
+      source: '/((?!_next/static|_next/image|favicon.ico|api/arch/run$|api/arch/convert$).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
         { type: 'header', key: 'purpose', value: 'prefetch' },

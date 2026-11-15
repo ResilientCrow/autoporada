@@ -37,6 +37,8 @@ export interface Config {
     | { readonly kind: 'graph' }
     | { readonly kind: 'dev'; readonly path: string };
   readonly gotenbergUrl: string;
+  /** The web's Gotenberg for an untrusted `.doc` (ADR 0066); undefined where none is set. */
+  readonly gotenbergImportUrl: string | undefined;
   readonly bootstrapHeadmasterOid: string | undefined;
   readonly logLevel: LogLevel;
   readonly worker: { readonly pollSeconds: number };
@@ -86,6 +88,7 @@ export function loadConfig(env: Env, readFile: ReadFile): Config {
         : { transport: 'graph', from: c.MAIL_FROM },
     directory: directoryOf(c),
     gotenbergUrl: c.GOTENBERG_URL.replace(/\/$/, ''),
+    gotenbergImportUrl: c.GOTENBERG_IMPORT_URL?.replace(/\/$/, ''),
     bootstrapHeadmasterOid: c.BOOTSTRAP_HEADMASTER_OID?.toLowerCase(),
     logLevel: c.LOG_LEVEL,
     worker: { pollSeconds: c.WORKER_POLL_SECONDS },

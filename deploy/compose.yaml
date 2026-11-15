@@ -32,7 +32,8 @@ x-app-env: &app-env
   OIDC_DOMAIN_HINT: ${DOMAIN_HINT:-ssps.cz}
   MAIL_TRANSPORT: graph
   MAIL_FROM: ${MAIL_FROM:-autoporada@ssps.cz}
-  # The worker converts each generated DOCX to PDF there (ADR 0038); the web never calls it.
+  # The worker converts each generated DOCX to PDF there (ADR 0038). The web never calls it: it has
+  # a Gotenberg of its own for the files people upload (GOTENBERG_IMPORT_URL, ADR 0066).
   GOTENBERG_URL: http://gotenberg:3000
 
 # Listed before *hardened in a merge: the first map wins, and a one-shot
@@ -84,10 +85,13 @@ services:
       BOOTSTRAP_HEADMASTER_OID: ${BOOTSTRAP_HEADMASTER_OID:-}
       # `off` until the smoke test shows the tenant answers the search (SMOKE-TEST step 29).
       DIRECTORY: ${DIRECTORY:-off}
+      # Only for an annex's old .doc, in a Gotenberg that never sees a porada (ADR 0066).
+      GOTENBERG_IMPORT_URL: http://gotenberg-import:3000
     secrets: [web_database_url, web_entra_key, web_entra_cert]
     tmpfs: ['/tmp:size=64m', '/app/.next/cache']
-    # edge: Caddy, and the way out to login.microsoftonline.com and graph.microsoft.com.
-    networks: [edge, data]
+    # edge: Caddy, and the way out to login.microsoftonline.com and graph.microsoft.com. import:
+    # gotenberg-import, for the annex import of an old .doc (ADR 0066).
+    networks: [edge, data, import]
     healthcheck:
       test:
         - CMD
@@ -134,16 +138,58 @@ services:
       postgres: { condition: service_healthy }
 
   # DOCX -> PDF for the worker (ADR 0038), with the porada's fonts (docker/gotenberg). No port, no
-  # secrets and no way out: only the worker reaches it. A PDF job waits and retries while it is down.
+  # secrets and no way out: only the worker reaches it. A PDF job waits and retries while it is
+  # down. The routes and features a DOCX conversion never uses are off.
   gotenberg:
     <<: *hardened
     image: autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
     build: { context: ../docker/gotenberg }
     user: '1001:1001'
-    command: ['gotenberg', '--chromium-auto-start=false', '--api-timeout=60s']
+    command:
+      - gotenberg
+      - --chromium-auto-start=false
+      - --chromium-disable-routes
+      - --pdfengines-disable-routes
+      - --webhook-disable
+      - --api-disable-download-from
+      - --api-timeout=60s
     # LibreOffice keeps its profile in the home directory.
     tmpfs: ['/tmp:size=256m', '/home/gotenberg:uid=1001,gid=1001,size=64m']
     networks: [render]
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', 'http://127.0.0.1:3000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+
+  # An annex's old .doc -> PDF for the web (ADR 0066): the same image, but a second instance, so an
+  # untrusted file is never parsed where a porada is. Only the web reaches it, on a network of its
+  # own; no port, no secrets, no way out. One conversion at a time, a fresh LibreOffice for each,
+  # and a small box around it.
+  gotenberg-import:
+    <<: *hardened
+    image: autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
+    build: { context: ../docker/gotenberg }
+    user: '1001:1001'
+    command:
+      - gotenberg
+      - --chromium-auto-start=false
+      - --chromium-disable-routes
+      - --pdfengines-disable-routes
+      - --webhook-disable
+      - --api-disable-download-from
+      - --libreoffice-deny-private-ips
+      - --libreoffice-deny-public-ips
+      - --libreoffice-restart-after=1
+      - --libreoffice-max-queue-size=2
+      - --api-timeout=30s
+      - --api-body-limit=11MB
+    tmpfs: ['/tmp:size=256m', '/home/gotenberg:uid=1001,gid=1001,size=64m']
+    mem_limit: 1g
+    pids_limit: 200
+    cpus: 1
+    networks: [import]
     healthcheck:
       test: ['CMD', 'curl', '--fail', '--silent', 'http://127.0.0.1:3000/health']
       interval: 15s
@@ -214,6 +260,8 @@ networks:
       com.docker.network.bridge.name: ap-egress
   # The worker and Gotenberg only, no way out: a document never leaves the server.
   render: { internal: true }
+  # The web and gotenberg-import only, no way out (ADR 0066).
+  import: { internal: true }
 
 volumes:
   pgdata: {}

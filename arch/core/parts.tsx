@@ -1,6 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { foldForSearch } from '@/domain/cs';
 import type { Indent, RichDoc } from '@/domain/richtext';
+import { shrinkToJpeg } from './image';
+import { appendImported, listBytes } from './import/apply';
+import { loadChunk } from './import/chunk';
+import { IMPORT_HINT, ImportError, importMessage, SKIPPED_IMAGES_NOTE, TEXT_ONLY_NOTE } from './import/messages';
+import { useStore } from './react';
 import * as Q from './select';
 import type { Annex, AnnexPart } from './types';
 
@@ -79,26 +84,18 @@ export function DocNav({ built, attention, notes }: { built: Q.Built; attention?
 }
 
 // ---- annexes ------------------------------------------------------------------
-const pid = () => `part-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
+let partSeq = 0;
+const pid = () => `part-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}-${partSeq++}`;
 const parseTable = (raw: string): string[][] => {
   const lines = raw.split(/\r?\n/).filter((l) => l.trim());
   const sep = lines.some((l) => l.includes('\t')) ? '\t' : lines.every((l) => l.includes(';')) ? ';' : null;
   return lines.map((l) => (sep ? l.split(sep) : [l]).map((c) => c.trim()));
 };
-const MAX_SIDE = 1400;
 /** A photo straight from a phone is megabytes: shrink it before it goes anywhere. */
 function readImage(file: File): Promise<{ src: string; w: number; h: number }> {
-  return new Promise((ok, no) => {
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { no(new Error('type')); return; }
-    const url = URL.createObjectURL(file); const img = new Image();
-    img.onerror = () => { URL.revokeObjectURL(url); no(new Error('read')); };
-    img.onload = () => {
-      const k = Math.min(1, MAX_SIDE / Math.max(img.width, img.height)); const w = Math.round(img.width * k), h = Math.round(img.height * k);
-      const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d')!; x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url); ok({ src: c.toDataURL('image/jpeg', 0.84), w, h });
-    };
-    img.src = url;
-  });
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return Promise.reject(new Error('type'));
+  const url = URL.createObjectURL(file);
+  return shrinkToJpeg(url).finally(() => URL.revokeObjectURL(url));
 }
 const count = (n: number, a: string, b: string, c: string) => `${n} ${n === 1 ? a : n > 1 && n < 5 ? b : c}`;
 function TablePart({ rows, onChange }: { rows: string[][]; onChange: (r: string[][]) => void }) {
@@ -117,10 +114,31 @@ export function TextPart({ doc, onChange }: { doc: RichDoc; onChange: (d: RichDo
   return <OutlineField label="Text" value={v} onChange={(x) => { set(x); onChange(annexDoc(x)); }} />;
 }
 export function AnnexEditor({ annex, onChange, n }: { annex: Annex; onChange: (a: Annex) => void; n: number }) {
-  const [err, setErr] = useState(''); const file = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState(''); const [notes, setNotes] = useState<string[]>([]); const [busy, setBusy] = useState(false); const file = useRef<HTMLInputElement>(null); const doc = useRef<HTMLInputElement>(null);
+  const { s } = useStore();
+  const latest = useRef(annex); const issues = useRef(s.issues); useEffect(() => { latest.current = annex; issues.current = s.issues; });
   const setPart = (id: string, p: Partial<AnnexPart>) => onChange({ ...annex, parts: annex.parts.map((x) => (x.id === id ? { ...x, ...p } as AnnexPart : x)) });
   const add = (p: AnnexPart) => onChange({ ...annex, parts: [...annex.parts, p] });
   const move = (k: number, d: -1 | 1) => { const a = [...annex.parts]; const j = k + d; if (j < 0 || j >= a.length) return; [a[k], a[j]] = [a[j]!, a[k]!]; onChange({ ...annex, parts: a }); };
+  /** Reads a Word, OpenDocument or PDF file in the browser and appends what it holds as ordinary parts. The importer loads on first use. */
+  const attach = async (f: File) => {
+    setErr(''); setNotes([]); setBusy(true);
+    try {
+      const [{ importFile }, { browserDeps }] = await Promise.all([loadChunk(() => import('./import')), loadChunk(() => import('./import/browser'))]);
+      const before = latest.current;
+      // The save cap is on the whole list of annexes of the porada, so count all of them, this one as it is now.
+      const all = issues.current.find((i) => i.annexes.some((a) => a.id === before.id))?.annexes ?? [];
+      const r = await importFile(new Uint8Array(await f.arrayBuffer()), { titleEmpty: !before.title.trim(), existingBytes: listBytes(all, before) }, browserDeps());
+      onChange(appendImported(latest.current, r, pid)); // the person may have typed while the file was read
+      setNotes([...(r.textOnly ? [TEXT_ONLY_NOTE] : []), ...(r.skipped ? [SKIPPED_IMAGES_NOTE] : [])]);
+    } catch (x) {
+      const e = x instanceof ImportError ? x : new ImportError('broken');
+      // Signed out or in need of a fresh sign-in: the same way the write queue goes (react.tsx).
+      if (e.code === 'signed-out') { location.href = '/'; return; }
+      if (e.code === 'step-up') { location.href = '/auth/step-up?returnTo=%2F'; return; }
+      setErr(importMessage(e));
+    } finally { setBusy(false); }
+  };
   return <div className="stack ax">
     <label className="l">Název přílohy {n}<input className="in" value={annex.title} onChange={(e) => onChange({ ...annex, title: e.target.value })} placeholder="Například: Výsledky voleb do Studentské rady" /></label>
     {annex.parts.map((p, k) => <section className="ax-p" key={p.id} aria-label={`Část ${k + 1}`}>
@@ -130,12 +148,16 @@ export function AnnexEditor({ annex, onChange, n }: { annex: Annex; onChange: (a
       <div className="row wr ax-a"><button type="button" className="q" disabled={k === 0} onClick={() => move(k, -1)}>Posunout výš</button><button type="button" className="q" disabled={k === annex.parts.length - 1} onClick={() => move(k, 1)}>Posunout níž</button><button type="button" className="q r" onClick={() => onChange({ ...annex, parts: annex.parts.filter((x) => x.id !== p.id) })}>Odebrat tuto část</button></div>
     </section>)}
     {err ? <p className="sm w-err" role="alert">{err}</p> : null}
+    {notes.map((n) => <p key={n} className="sm" role="status">{n}</p>)}
     <div className="row wr ax-add">
       <button type="button" className="btn" onClick={() => add({ id: pid(), kind: 'text', doc: { type: 'doc', content: [] } })}>Přidat text</button>
       <button type="button" className="btn" onClick={() => add({ id: pid(), kind: 'table', rows: [] })}>Přidat tabulku</button>
       <button type="button" className="btn" onClick={() => { setErr(''); file.current?.click(); }}>Přidat obrázek nebo graf</button>
+      <button type="button" className={`btn${busy ? ' off' : ''}`} disabled={busy} aria-busy={busy} onClick={() => { setErr(''); doc.current?.click(); }}>{busy ? 'Čtu soubor…' : 'Přiložit soubor'}</button>
+      <input ref={doc} className="vh" type="file" accept=".docx,.doc,.odt,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/vnd.oasis.opendocument.text,application/pdf" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void attach(f); }} />
       <input ref={file} className="vh" type="file" accept="image/png,image/jpeg,image/webp" tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (!f) return; void (async () => { try { const im = await readImage(f); add({ id: pid(), kind: 'image', ...im, alt: '' }); } catch (x) { setErr((x as Error).message === 'type' ? 'Tohle není obrázek. Vyberte soubor PNG nebo JPG. Graf z Excelu uložte jako obrázek.' : 'Obrázek se nepodařilo načíst. Zkuste ho uložit znovu a vybrat.'); } })(); }} />
     </div>
+    <p className="sm">{IMPORT_HINT}</p>
   </div>;
 }
 /** An unindented line is a paragraph, a tabbed one a list item, one more tab a sub-item. */

@@ -39,8 +39,34 @@ services:
   gotenberg:
     build: ./docker/gotenberg
     image: autoporada-gotenberg:dev
-    command: ['gotenberg', '--chromium-auto-start=false', '--api-timeout=60s']
+    command:
+      - gotenberg
+      - --chromium-auto-start=false
+      - --chromium-disable-routes
+      - --pdfengines-disable-routes
+      - --webhook-disable
+      - --api-disable-download-from
+      - --api-timeout=60s
     ports: ['127.0.0.1:3001:3000']
+
+  # An annex's old .doc -> PDF for the web (ADR 0066): a second instance with the flags of
+  # deploy/compose.yaml, so a dev run exercises the same limits.
+  gotenberg-import:
+    image: autoporada-gotenberg:dev
+    command:
+      - gotenberg
+      - --chromium-auto-start=false
+      - --chromium-disable-routes
+      - --pdfengines-disable-routes
+      - --webhook-disable
+      - --api-disable-download-from
+      - --libreoffice-deny-private-ips
+      - --libreoffice-deny-public-ips
+      - --libreoffice-restart-after=1
+      - --libreoffice-max-queue-size=2
+      - --api-timeout=30s
+      - --api-body-limit=11MB
+    ports: ['127.0.0.1:3002:3000']
 
 volumes:
   pgdata:

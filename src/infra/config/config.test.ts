@@ -62,7 +62,21 @@ describe('loadConfig', () => {
       smtpUrl: 'smtp://localhost:1025',
     });
     expect(config.gotenbergUrl).toBe('http://localhost:3001');
+    expect(config.gotenbergImportUrl).toBeUndefined();
     expect(config.logLevel).toBe('info');
+  });
+
+  it("reads the web's own Gotenberg for imports, apart from the worker's", () => {
+    const config = loadConfig(
+      { ...DEV_ENV, GOTENBERG_IMPORT_URL: 'http://gotenberg-import:3000/' },
+      noFiles,
+    );
+    expect(config.gotenbergImportUrl).toBe('http://gotenberg-import:3000');
+    expect(config.gotenbergUrl).toBe('http://localhost:3001');
+    const problems = problemsOf(() =>
+      loadConfig({ ...DEV_ENV, GOTENBERG_IMPORT_URL: 'file:///etc/passwd' }, noFiles),
+    );
+    expect(problems).toEqual(['GOTENBERG_IMPORT_URL: must be an http(s) URL']);
   });
 
   it('reads secrets from *_FILE and strips the trailing newline', () => {

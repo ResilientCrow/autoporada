@@ -82,3 +82,10 @@ export const DRAFT_CAP = 50;
 export function contentBytes(content: PointContent): number {
   return new TextEncoder().encode(JSON.stringify(content)).length;
 }
+
+/**
+ * The further annexes of one porada, as the JSON `arch.annexes` saves (ids included): below the
+ * `arch_annexes_size` CHECK (4 MB), which also counts jsonb's own spacing. The annex import checks
+ * against it before it adds a file's parts (ADR 0066).
+ */
+export const ANNEXES_MAX_BYTES = 3_500_000;

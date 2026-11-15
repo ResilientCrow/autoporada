@@ -13,6 +13,7 @@ export type { Clock } from './clock';
 export type {
   ArchivedDocument,
   ConvertCode,
+  ConvertResult,
   DocumentConverter,
   DocumentFile,
   DocumentFormat,
