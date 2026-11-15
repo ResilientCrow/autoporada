@@ -208,8 +208,14 @@ function snapshotOf(s: State, monday: string, opts: { pending?: boolean; draft?:
   };
   return { raw, refs, parsed: parseIssueSnapshot(raw) };
 }
-function segmentize(model: DocumentModel, snap: IssueSnapshot, refs: Record<string, Segment['state']>, rows: Issue['rows']): Segment[] {
-  const norm = (x: string) => x.replace(/\s+/g, ' ').trim().toLowerCase();
+const normTitle = (x: string) => x.replace(/\s+/g, ' ').trim().toLowerCase();
+/** The row a printed point stands for: the longest printed title the point starts with, never an empty one (a placed proposal's row has none of its own). */
+export function rowForPoint<R extends Issue['rows'][number]>(text: string, rows: readonly R[], titleOf: (r: R) => string): R | undefined {
+  const t = normTitle(text); let best: R | undefined; let len = 0;
+  for (const r of rows) { const own = normTitle(titleOf(r)); if (own.length > len && t.startsWith(own)) { best = r; len = own.length; } }
+  return best;
+}
+function segmentize(model: DocumentModel, snap: IssueSnapshot, refs: Record<string, Segment['state']>, rows: Issue['rows'], titleOf: (r: Issue['rows'][number]) => string): Segment[] {
   const out: Segment[] = []; let cur: Segment = { key: 'head', kind: 'head', blocks: [] };
   const reports = [...snap.reports]; let n = 0;
   for (const sec of model.sections) for (const [i, b] of sec.blocks.entries()) {
@@ -217,9 +223,9 @@ function segmentize(model: DocumentModel, snap: IssueSnapshot, refs: Record<stri
     if (i === 0 && sec.layout === 'nextPage') cur.blocks.push({ kind: 'pageBreak' });
     if (b.kind === 'point') {
       out.push(cur); n++;
-      const i = reports.findIndex((r) => norm(r.title) === norm(b.text));
+      const i = reports.findIndex((r) => normTitle(r.title) === normTitle(b.text));
       if (i >= 0) { const r = reports.splice(i, 1)[0]!; cur = { key: r.id, kind: r.missing ? 'missing' : 'report', refId: r.id.replace(/^missing-/, ''), state: refs[r.id], blocks: [b] }; }
-      else { const row = rows.find((x) => norm(b.text).startsWith(norm(x.title))); cur = { key: `n${n}`, kind: 'item', ...(row && { refId: row.id }), ...(row && isFixedRow(row) && { fixed: true as const }), blocks: [b] }; }
+      else { const row = rowForPoint(b.text, rows, titleOf); cur = { key: `n${n}`, kind: 'item', ...(row && { refId: row.id }), ...(row && isFixedRow(row) && { fixed: true as const }), blocks: [b] }; }
     } else if (b.kind === 'closing' || b.kind === 'annex') { out.push(cur); cur = { key: `t${out.length}`, kind: 'tail', blocks: [b] }; }
     else if (b.kind === 'section' && cur.kind !== 'head') { out.push(cur); cur = { key: `s${out.length}`, kind: 'head', blocks: [b] }; }
     else cur.blocks.push(b);
@@ -247,7 +253,8 @@ function buildDocNow(s: State, monday: string, opts: { pending?: boolean; draft?
   const { refs, parsed } = snapshotOf(s, monday, opts);
   if (!parsed.ok) return { model: null, errors: [...parsed.errors], segments: [], points: 0, printed: [] };
   const model = composeDocument(parsed.snapshot);
-  const segments = segmentize(model, parsed.snapshot, refs, iss?.rows ?? []);
+  const titleOf = (r: Issue['rows'][number]) => (r.pointId ? s.points.find((p) => p.id === r.pointId)?.content.title ?? r.title : r.title);
+  const segments = segmentize(model, parsed.snapshot, refs, iss?.rows ?? [], titleOf);
   return { model, errors: [], segments, points: model.sections.flatMap((x) => x.blocks).filter((b) => b.kind === 'point').length, printed: parsed.snapshot.reports.map((r) => r.id) };
 }
 // ---- preflight ----
@@ -285,7 +292,7 @@ export function preflight(s: State, monday: string): Check[] {
 }
 /** A saved document, grouped for the same sheet and rejstřík as a live one. */
 export function builtOfModel(model: DocumentModel): Built {
-  const segments = segmentize(model, { reports: [] } as unknown as IssueSnapshot, {}, []);
+  const segments = segmentize(model, { reports: [] } as unknown as IssueSnapshot, {}, [], (r) => r.title);
   return { model, errors: [], segments, points: segments.filter((x) => x.kind === 'item').length, printed: [] };
 }
 export interface OutlineItem { key: string; n?: number; title: string; kind: Segment['kind']; state?: Segment['state']; group: string; refId?: string }

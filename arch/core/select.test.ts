@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { deadline } from '@/domain/calendar';
 import { emptyRichDoc } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
-import { addable, poradaDates, type OutlineItem } from './select';
+import { addable, poradaDates, rowForPoint, type OutlineItem } from './select';
 import type { Row } from './types';
 
 const row = (id: string, p: Partial<Row> = {}): Row => ({ id, section: 'pokyny', slot: null, persistence: 'standing', title: id, body: emptyRichDoc(), quotes: [], pointId: null, ...p });
@@ -32,6 +32,26 @@ describe('addable: what the headmaster can type into, apart from what fills itse
   it('lists Pokyny before Hospodaření, also for a row added at the end of the porada', () => {
     const late = [row('fin', { section: 'hospodareni' }), row('a'), row('b')];
     expect(addable(late, []).points.map((x) => x.row.id)).toEqual(['a', 'b', 'fin']);
+  });
+});
+
+describe('rowForPoint: which porada row a printed point stands for', () => {
+  const titleOf = (r: Row) => (r.pointId ? 'Schválený návrh' : r.title);
+  it('never takes a row with an empty title, such as a placed proposal', () => {
+    const rows = [row('place', { title: '', pointId: 'p1' }), row('prov', { title: 'Provoz' })];
+    expect(rowForPoint('Provoz', rows, (r) => r.title)?.id).toBe('prov');
+  });
+  it('matches a placed proposal by the title it prints', () => {
+    const rows = [row('place', { title: '', pointId: 'p1' }), row('prov', { title: 'Provoz' })];
+    expect(rowForPoint('Schválený návrh', rows, titleOf)?.id).toBe('place');
+  });
+  it('prefers the longest title that the point starts with', () => {
+    const rows = [row('short', { title: 'Provoz' }), row('long', { title: 'Provoz budovy' })];
+    expect(rowForPoint('Provoz budovy', rows, titleOf)?.id).toBe('long');
+    expect(rowForPoint('Provoz školy', rows, titleOf)?.id).toBe('short');
+  });
+  it('finds no row for a point no row prints', () => {
+    expect(rowForPoint('Něco jiného', [row('prov', { title: 'Provoz' })], titleOf)).toBeUndefined();
   });
 });
 
