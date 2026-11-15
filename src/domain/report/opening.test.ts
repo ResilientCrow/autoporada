@@ -60,8 +60,8 @@ const content: PointContent = {
   statements: [],
 };
 
-const sentence = (c: PointContent, gender: Parameters<typeof openingInput>[1] = 'm') => {
-  const input = openingInput(c, gender, SPEC);
+const sentence = (c: PointContent) => {
+  const input = openingInput(c, SPEC);
   return input && openingSentence(input);
 };
 
@@ -77,7 +77,6 @@ describe('openingInput', () => {
     expect(
       openingInput(
         { ...content, title: '  Exkurze  ', endDate: d('2026-10-16'), place: ' na Hradě ' },
-        'f',
         SPEC,
       ),
     ).toMatchObject({
@@ -88,19 +87,17 @@ describe('openingInput', () => {
       to: t('12:00'),
       campus: 'smichov',
       place: 'na Hradě',
-      titleGender: 'f',
     });
   });
 
   it('takes only the people of the organisers bullet', () => {
-    const input = openingInput(content, 'm', SPEC);
+    const input = openingInput(content, SPEC);
     expect(input?.organisers.map((p) => p.familyName)).toEqual(['Malá', 'Novák']);
   });
 
   it('drops organisers without a salutation and keeps the input order', () => {
     const input = openingInput(
       { ...content, bullets: [organisers([jan, unnamed, eva]), participants([petra])] },
-      'm',
       SPEC,
     );
     expect(input?.organisers.map((p) => p.familyName)).toEqual(['Novák', 'Malá']);
@@ -110,14 +107,13 @@ describe('openingInput', () => {
   it('ignores a bullet whose spec has no organisers role, whatever its label', () => {
     const input = openingInput(
       { ...content, bullets: [organisers([eva], 'custom'), participants([jan])] },
-      'm',
       SPEC,
     );
     expect(input?.organisers).toEqual([]);
   });
 
   it('has no organisers when the point has no spec for them', () => {
-    expect(openingInput(content, 'm', [])?.organisers).toEqual([]);
+    expect(openingInput(content, [])?.organisers).toEqual([]);
     expect(sentence({ ...content, bullets: [] })).toMatch(/proběhl Vesmírný seminář\.$/);
   });
 
@@ -128,7 +124,6 @@ describe('openingInput', () => {
     ];
     const input = openingInput(
       { ...content, bullets: [organisers([jan], 'b'), organisers([eva], 'a')] },
-      'm',
       spec,
     );
     expect(input?.organisers.map((p) => p.familyName)).toEqual(['Novák', 'Malá']);
@@ -136,21 +131,21 @@ describe('openingInput', () => {
 
   it('skips text bullets even when the spec names the organisers key', () => {
     const text: DraftBullet = { key: 'organisers', label: 'Organizátoři', kind: 'text', text: 'x' };
-    expect(openingInput({ ...content, bullets: [text] }, 'm', SPEC)?.organisers).toEqual([]);
+    expect(openingInput({ ...content, bullets: [text] }, SPEC)?.organisers).toEqual([]);
   });
 
-  it('passes the title gender through, and leaves it out for a type without one', () => {
-    expect(sentence(content, 'pl')).toContain('proběhly Vesmírný seminář, které');
-    expect(sentence(content, null)).toContain('proběhla akce „Vesmírný seminář“, kterou');
-    expect(openingInput(content, null, SPEC)?.titleGender).toBeUndefined();
+  it('lets the title say its own gender and number', () => {
+    const titled = (title: string) => sentence({ ...content, title });
+    expect(titled('Krajské kolo SOČ')).toContain('proběhlo Krajské kolo SOČ, které');
+    expect(titled('Tematické exkurze')).toContain('proběhly Tematické exkurze, které');
+    expect(titled('Vaib')).toContain('proběhla akce „Vaib“, kterou');
   });
 
-  it('passes the type name through only with a gender', () => {
-    const named = { ...content, title: 'Robotická olympiáda' };
-    expect(openingInput(named, 'm', SPEC, 'Seminář')?.typeName).toBe('Seminář');
-    expect(openingInput(named, 'm', SPEC, '  ')?.typeName).toBeUndefined();
-    const input = openingInput(named, 'm', SPEC, 'Seminář');
-    expect(input && openingSentence(input)).toContain('proběhl seminář Robotická olympiáda');
+  it('carries no type: the input holds no gender, only the title', () => {
+    const input = openingInput({ ...content, title: 'Robotická olympiáda' }, SPEC);
+    expect(input).not.toHaveProperty('titleGender');
+    expect(input).not.toHaveProperty('typeName');
+    expect(input && openingSentence(input)).toContain('proběhla Robotická olympiáda, kterou');
   });
 
   it('maps each campus, with Jinde printing only the place', () => {
@@ -171,21 +166,21 @@ describe('openingInput', () => {
 
   it('writes a date range for a multi-day event and ignores an end before the start', () => {
     expect(sentence({ ...content, endDate: d('2026-10-16') })).toMatch(/^Ve dnech /);
-    const wrong = openingInput({ ...content, endDate: d('2026-10-10') }, 'm', SPEC);
+    const wrong = openingInput({ ...content, endDate: d('2026-10-10') }, SPEC);
     expect(wrong?.endDate).toBeUndefined();
     expect(sentence({ ...content, endDate: d('2026-10-10') })).toMatch(/^Ve středu 14\. října/);
   });
 
   it('keeps an end date on the start day, and writes one day', () => {
     const same = { ...content, endDate: d('2026-10-14') };
-    expect(openingInput(same, 'm', SPEC)?.endDate).toEqual(d('2026-10-14'));
+    expect(openingInput(same, SPEC)?.endDate).toEqual(d('2026-10-14'));
     expect(sentence(same)).toMatch(/^Ve středu 14\. října 2026 od/);
   });
 
   it('leaves the time out when there is none, and ignores a lone end time', () => {
     const noTimes = { ...content, timeFrom: null, timeTo: null };
     expect(sentence(noTimes)).toMatch(/^Ve středu 14\. října 2026 v areálu/);
-    const onlyTo = openingInput({ ...content, timeFrom: null }, 'm', SPEC);
+    const onlyTo = openingInput({ ...content, timeFrom: null }, SPEC);
     expect(onlyTo?.from).toBeUndefined();
     expect(onlyTo?.to).toBeUndefined();
   });
@@ -196,17 +191,17 @@ describe('openingInput', () => {
 
   describe('when data is missing', () => {
     it('returns null without a date', () => {
-      expect(openingInput({ ...content, eventDate: null }, 'm', SPEC)).toBeNull();
+      expect(openingInput({ ...content, eventDate: null }, SPEC)).toBeNull();
     });
 
     it('returns null for an empty or blank title', () => {
-      expect(openingInput({ ...content, title: '' }, 'm', SPEC)).toBeNull();
-      expect(openingInput({ ...content, title: ' \t ' }, 'm', SPEC)).toBeNull();
+      expect(openingInput({ ...content, title: '' }, SPEC)).toBeNull();
+      expect(openingInput({ ...content, title: ' \t ' }, SPEC)).toBeNull();
     });
 
     it('ignores an end date when there is no start date', () => {
       expect(
-        openingInput({ ...content, eventDate: null, endDate: d('2026-10-16') }, 'm', SPEC),
+        openingInput({ ...content, eventDate: null, endDate: d('2026-10-16') }, SPEC),
       ).toBeNull();
     });
   });

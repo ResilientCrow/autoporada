@@ -35,7 +35,7 @@ export const needsReauth = (s: State) => !s.stepUpAt || new Date(s.now).getTime(
 function refreshOpening(p: Point, content: PointContent): PointContent {
   if (p.kind !== 'report' || content.openingEdited) return content;
   const type = p.typeId ? pointType(p.typeId) : null;
-  const input = openingInput(content, type?.titleGender ?? null, type?.defaultBullets ?? [], type?.name);
+  const input = openingInput(content, type?.defaultBullets ?? []);
   return { ...content, opening: input ? openingSentence(input) : '' };
 }
 export function createPoint(kind: PointKind, typeId: PointTypeId | null, akceId: string | null, onId?: (id: string) => void): Fx {

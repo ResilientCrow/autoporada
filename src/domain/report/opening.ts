@@ -1,4 +1,4 @@
-import type { OpeningInput, TitleGender } from '@/domain/cs';
+import type { OpeningInput } from '@/domain/cs';
 import { compareDates } from '@/domain/time';
 
 import type { BulletSpec, DraftPerson, PointContent } from './content';
@@ -24,21 +24,18 @@ function organisersOf(content: PointContent, spec: readonly BulletSpec[]): reado
  * What `openingSentence` needs, read from the point's fields, or `null` while
  * the title or the start date is missing. An end date before the start and a
  * time to without a time from are left out; readiness reports them. A missing
- * campus reads as „Jinde“, which names no area. The type's name goes before
- * the title („proběhl seminář …“) when the type has a title gender.
+ * campus reads as „Jinde“, which names no area. The title's gender is read by
+ * `openingSentence` (ADR 0067).
  */
 export function openingInput(
   content: PointContent,
-  titleGender: TitleGender | null,
   spec: readonly BulletSpec[],
-  typeName?: string | null,
 ): OpeningInput | null {
   const title = content.title.trim();
   const { eventDate, endDate, timeFrom, timeTo } = content;
   if (title === '' || eventDate === null) return null;
 
   const place = content.place?.trim();
-  const noun = typeName?.trim();
   return {
     title,
     date: eventDate,
@@ -46,7 +43,6 @@ export function openingInput(
     ...(timeFrom && { from: timeFrom, ...(timeTo && { to: timeTo }) }),
     campus: content.campus ?? 'jinde',
     ...(place && { place }),
-    ...(titleGender && { titleGender, ...(noun && { typeName: noun }) }),
     organisers: organisersOf(content, spec),
   };
 }

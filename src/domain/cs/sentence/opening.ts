@@ -3,17 +3,8 @@ import { isSameDate, type CalDate, type WallTime } from '@/domain/time';
 import { formatLongDate, formatLongRange, formatProseTimeRange, onWeekday } from '../dates/format';
 import { SALUTATION } from '../names/person';
 import { renderPeople, type Person } from '../people/list';
-import { searchWords } from '../sort/fold';
-
-/**
- * Grammatical gender and number of an event title, fixed per report type in
- * `POINT_TYPES` (ADR 0064): proběhl … který / proběhla … kterou /
- * proběhlo … které / proběhly … které / proběhla … která (neuter plural,
- * „Školní kola olympiády“).
- */
-/** Every title gender, once: the report types and the contracts follow this list. */
-export const TITLE_GENDERS = ['m', 'f', 'n', 'pl', 'npl'] as const;
-export type TitleGender = (typeof TITLE_GENDERS)[number];
+import { titleGender } from './title-gender';
+import type { TitleGender } from './title-words';
 
 export type Campus = 'smichov' | 'radlice' | 'na-vidouli' | 'jinde';
 
@@ -62,28 +53,9 @@ export interface OpeningInput {
   readonly campus: Campus;
   /** A locative phrase: „v učebně S206“, „v Laboratoři fyziky v učebně S8“, „na Pražském hradě“. */
   readonly place?: string;
+  /** Read for its gender (ADR 0067); one it does not tell becomes „akce „…““. */
   readonly title: string;
-  /** Unknown (type „Jiné“): the sentence says „proběhla akce „…““, always correct. */
-  readonly titleGender?: TitleGender;
-  /** The point type („Seminář“), said before the title with `titleGender` as its own gender. */
-  readonly typeName?: string;
   readonly organisers: readonly Person[];
-}
-
-/** „seminář Robotická olympiáda“; the title alone when it already holds the type („Vesmírný seminář“). */
-function namedTitle(title: string, typeName: string | undefined): string {
-  const noun = typeName?.trim() ?? '';
-  if (noun === '' || holdsWords(searchWords(title), searchWords(noun))) return title;
-  // „Seminář“ becomes „seminář“; an acronym („SOČ“) keeps its capitals.
-  const word = /^\p{Lu}\p{Ll}/u.test(noun)
-    ? noun.charAt(0).toLocaleLowerCase('cs') + noun.slice(1)
-    : noun;
-  return `${word} ${title}`;
-}
-
-/** Whether the words run in order, whole, somewhere in the text: „Seminární práce“ does not hold „seminář“. */
-function holdsWords(text: readonly string[], words: readonly string[]): boolean {
-  return words.length > 0 && text.some((_, i) => words.every((w, k) => text[i + k] === w));
 }
 
 /**
@@ -103,9 +75,10 @@ export function openingSentence(input: OpeningInput): string {
     .filter(Boolean)
     .join(' ');
 
-  const gender: TitleGender = input.titleGender ?? 'f';
   const title = input.title.trim();
-  const what = input.titleGender ? namedTitle(title, input.typeName) : `akce „${title}“`;
+  const known = titleGender(title);
+  const gender: TitleGender = known ?? 'f';
+  const what = known ? title : `akce „${title}“`;
   const main = [when, time, where, PAST_TENSE[gender], what].filter(Boolean).join(' ');
 
   if (input.organisers.length === 0) return `${main}.`;

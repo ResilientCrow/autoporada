@@ -56,9 +56,8 @@ export {
   roomLocative,
   type Campus,
   type OpeningInput,
-  TITLE_GENDERS,
-  type TitleGender,
 } from './sentence/opening';
+export type { TitleGender } from './sentence/title-words';
 export {
   ORGANIZER_ROLES,
   organizerOnOneLine,
