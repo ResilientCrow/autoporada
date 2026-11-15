@@ -209,8 +209,8 @@ function snapshotOf(s: State, monday: string, opts: { pending?: boolean; draft?:
   return { raw, refs, parsed: parseIssueSnapshot(raw) };
 }
 function segmentize(model: DocumentModel, snap: IssueSnapshot, refs: Record<string, Segment['state']>, rows: Issue['rows']): Segment[] {
-  const out: Segment[] = []; let cur: Segment = { key: 'head', kind: 'head', blocks: [] };
   const norm = (x: string) => x.replace(/\s+/g, ' ').trim().toLowerCase();
+  const out: Segment[] = []; let cur: Segment = { key: 'head', kind: 'head', blocks: [] };
   const reports = [...snap.reports]; let n = 0;
   for (const sec of model.sections) for (const [i, b] of sec.blocks.entries()) {
     // Word starts such a section on a new page; the preview shows the same break, as before Příloha 1.
@@ -302,6 +302,17 @@ export function outlineOf(b: Built): OutlineItem[] {
     if (an && an.kind === 'annex') { const t = seg.blocks.find((x) => x.kind === 'annexTitle'); const name = an.text.replace('PŘÍLOHA', 'Příloha'); out.push({ key: seg.key, title: t && t.kind === 'annexTitle' ? `${name}: ${t.text}` : name, kind: 'tail', group: 'Přílohy' }); }
   }
   return out;
+}
+export interface Numbered { row: Issue['rows'][number]; n?: number }
+/** What the headmaster can still type into, numbered as the document prints it: no row that fills itself, no approved proposal (edited in review); the partners row apart. */
+export function addable(rows: Issue['rows'], outline: readonly OutlineItem[]): { points: Numbered[]; partners: Numbered | null; meetings?: number } {
+  const nOf = (id: string | undefined) => (id === undefined ? undefined : outline.find((o) => o.refId === id)?.n);
+  const num = (r: Issue['rows'][number]): Numbered => { const n = nOf(r.id); return n === undefined ? { row: r } : { row: r, n }; };
+  const partner = rows.find((r) => r.slot === 'partners');
+  const meetings = nOf(rows.find((r) => r.slot === 'meetings')?.id);
+  // A row added here lands at the end of the array whatever its section; list them as the document does.
+  const own = rows.filter((r) => !isAutoRow(r) && !r.pointId && r.slot !== 'partners');
+  return { points: [...own.filter((r) => r.section === 'pokyny'), ...own.filter((r) => r.section !== 'pokyny')].map(num), partners: partner ? num(partner) : null, ...(meetings === undefined ? {} : { meetings }) };
 }
 /** About how long it prints: measured on the rendered DOCX, about 650 words a page, each annex starts a new one. */
 export function pagesOf(b: Built): number {

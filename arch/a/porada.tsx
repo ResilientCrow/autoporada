@@ -4,7 +4,7 @@ import { downloadFailed } from '@/ui/copy/download';
 import { parseIsoDate, toIsoDate } from '@/domain/time';
 import { moveBounds } from '@/domain/calendar';
 import { POINT_LIMITS } from '@/domain/report';
-import { emptyRichDoc } from '@/domain/richtext';
+import { emptyRichDoc, isRichDocEmpty } from '@/domain/richtext';
 import { createWith, go, Sheet, useStore } from '../core/react';
 import type { DocumentModel } from '@/document/model';
 import * as Q from '../core/select';
@@ -119,26 +119,34 @@ export function Prilohy({ id }: { id?: string }) {
     {Q.hasAnnex2(iss) || iss.annexes.length ? <Sec h="Další přílohy">{Q.hasAnnex2(iss) ? <div className="rowi"><div className="updn" /><a className="tx" href={`#/porada/prilohy/${ANNEX2}`}><span className="tt">Příloha 2</span><span className="st">text, přechází i do dalších porad</span></a></div> : null}{iss.annexes.map((a, i) => <div className="rowi" key={a.id}><div className="updn"><button type="button" aria-label={`Posunout výš: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, -1))}><Ic n="up" /></button><button type="button" aria-label={`Posunout níž: ${a.title}`} onClick={() => apply(A.moveAnnex(m, a.id, 1))}><Ic n="down" /></button></div><a className="tx" href={`#/porada/prilohy/${a.id}`}><span className="tt">Příloha {i + first}: {a.title || 'bez názvu'}</span><span className="st">{a.parts.map((p) => ({ text: 'text', table: 'tabulka', image: 'obrázek' }[p.kind])).join(', ') || 'Zatím prázdná'}</span></a></div>)}</Sec> : null}
     <button type="button" className="btn lg w" onClick={() => { let n = ''; apply(A.addAnnex(m, (x) => (n = x))); setTimeout(() => go(`/porada/prilohy/${n}`)); }}><Ic n="plus" />Přidat přílohu</button></>} />;
 }
-/** Every list of the document, in its order: the headmaster's way to put anything in, with no approval step. */
+/** A row that creates something ends in a plus; a row that opens a page keeps the chevron. */
+const PLUS = <span className="gl"><Ic n="plus" /></span>;
+const DOC_NOTE = 'Takhle to teď vypadá. Přeškrtnuté zatím nevyjde.';
+/** New things first, then the points already in the porada that take more text: the headmaster's way to put anything in, with no approval step. */
 export function Pridat() {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const rows = iss?.rows ?? [];
   const future = (k: 'akce' | 'jednani') => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
-  const item = (r: Row) => {
-    if (r.slot === 'meetings') return <Item key={r.id} act={() => future('jednani')} t={r.title} st="Přidat jednání" />;
-    if (r.slot === 'events') return <Item key={r.id} act={() => future('akce')} t={r.title} st="Přidat akci" />;
-    if (r.slot === 'talent' || r.slot === 'exemptions') return <Item key={r.id} to="/seznamy" t={r.title} st="Přidat studenta do seznamu" />;
-    return <Item key={r.id} to={`/porada/pokyny/${r.id}`} t={r.title} st={r.slot === 'partners' ? `Přidat ohlas, teď ${r.quotes.length}` : r.pointId ? 'Schválený návrh' : 'Doplnit odrážku nebo text'} />;
+  const { points, partners, meetings } = Q.addable(rows, iss ? Q.outlineOf(Q.buildDoc(s, m, { pending: true })) : []);
+  const meetRow = rows.find((r) => r.slot === 'meetings');
+  // A point the document does not print yet has no number to name, so it is named by its title.
+  const until = (n: number | undefined, t: string) => (n === undefined ? `Do bodu „${t}“` : `Do bodu ${n}, ${t}`);
+  const pointLine = (r: Row, n: number | undefined) => {
+    const empty = isRichDocEmpty(r.body); const state = n === undefined ? (empty ? ', bez textu se netiskne' : ', zatím se netiskne') : empty ? ', zatím bez textu' : '';
+    return `${r.persistence === 'standing' ? 'Trvalý bod' : 'Jen pro tuto poradu'}${state}`;
   };
-  const section = (k: Row['section'], h: string) => <Sec h={h}>{rows.filter((r) => r.section === k).map(item)}<Item to={`/porada/pokyny-novy?sekce=${k}`} t="Nový bod" st="Vlastní nadpis, text a odrážky" />{k === 'pokyny' ? <Item to="/seznamy" t="Nový seznam studentů" st="Vyjde v bodě o uvolnění z výuky" /> : null}</Sec>;
-  return <App {...(iss ? { desk: <WholeDesk note="Takhle to teď vypadá. Přeškrtnuté zatím nevyjde." /> } : {})} col={<>
-    <Back to="/porada" t="Zpět na poradu" /><Top h="Přidat do porady" lead="Vyberte seznam. Jde to rovnou do porady, bez schvalování." />
-    {iss ? <>{section('pokyny', 'Pokyny')}{section('hospodareni', 'Hospodaření')}</> : <Sec h="Pokyny"><Item act={() => future('jednani')} t="Jednání" st="Přidat jednání" /><Item act={() => future('akce')} t="Akce" st="Přidat akci" /></Sec>}
-    <Sec h="Provoz školy">
-      <Item act={report} t="Zpráva o tom, co proběhlo" st="Vlastní bod s účastníky a vyjádřením" />
-      <Item act={() => future('akce')} t="Další doposud známé akce" st="Přidat akci, podle data se zařadí sama" />
+  return <App {...(iss ? { desk: <WholeDesk note={DOC_NOTE} /> } : {})} col={<>
+    <Back to="/porada" t="Zpět na poradu" /><Top h="Přidat do porady" lead="Co přidáte, jde rovnou do porady, bez schvalování." />
+    <Sec h="Nové">
+      <Item act={() => future('akce')} t="Akce" st="Podle data se zařadí sama" end={PLUS} />
+      <Item act={() => future('jednani')} t="Jednání" st={meetRow ? until(meetings, meetRow.title) : 'Zařadí se mezi jednání'} end={PLUS} />
+      {iss ? <Item to="/porada/pokyny-novy" t="Bod" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} /> : null}
+      <Item act={report} t="Zpráva o tom, co proběhlo" st="Do Provozu školy, s účastníky a vyjádřením" end={PLUS} />
+      {partners ? <Item to={`/porada/pokyny/${partners.row.id}`} t="Ohlas sociálního partnera" st={`${until(partners.n, partners.row.title)}, teď ${partners.row.quotes.length}`} end={PLUS} /> : null}
+      <Item to="/seznamy" t="Student do seznamu" st="Talentovaní studenti nebo uvolnění z výuky" />
+      {iss ? <Item to="/porada/prilohy" t="Příloha" st="Text, tabulka nebo obrázek" /> : null}
     </Sec>
-    {iss ? <Sec h="Záhlaví a přílohy"><Item to="/porada/udaje" t="Přítomní a hosté" /><Item to="/porada/prilohy" t="Přílohy" st="Text, tabulka nebo obrázek" /></Sec> : null}
+    {points.length ? <Sec h="Doplnit do bodu, který v poradě už je">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} />)}</Sec> : null}
   </>} />;
 }
 export function Pokyny({ rowId, adding, section }: { rowId?: string; adding?: boolean; section?: 'pokyny' | 'hospodareni' }) {

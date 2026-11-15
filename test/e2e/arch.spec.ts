@@ -393,7 +393,7 @@ test.describe('the Arch UI', () => {
 
     // The headmaster's akce goes through the same steps and needs no second person to approve it.
     await page.goto('/#/pridat');
-    await page.getByRole('button', { name: /Přidat akci, podle data/ }).click();
+    await page.getByRole('button', { name: /^Akce/ }).click();
     await page.getByRole('textbox', { name: 'Název' }).fill('Den otevřených dveří');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await page.getByLabel('Den', { exact: true }).fill(isoInDays(50));
@@ -411,7 +411,7 @@ test.describe('the Arch UI', () => {
 
     // A partner's words, kept after a reload.
     await page.goto('/#/pridat');
-    await page.getByRole('link', { name: /Přidat ohlas/ }).click();
+    await page.getByRole('link', { name: /Ohlas sociálního partnera/ }).click();
     await page.getByRole('button', { name: 'Přidat ohlas' }).click();
     await page.getByLabel(/Kdo ho napsal/).fill('pana Jana Nováka');
     await page.getByLabel(/Text ohlasu/).fill('Děkujeme za spolupráci.');
@@ -419,7 +419,7 @@ test.describe('the Arch UI', () => {
     await expect(page.getByRole('alert')).toHaveCount(0);
     await page.goto('/#/pridat');
     await page.reload();
-    await page.getByRole('link', { name: /Přidat ohlas, teď 1/ }).click();
+    await page.getByRole('link', { name: /Ohlas sociálního partnera.*teď 1/ }).click();
     await expect(page.getByLabel(/Kdo ho napsal/)).toHaveValue('pana Jana Nováka');
     await page.getByRole('button', { name: 'Odebrat ohlas' }).click();
     await page.getByRole('button', { name: 'Uložit', exact: true }).click();

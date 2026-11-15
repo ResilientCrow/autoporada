@@ -141,7 +141,8 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 ### „Přidat do porady" (`Pridat` in `porada.tsx`, route `pridat`)
 
 - Headmaster only: `main.tsx` renders `<Pridat />` when `head`, else `NotFound`. Entered from the `.add` button on the porada screen.
-- Lists every list of the document in document order: the `pokyny` rows, then `hospodareni` rows (each section ends with „Nový bod"), then „Provoz školy" (report, further akce), then „Záhlaví a přílohy" (when an issue exists). Row behaviour follows `Row.slot`: `meetings` and `events` start a new jednání or akce (`Item act`), `talent` and `exemptions` go to `/seznamy`, others open `/porada/pokyny/<id>`.
+- Two groups, sorted by what is added. „Nové": Akce, Jednání, Bod, Zpráva o tom, co proběhlo, Ohlas sociálního partnera, Student do seznamu, Příloha (Bod and Příloha only when the porada has a row, Ohlas only when it has the partners row). Each sub-line says where it lands. „Doplnit do bodu, který v poradě už je": the rows `Q.addable` returns (no row the document fills itself, no approved proposal, partners apart; Pokyny before Hospodaření), titled with the document's number (`5. …`), sub-line „Trvalý bod" or „Jen pro tuto poradu", plus „zatím bez textu". A row the document does not print has no number: it is named by its title, and its sub-line ends „zatím se netiskne", or „bez textu se netiskne" when it is empty.
+- A row that creates something ends in the plus icon (`end`), a row that opens a page keeps the chevron.
 - It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde."
 
 ### Missing-report placeholders (`Kontrola` in `review.tsx`, `Zpravy` in `porada.tsx`, ADR 0061)
