@@ -4,17 +4,9 @@ import { formatLongDate, formatLongRange, formatProseTimeRange, onWeekday } from
 import { SALUTATION } from '../names/person';
 import { renderPeople, type Person } from '../people/list';
 import { titleGender } from './title-gender';
-import type { TitleGender } from './title-words';
+import { PAST_TENSE, type TitleGender } from './title-words';
 
 export type Campus = 'smichov' | 'radlice' | 'na-vidouli' | 'jinde';
-
-const PAST_TENSE: Readonly<Record<TitleGender, string>> = {
-  m: 'proběhl',
-  f: 'proběhla',
-  n: 'proběhlo',
-  pl: 'proběhly',
-  npl: 'proběhla',
-};
 
 /** The relative pronoun as the object of „organizovali“ (accusative, inanimate). */
 const WHICH: Readonly<Record<TitleGender, string>> = {

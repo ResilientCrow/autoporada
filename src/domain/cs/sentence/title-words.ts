@@ -5,6 +5,15 @@
  */
 export type TitleGender = 'm' | 'f' | 'n' | 'pl' | 'npl';
 
+/** „proběhl“ and its agreeing forms, for the opening and the placeholder paragraph. */
+export const PAST_TENSE: Readonly<Record<TitleGender, string>> = {
+  m: 'proběhl',
+  f: 'proběhla',
+  n: 'proběhlo',
+  pl: 'proběhly',
+  npl: 'proběhla',
+};
+
 /**
  * The kinds of events the school holds, by the gender of their name, all
  * lowercase. A new kind is one more word here, no migration. Nouns in -ání,

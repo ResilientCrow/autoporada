@@ -61,7 +61,7 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
       statements: [],
     });
     expect(paragraphOf(report!)).toBe(
-      'Ve čtvrtek 22. října 2026 proběhla akce Seminář. Akci zajišťovali: organizuje pan Jan Novák (1.A). Zpráva o akci nebyla dodána.',
+      'Ve čtvrtek 22. října 2026 proběhl Seminář. Akci zajišťovali: organizuje pan Jan Novák (1.A). Zpráva o akci nebyla dodána.',
     );
     expect(facts.missingReports).toEqual([{ id, title: 'Seminář', state: 'none' }]);
     expect(publish.missing.map((m) => m.akce.id)).toEqual([id]);
@@ -87,7 +87,7 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
       const { snapshot } = await assemble(head);
 
       expect(paragraphOf(snapshot!.reports[0]!)).toBe(
-        `Ve čtvrtek 22. října 2026 proběhla akce Seminář. ${sentence} Zpráva o akci nebyla dodána.`,
+        `Ve čtvrtek 22. října 2026 proběhl Seminář. ${sentence} Zpráva o akci nebyla dodána.`,
       );
     },
   );
@@ -106,7 +106,7 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
 
     expect(snapshot?.reports[0]).toMatchObject({ date: '2026-10-20', endDate: '2026-10-22' });
     expect(paragraphOf(snapshot!.reports[0]!)).toBe(
-      'Od úterý 20. října do čtvrtka 22. října 2026 proběhla akce Výlet. Zpráva o akci nebyla dodána.',
+      'Od úterý 20. října do čtvrtka 22. října 2026 proběhl Výlet. Zpráva o akci nebyla dodána.',
     );
   });
 

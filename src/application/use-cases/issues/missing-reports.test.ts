@@ -73,12 +73,12 @@ describe('issues.missingReports', () => {
       version: 0,
     });
     expect(plain(page.reports[0]!.paragraph)).toBe(
-      'Ve středu 21. října 2026 proběhla akce Seminář. Akci zajišťovali: organizuje pan Jan Novák (1.A). Zpráva o akci nebyla dodána.',
+      'Ve středu 21. října 2026 proběhl Seminář. Akci zajišťovali: organizuje pan Jan Novák (1.A). Zpráva o akci nebyla dodána.',
     );
     expect(page.reports[0]!.original).toBe(page.reports[0]!.paragraph);
     expect(page.reports[1]).toMatchObject({ startDate: '2026-10-23', endDate: '2026-10-24' });
     expect(plain(page.reports[1]!.paragraph)).toBe(
-      'Od pátku 23. října do soboty 24. října 2026 proběhla akce Výlet. Zpráva o akci nebyla dodána.',
+      'Od pátku 23. října do soboty 24. října 2026 proběhl Výlet. Zpráva o akci nebyla dodána.',
     );
   });
 
@@ -96,7 +96,7 @@ describe('issues.missingReports', () => {
     expect(report).toMatchObject({ id, paragraph: 'Vlastní věta.', own: true, version: 1 });
     // The system's paragraph stays known, for „Obnovit původní text“.
     expect(plain(report!.original)).toBe(
-      'Ve čtvrtek 22. října 2026 proběhla akce Seminář. Zpráva o akci nebyla dodána.',
+      'Ve čtvrtek 22. října 2026 proběhl Seminář. Zpráva o akci nebyla dodána.',
     );
   });
 

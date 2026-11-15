@@ -9,6 +9,8 @@ import {
 } from '../dates/format';
 import type { Campus } from './opening';
 import type { OrganizerRole } from './organizer';
+import { titleGender } from './title-gender';
+import { PAST_TENSE } from './title-words';
 
 const CAMPUS_LABEL: Readonly<Record<Exclude<Campus, 'jinde'>, string>> = {
   smichov: 'areál Smíchov',
@@ -51,12 +53,13 @@ const closed = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`);
 
 /**
  * What the document says of an akce whose report was not handed in (ADR 0060, ADR 0049): „V úterý
- * 5. května 2026 od 14.00 hodin proběhla akce předání diplomů (areál Smíchov, Zasedací místnost).
+ * 5. května 2026 od 14.00 hodin proběhlo předání diplomů (areál Smíchov, Zasedací místnost).
  * Akci organizovali: …. Za Smíchovskou střední se zúčastnili: …. Zpráva o akci nebyla dodána.“ The
  * organizer sentence follows the role (ADR 0063): „Akci organizovali“, „Akci za školu
  * koordinovali“, and with no role „Akci zajišťovali“. A multi-day akce reads „Od pondělí
  * 11. května do středy 20. května 2026 proběhla akce …“, with no time. Only the dates are
- * inflected; the typed texts are quoted as they are, and an empty piece leaves its words out.
+ * inflected; the verb follows the gender the title reads as (ADR 0067), and a title that does not
+ * say it keeps „proběhla akce …“; the typed texts are quoted as they are, and an empty piece leaves its words out.
  */
 export function placeholderParagraph(input: PlaceholderInput): string {
   const multiDay = input.endDate !== undefined && !isSameDate(input.date, input.endDate);
@@ -73,7 +76,11 @@ export function placeholderParagraph(input: PlaceholderInput): string {
     when = `${onWeekday(input.date, { capitalize: true })} ${formatLongDate(input.date)}${time}`;
   }
   const where = [campusLabel(input.campus), clean(input.place ?? '')].filter(Boolean).join(', ');
-  const sentences = [`${when} proběhla akce ${clean(input.title)}${where ? ` (${where})` : ''}.`];
+  const title = clean(input.title);
+  const gender = titleGender(title);
+  // A title that does not say its gender keeps the always-correct „proběhla akce …“ (ADR 0067).
+  const what = gender ? `${PAST_TENSE[gender]} ${title}` : `proběhla akce ${title}`;
+  const sentences = [`${when} ${what}${where ? ` (${where})` : ''}.`];
   const organizer = clean(input.organizer ?? '');
   if (organizer) {
     const lead = ORGANIZER_LEAD[input.organizerRole ?? 'none'];
