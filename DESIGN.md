@@ -90,7 +90,7 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 | `Top` | Page heading: `h` title (`big` for the large one), optional `lead`. |
 | `Back` | „Zpět" link with a back icon; `to`, `t`. |
 | `Sec` | Titled group `.grp` with `h2`, optional `right` link. |
-| `Item` | List row `.it`. With `to`: an `<a>` to a hash route. With `act`: a `<button>` that runs a function (no navigation). With neither: a plain `div`. Props `t` title, `st` sub-line, `mk` marker (`c` done check, `o` open ring, `n` gold dot, `x` red dot), `end` right-hand content, `warn`. |
+| `Item` | List row `.it`. With `to`: an `<a>` to a hash route. With `act`: a `<button>` that runs a function (no navigation). With neither: a plain `div`. Props `t` title, `st` sub-line, `mk` marker (`c` done check, `o` open ring, `n` gold dot, `x` red dot), `end` right-hand content, `warn`, `hot` (runs on pointer enter and focus, for a desk that follows the row). |
 | `Note` | Gold-soft information box; `err` gives the red `role="alert"` variant. |
 | `Dialog` | Modal `.veil` > `.dlg` with `title`, Escape and outside click close, focus returns to opener. Bottom sheet on phone. |
 | `Toast` | `role="status"` message; with `undo` shows „Vrátit zpět" for 15 s, else 5 s. |
@@ -144,7 +144,7 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 - Two groups, sorted by what is added. „Nové": Akce, Jednání, Bod, Zpráva o tom, co proběhlo, Ohlas sociálního partnera, Student do seznamu, Příloha (Bod and Příloha only when the porada has a row, Ohlas only when it has the partners row). Each sub-line says where it lands. „Doplnit do bodu, který v poradě už je": the rows `Q.addable` returns (no row the document fills itself, no approved proposal, partners apart; Pokyny before Hospodaření), titled with the document's number (`5. …`), sub-line „Trvalý bod" or „Jen pro tuto poradu", plus „zatím bez textu". A row the document does not print has no number: it is named by its title, and its sub-line ends „zatím se netiskne", or „bez textu se netiskne" when it is empty. The numbers come from the outline, whose rows are matched to points by `Q.rowForPoint` (the longest printed title, never an empty one).
 - A row that creates something ends in the plus icon (`end`), a row that opens a page keeps the chevron.
 - Rows that open a point carry `?z=pridat`: `Pokyny` then returns to `/pridat` after Uložit or Odebrat, and its back link reads „Zpět na přidávání".
-- It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde."
+- It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde." On a desktop the desk follows the row under the pointer or focus (`Item hot`, `WholeDesk follow`): it glides to that point without scrolling the page, and does not touch the desk position Porada remembers. A row with no point (Bod, Zpráva, Příloha) clears the mark.
 
 ### Missing-report placeholders (`Kontrola` in `review.tsx`, `Zpravy` in `porada.tsx`, ADR 0061)
 

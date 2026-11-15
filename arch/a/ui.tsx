@@ -67,10 +67,12 @@ export function Desk({ note, children, cls = '', right, fold }: { note?: ReactNo
 export function Top({ h, lead, big }: { h: ReactNode; lead?: ReactNode; big?: boolean }) { return <div className="top"><h1 className={big ? 'big' : 'big m'}>{h}</h1>{lead ? <p className="lead">{lead}</p> : null}</div>; }
 export const Back = ({ to, t }: { to: string; t: string }) => <a className="back" href={Hash(to)}><Ic n="back" />{t}</a>;
 export const Sec = ({ h, right, children }: { h: string; right?: ReactNode; children: ReactNode }) => <section className="grp"><h2>{h}{right}</h2>{children}</section>;
-export function Item({ to, act, t, st, mk, end, warn }: { to?: string; act?: () => void; t: ReactNode; st?: ReactNode; mk?: Mark; end?: ReactNode; warn?: boolean }) {
+/** `hot` runs when the pointer or the focus reaches the row, for a desk that follows it. */
+export function Item({ to, act, t, st, mk, end, warn, hot }: { to?: string; act?: () => void; t: ReactNode; st?: ReactNode; mk?: Mark; end?: ReactNode; warn?: boolean; hot?: () => void }) {
   const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : mk === 'z' ? <Ic n="ban" /> : <i />}</span> : null}<span className="tx"><span className="tt">{t}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{st}</span> : null}</span>{end ?? (to || act ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
-  if (act) return <button type="button" className="it" onClick={act}>{inner}</button>;
-  return to ? <a className="it" href={Hash(to)}>{inner}</a> : <div className="it">{inner}</div>;
+  const on = hot ? { onMouseEnter: hot, onFocus: hot } : {};
+  if (act) return <button type="button" className="it" onClick={act} {...on}>{inner}</button>;
+  return to ? <a className="it" href={Hash(to)} {...on}>{inner}</a> : <div className="it">{inner}</div>;
 }
 export const Note = ({ h, children, err }: { h?: string; children: ReactNode; err?: boolean }) => <div className={`note${err ? ' err' : ''}`} {...(err ? { role: 'alert' } : {})}>{h ? <b>{h}</b> : null}{children}</div>;
 /** What a return asked of the author (ADR 0058): the parts to rework as the heading, the reviewer's note below. */

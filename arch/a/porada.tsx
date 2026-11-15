@@ -20,11 +20,17 @@ const useM = () => { const { s } = useStore(); return Q.workingMonday(s); };
 const { counts } = Q;
 const ATT = { label: 'Čeká na Vás', test: (i: Q.OutlineItem) => i.state === 'submitted' || (i.kind === 'missing' && i.state !== 'checked') };
 let deskTop = 0;
-function WholeDesk({ pending = true, note, focus }: { pending?: boolean; note?: string; focus?: (x: Q.Segment) => boolean }) {
+/** Scrolls the desk alone (never the page) so that a segment sits just under the desk's sticky note bar. */
+function glideTo(d: HTMLElement, el: HTMLElement) {
+  const bar = d.querySelector('.dhd')?.getBoundingClientRect().height ?? 0;
+  const top = d.scrollTop + el.getBoundingClientRect().top - d.getBoundingClientRect().top - bar - 16;
+  d.scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+function WholeDesk({ pending = true, note, focus, follow }: { pending?: boolean; note?: string; focus?: (x: Q.Segment) => boolean; follow?: boolean }) {
   const { s } = useStore(); const m = useM(); const b = Q.buildDoc(s, m, { pending });
   const fk = focus ? b.segments.find(focus)?.key : undefined;
-  // Coming back from a report lands where you left the long document, editing a point lands on that point.
-  useEffect(() => { const d = document.querySelector<HTMLElement>('.desk.mg'); if (!d) return; if (fk) document.getElementById(`seg-${fk}`)?.scrollIntoView({ block: 'start' }); else d.scrollTop = deskTop; return () => { if (!fk) deskTop = d.scrollTop; }; }, [fk]);
+  // Coming back from a report lands where you left the long document, editing a point lands on that point; with `follow` the desk glides to the row under the pointer.
+  useEffect(() => { const d = document.querySelector<HTMLElement>('.desk.mg'); if (!d) return; const el = fk ? document.getElementById(`seg-${fk}`) : null; if (el && follow) glideTo(d, el); else if (el) el.scrollIntoView({ block: 'start' }); else if (!follow) d.scrollTop = deskTop; return () => { if (!fk && !follow) deskTop = d.scrollTop; }; }, [fk, follow]);
   const open = (x: Q.Segment) => { if (x.kind === 'missing') go(`/kontrola/chybi-${x.refId}`); else if (x.kind === 'report') go(x.state === 'submitted' ? `/kontrola/${x.key}` : `/zprava/${x.key}`); else if (x.kind === 'item') go(x.refId ? `/porada/pokyny/${x.refId}` : '/porada/pokyny'); };
   const label = (x: Q.Segment) => x.state === 'submitted' ? <span className="mn w">Čeká na kontrolu</span> : x.kind === 'missing' ? <span className="mn w">{x.state === 'checked' ? 'Chybí zpráva, odstavec zkontrolovaný' : 'Chybí zpráva'}</span> : null;
   return <Desk cls="mg clip" fold={`Otevřít celý dokument, ${Q.pagesText(Q.pagesOf(b))}`} right={<DocNav built={b} attention={ATT} />} note={note ? <b>{note}</b> : <><b>Celý dokument, {Q.pagesText(Q.pagesOf(b))}.</b> Klikněte na část a upravte ji.</>}><div className="wrapm"><Sheet built={b} marginNote={label} onSeg={open} cls={(x) => `${x.state === 'submitted' ? 'np' : ''}${x.key === fk ? ' cur' : ''}`} /></div></Desk>;
@@ -125,9 +131,13 @@ const DOC_NOTE = 'Takhle to teď vypadá. Přeškrtnuté zatím nevyjde.';
 /** New things first, then the points already in the porada that take more text: the headmaster's way to put anything in, with no approval step. */
 export function Pridat() {
   const { s, apply } = useStore(); const m = useM(); const iss = Q.issueOf(s, m); const rows = iss?.rows ?? [];
+  const narrow = useNarrow(); const [hot, setHot] = useState<string | null>(null);
   const future = (k: 'akce' | 'jednani') => { const id = createWith(apply, s, (cb) => A.createFuture(k, cb)); go(`/nova-akce/${id}`); };
   const report = () => { const id = createWith(apply, s, (cb) => A.createPoint('report', 'jine', null, cb)); go(`/psat/${id}/zaklad`); };
   const { points, partners, meetings } = Q.addable(rows, iss ? Q.outlineOf(Q.buildDoc(s, m, { pending: true })) : []);
+  // On a desktop the desk glides to the point a row adds to, and a row with no point clears the mark; on a phone the document is folded away.
+  const hv = (id?: string) => (narrow ? {} : { hot: () => setHot(id ?? null) });
+  const slotId = (k: Row['slot']) => rows.find((r) => r.slot === k)?.id;
   const meetRow = rows.find((r) => r.slot === 'meetings');
   // A point the document does not print yet has no number to name, so it is named by its title.
   const until = (n: number | undefined, t: string) => (n === undefined ? `Do bodu „${t}“` : `Do bodu ${n}, ${t}`);
@@ -135,18 +145,18 @@ export function Pridat() {
     const empty = isRichDocEmpty(r.body); const state = n === undefined ? (empty ? ', bez textu se netiskne' : ', zatím se netiskne') : empty ? ', zatím bez textu' : '';
     return `${r.persistence === 'standing' ? 'Trvalý bod' : 'Jen pro tuto poradu'}${state}`;
   };
-  return <App {...(iss ? { desk: <WholeDesk note={DOC_NOTE} /> } : {})} col={<>
+  return <App {...(iss ? { desk: <WholeDesk note={DOC_NOTE} follow={!narrow} {...(hot && !narrow ? { focus: (x: Q.Segment) => x.refId === hot } : {})} /> } : {})} col={<>
     <Back to="/porada" t="Zpět na poradu" /><Top h="Přidat do porady" lead="Co přidáte, jde rovnou do porady, bez schvalování." />
     <Sec h="Nové">
-      <Item act={() => future('akce')} t="Akce" st="Podle data se zařadí sama" end={PLUS} />
-      <Item act={() => future('jednani')} t="Jednání" st={meetRow ? until(meetings, meetRow.title) : 'Zařadí se mezi jednání'} end={PLUS} />
-      {iss ? <Item to="/porada/pokyny-novy?z=pridat" t="Bod" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} /> : null}
-      <Item act={report} t="Zpráva o tom, co proběhlo" st="Do Provozu školy, s účastníky a vyjádřením" end={PLUS} />
-      {partners ? <Item to={`/porada/pokyny/${partners.row.id}?z=pridat`} t="Ohlas sociálního partnera" st={`${until(partners.n, partners.row.title)}, teď ${partners.row.quotes.length}`} end={PLUS} /> : null}
-      <Item to="/seznamy" t="Student do seznamu" st="Talentovaní studenti nebo uvolnění z výuky" />
-      {iss ? <Item to="/porada/prilohy" t="Příloha" st="Text, tabulka nebo obrázek" /> : null}
+      <Item act={() => future('akce')} t="Akce" st="Podle data se zařadí sama" end={PLUS} {...hv(slotId('events'))} />
+      <Item act={() => future('jednani')} t="Jednání" st={meetRow ? until(meetings, meetRow.title) : 'Zařadí se mezi jednání'} end={PLUS} {...hv(meetRow?.id)} />
+      {iss ? <Item to="/porada/pokyny-novy?z=pridat" t="Bod" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} {...hv()} /> : null}
+      <Item act={report} t="Zpráva o tom, co proběhlo" st="Do Provozu školy, s účastníky a vyjádřením" end={PLUS} {...hv()} />
+      {partners ? <Item to={`/porada/pokyny/${partners.row.id}?z=pridat`} t="Ohlas sociálního partnera" st={`${until(partners.n, partners.row.title)}, teď ${partners.row.quotes.length}`} end={PLUS} {...hv(partners.row.id)} /> : null}
+      <Item to="/seznamy" t="Student do seznamu" st="Talentovaní studenti nebo uvolnění z výuky" {...hv(slotId('talent'))} />
+      {iss ? <Item to="/porada/prilohy" t="Příloha" st="Text, tabulka nebo obrázek" {...hv()} /> : null}
     </Sec>
-    {points.length ? <Sec h="Doplnit do bodu, který v poradě už je">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}?z=pridat`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} />)}</Sec> : null}
+    {points.length ? <Sec h="Doplnit do bodu, který v poradě už je">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}?z=pridat`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} {...hv(r.id)} />)}</Sec> : null}
   </>} />;
 }
 export function Pokyny({ rowId, adding, section, from }: { rowId?: string; adding?: boolean; section?: 'pokyny' | 'hospodareni'; from?: 'pridat' }) {
