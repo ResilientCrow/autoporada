@@ -77,10 +77,24 @@ function isCoordinated(tokens: readonly string[], headIndex: number): boolean {
   const next = tokens[headIndex + 1];
   if (next !== undefined && CONJUNCTIONS.has(lower(next))) return true;
   // „turnaj, kvalifikace do kola“ is an apposition; „setkání, diskuse a raut“ is a list.
-  return (
+  if (
     token.endsWith(',') &&
     tokens.slice(headIndex + 1).some((later) => LIST_CONJUNCTIONS.has(lower(later)))
-  );
+  ) {
+    return true;
+  }
+  return joinsAnotherEvent(tokens, headIndex);
+}
+
+/** „Seminář pro učitele a workshop pro žáky“: a later conjunction before another event's noun. */
+function joinsAnotherEvent(tokens: readonly string[], headIndex: number): boolean {
+  for (let i = headIndex + 1; i < tokens.length; i += 1) {
+    if (!CONJUNCTIONS.has(lower(tokens[i] ?? ''))) continue;
+    const from = i + 1;
+    const noun = tokens[from + skipAdjectives(tokens, from).length];
+    if (noun !== undefined && classOf(analyse(noun)) !== null) return true;
+  }
+  return false;
 }
 
 /** Step 6: the list, else the endings of verbal nouns and of „Robotiáda“. */

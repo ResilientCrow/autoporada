@@ -31,7 +31,7 @@ export const reportSpec = (kind: PointKind): readonly BulletSpec[] =>
 
 /**
  * What the content may hold for the point's kind, checked by the save and the
- * submit. A report's bullet with a key of its type's spec carries that spec's
+ * submit. A report's bullet with a key of the report rows carries that row's
  * kind, because the opening and readiness match a bullet to its spec by key;
  * a missing required bullet is readiness's to report. Finance and pokyn have
  * a title and a text only (design section 11).

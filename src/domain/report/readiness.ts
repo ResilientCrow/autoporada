@@ -209,7 +209,7 @@ function speakerWarnings(content: PointContent): Warning[] {
 /**
  * What stops a point from being submitted, in form order (title, dates,
  * times, bullets, opening, statements), and what is only worth a look.
- * `spec` is the type's default bullets (empty for finance and pokyn);
+ * `spec` is the kind's default bullets (empty for finance and pokyn);
  * `today` is the Prague day: a report on an akce that has not ended by then is
  * refused (`event-not-over`), and classes count in its school year. Text is trimmed everywhere, so
  * a blank title or opening fails here before the database's

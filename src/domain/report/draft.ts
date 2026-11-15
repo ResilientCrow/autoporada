@@ -2,7 +2,7 @@ import { emptyRichDoc } from '@/domain/richtext';
 
 import type { BulletSpec, DraftBullet, PointContent } from './content';
 
-/** A type's bullet as the draft's own, still unfilled; people keep the order they are added in. */
+/** A default bullet as the draft's own, still unfilled; people keep the order they are added in. */
 export function draftBullet({ key, label, kind }: BulletSpec): DraftBullet {
   return kind === 'people'
     ? { key, label, kind, order: 'input', people: [] }
@@ -10,9 +10,9 @@ export function draftBullet({ key, label, kind }: BulletSpec): DraftBullet {
 }
 
 /**
- * The content a new draft starts with: every field empty, and the type's
- * default bullets as its own (design section 6). Finance and pokyn have no
- * type, so they pass none.
+ * The content a new draft starts with: every field empty, and the default
+ * bullets as its own (design section 6): the report rows for a report;
+ * finance and pokyn pass none.
  */
 export function newDraft(defaultBullets: readonly BulletSpec[]): PointContent {
   return {

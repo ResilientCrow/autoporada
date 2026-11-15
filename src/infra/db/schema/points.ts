@@ -48,8 +48,6 @@ const campusList = sql.raw(
     .map((campus) => `'${campus}'`)
     .join(','),
 );
-/** The keys of the report types fixed in code (ADR 0064). */
-
 /**
  * A point for the meeting: a report, or a HOSPODAŘENÍ or POKYNY proposal
  * (design §2). It holds what its author wrote, so it is personal data. The

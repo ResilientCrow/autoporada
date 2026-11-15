@@ -33,7 +33,7 @@ export const TITLE_WORDS: Readonly<Record<TitleGender, readonly string[]>> = {
     ...['ročník', 'cyklus', 'projekt', 'kongres', 'summit', 'panel', 'meetup', 'event'],
     ...['happening', 'teambuilding', 'brainstorming', 'rozhovor', 'podcast', 'stream'],
     ...['přenos', 'zápis', 'nábor', 'konkurz', 'pohovor', 'křest', 'ceremoniál', 'audit'],
-    ...['poplach', 'nácvik', 'sraz', 'sběr', 'kroužek', 'klub', 'halloween'],
+    ...['poplach', 'nácvik', 'sraz', 'sběr', 'kroužek', 'klub'],
   ],
   f: [
     ...['akce', 'stáž', 'praxe', 'brigáda', 'porada', 'rada', 'komise', 'schůze', 'schůzka'],
