@@ -186,22 +186,20 @@ describe('PDF render check', () => {
     expect(checkedColumns).toBeGreaterThanOrEqual(3);
   });
 
-  it('prints a missing report as its sentence and the two fixed lines, under its heading', () => {
+  it('prints a missing report as its sentence and the fixed line, under its heading', () => {
     const text = pages(pdfs['missing-report']!).join('\n').replace(/\s+/g, ' ');
     const at = text.indexOf('Vesmírný seminář');
     expect(at).toBeGreaterThan(-1);
     const rest = text.slice(at);
     expect(rest).toContain(PLACEHOLDER);
-    expect(rest.indexOf('Seznam účastníků nebyl dodán.')).toBeGreaterThan(
+    // ADR 0060: one report line follows the paragraph.
+    expect(rest.indexOf('vyjádření organizátora: nebylo dodáno')).toBeGreaterThan(
       rest.indexOf(PLACEHOLDER),
-    );
-    expect(rest.indexOf('Vyjádření organizátora nebylo dodáno.')).toBeGreaterThan(
-      rest.indexOf('Seznam účastníků nebyl dodán.'),
     );
     // Nothing else sits between the placeholder's heading and the next point.
     const point = rest.slice(0, rest.indexOf('Další doposud známé akce školy'));
     expect(point).not.toContain('účast studentů');
-    expect(point).not.toContain('vyjádření');
+    expect(point.split('vyjádření')).toHaveLength(2);
   });
 
   it('puts Příloha 2 on a page of its own', () => {
