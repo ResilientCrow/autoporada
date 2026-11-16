@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DraftBullet, DraftPerson, DraftStatement, PointContent } from '@/domain/report';
-import { richDocFromText } from '@/domain/richtext';
+import { richDocFromText, type RichDoc } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
 
 import { snapshotFixture } from '../../../test/support/snapshots';
@@ -68,6 +68,9 @@ const reportOf = (c: PointContent) => {
   if (!report) throw new Error('expected a report');
   return { report, omitted };
 };
+const paragraphText = (p: RichDoc['content'][number]): string =>
+  (p.content ?? []).map((r) => r.text).join('');
+
 const textOf = (b: Block): string => {
   if (b.kind === 'reportLine') return `${b.label}${b.runs.map((r) => r.text).join('')}`;
   if (b.kind === 'body') return b.runs.map((r) => r.text).join('');
@@ -133,11 +136,10 @@ describe('reportFromContent', () => {
   });
 
   describe('the opening sentence', () => {
-    it('becomes the first paragraph of the body', () => {
+    it('goes on with the body’s first paragraph', () => {
       const { report } = reportOf(content({ opening: 'Ve středu proběhl seminář.' }));
-      expect(report.body.content.map((p) => p.content?.[0]?.text)).toEqual([
-        'Ve středu proběhl seminář.',
-        'Proběhl seminář.',
+      expect(report.body.content.map(paragraphText)).toEqual([
+        'Ve středu proběhl seminář. Proběhl seminář.',
       ]);
       parses(report);
     });
@@ -367,10 +369,9 @@ describe('reportFromContent', () => {
           },
         }),
       );
-      expect(report.body.content.map((p) => p.content?.[0]?.text)).toEqual([
+      expect(report.body.content.map(paragraphText)).toEqual([
         'Ve\tstředu',
-        'proběhl seminář.',
-        'Jedna\tdva.',
+        'proběhl seminář. Jedna\tdva.',
       ]);
       parses(report);
     });
@@ -535,8 +536,7 @@ describe('composePointPreview', () => {
     );
     expect(blocks.map(textOf).filter(Boolean)).toEqual([
       'Seminář Matika Česku',
-      'Ve středu proběhl seminář.',
-      'Proběhl seminář.',
+      'Ve středu proběhl seminář. Proběhl seminář.',
       'účast studentů: pan Jan Novák',
       'vyjádření pana Nováka: „Bylo to skvělé.“',
     ]);

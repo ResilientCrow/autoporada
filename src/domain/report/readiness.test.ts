@@ -6,6 +6,7 @@ import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
 import {
   missingForSubmit,
+  reportBody,
   submittedContent,
   type BulletSpec,
   type DraftBullet,
@@ -635,12 +636,10 @@ describe('missingForSubmit: the body with the opening', () => {
     attrs: { indent: 0 },
     content: [{ type: 'text', text }],
   });
-  /** A one-paragraph body that, after the opening, makes the whole weigh `size` bytes. */
+  /** A one-paragraph body that, joined to the opening, makes the whole weigh `size` bytes. */
   function bodyWeighing(opening: string, size: number): RichDoc {
-    const whole = (text: string): RichDoc => ({
-      type: 'doc',
-      content: [...richDocFromText(opening).content, paragraph(text)],
-    });
+    const whole = (text: string): RichDoc =>
+      reportBody(opening, { type: 'doc', content: [paragraph(text)] });
     const fill = size - (bytes(whole('x')) - 1);
     return { type: 'doc', content: [paragraph('a'.repeat(fill))] };
   }
@@ -668,17 +667,17 @@ describe('missingForSubmit: the body with the opening', () => {
   });
 
   it('passes the opening and a body of exactly the most nodes', () => {
-    // The opening is a paragraph and its text: two nodes; the body paragraph is one more.
-    expect(check({ ...ready, body: manyTexts(LIMITS.maxNodes - 3) }).problems).toEqual([]);
+    // The body's first paragraph goes on the opening's: that paragraph and the opening's text.
+    expect(check({ ...ready, body: manyTexts(LIMITS.maxNodes - 2) }).problems).toEqual([]);
   });
 
   it('refuses one node more, which the body alone does not reach', () => {
-    const body = manyTexts(LIMITS.maxNodes - 2);
+    const body = manyTexts(LIMITS.maxNodes - 1);
     expect(check({ ...ready, body }).problems).toEqual([TOO_LONG]);
   });
 
   it('counts the opening’s lines, one paragraph each', () => {
-    const body = manyTexts(LIMITS.maxNodes - 4);
+    const body = manyTexts(LIMITS.maxNodes - 3);
     expect(check({ ...ready, opening: 'Jedna.\nDva.', body }).problems).toEqual([TOO_LONG]);
   });
 
