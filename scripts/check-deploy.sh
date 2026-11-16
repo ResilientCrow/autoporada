@@ -63,8 +63,9 @@ installed=$(as_root './install.sh') || fail 'install.sh is not idempotent'
 # The hint for a volume made before M7 names the upgrade SQL, which ships next to it.
 printf '%s\n' "$installed" | grep -qF 'docker compose exec -T postgres psql' || fail 'install.sh prints no upgrade command'
 hint_file=$(printf '%s\n' "$installed" | sed -n 's/.* -f - <//p')
-[ "$hint_file" = postgres/upgrade/m7-roles.sql ] && [ -s "$work/deploy/$hint_file" ] ||
+if [ "$hint_file" != postgres/upgrade/m7-roles.sql ] || [ ! -s "$work/deploy/$hint_file" ]; then
   fail "the upgrade command of install.sh names a missing file: $hint_file"
+fi
 compose up -d --no-build >/dev/null 2>&1 || fail 'compose up failed'
 
 i=0
@@ -231,6 +232,8 @@ upgraded=$(sql "SELECT concat_ws(' ',
   (SELECT count(*) FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.member WHERE r.rolname = 'autoporada_worker'),
   (SELECT rolcanlogin FROM pg_roles WHERE rolname = 'autoporada_worker'))") || fail 'could not read the upgraded roles'
 [ "$upgraded" = 't t 1 t' ] || fail "unexpected worker role after the upgrade SQL: $upgraded"
+# The container's shell expands $(cat …) and $(hostname -i), not this one.
+# shellcheck disable=SC2016
 login=$(compose exec -T postgres sh -c 'PGPASSWORD=$(cat /run/secrets/pg_worker_password) psql -X -h $(hostname -i) -U autoporada_worker -d autoporada -tAc "SELECT current_user"' 2>&1) ||
   fail "the worker role cannot log in with its secret after the upgrade SQL: $login"
 [ "$login" = autoporada_worker ] || fail "the worker login answered: $login"
