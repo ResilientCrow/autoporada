@@ -66,10 +66,10 @@ describe('openingSentence', () => {
   });
 
   it.each(['Vaib', 'Kariéra 2026', 'Seminář a workshop', 'Seminar'])(
-    'writes „akce „%s““ when the title does not say its gender',
+    'writes „akce s názvem %s“ when the title does not say its gender',
     (title) => {
       expect(openingSentence({ ...base, title })).toContain(
-        `proběhla akce „${title}“, kterou organizovali`,
+        `proběhla akce s názvem ${title}, kterou organizovali`,
       );
     },
   );

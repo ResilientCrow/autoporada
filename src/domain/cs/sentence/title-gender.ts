@@ -138,7 +138,7 @@ function agreeWithAdjectives(
 /**
  * The grammatical gender and number of an event's name, read from its title
  * (ADR 0067), or `null` when the title does not say: then the opening
- * sentence writes „proběhla akce „…““, which is always correct.
+ * sentence writes „proběhla akce s názvem …“ (ADR 0068), which is always correct.
  */
 export function titleGender(title: string): TitleGender | null {
   const tokens = title.split(/\s+/u).filter(Boolean);

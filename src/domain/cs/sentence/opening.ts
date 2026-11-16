@@ -45,7 +45,7 @@ export interface OpeningInput {
   readonly campus: Campus;
   /** A locative phrase: „v učebně S206“, „v Laboratoři fyziky v učebně S8“, „na Pražském hradě“. */
   readonly place?: string;
-  /** Read for its gender (ADR 0067); one it does not tell becomes „akce „…““. */
+  /** Read for its gender (ADR 0067); one it does not tell becomes „akce s názvem …“ (ADR 0068). */
   readonly title: string;
   readonly organisers: readonly Person[];
 }
@@ -70,7 +70,7 @@ export function openingSentence(input: OpeningInput): string {
   const title = input.title.trim();
   const known = titleGender(title);
   const gender: TitleGender = known ?? 'f';
-  const what = known ? title : `akce „${title}“`;
+  const what = known ? title : `akce s názvem ${title}`;
   const main = [when, time, where, PAST_TENSE[gender], what].filter(Boolean).join(' ');
 
   if (input.organisers.length === 0) return `${main}.`;

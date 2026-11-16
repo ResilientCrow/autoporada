@@ -116,7 +116,7 @@ describe('openingInput', () => {
     const titled = (title: string) => sentence({ ...content, title });
     expect(titled('Krajské kolo SOČ')).toContain('proběhlo Krajské kolo SOČ, které');
     expect(titled('Tematické exkurze')).toContain('proběhly Tematické exkurze, které');
-    expect(titled('Vaib')).toContain('proběhla akce „Vaib“, kterou');
+    expect(titled('Vaib')).toContain('proběhla akce s názvem Vaib, kterou');
   });
 
   it('carries no type: the input holds no gender, only the title', () => {
