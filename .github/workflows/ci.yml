@@ -121,6 +121,7 @@ jobs:
       - run: docker build -f docker/app/Dockerfile --target web -t autoporada-web:check .
       - run: docker build -f docker/app/Dockerfile --target worker -t autoporada-worker:check .
       - run: docker build -f docker/app/Dockerfile --target tools -t autoporada-tools:check .
+      - run: docker build -t autoporada-gotenberg:check docker/gotenberg
       - run: scripts/check-web-image.sh autoporada-web:check
       - run: scripts/check-deploy.sh
 
