@@ -1,5 +1,6 @@
 import { renderPeople, type Salutation } from '@/domain/cs';
 import {
+  OPENING_KEYS,
   reportBody,
   type DraftBullet,
   type DraftPerson,
@@ -106,7 +107,10 @@ function snapshotStatement(s: DraftStatement): SnapshotStatement | null {
   return { speakerGenitive, ...optional('affiliation', s.affiliation), quote };
 }
 
-/** The bullets that survive, with the counts of what did not (rules 2 to 4). */
+/**
+ * The bullets that survive, with the counts of what did not (rules 2 to 4). The organisers' row
+ * prints no line of its own: the opening sentence names them.
+ */
 function snapshotBullets(bullets: readonly DraftBullet[]): {
   kept: SnapshotBullet[];
   omitted: Pick<Omitted, 'people' | 'peopleBullets' | 'textBullets'>;
@@ -114,6 +118,7 @@ function snapshotBullets(bullets: readonly DraftBullet[]): {
   const kept: SnapshotBullet[] = [];
   const omitted = { people: 0, peopleBullets: 0, textBullets: 0 };
   for (const bullet of bullets) {
+    if (bullet.kind === 'people' && OPENING_KEYS.includes(bullet.key)) continue;
     const label = singleLine(bullet.label);
     if (bullet.kind === 'text') {
       const text = singleLine(bullet.text);

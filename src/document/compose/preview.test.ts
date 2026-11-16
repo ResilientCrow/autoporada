@@ -80,6 +80,22 @@ describe('reportFromContent', () => {
     expect(() => parses({ id: 'p-1' })).toThrow(/invalid/);
   });
 
+  it.each(['organisers', 'speakers'])(
+    'prints no %s line: the opening sentence names them',
+    (key) => {
+      const { report, omitted } = reportOf(
+        content({
+          bullets: [
+            peopleBullet([person()], { key, label: 'Organizátoři' }),
+            peopleBullet([person({ familyName: 'Svoboda' })], { label: 'Účastníci' }),
+          ],
+        }),
+      );
+      expect(omitted).toEqual(NONE);
+      expect(report?.bullets.map((b) => b.label)).toEqual(['Účastníci']);
+    },
+  );
+
   it('maps a complete point and counts nothing', () => {
     const { report, omitted } = reportOf(
       content({
