@@ -31,12 +31,6 @@ export function organiserVerb(organisers: readonly Person[]): string {
   return women === organisers.length ? 'organizovaly' : 'organizovali';
 }
 
-/** „S206“ → „v učebně S206“; anything else is used as typed. */
-export function roomLocative(room: string): string {
-  const code = room.trim();
-  return /^[A-Z]{0,2}\d{1,4}[A-Z]?$/.test(code) ? `v učebně ${code}` : code;
-}
-
 export interface OpeningInput {
   readonly date: CalDate;
   /** Last day of a multi-day event. */

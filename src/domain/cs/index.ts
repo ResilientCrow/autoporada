@@ -50,13 +50,8 @@ export {
   type PasteResult,
   type PasteRow,
 } from './people/paste';
-export {
-  openingSentence,
-  organiserVerb,
-  roomLocative,
-  type Campus,
-  type OpeningInput,
-} from './sentence/opening';
+export { openingSentence, organiserVerb, type Campus, type OpeningInput } from './sentence/opening';
+export { placePhrase } from './place/place-phrase';
 export type { TitleGender } from './sentence/title-words';
 export {
   ORGANIZER_ROLES,

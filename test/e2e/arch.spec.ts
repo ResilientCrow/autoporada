@@ -250,6 +250,21 @@ test.describe('the Arch UI', () => {
     await expect(page.getByRole('link', { name: /^Bez názvu/ })).toHaveCount(0);
   });
 
+  test('the place field says how the place reads in the sentence (ADR 0069)', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    const project = testInfo.project.name;
+    const id = await seedPoint(emailOf('archa', project), `Zpráva s místem ${project}`, 'draft');
+    await signInAs(signInAsRe('archa', project));
+    await page.goto(`/#/psat/${id}/zaklad`);
+    const place = page.getByLabel('Kde přesně');
+    await place.fill('místnost S205');
+    await expect(page.getByText('Ve větě: v místnosti S205.')).toBeVisible();
+    await place.fill('IKEM');
+    await expect(page.getByText(/ve větě proto stojí „v prostorách IKEM“/)).toBeVisible();
+  });
+
   test('a teacher sees no directory and an author no name of the vedení', async ({
     page,
     signInAs,

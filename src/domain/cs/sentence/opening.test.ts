@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
-import {
-  openingSentence,
-  organiserVerb,
-  roomLocative,
-  type OpeningInput,
-  type Person,
-} from '../index';
+import { openingSentence, organiserVerb, type OpeningInput, type Person } from '../index';
 
 const eva: Person = {
   salutation: 'slecna',
@@ -140,16 +134,5 @@ describe('organiserVerb', () => {
     [[eva, lucie], 'organizovaly'],
   ])('%#: %s', (people, verb) => {
     expect(organiserVerb(people)).toBe(verb);
-  });
-});
-
-describe('roomLocative', () => {
-  it.each([
-    ['S206', 'v učebně S206'],
-    ['S8', 'v učebně S8'],
-    [' R12A ', 'v učebně R12A'],
-    ['v Laboratoři fyziky', 'v Laboratoři fyziky'],
-  ])('%j → %j', (room, phrase) => {
-    expect(roomLocative(room)).toBe(phrase);
   });
 });

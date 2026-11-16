@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { foldForSearch, normalizeClass, parsePeopleList, roomLocative, suggestGenitive, type Salutation } from '@/domain/cs';
+import { foldForSearch, normalizeClass, parsePeopleList, placePhrase, suggestGenitive, type Salutation } from '@/domain/cs';
 import { displayName, organiserAt, POINT_LIMITS, REPORT_BULLETS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
 import { compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
@@ -13,8 +13,13 @@ import { NotFound } from './home';
 const SAL: readonly (readonly [Salutation, string])[] = [['pan', 'pan'], ['pani', 'paní'], ['slecna', 'slečna']];
 type Step = { key: string; title: string };
 type Statement = PointContent['statements'][number];
-/** A place in the opening sentence starts with a preposition: „na Pražském hradě“, „v Národním muzeu“. */
-const PREP = /^(?:v|ve|na|u|do|z|ze|při|před|za|mezi|pod|nad|po|k|ke|o|s|se|vedle|kolem|okolo|poblíž|uvnitř)\s/i;
+/** Under Kde přesně: how the place reads in the opening sentence (ADR 0069). */
+function placeLine(place: string) {
+  const read = placePhrase(place);
+  if (read.kind !== 'named') return read.text ? <small>Ve větě: {read.text}.</small> : null;
+  return <small className="w-err">Tohle místo neumíme vyskloňovat, ve větě proto stojí „{read.text}“. Když to nesedí, napište místo tak, jak má být ve větě, třeba „na Pražském hradě“.</small>;
+}
+
 function statementOf(x: DraftPerson, quote: string): Statement {
   const g = x.salutation ? suggestGenitive({ salutation: x.salutation, givenName: x.givenName, familyName: x.familyName }) : null;
   return { speaker: x, speakerGenitive: g?.text ?? '', ...(x.affiliation && { affiliation: x.affiliation }), quote };
@@ -106,7 +111,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     body = <div className="stack">
       <label className="l">Jak se to jmenovalo<TitleField autoFocus value={c.title} onChange={(v) => set({ title: v })} placeholder="Například: Robotiáda" /></label>
       <div className="two"><label className="l">Kdy<input className="in bigi" type="date" max={toIsoDate(Q.todayOf(s))} value={c.eventDate ? toIsoDate(c.eventDate) : ''} onChange={(e) => set({ eventDate: e.target.value ? parseIsoDate(e.target.value) : null })} /></label><label className="l">Kde<select className="in bigi" value={c.campus ?? 'jinde'} onChange={(e) => set({ campus: e.target.value as PointContent['campus'] })}><option value="smichov">Smíchov</option><option value="radlice">Radlice</option><option value="na-vidouli">Na Vidouli</option><option value="jinde">Jinde</option></select></label></div>
-      <label className="l">{jinde ? 'Kde přesně' : 'Kde přesně (nepovinné)'}<small>{jinde ? 'Tak, jak to bude ve větě: „na Pražském hradě“, „v\u00a0Národním muzeu“.' : 'Třeba číslo učebny, například S206.'}</small><input className="in bigi" maxLength={POINT_LIMITS.place} value={place} placeholder={jinde ? 'Například: na Pražském hradě' : 'Například: S206'} onChange={(e) => set({ place: e.target.value || null })} onBlur={(e) => { const v = roomLocative(e.target.value); if (v !== e.target.value) set({ place: v || null }); }} />{place.trim() && !PREP.test(place.trim()) ? <small className="w-err">Začněte předložkou, třeba „v“ nebo „na“, ať věta dává smysl.</small> : null}</label>
+      <label className="l">{jinde ? 'Kde přesně' : 'Kde přesně (nepovinné)'}<small>{jinde ? 'Například Národní muzeum nebo na Pražském hradě.' : 'Třeba číslo učebny, například S206.'}</small><input className="in bigi" maxLength={POINT_LIMITS.place} autoCapitalize="none" value={place} placeholder={jinde ? 'Například: Národní muzeum' : 'Například: S206'} onChange={(e) => set({ place: e.target.value || null })} />{placeLine(place)}</label>
     </div>;
   } else if (cur.key === 'org') {
     const noSal = orgPeople.filter((x) => !x.salutation).length;
