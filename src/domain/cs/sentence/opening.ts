@@ -3,6 +3,7 @@ import { isSameDate, type CalDate, type WallTime } from '@/domain/time';
 import { formatLongDate, formatLongRange, formatProseTimeRange, onWeekday } from '../dates/format';
 import { SALUTATION } from '../names/person';
 import { renderPeople, type Person } from '../people/list';
+import { placePhrase } from '../place/place-phrase';
 import { titleGender } from './title-gender';
 import { PAST_TENSE, type TitleGender } from './title-words';
 
@@ -43,7 +44,7 @@ export interface OpeningInput {
   readonly from?: WallTime;
   readonly to?: WallTime;
   readonly campus: Campus;
-  /** A locative phrase: „v učebně S206“, „v Laboratoři fyziky v učebně S8“, „na Pražském hradě“. */
+  /** As typed: „místnost S205“, „S206“, „na Pražském hradě“; read into the locative (ADR 0069). */
   readonly place?: string;
   /** Read for its gender (ADR 0067); one it does not tell becomes „akce s názvem …“ (ADR 0068). */
   readonly title: string;
@@ -63,7 +64,8 @@ export function openingSentence(input: OpeningInput): string {
       ? `Ve dnech ${formatLongRange(input.date, input.endDate)}`
       : `${onWeekday(input.date, { capitalize: true })} ${formatLongDate(input.date)}`;
   const time = input.from ? formatProseTimeRange(input.from, input.to) : '';
-  const where = [input.campus === 'jinde' ? '' : CAMPUS[input.campus], input.place?.trim() ?? '']
+  const place = input.place ? placePhrase(input.place).text : '';
+  const where = [input.campus === 'jinde' ? '' : CAMPUS[input.campus], place]
     .filter(Boolean)
     .join(' ');
 

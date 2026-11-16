@@ -74,3 +74,4 @@ record that supersedes it.
 | [0066](0066-an-annex-from-a-file.md) | An annex from a file | Accepted; adds to 0039 |
 | [0067](0067-report-grammar-comes-from-the-title.md) | Report grammar comes from the title | Accepted; supersedes 0064; amends 0061; items 3 and 4 amended by 0068 |
 | [0068](0068-an-unknown-title-is-named-not-quoted.md) | An unknown title is named, not quoted | Accepted; amends 0067 items 3 and 4 |
+| [0069](0069-a-reports-place-is-read-into-the-opening.md) | A report's place is read into the opening | Accepted; adds to 0067 |

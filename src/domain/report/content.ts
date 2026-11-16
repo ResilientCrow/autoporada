@@ -65,7 +65,7 @@ export interface PointContent {
   readonly timeFrom: WallTime | null;
   readonly timeTo: WallTime | null;
   readonly campus: Campus | null;
-  /** A locative phrase: „v učebně S206“. */
+  /** As typed: „místnost S205“ or „na Pražském hradě“; the opening reads it (ADR 0069). */
   readonly place: string | null;
   readonly opening: string;
   /** Once true, a change in the fields never overwrites `opening`. */

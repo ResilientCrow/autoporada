@@ -104,6 +104,27 @@ describe('openingSentence', () => {
     ).toBe('V pondělí 12. října 2026 na Pražském hradě proběhla Exkurze.');
   });
 
+  it.each([
+    ['místnost S205', 'v areálu Smíchov v místnosti S205 proběhl'],
+    ['S206', 'v areálu Smíchov v učebně S206 proběhl'],
+    ['velká tělocvična', 'v areálu Smíchov ve velké tělocvičně proběhl'],
+    [' na  Pražském hradě ', 'v areálu Smíchov na Pražském hradě proběhl'],
+    ['ČVUT', 'v areálu Smíchov na ČVUT proběhl'],
+    ['IKEM', 'v areálu Smíchov v prostorách IKEM proběhl'],
+    ['Makerspace', 'v areálu Smíchov v prostorách s názvem Makerspace proběhl'],
+  ])('reads the place %j into the sentence (ADR 0069)', (place, phrase) => {
+    expect(openingSentence({ ...base, place })).toContain(phrase);
+  });
+
+  it('gives an address with no areál its lead-in', () => {
+    expect(
+      openingSentence({ ...base, campus: 'jinde', place: 'Národní 7, Praha 1', organisers: [] }),
+    ).toBe(
+      'Ve středu 14. října 2026 od 10.00 do 12.00 hodin na adrese Národní 7, Praha 1 ' +
+        'proběhl Vesmírný seminář.',
+    );
+  });
+
   it('writes a start time alone as „od 9.00 hodin“', () => {
     expect(openingSentence({ ...base, from: t('9:00'), to: undefined })).toContain(
       'od 9.00 hodin v areálu',

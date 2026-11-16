@@ -31,6 +31,10 @@ in v1 unless the [plan of record](plan.md) changes first.
   - no report types: the opening sentence reads its grammar from the
     title (ADR 0067), and every report starts with the same rows
     (Organizátoři, Účastníci);
+  - the place is typed as it is named („místnost S205“, „Národní muzeum“)
+    and the opening reads it into the locative („v místnosti S205“); a place
+    it cannot read gets „v prostorách …“, „na adrese …“ or „v prostorách
+    s názvem …“ (ADR 0069);
   - at least one participant list and one vyjádření, both mandatory;
   - a live document preview.
 - People memory: the people from the author's own earlier points, with their salutation, class and genitive form. Nothing

@@ -134,6 +134,12 @@ describe('openingInput', () => {
     );
   });
 
+  it('reads a place typed in the nominative, as an akce gives it (ADR 0069)', () => {
+    expect(sentence({ ...content, place: 'učebna S206' })).toContain(
+      'v areálu Smíchov v učebně S206 proběhl',
+    );
+  });
+
   it('treats a missing campus like Jinde and a missing place as none', () => {
     const text = sentence({ ...content, campus: null, place: null });
     expect(text).toBe(

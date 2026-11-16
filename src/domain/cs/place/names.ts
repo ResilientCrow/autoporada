@@ -1,0 +1,176 @@
+import type { PlaceTable } from './words';
+
+/**
+ * Names of towns, Prague quarters, trip destinations and countries (ADR 0069),
+ * „nominative/locative“, lowercase, written out by hand. An adjective in front
+ * is declined by rule („Český Krumlov“ → „v Českém Krumlově“), so only the
+ * noun is listed; a name of several words is listed whole when its preposition
+ * or form differs from its head's („Staré Město“ in Prague takes „na“).
+ */
+export const PLACE_NAMES: PlaceTable = {
+  v: {
+    m: [
+      ...['karlín/karlíně', 'josefov/josefově', 'bubeneč/bubenči', 'břevnov/břevnově'],
+      ...['braník/braníku', 'motol/motole', 'mnichov/mnichově', 'berlín/berlíně'],
+      ...['londýn/londýně', 'řím/římě', 'brusel/bruselu', 'štrasburk/štrasburku'],
+      ...['linec/linci', 'salcburk/salcburku', 'krakov/krakově', 'norimberk/norimberku'],
+      ...['amsterdam/amsterdamu', 'pasov/pasově', 'izrael/izraeli', 'egypt/egyptě'],
+      ...['terezín/terezíně', 'liberec/liberci', 'jablonec/jablonci', 'kolín/kolíně'],
+      ...['beroun/berouně', 'benešov/benešově', 'mělník/mělníku', 'nymburk/nymburce'],
+      ...['rakovník/rakovníku', 'písek/písku', 'cheb/chebu', 'sokolov/sokolově'],
+      ...['chomutov/chomutově', 'děčín/děčíně', 'jičín/jičíně', 'trutnov/trutnově'],
+      ...['náchod/náchodě', 'rychnov/rychnově', 'žďár/žďáře', 'zlín/zlíně'],
+      ...['vsetín/vsetíně', 'vyškov/vyškově', 'prostějov/prostějově', 'přerov/přerově'],
+      ...['šumperk/šumperku', 'jeseník/jeseníku', 'havířov/havířově', 'hodonín/hodoníně'],
+      ...['mikulov/mikulově', 'harrachov/harrachově', 'brandýs/brandýse', 'krumlov/krumlově'],
+      ...['ráj/ráji', 'hradec/hradci', 'brod/brodě', 'bruntál/bruntále'],
+      ...['krnov/krnově', 'frýdek-místek/frýdku-místku', 'šternberk/šternberku'],
+      ...['radotín/radotíně', 'hloubětín/hloubětíně', 'veleslavín/veleslavíně'],
+      ...['suchdol/suchdole', 'sedlec/sedlci', 'slivenec/slivenci', 'lochkov/lochkově'],
+      ...['rožnov/rožnově', 'štramberk/štramberku', 'příbor/příboře', 'žatec/žatci'],
+      ...['loket/lokti', 'vimperk/vimperku', 'frymburk/frymburku', 'pelhřimov/pelhřimově'],
+      ...['humpolec/humpolci', 'broumov/broumově', 'turnov/turnově', 'bedřichov/bedřichově'],
+      ...['tanvald/tanvaldu', 'frýdlant/frýdlantu', 'frenštát/frenštátě', 'třinec/třinci'],
+      ...['těšín/těšíně', 'holešov/holešově', 'uničov/uničově', 'slavkov/slavkově'],
+      ...['vranov/vranově', 'adršpach/adršpachu', 'slaný/slaném'],
+      ...['madrid/madridu', 'lisabon/lisabonu', 'milán/miláně', 'istanbul/istanbulu'],
+      ...['petrohrad/petrohradě', 'kyjev/kyjevě', 'záhřeb/záhřebu', 'bělehrad/bělehradě'],
+      ...['stockholm/stockholmu', 'dublin/dublinu', 'edinburgh/edinburghu', 'oxford/oxfordu'],
+      ...['curych/curychu', 'bern/bernu', 'frankfurt/frankfurtu', 'hamburk/hamburku'],
+      ...['bamberk/bamberku', 'innsbruck/innsbrucku', 'zhořelec/zhořelci', 'gdaňsk/gdaňsku'],
+      ...['trenčín/trenčíně', 'washington/washingtonu', 'peking/pekingu', 'new york/new yorku'],
+      ...['vatikán/vatikánu', 'vietnam/vietnamu', 'wales/walesu'],
+      // „Králové“ stays: „v Hradci Králové“.
+      ...['hradec králové/hradci králové', 'dvůr králové/dvoře králové'],
+      // „Hrádek“ alone is a small castle („na hrádku“).
+      'hrádek nad nisou/hrádku nad nisou',
+    ],
+    f: [
+      ...['praha/praze', 'plzeň/plzni', 'ostrava/ostravě', 'olomouc/olomouci'],
+      ...['jihlava/jihlavě', 'opava/opavě', 'boleslav/boleslavi', 'třebíč/třebíči'],
+      ...['kroměříž/kroměříži', 'příbram/příbrami', 'chrudim/chrudimi', 'telč/telči'],
+      ...['litomyšl/litomyšli', 'třeboň/třeboni', 'břeclav/břeclavi', 'lípa/lípě'],
+      ...['třebová/třebové', 'karviná/karviné', 'hluboká/hluboké', 'kopřivnice/kopřivnici'],
+      ...['dobříš/dobříši', 'pec/peci', 'lednice/lednici', 'osvětim/osvětimi'],
+      ...['libeň/libni', 'troja/troji', 'podbaba/podbabě', 'michle/michli', 'krč/krči'],
+      ...['hostivař/hostivaři', 'ruzyně/ruzyni', 'stromovka/stromovce', 'šárka/šárce'],
+      ...['lucerna/lucerně', 'vídeň/vídni', 'bratislava/bratislavě', 'varšava/varšavě'],
+      ...['budapešť/budapešti', 'paříž/paříži', 'evropa/evropě', 'amerika/americe'],
+      ...['itálie/itálii', 'francie/francii', 'anglie/anglii', 'británie/británii'],
+      ...['belgie/belgii', 'litva/litvě', 'čína/číně'],
+      ...['lhotka/lhotce', 'liboc/liboci', 'chuchle/chuchli', 'uhříněves/uhříněvsi'],
+      ...['kadaň/kadani', 'čáslav/čáslavi', 'kouřim/kouřimi', 'polička/poličce'],
+      ...['rokytnice/rokytnici', 'ostravice/ostravici', 'litovel/litovli', 'roudnice/roudnici'],
+      ...['nelahozeves/nelahozevsi', 'portheimka/portheimce', 'barcelona/barceloně'],
+      ...['florencie/florencii', 'neapol/neapoli', 'moskva/moskvě', 'lublaň/lublani'],
+      ...['kodaň/kodani', 'ženeva/ženevě', 'basilej/basileji', 'postupim/postupimi'],
+      ...['žitava/žitavě', 'vratislav/vratislavi', 'žilina/žilině', 'nitra/nitře'],
+      ...['albánie/albánii', 'bosna/bosně', 'kanada/kanadě', 'austrálie/austrálii'],
+      ...['indie/indii', 'afrika/africe', 'asie/asii', 'skandinávie/skandinávii'],
+      ...['brazílie/brazílii', 'argentina/argentině', 'gruzie/gruzii', 'arménie/arménii'],
+      ...['korea/koreji'],
+      // Names whose noun alone takes „na“.
+      // „Černá Hora“ (the country, the town) only with its capital: „Černá hora“ is a mountain (na).
+      ...['kutná hora/kutné hoře', 'černá hora/černé hoře', 'železná ruda/železné rudě'],
+      // The building of the government: „ve Strakově akademii“, a school „na akademii“.
+      'strakova akademie/strakově akademii',
+    ],
+    n: [
+      ...['brno/brně', 'znojmo/znojmě', 'blansko/blansku', 'podolí/podolí', 'ústí/ústí'],
+      ...['hradiště/hradišti', 'řezno/řezně', 'slezsko/slezsku', 'česko/česku'],
+      ...['německo/německu', 'rakousko/rakousku', 'polsko/polsku', 'maďarsko/maďarsku'],
+      ...['španělsko/španělsku', 'chorvatsko/chorvatsku', 'řecko/řecku'],
+      ...['nizozemsko/nizozemsku', 'švýcarsko/švýcarsku', 'dánsko/dánsku'],
+      ...['švédsko/švédsku', 'norsko/norsku', 'finsko/finsku', 'irsko/irsku'],
+      ...['skotsko/skotsku', 'portugalsko/portugalsku', 'lotyšsko/lotyšsku'],
+      ...['estonsko/estonsku', 'slovinsko/slovinsku', 'japonsko/japonsku', 'turecko/turecku'],
+      ...['rusko/rusku', 'rumunsko/rumunsku', 'bulharsko/bulharsku', 'srbsko/srbsku'],
+      ...['lucembursko/lucembursku', 'holandsko/holandsku', 'lichtenštejnsko/lichtenštejnsku'],
+      ...['monako/monaku', 'mexiko/mexiku', 'thajsko/thajsku', 'maroko/maroku'],
+      ...['tunisko/tunisku', 'lipsko/lipsku', 'oslo/oslu', 'tokio/tokiu', 'sarajevo/sarajevu'],
+      'vrchlabí/vrchlabí',
+      // Towns, although „Nové Město“ alone is the Prague quarter, which takes „na“.
+      'nové město na moravě/novém městě na moravě',
+      'nové město nad metují/novém městě nad metují',
+      'nové město pod smrkem/novém městě pod smrkem',
+    ],
+    pl: [
+      ...['radlice/radlicích', 'holešovice/holešovicích', 'dejvice/dejvicích'],
+      ...['střešovice/střešovicích', 'vysočany/vysočanech', 'kobylisy/kobylisích'],
+      ...['bohnice/bohnicích', 'nusle/nuslích', 'vršovice/vršovicích'],
+      ...['strašnice/strašnicích', 'záběhlice/záběhlicích', 'malešice/malešicích'],
+      ...['košíře/košířích', 'jinonice/jinonicích', 'stodůlky/stodůlkách'],
+      ...['butovice/butovicích', 'hlubočepy/hlubočepích', 'modřany/modřanech', 'háje/hájích'],
+      ...['letňany/letňanech', 'kbely/kbelích', 'řepy/řepích', 'pardubice/pardubicích'],
+      ...['budějovice/budějovicích', 'vary/varech', 'teplice/teplicích', 'louny/lounech'],
+      ...['strakonice/strakonicích', 'prachatice/prachaticích', 'klatovy/klatovech'],
+      ...['domažlice/domažlicích', 'litoměřice/litoměřicích', 'svitavy/svitavách'],
+      ...['luhačovice/luhačovicích', 'poděbrady/poděbradech', 'valtice/valticích'],
+      ...['lidice/lidicích', 'průhonice/průhonicích', 'roztoky/roztokách'],
+      ...['černošice/černošicích', 'říčany/říčanech', 'doksy/doksech', 'brdy/brdech'],
+      ...['krkonoše/krkonoších', 'beskydy/beskydech', 'jeseníky/jeseníkách'],
+      ...['drážďany/drážďanech', 'benátky/benátkách', 'čechy/čechách', 'usa/usa'],
+      ...['čakovice/čakovicích', 'kyje/kyjích', 'počernice/počernicích', 'vokovice/vokovicích'],
+      ...['řeporyje/řeporyjích', 'kunratice/kunraticích', 'emauzy/emauzích'],
+      ...['slavonice/slavonicích', 'veltrusy/veltrusích', 'plasy/plasích', 'koněprusy/koněprusích'],
+      ...['sedlčany/sedlčanech', 'králíky/králíkách', 'hořice/hořicích', 'semily/semilech'],
+      ...['vítkovice/vítkovicích', 'boskovice/boskovicích', 'tatry/tatrách', 'alpy/alpách'],
+      ...['atény/aténách', 'helsinky/helsinkách', 'košice/košicích'],
+      // Mountain ranges, although „hory“ alone takes „na“.
+      ...['jizerské hory/jizerských horách', 'orlické hory/orlických horách'],
+      ...['krušné hory/krušných horách', 'bílé karpaty/bílých karpatech'],
+    ],
+  },
+  na: {
+    m: [
+      ...['smíchov/smíchově', 'vyšehrad/vyšehradě', 'žižkov/žižkově', 'prosek/proseku'],
+      ...['pankrác/pankráci', 'barrandov/barrandově', 'chodov/chodově', 'opatov/opatově'],
+      ...['zličín/zličíně', 'petřín/petříně', 'žofín/žofíně', 'strahov/strahově'],
+      ...['anděl/andělu', 'můstek/můstku', 'václavák/václaváku', 'ještěd/ještědu'],
+      ...['praděd/pradědu', 'říp/řípu', 'blaník/blaníku', 'karlštejn/karlštejně'],
+      ...['křivoklát/křivoklátě', 'kokořín/kokoříně', 'bouzov/bouzově', 'orlík/orlíku'],
+      ...['zlíchov/zlíchově', 'kamýk/kamýku', 'spořilov/spořilově', 'kačerov/kačerově'],
+      ...['velehrad/velehradě', 'hostýn/hostýně', 'bezděz/bezdězu', 'točník/točníku'],
+      ...['zvíkov/zvíkově', 'buchlov/buchlově', 'pernštejn/pernštejně', 'klínovec/klínovci'],
+      ...['radhošť/radhošti', 'boží dar/božím daru', 'island/islandu', 'kypr/kypru'],
+    ],
+    f: [
+      ...['letná/letné', 'kampa/kampě', 'bertramka/bertramce', 'palmovka/palmovce'],
+      ...['florenc/florenci', 'zbraslav/zbraslavi', 'sněžka/sněžce', 'šumava/šumavě'],
+      ...['vysočina/vysočině', 'morava/moravě', 'vltava/vltavě', 'ukrajina/ukrajině'],
+      ...['malta/maltě', 'kréta/krétě', 'sicílie/sicílii', 'etna/etně', 'ovčárna/ovčárně'],
+      ...['výtoň/výtoni', 'flora/floře', 'folimanka/folimance', 'klamovka/klamovce'],
+      ...['cibulka/cibulce', 'santoška/santošce', 'mrázovka/mrázovce', 'kotlářka/kotlářce'],
+      ...['pálava/pálavě', 'macocha/macoše', 'kvilda/kvildě', 'kost/kosti'],
+      ...['sardinie/sardinii', 'korsika/korsice'],
+      ...['malá strana/malé straně', 'národní třída/národní třídě'],
+    ],
+    n: [
+      ...['kladno/kladně', 'lipno/lipně', 'konopiště/konopišti', 'labe/labi'],
+      ...['slovensko/slovensku', 'kokořínsko/kokořínsku'],
+      ...['staré město/starém městě', 'nové město/novém městě', 'jižní město/jižním městě'],
+    ],
+    pl: [
+      ...['vinohrady/vinohradech', 'hradčany/hradčanech', 'petřiny/petřinách'],
+      ...['slapy/slapech', 'roztyly/roztylech', 'lužiny/lužinách', 'trosky/troskách'],
+      ...['pustevny/pustevnách', 'hukvaldy/hukvaldech', 'dívčí hrady/dívčích hradech'],
+    ],
+  },
+};
+
+/** Names read as the name only when typed with their capitals: „Černá Hora“, not „Černá hora“. */
+export const NAMES_BY_CAPITALS: ReadonlySet<string> = new Set(['černá hora']);
+
+/** Town quarters, also read after a hyphen: „v Praze-Smíchově“, but not „Praha-Brno“. */
+export const QUARTERS: ReadonlySet<string> = new Set([
+  ...['karlín', 'josefov', 'bubeneč', 'břevnov', 'braník', 'motol', 'radotín', 'hloubětín'],
+  ...['veleslavín', 'suchdol', 'sedlec', 'slivenec', 'lochkov', 'libeň', 'troja', 'podbaba'],
+  ...['michle', 'krč', 'hostivař', 'ruzyně', 'lhotka', 'liboc', 'chuchle', 'uhříněves'],
+  ...['podolí', 'radlice', 'holešovice', 'dejvice', 'střešovice', 'vysočany', 'kobylisy'],
+  ...['bohnice', 'nusle', 'vršovice', 'strašnice', 'záběhlice', 'malešice', 'košíře'],
+  ...['jinonice', 'stodůlky', 'butovice', 'hlubočepy', 'modřany', 'háje', 'letňany', 'kbely'],
+  ...['řepy', 'čakovice', 'kyje', 'počernice', 'vokovice', 'řeporyje', 'kunratice'],
+  ...['vítkovice', 'smíchov', 'vyšehrad', 'žižkov', 'prosek', 'pankrác', 'barrandov'],
+  ...['chodov', 'opatov', 'zličín', 'strahov', 'zlíchov', 'kamýk', 'spořilov', 'kačerov'],
+  ...['letná', 'zbraslav', 'vinohrady', 'hradčany', 'petřiny', 'roztyly', 'lužiny'],
+]);
