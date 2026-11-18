@@ -3,11 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { system, type UserRecord } from '@/application/ports';
+import { FUTURE_CAP } from '@/domain/report';
 
+import { futureFixtures } from '../../../../test/support/future';
 import { setupWorld } from '../../../../test/support/world';
 import { createFuture } from './index';
 
 const world = setupWorld();
+const { moveTo } = futureFixtures(world);
 
 const submitter = () => world.seed.user({ role: 'submitter' });
 const start = (by: UserRecord, input: Record<string, unknown> = {}) =>
@@ -135,5 +138,87 @@ describe('future.create', () => {
         requestId: 'test',
       },
     ]);
+  });
+
+  describe('draft cap', () => {
+    const capRule = { code: 'rule', rule: 'future-draft-cap' };
+
+    /** `count` empty drafts of the author's (akce and jednání alternate), made in one transaction. */
+    const fill = (author: UserRecord, count: number) =>
+      world.tx(world.as(author), async (tx) => {
+        const ids: string[] = [];
+        for (let i = 0; i < count; i++) {
+          const { item } = await tx.futureItems.create({
+            clientRef: randomUUID(),
+            kind: i % 2 === 0 ? 'akce' : 'jednani',
+            content: {
+              title: '',
+              startDate: null,
+              endDate: null,
+              timeFrom: null,
+              timeTo: null,
+              campus: null,
+              place: null,
+              organizer: null,
+              organizerRole: null,
+              participants: null,
+              note: null,
+            },
+          });
+          await tx.audit.record({
+            action: 'future.created',
+            target: { type: 'future_item', id: item.id },
+          });
+          ids.push(item.id);
+        }
+        return ids;
+      });
+
+    it(`refuses the ${FUTURE_CAP + 1}st draft, akce and jednání counted together, and writes nothing`, async () => {
+      const author = await submitter();
+      await fill(author, FUTURE_CAP);
+      const before = await everything();
+      expect(await start(author, { kind: 'jednani' })).toEqual({ ok: false, error: capRule });
+      expect(await start(author, { kind: 'akce' })).toEqual({ ok: false, error: capRule });
+      expect(await everything()).toEqual(before);
+      // A colleague is not held to the author's drafts.
+      expect((await start(await submitter())).ok).toBe(true);
+    });
+
+    it(`makes the ${FUTURE_CAP}th draft`, async () => {
+      const author = await submitter();
+      await fill(author, FUTURE_CAP - 1);
+      expect((await start(author)).ok).toBe(true);
+    });
+
+    it('answers a retry with a ref the author used at the cap with the existing item and writes nothing', async () => {
+      const author = await submitter();
+      const clientRef = randomUUID();
+      const id = await created(author, { clientRef });
+      await fill(author, FUTURE_CAP - 1);
+      const before = await everything();
+      expect(await start(author, { clientRef })).toEqual({ ok: true, value: { id } });
+      expect(await everything()).toEqual(before);
+    });
+
+    it('counts drafts only: a submitted or a returned item leaves room for a new one', async () => {
+      const author = await submitter();
+      const [first, second] = await fill(author, FUTURE_CAP);
+      await moveTo(author, first!, 'submitted');
+      expect((await start(author)).ok).toBe(true);
+      expect(await start(author)).toEqual({ ok: false, error: capRule });
+      await moveTo(author, second!, 'returned');
+      expect((await start(author)).ok).toBe(true);
+      expect(await start(author)).toEqual({ ok: false, error: capRule });
+    });
+
+    it('lets one of two creates at once through at one below the cap', async () => {
+      const author = await submitter();
+      await fill(author, FUTURE_CAP - 1);
+      const results = await Promise.all([start(author), start(author)]);
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.filter((r) => !r.ok).map((r) => !r.ok && r.error)).toEqual([capRule]);
+      expect((await everything()).items).toHaveLength(FUTURE_CAP);
+    });
   });
 });

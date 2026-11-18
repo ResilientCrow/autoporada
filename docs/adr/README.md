@@ -58,7 +58,7 @@ record that supersedes it.
 | [0050](0050-development-clamps-a-negative-measure-end.md) | Development clamps a negative measure end | Accepted; adds to 0023 |
 | [0051](0051-the-next-porada-on-any-date.md) | The next porada on any date, and no move page | Accepted; supersedes 0047 items 1 and 2 and 0034 item 3 and part of item 2; items 2 to 5 superseded by 0054 |
 | [0052](0052-owed-reports-first-proposals-for-vedeni.md) | Owed reports come first, and only vedení proposes | Accepted; builds on 0049; bounds the report card left open by 0048; amended by 0054 |
-| [0053](0053-the-arch-ui-at-the-root.md) | The Arch UI at the root, on the same backend | Accepted; builds on 0004, 0012, 0017 and 0043; the classic pages and item 6's step-up exception superseded by 0065 |
+| [0053](0053-the-arch-ui-at-the-root.md) | The Arch UI at the root, on the same backend | Accepted; builds on 0004, 0012, 0017 and 0043; the classic pages and item 6's step-up exception superseded by 0065; item 2 refined by 0070 |
 | [0054](0054-a-porada-that-does-not-take-place-does-not-exist.md) | A porada that does not take place does not exist: move, drop, add | Accepted; supersedes 0041, 0051 items 2 to 5, 0047 item 3, 0034 item 7 and parts of 0018, 0029, 0030; amends 0032, 0040, 0046, 0049, 0052 |
 | [0055](0055-the-headmaster-deletes-an-unused-point-type.md) | The headmaster deletes a point type no point uses | Superseded by 0064 |
 | [0056](0056-a-refused-report-closes-its-akce.md) | A refused report closes its akce | Accepted; supersedes 0049 item 3 in part; builds on 0052 |
@@ -75,3 +75,4 @@ record that supersedes it.
 | [0067](0067-report-grammar-comes-from-the-title.md) | Report grammar comes from the title | Accepted; supersedes 0064; amends 0061; items 3 and 4 amended by 0068 |
 | [0068](0068-an-unknown-title-is-named-not-quoted.md) | An unknown title is named, not quoted | Accepted; amends 0067 items 3 and 4 |
 | [0069](0069-a-reports-place-is-read-into-the-opening.md) | A report's place is read into the opening | Accepted; adds to 0067 |
+| [0070](0070-the-state-carries-the-working-set.md) | The state carries the working set, history is read on demand | Accepted; refines 0053 item 2 |

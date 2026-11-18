@@ -92,6 +92,13 @@ const contentColumns = (content: FutureContent) => ({
   note: content.note,
 });
 
+/**
+ * The class key of the per-author lock ('FUTC') that a create and a submit take to count the
+ * author's future items against their caps. A different class from the points' lock: the two
+ * kinds are capped on their own and never wait for each other.
+ */
+const CREATE_LOCK = 0x4655_5443;
+
 const ITEM_SCOPE = {
   owner: futureItems.authorId,
   kind: futureItems.kind,
@@ -159,7 +166,38 @@ export function createFutureItemRepo(
     return toRecord(row);
   };
 
+  /** The id of the user the transaction runs for, after taking their lock until the transaction ends. */
+  async function lockAuthor(): Promise<string> {
+    if (principal.kind !== 'user') throw new ScopeViolation();
+    const authorId = principal.actor.id;
+    await db.execute(sql`SELECT pg_advisory_xact_lock(${CREATE_LOCK}, hashtext(${authorId}))`);
+    return authorId;
+  }
+
   return {
+    async beginCreate(clientRef) {
+      const authorId = await lockAuthor();
+      // Statements after the lock read a new snapshot (READ COMMITTED): an earlier holder's
+      // committed draft is counted.
+      const own = eq(futureItems.authorId, authorId);
+      const [existing] = await db
+        .select(ITEM_ROW)
+        .from(futureItems)
+        .where(and(own, eq(futureItems.clientRef, clientRef)));
+      const [drafts] = await db
+        .select({ n: count() })
+        .from(futureItems)
+        .where(and(own, eq(futureItems.state, 'draft')));
+      return { existing: existing ? toRecord(existing) : null, drafts: drafts?.n ?? 0 };
+    },
+    async beginSubmit() {
+      const authorId = await lockAuthor();
+      const [pending] = await db
+        .select({ n: count() })
+        .from(futureItems)
+        .where(and(eq(futureItems.authorId, authorId), eq(futureItems.state, 'submitted')));
+      return { pending: pending?.n ?? 0 };
+    },
     async create({ clientRef, kind, content }) {
       if (principal.kind !== 'user') throw new ScopeViolation();
       const authorId = principal.actor.id;

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { RULE_CODES } from '@/contracts';
 import { typographizeText } from '@/domain/cs';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
-import { DRAFT_CAP } from '@/domain/report';
+import { DRAFT_CAP, FUTURE_CAP, PENDING_CAP } from '@/domain/report';
 import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
 import { cs, pageTitle } from './cs';
@@ -130,6 +130,18 @@ describe('error copy', () => {
   it('names the draft cap the use case counts against', () => {
     expect(cs.rules['draft-cap']).toBe(
       `Rozpracovaných bodů můžete mít nejvýše ${DRAFT_CAP}. Dokončete nebo zrušte některé z${NBSP}nich.`,
+    );
+  });
+
+  it('names the caps the use cases count against', () => {
+    expect(cs.rules['pending-cap']).toBe(
+      `U${NBSP}vedení můžete mít najednou nejvýše ${PENDING_CAP} bodů. Počkejte, až některé z${NBSP}nich zkontroluje.`,
+    );
+    expect(cs.rules['future-draft-cap']).toBe(
+      `Rozepsaných akcí a${NBSP}jednání můžete mít nejvýše ${FUTURE_CAP}. Dokončete nebo smažte některé z${NBSP}nich.`,
+    );
+    expect(cs.rules['future-pending-cap']).toBe(
+      `U${NBSP}vedení můžete mít najednou nejvýše ${FUTURE_CAP} akcí a${NBSP}jednání. Počkejte, až některé z${NBSP}nich zkontroluje.`,
     );
   });
 

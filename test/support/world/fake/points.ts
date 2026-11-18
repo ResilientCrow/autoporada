@@ -231,6 +231,14 @@ export function fakePointRepo(tx: FakeTxState, ctx: TxContext): PointRepo {
         drafts: own.filter((p) => p.state === 'draft').length,
       };
     },
+    async beginSubmit() {
+      guard(tx, false);
+      if (principal.kind !== 'user') throw new ScopeViolation();
+      const pending = [...points.values()].filter(
+        (p) => p.authorId === principal.actor.id && p.state === 'submitted',
+      );
+      return { pending: pending.length };
+    },
     async get(id) {
       guard(tx, false);
       return find(id);

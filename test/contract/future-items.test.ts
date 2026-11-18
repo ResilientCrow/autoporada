@@ -139,6 +139,138 @@ describe('FutureItemRepo (port contract)', () => {
     expect(await failure(refused)).toBeInstanceOf(ScopeViolation);
   });
 
+  it('begins a create with the user’s own item for the clientRef and their draft count', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const [mineRef, theirRef] = [nextRef(), nextRef()];
+    const mine = await create(world.as(author), { clientRef: mineRef });
+    await create(world.as(author), { kind: 'jednani' });
+    const returned = await create(world.as(author));
+    await update(world.as(author), returned.item, { ...SUBMIT, state: 'returned' });
+    const handedIn = await create(world.as(author));
+    await update(world.as(author), handedIn.item, SUBMIT);
+    const theirs = await create(world.as(colleague), { clientRef: theirRef });
+    const begin = (by: Principal, ref: string) =>
+      world.tx(by, (tx) => tx.futureItems.beginCreate(ref));
+    // Only a draft counts, and a colleague's items are not the user's.
+    expect(await begin(world.as(author), mineRef)).toEqual({
+      existing: mine.item,
+      drafts: 2,
+    });
+    expect(await begin(world.as(author), nextRef())).toEqual({ existing: null, drafts: 2 });
+    expect(await begin(world.as(colleague), theirRef)).toEqual({
+      existing: theirs.item,
+      drafts: 1,
+    });
+    expect(await failure(begin(cli, nextRef()))).toBeInstanceOf(ScopeViolation);
+  });
+
+  it('never begins a create on a colleague’s item with the same clientRef', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const clientRef = nextRef();
+    await create(world.as(colleague), { clientRef });
+    const begin = await world.tx(world.as(author), (tx) => tx.futureItems.beginCreate(clientRef));
+    expect(begin).toEqual({ existing: null, drafts: 0 });
+  });
+
+  it('begins a submit with how many of the user’s items are submitted, and no other state', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const begin = (by: Principal) => world.tx(by, (tx) => tx.futureItems.beginSubmit());
+    expect(await begin(world.as(author))).toEqual({ pending: 0 });
+    const first = await create(world.as(author));
+    const second = await create(world.as(author), { kind: 'jednani' });
+    const returned = await create(world.as(author));
+    const approved = await create(world.as(author));
+    await create(world.as(author));
+    const theirs = await create(world.as(colleague));
+    await update(world.as(author), first.item, SUBMIT);
+    await update(world.as(author), second.item, SUBMIT);
+    await update(world.as(author), returned.item, { ...SUBMIT, state: 'returned' });
+    await update(world.as(author), approved.item, { ...SUBMIT, state: 'approved' });
+    await update(world.as(colleague), theirs.item, SUBMIT);
+    expect(await begin(world.as(author))).toEqual({ pending: 2 });
+    expect(await begin(world.as(colleague))).toEqual({ pending: 1 });
+    expect(await failure(begin(cli))).toBeInstanceOf(ScopeViolation);
+  });
+
+  it('serialises one user’s creates and submit counts from the begin until the transaction ends', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const order: string[] = [];
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let begun = () => {};
+    const isBegun = new Promise<void>((resolve) => {
+      begun = resolve;
+    });
+    const first = audited(world.as(author), async (tx) => {
+      await tx.futureItems.beginCreate(nextRef());
+      order.push('first begun');
+      begun();
+      await held;
+      const { item } = await tx.futureItems.create({
+        clientRef: nextRef(),
+        kind: 'akce',
+        content: EMPTY,
+      });
+      order.push('first created');
+      return item;
+    });
+    await isBegun;
+    if (world.pg) {
+      // Another author is not held up (the fake runs one transaction at a time).
+      const theirs = await world.tx(world.as(colleague), (tx) =>
+        tx.futureItems.beginCreate(nextRef()),
+      );
+      expect(theirs).toEqual({ existing: null, drafts: 0 });
+    }
+    // A submit count of the same author waits for the create's lock as well.
+    const second = world.tx(world.as(author), async (tx) => {
+      const begin = await tx.futureItems.beginSubmit();
+      order.push('second begun');
+      return begin;
+    });
+    if (world.pg) {
+      const pg = world.pg;
+      await expect.poll(() => pg.lockWaits(), { timeout: 5_000 }).toBe(1);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(order).toEqual(['first begun']);
+    release();
+    await Promise.all([first, second]);
+    expect(order).toEqual(['first begun', 'first created', 'second begun']);
+  });
+
+  it('does not hold an item create behind a point lock of the same user', async () => {
+    // Points and future items are capped on their own: two locks, so neither waits for the other.
+    // Only PostgreSQL has locks to tell apart; the fake runs one transaction at a time.
+    if (!world.pg) return;
+    const author = await world.seed.user({ role: 'submitter' });
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let begun = () => {};
+    const isBegun = new Promise<void>((resolve) => {
+      begun = resolve;
+    });
+    const first = world.tx(world.as(author), async (tx) => {
+      await tx.points.beginCreate(nextRef());
+      begun();
+      await held;
+    });
+    await isBegun;
+    const begin = await world.tx(world.as(author), (tx) => tx.futureItems.beginCreate(nextRef()));
+    expect(begin).toEqual({ existing: null, drafts: 0 });
+    release();
+    await first;
+  });
+
   it('updates against the expected version, raises it by one and keeps unpatched fields', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author));

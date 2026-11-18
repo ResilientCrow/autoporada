@@ -155,7 +155,28 @@ export function fakeFutureItemRepo(tx: FakeTxState, ctx: TxContext): FutureItemR
     return record(row);
   };
 
+  /** The user's own items; the fake runs one transaction at a time, which stands in for the lock. */
+  const ownItems = () => {
+    if (principal.kind !== 'user') throw new ScopeViolation();
+    const authorId = principal.actor.id;
+    return [...futureItems.values()].filter((i) => i.authorId === authorId);
+  };
+
   return {
+    async beginCreate(clientRef) {
+      // It writes nothing, and PostgreSQL takes an advisory lock in read mode too.
+      guard(tx, false);
+      const own = ownItems();
+      const existing = own.find((i) => i.clientRef === clientRef);
+      return {
+        existing: existing ? record(existing) : null,
+        drafts: own.filter((i) => i.state === 'draft').length,
+      };
+    },
+    async beginSubmit() {
+      guard(tx, false);
+      return { pending: ownItems().filter((i) => i.state === 'submitted').length };
+    },
     async create({ clientRef, kind, content }) {
       guard(tx, true);
       if (principal.kind !== 'user') throw new ScopeViolation();

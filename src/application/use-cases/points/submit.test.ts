@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { system, type UserRecord } from '@/application/ports';
 import { deadline, DEFAULT_DEADLINE } from '@/domain/calendar';
 import { schoolYear } from '@/domain/cs';
+import { PENDING_CAP } from '@/domain/report';
 import { addDays, calDate, parseIsoDate, toIsoDate, type CalDate } from '@/domain/time';
 
 import { futureFixtures, readyAkce } from '../../../../test/support/future';
@@ -23,7 +24,7 @@ import {
 import { setupWorld } from '../../../../test/support/world';
 import { saveFuture, startFutureReport } from '../future';
 import { dropIssue } from '../issues';
-import { savePoint, submitPoint } from './index';
+import { decidePoint, retractPoint, savePoint, submitPoint, withdrawPoint } from './index';
 
 const world = setupWorld();
 const { start, moveTo, get, snapshot } = pointFixtures(world);
@@ -532,6 +533,139 @@ describe('points.submit', () => {
       await expect(world.run(submitPoint, system('cli:test'), input)).rejects.toThrow(
         'points.submit: runs as a signed-in user',
       );
+    });
+  });
+
+  describe('pending cap', () => {
+    const capRule = { code: 'rule', rule: 'pending-cap' };
+
+    /** `count` pokyn points of the author's, moved to `submitted` past the use cases. */
+    async function handedIn(author: UserRecord, count: number): Promise<string[]> {
+      const ids: string[] = [];
+      for (let i = 0; i < count; i++) {
+        const id = await start(author, 'pokyn');
+        await moveTo(author, id, 'submitted');
+        ids.push(id);
+      }
+      return ids;
+    }
+
+    it(`hands in the ${PENDING_CAP}th point: ${PENDING_CAP - 1} are waiting`, async () => {
+      const author = await user();
+      await handedIn(author, PENDING_CAP - 1);
+      const id = await start(author, 'pokyn');
+      expect(await submit(author, id, readyProposal())).toEqual({
+        ok: true,
+        value: { version: 2 },
+      });
+    });
+
+    it(`refuses the ${PENDING_CAP + 1}st point and writes nothing`, async () => {
+      const author = await user();
+      await handedIn(author, PENDING_CAP);
+      const id = await start(author, 'pokyn');
+      await refuses(id, () => submit(author, id, readyProposal()), capRule);
+      expect(await get(author, id)).toMatchObject({ state: 'draft', version: 1 });
+    });
+
+    it('is held to the author’s own points: a colleague at the cap does not block them', async () => {
+      const colleague = await user();
+      await handedIn(colleague, PENDING_CAP);
+      const author = await user();
+      const id = await start(author, 'pokyn');
+      expect((await submit(author, id, readyProposal())).ok).toBe(true);
+    });
+
+    it('checks the content first: an unready point at the cap is invalid, not capped', async () => {
+      const author = await user();
+      await handedIn(author, PENDING_CAP);
+      const id = await start(author, 'pokyn');
+      expect(await submit(author, id, readyProposal({ title: '' }))).toMatchObject({
+        ok: false,
+        error: { code: 'invalid-input' },
+      });
+    });
+
+    it('frees a place when the author withdraws a submitted point', async () => {
+      const author = await user();
+      const [first] = await handedIn(author, PENDING_CAP);
+      const id = await start(author, 'pokyn');
+      await refuses(id, () => submit(author, id, readyProposal()), capRule);
+      const withdrawn = await world.run(withdrawPoint, world.as(author), {
+        id: first!,
+        expectedVersion: 2,
+        confirmed: true,
+      });
+      expect(withdrawn.ok).toBe(true);
+      expect((await submit(author, id, readyProposal())).ok).toBe(true);
+    });
+
+    it('frees a place when the author takes a submitted point back', async () => {
+      const author = await user();
+      const [first] = await handedIn(author, PENDING_CAP);
+      const id = await start(author, 'pokyn');
+      const retracted = await world.run(retractPoint, world.as(author), {
+        id: first!,
+        expectedVersion: 2,
+      });
+      expect(retracted.ok).toBe(true);
+      expect((await submit(author, id, readyProposal())).ok).toBe(true);
+    });
+
+    it.each(['approve', 'return', 'reject'] as const)(
+      'frees a place when a reviewer decides one: %s',
+      async (event) => {
+        const author = await user();
+        const [first] = await handedIn(author, PENDING_CAP);
+        const id = await start(author, 'pokyn');
+        await refuses(id, () => submit(author, id, readyProposal()), capRule);
+        const reviewer = await user('reviewer');
+        const decided = await world.run(decidePoint, world.as(reviewer), {
+          id: first!,
+          expectedVersion: 2,
+          event,
+          ...(event !== 'approve' && { note: 'Doplňte prosím vyjádření.' }),
+        });
+        expect(decided.ok).toBe(true);
+        expect((await submit(author, id, readyProposal())).ok).toBe(true);
+      },
+    );
+
+    it('does not count a returned point, but sending it again needs a free place', async () => {
+      const author = await user();
+      await handedIn(author, PENDING_CAP - 1);
+      const returned = await start(author, 'pokyn');
+      await moveTo(author, returned, 'returned');
+      // 19 waiting and one returned: a new point still finds the last place …
+      const fresh = await start(author, 'pokyn');
+      expect((await submit(author, fresh, readyProposal())).ok).toBe(true);
+      // … and now the returned one finds none.
+      await refuses(returned, () => submit(author, returned, readyProposal(), 2), capRule);
+    });
+
+    it('does not count approved, rejected or withdrawn points', async () => {
+      const author = await user();
+      await handedIn(author, PENDING_CAP - 1);
+      for (const state of ['approved', 'rejected', 'withdrawn'] as const) {
+        const done = await start(author, 'pokyn');
+        await moveTo(author, done, state);
+      }
+      const id = await start(author, 'pokyn');
+      expect((await submit(author, id, readyProposal())).ok).toBe(true);
+    });
+
+    it('lets one of two submits at once through at one below the cap', async () => {
+      const author = await user();
+      await handedIn(author, PENDING_CAP - 1);
+      const [a, b] = [await start(author, 'pokyn'), await start(author, 'pokyn')];
+      const results = await Promise.all([
+        submit(author, a!, readyProposal()),
+        submit(author, b!, readyProposal()),
+      ]);
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.filter((r) => !r.ok).map((r) => !r.ok && r.error)).toEqual([capRule]);
+      const states = await Promise.all([get(author, a!), get(author, b!)]);
+      expect(states.filter((p) => p?.state === 'submitted')).toHaveLength(1);
     });
   });
 });

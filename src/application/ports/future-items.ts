@@ -83,6 +83,17 @@ export interface NewFutureItem {
   readonly content: FutureContent;
 }
 
+/** What `beginCreate` reports, under the lock. */
+interface FutureCreateStart {
+  readonly existing: FutureItemRecord | null;
+  readonly drafts: number;
+}
+
+/** What `beginSubmit` reports, under the lock. */
+interface FutureSubmitStart {
+  readonly pending: number;
+}
+
 /** What a versioned update changes; a field left out keeps its value. */
 export interface FutureItemPatch {
   readonly content?: FutureContent;
@@ -115,6 +126,19 @@ export interface FutureItemRepo {
   create(
     item: NewFutureItem,
   ): Promise<{ readonly item: FutureItemRecord; readonly inserted: boolean }>;
+  /**
+   * What a create decides on: the user's own item with this `clientRef`, and how many of their
+   * items are drafts. It first takes a lock on the user held until the transaction ends, so two of
+   * their creates never both pass the draft cap; other users are not held up. ScopeViolation for
+   * the system.
+   */
+  beginCreate(clientRef: string): Promise<FutureCreateStart>;
+  /**
+   * What a submit decides on: how many of the user's items are `submitted` (a returned one is
+   * not). It takes the lock `beginCreate` takes, so two of their submits never both pass the cap.
+   * Call it after any other row lock the use case takes. ScopeViolation for the system.
+   */
+  beginSubmit(): Promise<FutureSubmitStart>;
   get(id: string): Promise<FutureItemRecord | null>;
   /**
    * As `get` but within the write scope (null for an item that is not the author's), and

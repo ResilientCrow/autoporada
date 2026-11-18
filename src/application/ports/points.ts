@@ -54,6 +54,11 @@ interface CreateStart {
   readonly drafts: number;
 }
 
+/** What `beginSubmit` reports, under the lock. */
+interface SubmitStart {
+  readonly pending: number;
+}
+
 /** What a versioned update changes; a field left out keeps its value. */
 export interface PointPatch {
   readonly content?: PointContent;
@@ -142,6 +147,13 @@ export interface PointRepo {
    * the draft cap; other users are not held up. ScopeViolation for the system.
    */
   beginCreate(clientRef: string): Promise<CreateStart>;
+  /**
+   * What a submit decides on: how many of the user's points are `submitted` (a returned one is
+   * not). It first takes the same lock `beginCreate` takes, held until the transaction ends, so
+   * two of their submits, or a submit and a create, never both pass a cap. Call it after any
+   * other row lock the use case takes. ScopeViolation for the system.
+   */
+  beginSubmit(): Promise<SubmitStart>;
   get(id: string): Promise<PointRecord | null>;
   /** As `get`, and holds the row lock (SELECT … FOR UPDATE) until the transaction ends. */
   loadForWrite(id: string): Promise<PointRecord | null>;

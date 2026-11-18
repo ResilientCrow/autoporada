@@ -74,6 +74,33 @@ export const DIRECTORY_LIMITS = {
 export const DRAFT_CAP = 50;
 
 /**
+ * The points one author may have at `submitted` at once. Every reviewer's state
+ * carries each of them, and a point can hold up to `contentBytes` (200 KB), so
+ * an author who hands in without bound makes every reviewer's page grow with
+ * them. `points.submit` refuses the next one (`pending-cap`) until a reviewer
+ * decides one or the author takes one back. A returned point does not count (a
+ * reviewer put it there), but sending it again needs a free place. A retract
+ * has no check: it can put the author's drafts above `DRAFT_CAP` by at most
+ * this many, which is still bounded.
+ */
+export const PENDING_CAP = 20;
+
+/**
+ * The jednání and akce one author may have at `draft`, and, counted
+ * separately, at `submitted`. A future item is a few kilobytes of short text
+ * (`POINT_LIMITS.organizer`, `participants`, `futureNote`), so the cap is
+ * higher than `PENDING_CAP`; it only bounds how many rows one author can put
+ * into their own list and into every reviewer's. `future.create` refuses the
+ * 51st draft (`future-draft-cap`) and `future.submit` the 51st handed-in item
+ * (`future-pending-cap`); a returned item counts for neither. A retract and a
+ * revise of an approved akce (`future.save` with intent `revise`) have no
+ * check. A retract can put the drafts above the cap by at most the submitted
+ * cap; a revise can put the submitted ones above it by the author's approved
+ * akce, each of which a reviewer approved. Both stay bounded.
+ */
+export const FUTURE_CAP = 50;
+
+/**
  * What `contentBytes` caps: UTF-8 bytes of the content's JSON, as `bodyBytes`
  * is measured. It measures the domain form, where a date or a time is an
  * object, a few bytes longer than its ISO text on the wire; a counter in the

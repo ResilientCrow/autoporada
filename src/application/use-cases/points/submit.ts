@@ -15,7 +15,12 @@ import {
   type DeadlineRule,
   type IssueSlot,
 } from '@/domain/calendar';
-import { missingForSubmit, submittedContent, type PointContent } from '@/domain/report';
+import {
+  missingForSubmit,
+  PENDING_CAP,
+  submittedContent,
+  type PointContent,
+} from '@/domain/report';
 import { addDays, instantToWallClock, isSameDate, type CalDate } from '@/domain/time';
 
 import { ensureIssue, readWindow } from '../issues';
@@ -117,7 +122,11 @@ async function handIn(
  * holds is checked as a save checks it, then for readiness, and stored
  * without the empty optional bullets as the point moves to submitted. A
  * refusal writes nothing; readiness warnings never refuse. A report that
- * answers an akce marks the akce's report as written (design section 12).
+ * answers an akce marks the akce's report as written (design section 12). An
+ * author has at most PENDING_CAP points at submitted; `beginSubmit` counts them
+ * under the author's lock (taken after the akce's row lock, as `future.startReport`
+ * orders them), so two submits at once cannot both take the last place. A
+ * returned point does not count, but sending it again needs a free place.
  */
 export const submitPoint = defineUseCase({
   name: 'points.submit',
@@ -136,6 +145,8 @@ export const submitPoint = defineUseCase({
     }
 
     const akce = await answeredAkce(tx, point);
+    const { pending } = await tx.points.beginSubmit();
+    if (pending >= PENDING_CAP) return fail({ code: 'rule', rule: 'pending-cap' });
     const placed = await handIn(tx, point, content, akce, now);
     if (placed === null) return fail({ code: 'rule', rule: 'report-not-due' });
     const { patch, related = [] } = placed;

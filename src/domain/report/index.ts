@@ -15,6 +15,8 @@ export {
   contentBytes,
   DIRECTORY_LIMITS,
   DRAFT_CAP,
+  FUTURE_CAP,
+  PENDING_CAP,
   PERSON_FIELD_MAX,
   POINT_LIMITS,
 } from './limits';

@@ -10,10 +10,10 @@ import { parseJsonb, POINT_ROW, toRecord, visiblePoints } from './points-read';
 import { isoDate, isoTime } from './wall-columns';
 
 /**
- * The class key of the per-author create lock ('PNTC'); the author's id,
- * hashed, is the object key. The two-key form shares no key space with the
- * one-key locks (mail-ledger.ts), and a hash collision only serialises two
- * authors' creates.
+ * The class key of the per-author lock ('PNTC') that a create and a submit take
+ * to count the author's points against their caps; the author's id, hashed, is
+ * the object key. The two-key form shares no key space with the one-key locks
+ * (mail-ledger.ts), and a hash collision only serialises two authors' creates.
  */
 const CREATE_LOCK = 0x504e_5443;
 
@@ -36,8 +36,16 @@ function contentColumns(content: PointContent) {
 export function createPointWrites(
   db: TxDatabase,
   ctx: TxContext,
-): Pick<PointRepo, 'create' | 'beginCreate' | 'update'> {
+): Pick<PointRepo, 'create' | 'beginCreate' | 'beginSubmit' | 'update'> {
   const { principal, now } = ctx;
+
+  /** The id of the user the transaction runs for, after taking their lock until the transaction ends. */
+  async function lockAuthor(): Promise<string> {
+    if (principal.kind !== 'user') throw new ScopeViolation();
+    const authorId = principal.actor.id;
+    await db.execute(sql`SELECT pg_advisory_xact_lock(${CREATE_LOCK}, hashtext(${authorId}))`);
+    return authorId;
+  }
 
   return {
     async create({ clientRef, kind, content, futureItemId }) {
@@ -67,9 +75,7 @@ export function createPointWrites(
       return { point: toRecord(existing), inserted: false };
     },
     async beginCreate(clientRef) {
-      if (principal.kind !== 'user') throw new ScopeViolation();
-      const authorId = principal.actor.id;
-      await db.execute(sql`SELECT pg_advisory_xact_lock(${CREATE_LOCK}, hashtext(${authorId}))`);
+      const authorId = await lockAuthor();
       // Statements after the lock read a new snapshot (READ COMMITTED): an earlier
       // holder's committed draft is counted.
       const own = eq(points.authorId, authorId);
@@ -82,6 +88,15 @@ export function createPointWrites(
         .from(points)
         .where(and(own, eq(points.state, 'draft')));
       return { existing: existing ? toRecord(existing) : null, drafts: drafts?.n ?? 0 };
+    },
+    async beginSubmit() {
+      const authorId = await lockAuthor();
+      // As in beginCreate: the count is a new snapshot, after the lock.
+      const [pending] = await db
+        .select({ n: count() })
+        .from(points)
+        .where(and(eq(points.authorId, authorId), eq(points.state, 'submitted')));
+      return { pending: pending?.n ?? 0 };
     },
     async update(
       id,

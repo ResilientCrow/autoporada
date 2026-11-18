@@ -1,6 +1,6 @@
 import type { ErrorCode, FieldIssueCode, RuleCode } from '@/contracts';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
-import { DRAFT_CAP } from '@/domain/report';
+import { DRAFT_CAP, FUTURE_CAP, PENDING_CAP } from '@/domain/report';
 import { ACCESS_COOLDOWN_DAYS } from '@/domain/review';
 
 /** Why an action did not happen; `invalid-input` here is the case with no field to point at. */
@@ -37,6 +37,9 @@ export const rules = {
   'request-cooldown': `Novou žádost lze podat nejdříve ${ACCESS_COOLDOWN_DAYS}\u00A0dní po zamítnutí.`,
   'request-blocked': 'Další žádosti o\u00A0přístup nelze podat. Obraťte se prosím na vedení školy.',
   'draft-cap': `Rozpracovaných bodů můžete mít nejvýše ${DRAFT_CAP}. Dokončete nebo zrušte některé z\u00A0nich.`,
+  'pending-cap': `U\u00A0vedení můžete mít najednou nejvýše ${PENDING_CAP} bodů. Počkejte, až některé z\u00A0nich zkontroluje.`,
+  'future-draft-cap': `Rozepsaných akcí a\u00A0jednání můžete mít nejvýše ${FUTURE_CAP}. Dokončete nebo smažte některé z\u00A0nich.`,
+  'future-pending-cap': `U\u00A0vedení můžete mít najednou nejvýše ${FUTURE_CAP} akcí a\u00A0jednání. Počkejte, až některé z\u00A0nich zkontroluje.`,
   'point-not-editable': 'Bod už nelze upravovat, protože se změnil jeho stav.',
   'future-not-editable': 'Položku už nelze upravovat, protože se změnil její stav.',
   'report-not-due': 'Zprávu k\u00A0této akci teď nelze založit.',

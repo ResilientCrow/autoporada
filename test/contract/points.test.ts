@@ -262,6 +262,111 @@ describe('PointRepo (port contract)', () => {
     expect(after).toEqual({ existing: null, drafts: 1 });
   });
 
+  it('begins a submit with how many of the user’s points are submitted, and no other state', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const begin = (by: Principal) => world.tx(by, (tx) => tx.points.beginSubmit());
+    expect(await begin(world.as(author))).toEqual({ pending: 0 });
+    const handedIn = await create(world.as(author));
+    const other = await create(world.as(author));
+    const returned = await create(world.as(author));
+    const approved = await create(world.as(author));
+    await create(world.as(author));
+    await create(world.as(colleague));
+    const theirs = await create(world.as(colleague));
+    await update(world.as(author), handedIn.point, SUBMIT);
+    await update(world.as(author), other.point, SUBMIT);
+    await update(world.as(author), returned.point, { ...SUBMIT, state: 'returned' });
+    await update(world.as(author), approved.point, { ...SUBMIT, state: 'approved' });
+    await update(world.as(colleague), theirs.point, SUBMIT);
+    // A returned or approved point is not submitted, a draft neither, and a colleague's is not the user's.
+    expect(await begin(world.as(author))).toEqual({ pending: 2 });
+    expect(await begin(world.as(colleague))).toEqual({ pending: 1 });
+    expect(await failure(begin(cli))).toBeInstanceOf(ScopeViolation);
+  });
+
+  it('serialises one user’s submit count with their creates until the transaction ends', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const colleague = await world.seed.user({ role: 'submitter' });
+    const order: string[] = [];
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let begun = () => {};
+    const isBegun = new Promise<void>((resolve) => {
+      begun = resolve;
+    });
+    const { point } = await create(world.as(author));
+    const first = audited(world.as(author), async (tx) => {
+      await tx.points.beginSubmit();
+      order.push('first begun');
+      begun();
+      await held;
+      const updated = await tx.points.update(point.id, point.version, SUBMIT);
+      order.push('first submitted');
+      return updated;
+    });
+    await isBegun;
+    if (world.pg) {
+      // Another author is not held up (the fake runs one transaction at a time).
+      const theirs = await world.tx(world.as(colleague), (tx) => tx.points.beginSubmit());
+      expect(theirs).toEqual({ pending: 0 });
+    }
+    // The same lock as a create takes: a create of the author waits, and so does a second submit count.
+    const second = world.tx(world.as(author), async (tx) => {
+      const begin = await tx.points.beginSubmit();
+      order.push('second begun');
+      return begin;
+    });
+    if (world.pg) {
+      const pg = world.pg;
+      await expect.poll(() => pg.lockWaits(), { timeout: 5_000 }).toBe(1);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(order).toEqual(['first begun']);
+    release();
+    const [, after] = await Promise.all([first, second]);
+    expect(order).toEqual(['first begun', 'first submitted', 'second begun']);
+    // The second sees the first's committed submit.
+    expect(after).toEqual({ pending: 1 });
+  });
+
+  it('holds a create behind a submit count of the same user', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const order: string[] = [];
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let begun = () => {};
+    const isBegun = new Promise<void>((resolve) => {
+      begun = resolve;
+    });
+    const first = world.tx(world.as(author), async (tx) => {
+      await tx.points.beginSubmit();
+      begun();
+      await held;
+      order.push('first done');
+    });
+    await isBegun;
+    const second = world.tx(world.as(author), async (tx) => {
+      await tx.points.beginCreate(nextRef());
+      order.push('second begun');
+    });
+    if (world.pg) {
+      const pg = world.pg;
+      await expect.poll(() => pg.lockWaits(), { timeout: 5_000 }).toBe(1);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(order).toEqual([]);
+    release();
+    await Promise.all([first, second]);
+    expect(order).toEqual(['first done', 'second begun']);
+  });
+
   it('updates against the expected version, raises it by one and keeps unpatched fields', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { point } = await create(world.as(author));

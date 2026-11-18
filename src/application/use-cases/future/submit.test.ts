@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { UserRecord } from '@/application/ports';
+import { FUTURE_CAP } from '@/domain/report';
 import type { FutureState } from '@/domain/review';
 
 import {
@@ -213,5 +214,93 @@ describe('future.submit', () => {
         await refuses(id, () => submit(other, id, readyAkce(), 2), { code: 'not-found' });
       },
     );
+  });
+
+  describe('pending cap', () => {
+    const capRule = { code: 'rule', rule: 'future-pending-cap' };
+
+    /** `count` items of the author's (akce and jednání alternate), moved to `submitted` past the use cases. */
+    async function handedIn(author: UserRecord, count: number): Promise<string[]> {
+      const ids: string[] = [];
+      for (let i = 0; i < count; i++) {
+        const id = await start(author, i % 2 === 0 ? 'akce' : 'jednani');
+        await moveTo(author, id, 'submitted');
+        ids.push(id);
+      }
+      return ids;
+    }
+
+    it(`hands in the ${FUTURE_CAP}th item: ${FUTURE_CAP - 1} are waiting`, async () => {
+      const author = await user();
+      await handedIn(author, FUTURE_CAP - 1);
+      const id = await start(author, 'akce');
+      expect(await submit(author, id, readyAkce())).toEqual({ ok: true, value: { version: 2 } });
+    });
+
+    it(`refuses the ${FUTURE_CAP + 1}st item, a jednání as well as an akce, and writes nothing`, async () => {
+      const author = await user();
+      await handedIn(author, FUTURE_CAP);
+      const akce = await start(author, 'akce');
+      await refuses(akce, () => submit(author, akce, readyAkce()), capRule);
+      const jednani = await start(author, 'jednani');
+      await refuses(jednani, () => submit(author, jednani, readyJednani()), capRule);
+      expect(await get(author, akce)).toMatchObject({ state: 'draft', version: 1 });
+    });
+
+    it('is held to the author’s own items: a colleague at the cap does not block them', async () => {
+      const colleague = await user();
+      await handedIn(colleague, FUTURE_CAP);
+      const author = await user();
+      const id = await start(author, 'akce');
+      expect((await submit(author, id, readyAkce())).ok).toBe(true);
+    });
+
+    it('checks the content first: an unready item at the cap is invalid, not capped', async () => {
+      const author = await user();
+      await handedIn(author, FUTURE_CAP);
+      const id = await start(author, 'akce');
+      expect(await submit(author, id, readyAkce({ title: '' }))).toMatchObject({
+        ok: false,
+        error: { code: 'invalid-input' },
+      });
+    });
+
+    it('frees a place when the author takes a submitted item back', async () => {
+      const author = await user();
+      const [first] = await handedIn(author, FUTURE_CAP);
+      const id = await start(author, 'akce');
+      await refuses(id, () => submit(author, id, readyAkce()), capRule);
+      const retracted = await world.run(retractFuture, world.as(author), {
+        id: first!,
+        expectedVersion: 2,
+      });
+      expect(retracted.ok).toBe(true);
+      expect((await submit(author, id, readyAkce())).ok).toBe(true);
+    });
+
+    it('does not count a returned, approved or cancelled item, but sending a returned one needs a free place', async () => {
+      const author = await user();
+      await handedIn(author, FUTURE_CAP - 1);
+      for (const state of ['approved', 'cancelled'] as const) {
+        await moveTo(author, await start(author, 'akce'), state);
+      }
+      const returned = await start(author, 'akce');
+      await moveTo(author, returned, 'returned');
+      const fresh = await start(author, 'akce');
+      expect((await submit(author, fresh, readyAkce())).ok).toBe(true);
+      await refuses(returned, () => submit(author, returned, readyAkce(), 2), capRule);
+    });
+
+    it('lets one of two submits at once through at one below the cap', async () => {
+      const author = await user();
+      await handedIn(author, FUTURE_CAP - 1);
+      const [a, b] = [await start(author, 'akce'), await start(author, 'jednani')];
+      const results = await Promise.all([
+        submit(author, a!, readyAkce()),
+        submit(author, b!, readyJednani()),
+      ]);
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(results.filter((r) => !r.ok).map((r) => !r.ok && r.error)).toEqual([capRule]);
+    });
   });
 });
