@@ -3,6 +3,9 @@ import { randomBytes } from 'node:crypto';
 /** 128 random bits for one response's CSP nonce. */
 export const newNonce = (): string => randomBytes(16).toString('base64');
 
+/** Whether a string is exactly what `newNonce` makes: 22 base64 characters and `==`. */
+export const isNonce = (value: string): boolean => /^[A-Za-z0-9+/]{22}==$/.test(value);
+
 /** The request header the proxy sets with this response's nonce, and pages read. */
 export const NONCE_HEADER = 'x-nonce';
 

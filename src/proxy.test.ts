@@ -88,9 +88,9 @@ describe('proxy matcher', () => {
   });
 
   it.each([{ 'next-router-prefetch': '1' }, { purpose: 'prefetch' }])(
-    'skips a prefetch (%o)',
+    'runs for a request marked as a prefetch (%o): a skipped proxy is a page with no policy',
     (headers) => {
-      expect(matches({ config, url: '/', headers, nextConfig })).toBe(false);
+      expect(matches({ config, url: '/', headers, nextConfig })).toBe(true);
     },
   );
 });
