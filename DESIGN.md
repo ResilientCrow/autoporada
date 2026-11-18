@@ -163,6 +163,8 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 
 To add a write: a state function in `store.ts`, a tagged op in `ops.ts`, a branch in `toCalls` mapping it to a use case. If no use case fits, add or extend one in `src/application/use-cases` (see rules); if the screen needs data `GET /api/arch/state` does not return, extend `src/server/routes/arch-state.ts`.
 
+History is not in the state (ADR 0070): it carries the live working set, and a generated porada is metadata only (`doc` without a model). A screen that shows a generated document reads it through `core/archive.ts`: `useArchived(m)` (`documents.read`) for one porada and `useArchive()` (`documents.list`) for the shelf, both kept for the session. Do not put history back into the state.
+
 ## 6. Hard rules
 
 1. **Style is 1:1 with the prototype**: font, colour, spacing, radii, shadows and icons, on desktop and phone. Structure may differ where it is better; style may not. After any UI change, compare screenshots side by side with the prototype (`/work/ssps/app`) at the same viewport.

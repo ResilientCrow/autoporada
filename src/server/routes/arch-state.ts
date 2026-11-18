@@ -11,13 +11,12 @@ import { SETTINGS } from '@/contracts';
 import { workingSlot } from '@/domain/calendar';
 import { can } from '@/domain/policy';
 import { instantToWallClock, parseWallTime, toIsoDate } from '@/domain/time';
-import { composeDocument } from '@/document/compose';
-import { parseIssueSnapshot } from '@/snapshot';
 
 import type { WebContainer } from '../container';
 import { runRegistered } from '../pipeline';
 import { archCalendar } from './arch-calendar';
 import { archItems } from './arch-items';
+import { lastGeneratedOf, liveFutures, livePoints, liveSince } from './arch-live';
 import { archPlaceholders, withServerStatusOf } from './arch-placeholders';
 import { peopleFor } from './arch-people';
 
@@ -70,8 +69,17 @@ export async function archState(
   const { plannedThrough, slots, poradas } = archCalendar(issueRows, planned, today, rule);
 
   // ---- points and future items, as the policy lets this viewer see them ----
-  const pointRows = await db.points(ctx);
-  const futureRows = await db.futures(ctx);
+  // Only the live working set (ADR 0070): nothing generated, withdrawn or over is sent again.
+  const cut = lastGeneratedOf(issueRows);
+  const since = liveSince(cut, toIsoDate(today));
+  const futureRows = liveFutures(await db.futures(ctx, since), actor.id, since);
+  const liveAkceIds = new Set(futureRows.map((f) => f.id));
+  const pointRows = livePoints(
+    await db.points(ctx, cut, [...liveAkceIds]),
+    actor.id,
+    cut,
+    liveAkceIds,
+  );
   const pIds = pointRows.map((p) => p.id);
   const fIds = futureRows.map((f) => f.id);
   const pEvents = await db.pointEvents(pIds);
@@ -107,8 +115,10 @@ export async function archState(
   const work = workingSlot(today, slots) ?? slots[0];
   const ph = await archPlaceholders(db, { staff, head }, futureRows, vers);
   const docs = staff ? await db.documents() : [];
+  // A generated porada is metadata only: its content is read on demand (`documents.read`).
+  const openMondays = issueRows.filter((r) => r.status === 'open').map((r) => r.monday);
   const annexRows = new Map<string, unknown>(
-    staff ? (await db.annexes()).map((r) => [r.monday, r.annexes]) : [],
+    staff ? (await db.annexes(openMondays)).map((r) => [r.monday, r.annexes]) : [],
   );
   const annexSetting = (m: string): unknown[] => {
     const v = annexRows.get(m);
@@ -122,6 +132,7 @@ export async function archState(
   ) => {
     if (row) vers[`issue:${monday}`] = row.version;
     const open = (row?.status ?? 'open') === 'open';
+    const content = staff && open;
     // Without the outline, the two generated slots still frame a preview of one's own report.
     let rows: Json[] = staff
       ? []
@@ -136,12 +147,12 @@ export async function archState(
           pointId: null,
         }));
     // Texts of a porada are staff's until it is published (issue.preview).
-    let present = staff ? (row?.presentText ?? '') : '';
-    let guests = staff ? (row?.guestsText ?? '') : '';
-    let annex2: unknown = staff ? (row?.annex2 ?? null) : null;
+    let present = content ? (row?.presentText ?? '') : '';
+    let guests = content ? (row?.guestsText ?? '') : '';
+    let annex2: unknown = content ? (row?.annex2 ?? null) : null;
     // What the porada stores itself, not carried or derived: what a drop hands over (ADR 0054).
     let ownRows = false;
-    if (staff && open) {
+    if (content) {
       const items = row ? await db.issueItems(row.id) : [];
       ownRows = items.length > 0;
       if (items.length) {
@@ -189,17 +200,11 @@ export async function archState(
       row && docs.filter((d) => d.issueId === row.id).sort((a, b) => b.version - a.version)[0];
     let docOut: Json | undefined;
     if (doc) {
-      const parsed = parseIssueSnapshot(doc.snapshot);
-      const model = parsed.ok ? composeDocument(parsed.snapshot) : null;
       docOut = {
         at: doc.generatedAt.toISOString(),
         by: '',
         pdf:
           doc.pdfStatus === 'ready' ? 'ready' : doc.pdfStatus === 'failed' ? 'failed' : 'rendering',
-        model,
-        points: model
-          ? model.sections.flatMap((s) => s.blocks).filter((b) => b.kind === 'point').length
-          : 0,
         ...(doc.pdfFailure && { pdfFailure: doc.pdfFailure }),
       };
     }
@@ -211,15 +216,15 @@ export async function archState(
       present,
       guests,
       annex2,
-      annexes: staff ? annexSetting(monday) : [],
+      annexes: content ? annexSetting(monday) : [],
       own: {
         rows: ownRows,
-        present: staff && (row?.presentText ?? null) !== null,
-        guests: staff && (row?.guestsText ?? null) !== null,
-        annex2: staff && (row?.annex2 ?? null) !== null,
+        present: content && (row?.presentText ?? null) !== null,
+        guests: content && (row?.guestsText ?? null) !== null,
+        annex2: content && (row?.annex2 ?? null) !== null,
       },
       rows,
-      placeholders: ph.placeholders,
+      placeholders: open ? ph.placeholders : {},
       ...(docOut && { doc: docOut }),
     };
   };

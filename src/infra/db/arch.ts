@@ -3,7 +3,8 @@
  * use cases (a porada's annexes, the type of a draft). Points and future items are read through the
  * repos' own scope SQL, so the policy decides what a viewer sees.
  */
-import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNotNull, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
+import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import type { TxContext } from '@/application/ports';
 import { SETTINGS } from '@/contracts';
@@ -35,6 +36,59 @@ import {
 
 export type ArchStore = ReturnType<typeof createArchStore>;
 
+/**
+ * The last generated porada, as ISO dates, or null before the first (ADR 0070). The state
+ * endpoint's live working set is cut at it; the reads below keep a superset of that set.
+ */
+export interface LastGenerated {
+  readonly monday: string;
+  readonly meetingDate: string;
+}
+
+/** The viewer's own rows; none for a system principal. */
+const ownedBy = (ctx: TxContext, owner: AnyPgColumn): SQL =>
+  ctx.principal.kind === 'user' ? eq(owner, ctx.principal.actor.id) : sql`false`;
+
+/**
+ * Points that may be live (`server/routes/arch-live.ts`): never a withdrawn one; the viewer's own,
+ * those in review or approved, and a refused report of one of `liveAkceIds`. All before the first
+ * generation.
+ */
+function maybeLivePoints(
+  ctx: TxContext,
+  last: LastGenerated | null,
+  liveAkceIds: readonly string[],
+): SQL | undefined {
+  if (!last) return undefined;
+  return and(
+    ne(points.state, 'withdrawn'),
+    or(
+      ownedBy(ctx, points.authorId),
+      inArray(points.state, ['submitted', 'returned', 'approved']),
+      liveAkceIds.length
+        ? and(eq(points.state, 'rejected'), inArray(points.futureItemId, [...liveAkceIds]))
+        : sql`false`,
+    ),
+  );
+}
+
+/**
+ * Future items that may be live: the exact rule's superset is the rule itself (it needs only
+ * columns). `since` is `liveSince` of the route (null before the first generation: no cut).
+ */
+function maybeLiveFutures(ctx: TxContext, since: string | null): SQL | undefined {
+  if (since === null) return undefined;
+  return and(
+    ne(futureItems.state, 'withdrawn'),
+    or(
+      ownedBy(ctx, futureItems.authorId),
+      inArray(futureItems.state, ['submitted', 'returned']),
+      and(eq(futureItems.state, 'approved'), isNotNull(futureItems.cancelRequestedAt)),
+      gte(sql`coalesce(${futureItems.endDate}, ${futureItems.startDate})`, since),
+    ),
+  );
+}
+
 /** Whether a Monday with no row is a porada at `now`: after the calendar's boundary (ADR 0054 item 1). */
 async function pastBoundary(
   tx: Pick<TxDatabase, 'select'>,
@@ -58,12 +112,22 @@ async function pastBoundary(
 export function createArchStore(db: Database) {
   return {
     settings: () => db.select().from(settings),
-    points: async (ctx: TxContext) =>
-      (await db.select(POINT_ROW).from(points).where(visiblePoints(ctx))).map(pointRecord),
-    futures: async (ctx: TxContext) =>
-      (await db.select(ITEM_ROW).from(futureItems).where(visibleFutureItems(ctx))).map(
-        futureRecord,
-      ),
+    /** What the viewer may see (the scope), cut to what may be live after `last` (ADR 0070); `liveAkceIds` are the akce already found live. */
+    points: async (ctx: TxContext, last: LastGenerated | null, liveAkceIds: readonly string[]) =>
+      (
+        await db
+          .select(POINT_ROW)
+          .from(points)
+          .where(and(visiblePoints(ctx), maybeLivePoints(ctx, last, liveAkceIds)))
+      ).map(pointRecord),
+    /** What the viewer may see, cut to the items that may be live from `since` (`liveSince`, ADR 0070). */
+    futures: async (ctx: TxContext, since: string | null) =>
+      (
+        await db
+          .select(ITEM_ROW)
+          .from(futureItems)
+          .where(and(visibleFutureItems(ctx), maybeLiveFutures(ctx, since)))
+      ).map(futureRecord),
     pointEvents: (ids: string[]) =>
       ids.length
         ? db
@@ -93,18 +157,22 @@ export function createArchStore(db: Database) {
             .from(reportPlaceholders)
             .where(inArray(reportPlaceholders.futureItemId, futureIds))
         : Promise.resolve([]),
+    /** What the state shows of a generated document; the snapshot is read on demand (`documents.read`). */
     documents: () =>
       db
         .select({
           issueId: generatedDocuments.issueId,
-          snapshot: generatedDocuments.snapshot,
           pdfStatus: generatedDocuments.pdfStatus,
           pdfFailure: generatedDocuments.pdfFailure,
           generatedAt: generatedDocuments.generatedAt,
           version: generatedDocuments.version,
         })
         .from(generatedDocuments),
-    annexes: () => db.select().from(archAnnexes),
+    /** The annexes of these Mondays (the open poradas); a generated porada's are in its document. */
+    annexes: (mondays: string[]) =>
+      mondays.length
+        ? db.select().from(archAnnexes).where(inArray(archAnnexes.monday, mondays))
+        : Promise.resolve([]),
     issueItems: (issueId: string) =>
       db
         .select()
