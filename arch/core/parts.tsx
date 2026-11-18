@@ -7,6 +7,8 @@ import { loadChunk } from './import/chunk';
 import { IMPORT_HINT, ImportError, importMessage, SKIPPED_IMAGES_NOTE, TEXT_ONLY_NOTE } from './import/messages';
 import { useStore } from './react';
 import * as Q from './select';
+import { parseTable } from './table';
+import { typedLine } from './text';
 import type { Annex, AnnexPart } from './types';
 
 // ---- text with levels -------------------------------------------------------
@@ -86,11 +88,6 @@ export function DocNav({ built, attention, notes }: { built: Q.Built; attention?
 // ---- annexes ------------------------------------------------------------------
 let partSeq = 0;
 const pid = () => `part-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}-${partSeq++}`;
-const parseTable = (raw: string): string[][] => {
-  const lines = raw.split(/\r?\n/).filter((l) => l.trim());
-  const sep = lines.some((l) => l.includes('\t')) ? '\t' : lines.every((l) => l.includes(';')) ? ';' : null;
-  return lines.map((l) => (sep ? l.split(sep) : [l]).map((c) => c.trim()));
-};
 /** A photo straight from a phone is megabytes: shrink it before it goes anywhere. */
 function readImage(file: File): Promise<{ src: string; w: number; h: number }> {
   if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return Promise.reject(new Error('type'));
@@ -140,11 +137,11 @@ export function AnnexEditor({ annex, onChange, n }: { annex: Annex; onChange: (a
     } finally { setBusy(false); }
   };
   return <div className="stack ax">
-    <label className="l">Název přílohy {n}<input className="in" value={annex.title} onChange={(e) => onChange({ ...annex, title: e.target.value })} placeholder="Například: Výsledky voleb do Studentské rady" /></label>
+    <label className="l">Název přílohy {n}<input className="in" value={annex.title} onChange={(e) => onChange({ ...annex, title: typedLine(e.target.value) })} placeholder="Například: Výsledky voleb do Studentské rady" /></label>
     {annex.parts.map((p, k) => <section className="ax-p" key={p.id} aria-label={`Část ${k + 1}`}>
       {p.kind === 'text' ? <TextPart doc={p.doc} onChange={(doc) => setPart(p.id, { doc })} /> : null}
       {p.kind === 'table' ? <TablePart rows={p.rows} onChange={(rows) => setPart(p.id, { rows })} /> : null}
-      {p.kind === 'image' ? <div className="stack st8"><img className="ax-img" src={p.src} alt="" /><label className="l">Co je na obrázku<small>Přečte si to člověk, který obrázek nevidí.</small><input className="in" value={p.alt} onChange={(e) => setPart(p.id, { alt: e.target.value })} /></label></div> : null}
+      {p.kind === 'image' ? <div className="stack st8"><img className="ax-img" src={p.src} alt="" /><label className="l">Co je na obrázku<small>Přečte si to člověk, který obrázek nevidí.</small><input className="in" value={p.alt} onChange={(e) => setPart(p.id, { alt: typedLine(e.target.value) })} /></label></div> : null}
       <div className="row wr ax-a"><button type="button" className="q" disabled={k === 0} onClick={() => move(k, -1)}>Posunout výš</button><button type="button" className="q" disabled={k === annex.parts.length - 1} onClick={() => move(k, 1)}>Posunout níž</button><button type="button" className="q r" onClick={() => onChange({ ...annex, parts: annex.parts.filter((x) => x.id !== p.id) })}>Odebrat tuto část</button></div>
     </section>)}
     {err ? <p className="sm w-err" role="alert">{err}</p> : null}

@@ -133,13 +133,13 @@ export const issueAnnexSchema = z.strictObject({
   parts: z.array(
     z.union([
       z.strictObject({ kind: z.literal('text'), doc: richDoc('outline') }),
-      z.strictObject({ kind: z.literal('table'), rows: z.array(z.array(z.string())) }),
+      z.strictObject({ kind: z.literal('table'), rows: z.array(z.array(text)) }),
       z.strictObject({
         kind: z.literal('image'),
         src: z.string(),
         w: z.number(),
         h: z.number(),
-        alt: z.string(),
+        alt: text,
       }),
     ]),
   ),

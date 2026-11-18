@@ -210,6 +210,64 @@ describe('IssueSnapshot', () => {
     });
   });
 
+  describe('the extra annexes of a porada', () => {
+    const table = (rows: string[][]) => ({ kind: 'table', rows });
+    const image = (alt: string) => ({
+      kind: 'image',
+      src: 'data:image/png;base64,AAAA',
+      w: 10,
+      h: 10,
+      alt,
+    });
+    const withAnnex = (part: unknown) =>
+      variant(['annexes'], [{ title: 'Příloha', parts: [part] }]);
+
+    it.each([
+      ['a vertical tab in a table cell', table([['a', 'b\u000bc']])],
+      ['a control character in a table cell', table([['a'], ['\u0001']])],
+      ['a bidi mark in a table cell', table([['a\u200fb']])],
+      ['a tab in a table cell', table([['a\tb']])],
+      ['a newline in a table cell', table([['a\nb']])],
+      ['a control character in an image description', image('Graf\u0001')],
+      ['a vertical tab in an image description', image('Gr\u000baf')],
+      ['a tab in an image description', image('Graf\tvolby')],
+      ['a newline in an image description', image('Graf\nvolby')],
+    ])('rejects %s (the DOCX would be invalid XML)', (_case, part) => {
+      expect(parseIssueSnapshot(withAnnex(part)).ok).toBe(false);
+    });
+
+    it('accepts ordinary cells and descriptions, and trims a cell', () => {
+      const result = parseIssueSnapshot(
+        variant(
+          ['annexes'],
+          [
+            {
+              title: 'Příloha',
+              parts: [
+                table([
+                  ['  Třída ', 'Počet'],
+                  ['1.A', ''],
+                ]),
+                image('Graf voleb'),
+              ],
+            },
+          ],
+        ),
+      );
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      const [t, i] = result.snapshot.annexes[0]!.parts as unknown as [
+        { rows: string[][] },
+        { alt: string },
+      ];
+      expect(t.rows).toEqual([
+        ['Třída', 'Počet'],
+        ['1.A', ''],
+      ]);
+      expect(i.alt).toBe('Graf voleb');
+    });
+  });
+
   it('rejects a future schema version', () => {
     expect(errorsOf(variant(['schema'], 3))).toContainEqual(expect.stringMatching(/^schema:/));
   });

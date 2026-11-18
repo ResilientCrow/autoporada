@@ -3,17 +3,11 @@ import { exceedsLimits, richDocToPlainText, type RichDoc } from '@/domain/richte
 import { ImportError } from './messages';
 import { ANNEXES_MAX_BYTES } from '@/domain/report';
 import { listBytes } from './apply';
-import { clean, IMPORT_LIMIT, toParts, type PartDraft } from './parts';
+import { IMPORT_LIMIT, toParts, type PartDraft } from './parts';
 import type { PlacedBlock } from './types';
 
 const p = (text: string, indent: 0 | 1 | 2 | 3 = 0, heading?: true): PlacedBlock => ({ k: 'p', indent, text, ...(heading && { heading }) });
 const textOf = (part: PartDraft | undefined) => richDocToPlainText((part as { doc: RichDoc }).doc);
-
-describe('clean', () => {
-  it('folds every kind of space and drops control and direction characters', () => {
-    expect(clean('  a  b\t\nc‮d\u0007 ')).toBe('a b cd');
-  });
-});
 
 describe('toParts', () => {
   it('turns a run of paragraphs into one text part with their indents', () => {

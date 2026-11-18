@@ -1,5 +1,6 @@
 import { ANNEXES_MAX_BYTES } from '@/domain/report';
-import { stripForbiddenCharacters, type Indent, type RichDoc } from '@/domain/richtext';
+import type { Indent, RichDoc } from '@/domain/richtext';
+import { clean } from '../text';
 import type { AnnexPart } from '../types';
 import { ImportError } from './messages';
 import type { PlacedBlock } from './types';
@@ -16,9 +17,6 @@ const MARGIN = 50_000; // room for what the estimate misses
 /** The server refuses an annex list over `ANNEXES_MAX_BYTES`; the import stays this far under it. */
 export const IMPORT_LIMIT = ANNEXES_MAX_BYTES - MARGIN;
 const ID_BYTES = 48; // `{"id":"part-…",` and the comma of a part the editor will give an id
-
-/** One line of plain text: forbidden characters out, every run of white space one space. */
-export const clean = (s: string): string => stripForbiddenCharacters(s).replace(/\s+/g, ' ').trim();
 
 const bytes = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length;
 
