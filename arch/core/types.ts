@@ -38,7 +38,7 @@ export interface Issue {
   annex2: RichDoc | null; annexes: Annex[]; rows: Row[]; placeholders: Record<string, string>;
   /** What the porada stores itself, not carried or derived: what a drop hands over (ADR 0054). */
   own: { rows: boolean; present: boolean; guests: boolean; annex2: boolean };
-  doc?: { at: string; by: string; pdf: 'rendering' | 'ready' | 'failed'; model: unknown; points: number; pdfFailure?: string; left?: { moved: string[]; missed: string[] } };
+  doc?: { at: string; by: string; pdf: 'rendering' | 'ready' | 'failed'; /** Only the optimistic Generate fills these; the server sends metadata, the document is read on demand (`core/archive`). */ model?: unknown; points?: number; pdfFailure?: string; left?: { moved: string[]; missed: string[] } };
 }
 /** The headmaster's check of an akce's missing-report paragraph (ADR 0061): `was` is the paragraph they confirmed. */
 interface PlaceholderCheck { checked: boolean; was: string | null; /** Where the server put the placeholder when it sent the state (`placeholderStatus`); dropped by a local edit that makes it stale. */ status?: 'checked' | 'handed-in' | 'open' | 'to-check' }

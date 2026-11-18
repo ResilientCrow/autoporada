@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import {
+  DatabaseFailure,
   ScopeViolation,
   type DocumentRecord,
   type DocumentRepo,
@@ -94,7 +95,7 @@ export function fakeDocumentRepo(tx: FakeTxState, ctx: TxContext): DocumentRepo 
       if (!row) return null;
       // As the repository reads it: through JSON, and refused when it fails its schema.
       const parsed = parseIssueSnapshot(JSON.parse(JSON.stringify(row.snapshot)));
-      if (!parsed.ok) throw new Error('documents.snapshot: the stored snapshot fails its schema');
+      if (!parsed.ok) throw new DatabaseFailure('db.parse.generated_documents');
       return parsed.snapshot;
     },
     async file(id, format) {

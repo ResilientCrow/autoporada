@@ -6,7 +6,7 @@ import { moveBounds } from '@/domain/calendar';
 import { POINT_LIMITS } from '@/domain/report';
 import { emptyRichDoc, isRichDocEmpty } from '@/domain/richtext';
 import { createWith, go, Sheet, useStore } from '../core/react';
-import type { DocumentModel } from '@/document/model';
+import { useArchive, useArchived, type Archived } from '../core/archive';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import { NotFound } from './home';
@@ -211,18 +211,23 @@ export function Nahled() {
     desk={narrow ? undefined : <Desk cls="mg clip" right={<DocNav built={b} attention={ATT} />} note={<b>Takhle vyjde, když vygenerujete teď</b>}><div className="wrapm"><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} marginNote={(x) => (x.state === 'submitted' ? <span className="mn w">Neschváleno, teď by nevyšlo</span> : x.kind === 'missing' ? <span className="mn w">{x.state === 'checked' ? 'Chybí zpráva, vytiskne se zkontrolovaný odstavec' : 'Chybí zpráva, vytiskne se odstavec'}</span> : null)} /></div></Desk>}
     col={<><Back to="/porada" t="Zpět na poradu" /><Top h="Náhled porady" lead={`${printed.points >= 2 && printed.points <= 4 ? 'Jdou' : 'Jde'} do něj ${counts(printed.points, 'bod', 'body', 'bodů')}, ${Q.pagesText(Q.pagesOf(b))}. Přeškrtnuté zatím nevyjde.`} />{unchecked ? <Note err h="Některé odstavce za nedodané zprávy nejsou zkontrolované.">Vyjdou tak, jak je napsal systém. <a href="#/porada/zpravy">Zkontrolovat odstavce</a></Note> : null}<Sec h="Před generováním"><Todo rows={rows} /></Sec>{narrow ? (openDoc ? <><DocNav built={b} attention={ATT} /><div className="pv"><p className="pvh">Dokument</p><Sheet built={b} cls={(x) => (x.state === 'submitted' ? 'np' : '')} /></div></> : <button type="button" className="btn lg w" onClick={() => setOpenDoc(true)}>Otevřít celý dokument</button>) : null}<p className="sm" hidden>{iss.monday}</p></>} />;
 }
-const modelOf = (s: ReturnType<typeof useStore>['s'], m: string) => (Q.issueOf(s, m)?.doc?.model as DocumentModel | null) ?? Q.buildDoc(s, m).model;
 /** The real files of a generated porada: the server's DOCX and the worker's PDF, same-site GETs. */
 function DocxBtn({ cls, m, children }: { cls?: string; m: string; children: string }) {
   return <a className={cls} href={`/porada/${m}/dokument/docx`}>{children}</a>;
 }
 const PdfBtn = ({ cls, m }: { cls?: string; m: string }) => <a className={cls} href={`/porada/${m}/dokument/pdf`}>Stáhnout PDF</a>;
+/** The document of a generated porada is read on demand: while it comes, or when it will not. */
+function ArchivedWait({ a }: { a: Archived }) {
+  if (a.state === 'failed') return <div className="store-load"><Note err h="Dokument se teď nepodařilo načíst."><button type="button" className="btn go" onClick={a.retry}>Zkusit znovu</button></Note></div>;
+  return <div className="store-load" role="status" aria-live="polite">Načítám…</div>;
+}
 export function Hotovo({ m }: { m: string }) {
-  const { s } = useStore(); const iss = Q.issueOf(s, m); if (!iss?.doc) return <NotFound />;
-  const model = modelOf(s, m)!;
+  const { s } = useStore(); const iss = Q.issueOf(s, m); const a = useArchived(m); if (!iss?.doc || a.state === 'missing') return <NotFound />;
+  if (a.state !== 'ready') return <ArchivedWait a={a} />;
+  const { model, points } = a;
   const pdf = iss.doc.pdf;
   return <App nar desk={<Desk cls="tall" fold={`Otevřít dokument, ${Q.pagesText(Q.pagesOf(Q.builtOfModel(model)))}`} right={<DocNav built={Q.builtOfModel(model)} />} note={<b>Takhle vyšla</b>}><div className="wrapm wrapn"><div className="arch-wrap rise"><Stamp t="Hotovo" /><Sheet built={Q.builtOfModel(model)} /></div></div></Desk>} col={<>
-    <Top h={`Hotovo. Porada ${Q.dm(iss.meetingDate)} je na světě.`} lead={`${iss.doc.points === 1 ? 'Vyšel' : iss.doc.points >= 2 && iss.doc.points <= 4 ? 'Vyšly' : 'Vyšlo'} ${counts(iss.doc.points, 'bod', 'body', 'bodů')}. Autoři své zprávy uvidí jako zveřejněné.`} />
+    <Top h={`Hotovo. Porada ${Q.dm(iss.meetingDate)} je na světě.`} lead={`${points === 1 ? 'Vyšel' : points >= 2 && points <= 4 ? 'Vyšly' : 'Vyšlo'} ${counts(points, 'bod', 'body', 'bodů')}. Autoři své zprávy uvidí jako zveřejněné.`} />
     <div className="stack st8"><DocxBtn cls="btn go lg w" m={m}>Stáhnout DOCX</DocxBtn>
       {pdf === 'rendering' ? <div className="btn off lg w" role="status">PDF se připravuje…</div> : pdf === 'failed' ? <><Note err h="PDF se nepovedlo">DOCX je v pořádku. PDF zkuste vytvořit znovu.</Note></> : <PdfBtn cls="btn lg w" m={m} />}
     </div>
@@ -243,11 +248,13 @@ function DownloadNotice({ q }: { q: URLSearchParams }) {
   return text ? <Toast onDone={() => setText(null)}>{text}</Toast> : null;
 }
 export function Archiv({ q }: { q: URLSearchParams }) {
-  const { s } = useStore(); const u = Q.me(s)!; const iss = [...s.issues].sort((a, b) => b.monday.localeCompare(a.monday)).filter((i) => i.status !== 'open');
+  const { s } = useStore(); const u = Q.me(s)!; const { byMonday } = useArchive(); const iss = [...s.issues].sort((a, b) => b.monday.localeCompare(a.monday)).filter((i) => i.status !== 'open');
   if (!Q.atLeast(u.role, 'reviewer')) return <NotFound />;
-  return <div className="lay full"><DownloadNotice q={q} /><div className="work arch-top"><header /></div><aside className="desk scroll shelfw"><div className="deskhd"><a className="back on-d" href="#/"><Ic n="back" />Zpět</a><h1 className="big m">Archiv porad</h1></div><div className="shelf">{iss.filter((i) => i.status === 'generated').map((i) => { const model = modelOf(s, i.monday); const titles = model ? model.sections.flatMap((x) => x.blocks).filter((b) => b.kind === 'point').slice(-3).map((b) => (b as { text: string }).text) : []; return <div className="bk" key={i.monday}><a className="pg" href={`#/archiv/${i.monday}`} aria-label={`Otevřít poradu ${Q.dm(i.meetingDate)}`}><span>Porada vedení školy</span><span className="ln">{titles.map((t) => <b key={t}>{t}</b>)}</span></a><span><b>{Q.dm(i.meetingDate)} {i.meetingDate.slice(0, 4)}</b><small>{i.doc ? counts(i.doc.points, 'bod', 'body', 'bodů') : ''}</small></span>{model ? <span className="lnks"><DocxBtn m={i.monday}>DOCX</DocxBtn>{i.doc?.pdf === 'ready' ? <a href={`#/archiv/${i.monday}`}>PDF</a> : i.doc?.pdf === 'rendering' ? <span>PDF se dělá</span> : <span>PDF chybí</span>}</span> : null}</div>; })}</div></aside></div>;
+  return <div className="lay full"><DownloadNotice q={q} /><div className="work arch-top"><header /></div><aside className="desk scroll shelfw"><div className="deskhd"><a className="back on-d" href="#/"><Ic n="back" />Zpět</a><h1 className="big m">Archiv porad</h1></div><div className="shelf">{iss.filter((i) => i.status === 'generated').map((i) => { const on = byMonday.get(i.monday); const points = i.doc?.points ?? on?.points; return <div className="bk" key={i.monday}><a className="pg" href={`#/archiv/${i.monday}`} aria-label={`Otevřít poradu ${Q.dm(i.meetingDate)}`}><span>Porada vedení školy</span><span className="ln">{(on?.titles ?? []).map((t) => <b key={t}>{t}</b>)}</span></a><span><b>{Q.dm(i.meetingDate)} {i.meetingDate.slice(0, 4)}</b><small>{points === undefined ? '' : counts(points, 'bod', 'body', 'bodů')}</small></span>{i.doc ? <span className="lnks"><DocxBtn m={i.monday}>DOCX</DocxBtn>{i.doc.pdf === 'ready' ? <a href={`#/archiv/${i.monday}`}>PDF</a> : i.doc.pdf === 'rendering' ? <span>PDF se dělá</span> : <span>PDF chybí</span>}</span> : null}</div>; })}</div></aside></div>;
 }
 export function ArchivDoc({ m }: { m: string }) {
-  const { s } = useStore(); const iss = Q.issueOf(s, m); const model = modelOf(s, m); if (!iss || !model) return <NotFound />;
+  const { s } = useStore(); const iss = Q.issueOf(s, m); const a = useArchived(m); if (!iss || a.state === 'missing') return <NotFound />;
+  if (a.state !== 'ready') return <ArchivedWait a={a} />;
+  const { model } = a;
   return <div className="lay full"><aside className="desk scroll"><div className="deskhd"><a className="back on-d" href="#/archiv"><Ic n="back" />Zpět na archiv</a><h1 className="big m">Porada {Q.dm(iss.meetingDate)}</h1><div className="row wr"><DocxBtn cls="btn go" m={m}>Stáhnout DOCX</DocxBtn>{iss.doc?.pdf === 'ready' ? <PdfBtn cls="btn" m={m} /> : null}</div><DocNav built={Q.builtOfModel(model)} /></div><Sheet built={Q.builtOfModel(model)} /></aside></div>;
 }

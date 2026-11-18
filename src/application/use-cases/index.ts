@@ -23,7 +23,7 @@ import {
   submitFuture,
   withdrawFuture,
 } from './future';
-import { downloadDocument } from './documents';
+import { downloadDocument, listDocuments, readDocument } from './documents';
 import {
   addIssue,
   confirmPlaceholder,
@@ -88,7 +88,7 @@ export {
   submitFuture,
   withdrawFuture,
 } from './future';
-export { downloadDocument } from './documents';
+export { downloadDocument, listDocuments, readDocument } from './documents';
 export {
   addIssue,
   confirmPlaceholder,
@@ -155,9 +155,11 @@ export const USE_CASES: readonly AnyUseCase[] = [
   downloadDocument,
   generateIssue,
   issueMissingReports,
+  listDocuments,
   moveIssue,
   moveOutlineItem,
   newSchoolYear,
+  readDocument,
   readIssueTexts,
   readOutline,
   readOutlineItem,

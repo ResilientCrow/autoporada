@@ -61,3 +61,95 @@ export const downloadDocumentOutput = z.strictObject({
   bytes: fileBytes,
   sha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
+
+const run = z.strictObject({
+  text: z.string(),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+});
+const runs = z.array(run).readonly();
+
+/** One block of a document (`document/model`), by its kind. */
+const documentBlockWire = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('title'), text: z.string() }),
+  z.strictObject({ kind: z.literal('label'), label: z.string(), text: z.string() }),
+  z.strictObject({ kind: z.literal('section'), text: z.string() }),
+  z.strictObject({ kind: z.literal('point'), number: z.int(), text: z.string() }),
+  z.strictObject({ kind: z.literal('body'), runs }),
+  z.strictObject({ kind: z.literal('reportLine'), label: z.string(), runs }),
+  z.strictObject({ kind: z.literal('dash'), label: z.string(), runs }),
+  z.strictObject({ kind: z.literal('bullet'), runs }),
+  z.strictObject({
+    kind: z.literal('rich'),
+    level: z.union([z.literal(0), z.literal(1), z.literal(2)]),
+    runs,
+  }),
+  z.strictObject({ kind: z.literal('partner'), label: z.string(), quote: z.string() }),
+  z.strictObject({ kind: z.literal('spacer'), keepNext: z.boolean().optional() }),
+  z.strictObject({ kind: z.literal('pageBreak') }),
+  z.strictObject({ kind: z.literal('closing'), place: z.string(), signature: z.string() }),
+  z.strictObject({ kind: z.literal('annex'), text: z.string() }),
+  z.strictObject({ kind: z.literal('annexTitle'), text: z.string() }),
+  z.strictObject({
+    kind: z.literal('studentTable'),
+    rows: z
+      .array(z.strictObject({ name: z.string(), classCode: z.string(), isNew: z.boolean() }))
+      .readonly(),
+  }),
+  z.strictObject({
+    kind: z.literal('dataTable'),
+    rows: z.array(z.array(z.string()).readonly()).readonly(),
+  }),
+  z.strictObject({
+    kind: z.literal('image'),
+    src: z.string(),
+    width: z.number(),
+    height: z.number(),
+    alt: z.string(),
+  }),
+]);
+
+/**
+ * A composed document as the archive reads it (`document/model`). `contracts` may not import the
+ * model's types, so this names every block once; the use case's output type proves the model fits
+ * it, and a test proves the other way round.
+ */
+const documentModelWire = z.strictObject({
+  meta: z.strictObject({ title: z.string(), author: z.string() }),
+  sections: z
+    .array(
+      z.strictObject({
+        layout: z.enum(['single', 'twoColumn', 'nextPage']),
+        blocks: z.array(documentBlockWire).readonly(),
+      }),
+    )
+    .readonly(),
+});
+
+/** One generated porada's document, by the porada's Monday. */
+export const readDocumentInput = z.strictObject({ monday: z.iso.date().max(10) });
+
+export const readDocumentOutput = z.strictObject({
+  /** When the latest document was generated. */
+  at: z.iso.datetime(),
+  model: documentModelWire,
+  /** How many numbered points the model holds. */
+  points: z.int().nonnegative(),
+});
+
+/** The archive shelf: every generated porada, no input. */
+export const listDocumentsInput = z.strictObject({});
+
+export const listDocumentsOutput = z.strictObject({
+  /** Latest meeting first. */
+  documents: z
+    .array(
+      z.strictObject({
+        monday: z.iso.date(),
+        points: z.int().nonnegative(),
+        /** The last three points of the document, in its order. */
+        titles: z.array(z.string()).max(3).readonly(),
+      }),
+    )
+    .readonly(),
+});
