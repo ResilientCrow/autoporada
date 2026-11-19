@@ -65,7 +65,7 @@ describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
       titlesAfter: 'Ph.D.',
     }),
     // The name reads as a woman's, and the person said „pan“: their answer stands.
-    row('kolega', 'zamestnanec', 'submitter', { salutation: 'pan' }),
+    row('kolega', 'zamestnanec', 'submitter', { salutation: 'pan', titlesBefore: 'Ing.' }),
     row('eva', 'student', 'submitter', { salutation: 'slecna' }),
     // Named „Jana“, which reads as a woman's: nothing is guessed from it.
     row('nikdo', null),
@@ -81,17 +81,29 @@ describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
       vers: {},
     });
 
-  it('gives every row the person’s own answer, whoever looks', () => {
-    for (const head of [true, false]) {
-      const people = list(head);
-      expect(byId(people, 'me')).toMatchObject({
-        salutation: 'pani',
-        titlesBefore: 'Mgr.',
-        titlesAfter: 'Ph.D.',
-      });
-      expect(byId(people, 'kolega')).toMatchObject({ salutation: 'pan' });
-      expect(byId(people, 'eva')).toMatchObject({ salutation: 'slecna' });
+  it('gives the headmaster every row’s own answer', () => {
+    const people = list(true);
+    expect(byId(people, 'me')).toMatchObject({
+      salutation: 'pani',
+      titlesBefore: 'Mgr.',
+      titlesAfter: 'Ph.D.',
+    });
+    expect(byId(people, 'kolega')).toMatchObject({ salutation: 'pan', titlesBefore: 'Ing.' });
+    expect(byId(people, 'eva')).toMatchObject({ salutation: 'slecna' });
+  });
+
+  it('gives anyone else their own answer only: others’ salutation and degrees stay theirs', () => {
+    for (const actorId of ['me', 'eva']) {
+      const people = list(false, actorId);
+      const own = byId(people, actorId);
+      expect(own).toMatchObject({ salutation: actorId === 'me' ? 'pani' : 'slecna' });
+      for (const other of people.filter((p) => p.id !== actorId && p.id !== 'vedeni')) {
+        expect(other).toMatchObject({ salutation: null });
+        expect(other).not.toHaveProperty('titlesBefore');
+        expect(other).not.toHaveProperty('titlesAfter');
+      }
     }
+    expect(byId(list(false), 'me')).toMatchObject({ titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' });
   });
 
   it('guesses nothing: a user without a salutation comes without one', () => {
@@ -102,9 +114,9 @@ describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
   });
 
   it('leaves out an absent degree instead of sending null', () => {
-    const kolega = byId(list(true), 'kolega');
-    expect(kolega).not.toHaveProperty('titlesBefore');
-    expect(kolega).not.toHaveProperty('titlesAfter');
+    const eva = byId(list(true), 'eva');
+    expect(eva).not.toHaveProperty('titlesBefore');
+    expect(eva).not.toHaveProperty('titlesAfter');
   });
 });
 

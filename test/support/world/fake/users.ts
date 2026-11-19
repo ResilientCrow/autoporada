@@ -135,7 +135,13 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       }
       const user = find(id);
       if (!user) throw new ScopeViolation();
-      return save({ ...user, ...patch, updatedAt: ctx.now });
+      return save({
+        ...user,
+        salutation: patch.salutation,
+        titlesBefore: patch.titlesBefore,
+        titlesAfter: patch.titlesAfter,
+        updatedAt: ctx.now,
+      });
     },
     async functions(ids) {
       guard(tx, false);

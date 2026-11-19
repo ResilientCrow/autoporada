@@ -55,8 +55,9 @@ interface UserRow {
 /**
  * The people a viewer's state holds: the headmaster sees the directory (`users.view`); anyone else
  * only the names their own view already mentions, and role, status and contact of nobody but
- * themselves, and their tier and functions (ADR 0072). Every row carries the person's salutation and degrees, since they print in a document. Who of the vedení returned or edited a point is not shown to its author (`points.get`):
- * they see „Vedení“.
+ * themselves, and their tier, functions, salutation and degrees (ADR 0072); what prints in a
+ * document comes from the cards (`cardsFor`). Who of the vedení returned or edited a point is not
+ * shown to its author (`points.get`): they see „Vedení“.
  */
 export function peopleFor(input: {
   readonly rows: readonly UserRow[];
@@ -79,9 +80,10 @@ export function peopleFor(input: {
       return {
         id: u.id,
         // The person's own answer, never guessed (ADR 0072 item 6): none yet comes without one.
-        salutation: u.salutation as string | null,
-        ...(u.titlesBefore && { titlesBefore: u.titlesBefore }),
-        ...(u.titlesAfter && { titlesAfter: u.titlesAfter }),
+        // Only they and the headmaster see it; a document gets it from the cards.
+        salutation: full ? (u.salutation as string | null) : null,
+        ...(full && u.titlesBefore && { titlesBefore: u.titlesBefore }),
+        ...(full && u.titlesAfter && { titlesAfter: u.titlesAfter }),
         ...name,
         email: full ? (u.email ?? '') : '',
         role: full ? u.role : 'submitter',
