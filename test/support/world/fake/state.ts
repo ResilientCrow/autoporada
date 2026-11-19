@@ -21,6 +21,7 @@ import {
   type StoredSetting,
   type UserRecord,
 } from '@/application/ports';
+import type { UserFunction } from '@/domain/actor';
 import type { Outline } from '@/domain/outline';
 import type { IssueSnapshot } from '@/snapshot';
 
@@ -29,6 +30,8 @@ import { refusedBy } from './guards';
 /** What the fake database holds, mirroring the tables the ports write. */
 export interface FakeState {
   readonly users: Map<string, UserRecord>;
+  /** user_functions, by user id: the list in order (never empty; none = absent). */
+  readonly userFunctions: Map<string, readonly UserFunction[]>;
   readonly accessRequests: Map<string, AccessRequestRecord>;
   /** auth_transactions, by cookie hash (unique). */
   readonly signIns: Map<string, PendingSignIn>;
@@ -98,6 +101,7 @@ export interface JobRow {
 
 export const emptyState = (): FakeState => ({
   users: new Map(),
+  userFunctions: new Map(),
   accessRequests: new Map(),
   signIns: new Map(),
   sessions: new Map(),
@@ -154,6 +158,7 @@ export function eraseFakeUser(state: FakeState, id: string): void {
   for (const [key, s] of state.signIns) if (s.userId === id) state.signIns.delete(key);
   for (const [key, row] of state.mailLedger)
     if (row.recipientId === id) state.mailLedger.delete(key);
+  state.userFunctions.delete(id);
   state.users.delete(id);
 }
 

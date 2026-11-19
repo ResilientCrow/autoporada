@@ -29,7 +29,7 @@ export interface PersonName {
  * reuse them, and the paste parser checks its rows against them, so a pasted
  * row never fails the form's own validation later.
  */
-export const PERSON_FIELD_MAX = { name: 80, title: 40, affiliation: 120 } as const;
+export const PERSON_FIELD_MAX = { name: 80, title: 40, affiliation: 120, complement: 80 } as const;
 
 export const SALUTATION: Readonly<
   Record<Salutation, { label: string; genitive: string; plural: string; sex: Sex }>

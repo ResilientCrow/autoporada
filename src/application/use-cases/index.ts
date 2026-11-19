@@ -63,7 +63,7 @@ import {
   saveList,
 } from './registry';
 import { saveSettings } from './settings';
-import { changeUserAccess, setAddress } from './users';
+import { changeUserAccess, setAddress, setFunctions } from './users';
 
 export { cancelAccess, decideAccess, requestAccess } from './access';
 export {
@@ -129,7 +129,7 @@ export {
   saveList,
 } from './registry';
 export { saveSettings } from './settings';
-export { changeUserAccess, setAddress } from './users';
+export { changeUserAccess, setAddress, setFunctions } from './users';
 
 /**
  * Every use case of the app. The inventory test proves this list is
@@ -183,6 +183,7 @@ export const USE_CASES: readonly AnyUseCase[] = [
   saveSettings,
   searchGate,
   setAddress,
+  setFunctions,
   setIssueAnnex2,
   setIssueDetails,
   setPlaceholder,

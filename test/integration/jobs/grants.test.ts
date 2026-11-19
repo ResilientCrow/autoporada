@@ -427,18 +427,22 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
 
   // Migration 0031: the names of the school's people are no business of any job. `issue_items`
   // holds the agenda's text, which carries names too (M9 review, Security 6). report_placeholders holds
-  // the headmaster's paragraphs and their confirmations (0055).
-  it.each(['registry_lists', 'registry_entries', 'issue_items', 'report_placeholders'])(
-    'gives the worker no privilege at all on %s',
-    async (table) => {
-      const [row] = await database.owner<{ held: boolean }>(
-        `SELECT has_any_column_privilege('autoporada_worker', $1::regclass, 'SELECT, INSERT, UPDATE, REFERENCES') AS held`,
-        [table],
-      );
-      expect(row?.held).toBe(false);
-      expect(await sqlstateAs('autoporada_worker', `SELECT * FROM ${table}`)).toBe(DENIED);
-    },
-  );
+  // the headmaster's paragraphs and their confirmations (0055); user_functions the functions people hold
+  // (0063), which no job needs.
+  it.each([
+    'registry_lists',
+    'registry_entries',
+    'issue_items',
+    'report_placeholders',
+    'user_functions',
+  ])('gives the worker no privilege at all on %s', async (table) => {
+    const [row] = await database.owner<{ held: boolean }>(
+      `SELECT has_any_column_privilege('autoporada_worker', $1::regclass, 'SELECT, INSERT, UPDATE, REFERENCES') AS held`,
+      [table],
+    );
+    expect(row?.held).toBe(false);
+    expect(await sqlstateAs('autoporada_worker', `SELECT * FROM ${table}`)).toBe(DENIED);
+  });
 
   // The statements the settings repository runs: `value` is all the worker's reads need, `get` also
   // selects the version, which only the headmaster's screen and save may.

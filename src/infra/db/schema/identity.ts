@@ -5,13 +5,14 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
-import { TIERS, type Tier } from '@/domain/actor';
+import { FUNCTION_HEADS, TIERS, type FunctionHead, type Tier } from '@/domain/actor';
 import { PERSON_FIELD_MAX, SALUTATIONS, type Salutation } from '@/domain/cs';
 
 import { at, bytea, createdAt, id } from './columns';
@@ -28,6 +29,7 @@ export const accessRequestState = pgEnum('access_request_state', [
 export const authPurpose = pgEnum('auth_purpose', ['login', 'step_up']);
 
 const tierList = sql.raw(TIERS.map((tier) => `'${tier}'`).join(','));
+const headList = sql.raw(FUNCTION_HEADS.map((head) => `'${head}'`).join(','));
 const salutationList = sql.raw(SALUTATIONS.map((salutation) => `'${salutation}'`).join(','));
 
 /**
@@ -79,6 +81,31 @@ export const users = pgTable(
     check(
       'users_student_role',
       sql`${t.tier} IS NULL OR ${t.tier} NOT IN ('student', 'absolvent') OR ${t.role} IN ('pending', 'submitter')`,
+    ),
+  ],
+);
+
+/**
+ * What a person holds besides the tier (ADR 0072 item 4), in the order the headmaster listed it.
+ * No grant to the worker: it reads no function.
+ */
+export const userFunctions = pgTable(
+  'user_functions',
+  {
+    userId: uuid()
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    head: text().$type<FunctionHead>().notNull(),
+    /** After the head, never declined: „pro majetek“, „IT oddělení“. */
+    complement: text(),
+    position: integer().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.position] }),
+    check('user_functions_head', sql`${t.head} IN (${headList})`),
+    check(
+      'user_functions_complement',
+      sql`${t.complement} IS NULL OR (char_length(${t.complement}) <= ${sql.raw(String(PERSON_FIELD_MAX.complement))} AND ${t.complement} !~ '[[:cntrl:]]')`,
     ),
   ],
 );

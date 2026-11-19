@@ -29,4 +29,13 @@ export const ROLES: readonly Role[] = ['pending', 'submitter', 'reviewer', 'head
 
 export const USER_STATUSES: readonly UserStatus[] = ['active', 'blocked', 'deactivated'];
 
-export { isStudentTier, TIERS, type Tier } from './position';
+export {
+  FUNCTION_HEADS,
+  FUNCTIONS_MAX,
+  highestFunction,
+  isStudentTier,
+  TIERS,
+  type FunctionHead,
+  type Tier,
+  type UserFunction,
+} from './position';

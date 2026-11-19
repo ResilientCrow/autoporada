@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { accessRequests, sessions, users } from '@/infra/db/schema';
+import { accessRequests, sessions, userFunctions, users } from '@/infra/db/schema';
 
 import { pgErrorOf, setupTestDatabase } from '../../support/database';
 
@@ -93,6 +93,78 @@ describe('a user’s own address (ADR 0072 item 6)', () => {
     for (const bad of [`E'Mgr.\\n'`, `E'Mgr.\\t'`, `E'Mgr.\\u0007'`]) {
       expect(await pgErrorOf(insertOwner(column, bad))).toMatchObject(violation('23514', name));
     }
+  });
+});
+
+describe('a user’s functions (ADR 0072 item 4)', () => {
+  const insertFunction = (userId: string, over: Partial<typeof userFunctions.$inferInsert> = {}) =>
+    database.db
+      .insert(userFunctions)
+      .values({ userId, head: 'zastupce', complement: 'pro majetek', position: 0, ...over });
+  const insertRaw = (userId: string, head: string, complement: string) =>
+    database.owner(
+      `INSERT INTO user_functions (user_id, head, complement, position) VALUES ('${userId}', '${head}', ${complement}, 0)`,
+    );
+
+  it('keeps several functions of one user in order, a complement being optional', async () => {
+    const id = await insertUser();
+    await insertFunction(id, { position: 0 });
+    await insertFunction(id, { head: 'clen', complement: null, position: 1 });
+    const rows = await database.db
+      .select()
+      .from(userFunctions)
+      .where(eq(userFunctions.userId, id))
+      .orderBy(userFunctions.position);
+    expect(rows.map((r) => [r.head, r.complement])).toEqual([
+      ['zastupce', 'pro majetek'],
+      ['clen', null],
+    ]);
+  });
+
+  it('keys a function by user and position', async () => {
+    const id = await insertUser();
+    await insertFunction(id);
+    expect(await pgErrorOf(insertFunction(id))).toMatchObject(
+      violation('23505', 'user_functions_user_id_position_pk'),
+    );
+  });
+
+  it('takes only the four heads', async () => {
+    for (const head of ['statutarni-zastupce', 'zastupce', 'vedouci', 'clen']) {
+      await insertRaw(await insertUser(), head, 'NULL');
+    }
+    const id = await insertUser();
+    expect(await pgErrorOf(insertRaw(id, 'reditel', 'NULL'))).toMatchObject(
+      violation('23514', 'user_functions_head'),
+    );
+  });
+
+  it('caps the complement at 80 characters and refuses control characters', async () => {
+    const id = await insertUser();
+    await insertFunction(id, { complement: 'x'.repeat(80) });
+    expect(await pgErrorOf(insertRaw(id, 'clen', `'${'x'.repeat(81)}'`))).toMatchObject(
+      violation('23514', 'user_functions_complement'),
+    );
+    for (const bad of [`E'a\\nb'`, `E'a\\tb'`, `E'a\\u0007b'`]) {
+      expect(await pgErrorOf(insertRaw(id, 'clen', bad))).toMatchObject(
+        violation('23514', 'user_functions_complement'),
+      );
+    }
+  });
+
+  it('goes with the user', async () => {
+    const id = await insertUser();
+    await insertFunction(id);
+    await database.db.delete(users).where(eq(users.id, id));
+    expect(
+      await database.db.select().from(userFunctions).where(eq(userFunctions.userId, id)),
+    ).toEqual([]);
+  });
+
+  it('refuses a function of nobody', async () => {
+    expect(await pgErrorOf(insertFunction(randomUUID()))).toMatchObject(
+      violation('23503', 'user_functions_user_id_users_id_fk'),
+    );
   });
 });
 

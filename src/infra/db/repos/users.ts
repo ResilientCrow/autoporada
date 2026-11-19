@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, sql } from 'drizzle-orm';
 
 import {
   scopeOf,
@@ -7,10 +7,11 @@ import {
   type TxContext,
   type UserRepo,
 } from '@/application/ports';
+import type { UserFunction } from '@/domain/actor';
 import { can, type Check } from '@/domain/policy';
 
 import { scopeWhere } from '../scope-sql';
-import { users } from '../schema';
+import { userFunctions, users } from '../schema';
 import type { TxDatabase } from './database';
 
 /** The columns a UserRecord is made of; new columns stay out until named here. */
@@ -134,6 +135,48 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
         .where(and(eq(users.id, id), visible()))
         .returning(USER_RECORD);
       if (!row) throw new ScopeViolation();
+      return row;
+    },
+    async functions(ids) {
+      const found = new Map<string, UserFunction[]>();
+      if (ids.length === 0) return found;
+      const rows = await db
+        .select({
+          userId: userFunctions.userId,
+          head: userFunctions.head,
+          complement: userFunctions.complement,
+        })
+        .from(userFunctions)
+        .innerJoin(users, eq(users.id, userFunctions.userId))
+        .where(and(inArray(userFunctions.userId, [...ids]), visible()))
+        .orderBy(asc(userFunctions.userId), asc(userFunctions.position));
+      for (const { userId, head, complement } of rows) {
+        const list = found.get(userId) ?? [];
+        list.push({ head, complement });
+        found.set(userId, list);
+      }
+      return found;
+    },
+    async setFunctions(id, expectedVersion, list) {
+      // A function grants no rights, so the own row is allowed; only the manage action is needed.
+      require({ action: 'users.manage' });
+      const [row] = await db
+        .update(users)
+        .set({ version: sql`${users.version} + 1`, updatedAt: ctx.now })
+        .where(and(eq(users.id, id), eq(users.version, expectedVersion), visible()))
+        .returning(USER_RECORD);
+      if (!row) throw new StaleVersion();
+      await db.delete(userFunctions).where(eq(userFunctions.userId, id));
+      if (list.length > 0) {
+        await db.insert(userFunctions).values(
+          list.map((f, position) => ({
+            userId: id,
+            head: f.head,
+            complement: f.complement,
+            position,
+          })),
+        );
+      }
       return row;
     },
     async countActiveHeadmasters() {

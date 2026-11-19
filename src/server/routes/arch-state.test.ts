@@ -110,6 +110,7 @@ function containerWith(opts: {
     pointEvents: vi.fn(async (_ids: string[]) => []),
     futureEvents: vi.fn(async (_ids: string[]) => []),
     users: async () => [],
+    functions: vi.fn(async (_ids: string[] | null) => new Map()),
     accessRequests: async () => [],
     placeholders: async () => [],
     issueItems: async () => [],
@@ -305,5 +306,22 @@ describe('archState: generated poradas are metadata only', () => {
     expect(arch.documents).not.toHaveBeenCalled();
     expect(arch.annexes).not.toHaveBeenCalled();
     expect(issuesOf(state).get(GENERATED.monday)!.doc).toBeUndefined();
+  });
+});
+
+describe('archState: the functions (ADR 0072 item 4)', () => {
+  const headmaster: UserPrincipal = {
+    ...principal,
+    actor: { ...principal.actor, role: 'headmaster' },
+  };
+
+  it('reads everyone’s functions for the headmaster and only the viewer’s own for anyone else', async () => {
+    const asHead = containerWith({ issues: [GENERATED, OPEN], points: [], futures: [] });
+    await archState(asHead.c, headmaster, 'test');
+    expect(asHead.arch.functions).toHaveBeenCalledWith(null);
+
+    const asReviewer = containerWith({ issues: [GENERATED, OPEN], points: [], futures: [] });
+    await archState(asReviewer.c, reviewer, 'test');
+    expect(asReviewer.arch.functions).toHaveBeenCalledWith([reviewer.actor.id]);
   });
 });

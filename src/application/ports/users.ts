@@ -1,4 +1,4 @@
-import type { Role, Tier, UserStatus } from '@/domain/actor';
+import type { Role, Tier, UserFunction, UserStatus } from '@/domain/actor';
 import type { Salutation } from '@/domain/cs';
 
 export interface UserRecord {
@@ -79,5 +79,20 @@ export interface UserRepo {
    * principal does not see.
    */
   setAddress(id: string, patch: AddressPatch): Promise<UserRecord>;
+  /**
+   * The functions of these users, each list in the order it was set; a user with none is absent.
+   * Only users the principal may see.
+   */
+  functions(ids: readonly string[]): Promise<ReadonlyMap<string, readonly UserFunction[]>>;
+  /**
+   * Replaces the whole list of functions of the row `id` and bumps its version; throws
+   * StaleVersion. A user principal needs `users.manage`, on their own row too: a function grants
+   * no rights (ADR 0072 item 1). Not access: no session ends.
+   */
+  setFunctions(
+    id: string,
+    expectedVersion: number,
+    list: readonly UserFunction[],
+  ): Promise<UserRecord>;
   countActiveHeadmasters(): Promise<number>;
 }

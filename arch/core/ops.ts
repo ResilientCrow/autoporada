@@ -92,6 +92,7 @@ export const requestAccess = simple('requestAccess', S.requestAccess);
 export const cancelRequest = simple('cancelRequest', S.cancelRequest);
 export const decideRequest = simple('decideRequest', S.decideRequest);
 export const setUser = simple('setUser', S.setUser);
+export const setFunctions = simple('setFunctions', S.setFunctions);
 /** The viewer's own salutation and degrees; the server keeps no version for them. */
 export const setAddress = simple('setAddress', S.setAddress);
 /** A draft's type or kind; the real app fixes them at the create, the bridge lets the author change a draft's. */
@@ -225,6 +226,11 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
       const [uid] = a as unknown as [string, { role?: Role }];
       const u = s.users.find((x) => x.id === uid); if (!u) return [];
       return [{ name: 'users.changeAccess', key: uid, input: { userId: uid, version: vers[uid] ?? 1, role: u.role, tier: u.tier ?? null, status: u.status, confirmed: true } }];
+    }
+    case 'setFunctions': {
+      const [uid] = a as unknown as [string];
+      const u = s.users.find((x) => x.id === uid); if (!u) return [];
+      return [{ name: 'users.setFunctions', key: uid, input: { userId: uid, version: vers[uid] ?? 1, functions: u.functions ?? [] } }];
     }
     default: return [];
   }

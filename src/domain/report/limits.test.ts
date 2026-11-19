@@ -52,7 +52,7 @@ describe('POINT_LIMITS', () => {
   it('shares the person caps with the paste parser instead of copying them', () => {
     expect(POINT_LIMITS.person).toBe(PERSON_FIELD_MAX);
     expect(REEXPORTED).toBe(PERSON_FIELD_MAX);
-    expect(POINT_LIMITS.person).toEqual({ name: 80, title: 40, affiliation: 120 });
+    expect(POINT_LIMITS.person).toEqual({ name: 80, title: 40, affiliation: 120, complement: 80 });
   });
 
   it('takes the body cap from the rich text module', () => {

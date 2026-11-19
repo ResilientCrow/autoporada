@@ -7,7 +7,7 @@ import {
   type UserRecord,
   type UserRepo,
 } from '@/application/ports';
-import { isStudentTier } from '@/domain/actor';
+import { isStudentTier, type UserFunction } from '@/domain/actor';
 import { admits, can } from '@/domain/policy';
 
 import { guard } from './guards';
@@ -136,6 +136,35 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       const user = find(id);
       if (!user) throw new ScopeViolation();
       return save({ ...user, ...patch, updatedAt: ctx.now });
+    },
+    async functions(ids) {
+      guard(tx, false);
+      const found = new Map<string, readonly UserFunction[]>();
+      for (const id of new Set(ids)) {
+        const list = tx.draft.userFunctions.get(id);
+        if (list && find(id))
+          found.set(
+            id,
+            list.map((f) => ({ ...f })),
+          );
+      }
+      return found;
+    },
+    async setFunctions(id, expectedVersion, list) {
+      guard(tx, true);
+      // As the repo: `users.manage`, whoever's row it is.
+      if (principal.kind === 'user' && !can(principal.actor, { action: 'users.manage' })) {
+        throw new ScopeViolation();
+      }
+      const user = find(id);
+      if (!user || user.version !== expectedVersion) throw new StaleVersion();
+      if (list.length === 0) tx.draft.userFunctions.delete(id);
+      else
+        tx.draft.userFunctions.set(
+          id,
+          list.map((f) => ({ ...f })),
+        );
+      return save({ ...user, version: user.version + 1, updatedAt: ctx.now });
     },
     async countActiveHeadmasters() {
       guard(tx, false);

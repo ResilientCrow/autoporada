@@ -98,6 +98,7 @@ export async function archState(
 
   // ---- people ----
   const userRows = await db.users(null);
+  const functions = await db.functions(head ? null : [actor.id]);
   const archUsers = peopleFor({
     rows: userRows,
     actorId: actor.id,
@@ -109,6 +110,7 @@ export async function archState(
       ...futureRows.map((f) => f.authorId),
       ...(staff ? [...pEvents, ...fEvents].flatMap((e) => (e.actorId ? [e.actorId] : [])) : []),
     ]),
+    functions,
     vers,
   });
 

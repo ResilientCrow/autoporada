@@ -158,6 +158,8 @@ export {
   changeUserAccessOutput,
   setAddressInput,
   setAddressOutput,
+  setFunctionsInput,
+  setFunctionsOutput,
 } from './users';
 export {
   SETTINGS,

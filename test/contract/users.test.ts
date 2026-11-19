@@ -409,4 +409,112 @@ describe('UserRepo (port contract)', () => {
       expect(again).toMatchObject({ ...ADDRESS, displayName: 'Jana Svobodová' });
     });
   });
+  describe('functions (ADR 0072 item 4)', () => {
+    const MAJETEK = { head: 'zastupce', complement: 'pro majetek' } as const;
+    const IT = { head: 'vedouci', complement: 'IT oddělení' } as const;
+    const CLEN = { head: 'clen', complement: null } as const;
+    const set = (
+      by: Principal,
+      user: UserRecord,
+      list: Parameters<Tx['users']['setFunctions']>[2],
+      version = user.version,
+    ) =>
+      world.tx(by, async (tx) => {
+        const after = await tx.users.setFunctions(user.id, version, list);
+        await tx.audit.record({
+          action: 'user.functions.change',
+          target: { type: 'user', id: user.id },
+        });
+        return after;
+      });
+    const read = (by: Principal, ids: readonly string[]) =>
+      world.tx(by, (tx) => tx.users.functions(ids), 'read');
+
+    it('starts with none, and a user without any is absent from the map', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      expect((await read(cli, [user.id])).size).toBe(0);
+      expect((await read(cli, [])).size).toBe(0);
+    });
+
+    it('keeps the order it was given, and a head without a complement', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter' });
+      await set(world.as(head), user, [IT, CLEN, MAJETEK]);
+      expect((await read(cli, [user.id])).get(user.id)).toEqual([IT, CLEN, MAJETEK]);
+    });
+
+    it('replaces the whole list, and an empty list removes it', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter' });
+      const first = await set(world.as(head), user, [IT, CLEN]);
+      const second = await set(world.as(head), first, [CLEN, CLEN, MAJETEK]);
+      expect((await read(cli, [user.id])).get(user.id)).toEqual([CLEN, CLEN, MAJETEK]);
+      await set(world.as(head), second, []);
+      expect((await read(cli, [user.id])).has(user.id)).toBe(false);
+    });
+
+    it('bumps the version and touches nothing else on the row', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'reviewer', tier: 'vedeni' });
+      await signIn(user, createHash('sha256').update('theirs').digest('hex'));
+      const after = await set(world.as(head), user, [MAJETEK]);
+      expect(after).toMatchObject({
+        id: user.id,
+        version: user.version + 1,
+        role: 'reviewer',
+        tier: 'vedeni',
+        status: 'active',
+      });
+      const sha = createHash('sha256').update('theirs').digest('hex');
+      expect(await world.tx(cli, (tx) => tx.sessions.find(sha), 'read')).not.toBeNull();
+    });
+
+    it('writes only from the version the change started from, and then writes nothing', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter' });
+      await set(world.as(head), user, [IT]);
+      await expect(set(world.as(head), user, [MAJETEK])).rejects.toBeInstanceOf(StaleVersion);
+      expect((await read(cli, [user.id])).get(user.id)).toEqual([IT]);
+    });
+
+    it('holds any tier, a student too', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const student = await world.seed.user({ role: 'submitter', tier: 'student' });
+      await set(world.as(head), student, [{ head: 'clen', complement: 'PR oddělení' }]);
+      expect((await read(cli, [student.id])).get(student.id)).toHaveLength(1);
+    });
+
+    it('lets a headmaster set their own functions: a function grants no rights', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      await set(world.as(head), head, [MAJETEK]);
+      expect((await read(cli, [head.id])).get(head.id)).toEqual([MAJETEK]);
+    });
+
+    it('refuses anyone but a headmaster, even on themselves', async () => {
+      const reviewer = await world.seed.user({ role: 'reviewer' });
+      const user = await world.seed.user({ role: 'submitter' });
+      await expect(set(world.as(reviewer), user, [IT])).rejects.toBeInstanceOf(ScopeViolation);
+      await expect(set(world.as(user), user, [IT])).rejects.toBeInstanceOf(ScopeViolation);
+      expect((await read(cli, [user.id])).size).toBe(0);
+    });
+
+    it('reads several users at once, within the principal’s scope', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const me = await world.seed.user({ role: 'submitter' });
+      const other = await world.seed.user({ role: 'submitter' });
+      await set(world.as(head), me, [IT]);
+      await set(world.as(head), other, [CLEN]);
+      const all = await read(world.as(head), [me.id, other.id]);
+      expect([...all.keys()].sort()).toEqual([me.id, other.id].sort());
+      expect([...(await read(world.as(me), [me.id, other.id])).keys()]).toEqual([me.id]);
+    });
+
+    it('goes with the user when they are deleted', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter' });
+      await set(world.as(head), user, [IT]);
+      await world.erase.user(user.id);
+      expect((await read(cli, [user.id])).size).toBe(0);
+    });
+  });
 });

@@ -442,6 +442,13 @@
       "when": 1795085403103,
       "tag": "0062_user_address",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1795086235368,
+      "tag": "0063_user_functions",
+      "breakpoints": true
     }
   ]
 }

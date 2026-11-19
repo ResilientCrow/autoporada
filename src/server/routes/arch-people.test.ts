@@ -36,6 +36,7 @@ const people = (head: boolean) =>
     head,
     staff: true,
     named: new Set(ROWS.map((r) => r.id)),
+    functions: new Map(),
     vers: {},
   });
 const byId = (list: ReturnType<typeof people>, id: string) => list.find((p) => p.id === id);
@@ -76,6 +77,7 @@ describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
       head,
       staff: true,
       named: new Set(addressed.map((r) => r.id)),
+      functions: new Map(),
       vers: {},
     });
 
@@ -103,5 +105,38 @@ describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
     const kolega = byId(list(true), 'kolega');
     expect(kolega).not.toHaveProperty('titlesBefore');
     expect(kolega).not.toHaveProperty('titlesAfter');
+  });
+});
+
+describe('peopleFor: the functions (ADR 0072 item 4)', () => {
+  const MAJETEK = { head: 'zastupce', complement: 'pro majetek' } as const;
+  const IT = { head: 'vedouci', complement: 'IT oddělení' } as const;
+  const held = new Map([
+    ['me', [MAJETEK, IT]],
+    ['kolega', [IT]],
+  ]);
+  const list = (head: boolean) =>
+    peopleFor({
+      rows: ROWS,
+      actorId: 'me',
+      head,
+      staff: true,
+      named: new Set(ROWS.map((r) => r.id)),
+      functions: held,
+      vers: {},
+    });
+
+  it('gives the headmaster everyone’s functions in order, an empty list for none', () => {
+    const people = list(true);
+    expect(byId(people, 'me')).toMatchObject({ functions: [MAJETEK, IT] });
+    expect(byId(people, 'kolega')).toMatchObject({ functions: [IT] });
+    expect(byId(people, 'nikdo')).toMatchObject({ functions: [] });
+  });
+
+  it('gives anyone else their own functions and nobody else’s', () => {
+    const people = list(false);
+    expect(byId(people, 'me')).toMatchObject({ functions: [MAJETEK, IT] });
+    expect(byId(people, 'kolega')).not.toHaveProperty('functions');
+    expect(byId(people, 'nikdo')).not.toHaveProperty('functions');
   });
 });

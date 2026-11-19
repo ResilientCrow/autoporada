@@ -20,7 +20,7 @@ const person = (
 
 describe('person field caps', () => {
   it('are the form limits, exported for the point content to reuse', () => {
-    expect(PERSON_FIELD_MAX).toEqual({ name: 80, title: 40, affiliation: 120 });
+    expect(PERSON_FIELD_MAX).toEqual({ name: 80, title: 40, affiliation: 120, complement: 80 });
   });
 });
 

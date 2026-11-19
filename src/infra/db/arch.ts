@@ -8,6 +8,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import type { TxContext } from '@/application/ports';
 import { SETTINGS } from '@/contracts';
+import type { UserFunction } from '@/domain/actor';
 import { calendarBoundary } from '@/domain/calendar';
 import { compareDates, instantToWallClock, parseIsoDate, type CalDate } from '@/domain/time';
 
@@ -31,6 +32,7 @@ import {
   registryLists,
   reportPlaceholders,
   settings,
+  userFunctions,
   users,
 } from './schema';
 
@@ -149,6 +151,19 @@ export function createArchStore(db: Database) {
       ids === null
         ? db.select().from(users)
         : db.select().from(users).where(inArray(users.id, ids)),
+    /** Everyone's functions with `null`, else these users'; each list in order, none = absent. */
+    functions: async (ids: string[] | null) => {
+      const rows = await db
+        .select()
+        .from(userFunctions)
+        .where(ids === null ? undefined : inArray(userFunctions.userId, ids))
+        .orderBy(asc(userFunctions.userId), asc(userFunctions.position));
+      const found = new Map<string, UserFunction[]>();
+      for (const { userId, head, complement } of rows) {
+        found.set(userId, [...(found.get(userId) ?? []), { head, complement }]);
+      }
+      return found;
+    },
     issues: () => db.select().from(issues).orderBy(asc(issues.monday)),
     placeholders: (futureIds: string[]) =>
       futureIds.length

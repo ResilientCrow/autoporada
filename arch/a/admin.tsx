@@ -1,5 +1,5 @@
 import { isAadstsCode, isFailureCause, isSignInError } from '@/contracts';
-import { isStudentTier, TIERS, type Tier } from '@/domain/actor';
+import { FUNCTION_HEADS, FUNCTIONS_MAX, highestFunction, isStudentTier, TIERS, type FunctionHead, type Tier, type UserFunction } from '@/domain/actor';
 import { foldForSearch, normalizeClass, PERSON_FIELD_MAX, SALUTATION, salutationsFor, type Salutation } from '@/domain/cs';
 import { failures } from '@/ui/copy/failures';
 import { signIn } from '@/ui/copy/sign-in';
@@ -22,7 +22,10 @@ const TIER: Record<Tier, string> = { reditel: 'Ředitel', vedeni: 'Vedení', uci
 const tierOptions = (tiers: readonly Tier[]) => tiers.map((t) => [t, TIER[t]] as const);
 /** The headmaster's own row takes a staff tier only. */
 const OWN_TIERS = TIERS.filter((t) => !isStudentTier(t));
-const subtitle = (u: { role: keyof typeof ROLE; tier?: Tier | null; status: string }) => `${ROLE[u.role]}${u.tier ? `, ${TIER[u.tier].toLowerCase()}` : ''}${u.status === 'blocked' ? ', zablokovaný účet' : ''}`;
+/** What a person holds besides the tier (ADR 0072 item 4); the head is a fixed list, the complement is typed. */
+const HEAD: Record<FunctionHead, string> = { 'statutarni-zastupce': 'Statutární zástupce', zastupce: 'Zástupce', vedouci: 'Vedoucí', clen: 'Člen' };
+const functionText = (f: UserFunction) => `${HEAD[f.head].toLowerCase()}${f.complement ? ` ${f.complement}` : ''}`;
+const subtitle = (u: { role: keyof typeof ROLE; tier?: Tier | null; functions?: UserFunction[]; status: string }) => { const top = highestFunction(u.functions ?? []); return `${ROLE[u.role]}${u.tier ? `, ${TIER[u.tier].toLowerCase()}` : ''}${top ? `, ${functionText(top)}` : ''}${u.status === 'blocked' ? ', zablokovaný účet' : ''}`; };
 export function Lide() {
   const { s, apply } = useStore(); const [q, setQ] = useState(''); const [dlg, setDlg] = useState<string | null>(null); const [tier, setTier] = useState<Tier | null>(null);
   const f = q.toLowerCase(); const us = s.users.filter((u) => !f || Q.nameOf(u).toLowerCase().includes(f) || u.email.includes(f));
@@ -37,18 +40,41 @@ export function Lide() {
     <Sec h={`Všichni (${us.length})`}>{us.map((u) => <Item key={u.id} to={`/lide/${u.id}`} t={Q.nameOf(u)} st={subtitle(u)} />)}{us.length === 0 ? <p className="sm">Nikdo takový tu není.</p> : null}</Sec>
   </Pane>;
 }
+/** The functions of one person: the whole list is edited here and sent with one save (users.setFunctions). */
+function Funkce({ u, onSave }: { u: User; onSave: (list: UserFunction[]) => void }) {
+  const { s } = useStore(); const [draft, setDraft] = useState<UserFunction[] | null>(null); const [foc, setFoc] = useState<number | null>(null);
+  const list = draft ?? u.functions ?? [];
+  const put = (i: number, p: Partial<UserFunction>) => setDraft(list.map((f, k) => (k === i ? { ...f, ...p } : f)));
+  const used = [...new Set(s.users.flatMap((x) => (x.functions ?? []).map((f) => f.complement ?? '')).filter(Boolean))];
+  const hits = (i: number) => { const typed = foldForSearch(list[i]?.complement ?? ''); return used.filter((c) => c !== list[i]?.complement && foldForSearch(c).includes(typed)).slice(0, 5); };
+  return <section className="stack st8"><h2>Funkce</h2>
+    <p className="sm">Funkce nedává žádná práva. Do dokumentu se píše před jménem, ta nejvyšší.</p>
+    {list.map((f, i) => <div className="stack st8" role="group" aria-label={`Funkce ${i + 1}`} key={i}>
+      <div className="two"><label className="l">Druh<select className="in" value={f.head} onChange={(e) => put(i, { head: e.target.value as FunctionHead })}>{FUNCTION_HEADS.map((h) => <option key={h} value={h}>{HEAD[h]}</option>)}</select></label>
+        <label className="l">Doplnění<input className="in" maxLength={PERSON_FIELD_MAX.complement} placeholder="pro majetek" value={f.complement ?? ''} onFocus={() => setFoc(i)} onChange={(e) => put(i, { complement: typedLine(e.target.value) })} /></label></div>
+      {foc === i && hits(i).length ? <div className="picks">{hits(i).map((c) => <button type="button" className="pick" key={c} onClick={() => { put(i, { complement: c }); setFoc(null); }}><b>{c}</b><span>už u někoho je</span></button>)}</div> : null}
+      <div className="row wr">{i > 0 ? <button type="button" className="q" onClick={() => setDraft(list.map((x, k) => (k === i - 1 ? f : k === i ? list[i - 1]! : x)))}>Posunout nahoru</button> : null}<button type="button" className="q r" onClick={() => { setDraft(list.filter((_, k) => k !== i)); setFoc(null); }}>Odebrat funkci</button></div>
+    </div>)}
+    {list.length === 0 ? <p className="sm">Žádnou funkci nemá.</p> : null}
+    <div className="row wr"><button type="button" className={`btn ${list.length < FUNCTIONS_MAX ? '' : 'off'}`} aria-disabled={list.length >= FUNCTIONS_MAX} onClick={() => { if (list.length < FUNCTIONS_MAX) setDraft([...list, { head: 'clen', complement: null }]); }}><Ic n="plus" />Přidat funkci</button>
+      {draft ? <button type="button" className="btn go" onClick={() => { onSave(draft); setDraft(null); setFoc(null); }}>Uložit funkce</button> : null}</div>
+    {list.length >= FUNCTIONS_MAX ? <p className="sm">Víc než {FUNCTIONS_MAX} funkcí jedna osoba mít nemůže.</p> : null}
+  </section>;
+}
 export function Clovek({ id }: { id: string }) {
   const { s, apply } = useStore(); const u = s.users.find((x) => x.id === id); const [ok, setOk] = useState(false); if (!u) return <NotFound />;
   const self = u.id === s.userId; const need = A.needsReauth(s);
   const set = (p: Parameters<typeof A.setUser>[1]) => { apply(A.setUser(id, p)); setOk(true); };
   const student = isStudentTier(u.tier ?? null);
   const stepUp = <section className="stack st8"><Note h="Nejdřív ověříme, že jste to Vy">Změna role nebo zařazení patří k citlivým věcem, proto Vás Microsoft požádá o nové přihlášení. Ověření platí 10 minut.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section>;
+  const funkce = <Funkce u={u} onSave={(list) => { apply(A.setFunctions(id, list)); setOk(true); }} />;
   const placing = (tiers: readonly Tier[]) => <section className="stack st8"><h2>Zařazení</h2><Seg label="Zařazení" value={u.tier ?? null} options={tierOptions(tiers)} onChange={(v) => set({ tier: v })} /></section>;
   return <Pane on="/lide"><Back to="/lide" t="Zpět na lidi" /><Top h={Q.nameOf(u)} lead={u.email} />
     {ok ? <Toast onDone={() => setOk(false)}>Uloženo</Toast> : null}
-    {self ? <><Note h="Tohle jste Vy">Svou roli ani účet si sami nezměníte, jen své zařazení. Jediný ředitel nejdřív povýší zástupce.</Note>{need ? stepUp : placing(OWN_TIERS)}</> : need ? stepUp : <>
+    {self ? <><Note h="Tohle jste Vy">Svou roli ani účet si sami nezměníte, jen své zařazení. Jediný ředitel nejdřív povýší zástupce.</Note>{need ? stepUp : <>{placing(OWN_TIERS)}{funkce}</>}</> : need ? stepUp : <>
       <section className="stack st8"><h2>Co smí</h2><Seg label="Role" value={u.role} options={(student ? (['submitter', 'pending'] as const) : (['submitter', 'reviewer', 'headmaster', 'pending'] as const)).map((r) => [r, ROLE[r]] as const)} onChange={(v) => set({ role: v })} />{student ? <p className="sm">Student i absolvent smí jen psát zprávy.</p> : null}</section>
       {placing(TIERS)}
+      {funkce}
       <section className="stack st8"><h2>Účet</h2><button className="btn" onClick={() => set({ status: u.status === 'blocked' ? 'active' : 'blocked' })}>{u.status === 'blocked' ? 'Odblokovat účet' : 'Zablokovat účet'}</button></section>
     </>}
   </Pane>;

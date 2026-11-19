@@ -1,4 +1,4 @@
-import type { Tier } from '@/domain/actor';
+import type { Tier, UserFunction } from '@/domain/actor';
 import type { Campus, OrganizerRole, ParticipantsAddress, Salutation } from '@/domain/cs';
 import type { PointContent, PointKind } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
@@ -12,6 +12,8 @@ export interface User {
   email: string; role: Role; isStudent: boolean; status: 'active' | 'blocked'; affiliation?: string; job?: string;
   /** Who they are at the school (ADR 0072): only on full rows (the headmaster's view, the own row); null until set. */
   tier?: Tier | null;
+  /** What they hold besides the tier (ADR 0072 item 4), in order: only on full rows, like the tier. */
+  functions?: UserFunction[];
 }
 export interface Trail { at: string; who: string; what: string; note?: string; parts?: string[]; original?: Record<string, string> }
 export interface Point {

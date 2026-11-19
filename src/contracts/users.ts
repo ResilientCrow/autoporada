@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ROLES, TIERS, USER_STATUSES } from '@/domain/actor';
+import { FUNCTION_HEADS, FUNCTIONS_MAX, ROLES, TIERS, USER_STATUSES } from '@/domain/actor';
 import { PERSON_FIELD_MAX, SALUTATIONS } from '@/domain/cs';
 import { hasForbiddenCharacters } from '@/domain/richtext';
 
@@ -50,3 +50,32 @@ export const setAddressInput = z.strictObject({
 });
 /** Whether anything was written; the version stays, since an address is not access. */
 export const setAddressOutput = z.object({ changed: z.boolean() });
+
+/** A complement on one line, as typed: trimmed, empty is none, capped as the column's CHECK is. */
+const complement = z
+  .string()
+  .trim()
+  .max(PERSON_FIELD_MAX.complement)
+  .refine(
+    (value) => !hasForbiddenCharacters(value, { allowTab: false }),
+    'contains control or direction characters',
+  )
+  .transform((value) => value || null)
+  .nullable();
+
+/**
+ * All of a person's functions, in the order they are held (ADR 0072 item 4); the form sends the
+ * whole list and the use case replaces what is stored. Any tier may hold any.
+ */
+export const setFunctionsInput = z.strictObject({
+  userId: z.guid(),
+  version: z.number().int().positive(),
+  functions: z
+    .array(z.strictObject({ head: z.enum(FUNCTION_HEADS), complement }))
+    .max(FUNCTIONS_MAX),
+});
+/** The row's version after the call: a change of functions bumps it, as a change of access does. */
+export const setFunctionsOutput = z.object({
+  changed: z.boolean(),
+  version: z.number().int().positive(),
+});

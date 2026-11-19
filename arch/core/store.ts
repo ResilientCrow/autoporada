@@ -1,4 +1,4 @@
-import { isStudentTier, type Tier } from '@/domain/actor';
+import { isStudentTier, type Tier, type UserFunction } from '@/domain/actor';
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
 import { missingForSubmit, newDraft, openingInput, REPORT_BULLETS, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
 import { openingSentence, type Salutation } from '@/domain/cs';
@@ -293,4 +293,10 @@ export const setUser = (uid: string, patch: { role?: Role; status?: 'active' | '
   const own = uid === s.userId && (patch.role !== undefined || patch.status !== undefined || isStudentTier(patch.tier ?? null));
   if (own || needsReauth(s)) return s;
   return audit({ ...s, users: up(s.users, uid, (u) => { const n = { ...u, ...patch, ...(patch.tier && { isStudent: isStudentTier(patch.tier) }) }; return n.isStudent && (n.role === 'reviewer' || n.role === 'headmaster') ? { ...n, role: 'submitter' } : n; }) }, `Změna uživatele ${uid}`);
+};
+/** All of a person's functions, in order (ADR 0072 item 4); a complement is trimmed, an empty one is none. Any tier, the own row too. */
+export const setFunctions = (uid: string, list: readonly UserFunction[]): Fx => (s) => {
+  if (needsReauth(s)) return s;
+  const functions = list.map((f) => ({ head: f.head, complement: f.complement?.trim() || null }));
+  return audit({ ...s, users: up(s.users, uid, (u) => ({ ...u, functions })) }, `Změna funkcí ${uid}`);
 };

@@ -84,6 +84,7 @@ describe('inventory of entry points', () => {
     expect(limitOf('access.request')).toBe('submission');
     expect(limitOf('users.setAddress')).toBe('submission');
     expect(limitOf('points.decide')).toBe('admin');
+    expect(limitOf('users.setFunctions')).toBe('admin');
     expect(limitOf('registry.newSchoolYear')).toBe('admin');
     expect(limitOf('no.such')).toBe('admin');
   });
