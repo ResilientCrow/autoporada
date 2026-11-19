@@ -6,7 +6,6 @@ import {
   participantsFits,
   participantsLabel,
   participantsPastLead,
-  participantsSeveral,
   participantsWomen,
 } from '../index';
 
@@ -15,11 +14,16 @@ describe('participants address (ADR 0071)', () => {
     expect(PARTICIPANTS_ADDRESSES).toEqual(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni']);
   });
 
-  it('counts several people by the comma, as the organizer does', () => {
-    expect(participantsSeveral('Eva Malá (3.B), Jan Novák (2.A)')).toBe(true);
-    expect(participantsSeveral('Eva Malá (3.B)')).toBe(false);
-    expect(participantsSeveral('Eva Malá a Jan Novák')).toBe(false);
-    expect(participantsSeveral('')).toBe(false);
+  it('counts several people as the organizer does: a comma before a title is no second person', () => {
+    expect(participantsAgenda('slecny-a-panove', 'Eva Malá (3.B), Jan Novák (2.A)')).toBe(
+      'zúčastní se slečny a pánové: Eva Malá (3.B), Jan Novák (2.A)',
+    );
+    expect(participantsAgenda('panove', 'Jan Novák, Ph.D.')).toBe(
+      'zúčastní se pan: Jan Novák, Ph.D.',
+    );
+    expect(participantsAgenda('panove', 'Jan Novák, Ph.D., Petr Malý')).toBe(
+      'zúčastní se pánové: Jan Novák, Ph.D., Petr Malý',
+    );
   });
 
   describe('label', () => {

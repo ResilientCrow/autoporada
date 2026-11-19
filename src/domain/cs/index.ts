@@ -76,13 +76,13 @@ export {
   organizerPhrase,
   type OrganizerRole,
 } from './sentence/organizer';
+export { severalPeople } from './names/several';
 export {
   PARTICIPANTS_ADDRESSES,
   participantsAgenda,
   participantsFits,
   participantsLabel,
   participantsPastLead,
-  participantsSeveral,
   participantsWomen,
   type ParticipantsAddress,
 } from './sentence/participants';

@@ -1,3 +1,5 @@
+import { severalPeople } from '../names/several';
+
 /**
  * How the author addresses the participants of an akce as one group (ADR 0071): all of them are
  * „slečny a pánové“, or „slečny“, or „pánové“, or none of these. The app never knows anyone's gender.
@@ -26,9 +28,6 @@ const PAST: Readonly<Record<ParticipantsAddress, { one: string; many: string }>>
   'bez-osloveni': { one: 'zúčastnili', many: 'zúčastnili' },
 };
 
-/** Names with a comma are several people, as for the organizer (ADR 0063 item 2). */
-export const participantsSeveral = (names: string): boolean => names.includes(',');
-
 /** The label in the right number; null for no address or „bez oslovení“. */
 export function participantsLabel(
   address: ParticipantsAddress | null,
@@ -52,7 +51,7 @@ export const participantsFits = (address: ParticipantsAddress | null, several: b
  */
 export function participantsAgenda(address: ParticipantsAddress | null, names: string): string {
   const typed = names.trim();
-  const label = typed === '' ? null : participantsLabel(address, participantsSeveral(typed));
+  const label = typed === '' ? null : participantsLabel(address, severalPeople(typed));
   return label === null ? typed : `zúčastní se ${label}: ${typed}`;
 }
 

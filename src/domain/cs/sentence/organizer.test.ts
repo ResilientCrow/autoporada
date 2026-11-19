@@ -23,6 +23,18 @@ describe('organizerPhrase (ADR 0063)', () => {
     );
   });
 
+  it('does not take a comma before a title after the name for a second person', () => {
+    expect(organizerPhrase('organizes', 'Mgr. Jan Novák, Ph.D.')).toBe(
+      'organizuje Mgr. Jan Novák, Ph.D.',
+    );
+    expect(organizerPhrase('coordinates', 'Jan Novák, Ph.D., MBA')).toBe(
+      'koordinuje Jan Novák, Ph.D., MBA',
+    );
+    expect(organizerPhrase('organizes', 'Jan Novák, Ph.D., Eva Malá')).toBe(
+      'organizují Jan Novák, Ph.D., Eva Malá',
+    );
+  });
+
   it('does not take " a " for several people', () => {
     expect(organizerPhrase('organizes', 'Jana Nováková a Petr Malý')).toBe(
       'organizuje Jana Nováková a Petr Malý',

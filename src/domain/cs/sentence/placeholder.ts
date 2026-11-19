@@ -7,13 +7,10 @@ import {
   onWeekday,
   weekdayGenitive,
 } from '../dates/format';
+import { severalPeople } from '../names/several';
 import type { Campus } from './opening';
 import type { OrganizerRole } from './organizer';
-import {
-  participantsPastLead,
-  participantsSeveral,
-  type ParticipantsAddress,
-} from './participants';
+import { participantsPastLead, type ParticipantsAddress } from './participants';
 import { titleGender } from './title-gender';
 import { PAST_TENSE } from './title-words';
 
@@ -98,7 +95,7 @@ export function placeholderParagraph(input: PlaceholderInput): string {
   if (participants) {
     const lead = participantsPastLead(
       input.participantsAddress ?? null,
-      participantsSeveral(participants),
+      severalPeople(participants),
     );
     sentences.push(`Za Smíchovskou střední ${lead}: ${closed(participants)}`);
   }

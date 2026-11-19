@@ -1,6 +1,6 @@
 import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
 import { isStudentTier } from '@/domain/actor';
-import { suggestGenitive, formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, participantsFits, participantsSeveral, salutationsFor, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
+import { suggestGenitive, formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, participantsFits, severalPeople, salutationsFor, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
 import { missingForSubmit, REPORT_BULLETS, type BulletSpec, type DraftPerson } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
@@ -141,7 +141,7 @@ export function participantsProblem(f: Future): string | null {
   const names = f.participants.trim();
   if (f.kind !== 'akce' || !names) return null;
   if (!f.participantsAddress) return 'Vyberte oslovení účastníků.';
-  return participantsFits(f.participantsAddress, participantsSeveral(names)) ? null : 'Slečny a pánové potřebují aspoň dvě jména oddělená čárkou.';
+  return participantsFits(f.participantsAddress, severalPeople(names)) ? null : 'Slečny a pánové potřebují aspoň dvě jména oddělená čárkou.';
 }
 /** The paragraph the system writes for an akce (ADR 0060), whatever the headmaster wrote instead. */
 export function systemText(f: Future): string {

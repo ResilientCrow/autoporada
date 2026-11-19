@@ -140,6 +140,17 @@ describe('future.submit', () => {
       ).toMatchObject({ ok: true });
     });
 
+    it('does not count a title after a name as a second person', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      const one = { participants: 'Mgr. Jan Novák, Ph.D.', participantsAddress: 'slecny-a-panove' };
+      await refuses(
+        id,
+        () => submit(author, id, readyAkce(one)),
+        invalid({ 'content.participantsAddress': 'several' }),
+      );
+    });
+
     it.each(['slecny', 'panove', 'bez-osloveni'])(
       'takes %s for one person and for several',
       async (participantsAddress) => {

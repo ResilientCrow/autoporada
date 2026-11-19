@@ -2,7 +2,7 @@ import { MAX_FIELDS } from '@/application/core';
 import type { FutureContent } from '@/application/ports';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
 import type { FutureKind } from '@/domain/calendar';
-import { participantsFits, participantsSeveral } from '@/domain/cs';
+import { participantsFits, severalPeople } from '@/domain/cs';
 import { compareDates, compareTimes } from '@/domain/time';
 
 /**
@@ -75,9 +75,7 @@ function readinessIssues(
       if (!keepsTypedParticipants(content, stored)) {
         issues['content.participantsAddress'] = 'required';
       }
-    } else if (
-      !participantsFits(participantsAddress, participantsSeveral(participantsOf(content)))
-    ) {
+    } else if (!participantsFits(participantsAddress, severalPeople(participantsOf(content)))) {
       issues['content.participantsAddress'] = 'several';
     }
   }
