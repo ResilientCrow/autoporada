@@ -1,4 +1,4 @@
-import type { Campus, ParticipantsAddress, Salutation } from '@/domain/cs';
+import type { Campus, ParticipantsAddress, PersonHead, Salutation } from '@/domain/cs';
 import type { RichDoc } from '@/domain/richtext';
 import type { CalDate, WallTime } from '@/domain/time';
 
@@ -19,6 +19,13 @@ export interface DraftPerson {
   readonly givenName: string;
   readonly familyName: string;
   readonly titlesAfter?: string;
+  /**
+   * What prints between the salutation and the name, copied when the author picked the person
+   * (ADR 0072 item 7): „pan profesor“, „paní zástupkyně pro majetek“. A head needs a salutation.
+   */
+  readonly head?: PersonHead;
+  /** After the head noun, never declined; one line. */
+  readonly complement?: string;
   /** „3.B“ or an employer. */
   readonly affiliation?: string;
   /** The school year in which the class was confirmed („2026/2027“). */

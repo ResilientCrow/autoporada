@@ -103,6 +103,21 @@ describe('openingInput', () => {
     expect(input?.organisers).toEqual([]);
   });
 
+  it('names an organiser with a function in the opening sentence', () => {
+    const deputy: DraftPerson = {
+      ...person('Jana', 'Nováková', 'pani', '3.B'),
+      head: 'zastupce',
+      complement: 'pro majetek',
+    };
+    const text = sentence({ ...content, bullets: [organisers([deputy, jan])] });
+    expect(text).toContain(
+      'organizovali paní zástupkyně pro majetek Jana Nováková a pan Jan Novák (oba\u00a03.B)',
+    );
+    expect(sentence({ ...content, bullets: [organisers([deputy])] })).toContain(
+      'organizovala paní zástupkyně pro majetek Jana Nováková (3.B)',
+    );
+  });
+
   it('has no organisers when the point has no organisers row', () => {
     expect(sentence({ ...content, bullets: [] })).toMatch(/proběhl Vesmírný seminář\.$/);
   });

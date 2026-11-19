@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PARTICIPANTS_ADDRESSES } from '@/domain/cs';
+import { PARTICIPANTS_ADDRESSES, PERSON_HEADS } from '@/domain/cs';
 import { hasForbiddenCharacters, parseRichDoc, type RichProfile } from '@/domain/richtext';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
@@ -68,9 +68,20 @@ export const person = z.strictObject({
 
 /**
  * A person of a people row. The salutation is the row's to ask for: a row with an `address` (ADR 0071)
- * addresses its people as one group and names them without one; any other row needs one for each.
+ * addresses its people as one group and names them without one (or a function); any other row needs one
+ * for each.
  */
-const rowPerson = person.extend({ salutation: salutation.optional() });
+const rowPerson = person
+  .extend({
+    salutation: salutation.optional(),
+    /** Printed between the salutation and the name (ADR 0072); absent prints as before. */
+    head: z.enum(PERSON_HEADS).optional(),
+    /** After the head noun, never declined; needs a head. */
+    complement: text.optional(),
+  })
+  .refine((p) => p.complement === undefined || p.head !== undefined, {
+    message: 'a complement needs a head',
+  });
 
 /** „vyjádření pana Johna Doe (1.A): „…““ — the speaker is stored in the 2nd case. */
 const statement = z.strictObject({
@@ -103,6 +114,10 @@ const bullet = z.discriminatedUnion('kind', [
       (row) =>
         row.people.every((p) => (p.salutation === undefined) === (row.address !== undefined)),
       'people have a salutation of their own exactly when the row has no address',
+    )
+    .refine(
+      (row) => row.address === undefined || row.people.every((p) => p.head === undefined),
+      'people in a row with an address have no function',
     ),
   z.strictObject({ kind: z.literal('text'), label: required, text: required }),
 ]);

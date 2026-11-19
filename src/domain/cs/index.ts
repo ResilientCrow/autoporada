@@ -21,6 +21,13 @@ export { typographize, typographizeText } from './typography/typography';
 export { declineToken, type Confidence, type DeclinedToken } from './names/decline';
 export { splitFullName, suggestGenitive, type GenitiveSuggestion } from './names/genitive';
 export {
+  headedName,
+  PERSON_HEADS,
+  type HeadedPerson,
+  type NameCase,
+  type PersonHead,
+} from './names/heads';
+export {
   formatName,
   PERSON_FIELD_MAX,
   SALUTATION,

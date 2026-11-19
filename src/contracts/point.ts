@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PARTICIPANTS_ADDRESSES, type Campus, type Salutation } from '@/domain/cs';
+import { PARTICIPANTS_ADDRESSES, PERSON_HEADS, type Campus, type Salutation } from '@/domain/cs';
 import {
   contentBytes,
   PARTICIPANTS_KEY,
@@ -64,6 +64,8 @@ const draftPersonSchema = z.strictObject({
   givenName: capped(PERSON.name),
   familyName: capped(PERSON.name),
   titlesAfter: capped(PERSON.title).optional(),
+  head: z.enum(PERSON_HEADS).optional(),
+  complement: capped(PERSON.complement).optional(),
   affiliation: capped(PERSON.affiliation).optional(),
   affiliationYear: schoolYearSchema.optional(),
 }) satisfies z.ZodType<DraftPerson>;

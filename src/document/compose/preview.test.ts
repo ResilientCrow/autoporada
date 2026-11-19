@@ -296,6 +296,119 @@ describe('reportFromContent', () => {
     });
   });
 
+  describe('the function of a person (ADR 0072)', () => {
+    const deputy = person({
+      salutation: 'pani',
+      givenName: 'Jana',
+      familyName: 'Nováková',
+      titlesBefore: 'Mgr.',
+      head: 'zastupce',
+      complement: ' pro pedagogickou činnost ',
+    });
+    const member = person({
+      salutation: 'slecna',
+      givenName: 'Eva',
+      familyName: 'Malá',
+      affiliation: '3.B',
+      head: 'clen',
+      complement: 'PR oddělení',
+    });
+    const rowOf = (
+      people: readonly DraftPerson[],
+      over: Partial<Extract<DraftBullet, { kind: 'people' }>> = {},
+    ) =>
+      content({
+        bullets: [peopleBullet(people, { label: 'Účastníci', order: 'input', ...over })],
+      });
+    const printed = (c: PointContent) =>
+      composePointPreview(c, { schoolYear: '2026/2027', kind: 'report' })
+        .blocks.map(textOf)
+        .find((t) => t.startsWith('Účastníci'));
+
+    it('carries the head and the trimmed complement into the snapshot, and parses', () => {
+      const { report, omitted } = reportOf(rowOf([deputy, member]));
+      expect(omitted).toEqual(NONE);
+      const bullet = report.bullets[0];
+      expect(bullet?.kind === 'people' && bullet.people).toEqual([
+        {
+          salutation: 'pani',
+          titlesBefore: 'Mgr.',
+          givenName: 'Jana',
+          familyName: 'Nováková',
+          head: 'zastupce',
+          complement: 'pro pedagogickou činnost',
+        },
+        {
+          salutation: 'slecna',
+          givenName: 'Eva',
+          familyName: 'Malá',
+          affiliation: '3.B',
+          head: 'clen',
+          complement: 'PR oddělení',
+        },
+      ]);
+      parses(report);
+    });
+
+    it('prints it before the name in the row, naming everyone one by one', () => {
+      expect(printed(rowOf([deputy, member, person()]))).toBe(
+        'Účastníci: paní zástupkyně pro pedagogickou činnost Mgr.\u00a0Jana Nováková, slečna členka PR oddělení Eva Malá (3.B), pan Jan Novák',
+      );
+    });
+
+    it('leaves a row without a head as it was', () => {
+      const jana = person({ salutation: 'pani', givenName: 'Jana', familyName: 'Bílá' });
+      expect(printed(rowOf([person(), jana]))).toBe('Účastníci: paní Jana Bílá, pan Jan Novák');
+    });
+
+    it('leaves out a complement that is blank, and one with no head', () => {
+      const { report } = reportOf(
+        rowOf([
+          person({ head: 'profesor', complement: '  ' }),
+          person({ complement: 'x', familyName: 'Svoboda' }),
+        ]),
+      );
+      const bullet = report.bullets[0];
+      expect(bullet?.kind === 'people' && bullet.people).toEqual([
+        { salutation: 'pan', givenName: 'Jan', familyName: 'Novák', head: 'profesor' },
+        { salutation: 'pan', givenName: 'Jan', familyName: 'Svoboda' },
+      ]);
+      parses(report);
+    });
+
+    it('drops the head in a row addressed as a group', () => {
+      const { report } = reportOf(
+        rowOf([{ ...member, salutation: null }], {
+          key: 'participants',
+          address: 'slecny',
+        }),
+      );
+      const bullet = report.bullets[0];
+      expect(bullet?.kind === 'people' && bullet.people).toEqual([
+        { givenName: 'Eva', familyName: 'Malá', affiliation: '3.B' },
+      ]);
+      parses(report);
+      expect(printed(rowOf([{ ...member, salutation: null }], { address: 'slecny' }))).toBe(
+        'Účastníci: slečna Eva Malá (3.B)',
+      );
+    });
+
+    it('names a speaker’s function through the genitive the author left', () => {
+      const { report } = reportOf(
+        content({
+          statements: [
+            statement({
+              speaker: person({ head: 'profesor' }),
+              speakerGenitive: 'pana profesora Nováka',
+            }),
+          ],
+        }),
+      );
+      expect(report.statements[0]?.speakerGenitive).toBe('pana profesora Nováka');
+      parses(report);
+    });
+  });
+
   describe('text bullets', () => {
     it.each(['', '   ', '\n'])('drops one that is blank (%j)', (text) => {
       const { report, omitted } = reportOf(content({ bullets: [textBullet(text)] }));

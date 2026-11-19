@@ -283,6 +283,57 @@ describe('IssueSnapshot', () => {
     });
   });
 
+  describe('the function of a person (ADR 0072)', () => {
+    const upcast = parseIssueSnapshot(replica);
+    const v2: unknown = upcast.ok ? structuredClone(upcast.snapshot) : null;
+    const eva = { salutation: 'slecna', givenName: 'Eva', familyName: 'Malá', affiliation: '3.B' };
+    const withRow = (row: Record<string, unknown>) => {
+      const copy = structuredClone(v2) as { reports: { bullets: unknown[] }[] };
+      copy.reports[0]!.bullets = [{ kind: 'people', label: 'Účastníci', order: 'input', ...row }];
+      return copy;
+    };
+
+    it('reads a person with a head and a complement, and gives them back', () => {
+      const people = [{ ...eva, head: 'clen', complement: 'PR oddělení' }];
+      const result = parseIssueSnapshot(withRow({ people }));
+      expect(result.ok).toBe(true);
+      const bullet = result.ok ? result.snapshot.reports[0]?.bullets[0] : undefined;
+      expect(bullet?.kind === 'people' && bullet.people).toEqual(people);
+    });
+
+    it('reads a head with no complement', () => {
+      expect(errorsOf(withRow({ people: [{ ...eva, head: 'profesor' }] }))).toEqual([]);
+    });
+
+    it('refuses a complement without a head', () => {
+      expect(errorsOf(withRow({ people: [{ ...eva, complement: 'PR oddělení' }] }))).not.toEqual(
+        [],
+      );
+    });
+
+    it.each(['ucitel', '', null])('refuses the head %j', (head) => {
+      expect(errorsOf(withRow({ people: [{ ...eva, head }] }))).not.toEqual([]);
+    });
+
+    it('refuses a complement of several lines', () => {
+      const people = [{ ...eva, head: 'clen', complement: 'PR\noddělení' }];
+      expect(errorsOf(withRow({ people }))).not.toEqual([]);
+    });
+
+    it('refuses a head in a row with an address', () => {
+      const { salutation: _, ...bare } = eva;
+      expect(
+        errorsOf(withRow({ address: 'panove', people: [{ ...bare, head: 'profesor' }] })),
+      ).not.toEqual([]);
+      expect(errorsOf(withRow({ address: 'panove', people: [bare] }))).toEqual([]);
+    });
+
+    it('leaves a stored snapshot without one schema 2 and readable', () => {
+      expect(errorsOf(v2)).toEqual([]);
+      expect(upcast.ok && upcast.snapshot.schema).toBe(2);
+    });
+  });
+
   describe('the extra annexes of a porada', () => {
     const table = (rows: string[][]) => ({ kind: 'table', rows });
     const image = (alt: string) => ({

@@ -456,6 +456,40 @@ describe('suggestGenitive', () => {
     expect(result.needsCheck).toBe(confidence !== 'high');
   });
 
+  it('puts the head noun and the complement between the salutation and the name', () => {
+    const name = (salutation: Salutation, full: string) => splitFullName(full, salutation);
+    expect(suggestGenitive({ ...name('pan', 'Mgr. Jan Novák'), head: 'profesor' }).text).toBe(
+      'pana profesora Mgr. Jana Nováka',
+    );
+    expect(
+      suggestGenitive({
+        ...name('pani', 'Mgr. Jana Nováková'),
+        head: 'zastupce',
+        complement: 'pro pedagogickou činnost',
+      }).text,
+    ).toBe('paní zástupkyně pro pedagogickou činnost Mgr. Jany Novákové');
+    expect(
+      suggestGenitive({ ...name('slecna', 'Eva Malá'), head: 'clen', complement: 'PR oddělení' })
+        .text,
+    ).toBe('slečny členky PR oddělení Evy Malé');
+  });
+
+  it('puts the absolvent noun before the salutation', () => {
+    expect(suggestGenitive({ ...splitFullName('Jan Novák', 'pan'), head: 'absolvent' }).text).toBe(
+      'absolventa pana Jana Nováka',
+    );
+    expect(
+      suggestGenitive({ ...splitFullName('Eva Malá', 'slecna'), head: 'absolvent' }).text,
+    ).toBe('absolventky slečny Evy Malé');
+  });
+
+  it('declines the name as before with a head', () => {
+    const plain = suggestGenitive(splitFullName('Lukáš Němec', 'pan'));
+    const headed = suggestGenitive({ ...splitFullName('Lukáš Němec', 'pan'), head: 'clen' });
+    expect(headed.confidence).toBe(plain.confidence);
+    expect(headed.needsCheck).toBe(plain.needsCheck);
+  });
+
   it('declines a lone surname', () => {
     expect(suggestGenitive(splitFullName('Novák', 'pan')).text).toBe('pana Nováka');
   });

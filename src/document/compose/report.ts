@@ -107,7 +107,8 @@ const optional = <K extends string>(key: K, value: string | undefined) => {
 
 /**
  * The snapshot's person, or null when it cannot show them: no family name, and no salutation unless
- * the row is addressed as a group, which names its people without one (ADR 0071).
+ * the row is addressed as a group, which names its people without one or a function (ADR 0071). A
+ * complement without a head is left out: it prints nowhere.
  */
 export function snapshotPerson(p: DraftPerson, addressed = false): SnapshotPerson | null {
   const familyName = singleLine(p.familyName);
@@ -118,6 +119,8 @@ export function snapshotPerson(p: DraftPerson, addressed = false): SnapshotPerso
     givenName: singleLine(p.givenName),
     familyName,
     ...optional('titlesAfter', p.titlesAfter),
+    ...(!addressed &&
+      p.head !== undefined && { head: p.head, ...optional('complement', p.complement) }),
     ...optional('affiliation', p.affiliation),
   };
 }

@@ -1,3 +1,4 @@
+import { headedName, type PersonHead } from '../names/heads';
 import { formatName, SALUTATION, type PersonName, type Salutation } from '../names/person';
 import { compareStudents, parseClass } from '../sort/class-code';
 
@@ -6,6 +7,10 @@ export interface Person extends PersonName {
   readonly affiliation?: string;
   /** Written before the salutation: „absolvent pan Jan Novák“. */
   readonly role?: string;
+  /** A function or a tier that prints between the salutation and the name (ADR 0072): „pan profesor“. */
+  readonly head?: PersonHead;
+  /** After the head noun, never declined: „pro majetek“. */
+  readonly complement?: string;
 }
 
 export interface ListOptions {
@@ -32,8 +37,8 @@ export interface OneLabelOptions extends Pick<ListOptions, 'join' | 'order'> {
   readonly oneLabel: OneLabel;
 }
 
-/** A person in a list with one label: no salutation, and no role to write before the name. */
-export type UnaddressedPerson = Omit<Person, 'salutation' | 'role'>;
+/** A person in a list with one label: no salutation, role, head or complement to write before the name. */
+export type UnaddressedPerson = Omit<Person, 'salutation' | 'role' | 'head' | 'complement'>;
 
 const DEFAULT_GROUP_ORDER: readonly Salutation[] = ['slecna', 'pani', 'pan'];
 
@@ -138,6 +143,18 @@ function withClassRuns(
   return { texts, bare };
 }
 
+/**
+ * One person in a list of people named one by one: „absolvent pan Jan Novák“, „pan profesor Jan
+ * Novák“, „paní Jana Malá“. A role typed by hand goes first, and then an absolvent head would only
+ * repeat it.
+ */
+function namedOnOwn(p: Person): string {
+  const role = p.role?.trim();
+  const { head, ...rest } = p;
+  const named = headedName(role && head === 'absolvent' ? rest : p, formatName(p));
+  return role ? `${role} ${named}` : named;
+}
+
 function joinItems(items: readonly string[], join: ListOptions['join']): string {
   if (join === 'comma' || items.length < 2) return items.join(', ');
   return `${items.slice(0, -1).join(', ')} a ${items[items.length - 1] ?? ''}`;
@@ -171,7 +188,7 @@ export function renderPeople(
   const sort = (list: readonly Person[]) =>
     options.order === 'class-surname' ? [...list].sort((a, b) => compareStudents(a, b)) : [...list];
 
-  const withRoles = !oneLabel && people.some((p) => p.role?.trim());
+  const withRoles = !oneLabel && people.some((p) => p.role?.trim() || p.head !== undefined);
   const groups: { label?: string; people: Person[] }[] = [];
   if (oneLabel) {
     groups.push({
@@ -190,10 +207,7 @@ export function renderPeople(
     }
   }
 
-  const name = (p: Person) =>
-    withRoles
-      ? [p.role?.trim(), SALUTATION[p.salutation].label, formatName(p)].filter(Boolean).join(' ')
-      : formatName(p);
+  const name = (p: Person) => (withRoles ? namedOnOwn(p) : formatName(p));
   const items: string[] = [];
   let bare: Bare[] = [];
   for (const g of groups) {

@@ -1,5 +1,6 @@
 import { declineToken, lowest, type Confidence, type DeclinedToken } from './decline';
 import { PARTICLES } from './exceptions';
+import { headedName, type PersonHead } from './heads';
 import { SALUTATION, type PersonName, type Salutation } from './person';
 import { isTitleAfter, isTitleBefore } from './titles';
 
@@ -15,15 +16,19 @@ export interface GenitiveSuggestion {
 const words = (s: string) => s.split(/\s+/).filter(Boolean);
 
 /**
- * Suggests the 2nd case for „vyjádření pana Johna Doe (1.A)“. A stored
+ * Suggests the 2nd case for „vyjádření pana Johna Doe (1.A)“. A head and complement (ADR 0072)
+ * stand between the salutation and the name: „pana profesora Mgr. Jana Nováka“. A stored
  * correction for this person (`override`) always wins. Words the rules are
  * unsure about keep their 1st case and the suggestion is flagged.
  */
-export function suggestGenitive(person: PersonName, override?: string): GenitiveSuggestion {
+export function suggestGenitive(
+  person: PersonName & { readonly head?: PersonHead; readonly complement?: string },
+  override?: string,
+): GenitiveSuggestion {
   if (override?.trim()) {
     return { text: override.trim(), confidence: 'manual', needsCheck: false, tokens: [] };
   }
-  const { sex, genitive } = SALUTATION[person.salutation];
+  const { sex } = SALUTATION[person.salutation];
   const given = words(person.givenName).map((w, i) =>
     declineToken(w, sex, 'given', { mayBeParticle: i > 0 }),
   );
@@ -32,7 +37,8 @@ export function suggestGenitive(person: PersonName, override?: string): Genitive
   const name = [person.titlesBefore?.trim(), ...tokens.map((t) => t.form)]
     .filter(Boolean)
     .join(' ');
-  const text = `${genitive} ${name}${person.titlesAfter?.trim() ? `, ${person.titlesAfter.trim()}` : ''}`;
+  const full = `${name}${person.titlesAfter?.trim() ? `, ${person.titlesAfter.trim()}` : ''}`;
+  const text = headedName(person, full, 'genitive');
   const confidence = lowest(tokens.map((t) => t.confidence));
   return { text, confidence, needsCheck: confidence === 'medium' || confidence === 'low', tokens };
 }

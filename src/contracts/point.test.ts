@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { schoolYear } from '@/domain/cs';
+import { PERSON_FIELD_MAX, PERSON_HEADS, schoolYear } from '@/domain/cs';
 import { POINT_LIMITS, type DraftPerson } from '@/domain/report';
 import { richDocFromText } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
@@ -141,6 +141,37 @@ describe('draftBulletsSchema', () => {
 
     it('refuses one on a text bullet', () => {
       expect(ok(draftBulletsSchema, [text({ address: 'panove' })])).toBe(false);
+    });
+  });
+
+  describe('a person’s function (ADR 0072)', () => {
+    const parses = (over: Record<string, unknown>) =>
+      ok(draftBulletsSchema, [people({ people: [person(over)] })]);
+
+    it.each(PERSON_HEADS)('accepts the head %s, and keeps it with its complement', (head) => {
+      const bullets = [
+        people({ people: [person({ head, complement: 'pro majetek' }), person({ head })] }),
+      ];
+      expect(draftBulletsSchema.parse(bullets)).toEqual(bullets);
+    });
+
+    it('needs neither: an older person has none', () => {
+      expect(parses({})).toBe(true);
+    });
+
+    it.each(['ucitel', '', 'Reditel', 7, null])('refuses the head %j', (head) => {
+      expect(parses({ head })).toBe(false);
+    });
+
+    it('bounds the complement', () => {
+      expect(parses({ head: 'clen', complement: x(PERSON_FIELD_MAX.complement) })).toBe(true);
+      expect(parses({ head: 'clen', complement: x(PERSON_FIELD_MAX.complement + 1) })).toBe(false);
+    });
+
+    it('takes the head and complement of a statement’s speaker too', () => {
+      const speaker = person({ head: 'profesor' });
+      const statements = [{ speaker, speakerGenitive: 'pana profesora Nováka', quote: 'Ano.' }];
+      expect(draftStatementsSchema.parse(statements)).toEqual(statements);
     });
   });
 

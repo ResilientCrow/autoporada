@@ -486,6 +486,84 @@ describe('people with roles', () => {
   });
 });
 
+describe('people with a function (ADR 0072)', () => {
+  const headed = (
+    person: Person,
+    head: NonNullable<Person['head']>,
+    complement?: string,
+  ): Person => ({ ...person, head, ...(complement && { complement }) });
+
+  it('prints the salutation, the noun and the complement before the name', () => {
+    const deputy = headed(
+      { ...p('pani', 'Jana', 'Nováková'), titlesBefore: 'Mgr.' },
+      'zastupce',
+      'pro pedagogickou činnost',
+    );
+    expect(renderPeople([deputy], organisers)).toBe(
+      'paní zástupkyně pro pedagogickou činnost Mgr. Jana Nováková',
+    );
+    expect(
+      renderPeople([headed(p('pan', 'Jan', 'Novák', undefined, 'Mgr.'), 'reditel')], organisers),
+    ).toBe('pan ředitel Mgr. Jan Novák');
+  });
+
+  it('keeps the affiliation after the name', () => {
+    expect(
+      renderPeople([headed(p('slecna', 'Eva', 'Malá', '3.B'), 'clen', 'PR oddělení')], organisers),
+    ).toBe('slečna členka PR oddělení Eva Malá (3.B)');
+  });
+
+  it('names everyone one by one as soon as anyone has a head', () => {
+    const list = [
+      headed(p('pani', 'Jana', 'Bílá'), 'vedouci', 'IT oddělení'),
+      p('pani', 'Eva', 'Malá'),
+      p('pan', 'Jan', 'Novák'),
+    ];
+    expect(renderPeople(list, organisers)).toBe(
+      'paní vedoucí IT oddělení Jana Bílá, paní Eva Malá a pan Jan Novák',
+    );
+  });
+
+  it('writes an absolvent before the salutation', () => {
+    expect(
+      renderPeople(
+        [
+          headed(p('pan', 'Jan', 'Novák'), 'absolvent'),
+          headed(p('slecna', 'Eva', 'Malá'), 'absolvent'),
+        ],
+        organisers,
+      ),
+    ).toBe('absolvent pan Jan Novák a absolventka slečna Eva Malá');
+  });
+
+  it('still shares a class at the end of a run', () => {
+    const list = [
+      headed(p('pan', 'Petr', 'Dvořák', '1.A'), 'clen', 'PR oddělení'),
+      p('pan', 'Jan', 'Novák', '1.A'),
+    ];
+    expect(renderPeople(list, organisers)).toBe(
+      `pan člen PR oddělení Petr Dvořák a pan Jan Novák (oba${NB}1.A)`,
+    );
+  });
+
+  it('leaves a list without heads as it was', () => {
+    expect(renderPeople([p('pani', 'Jana', 'Malá'), p('pan', 'Jan', 'Novák')], organisers)).toBe(
+      'paní Jana Malá a pan Jan Novák',
+    );
+  });
+
+  it('prints no head in a list with one label', () => {
+    const row = [{ givenName: 'Eva', familyName: 'Malá', affiliation: '3.B' }];
+    expect(
+      renderPeople(row, {
+        join: 'comma',
+        order: 'input',
+        oneLabel: { label: 'slečna', women: true },
+      }),
+    ).toBe('slečna Eva Malá (3.B)');
+  });
+});
+
 describe('organiser phrases', () => {
   it.each([
     [
