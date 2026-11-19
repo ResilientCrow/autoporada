@@ -9,7 +9,7 @@ const person = (id: string, extra: Partial<User> = {}): User => ({ id, salutatio
 /** The headmaster `boss`, signed in a moment ago unless `stepUpAt` says otherwise, with `users`. */
 function state(users: User[] = [], stepUpAt = NOW): State {
   return {
-    v: 1, now: NOW, userId: 'boss', users: [person('boss', { role: 'headmaster' }), ...users],
+    v: 1, now: NOW, userId: 'boss', users: [person('boss', { role: 'headmaster' }), ...users], cards: [],
     points: [], futures: [], issues: [], placeholderChecks: {}, plannedThrough: '2026-11-16', registry: [], requests: [],
     settings: { dayOffset: -3, time: '12:00', remindSoft: true, remindHard: true, annex1Heading: '', annex1Intro: emptyRichDoc() },
     mails: [], stepUpAt, seq: 0, audit: [],

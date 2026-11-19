@@ -40,6 +40,7 @@ interface ArchState {
     status: string;
     isStudent: boolean;
   }[];
+  readonly cards: readonly { id: string }[];
   readonly futures: readonly {
     id: string;
     note: string | null;
@@ -322,6 +323,12 @@ test.describe('the Arch UI', () => {
       expect(other).not.toHaveProperty('tier');
     }
     expect(state.users.length).toBeLessThan(10);
+    // A colleague's card holds the address that prints and nothing about access (ADR 0072 item 7).
+    expect(state.cards.length).toBeGreaterThan(0);
+    for (const card of state.cards) {
+      for (const key of ['email', 'role', 'tier', 'functions', 'status', 'isStudent'])
+        expect(card).not.toHaveProperty(key);
+    }
     const returned = state.futures.find((f) => f.id === id)!;
     expect(returned).toMatchObject({ note: 'Doplňte prosím místo.', parts: ['place'] });
     const trail = returned.trail;

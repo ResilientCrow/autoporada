@@ -18,7 +18,7 @@ import { archCalendar } from './arch-calendar';
 import { archItems } from './arch-items';
 import { lastGeneratedOf, liveFutures, livePoints, liveSince } from './arch-live';
 import { archPlaceholders, withServerStatusOf } from './arch-placeholders';
-import { peopleFor } from './arch-people';
+import { cardsFor, peopleFor } from './arch-people';
 
 type Json = Record<string, unknown>;
 
@@ -98,7 +98,13 @@ export async function archState(
 
   // ---- people ----
   const userRows = await db.users(null);
-  const functions = await db.functions(head ? null : [actor.id]);
+  // Cards are for whoever writes people into a point; a student copies only themselves.
+  const viewer = !can(actor, { action: 'point.create' })
+    ? 'none'
+    : actor.isStudent
+      ? 'student'
+      : 'staff';
+  const functions = await db.functions(head || viewer === 'staff' ? null : [actor.id]);
   const archUsers = peopleFor({
     rows: userRows,
     actorId: actor.id,
@@ -113,6 +119,7 @@ export async function archState(
     functions,
     vers,
   });
+  const cards = cardsFor({ rows: userRows, actorId: actor.id, viewer, functions });
 
   const work = workingSlot(today, slots) ?? slots[0];
   const ph = await archPlaceholders(db, { staff, head }, futureRows, vers);
@@ -300,6 +307,7 @@ export async function archState(
     now: now.toISOString(),
     userId: actor.id,
     users: archUsers,
+    cards,
     points: archPoints,
     futures: archFutures,
     issues: archIssues,

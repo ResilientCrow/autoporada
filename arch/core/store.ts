@@ -1,14 +1,13 @@
 import { isStudentTier, type Tier, type UserFunction } from '@/domain/actor';
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
-import { missingForSubmit, newDraft, openingInput, REPORT_BULLETS, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
+import { missingForSubmit, newDraft, openingInput, REPORT_BULLETS, submittedContent, type PointContent, type PointKind } from '@/domain/report';
 import { openingSentence, type Salutation } from '@/domain/cs';
 import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
-import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, preflight, ruleOf, slotsOf, specOf, todayOf, userById, yearOf } from './select';
+import { working, atLeast, mePerson, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, preflight, ruleOf, slotsOf, specOf, todayOf, userById } from './select';
 import type { AccessReq, Annex, Future, Issue, Mail, Point, Role, Row, State, Trail } from './types';
 
 type Fx = (s: State) => State;
-const person = (year: string, salutation: DraftPerson['salutation'], givenName: string, familyName: string, affiliation?: string): DraftPerson => ({ salutation, givenName, familyName, ...(affiliation && { affiliation, affiliationYear: year }) });
 
 
 const id = (s: State, p: string): [State, string] => [{ ...s, seq: s.seq + 1 }, `${p}-${s.seq}`];
@@ -46,7 +45,7 @@ export function createPoint(kind: PointKind, akceId: string | null, onId?: (id: 
     if (akce) {
       content = { ...content, title: akce.title, eventDate: akce.date, endDate: akce.endDate, timeFrom: akce.timeFrom, timeTo: akce.timeTo, campus: akce.campus, place: akce.place || null };
     } else if (kind === 'report' && u) {
-      content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [person(yearOf(s), u.salutation, u.givenName, u.familyName, u.affiliation)] } : b)) };
+      content = { ...content, bullets: content.bullets.map((b) => (b.kind === 'people' && b.key === 'organisers' ? { ...b, people: [mePerson(s)] } : b)) };
     }
     const p: Point = { id: pid, kind, authorId: u.id, akceId, content, state: 'draft', handInMonday: null, poradaMonday: null, submittedAt: null, note: null, parts: null, savedAt: s.now, trail: [] };
     p.content = refreshOpening(p, content);

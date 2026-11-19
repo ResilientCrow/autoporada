@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { headedName, PERSON_HEADS, type NameCase, type PersonHead } from './heads';
+import type { Tier, UserFunction } from '@/domain/actor';
+
+import { beforeName, headedName, PERSON_HEADS, type NameCase, type PersonHead } from './heads';
 import type { Salutation } from './person';
 
 /** [head, man 1st, woman 1st, man 2nd, woman 2nd] — ADR 0072 item 5. */
@@ -105,5 +107,54 @@ describe('the head nouns', () => {
     expect(headedName({ salutation: 'pan', head: 'clen', complement: '   ' }, 'Jan Novák')).toBe(
       'pan člen Jan Novák',
     );
+  });
+});
+
+describe('beforeName: what a user prints before the name (ADR 0072 item 5)', () => {
+  const MAJETEK: UserFunction = { head: 'zastupce', complement: 'pro majetek' };
+  const IT: UserFunction = { head: 'vedouci', complement: 'IT oddělení' };
+  const CLEN: UserFunction = { head: 'clen', complement: 'PR oddělení' };
+  const STATUTAR: UserFunction = { head: 'statutarni-zastupce', complement: null };
+
+  it.each<[Tier | null, PersonHead | undefined]>([
+    ['reditel', 'reditel'],
+    ['ucitel', 'profesor'],
+    ['absolvent', 'absolvent'],
+    ['vedeni', undefined],
+    ['zamestnanec', undefined],
+    ['student', undefined],
+    [null, undefined],
+  ])('with no function, the tier %s prints %s', (tier, head) => {
+    const out = beforeName(tier, []);
+    expect(out.head).toBe(head);
+    expect(out).not.toHaveProperty('complement');
+  });
+
+  it('prints the highest function, with its complement, whatever the tier', () => {
+    for (const tier of ['reditel', 'vedeni', 'ucitel', 'student', 'absolvent', null] as const) {
+      expect(beforeName(tier, [CLEN, MAJETEK, IT])).toEqual({
+        head: 'zastupce',
+        complement: 'pro majetek',
+      });
+    }
+  });
+
+  it('prints a function without a complement as its head alone', () => {
+    const out = beforeName('vedeni', [STATUTAR]);
+    expect(out).toEqual({ head: 'statutarni-zastupce' });
+    expect(out).not.toHaveProperty('complement');
+  });
+
+  it('takes the first added of two functions with the same head', () => {
+    const first: UserFunction = { head: 'clen', complement: 'PR oddělení' };
+    const second: UserFunction = { head: 'clen', complement: 'IT oddělení' };
+    expect(beforeName('student', [first, second])).toEqual({
+      head: 'clen',
+      complement: 'PR oddělení',
+    });
+  });
+
+  it('drops a blank complement', () => {
+    expect(beforeName(null, [{ head: 'vedouci', complement: '  ' }])).toEqual({ head: 'vedouci' });
   });
 });

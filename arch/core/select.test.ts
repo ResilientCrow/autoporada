@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { deadline } from '@/domain/calendar';
 import { emptyRichDoc } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
-import { addable, futureSnap, participantsProblem, poradaDates, rowForPoint, systemText, type OutlineItem } from './select';
-import type { Future, Row } from './types';
+import { addable, futureSnap, me, mePerson, genitiveFor, participantsProblem, personFromCard, poradaDates, rowForPoint, systemText, unaddressed, withoutFunction, type OutlineItem } from './select';
+import type { Card, Future, Row, State, User } from './types';
 
 const row = (id: string, p: Partial<Row> = {}): Row => ({ id, section: 'pokyny', slot: null, persistence: 'standing', title: id, body: emptyRichDoc(), quotes: [], pointId: null, ...p });
 const at = (refId: string, n: number): OutlineItem => ({ key: `n${n}`, n, title: refId, kind: 'item', group: 'Pokyny', refId });
@@ -113,5 +113,60 @@ describe('the address in what the preview prints (ADR 0071)', () => {
   it('goes into the paragraph of a missing report', () => {
     expect(systemText(typed)).toContain('Za Smíchovskou střední se zúčastnili slečny a pánové: Eva Malá (3.B), Jan Novák (2.A).');
     expect(systemText({ ...typed, participantsAddress: null })).toContain('Za Smíchovskou střední se zúčastnili: Eva Malá');
+  });
+});
+
+const CARD: Card = { id: 'k', salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.', head: 'zastupce', complement: 'pro majetek' };
+
+describe('personFromCard: a user copied into a people row (ADR 0072 item 7)', () => {
+  it('copies the name, salutation, degrees, head and complement, and nothing that links back', () => {
+    expect(personFromCard(CARD)).toEqual({ salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.', head: 'zastupce', complement: 'pro majetek' });
+  });
+  it('keeps a missing salutation null: nothing is guessed', () => {
+    expect(personFromCard({ id: 'k', salutation: null, givenName: 'Jana', familyName: 'Nováková' })).toEqual({ salutation: null, givenName: 'Jana', familyName: 'Nováková' });
+  });
+  it('leaves out what the card does not have', () => {
+    const p = personFromCard({ id: 'k', salutation: 'pan', givenName: 'Jan', familyName: 'Novák' });
+    expect(Object.keys(p).sort()).toEqual(['familyName', 'givenName', 'salutation']);
+  });
+  it('adds the class or job for the school year when given both', () => {
+    expect(personFromCard(CARD, '2026/2027', '3.B')).toMatchObject({ affiliation: '3.B', affiliationYear: '2026/2027' });
+    expect(personFromCard(CARD, '2026/2027')).not.toHaveProperty('affiliation');
+  });
+});
+
+describe('unaddressed and withoutFunction: what a row may keep', () => {
+  it('takes the salutation, head and complement off a person of the addressed row', () => {
+    const p = unaddressed({ ...personFromCard(CARD), affiliation: '3.B', affiliationYear: '2026/2027' });
+    expect(p).toEqual({ salutation: null, givenName: 'Jana', familyName: 'Nováková', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.', affiliation: '3.B', affiliationYear: '2026/2027' });
+  });
+  it('drops only the head and complement, keeping the salutation', () => {
+    expect(withoutFunction(personFromCard(CARD))).toEqual({ salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' });
+  });
+});
+
+const USER: User = { id: 'me', salutation: 'pani', givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Ing.', email: 'me@ssps.cz', role: 'submitter', isStudent: false, status: 'active', affiliation: 'Matematika' };
+const stateOf = (cards: Card[]): State => ({ v: 1, now: '2026-11-19T09:00:00.000Z', userId: 'me', users: [USER], cards, points: [], futures: [], issues: [], placeholderChecks: {}, plannedThrough: '2026-11-16', registry: [], requests: [], settings: { dayOffset: -3, time: '12:00', remindSoft: true, remindHard: true, annex1Heading: '', annex1Intro: emptyRichDoc() }, mails: [], stepUpAt: null, seq: 0, audit: [] });
+
+describe('mePerson: the author as a person of a report', () => {
+  it('copies the viewer’s own card, with its head and the job of the school year', () => {
+    const s = stateOf([{ id: 'me', salutation: 'pani', givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Ing.', head: 'profesor' }]);
+    expect(me(s)).toBe(USER);
+    expect(mePerson(s)).toEqual({ salutation: 'pani', givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Ing.', head: 'profesor', affiliation: 'Matematika', affiliationYear: '2026/2027' });
+  });
+  it('reads the user row when no card came, without a head', () => {
+    expect(mePerson(stateOf([]))).toEqual({ salutation: 'pani', givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Ing.', affiliation: 'Matematika', affiliationYear: '2026/2027' });
+  });
+});
+
+describe('genitiveFor: a statement speaker’s „vyjádření koho“', () => {
+  it('is none until the person has a salutation', () => {
+    expect(genitiveFor({ salutation: null, givenName: 'Jana', familyName: 'Nováková' })).toBeNull();
+  });
+  it('declines the name and keeps the degrees', () => {
+    expect(genitiveFor({ salutation: 'pan', givenName: 'Jan', familyName: 'Novák', titlesBefore: 'Mgr.' })?.text).toBe('pana Mgr. Jana Nováka');
+  });
+  it('passes the head and complement of a copied person to the sentence', () => {
+    expect(genitiveFor(personFromCard(CARD))?.text).toBe('paní zástupkyně pro majetek Mgr. Jany Novákové, Ph.D.');
   });
 });

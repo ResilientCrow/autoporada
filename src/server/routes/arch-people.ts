@@ -1,7 +1,7 @@
 /** Branch arch-ui only: how Arch shows people and trail entries the real model keeps differently. */
 
 import { isStudentTier, type Tier, type UserFunction } from '@/domain/actor';
-import type { Salutation } from '@/domain/cs';
+import { beforeName, type BeforeName, type Salutation } from '@/domain/cs';
 
 export const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -107,4 +107,46 @@ export function peopleFor(input: {
       status: 'active',
     },
   ];
+}
+
+/**
+ * A person as a people row copies them (ADR 0072 item 7): the name, the person's own salutation
+ * and degrees, and what prints before the name. Nothing else: no email, role, status, tier or
+ * function list, so a colleague's card tells a submitter no more than a printed document would.
+ */
+export interface Card extends BeforeName {
+  readonly id: string;
+  readonly salutation: Salutation | null;
+  readonly givenName: string;
+  readonly familyName: string;
+  readonly titlesBefore?: string;
+  readonly titlesAfter?: string;
+}
+
+/**
+ * The cards a viewer may copy from: someone who may write points and is not a student gets every
+ * user who can sign in (not pending, blocked or deactivated); a student only their own, since a
+ * student's colleagues are not theirs to name; anyone else none. A salutation is never guessed.
+ */
+export function cardsFor(input: {
+  readonly rows: readonly UserRow[];
+  readonly actorId: string;
+  readonly viewer: 'staff' | 'student' | 'none';
+  /** Each user's functions in order (`UserRepo.functions`); a user with none is absent. */
+  readonly functions: ReadonlyMap<string, readonly UserFunction[]>;
+}): Card[] {
+  const { rows, actorId, viewer, functions } = input;
+  if (viewer === 'none') return [];
+  return rows
+    .filter((u) =>
+      viewer === 'student' ? u.id === actorId : u.role !== 'pending' && u.status === 'active',
+    )
+    .map((u) => ({
+      id: u.id,
+      salutation: u.salutation,
+      ...splitName(u.displayName),
+      ...(u.titlesBefore && { titlesBefore: u.titlesBefore }),
+      ...(u.titlesAfter && { titlesAfter: u.titlesAfter }),
+      ...beforeName(u.tier, functions.get(u.id) ?? []),
+    }));
 }

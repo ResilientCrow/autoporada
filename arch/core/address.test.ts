@@ -9,7 +9,7 @@ const person = (id: string, extra: Partial<User> = {}): User => ({ id, salutatio
 
 function state(viewer: User): State {
   return {
-    v: 1, now: NOW, userId: viewer.id, users: [viewer, person('kolega')],
+    v: 1, now: NOW, userId: viewer.id, users: [viewer, person('kolega')], cards: [],
     points: [], futures: [], issues: [], placeholderChecks: {}, plannedThrough: '2026-11-16', registry: [], requests: [],
     settings: { dayOffset: -3, time: '12:00', remindSoft: true, remindHard: true, annex1Heading: '', annex1Intro: emptyRichDoc() },
     mails: [], stepUpAt: null, seq: 0, audit: [],

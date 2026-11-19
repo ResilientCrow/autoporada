@@ -1,5 +1,5 @@
 import type { Tier, UserFunction } from '@/domain/actor';
-import type { Campus, OrganizerRole, ParticipantsAddress, Salutation } from '@/domain/cs';
+import type { Campus, OrganizerRole, ParticipantsAddress, PersonHead, Salutation } from '@/domain/cs';
 import type { PointContent, PointKind } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import type { Statement, SystemSlot } from '@/domain/outline';
@@ -14,6 +14,10 @@ export interface User {
   tier?: Tier | null;
   /** What they hold besides the tier (ADR 0072 item 4), in order: only on full rows, like the tier. */
   functions?: UserFunction[];
+}
+/** What a people row may copy of a user (ADR 0072 item 7): the address as printed, never contact, role, tier or the function list. `head` and `complement` are what prints before the name. */
+export interface Card {
+  id: string; salutation: Salutation | null; givenName: string; familyName: string; titlesBefore?: string; titlesAfter?: string; head?: PersonHead; complement?: string;
 }
 export interface Trail { at: string; who: string; what: string; note?: string; parts?: string[]; original?: Record<string, string> }
 export interface Point {
@@ -53,7 +57,7 @@ export interface AccessReq { id: string; name: string; email: string; reason: st
 export interface Mail { id: string; at: string; to: string; subject: string; body: string }
 interface Settings { dayOffset: number; time: string; remindSoft: boolean; remindHard: boolean; annex1Heading: string; annex1Intro: RichDoc }
 export interface State {
-  v: number; now: string; userId: string | null; users: User[]; points: Point[]; futures: Future[];
+  v: number; now: string; userId: string | null; users: User[]; /** Who the viewer may copy into a people row: staff who write points get every active colleague, a student only themselves; none for anyone else. */ cards: Card[]; points: Point[]; futures: Future[];
   issues: Issue[]; /** By akce id; the headmaster's only. */ placeholderChecks: Record<string, PlaceholderCheck>; plannedThrough: string; registry: RegistryList[]; requests: AccessReq[]; settings: Settings; mails: Mail[]; stepUpAt: string | null; seq: number; audit: { at: string; who: string; what: string }[];
 }
 export type { PointKind };

@@ -1,4 +1,4 @@
-import { FUNCTION_HEADS } from '@/domain/actor';
+import { FUNCTION_HEADS, highestFunction, type Tier, type UserFunction } from '@/domain/actor';
 
 import { SALUTATION, type Salutation, type Sex } from './person';
 
@@ -62,4 +62,31 @@ export function headedName(
   if (person.head === 'absolvent') return `${word} ${salutation} ${name}`;
   const complement = person.complement?.trim();
   return [salutation, word, complement, name].filter(Boolean).join(' ');
+}
+
+/** What a user prints before their name, if anything: the head and its complement (typed text). */
+export interface BeforeName {
+  readonly head?: PersonHead;
+  readonly complement?: string;
+}
+
+const TIER_HEAD: Readonly<Partial<Record<Tier, PersonHead>>> = {
+  reditel: 'reditel',
+  ucitel: 'profesor',
+  absolvent: 'absolvent',
+};
+
+/**
+ * What prints before a user's name (ADR 0072 item 5): their highest function with its complement,
+ * which always wins; with none, the tier decides. A ředitel, a teacher and an absolvent print a
+ * noun; vedení, other staff, a student and a person with no tier yet print the salutation alone.
+ */
+export function beforeName(tier: Tier | null, functions: readonly UserFunction[]): BeforeName {
+  const held = highestFunction(functions);
+  if (held !== null) {
+    const complement = held.complement?.trim();
+    return complement ? { head: held.head, complement } : { head: held.head };
+  }
+  const head = tier === null ? undefined : TIER_HEAD[tier];
+  return head === undefined ? {} : { head };
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { foldForSearch, normalizeClass, parsePeopleList, participantsLabel, placePhrase, suggestGenitive, type ParticipantsAddress, type Salutation } from '@/domain/cs';
+import { foldForSearch, normalizeClass, parsePeopleList, participantsLabel, headedName, placePhrase, type ParticipantsAddress, type Salutation } from '@/domain/cs';
 import { displayName, organiserAt, PARTICIPANTS_KEY, POINT_LIMITS, REPORT_BULLETS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
 import { compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
@@ -21,7 +21,7 @@ function placeLine(place: string) {
 }
 
 function statementOf(x: DraftPerson, quote: string): Statement {
-  const g = x.salutation ? suggestGenitive({ salutation: x.salutation, givenName: x.givenName, familyName: x.familyName }) : null;
+  const g = Q.genitiveFor(x);
   return { speaker: x, speakerGenitive: g?.text ?? '', ...(x.affiliation && { affiliation: x.affiliation }), quote };
 }
 /** Puts x's statement first: their later one moves up, a first one without a speaker becomes theirs, and one by someone else moves after it. Null when nothing changes or there is no room. */
@@ -49,9 +49,11 @@ function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson
   const year = Q.yearOf(s);
   const known = useMemo(() => {
     const r = Q.peopleFor(s, me.id).map((x) => ({ ...x, how: 'uvedli jste v dřívější zprávě' }));
-    const dir = s.users.filter((u) => u.role !== 'pending').map((u) => ({ salutation: u.salutation, givenName: u.givenName, familyName: u.familyName, ...(u.affiliation && { affiliation: u.affiliation, affiliationYear: year }), how: 'ze školního adresáře' }));
+    const recent = new Map(r.map((x) => [foldForSearch(`${x.givenName} ${x.familyName}`), x]));
+    // Staff who write points copy a colleague's address as it is now; the class or job comes from the directory row, else from an earlier report.
+    const dir = s.cards.map((c) => { const was = recent.get(foldForSearch(`${c.givenName} ${c.familyName}`)); const job = Q.userById(s, c.id)?.affiliation; const aff = job ?? was?.affiliation; return { ...Q.personFromCard(c, job ? year : (was?.affiliationYear ?? year), aff), how: 'ze školního adresáře' }; });
     const seen = new Set<string>();
-    return [...r, ...dir].filter((x) => { const k = foldForSearch(`${x.givenName} ${x.familyName}`); if (seen.has(k) || list.some((l) => foldForSearch(displayName(l)) === k)) return false; seen.add(k); return true; });
+    return [...dir, ...r].filter((x) => { const k = foldForSearch(`${x.givenName} ${x.familyName}`); if (seen.has(k) || list.some((l) => foldForSearch(displayName(l)) === k)) return false; seen.add(k); return true; });
   }, [s, me.id, list, year]);
   const f = foldForSearch(v.trim());
   const hits = f && !/[,;\n]/.test(v) ? known.filter((x) => foldForSearch(`${x.givenName} ${x.familyName}`).includes(f)).slice(0, 4) : [];
@@ -72,6 +74,7 @@ function AddressChoice({ value, onChange }: { value: ParticipantsAddress | null 
 function PersonRow({ p, bare, onChange, onRemove }: { p: DraftPerson; bare?: boolean; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
   const { s } = useStore(); const year = Q.yearOf(s);
   return <li className="pr"><div className="pr-h"><b>{displayName(p)}</b><input className="in cls" aria-label={`Třída nebo organizace: ${displayName(p)}`} placeholder="Třída" value={p.affiliation ?? ''} onChange={(e) => onChange({ ...p, affiliation: e.target.value, affiliationYear: year })} onBlur={(e) => { const c = normalizeClass(e.target.value); if (c) onChange({ ...p, affiliation: c, affiliationYear: year }); }} /><button type="button" className="x" aria-label={`Odebrat: ${displayName(p)}`} onClick={onRemove}><Ic n="x" /></button></div>
+    {p.head && p.salutation ? <p className="sm">Vyjde: {headedName({ salutation: p.salutation, head: p.head, ...(p.complement && { complement: p.complement }) }, displayName(p))}<button type="button" className="q in-l" aria-label={`Bez funkce: ${displayName(p)}`} onClick={() => onChange(Q.withoutFunction(p))}>Bez funkce</button></p> : null}
     {bare ? null : <Seg label={`Oslovení: ${displayName(p)}`} value={p.salutation} options={SAL} onChange={(v) => onChange({ ...p, salutation: v })} />}</li>;
 }
 export function Wizard({ id, step }: { id: string; step?: string }) {
@@ -139,7 +142,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     ask = bul.key === 'participants' ? 'Kdo se účastnil?' : `${bul.label}?`; help = 'Napište jména, nebo vložte seznam třeba z Excelu. Třídu napište do závorky, například Tereza Malá (3.B).';
     can = (bul.people.length > 0 || !req) && noSal === 0 && !addr; hint = bul.people.length === 0 && req ? 'Přidejte aspoň jednoho člověka.' : addr ? copy.readiness.problem(addr.code, addr.params) : noSal ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení. Nehádáme ho za Vás.` : '';
     nextText = bul.people.length === 0 && !req ? 'Přeskočit' : 'Pokračovat';
-    body = <>{noSal > 1 ? <button type="button" className="btn lg w" onClick={() => setPeople(bul.people.map((x) => (x.salutation ? x : { ...x, salutation: Q.guessSalutation(x) })))}>Doplnit oslovení podle jmen</button> : null}{noSal > 1 ? <p className="sm">Je to jen odhad, po doplnění je prosím zkontrolujte.</p> : null}<PeoplePick list={[...bul.people]} autoFocus placeholder="Například: Tereza Malá (3.B), Jakub Veselý (3.B)" onAdd={(x) => setPeople([...bul.people, ...x])} />{grouped && bul.people.length ? <AddressChoice value={bul.address} onChange={setAddress} /> : null}{bul.people.length ? <ul className="prs">{bul.people.map((x, j) => <PersonRow key={j} p={x} bare={bare} onChange={(n) => setPeople(bul.people.map((y, q) => (q === j ? n : y)))} onRemove={() => setPeople(bul.people.filter((_, q) => q !== j))} />)}</ul> : null}</>;
+    body = <>{noSal > 1 ? <button type="button" className="btn lg w" onClick={() => setPeople(bul.people.map((x) => (x.salutation ? x : { ...x, salutation: Q.guessSalutation(x) })))}>Doplnit oslovení podle jmen</button> : null}{noSal > 1 ? <p className="sm">Je to jen odhad, po doplnění je prosím zkontrolujte.</p> : null}<PeoplePick list={[...bul.people]} autoFocus placeholder="Například: Tereza Malá (3.B), Jakub Veselý (3.B)" onAdd={(x) => setPeople([...bul.people, ...(grouped ? x.map(Q.unaddressed) : x)])} />{grouped && bul.people.length ? <AddressChoice value={bul.address} onChange={setAddress} /> : null}{bul.people.length ? <ul className="prs">{bul.people.map((x, j) => <PersonRow key={j} p={x} bare={bare} onChange={(n) => setPeople(bul.people.map((y, q) => (q === j ? n : y)))} onRemove={() => setPeople(bul.people.filter((_, q) => q !== j))} />)}</ul> : null}</>;
   } else if (cur.key.startsWith('text-')) {
     const i = Number(cur.key.split('-')[1]); const bul = c.bullets[i] as Extract<DraftBullet, { kind: 'text' }>;
     ask = `${bul.label}?`; help = 'Nepovinné. Když není co psát, klidně přeskočte.'; nextText = bul.text.trim() ? 'Pokračovat' : 'Přeskočit';
@@ -156,7 +159,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     const change = () => (!si && st0?.speaker && !isOrg(st0.speaker) && c.statements.length < POINT_LIMITS.statements ? set({ statements: [blank, ...c.statements] }) : putSt({ ...blank, quote: st0?.quote ?? '' }));
     const notOrg = !si && !!st0?.speaker && !isOrg(st0.speaker);
     can = !!st0?.speaker && !!st0.speakerGenitive.trim() && !!st0.speaker.salutation && !notOrg; hint = notOrg ? 'Vyjádřit se má někdo z organizátorů.' : st0?.speaker ? 'Zkontrolujte tvar jména.' : 'Vyberte člověka.';
-    const g = st0?.speaker?.salutation ? suggestGenitive({ salutation: st0.speaker.salutation, givenName: st0.speaker.givenName, familyName: st0.speaker.familyName }) : null;
+    const g = st0?.speaker ? Q.genitiveFor(st0.speaker) : null;
     const dropThis = si ? <button type="button" className="q r" onClick={() => { set({ statements: c.statements.filter((_, q) => q !== si) }); toStep('hotovo'); }}>Další vyjádření nepřidávat</button> : null;
     body = st0?.speaker ? <div className="stack st8">
       <div className="pick"><b>{speakerName}</b><span>{st0.speaker.affiliation ?? ''} <button type="button" className="q in-l" onClick={change}>Změnit</button></span></div>
