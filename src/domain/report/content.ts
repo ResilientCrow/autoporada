@@ -1,4 +1,4 @@
-import type { Campus, Salutation } from '@/domain/cs';
+import type { Campus, ParticipantsAddress, Salutation } from '@/domain/cs';
 import type { RichDoc } from '@/domain/richtext';
 import type { CalDate, WallTime } from '@/domain/time';
 
@@ -32,6 +32,12 @@ export type DraftBullet =
       readonly kind: 'people';
       readonly order: 'input' | 'class-surname';
       readonly people: readonly DraftPerson[];
+      /**
+       * How the people of the `participants` row are addressed as a group (ADR 0071); no other row
+       * has one. Null (or absent) until the author chooses, and for a row saved before it existed.
+       * With one, the people need no salutation of their own.
+       */
+      readonly address?: ParticipantsAddress | null;
     }
   | {
       readonly key: string;

@@ -521,3 +521,72 @@ describe('organiser phrases', () => {
     expect(renderPeople(people, organisers)).toBe(text);
   });
 });
+
+describe('one label for the whole group (ADR 0071)', () => {
+  const n = (givenName: string, familyName: string, affiliation?: string) => ({
+    givenName,
+    familyName,
+    ...(affiliation && { affiliation }),
+  });
+  const one = (label: string | null, women = false) =>
+    ({ join: 'comma', order: 'class-surname', oneLabel: { label, women } }) as const;
+
+  it('puts the label once before the names, sorted by class and surname', () => {
+    expect(
+      renderPeople([n('Jan', 'Novák', '2.A'), n('Eva', 'Malá', '3.B')], one('slečny a pánové')),
+    ).toBe('slečny a pánové Jan Novák (2.A), Eva Malá (3.B)');
+    expect(
+      renderPeople([n('Eva', 'Malá', '3.B'), n('Jan', 'Novák', '2.A')], one('slečny a pánové')),
+    ).toBe('slečny a pánové Jan Novák (2.A), Eva Malá (3.B)');
+  });
+
+  it('prints the names alone with no label', () => {
+    expect(renderPeople([n('Eva', 'Malá', '3.B'), n('Jan', 'Novák', '2.A')], one(null))).toBe(
+      'Jan Novák (2.A), Eva Malá (3.B)',
+    );
+  });
+
+  it('prints one person with the label it is given', () => {
+    expect(renderPeople([n('Eva', 'Malá', '3.B')], one('slečna', true))).toBe(
+      'slečna Eva Malá (3.B)',
+    );
+  });
+
+  it('keeps the class-run grouping, with the word of the group', () => {
+    const pair = [n('Petr', 'Dvořák', '1.A'), n('Jan', 'Novák', '1.A')];
+    expect(renderPeople(pair, one('pánové'))).toBe(`pánové Petr Dvořák, Jan Novák (oba${NB}1.A)`);
+    expect(renderPeople(pair, one('slečny', true))).toBe(
+      `slečny Petr Dvořák, Jan Novák (obě${NB}1.A)`,
+    );
+    expect(renderPeople([...pair, n('Ivo', 'Žák', '1.A')], one('slečny', true))).toBe(
+      `slečny Petr Dvořák, Jan Novák, Ivo Žák (všechny${NB}1.A)`,
+    );
+    expect(renderPeople([...pair, n('Ivo', 'Žák', '1.A')], one('slečny a pánové'))).toBe(
+      `slečny a pánové Petr Dvořák, Jan Novák, Ivo Žák (všichni${NB}1.A)`,
+    );
+  });
+
+  it('writes a run inside the list: a class shared by neighbours only', () => {
+    const people = [n('Adam', 'A', '1.A'), n('Bořek', 'B', '1.A'), n('Cyril', 'C', '2.B')];
+    expect(renderPeople(people, one('pánové'))).toBe(
+      `pánové Adam A, Bořek B (oba${NB}1.A), Cyril C (2.B)`,
+    );
+  });
+
+  it('never drops or repeats anyone', () => {
+    const people = [n('Adam', 'A'), n('Bořek', 'B', '1.A'), n('Cyril', 'C', '1.A'), n('Dan', 'D')];
+    const text = renderPeople(people, one('slečny a pánové'));
+    for (const name of ['Adam A', 'Bořek B', 'Cyril C', 'Dan D'])
+      expect(text.split(name)).toHaveLength(2);
+  });
+
+  it('renders nothing for nobody', () => {
+    expect(renderPeople([], one('pánové'))).toBe('');
+  });
+
+  it('leaves the salutation lists as they were', () => {
+    expect(renderPeople([p('slecna', 'Eva', 'Malá', '1.A')], participants)).toBe(
+      'slečna Eva Malá (1.A)',
+    );
+  });
+});

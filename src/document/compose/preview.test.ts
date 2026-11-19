@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import type { ParticipantsAddress } from '@/domain/cs';
 import type { DraftBullet, DraftPerson, DraftStatement, PointContent } from '@/domain/report';
 import { richDocFromText, type RichDoc } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
@@ -205,6 +206,93 @@ describe('reportFromContent', () => {
         content({ bullets: [peopleBullet([person()], { order: 'class-surname' })] }),
       );
       expect(report.bullets[0]).toMatchObject({ order: 'class-surname' });
+    });
+  });
+
+  describe('the address of the participants row (ADR 0071)', () => {
+    const eva = person({
+      salutation: null,
+      givenName: 'Eva',
+      familyName: 'Malá',
+      affiliation: '3.B',
+    });
+    const jan = person({ salutation: null, familyName: 'Novák', affiliation: '2.A' });
+    const row = (
+      people: readonly DraftPerson[],
+      address: ParticipantsAddress | null | undefined,
+      over: Partial<Extract<DraftBullet, { kind: 'people' }>> = {},
+    ) =>
+      content({
+        bullets: [
+          peopleBullet(people, {
+            label: 'Účastníci',
+            order: 'class-surname',
+            ...(address !== undefined && { address }),
+            ...over,
+          }),
+        ],
+      });
+    const printed = (c: PointContent) =>
+      composePointPreview(c, { schoolYear: '2026/2027', kind: 'report' })
+        .blocks.map(textOf)
+        .find((t) => t.startsWith('Účastníci'));
+
+    it('keeps people with no salutation, carries the address and parses', () => {
+      const { report, omitted } = reportOf(row([eva, jan], 'slecny-a-panove'));
+      expect(omitted).toEqual(NONE);
+      expect(report.bullets[0]).toMatchObject({ kind: 'people', address: 'slecny-a-panove' });
+      parses(report);
+    });
+
+    it('prints the label once, then the people by class and surname, with no salutation', () => {
+      expect(printed(row([eva, jan], 'slecny-a-panove'))).toBe(
+        'Účastníci: slečny a\u00a0pánové Jan Novák (2.A), Eva Malá (3.B)',
+      );
+    });
+
+    it.each([
+      ['slecny', 'Účastníci: slečny Jan Novák (2.A), Eva Malá (3.B)'],
+      ['panove', 'Účastníci: pánové Jan Novák (2.A), Eva Malá (3.B)'],
+      ['bez-osloveni', 'Účastníci: Jan Novák (2.A), Eva Malá (3.B)'],
+    ] as const)('prints %s for several people', (address, line) => {
+      expect(printed(row([eva, jan], address))).toBe(line);
+    });
+
+    it.each([
+      ['slecny', eva, 'Účastníci: slečna Eva Malá (3.B)'],
+      ['panove', jan, 'Účastníci: pan Jan Novák (2.A)'],
+      ['bez-osloveni', eva, 'Účastníci: Eva Malá (3.B)'],
+    ] as const)('prints %s for one person', (address, who, line) => {
+      expect(printed(row([who], address))).toBe(line);
+    });
+
+    it('drops a salutation the author picked before choosing the address', () => {
+      const picked = person({ salutation: 'slecna', givenName: 'Eva', familyName: 'Malá' });
+      const { report } = reportOf(row([picked, jan], 'panove'));
+      const bullet = report.bullets[0];
+      expect(bullet?.kind === 'people' && bullet.people.map((p) => p.salutation)).toEqual([
+        undefined,
+        undefined,
+      ]);
+      parses(report);
+    });
+
+    it('still leaves out a person with no family name, and counts them', () => {
+      const { report, omitted } = reportOf(row([eva, person({ familyName: ' ' })], 'panove'));
+      expect(omitted).toEqual({ ...NONE, people: 1 });
+      parses(report);
+    });
+
+    it.each([null, undefined])('treats a row with address %j as before', (address) => {
+      const { report, omitted } = reportOf(row([person(), eva], address));
+      expect(omitted).toEqual({ ...NONE, people: 1 });
+      expect(report.bullets[0]).not.toHaveProperty('address');
+      expect(printed(row([person(), eva], address))).toBe('Účastníci: pan Jan Novák');
+    });
+
+    it('is the participants row only', () => {
+      const { omitted } = reportOf(row([eva], 'panove', { key: 'audience' }));
+      expect(omitted).toEqual({ ...NONE, people: 1, peopleBullets: 1 });
     });
   });
 

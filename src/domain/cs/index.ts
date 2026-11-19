@@ -40,7 +40,14 @@ export {
   type SortableStudent,
 } from './sort/class-code';
 export { foldForSearch, matchesWordPrefixes, searchWords } from './sort/fold';
-export { renderPeople, withAffiliation, type ListOptions, type Person } from './people/list';
+export {
+  renderPeople,
+  withAffiliation,
+  type ListOptions,
+  type OneLabelOptions,
+  type Person,
+  type UnaddressedPerson,
+} from './people/list';
 export {
   parsePeopleList,
   PASTE_MAX_CHARS,

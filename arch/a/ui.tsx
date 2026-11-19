@@ -102,6 +102,8 @@ export function Track({ on, steps }: { on: number; steps: string[] }) {
   return <ol className="trk">{steps.map((t, k) => <li key={t} className={k < on ? 'dn' : k === on ? 'nw2' : ''} {...(k === on ? { 'aria-current': 'step' as const } : {})}><i>{k < on ? <Ic n="chk" /> : null}</i><span>{t}</span></li>)}</ol>;
 }
 export const Stamp = ({ t }: { t: string }) => <span className="stamp">{t}</span>;
+/** How the participants are addressed as one group (ADR 0071), for an akce and for a report's Účastníci row; nothing is preselected. */
+export const ADDRESSES = [['slecny-a-panove', 'slečny a pánové'], ['slecny', 'slečny'], ['panove', 'pánové'], ['bez-osloveni', 'bez oslovení']] as const;
 export function Seg<T extends string>({ label, value, options, onChange }: { label: string; value: T | null; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
   return <div className="sgm" role="radiogroup" aria-label={label}>{options.map(([v, t]) => <button type="button" key={v} role="radio" aria-checked={value === v} className={value === v ? 'on' : ''} onClick={() => onChange(v)}>{t}</button>)}</div>;
 }

@@ -350,6 +350,9 @@ test.describe('the Arch UI', () => {
     await expect(page.getByRole('textbox', { name: 'Název' })).toBeVisible();
     await expect(page.getByLabel('Kdy')).toBeVisible();
     await expect(page.getByRole('button', { name: /^Odebrat: .*Ondřej Pech$/ })).toBeVisible();
+    // The participants are addressed as a group (ADR 0071): one choice, no salutation per person.
+    await expect(page.getByRole('radiogroup', { name: 'Oslovení účastníků' })).toBeVisible();
+    await expect(page.getByRole('radiogroup', { name: /^Oslovení: / })).toHaveCount(0);
     // The organisers are the akce's own; the text and the statements were not named.
     await expect(page.getByRole('button', { name: /^Odebrat: .*Jana Nováková$/ })).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Text zprávy' })).toHaveCount(0);

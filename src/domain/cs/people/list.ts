@@ -17,6 +17,24 @@ export interface ListOptions {
   readonly order?: 'input' | 'class-surname';
 }
 
+/**
+ * One label for the whole list (ADR 0071): „slečny a pánové Eva Malá (3.B), Jan Novák (2.A)“.
+ * The people have no salutation of their own; `women` says whether the label is for women alone, which
+ * only picks „obě“ / „všechny“ over „oba“ / „všichni“ for a class shared by neighbours.
+ */
+interface OneLabel {
+  readonly label: string | null;
+  readonly women: boolean;
+}
+
+/** `ListOptions` for a list with one label: grouping and roles do not apply. */
+export interface OneLabelOptions extends Pick<ListOptions, 'join' | 'order'> {
+  readonly oneLabel: OneLabel;
+}
+
+/** A person in a list with one label: no salutation, and no role to write before the name. */
+export type UnaddressedPerson = Omit<Person, 'salutation' | 'role'>;
+
 const DEFAULT_GROUP_ORDER: readonly Salutation[] = ['slecna', 'pani', 'pan'];
 
 /**
@@ -132,22 +150,45 @@ function joinItems(items: readonly string[], join: ListOptions['join']): string 
  * are named one by one: „absolvent pan X a učitelka paní Y“. A class shared
  * by the whole list is written once at the end: „(všichni 1.A)“.
  */
-export function renderPeople(people: readonly Person[], options: ListOptions): string {
-  if (people.length === 0) return '';
+export function renderPeople(people: readonly Person[], options: ListOptions): string;
+/** With `oneLabel`: one group under that label, whoever the people are. */
+export function renderPeople(
+  people: readonly UnaddressedPerson[],
+  options: OneLabelOptions,
+): string;
+export function renderPeople(
+  listed: readonly (Person | UnaddressedPerson)[],
+  options: ListOptions | OneLabelOptions,
+): string {
+  if (listed.length === 0) return '';
+  const oneLabel = 'oneLabel' in options ? options.oneLabel : undefined;
+  // The rest reads a salutation for the grouping and for „obě“ / „oba“; a list with one label has
+  // one sex for everybody, so it is given that, and the salutation is never printed.
+  const people: readonly Person[] = oneLabel
+    ? listed.map((p) => ({ ...p, salutation: oneLabel.women ? 'slecna' : 'pan' }))
+    : (listed as readonly Person[]);
   const shared = people.length >= 2 ? sharedClass(people) : undefined;
   const sort = (list: readonly Person[]) =>
     options.order === 'class-surname' ? [...list].sort((a, b) => compareStudents(a, b)) : [...list];
 
-  const withRoles = people.some((p) => p.role?.trim());
-  const groups: { label?: string; people: Person[] }[] = withRoles
-    ? [{ people: sort(people) }]
-    : completeGroupOrder(options.groupOrder)
-        .map((salutation) => {
-          const members = sort(people.filter((p) => p.salutation === salutation));
-          const { label, plural } = SALUTATION[salutation];
-          return { label: members.length === 1 ? label : plural, people: members };
-        })
-        .filter((g) => g.people.length > 0);
+  const withRoles = !oneLabel && people.some((p) => p.role?.trim());
+  const groups: { label?: string; people: Person[] }[] = [];
+  if (oneLabel) {
+    groups.push({
+      ...(oneLabel.label !== null && { label: oneLabel.label }),
+      people: sort(people),
+    });
+  } else if (withRoles) {
+    groups.push({ people: sort(people) });
+  } else {
+    const order = completeGroupOrder('groupOrder' in options ? options.groupOrder : undefined);
+    for (const salutation of order) {
+      const members = sort(people.filter((p) => p.salutation === salutation));
+      const { label, plural } = SALUTATION[salutation];
+      if (members.length > 0)
+        groups.push({ label: members.length === 1 ? label : plural, people: members });
+    }
+  }
 
   const name = (p: Person) =>
     withRoles

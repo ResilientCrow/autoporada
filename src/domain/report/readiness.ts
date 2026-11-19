@@ -1,8 +1,9 @@
-import { schoolYear } from '@/domain/cs';
+import { participantsFits, schoolYear } from '@/domain/cs';
 import { exceedsLimits, isRichDocEmpty } from '@/domain/richtext';
 import { compareDates, compareTimes, type CalDate } from '@/domain/time';
 
 import type { BulletSpec, DraftBullet, DraftPerson, PointContent, PointKind } from './content';
+import { PARTICIPANTS_KEY } from './bullets';
 import { displayName, isParticipant } from './people';
 import { reportBody } from './report-body';
 
@@ -21,6 +22,8 @@ export type ProblemCode =
   | 'people-none'
   | 'person-name-required'
   | 'salutation-required'
+  | 'participants-address-required'
+  | 'participants-address-several'
   | 'class-stale'
   | 'statements-required'
   | 'speaker-required'
@@ -113,15 +116,28 @@ function requiredBulletProblem(bullet: DraftBullet, index: number): Problem[] {
     : [];
 }
 
+type PeopleBullet = Extract<DraftBullet, { kind: 'people' }>;
+
+/** A participants row with people needs an address, and „slečny a pánové“ needs several of them. */
+function addressProblems(bullet: PeopleBullet, index: number): Problem[] {
+  if (bullet.key !== PARTICIPANTS_KEY || bullet.people.length === 0) return [];
+  const path = `content.bullets.${index}.address`;
+  if (!bullet.address) return [problem('participants-address-required', path)];
+  return participantsFits(bullet.address, bullet.people.length > 1)
+    ? []
+    : [problem('participants-address-several', path)];
+}
+
 function personProblems(
   person: DraftPerson,
   path: string,
   position: number,
   label: string,
+  addressed: boolean,
 ): Problem[] {
   if (blank(person.familyName))
     return [problem('person-name-required', `${path}.familyName`, { position, label })];
-  if (person.salutation === null) {
+  if (person.salutation === null && !addressed) {
     return [problem('salutation-required', `${path}.salutation`, { name: displayName(person) })];
   }
   return [];
@@ -152,9 +168,18 @@ function bulletProblems(
       perBullet.push(problem('label-required', `content.bullets.${i}.label`, { n: i + 1 }));
     if (isRequired) perBullet.push(...requiredBulletProblem(bullet, i));
     if (bullet.kind !== 'people') return;
+    perBullet.push(...addressProblems(bullet, i));
     bullet.people.forEach((person, j) => {
       const path = `content.bullets.${i}.people.${j}`;
-      perBullet.push(...personProblems(person, path, j + 1, bullet.label));
+      perBullet.push(
+        ...personProblems(
+          person,
+          path,
+          j + 1,
+          bullet.label,
+          !!bullet.address && bullet.key === PARTICIPANTS_KEY,
+        ),
+      );
       persons.push([person, path]);
     });
   });

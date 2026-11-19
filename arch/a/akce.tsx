@@ -7,15 +7,13 @@ import { createWith, fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future } from '../core/types';
-import { App, TitleField, Back, Left, Desk, Dialog, goReplace, Ic, Note, Rework, Saved, Seg, Sec, Stamp, Todo, Top, Track, TrailMore, WHEN } from './ui';
+import { ADDRESSES, App, TitleField, Back, Left, Desk, Dialog, goReplace, Ic, Note, Rework, Saved, Seg, Sec, Stamp, Todo, Top, Track, TrailMore, WHEN } from './ui';
 import { futureLine, NotFound } from './home';
 
 const CAMPUS = [['smichov', 'Smíchov'], ['radlice', 'Radlice'], ['na-vidouli', 'Na Vidouli'], ['jinde', 'Jinde']] as const;
 /** Místo says where within the chosen areál, so it waits for one. */
 const PLACE_NEEDS_CAMPUS = 'Nejdřív vyberte areál.';
 const ROLES = [['organizes', 'Organizuje'], ['coordinates', 'Koordinuje']] as const;
-/** How an akce's participants are addressed as one group (ADR 0071); nothing is preselected. */
-const ADDRESSES = [['slecny-a-panove', 'slečny a pánové'], ['slecny', 'slečny'], ['panove', 'pánové'], ['bez-osloveni', 'bez oslovení']] as const;
 const time = (x: string) => { if (!x) return null; try { return parseWallTime(x); } catch { return null; } };
 /** The wizard step that asks a part a return named (ADR 0058). */
 const STEP_OF: Record<string, string> = { title: 'nazev', when: 'kdy', place: 'kde', who: 'kdo', note: 'poznamka' };

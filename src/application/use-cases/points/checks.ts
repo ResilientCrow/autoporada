@@ -76,6 +76,8 @@ const ISSUE: Readonly<Record<ProblemCode, FieldIssueCode>> = {
   'people-none': 'required',
   'person-name-required': 'required',
   'salutation-required': 'required',
+  'participants-address-required': 'required',
+  'participants-address-several': 'several',
   'class-stale': 'invalid',
   'statements-required': 'required',
   'speaker-required': 'required',

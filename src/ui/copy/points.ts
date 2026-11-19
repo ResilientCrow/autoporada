@@ -25,6 +25,8 @@ const PROBLEM: Readonly<Record<ProblemCode, (params: Params) => string>> = {
   'person-name-required': (p) =>
     `Doplňte příjmení u osoby č.\u00A0${word(p, 'position')} v\u00A0řádku „${word(p, 'label')}“.`,
   'salutation-required': (p) => `U osoby ${word(p, 'name')} zvolte oslovení.`,
+  'participants-address-required': () => 'Vyberte oslovení účastníků.',
+  'participants-address-several': () => 'Slečny a pánové potřebují aspoň dva účastníky.',
   'class-stale': (p) => `Ověřte třídu u osob: ${words(p, 'names')}.`,
   'statements-required': () => 'Přidejte alespoň jedno vyjádření.',
   'speaker-required': (p) => `U vyjádření č.\u00A0${word(p, 'n')} zvolte, kdo mluví.`,

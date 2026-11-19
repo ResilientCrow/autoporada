@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { PARTICIPANTS_ADDRESSES } from '@/domain/cs';
 import { hasForbiddenCharacters, parseRichDoc, type RichProfile } from '@/domain/richtext';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
@@ -65,6 +66,12 @@ export const person = z.strictObject({
   affiliation: text.optional(),
 });
 
+/**
+ * A person of a people row. The salutation is the row's to ask for: a row with an `address` (ADR 0071)
+ * addresses its people as one group and names them without one; any other row needs one for each.
+ */
+const rowPerson = person.extend({ salutation: salutation.optional() });
+
 /** „vyjádření pana Johna Doe (1.A): „…““ — the speaker is stored in the 2nd case. */
 const statement = z.strictObject({
   speakerGenitive: required,
@@ -83,12 +90,20 @@ const item = z.strictObject({
 });
 
 const bullet = z.discriminatedUnion('kind', [
-  z.strictObject({
-    kind: z.literal('people'),
-    label: required,
-    order: z.enum(['input', 'class-surname']),
-    people: z.array(person).min(1),
-  }),
+  z
+    .strictObject({
+      kind: z.literal('people'),
+      label: required,
+      order: z.enum(['input', 'class-surname']),
+      /** How the people are addressed as a group; only the Účastníci row has one. Left out, each person has a salutation. */
+      address: z.enum(PARTICIPANTS_ADDRESSES).optional(),
+      people: z.array(rowPerson).min(1),
+    })
+    .refine(
+      (row) =>
+        row.people.every((p) => (p.salutation === undefined) === (row.address !== undefined)),
+      'people have a salutation of their own exactly when the row has no address',
+    ),
   z.strictObject({ kind: z.literal('text'), label: required, text: required }),
 ]);
 

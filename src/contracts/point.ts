@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-import type { Campus, Salutation } from '@/domain/cs';
+import { PARTICIPANTS_ADDRESSES, type Campus, type Salutation } from '@/domain/cs';
 import {
   contentBytes,
+  PARTICIPANTS_KEY,
   POINT_LIMITS,
   type PointKind,
   type DraftBullet,
@@ -70,12 +71,18 @@ const draftPersonSchema = z.strictObject({
 const bulletBase = { key: bulletKeySchema, label: capped(POINT_LIMITS.bulletLabel) };
 
 const draftBulletSchema = z.discriminatedUnion('kind', [
-  z.strictObject({
-    ...bulletBase,
-    kind: z.literal('people'),
-    order: z.enum(['input', 'class-surname']),
-    people: z.array(draftPersonSchema).max(POINT_LIMITS.peoplePerBullet),
-  }),
+  z
+    .strictObject({
+      ...bulletBase,
+      kind: z.literal('people'),
+      order: z.enum(['input', 'class-surname']),
+      people: z.array(draftPersonSchema).max(POINT_LIMITS.peoplePerBullet),
+      address: z.enum(PARTICIPANTS_ADDRESSES).nullable().optional(),
+    })
+    // Only the participants row is addressed as a group (ADR 0071).
+    .refine((row) => !row.address || row.key === PARTICIPANTS_KEY, {
+      message: 'address-not-allowed',
+    }),
   z.strictObject({ ...bulletBase, kind: z.literal('text'), text: capped(POINT_LIMITS.textBullet) }),
 ]) satisfies z.ZodType<DraftBullet>;
 

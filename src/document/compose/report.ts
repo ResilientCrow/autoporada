@@ -1,6 +1,7 @@
-import { renderPeople, type Salutation } from '@/domain/cs';
+import { participantsLabel, renderPeople, type Salutation } from '@/domain/cs';
 import {
   OPENING_KEYS,
+  PARTICIPANTS_KEY,
   reportBody,
   type DraftBullet,
   type DraftPerson,
@@ -22,15 +23,33 @@ import {
   type Tokens,
 } from './text';
 
+/**
+ * What a people row prints after its heading. A row with an address (ADR 0071) prints its people
+ * under one label, with no salutation of their own: „slečny a pánové Eva Malá (3.B), Jan Novák
+ * (2.A)“; „bez oslovení“ prints the names alone. Any other row groups its people by salutation.
+ */
+function peopleText(
+  bullet: Extract<SnapshotBullet, { kind: 'people' }>,
+  groupOrder?: readonly Salutation[],
+): string {
+  const { address, order } = bullet;
+  if (address !== undefined) {
+    const label = participantsLabel(address, bullet.people.length > 1);
+    return renderPeople(bullet.people, {
+      join: 'comma',
+      order,
+      oneLabel: { label, women: address === 'slecny' },
+    });
+  }
+  // The snapshot gives each person of a row with no address a salutation; the type cannot say so.
+  const people = bullet.people.flatMap((p) =>
+    p.salutation === undefined ? [] : [{ ...p, salutation: p.salutation }],
+  );
+  return renderPeople(people, { join: 'comma', order, ...(groupOrder && { groupOrder }) });
+}
+
 function bulletLine(bullet: SnapshotBullet, groupOrder?: readonly Salutation[]): Block {
-  const text =
-    bullet.kind === 'text'
-      ? bullet.text
-      : renderPeople(bullet.people, {
-          join: 'comma',
-          order: bullet.order,
-          ...(groupOrder && { groupOrder }),
-        });
+  const text = bullet.kind === 'text' ? bullet.text : peopleText(bullet, groupOrder);
   return {
     kind: 'reportLine',
     label: finalText(`${bullet.label}:`),
@@ -68,7 +87,7 @@ export function reportBlocks(
 
 /** What `reportFromContent` left out, by kind. */
 export interface Omitted {
-  /** People without a salutation (or without a family name). */
+  /** People without a salutation (unless their row is addressed as a group) or without a family name. */
   readonly people: number;
   /** People bullets with nobody left, or without a label. */
   readonly peopleBullets: number;
@@ -86,12 +105,15 @@ const optional = <K extends string>(key: K, value: string | undefined) => {
   return text ? ({ [key]: text } as { [P in K]: string }) : {};
 };
 
-/** The snapshot's person, or null when it cannot show them: no salutation, no family name. */
-export function snapshotPerson(p: DraftPerson): SnapshotPerson | null {
+/**
+ * The snapshot's person, or null when it cannot show them: no family name, and no salutation unless
+ * the row is addressed as a group, which names its people without one (ADR 0071).
+ */
+export function snapshotPerson(p: DraftPerson, addressed = false): SnapshotPerson | null {
   const familyName = singleLine(p.familyName);
-  if (p.salutation === null || familyName === '') return null;
+  if (familyName === '' || (p.salutation === null && !addressed)) return null;
   return {
-    salutation: p.salutation,
+    ...(!addressed && p.salutation !== null && { salutation: p.salutation }),
     ...optional('titlesBefore', p.titlesBefore),
     givenName: singleLine(p.givenName),
     familyName,
@@ -126,10 +148,19 @@ function snapshotBullets(bullets: readonly DraftBullet[]): {
       else kept.push({ kind: 'text', label, text });
       continue;
     }
-    const people = bullet.people.flatMap((p) => snapshotPerson(p) ?? []);
+    // Only the participants row has an address, whatever else a draft carries.
+    const address = bullet.key === PARTICIPANTS_KEY ? bullet.address : null;
+    const people = bullet.people.flatMap((p) => snapshotPerson(p, !!address) ?? []);
     omitted.people += bullet.people.length - people.length;
     if (label === '' || people.length === 0) omitted.peopleBullets++;
-    else kept.push({ kind: 'people', label, order: bullet.order, people });
+    else
+      kept.push({
+        kind: 'people',
+        label,
+        order: bullet.order,
+        ...(address && { address }),
+        people,
+      });
   }
   return { kept, omitted };
 }

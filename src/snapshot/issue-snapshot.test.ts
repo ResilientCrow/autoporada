@@ -235,6 +235,54 @@ describe('IssueSnapshot', () => {
     });
   });
 
+  describe('the address of a participants row (ADR 0071)', () => {
+    const upcast = parseIssueSnapshot(replica);
+    const v2: unknown = upcast.ok ? structuredClone(upcast.snapshot) : null;
+    const bare = [
+      { givenName: 'Eva', familyName: 'Malá', affiliation: '3.B' },
+      { givenName: 'Jan', familyName: 'Novák', affiliation: '2.A' },
+    ];
+    const withBullet = (bullet: Record<string, unknown>) => {
+      const copy = structuredClone(v2) as { reports: { bullets: unknown[] }[] };
+      copy.reports[0]!.bullets = [bullet];
+      return copy;
+    };
+    const withRow = (row: Record<string, unknown>) =>
+      withBullet({ kind: 'people', label: 'Účastníci', order: 'class-surname', ...row });
+
+    it.each(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni'])(
+      'reads the people of a row with the address %s without a salutation',
+      (address) => {
+        expect(errorsOf(withRow({ address, people: bare }))).toEqual([]);
+      },
+    );
+
+    it('still needs a salutation for each person of a row without an address', () => {
+      expect(errorsOf(withRow({ people: bare }))).not.toEqual([]);
+      expect(errorsOf(withRow({ people: [{ ...bare[0], salutation: 'slecna' }] }))).toEqual([]);
+    });
+
+    it('gives a person in an addressed row no salutation', () => {
+      const people = [{ ...bare[0], salutation: 'slecna' }, bare[1]];
+      expect(errorsOf(withRow({ address: 'panove', people }))).not.toEqual([]);
+    });
+
+    it.each(['damy', '', null])('rejects the address %j', (address) => {
+      expect(errorsOf(withRow({ address, people: bare }))).not.toEqual([]);
+    });
+
+    it('is no part of a text bullet', () => {
+      const text = { kind: 'text', label: 'Výsledky', text: 'Dobré.' };
+      expect(errorsOf(withBullet(text))).toEqual([]);
+      expect(errorsOf(withBullet({ ...text, address: 'panove' }))).not.toEqual([]);
+    });
+
+    it('leaves a stored snapshot without one schema 2 and readable', () => {
+      expect(errorsOf(v2)).toEqual([]);
+      expect(upcast.ok && upcast.snapshot.schema).toBe(2);
+    });
+  });
+
   describe('the extra annexes of a porada', () => {
     const table = (rows: string[][]) => ({ kind: 'table', rows });
     const image = (alt: string) => ({

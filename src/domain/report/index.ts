@@ -8,7 +8,7 @@ export {
   type PointKind,
   type ProposalKind,
 } from './content';
-export { OPENING_KEYS, organiserAt, REPORT_BULLETS } from './bullets';
+export { OPENING_KEYS, organiserAt, PARTICIPANTS_KEY, REPORT_BULLETS } from './bullets';
 export { draftBullet, newDraft } from './draft';
 export {
   ANNEXES_MAX_BYTES,

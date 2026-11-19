@@ -111,6 +111,39 @@ describe('draftBulletsSchema', () => {
     expect(ok(draftBulletsSchema, [value])).toBe(false);
   });
 
+  describe('the address of the participants row (ADR 0071)', () => {
+    it.each(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni', null])(
+      'accepts %j on the participants row, and keeps it',
+      (address) => {
+        const bullets = [people({ address, people: [person({ salutation: null })] })];
+        expect(draftBulletsSchema.parse(bullets)).toEqual(bullets);
+      },
+    );
+
+    it('needs none: an older row has no address', () => {
+      expect(ok(draftBulletsSchema, [people()])).toBe(true);
+    });
+
+    it.each(['damy', '', 7])('refuses the address %j', (address) => {
+      expect(ok(draftBulletsSchema, [people({ address })])).toBe(false);
+    });
+
+    it.each(['organisers', 'speakers', 'audience', 'guests'])(
+      'refuses an address on the %s row',
+      (key) => {
+        expect(ok(draftBulletsSchema, [people({ key, address: 'panove' })])).toBe(false);
+      },
+    );
+
+    it('lets another row carry a null address, which says nothing', () => {
+      expect(ok(draftBulletsSchema, [people({ key: 'organisers', address: null })])).toBe(true);
+    });
+
+    it('refuses one on a text bullet', () => {
+      expect(ok(draftBulletsSchema, [text({ address: 'panove' })])).toBe(false);
+    });
+  });
+
   describe('a person’s directory id and school year', () => {
     const parses = (over: Record<string, unknown>) =>
       ok(draftBulletsSchema, [people({ people: [person(over)] })]);

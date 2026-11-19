@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Salutation } from '@/domain/cs';
+import type { ParticipantsAddress, Salutation } from '@/domain/cs';
 import { emptyRichDoc, LIMITS, richDocFromText, type RichDoc } from '@/domain/richtext';
 import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
@@ -32,12 +32,23 @@ const jan = person('Jan', 'Novák');
 const eva = person('Eva', 'Malá', 'slecna');
 const petra = person('Petra', 'Dvořáková', 'pani');
 
-const peopleBullet = (key: string, people: readonly DraftPerson[]): DraftBullet => ({
+/**
+ * The participants row is addressed as a group unless a test says otherwise (ADR 0071); any other
+ * row has no address.
+ */
+const peopleBullet = (
+  key: string,
+  people: readonly DraftPerson[],
+  address: ParticipantsAddress | null | undefined = key === 'participants'
+    ? 'bez-osloveni'
+    : undefined,
+): DraftBullet => ({
   key,
   label: key === 'organisers' ? 'Organizátoři' : 'Účastníci',
   kind: 'people',
   order: 'input',
   people,
+  ...(address !== undefined && { address }),
 });
 const textBullet = (key: string, text: string): DraftBullet => ({
   key,
@@ -151,10 +162,13 @@ describe('missingForSubmit: report', () => {
     ],
     [
       'a person without a salutation',
-      withBullets(peopleBullet('participants', [jan, person('Karel', 'Bez', null)])),
+      withBullets(
+        peopleBullet('organisers', [person('Karel', 'Bez', null)]),
+        peopleBullet('participants', [jan]),
+      ),
       {
         code: 'salutation-required',
-        path: 'content.bullets.0.people.1.salutation',
+        path: 'content.bullets.0.people.0.salutation',
         params: { name: 'Karel Bez' },
       },
     ],
@@ -177,15 +191,6 @@ describe('missingForSubmit: report', () => {
         code: 'person-name-required',
         path: 'content.bullets.0.people.0.familyName',
         params: { position: 1, label: 'Organizátoři' },
-      },
-    ],
-    [
-      'a nameless person with a blank salutation, which needs the name first',
-      withBullets(peopleBullet('participants', [jan, person('Karel', ' ', null)])),
-      {
-        code: 'person-name-required',
-        path: 'content.bullets.0.people.1.familyName',
-        params: { position: 2, label: 'Účastníci' },
       },
     ],
     [
@@ -267,6 +272,93 @@ describe('missingForSubmit: report', () => {
 
   it.each(cases)('reports %s, and only that', (_name, content, problem) => {
     expect(check(content).problems).toEqual([problem]);
+  });
+
+  describe('how the participants are addressed (ADR 0071)', () => {
+    const row = (people: readonly DraftPerson[], address?: ParticipantsAddress | null) =>
+      withBullets(peopleBullet('organisers', [eva]), peopleBullet('participants', people, address));
+    const nobody = person('Karel', 'Bez', null);
+
+    it('asks for it when the row has people and it is null or absent', () => {
+      const none = row([jan, petra], null);
+      const bullets = none.bullets.map((b) => {
+        if (b.kind !== 'people' || b.key !== 'participants') return b;
+        const { address: _address, ...older } = b;
+        return older;
+      });
+      for (const content of [none, { ...none, bullets }]) {
+        expect(check(content).problems).toEqual([
+          {
+            code: 'participants-address-required',
+            path: 'content.bullets.1.address',
+            params: {},
+          },
+        ]);
+      }
+    });
+
+    it('does not ask for it when the row has nobody', () => {
+      expect(check(row([], null)).problems.map((p) => p.code)).toEqual(['people-required']);
+    });
+
+    it.each(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni'] as const)(
+      'needs no salutation for anybody once it is %s',
+      (address) => {
+        expect(check(row([jan, nobody], address)).problems).toEqual([]);
+      },
+    );
+
+    it('still asks each person of a row with no address for a salutation', () => {
+      expect(check(row([jan, nobody], null)).problems.map((p) => p.code)).toEqual([
+        'participants-address-required',
+        'salutation-required',
+      ]);
+    });
+
+    it('refuses „slečny a pánové“ for one person, and only that', () => {
+      expect(check(row([nobody], 'slecny-a-panove')).problems).toEqual([
+        {
+          code: 'participants-address-several',
+          path: 'content.bullets.1.address',
+          params: {},
+        },
+      ]);
+    });
+
+    it.each(['slecny', 'panove', 'bez-osloveni'] as const)('lets one person take %s', (address) => {
+      expect(check(row([nobody], address)).problems).toEqual([]);
+    });
+
+    it('lets „slečny a pánové“ take two people', () => {
+      expect(check(row([jan, nobody], 'slecny-a-panove')).problems).toEqual([]);
+    });
+
+    it('keeps the salutation rule for the organisers row', () => {
+      const content = withBullets(
+        peopleBullet('organisers', [person('Karel', 'Bez', null)]),
+        peopleBullet('participants', [jan], 'panove'),
+      );
+      expect(check(content).problems.map((p) => p.code)).toEqual(['salutation-required']);
+    });
+
+    it('does not apply to an older row with another key', () => {
+      const content = withBullets(
+        peopleBullet('organisers', [eva]),
+        peopleBullet('audience', [jan]),
+        peopleBullet('participants', [jan], 'panove'),
+      );
+      expect(check(content).problems).toEqual([]);
+    });
+  });
+
+  it('asks for a nameless person’s name before their salutation', () => {
+    const content = withBullets(
+      peopleBullet('participants', [jan, person('Karel', ' ', null)], null),
+    );
+    expect(check(content).problems.map((p) => p.code)).toEqual([
+      'participants-address-required',
+      'person-name-required',
+    ]);
   });
 
   it('names the required bullet, not a general gap, when nobody is listed anywhere', () => {
@@ -368,7 +460,11 @@ describe('missingForSubmit: report', () => {
 
   it('formats the name with its titles', () => {
     const doc = person('Jana', 'Nová', null, { titlesBefore: 'Mgr.', titlesAfter: ' Ph.D. ' });
-    expect(check(withBullets(peopleBullet('participants', [doc]))).problems).toMatchObject([
+    const content = withBullets(
+      peopleBullet('organisers', [doc]),
+      peopleBullet('participants', [jan]),
+    );
+    expect(check(content).problems).toMatchObject([
       { code: 'salutation-required', params: { name: 'Mgr. Jana Nová, Ph.D.' } },
     ]);
   });
