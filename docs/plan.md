@@ -2,6 +2,8 @@
 
 > Note, 2026-11-13: the classic Next.js UI (pages, server actions, `src/ui` apart from `ui/copy`) was removed; Arch is the only UI. Page paths, UI libraries and `ui/` layer rules named below describe the plan as written. See [ADR 0065](adr/0065-the-classic-ui-is-removed.md).
 
+> Note, 2026-11-19: this is the plan as written, not a description of the app. What is built is in [features.md](features.md). Planned below and **not built**: the backup sidecar (§1 Hosting, §3, §9; the database has the `autoporada_backup` group role of §4, and nothing logs in with it), the jobs `retention.daily`, `retention.school-year` and `ops.check` (§9), `/healthz` and the admin banner, reopening and regenerating a porada and the break-glass CLI (M10 items 4 and 5), and M11 (retention, backup, ops check, data-subject CLI, RUNBOOK). The reviewer digest, the headmaster summaries and the moved-porada notice are switched off (ADR 0037). Installing and running the app as it is today, backups by hand included, is in [DEPLOYMENT.md](DEPLOYMENT.md) and [OPERATIONS.md](OPERATIONS.md), which take the place of the planned RUNBOOK.
+
 ## Context
 
 Every Monday the headmaster of Smíchovská střední (ssps.cz) assembles the

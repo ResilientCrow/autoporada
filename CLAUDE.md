@@ -67,4 +67,5 @@ Then, when the change warrants it:
 - `docs/plan.md`: plan of record; milestones and commit plan in section 10.
 - `docs/adr/`: decisions (index in README). An ADR is never edited; add one that supersedes it.
 - `docs/features.md`, `docs/glossary.md`: product behavior and terms.
-- `deploy/SMOKE-TEST.md`, `docs/ENTRA-SETUP.md`: deploy and tenant setup. `docs/gdpr/privacy-review.md`: GDPR review.
+- `docs/DEPLOYMENT.md` (install on the school server, step by step), `docs/OPERATIONS.md` (runbook for IT: backup, restore, updates, certificates, emergencies; it also lists what is not built: backups, alerts, retention purges, health endpoint). A change to `deploy/`, the CLI, log names or queues must keep both true.
+- `deploy/SMOKE-TEST.md`, `docs/ENTRA-SETUP.md`: first-start checklist and tenant setup. `docs/gdpr/privacy-review.md`: GDPR review.

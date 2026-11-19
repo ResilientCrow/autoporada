@@ -3,8 +3,13 @@
 This guide is for the school's Microsoft 365 / Entra ID administrators. It
 lists everything the app needs from the tenant, and why.
 
-Allow 1–2 weeks: Exchange permission changes take up to 2 hours to apply, and
-a first sign-in test is planned early in development.
+Allow 1–2 weeks. Exchange permission changes alone take up to 2 hours to
+apply.
+
+This guide covers the Microsoft side only. Installing the app on the server
+is in [DEPLOYMENT.md](DEPLOYMENT.md), which calls this guide at its step 5,
+and keeping the app running (backups, updates, renewing the certificates) is
+in [OPERATIONS.md](OPERATIONS.md).
 
 **Do not paste secrets into e-mail or chat.** The certificate's private key
 is created on the server and never leaves it. Only the public certificate is
@@ -15,7 +20,7 @@ uploaded to Entra.
 | The app will | The app will not |
 |---|---|
 | Sign users in (OpenID Connect) and read their basic profile | Store passwords or Microsoft access tokens |
-| Search the directory by name (display name, given name, surname, mail), from the web's own registration | Read mail, files, calendars, Teams or groups |
+| Search the school's users by display name or surname and read each hit's name, e-mail address and sign-in name, from the web's own registration. The search is switched off until `DIRECTORY=graph` is set, and no screen of the app uses it yet | Read mail, files, calendars, Teams or groups |
 | Send reminder e-mails **as `autoporada@ssps.cz` only**, from the mail registration the web never holds | Send mail as any other mailbox, or from the web |
 | Accept members of the ssps.cz tenant | Accept guest (B2B) accounts or other tenants |
 
@@ -139,7 +144,10 @@ Test-ServicePrincipalAuthorization -Identity <AppId> -Resource <any-other-user>@
 
 The first mails can be refused (403) for up to 2 hours while the scope
 propagates. The worker retries on its own for about 2.8 hours, one Graph call
-a minute, and logs each refusal as `mail.systemic`; nobody has to act. Then
+a minute, and logs each refusal as `mail.systemic`. Within that time nobody
+has to act. A message still refused after it is given up and waits in the
+dead queue: `docker compose run --rm cli jobs:status` shows it, and
+[OPERATIONS.md](OPERATIONS.md), "E-mail", says how to send it again. Then
 send a test mail from the server:
 
 ```sh
@@ -179,9 +187,13 @@ an Exchange retention policy on it.
     `github.com` (the source), `registry.npmjs.org` (packages), and the
     container registries `registry-1.docker.io`, `auth.docker.io`,
     `production.cloudflare.docker.com`, `gcr.io`, `ghcr.io`,
-    `pkg-containers.githubusercontent.com`.
+    `pkg-containers.githubusercontent.com`, and `deb.debian.org` over plain
+    HTTP (port 80; one font package for the PDF image).
 
 ## 5. Server
+
+The full list of what the server needs, and every step of the install, is
+in [DEPLOYMENT.md](DEPLOYMENT.md). In short:
 
 - Linux with Docker Engine 27+, the Compose plugin, git and openssl.
 - At least 2 vCPU, 6 GB RAM and 40 GB disk.
@@ -189,15 +201,22 @@ an Exchange retention policy on it.
   the compose stack; `deploy/SMOKE-TEST.md` is the checklist for the first
   start.
 - Named people:
-  - an **IT contact** e-mail for alerts (backups, certificate expiry, disk
-    space);
+  - an **IT contact** who does the weekly check
+    ([OPERATIONS.md](OPERATIONS.md), "The weekly check"). The app sends no
+    alerts of its own, not about backups, certificate expiry or disk space;
   - who applies security updates. Critical fixes should be applied within
     72 hours.
 - An **off-site backup target** on school-controlled infrastructure: SFTP or
   rsync over SSH, an SMB share on the school NAS, or S3-compatible storage.
-  Backups are encrypted before they leave the server.
+  The app makes no backups itself: IT sets up the nightly dump and the copy
+  as [OPERATIONS.md](OPERATIONS.md), "Backup", describes. A dump holds
+  personal data unencrypted, so encrypt the copy or keep the target readable
+  by IT only.
 
 ## 6. Certificates (done on the server)
+
+[DEPLOYMENT.md](DEPLOYMENT.md), step 4, runs these commands in the right
+directory and puts the files in place; this section is the reference.
 
 One pair for each registration, made with the same command:
 
@@ -227,7 +246,12 @@ chmod 600 autoporada-mail.key
 - The app signs its client assertion with PS256 and names the certificate by
   its SHA-256 (`x5t#S256`), as Microsoft documents for certificate
   credentials.
-- The app warns the IT contact 45 days before the certificate expires.
+- From 45 days before a certificate expires, `web` (its own pair) and
+  `worker` (the mail pair) log a warning each time they start, and
+  `cli auth:probe` prints it for the mail pair. Nobody is e-mailed, and an
+  expired certificate stops sign-in or e-mail. Write both end dates into a
+  calendar; [OPERATIONS.md](OPERATIONS.md), "Certificates", shows how to read
+  them.
 - **Renewal**, before the old certificate expires, for each pair:
   1. make a new pair with the command above and upload the new certificate
      to its registration (step 1.2 or 1.5), keeping the old one in Entra for
@@ -254,8 +278,8 @@ chmod 600 autoporada-mail.key
 | Mail registration: enterprise application object ID | Enterprise applications → Autoporada mail |
 | Shared mailbox | `autoporada@ssps.cz` |
 | Headmaster's user object ID | Entra → Users → the headmaster → Object ID. It becomes the first administrator. |
-| IT contact e-mail | §5 |
-| Off-site backup target and credentials | §5. Hand these over in person or through a password manager. |
+| IT contact (name and e-mail) | §5. For the school's own records; no setting of the app takes it. |
+| Off-site backup target and credentials | §5. Used by the backup copy that IT sets up, not by the app. Hand these over in person or through a password manager. |
 
 ## 8. Staging / development (optional)
 

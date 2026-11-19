@@ -7,14 +7,14 @@ same word.
 
 | Czech (UI / document) | Code identifier | Meaning |
 |---|---|---|
-| Porada vedení školy | `issue` | One weekly meeting document. It belongs to a slot (a Monday) and has its own meeting date, which is the Monday unless the porada was moved. |
-| slot | `monday`, `IssueSlot` | A porada Monday: the key of one porada in URLs, hand-in, mail keys and placement. A slot is stored, skipped, generated or virtual (not yet created). The slot never changes when the porada moves; the meeting date does. |
-| datum porady | `meetingDate` | The day the meeting is held. The document's title, the agenda windows, the deadline and the reports that count all follow it. It is free: „Přesunout poradu“ sets it. |
+| Porada vedení školy | `issue` | One weekly meeting document. It belongs to a slot (a Monday) and has its own meeting date, which is the Monday unless the porada was moved. Its status is `open` or `generated`. |
+| slot | `monday`, `IssueSlot` | A porada Monday: the key of one porada in URLs, hand-in, mail keys and placement. A slot is stored (open or generated) or virtual: a Monday after the calendar's boundary with no row yet (ADR 0054). The slot never changes when the porada moves; the meeting date does. |
+| datum porady | `meetingDate` | The day the meeting is held. The document's title, the agenda windows, the deadline and the reports that count all follow it. It is free: „Přesunout poradu“ sets it, within the neighbouring poradas. |
 | bod | `point` | A numbered item in the document („15). Seminář Matika Česku“). Before it is one, an author writes it as a draft, hands it in, and a reviewer approves, returns or rejects it. A reviewer sees it while it is handed in or decided, never as a draft (a retract hides it again). |
 | POKYNY PRO ZAMĚSTNANCE, ORGANIZAČNÍ ZÁLEŽITOSTI | `pokyny` | Section 1: organisational instructions. Mostly standing content. |
 | INFORMACE Z HOSPODAŘENÍ | `hospodareni` | Section 2: finances. Printed only when it has items. |
 | INFORMACE Z PROVOZU ŠKOLY | `provoz` | Section 3: reports about past events. |
-| zpráva / bod z provozu | `report` point | A report about an event that already happened. |
+| zpráva / bod z provozu | `report` point | A report about an event that already happened. It has no type: the opening reads its grammar from the title (ADR 0067). |
 | pozdní zpráva | late report, `isLateReport` | A report on an event that ends after its porada's deadline but before the meeting day. It is due two hours after the event ends (20.00 if no end time), at most 00.00 of the meeting day, and goes to that porada. |
 | jednání | `jednani` future item | An upcoming meeting. Listed in point 1. |
 | akce | `akce` future item | An upcoming event, written by its author before it happens and reviewed like a point. Listed in point 2 or in the last PROVOZ point. An approved akce is visible to every signed-in user, students included, with its Organizátor, Účastníci and Poznámka (free text, as typed). An approved akce can be changed only by an explicit „Uložit změny“, which sends it for review again; a reviewer can cancel it. After it is over, its author is asked for a report. |
@@ -34,17 +34,18 @@ same word.
 | nový školní rok | `registry.newSchoolYear` | Archives the chosen registry lists for the school year that ends. The lists stay; entries never printed are deleted. |
 | pravidlo uzávěrky | `DeadlineRule` | The setting that gives every uzávěrka: 1 to 4 days before the meeting date, at a time from 8.00 to 22.00 (default 2 days, 20.00). It applies when a porada's row is created, or to one nobody has seen. |
 | uzávěrka | `deadline` | Submission deadline for an issue (default Saturday 20:00 for a Monday meeting: two days before the meeting date, counted back from it). It is fixed when the issue row is created, so a deadline already shown never moves. A point handed in after it goes to the next meeting whose deadline is still ahead. |
-| porada se nekoná | `issue` status `skipped` | A meeting the headmaster cancelled, before or after its deadline. Its points go to the next meeting; „Porada se koná“ undoes it unless that breaks the meeting order. |
-| přesunout poradu | `issues.move` | Moving a porada to another meeting date. The deadline follows by the rule (or is set by hand), and a slot in the way is skipped in the same step. |
-| pořadí porad | `orderConflicts` | The rule that, among porady that are held, meeting dates and deadlines increase and every deadline is before its own meeting day. |
+| porada se nekoná | `issues.drop`, `planDrop` | An open porada that does not take place is deleted from the calendar (ADR 0054). Its points, outline, empty texts and annexes go to the next porada; it cannot be brought back. |
+| přesunout poradu | `issues.move` | Moving a porada to another meeting date. The deadline follows by the rule; the move is refused when it would break the order of poradas (`planMove`). |
+| přidat poradu | `issues.add`, `planAdd` | Adds a porada for a week without one (one per week), not before a generated porada. |
+| pořadí porad | `orderConflicts` | The rule that, among porady, meeting dates and deadlines increase and every deadline is before its own meeting day. |
 | dříve použité osoby | `people.recent` | People the author already put into their own recent points, offered again with their salutation, class and genitive. Nobody else sees them, and there is no separate list. |
 | školní rok | `schoolYear` | School year, e.g. „2026/2027“. Switches on 1 September. |
-| ředitel | `headmaster` role | Full administrator. The only role that generates the document. |
+| ředitel | `headmaster` role | Shown as „Ředitel“. Full administrator. The only role that generates the document. |
 | vedení | `reviewer` role | A member of the school's leadership: approves, edits, returns or rejects submitted points, and may propose HOSPODAŘENÍ and POKYNY items. Shown as „Vedení“ (once „kontrolor“; ADR 0052). |
-| přispěvatel | `submitter` role | An allow-listed user who may file points. |
+| píše zprávy | `submitter` role | An allow-listed user who may file points and akce. Shown as „Píše zprávy“. |
 | žádost o přístup | `accessRequest` | A signed-in user's request for the submitter role, with a free-text reason that only the headmaster sees. |
 | student | `isStudent` | Flag on a user. A student may only be `pending` or `submitter`. |
-| bez přístupu | `pending` role | The role of a new account: it sees nothing until a request is approved or access is granted by hand. |
+| bez přístupu | `pending` role | Shown as „Bez přístupu“. The role of a new account: it sees nothing until a request is approved or access is granted by hand. |
 | zablokovaný účet | `status` `blocked` | An account that cannot sign in. Not the same as blocking further access requests. |
 | ověření totožnosti | step-up | A fresh Entra sign-in (no older than 10 minutes) required before changing users or starting „Nový školní rok“. |
 | 2. pád | `genitive` | The genitive case used in „vyjádření pana Johna Doe“. |
