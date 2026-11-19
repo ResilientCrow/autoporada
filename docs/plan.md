@@ -40,7 +40,7 @@ This plan comes from six interview rounds and a 9-agent design workflow:
 | Area | Decision |
 |---|---|
 | Login | Microsoft 365 SSO only, with a single-tenant Entra app registered by school IT and authenticated by a certificate (`private_key_jwt`). From M8b the web has its own registration (sign-in and directory search) and the mail registration is the worker's (ADR 0021, amending the "single" app of ADR 0003). The app is reachable from the internet on its own subdomain (e.g. `autoporada.ssps.cz`), with Let's Encrypt HTTPS. |
-| Access | Anyone in the tenant can sign in. Only allow-listed users can submit; everyone else gets "Požádat o přístup", and the headmaster approves the request and sets the student/staff flag. |
+| Access | Anyone in the tenant can sign in. Only allow-listed users can submit; everyone else gets "Požádat o přístup", and the headmaster approves the request and sets the tier (zařazení; ADR 0072). |
 | Roles | `pending` → `submitter` → `reviewer` (approve, edit, return, reject points) → `headmaster` (everything else, plus generating the document). Students can only ever be `submitter`. |
 | What submitters may add | Report points (PROVOZ), future items (jednání / akce), HOSPODAŘENÍ items, other POKYNY points. Ohlasy (media and partners) are headmaster-only. |
 | Future items | Placed in the document by date (§6). After an event, its author is prompted to write the report. Each line, in the headmaster's format (checkpoint M2): "úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon". Every part after the date is optional; multi-day items read "neděle 3. května až čtvrtek 14. května 2026" without times. Organizátor, Účastníci and Poznámka are free text printed as typed (ADR 0060, superseding the structured responsible part with its verb, "za …" and people). |
@@ -254,8 +254,8 @@ An inventory test fails the build if any action or route handler is not wrapped.
 ## 5. Data model (Drizzle, UUIDv7, `timestamptz`)
 
 **Identity**
-- `users(tid, oid, display_name, email, job_title, department, role, is_student, status, notify_prefs)`
-  - UNIQUE(tid, oid). CHECK: students only `pending` or `submitter`.
+- `users(tid, oid, display_name, email, job_title, department, role, tier, status, notify_prefs)`
+  - UNIQUE(tid, oid). CHECK: students (tier student or absolvent) only `pending` or `submitter`.
 - `access_requests(user_id, reason, state pending|approved|rejected|blocked|cancelled, decided_by, decided_at)`
   - One pending request per user.
 - `sessions(token_sha256, user_id, auth_time, idle_expires_at, abs_expires_at)`, `auth_tx`
@@ -547,7 +547,7 @@ Immediate notifications:
 5. login page + privacy notice
 
 **M6 Access & users**
-1. access request page + headmaster decision (with student flag); the form submit path (action result → fields, error summary, problem notice) is designed with it
+1. access request page + headmaster decision (with the tier); the form submit path (action result → fields, error summary, problem notice) is designed with it
 2. step-up re-auth
 3. users and roles admin
 

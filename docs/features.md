@@ -13,20 +13,39 @@ has not built yet is under „Not built yet“.
 - Allow-list with access requests. A user who is not approved sees „Zatím tu
   nemáte přístup“ with a reason field and „Odeslat žádost“, and the headmaster
   decides each request („Schválit“, „Zamítnout, znovu může za 30 dní“,
-  „Zablokovat další žádosti“). The requester can withdraw it („Zrušit žádost“).
+  „Zablokovat další žádosti“). Approving also picks the person's „Zařazení“
+  (tier, ADR 0072), which is required. The requester can withdraw it („Zrušit žádost“).
 - The requester gets an e-mail when the request is approved, rejected or
   blocked, and a user gets one when access is granted by hand.
 - After a rejection the person can ask again 30 days later. A blocked request
   is final, but the headmaster can still grant access by hand.
 - Roles: submitter, reviewer, headmaster, and `pending` for a new account. The
   UI calls them „Píše zprávy“, „Vedení“ (ADR 0052), „Ředitel“ and „Bez
-  přístupu“. A student flag limits students to the submitter role (or none).
-- The headmaster finds people in „Lidé“ by name or e-mail. A headmaster cannot
-  change their own role or account status; a sole headmaster first promotes a
-  deputy.
+  přístupu“. Besides the role, every user has a „Zařazení“ (tier): Ředitel,
+  Vedení, Učitel, Zaměstnanec, Student or Absolvent. A tier grants no rights,
+  but a student or an absolvent may only be a submitter (or have no access).
+  Functions (below) grant none either.
+- The headmaster finds people in „Lidé“ by name or e-mail. People who have
+  access but no tier yet (accounts that existed before ADR 0072) are listed
+  first under „Bez zařazení“. The headmaster sets a person's „Zařazení“ there,
+  and it cannot go back to empty. A headmaster cannot change their own role or
+  account status; a sole headmaster first promotes a deputy, but may set their
+  own tier to a staff tier (never student or absolvent).
+- „Funkce“ of a person (the headmaster sets them in „Lidé“, up to five): a kind
+  (Statutární zástupce, Zástupce, Vedoucí, Člen) and a typed complement („pro
+  pedagogickou činnost“, „PR oddělení“; it is never declined). The complement
+  field suggests complements already used for other people. The highest function
+  prints before the person's name in documents, in the order of the kinds above.
 - Re-authentication (step-up, valid 10 minutes, „Ověřit přihlášením“) for
   changes to users' roles, types and account status, and for „Nový školní rok“.
 - „Odhlásit všude“, which revokes all of a user's sessions.
+- Salutation (ADR 0072): the first time a person opens Arch they are asked
+  „Jak Vás máme oslovovat v dokumentech?“, with nothing preselected and no way
+  past it. Employees (every tier but student and absolvent) choose pan or paní,
+  students and absolventi pan or slečna. The question comes back if a tier
+  change makes the saved answer invalid. On „Účet“ the person can change their
+  salutation and write their degrees before and after the name. Only the person
+  sets these; they are never guessed from the name or read from Entra.
 
 ### Submitting
 
@@ -49,20 +68,27 @@ has not built yet is under „Not built yet“.
   - a live document preview.
 - People: the picker offers the author's own people from earlier reports (with
   their salutation, class and genitive form) and the app's own users with
-  access (the picker labels them „ze školního adresáře“). It does not search
+  access (the picker labels them „ze školního adresáře“). Picking a user copies
+  their address card into the row: salutation, the function noun and its
+  complement, and degrees („paní zástupkyně pro pedagogickou činnost Mgr. Jana
+  Nováková“; a teacher prints „profesor“, an absolvent „absolvent pan …“ before the
+  salutation). The row is a copy, not a link, and „Bez funkce“ drops the copied
+  head. Staff who write points get everyone's card; a student gets only their
+  own. The genitive is prefilled with the head in the 2nd case. It does not search
   the school's Microsoft directory: that route has no caller in Arch (ADR
   0065 item 7). A list of people can be pasted, with the class in brackets
   („Tereza Malá (3.B)“). Class codes are saved in the school's form („1. a“
-  becomes „1.A“). „Doplnit oslovení podle jmen“ guesses salutations for
-  checking; they are never guessed otherwise.
+  becomes „1.A“). „Doplnit oslovení podle jmen“ guesses salutations for typed
+  people to check; a user's own salutation is never guessed.
 - Genitive suggestion with an indicator when it was only guessed. The author
   can correct it.
 - Future items (jednání / akce). They are placed into points 1 and 2 and the
   last PROVOZ point by date. An approved akce is visible to every signed-in
   user, students included, with its free-text Organizátor, Účastníci and Poznámka
   as typed (ADR 0060). Organizátor first asks „Organizuje“ or „Koordinuje“, then
-  the names; the line prints „organizuje …“ / „koordinuje …“, or „organizují …“ /
-  „koordinují …“ when the names hold a comma (ADR 0063). Under Účastníci of an akce
+  the names (the step also suggests the app's users, copied as above); the line prints „organizuje …“ / „koordinuje …“, or „organizují …“ /
+  „koordinují …“ when the names hold a comma (ADR 0063), except a comma before
+  a title after a name: „Mgr. Jan Novák, Ph.D.“ is one person. Under Účastníci of an akce
   the author picks one address for the whole group: „slečny a pánové“, „slečny“,
   „pánové“ or „bez oslovení“, nothing preselected; the line prints „zúčastní se
   slečny a pánové: …“ (one name: „slečna“, „pan“), „slečny a pánové“ needs several

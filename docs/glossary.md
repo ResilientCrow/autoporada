@@ -44,9 +44,11 @@ same word.
 | vedení | `reviewer` role | A member of the school's leadership: approves, edits, returns or rejects submitted points, and may propose HOSPODAŘENÍ and POKYNY items. Shown as „Vedení“ (once „kontrolor“; ADR 0052). |
 | píše zprávy | `submitter` role | An allow-listed user who may file points and akce. Shown as „Píše zprávy“. |
 | žádost o přístup | `accessRequest` | A signed-in user's request for the submitter role, with a free-text reason that only the headmaster sees. |
-| student | `isStudent` | Flag on a user. A student may only be `pending` or `submitter`. |
+| zařazení | `tier` | A user's place in the school: ředitel, vedení, učitel, zaměstnanec, student or absolvent. Set by the headmaster; grants no rights. A student or an absolvent (`isStudent`) may only be `pending` or `submitter`. |
+| funkce | `user_functions` | What a person holds besides the tier: a head (statutární zástupce, zástupce, vedoucí, člen) and a typed complement („pro majetek“). Set by the headmaster, up to five; the highest prints before the name. Grants no rights. |
+| adresní karta | `cards` (Arch state) | A user's name, salutation, degrees and printed head with complement, offered to staff (a student sees only their own) to copy into a people row. Never e-mail, role, tier or the list of functions. |
 | bez přístupu | `pending` role | Shown as „Bez přístupu“. The role of a new account: it sees nothing until a request is approved or access is granted by hand. |
 | zablokovaný účet | `status` `blocked` | An account that cannot sign in. Not the same as blocking further access requests. |
 | ověření totožnosti | step-up | A fresh Entra sign-in (no older than 10 minutes) required before changing users or starting „Nový školní rok“. |
 | 2. pád | `genitive` | The genitive case used in „vyjádření pana Johna Doe“. |
-| oslovení | `salutation` | pan / paní / slečna. |
+| oslovení | `salutation` | pan / paní / slečna. A user's own answer (employees pan or paní, students and absolventi pan or slečna), never guessed. |
