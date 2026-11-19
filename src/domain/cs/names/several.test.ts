@@ -29,6 +29,13 @@ describe('severalPeople: names typed on one line', () => {
     expect(severalPeople('Eva Malá, Jan Novák, Ph.D.')).toBe(true);
   });
 
+  it('keeps an affiliation in brackets after the titles with its person', () => {
+    expect(severalPeople('Jan Novák, Ph.D. (ČVUT)')).toBe(false);
+    expect(severalPeople('Jan Novák, Ph.D., Eva Malá')).toBe(true);
+    expect(severalPeople('Jan Novák (ČVUT), Eva Malá')).toBe(true);
+    expect(severalPeople('Jan Novák, Ph.D. (ČVUT), Eva Malá (UK)')).toBe(true);
+  });
+
   it('needs the whole part to be titles: a title with other words is a name', () => {
     expect(severalPeople('Jan Novák, Ph.D. Eva Malá')).toBe(true);
   });
