@@ -142,7 +142,9 @@ const salutationOptions = (u: User) => salutationsFor(isStudentTier(u.tier ?? nu
 export function Osloveni() {
   const { s, apply } = useStore(); const u = Q.me(s)!;
   return <Entry><Top h="Jak Vás máme oslovovat v dokumentech?" lead="Použijeme to všude, kde se v dokumentu píše o Vás jménem. Změnit to můžete kdykoli na stránce Účet." />
-    <Seg label="Oslovení" value={null} options={salutationOptions(u)} onChange={(v) => apply(A.setAddress({ salutation: v, titlesBefore: u.titlesBefore ?? null, titlesAfter: u.titlesAfter ?? null }))} /></Entry>;
+    <Seg label="Oslovení" value={null} options={salutationOptions(u)} onChange={(v) => apply(A.setAddress({ salutation: v, titlesBefore: u.titlesBefore ?? null, titlesAfter: u.titlesAfter ?? null }))} />
+    {/* The question cannot be skipped, but whoever will not answer can leave. */}
+    <button className="q" onClick={() => { apply(A.signOut); go('/'); }}>Zpět na přihlášení</button><a className="q" href="#/soukromi">Jak s údaji zacházíme</a></Entry>;
 }
 export function Ucet() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const [all, setAll] = useState(false);
