@@ -584,4 +584,55 @@ test.describe('the Arch UI', () => {
     await page.goto('/?chyba=%3Cscript%3E');
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
+  test('the salutation question blocks the app until it is answered, and Účet changes the answer', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    const project = testInfo.project.name;
+    const email = emailOf('osloveni', project);
+    const answer = () =>
+      withClient(async (client) => {
+        const { rows } = await client.query<{
+          salutation: string | null;
+          titles_after: string | null;
+        }>('SELECT salutation, titles_after FROM users WHERE email = $1', [email]);
+        return rows[0] ?? null;
+      });
+    expect(await answer()).toMatchObject({ salutation: null });
+
+    await signInAs(signInAsRe('osloveni', project));
+    // A deep link lands on the question, with nothing preselected and no other way in.
+    await page.goto('/#/ucet');
+    const question = page.getByRole('heading', { name: 'Jak Vás máme oslovovat v dokumentech?' });
+    await expect(question).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'pan', exact: true })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    await expect(page.getByRole('radio', { name: 'paní' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    // An employee is not offered „slečna“.
+    await expect(page.getByRole('radio', { name: 'slečna' })).toHaveCount(0);
+
+    // One click saves the answer and lets the deep link through.
+    await page.getByRole('radio', { name: 'paní' }).click();
+    await expect(question).toHaveCount(0);
+    await expect(page.getByRole('radio', { name: 'paní' })).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(async () => (await answer())?.salutation).toBe('pani');
+
+    // Účet shows the answer and changes it, with a degree.
+    await page.getByRole('radio', { name: 'pan', exact: true }).click();
+    await page.getByLabel('Titul za jménem').fill('Ph.D.');
+    await page.getByRole('button', { name: 'Uložit', exact: true }).click();
+    await expect(page.getByText('Uloženo.')).toBeVisible();
+    await expect.poll(answer).toMatchObject({ salutation: 'pan', titles_after: 'Ph.D.' });
+    await page.reload();
+    await expect(page.getByRole('radio', { name: 'pan', exact: true })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(page.getByLabel('Titul za jménem')).toHaveValue('Ph.D.');
+  });
 });

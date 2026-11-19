@@ -763,6 +763,34 @@
         },
         {
           "requestParam": "subject",
+          "match": "osloveni-d",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000041",
+            "name": "Ondřej Oslovený",
+            "preferred_username": "osloveni-d@ssps.cz",
+            "upn": "osloveni-d@ssps.cz",
+            "email": "osloveni-d@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
+          "match": "osloveni-m",
+          "claims": {
+            "aud": ["autoporada-dev"],
+            "tid": "00000000-0000-0000-0000-000000000001",
+            "oid": "0d000000-0000-4000-8000-000000000042",
+            "name": "Olivie Oslovená",
+            "preferred_username": "osloveni-m@ssps.cz",
+            "upn": "osloveni-m@ssps.cz",
+            "email": "osloveni-m@ssps.cz",
+            "acct": 0
+          }
+        },
+        {
+          "requestParam": "subject",
           "match": "*",
           "claims": {
             "aud": ["autoporada-dev"],

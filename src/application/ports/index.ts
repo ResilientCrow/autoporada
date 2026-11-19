@@ -132,4 +132,4 @@ export type { ReportPlaceholderRepo, StoredPlaceholder } from './report-placehol
 export type { NewSession, SessionRecord, SessionRepo, SessionSelector } from './sessions';
 export type { SettingsRepo, StoredSetting } from './settings';
 export type { PendingSignIn, SignInRepo } from './sign-ins';
-export type { AccessPatch, UserRecord, UserRepo, VerifiedIdentity } from './users';
+export type { AccessPatch, AddressPatch, UserRecord, UserRepo, VerifiedIdentity } from './users';

@@ -153,7 +153,12 @@ export {
   saveListInput,
   saveListOutput,
 } from './registry';
-export { changeUserAccessInput, changeUserAccessOutput } from './users';
+export {
+  changeUserAccessInput,
+  changeUserAccessOutput,
+  setAddressInput,
+  setAddressOutput,
+} from './users';
 export {
   SETTINGS,
   settingsSaveInput,

@@ -12,6 +12,10 @@ export const USER_ACCESS: AuditShape<UserRecord> = {
   department: 'omit',
   role: 'value',
   tier: 'value',
+  // Not access: a person's own answer to how documents address them (ADR 0072 decision E).
+  salutation: 'omit',
+  titlesBefore: 'omit',
+  titlesAfter: 'omit',
   status: 'value',
   version: 'omit',
   createdAt: 'omit',

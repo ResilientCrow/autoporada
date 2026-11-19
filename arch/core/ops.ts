@@ -92,6 +92,8 @@ export const requestAccess = simple('requestAccess', S.requestAccess);
 export const cancelRequest = simple('cancelRequest', S.cancelRequest);
 export const decideRequest = simple('decideRequest', S.decideRequest);
 export const setUser = simple('setUser', S.setUser);
+/** The viewer's own salutation and degrees; the server keeps no version for them. */
+export const setAddress = simple('setAddress', S.setAddress);
 /** A draft's type or kind; the real app fixes them at the create, the bridge lets the author change a draft's. */
 export const retype = (id: string, patch: { kind: PointKind }): Fx => tag((s) => ({ ...s, points: s.points.map((x) => (x.id === id ? { ...x, ...patch } : x)) }), { k: 'retype', a: [id, patch] });
 /** The session lives at the server: these leave the app for its sign-out and step-up. */
@@ -214,6 +216,10 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
       const [rid, to, tier] = a as unknown as [string, 'approved' | 'rejected' | 'blocked', string | undefined];
       if (to === 'approved') return tier ? [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision: 'approve', tier } }] : [];
       return [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision: to === 'rejected' ? 'reject' : 'block', confirmed: true } }];
+    }
+    case 'setAddress': {
+      const [x] = a as unknown as [{ salutation: string; titlesBefore: string | null; titlesAfter: string | null }];
+      return [{ name: 'users.setAddress', input: { salutation: x.salutation, titlesBefore: x.titlesBefore?.trim() || null, titlesAfter: x.titlesAfter?.trim() || null } }];
     }
     case 'setUser': {
       const [uid] = a as unknown as [string, { role?: Role }];

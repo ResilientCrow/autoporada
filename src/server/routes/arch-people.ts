@@ -1,6 +1,7 @@
 /** Branch arch-ui only: how Arch shows people and trail entries the real model keeps differently. */
 
 import { isStudentTier, type Tier } from '@/domain/actor';
+import type { Salutation } from '@/domain/cs';
 
 export const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -26,21 +27,6 @@ function splitName(displayName: string) {
   return { givenName: parts.join(' ') || displayName, familyName };
 }
 
-/**
- * Entra sends no salutation. Arch puts the author into the organisers with one, so it is guessed
- * the way the prototype's „Doplnit oslovení podle jmen“ does: -ová/-á or a given name in -a reads
- * as a woman; a student woman is „slečna“.
- */
-function guessSalutation(
-  { givenName, familyName }: { givenName: string; familyName: string },
-  student: boolean,
-) {
-  const woman =
-    /(ová|á)$/i.test(familyName) ||
-    (/a$/i.test(givenName) && !/^(jan|honz|mich|luk|nikol|jir|kub|mis|sas)a$/i.test(givenName));
-  return !woman ? 'pan' : student ? 'slecna' : 'pani';
-}
-
 /** A reviewer's edit keeps the previous fields; Arch shows them as text. */
 export function flatBefore(before: unknown): Record<string, string> {
   const out: Record<string, string> = {};
@@ -59,6 +45,9 @@ interface UserRow {
   readonly role: string;
   readonly status: string;
   readonly tier: Tier | null;
+  readonly salutation: Salutation | null;
+  readonly titlesBefore: string | null;
+  readonly titlesAfter: string | null;
   readonly jobTitle: string | null;
   readonly department: string | null;
 }
@@ -66,7 +55,7 @@ interface UserRow {
 /**
  * The people a viewer's state holds: the headmaster sees the directory (`users.view`); anyone else
  * only the names their own view already mentions, and role, status and contact of nobody but
- * themselves. Who of the vedení returned or edited a point is not shown to its author (`points.get`):
+ * themselves. Every row carries the person's salutation and degrees, since they print in a document. Who of the vedení returned or edited a point is not shown to its author (`points.get`):
  * they see „Vedení“.
  */
 export function peopleFor(input: {
@@ -87,7 +76,10 @@ export function peopleFor(input: {
       const student = isStudentTier(u.tier);
       return {
         id: u.id,
-        salutation: guessSalutation(name, student) as string,
+        // The person's own answer, never guessed (ADR 0072 item 6): none yet comes without one.
+        salutation: u.salutation as string | null,
+        ...(u.titlesBefore && { titlesBefore: u.titlesBefore }),
+        ...(u.titlesAfter && { titlesAfter: u.titlesAfter }),
         ...name,
         email: full ? (u.email ?? '') : '',
         role: full ? u.role : 'submitter',

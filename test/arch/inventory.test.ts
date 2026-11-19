@@ -72,6 +72,7 @@ describe('inventory of entry points', () => {
       'points.retract',
       'points.submit',
       'points.withdraw',
+      'users.setAddress',
     ]);
     expect(LIMITS.autosave).toEqual({ max: 120, windowMs: 60_000, key: 'user' });
   });
@@ -81,6 +82,7 @@ describe('inventory of entry points', () => {
     expect(limitOf('future.save')).toBe('autosave');
     expect(limitOf('points.submit')).toBe('submission');
     expect(limitOf('access.request')).toBe('submission');
+    expect(limitOf('users.setAddress')).toBe('submission');
     expect(limitOf('points.decide')).toBe('admin');
     expect(limitOf('registry.newSchoolYear')).toBe('admin');
     expect(limitOf('no.such')).toBe('admin');

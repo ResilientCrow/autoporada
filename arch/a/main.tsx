@@ -6,7 +6,7 @@ import './app.css';
 import { StoreProvider, useRoute, useStore } from '../core/react';
 import * as Q from '../core/select';
 import { AkceDetail, Navrh, NovaAkce } from './akce';
-import { Clovek, Lide, Login, Nastaveni, NovyRok, Pristup, Seznam, Seznamy, SignInNotice, Soukromi, Ucet } from './admin';
+import { Clovek, Lide, Login, Nastaveni, NovyRok, Osloveni, Pristup, Seznam, Seznamy, SignInNotice, Soukromi, Ucet } from './admin';
 import { Domu, Moje, NotFound, Tyden, Udalosti, Zprava } from './home';
 import { Archiv, ArchivDoc, Hotovo, Nahled, Pokyny, Porada, Pridat, Prilohy, Udaje, Zpravy } from './porada';
 import { Kontrola } from './review';
@@ -17,6 +17,8 @@ function Router() {
   if (a === 'soukromi') return <Soukromi />;
   if (!u) return <Login />;
   if (u.role === 'pending' || u.status === 'blocked') return <Pristup />;
+  // Before anything else, whatever address was opened: it stays in the hash and renders once the question is answered.
+  if (Q.needsAddress(u)) return <Osloveni />;
   const head = u.role === 'headmaster'; const staff = Q.atLeast(u.role, 'reviewer');
   // A point opened from Přidat do porady returns there once saved.
   const fromPridat = r.q.get('z') === 'pridat' ? { from: 'pridat' as const } : {};

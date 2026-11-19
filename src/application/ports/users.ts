@@ -1,4 +1,5 @@
 import type { Role, Tier, UserStatus } from '@/domain/actor';
+import type { Salutation } from '@/domain/cs';
 
 export interface UserRecord {
   readonly id: string;
@@ -11,6 +12,11 @@ export interface UserRecord {
   readonly role: Role;
   /** Who they are at the school (ADR 0072); a student or absolvent tier limits access. */
   readonly tier: Tier | null;
+  /** How documents address them (ADR 0072 item 6): their own answer, null until given. */
+  readonly salutation: Salutation | null;
+  /** Degrees as they typed them: before the name („Mgr.“) and after it („Ph.D.“). */
+  readonly titlesBefore: string | null;
+  readonly titlesAfter: string | null;
   readonly status: UserStatus;
   readonly version: number;
   readonly createdAt: Date;
@@ -33,6 +39,13 @@ export interface AccessPatch {
   readonly status?: UserStatus;
 }
 
+/** A person's own answer to how documents address them; all three fields are written together. */
+export interface AddressPatch {
+  readonly salutation: Salutation | null;
+  readonly titlesBefore: string | null;
+  readonly titlesAfter: string | null;
+}
+
 /** Users, as the transaction's principal may see them (scope `user`). */
 export interface UserRepo {
   get(id: string): Promise<UserRecord | null>;
@@ -46,7 +59,7 @@ export interface UserRepo {
   }): Promise<readonly UserRecord[]>;
   /**
    * Creates the user on first sign-in, or refreshes their display fields.
-   * Never changes role, status or the tier. System principals only.
+   * Never changes role, status, the tier or the address. System principals only.
    */
   upsertFromClaims(identity: VerifiedIdentity): Promise<UserRecord>;
   /**
@@ -59,5 +72,12 @@ export interface UserRepo {
    * (`test.seed`, `cli:*`) are not affected.
    */
   changeAccess(id: string, expectedVersion: number, patch: AccessPatch): Promise<UserRecord>;
+  /**
+   * Writes the salutation and the degrees of the row `id`. Not access: the version stays and no
+   * session ends. A user principal writes only their own row (`profile.manage`, else
+   * ScopeViolation); of the system only `test.seed` does. ScopeViolation too for a row the
+   * principal does not see.
+   */
+  setAddress(id: string, patch: AddressPatch): Promise<UserRecord>;
   countActiveHeadmasters(): Promise<number>;
 }

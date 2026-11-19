@@ -12,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { TIERS, type Tier } from '@/domain/actor';
+import { PERSON_FIELD_MAX, SALUTATIONS, type Salutation } from '@/domain/cs';
 
 import { at, bytea, createdAt, id } from './columns';
 
@@ -27,6 +28,7 @@ export const accessRequestState = pgEnum('access_request_state', [
 export const authPurpose = pgEnum('auth_purpose', ['login', 'step_up']);
 
 const tierList = sql.raw(TIERS.map((tier) => `'${tier}'`).join(','));
+const salutationList = sql.raw(SALUTATIONS.map((salutation) => `'${salutation}'`).join(','));
 
 /**
  * Everyone in the tenant who has signed in. Keyed by Entra (tid, oid); the
@@ -45,6 +47,11 @@ export const users = pgTable(
     role: role().notNull().default('pending'),
     /** Who they are at the school (ADR 0072); empty until the headmaster sets it. */
     tier: text().$type<Tier>(),
+    /** How documents address them (ADR 0072 item 6): the person's own answer, never guessed. */
+    salutation: text().$type<Salutation>(),
+    /** „Mgr.“ before and „Ph.D.“ after the name, as the person types them. */
+    titlesBefore: text(),
+    titlesAfter: text(),
     status: userStatus().notNull().default('active'),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
@@ -56,6 +63,18 @@ export const users = pgTable(
   (t) => [
     unique('users_entra_key').on(t.tid, t.oid),
     check('users_tier', sql`${t.tier} IS NULL OR ${t.tier} IN (${tierList})`),
+    check(
+      'users_salutation',
+      sql`${t.salutation} IS NULL OR ${t.salutation} IN (${salutationList})`,
+    ),
+    check(
+      'users_titles_before',
+      sql`${t.titlesBefore} IS NULL OR (char_length(${t.titlesBefore}) <= ${sql.raw(String(PERSON_FIELD_MAX.title))} AND ${t.titlesBefore} !~ '[[:cntrl:]]')`,
+    ),
+    check(
+      'users_titles_after',
+      sql`${t.titlesAfter} IS NULL OR (char_length(${t.titlesAfter}) <= ${sql.raw(String(PERSON_FIELD_MAX.title))} AND ${t.titlesAfter} !~ '[[:cntrl:]]')`,
+    ),
     // Students and absolventi can only ever submit (plan §1, ADR 0072); policy.can enforces it too.
     check(
       'users_student_role',

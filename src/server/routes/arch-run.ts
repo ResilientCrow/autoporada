@@ -33,6 +33,7 @@ export const SUBMISSION = new Set([
   'future.startReport',
   'access.request',
   'access.cancel',
+  'users.setAddress',
 ]);
 export const limitOf = (name: string): UserLimitName =>
   AUTOSAVE.has(name) ? 'autosave' : SUBMISSION.has(name) ? 'submission' : 'admin';

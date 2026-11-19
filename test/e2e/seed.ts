@@ -10,12 +10,16 @@ import { Client } from 'pg';
 
 type Role = 'pending' | 'submitter' | 'reviewer' | 'headmaster';
 
+type Salutation = 'pan' | 'pani' | 'slecna';
+
 type RequestState = 'pending' | 'rejected' | 'cancelled' | 'blocked';
 
 interface Persona {
   /** The `subject` of the mock IdP's mapping. */
   readonly subject: string;
   readonly role: Role;
+  /** The answer to Arch's salutation question; `null` leaves it unanswered, so the question blocks the app (ADR 0072). */
+  readonly salutation?: Salutation | null;
   /** An access request the user starts with; the offsets are days before the run (decided only for a decision). */
   readonly request?: {
     readonly state: RequestState;
@@ -117,7 +121,25 @@ const PERSONAS: readonly Persona[] = [
   // archa writes through the Arch UI (branch arch-ui).
   { subject: 'archa-d', role: 'submitter' },
   { subject: 'archa-m', role: 'submitter' },
+  // Has never answered the salutation question: the personas Arch asks (arch.spec.ts), one per project.
+  { subject: 'osloveni-d', role: 'submitter', salutation: null },
+  { subject: 'osloveni-m', role: 'submitter', salutation: null },
 ];
+
+/**
+ * The salutation a persona starts with unless the persona says otherwise: read from the name the way
+ * the app once guessed (a family name ending in -ová or -á, or a given name ending in -a bar the
+ * men's ones, is feminine). The app no longer guesses; the seed does it once so the personas stay
+ * as they were.
+ */
+function salutationOf(name: string): Salutation {
+  const [given = '', ...rest] = name.trim().split(/\s+/);
+  const family = rest.at(-1) ?? '';
+  const womanByFamily = /(ová|á)$/i.test(family);
+  const womanByGiven =
+    /a$/i.test(given) && !/^(jan|honz|mich|luk|nikol|jir|kub|mis|sas)a$/i.test(given);
+  return womanByFamily || womanByGiven ? 'pani' : 'pan';
+}
 
 interface Mapping {
   readonly match: string;
@@ -144,8 +166,15 @@ export async function seed(databaseUrl: string): Promise<void> {
     for (const persona of PERSONAS) {
       const { tid, oid, name, email } = identityOf(persona.subject);
       const { rows } = await client.query<{ id: string }>(
-        'INSERT INTO users (tid, oid, display_name, email, role) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-        [tid, oid, name, email, persona.role],
+        'INSERT INTO users (tid, oid, display_name, email, role, salutation) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [
+          tid,
+          oid,
+          name,
+          email,
+          persona.role,
+          persona.salutation === undefined ? salutationOf(name) : persona.salutation,
+        ],
       );
       const userId = rows[0]!.id;
       if (persona.role === 'headmaster') headmaster = userId;

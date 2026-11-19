@@ -73,6 +73,9 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
         ...display,
         role: 'pending',
         tier: null,
+        salutation: null,
+        titlesBefore: null,
+        titlesAfter: null,
         status: 'active',
         version: 1,
         createdAt: ctx.now,
@@ -121,6 +124,18 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
         version: user.version + 1,
         updatedAt: ctx.now,
       });
+    },
+    async setAddress(id, patch) {
+      guard(tx, true);
+      // As the repo: the own row, or a test seed.
+      if (principal.kind === 'system') {
+        if (principal.reason !== 'test.seed') throw new ScopeViolation();
+      } else if (principal.actor.id !== id || !can(principal.actor, { action: 'profile.manage' })) {
+        throw new ScopeViolation();
+      }
+      const user = find(id);
+      if (!user) throw new ScopeViolation();
+      return save({ ...user, ...patch, updatedAt: ctx.now });
     },
     async countActiveHeadmasters() {
       guard(tx, false);

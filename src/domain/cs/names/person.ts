@@ -4,6 +4,14 @@ export type Salutation = 'pan' | 'pani' | 'slecna';
 export const SALUTATIONS = ['pan', 'pani', 'slecna'] as const satisfies readonly Salutation[];
 export type Sex = 'm' | 'f';
 
+/**
+ * What a person may choose as their own salutation (ADR 0072 item 6): a student or absolvent
+ * is a „slečna“ or a „pan“, anyone else a „paní“ or a „pan“. A flag, so domain/actor needs no cs.
+ */
+export function salutationsFor(student: boolean): readonly Salutation[] {
+  return student ? ['pan', 'slecna'] : ['pan', 'pani'];
+}
+
 export interface PersonName {
   readonly salutation: Salutation;
   /** „Mgr.“, „Ing. arch.“ — written before the name, never declined. */

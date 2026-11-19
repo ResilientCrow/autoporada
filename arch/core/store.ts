@@ -1,7 +1,7 @@
 import { isStudentTier, type Tier } from '@/domain/actor';
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
 import { missingForSubmit, newDraft, openingInput, REPORT_BULLETS, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
-import { openingSentence } from '@/domain/cs';
+import { openingSentence, type Salutation } from '@/domain/cs';
 import { addDays, compareDates, parseIsoDate, parseWallTime, toIsoDate, type CalDate } from '@/domain/time';
 import { emptyRichDoc, isRichDocEmpty, richDocFromText, richDocToPlainText, type RichDoc } from '@/domain/richtext';
 import { working, atLeast, buildDoc, partLabels, systemText, isAutoRow, canDecideFuture, canDecidePoint, handInTo, issueOf, me, nameOf, owedMonday, plannedOf, preflight, ruleOf, slotsOf, specOf, todayOf, userById, yearOf } from './select';
@@ -282,6 +282,11 @@ export const decideRequest = (rid: string, to: 'approved' | 'rejected' | 'blocke
   if (to === 'approved') { const ex = s.users.find((u) => u.email === r.email); if (ex) s = { ...s, users: up(s.users, ex.id, (u) => ({ ...u, role: 'submitter', ...placed })) }; else { const [n, uid] = id(s, 'u'); const [givenName = '', familyName = ''] = r.name.split(' '); s = { ...n, users: [...n.users, { id: uid, salutation: 'pan', givenName, familyName, email: r.email, role: 'submitter', status: 'active', job: 'Učitel', ...placed }] }; } }
   const ex = s.users.find((u) => u.email === r.email);
   return ex ? mail(s, ex.id, 'Přístup do Autoporady', to === 'approved' ? 'Přístup byl schválen.' : 'Přístup nebyl schválen.') : s;
+};
+/** The viewer's own salutation and degrees (ADR 0072 item 6); a degree left empty is none. */
+export const setAddress = (a: { salutation: Salutation; titlesBefore: string | null; titlesAfter: string | null }): Fx => (s) => {
+  const before = a.titlesBefore?.trim(); const after = a.titlesAfter?.trim();
+  return { ...s, users: up(s.users, s.userId!, ({ titlesBefore: _b, titlesAfter: _a, ...u }) => ({ ...u, salutation: a.salutation, ...(before && { titlesBefore: before }), ...(after && { titlesAfter: after }) })) };
 };
 /** On the own row only a staff tier changes (ADR 0072, decision A); a student or absolvent is at most a submitter. */
 export const setUser = (uid: string, patch: { role?: Role; status?: 'active' | 'blocked'; tier?: Tier }): Fx => (s) => {

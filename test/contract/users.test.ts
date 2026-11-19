@@ -321,4 +321,92 @@ describe('UserRepo (port contract)', () => {
       role: 'reviewer',
     });
   });
+
+  describe('setAddress (ADR 0072 item 6)', () => {
+    const ADDRESS = { salutation: 'pani', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' } as const;
+    const set = (by: Principal, id: string, patch: Parameters<Tx['users']['setAddress']>[1]) =>
+      world.tx(by, async (tx) => {
+        const after = await tx.users.setAddress(id, patch);
+        await tx.audit.record({ action: 'user.address.change', target: { type: 'user', id } });
+        return after;
+      });
+    const read = (id: string) => world.tx(cli, (tx) => tx.users.get(id), 'read');
+
+    it('starts without an address', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      expect(user).toMatchObject({ salutation: null, titlesBefore: null, titlesAfter: null });
+    });
+
+    it('writes the own row, leaves the version and the access alone, and signs nobody out', async () => {
+      const user = await world.seed.user({ role: 'reviewer', tier: 'vedeni' });
+      await signIn(user, createHash('sha256').update('mine').digest('hex'));
+      world.clock.advance(60_000);
+      const after = await set(world.as(user), user.id, ADDRESS);
+      expect(after).toMatchObject({
+        ...ADDRESS,
+        version: user.version,
+        role: 'reviewer',
+        tier: 'vedeni',
+        status: 'active',
+      });
+      expect(await read(user.id)).toMatchObject(ADDRESS);
+      const sha = createHash('sha256').update('mine').digest('hex');
+      expect(await world.tx(cli, (tx) => tx.sessions.find(sha), 'read')).not.toBeNull();
+    });
+
+    it('clears a field when it is given as null', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      await set(world.as(user), user.id, ADDRESS);
+      const after = await set(world.as(user), user.id, {
+        salutation: 'pan',
+        titlesBefore: null,
+        titlesAfter: null,
+      });
+      expect(after).toMatchObject({ salutation: 'pan', titlesBefore: null, titlesAfter: null });
+    });
+
+    it('writes nobody else’s row, not even a headmaster’s', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter' });
+      await expect(set(world.as(head), user.id, ADDRESS)).rejects.toBeInstanceOf(ScopeViolation);
+      await expect(set(world.as(user), head.id, ADDRESS)).rejects.toBeInstanceOf(ScopeViolation);
+      expect(await read(user.id)).toMatchObject({ salutation: null });
+    });
+
+    it('lets a pending user write theirs and a blocked one nothing', async () => {
+      const pending = await world.seed.user({ role: 'pending' });
+      await expect(set(world.as(pending), pending.id, ADDRESS)).resolves.toMatchObject(ADDRESS);
+      const blocked = await world.seed.user({ role: 'submitter', status: 'blocked' });
+      await expect(set(world.as(blocked), blocked.id, ADDRESS)).rejects.toBeInstanceOf(
+        ScopeViolation,
+      );
+    });
+
+    it('lets the system write only as a test seed', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      await expect(set(cli, user.id, ADDRESS)).rejects.toBeInstanceOf(ScopeViolation);
+      await expect(set(system('auth.login'), user.id, ADDRESS)).rejects.toBeInstanceOf(
+        ScopeViolation,
+      );
+      await expect(set(system('test.seed'), user.id, ADDRESS)).resolves.toMatchObject(ADDRESS);
+    });
+
+    it('is kept by a later sign-in, which refreshes the display fields only', async () => {
+      const user = await world.seed.user({ role: 'submitter' });
+      await set(world.as(user), user.id, ADDRESS);
+      const again = await world.tx(cli, async (tx) => {
+        const row = await tx.users.upsertFromClaims({
+          tid: user.tid,
+          oid: user.oid,
+          displayName: 'Jana Svobodová',
+          email: null,
+          jobTitle: null,
+          department: null,
+        });
+        await tx.audit.record({ action: 'auth.login', target: { type: 'user', id: row.id } });
+        return row;
+      });
+      expect(again).toMatchObject({ ...ADDRESS, displayName: 'Jana Svobodová' });
+    });
+  });
 });

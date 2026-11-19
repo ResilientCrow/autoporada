@@ -24,6 +24,9 @@ export const USER_RECORD = {
   department: users.department,
   role: users.role,
   tier: users.tier,
+  salutation: users.salutation,
+  titlesBefore: users.titlesBefore,
+  titlesAfter: users.titlesAfter,
   status: users.status,
   version: users.version,
   createdAt: users.createdAt,
@@ -112,6 +115,25 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
         .where(and(eq(users.id, id), eq(users.version, expectedVersion), visible()))
         .returning(USER_RECORD);
       if (!row) throw new StaleVersion();
+      return row;
+    },
+    async setAddress(id, patch) {
+      if (principal.kind === 'system') {
+        if (principal.reason !== 'test.seed') throw new ScopeViolation();
+      } else if (principal.actor.id !== id || !can(principal.actor, { action: 'profile.manage' })) {
+        throw new ScopeViolation();
+      }
+      const [row] = await db
+        .update(users)
+        .set({
+          salutation: patch.salutation,
+          titlesBefore: patch.titlesBefore,
+          titlesAfter: patch.titlesAfter,
+          updatedAt: ctx.now,
+        })
+        .where(and(eq(users.id, id), visible()))
+        .returning(USER_RECORD);
+      if (!row) throw new ScopeViolation();
       return row;
     },
     async countActiveHeadmasters() {

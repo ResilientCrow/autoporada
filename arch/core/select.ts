@@ -1,5 +1,6 @@
 import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
-import { formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, participantsFits, participantsSeveral, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
+import { isStudentTier } from '@/domain/actor';
+import { formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, participantsFits, participantsSeveral, salutationsFor, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
 import { missingForSubmit, REPORT_BULLETS, type BulletSpec, type DraftPerson } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
@@ -24,6 +25,8 @@ export const firstExtraAnnex = (iss: Issue) => (hasAnnex2(iss) ? 3 : 2);
 export const todayOf = (s: State): CalDate => instantToWallClock(nowOf(s)).date;
 export const me = (s: State): User | null => s.users.find((u) => u.id === s.userId) ?? null;
 export const userById = (s: State, id: string) => s.users.find((u) => u.id === id);
+/** Arch asks how to address the viewer until their salutation is one their tier offers; a tier change brings the question back (ADR 0072 item 6). */
+export const needsAddress = (u: User): boolean => u.salutation === null || !salutationsFor(isStudentTier(u.tier ?? null)).includes(u.salutation);
 export const nameOf = (u?: User | null) => (u ? `${u.givenName} ${u.familyName}`.trim() : '');
 /** Czech count: 1 bod, 2 body, 5 bodů, 0 bodů. */
 export const counts = (n: number, a: string, b: string, c: string) => (n === 1 ? `1 ${a}` : n >= 2 && n <= 4 ? `${n} ${b}` : `${n} ${c}`);

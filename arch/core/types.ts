@@ -8,7 +8,7 @@ import type { CalDate, WallTime } from '@/domain/time';
 
 export type Role = 'pending' | 'submitter' | 'reviewer' | 'headmaster';
 export interface User {
-  id: string; salutation: Salutation; givenName: string; familyName: string; titlesBefore?: string;
+  id: string; /** The person's own answer (ADR 0072 item 6); null until they gave it, never guessed. */ salutation: Salutation | null; givenName: string; familyName: string; titlesBefore?: string; titlesAfter?: string;
   email: string; role: Role; isStudent: boolean; status: 'active' | 'blocked'; affiliation?: string; job?: string;
   /** Who they are at the school (ADR 0072): only on full rows (the headmaster's view, the own row); null until set. */
   tier?: Tier | null;

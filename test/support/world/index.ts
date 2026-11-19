@@ -51,7 +51,19 @@ declare module 'vitest' {
 }
 
 type UserSeed = Partial<
-  Pick<UserRecord, 'role' | 'tier' | 'status' | 'displayName' | 'tid' | 'oid' | 'email'>
+  Pick<
+    UserRecord,
+    | 'role'
+    | 'tier'
+    | 'status'
+    | 'displayName'
+    | 'tid'
+    | 'oid'
+    | 'email'
+    | 'salutation'
+    | 'titlesBefore'
+    | 'titlesAfter'
+  >
 >;
 
 /** A row of someone's request history; `createdAt` defaults to the world's clock. */
@@ -218,9 +230,18 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             ...(tier !== undefined && { tier }),
             ...(status && { status }),
           };
-          return Object.keys(patch).length > 0
-            ? tx.users.changeAccess(user.id, user.version, patch)
-            : user;
+          const placed =
+            Object.keys(patch).length > 0
+              ? await tx.users.changeAccess(user.id, user.version, patch)
+              : user;
+          const { salutation, titlesBefore, titlesAfter } = seed;
+          return salutation || titlesBefore || titlesAfter
+            ? tx.users.setAddress(user.id, {
+                salutation: salutation ?? null,
+                titlesBefore: titlesBefore ?? null,
+                titlesAfter: titlesAfter ?? null,
+              })
+            : placed;
         }),
       accessRequest: (seed) => backend().insertAccessRequest(accessRequestRow(seed, clock.now())),
       setting: (key, value) => backend().insertSetting(key, value),

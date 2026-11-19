@@ -430,5 +430,17 @@
     "givenName": "Arnoštka",
     "familyName": "Archová",
     "displayName": "Arnoštka Archová"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000041",
+    "givenName": "Ondřej",
+    "familyName": "Oslovený",
+    "displayName": "Ondřej Oslovený"
+  },
+  {
+    "graphId": "0d000000-0000-4000-8000-000000000042",
+    "givenName": "Olivie",
+    "familyName": "Oslovená",
+    "displayName": "Olivie Oslovená"
   }
 ]
