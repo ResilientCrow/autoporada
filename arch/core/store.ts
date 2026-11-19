@@ -285,7 +285,8 @@ export const decideRequest = (rid: string, to: 'approved' | 'rejected' | 'blocke
 /** The viewer's own salutation and degrees (ADR 0072 item 6); a degree left empty is none. */
 export const setAddress = (a: { salutation: Salutation; titlesBefore: string | null; titlesAfter: string | null }): Fx => (s) => {
   const before = a.titlesBefore?.trim(); const after = a.titlesAfter?.trim();
-  return { ...s, users: up(s.users, s.userId!, ({ titlesBefore: _b, titlesAfter: _a, ...u }) => ({ ...u, salutation: a.salutation, ...(before && { titlesBefore: before }), ...(after && { titlesAfter: after }) })) };
+  const put = <T extends { titlesBefore?: string; titlesAfter?: string; salutation: Salutation | null }>({ titlesBefore: _b, titlesAfter: _a, ...u }: T): T => ({ ...u, salutation: a.salutation, ...(before && { titlesBefore: before }), ...(after && { titlesAfter: after }) }) as T;
+  return { ...s, users: up(s.users, s.userId!, put), cards: s.cards.map((c) => (c.id === s.userId ? put(c) : c)) };
 };
 /** On the own row only a staff tier changes (ADR 0072, decision A); a student or absolvent is at most a submitter. */
 export const setUser = (uid: string, patch: { role?: Role; status?: 'active' | 'blocked'; tier?: Tier }): Fx => (s) => {

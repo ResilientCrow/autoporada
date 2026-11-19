@@ -5,6 +5,7 @@ import { compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
 import { fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
+import { directoryPerson } from '../core/directory';
 import * as A from '../core/ops';
 import type { Point } from '../core/types';
 import { ADDRESSES, App, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, WHEN } from './ui';
@@ -51,10 +52,10 @@ function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson
     const r = Q.peopleFor(s, me.id).map((x) => ({ ...x, how: 'uvedli jste v dřívější zprávě' }));
     const recent = new Map(r.map((x) => [foldForSearch(`${x.givenName} ${x.familyName}`), x]));
     // Staff who write points copy a colleague's address as it is now; the class or job comes from the directory row, else from an earlier report.
-    const dir = s.cards.map((c) => { const was = recent.get(foldForSearch(`${c.givenName} ${c.familyName}`)); const job = Q.userById(s, c.id)?.affiliation; const aff = job ?? was?.affiliation; return { ...Q.personFromCard(c, job ? year : (was?.affiliationYear ?? year), aff), how: 'ze školního adresáře' }; });
+    const dir = s.cards.map((c) => ({ ...directoryPerson(s, c, recent.get(foldForSearch(`${c.givenName} ${c.familyName}`))), how: 'ze školního adresáře' }));
     const seen = new Set<string>();
     return [...dir, ...r].filter((x) => { const k = foldForSearch(`${x.givenName} ${x.familyName}`); if (seen.has(k) || list.some((l) => foldForSearch(displayName(l)) === k)) return false; seen.add(k); return true; });
-  }, [s, me.id, list, year]);
+  }, [s, me.id, list]);
   const f = foldForSearch(v.trim());
   const hits = f && !/[,;\n]/.test(v) ? known.filter((x) => foldForSearch(`${x.givenName} ${x.familyName}`).includes(f)).slice(0, 4) : [];
   const parsed = v.trim() ? parsePeopleList(Q.oneOnLine(v), known) : null;

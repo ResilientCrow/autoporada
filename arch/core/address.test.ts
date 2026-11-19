@@ -71,6 +71,14 @@ describe('setAddress', () => {
     expect(me(s)).not.toHaveProperty('titlesAfter');
   });
 
+  it('the own card follows, so a new report pre-fills the new address', () => {
+    const viewer = person('me', { salutation: null, titlesBefore: 'Bc.', givenName: 'Eva', familyName: 'Malá' });
+    const s0 = { ...state(viewer), cards: [{ id: 'me', salutation: null, givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Bc.', head: 'profesor' as const }, { id: 'kolega', salutation: null, givenName: 'Jan', familyName: 'kolega' }] };
+    const s = A.setAddress({ salutation: 'pani', titlesBefore: null, titlesAfter: 'Ph.D.' })(s0);
+    expect(mePerson(s)).toEqual({ salutation: 'pani', givenName: 'Eva', familyName: 'Malá', titlesAfter: 'Ph.D.', head: 'profesor' });
+    expect(s.cards.find((c) => c.id === 'kolega')).toEqual(s0.cards[1]);
+  });
+
   it('touches nobody else', () => {
     const s0 = state(person('me', { salutation: null }));
     const s = A.setAddress(ask)(s0);
