@@ -1,7 +1,7 @@
 import { diffRecords, type AuditShape } from '@/application/core';
 import type { AuditEvent, Json, UserRecord } from '@/application/ports';
 
-/** What the audit log shows of a user's access: role, status and the student flag. */
+/** What the audit log shows of a user's access: role, status and the tier. */
 export const USER_ACCESS: AuditShape<UserRecord> = {
   id: 'omit',
   tid: 'omit',
@@ -11,14 +11,14 @@ export const USER_ACCESS: AuditShape<UserRecord> = {
   jobTitle: 'omit',
   department: 'omit',
   role: 'value',
-  isStudent: 'value',
+  tier: 'value',
   status: 'value',
   version: 'omit',
   createdAt: 'omit',
   updatedAt: 'omit',
 };
 
-/** `user.access.change`: a headmaster changed a user's role, status or student flag. */
+/** `user.access.change`: a headmaster changed a user's role, status or tier. */
 export function userAccessEvent(
   before: UserRecord,
   after: UserRecord,

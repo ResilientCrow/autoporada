@@ -208,7 +208,7 @@ describe('the soft reminder (two days before, 13.00 Prague)', () => {
       await submitter(),
       await submitter(),
       await submitter(),
-      await submitter({ isStudent: true }),
+      await submitter({ tier: 'student' }),
       await submitter(),
       await submitter(),
       await submitter(),
@@ -292,7 +292,7 @@ describe('the hard reminder (the deadline day, 12.00 Prague)', () => {
     const [drafter, returned, student] = [
       await submitter(),
       await submitter(),
-      await submitter({ isStudent: true }),
+      await submitter({ tier: 'student' }),
     ];
     await pointAt(drafter, 'draft', '2026-10-20T08:00:00Z');
     await pointAt(returned, 'returned', '2026-10-20T08:00:00Z');

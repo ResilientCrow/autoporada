@@ -252,7 +252,7 @@ describe('FutureEventRepo (port contract)', () => {
     });
     const colleagues = [
       await world.seed.user({ role: 'submitter' }),
-      await world.seed.user({ role: 'submitter', isStudent: true }),
+      await world.seed.user({ role: 'submitter', tier: 'student' }),
     ];
     for (const colleague of colleagues) {
       // The item itself is theirs to read ...

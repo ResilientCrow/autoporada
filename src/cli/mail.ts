@@ -5,6 +5,7 @@
  */
 import { mailJob } from '@/application/notifications';
 import { system, type Clock, type Db } from '@/application/ports';
+import { isStudentTier } from '@/domain/actor';
 
 export const MAIL_TEST_USAGE = 'mail:test --user <id>';
 
@@ -40,7 +41,7 @@ export async function mailTest(deps: MailTestDeps, args: readonly string[]): Pro
     if (!user) throw new Error('mail:test: there is no user with that id');
     const eligible =
       user.status === 'active' &&
-      !user.isStudent &&
+      !isStudentTier(user.tier) &&
       (user.role === 'reviewer' || user.role === 'headmaster');
     if (!eligible) throw new Error(`mail:test: ${RULE}`);
     if (user.email === null) throw new Error('mail:test: the user has no e-mail address');

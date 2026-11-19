@@ -12,7 +12,7 @@ const gate = (by: UserRecord, input: unknown = {}) => world.run(searchGate, worl
 describe('people.searchGate', () => {
   it.each([
     ['a submitter', { role: 'submitter' }],
-    ['a student submitter', { role: 'submitter', isStudent: true }],
+    ['a student submitter', { role: 'submitter', tier: 'student' }],
     ['a reviewer', { role: 'reviewer' }],
     ['the headmaster', { role: 'headmaster' }],
   ] as const)('lets %s search, and answers nothing', async (_, seed) => {

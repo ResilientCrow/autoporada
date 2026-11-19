@@ -253,7 +253,7 @@ describe('points.decide', () => {
     it.each([
       ['pending', { role: 'pending' }],
       ['deactivated', { role: 'reviewer', status: 'deactivated' }],
-      ['student', { role: 'submitter', isStudent: true }],
+      ['student', { role: 'submitter', tier: 'student' }],
     ] as const)('does not find the point for a %s user', async (_who, seed) => {
       const id = await handedIn(await user());
       const who = await world.seed.user(seed);

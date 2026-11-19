@@ -599,7 +599,7 @@ describe('FutureItemRepo scope', () => {
     const author = await world.seed.user({ role: 'submitter' });
     const all = await items(author);
     const teacher = await world.seed.user({ role: 'submitter' });
-    const student = await world.seed.user({ role: 'submitter', isStudent: true });
+    const student = await world.seed.user({ role: 'submitter', tier: 'student' });
     for (const reader of [teacher, student]) {
       expect(await seen(world.as(reader), all)).toEqual(['approvedAkce']);
     }
@@ -633,7 +633,7 @@ describe('FutureItemRepo scope', () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { submitted, approvedAkce } = await items(author);
     const teacher = await world.seed.user({ role: 'submitter' });
-    const student = await world.seed.user({ role: 'submitter', isStudent: true });
+    const student = await world.seed.user({ role: 'submitter', tier: 'student' });
     const reviewer = await world.seed.user({ role: 'reviewer' });
     const headmaster = await world.seed.user({ role: 'headmaster' });
     const readers: [string, UserRecord, FutureItemRecord][] = [
@@ -719,7 +719,7 @@ describe('FutureItemRepo decision path', () => {
   it('gives a teacher or a student only their own items, an approved akce of a colleague included', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const approved = await update(world.as(author), await handedIn(author), { state: 'approved' });
-    for (const seed of [{ role: 'submitter' }, { role: 'submitter', isStudent: true }] as const) {
+    for (const seed of [{ role: 'submitter' }, { role: 'submitter', tier: 'student' }] as const) {
       const reader = world.as(await world.seed.user(seed));
       expect(await lock(reader, approved.id)).toBeNull();
       expect(await failure(decide(reader, approved, 'cancelled'))).toBeInstanceOf(StaleVersion);

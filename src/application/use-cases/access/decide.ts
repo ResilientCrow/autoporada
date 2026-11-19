@@ -6,6 +6,7 @@ import { decideAccessInput, decideAccessOutput } from '@/contracts';
 import { can } from '@/domain/policy';
 import { ACCESS_MACHINE, transition, type DecisionEvent } from '@/domain/review';
 
+import { tierOfAudience } from '../users/audience';
 import { userAccessEvent } from '../users/events';
 import { lockedActor } from '../users/locked-actor';
 import { accessRequestEvent } from './events';
@@ -67,7 +68,7 @@ export const decideAccess = defineUseCase({
     if (event === 'approve') {
       const changed = await tx.users.changeAccess(user.id, user.version, {
         role: 'submitter',
-        isStudent: input.decision === 'approve-student',
+        tier: tierOfAudience(input.decision === 'approve-student' ? 'student' : 'staff', user.tier),
       });
       await tx.audit.record(userAccessEvent(user, changed, { via: 'access.approve' }));
     }

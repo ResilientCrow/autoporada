@@ -14,7 +14,7 @@ const resolve = (token = 'token') =>
 
 describe('auth.resolveSession', () => {
   it('finds the signed-in user as stored now', async () => {
-    const user = await world.seed.user({ role: 'reviewer', isStudent: false });
+    const user = await world.seed.user({ role: 'reviewer', tier: 'ucitel' });
     const session = await signedIn(world, user.id, 'token');
     expect(await resolve()).toEqual({
       ok: true,

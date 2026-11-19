@@ -9,6 +9,7 @@ import {
   type TxContext,
   type UserRecord,
 } from '@/application/ports';
+import { isStudentTier } from '@/domain/actor';
 
 import { setupTestDatabase } from '../../support/database';
 
@@ -36,7 +37,7 @@ const newUser = () =>
   );
 const asUser = (user: UserRecord) => ({
   kind: 'user' as const,
-  actor: { id: user.id, role: user.role, status: user.status, isStudent: user.isStudent },
+  actor: { id: user.id, role: user.role, status: user.status, isStudent: isStudentTier(user.tier) },
   sessionId: randomUUID(),
   authTime: new Date('2026-10-19T08:00:00Z'),
 });
@@ -45,7 +46,7 @@ describe('constraint names', () => {
   it('reports the student CHECK as users_student_role', async () => {
     const user = await newUser();
     const failure = await run(cli, (tx) =>
-      tx.users.changeAccess(user.id, user.version, { role: 'reviewer', isStudent: true }),
+      tx.users.changeAccess(user.id, user.version, { role: 'reviewer', tier: 'student' }),
     ).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(ConstraintViolation);
     expect(failure).toMatchObject({ constraint: 'users_student_role' });

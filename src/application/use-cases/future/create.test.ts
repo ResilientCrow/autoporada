@@ -108,7 +108,7 @@ describe('future.create', () => {
   });
 
   it.each([
-    ['a student submitter', { role: 'submitter', isStudent: true }],
+    ['a student submitter', { role: 'submitter', tier: 'student' }],
     ['a reviewer', { role: 'reviewer' }],
     ['the headmaster', { role: 'headmaster' }],
   ] as const)('lets %s start one', async (_, seed) => {

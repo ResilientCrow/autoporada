@@ -90,7 +90,7 @@ describe('future.retract', () => {
 
   it.each([
     ['a colleague', { role: 'submitter' }],
-    ['a student', { role: 'submitter', isStudent: true }],
+    ['a student', { role: 'submitter', tier: 'student' }],
   ] as const)('does not find a submitted item for %s', async (_who, seed) => {
     const author = await user();
     const id = await submitted(author);

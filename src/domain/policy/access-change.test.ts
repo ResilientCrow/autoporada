@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Actor, Role, UserStatus } from '@/domain/actor';
+import type { Actor, Role, Tier, UserStatus } from '@/domain/actor';
 
 import {
   accessChoices,
@@ -16,14 +16,14 @@ const by: Actor = { id: 'boss', role: 'headmaster', status: 'active', isStudent:
 const target = (extra: Partial<AccessTarget> = {}): AccessTarget => ({
   id: 'u1',
   role: 'submitter',
-  isStudent: false,
+  tier: null,
   status: 'active',
   hasPendingRequest: false,
   ...extra,
 });
 const value = (t: AccessTarget, extra: Partial<AccessValue> = {}): AccessValue => ({
   role: t.role,
-  isStudent: t.isStudent,
+  tier: t.tier,
   status: t.status,
   ...extra,
 });
@@ -84,13 +84,14 @@ describe('refuseAccessChange', () => {
     ['own account, whatever is asked', target({ id: by.id }), { role: 'reviewer' }, 'forbidden'],
     ['own account, no change at all', target({ id: by.id }), {}, 'forbidden'],
     ['request pending, role changes', pendingWithRequest, { role: 'submitter' }, 'conflict'],
-    ['request pending, audience changes', pendingWithRequest, { isStudent: true }, 'conflict'],
+    ['request pending, audience changes', pendingWithRequest, { tier: 'student' }, 'conflict'],
+    ['request pending, tier changes', pendingWithRequest, { tier: 'ucitel' }, 'conflict'],
     ['request pending, status changes', pendingWithRequest, { status: 'blocked' }, null],
     ['request pending, nothing changes', pendingWithRequest, {}, null],
     [
       'conflict beats student-role',
       pendingWithRequest,
-      { role: 'reviewer', isStudent: true },
+      { role: 'reviewer', tier: 'student' },
       'conflict',
     ],
     ['submitter to pending', t, { role: 'pending' }, 'forbidden'],
@@ -103,21 +104,23 @@ describe('refuseAccessChange', () => {
     ['blocked submitter unblocked', target({ status: 'blocked' }), { status: 'active' }, null],
     ['grant access by hand to a pending user', pendingNoRequest, { role: 'submitter' }, null],
     ['pending user without a request stays pending', pendingNoRequest, {}, null],
-    ['employee made a student', t, { isStudent: true }, null],
-    ['student made reviewer', t, { role: 'reviewer', isStudent: true }, 'student-role'],
+    ['employee made a student', t, { tier: 'student' }, null],
+    ['student made reviewer', t, { role: 'reviewer', tier: 'student' }, 'student-role'],
+    ['absolvent made reviewer', t, { role: 'reviewer', tier: 'absolvent' }, 'student-role'],
+    ['vedení made reviewer', t, { role: 'reviewer', tier: 'vedeni' }, null],
     [
       'existing student made reviewer',
-      target({ isStudent: true }),
+      target({ tier: 'student' }),
       { role: 'reviewer' },
       'student-role',
     ],
     [
       'student granted access by hand',
       pendingNoRequest,
-      { role: 'submitter', isStudent: true },
+      { role: 'submitter', tier: 'student' },
       null,
     ],
-    ['forbidden beats student-role', t, { role: 'pending', isStudent: true }, 'forbidden'],
+    ['forbidden beats student-role', t, { role: 'pending', tier: 'student' }, 'forbidden'],
   ])('%s', (_name, tg, change, expected) => {
     expect(refuseAccessChange(by, tg, value(tg, change))).toBe(expected);
   });
@@ -127,7 +130,7 @@ describe('lowersAccess', () => {
   const v = (role: Role, status: UserStatus = 'active'): AccessValue => ({
     role,
     status,
-    isStudent: false,
+    tier: null,
   });
 
   it.each<[string, AccessValue, AccessValue, boolean]>([
@@ -146,14 +149,17 @@ describe('lowersAccess', () => {
 });
 
 describe('isValidAccess', () => {
-  it.each<[Role, boolean, boolean]>([
-    ['pending', true, true],
-    ['submitter', true, true],
-    ['reviewer', true, false],
-    ['headmaster', true, false],
-    ['reviewer', false, true],
-    ['headmaster', false, true],
-  ])('%s, student %s → %s', (role, isStudent, valid) => {
-    expect(isValidAccess({ role, isStudent })).toBe(valid);
+  it.each<[Role, Tier | null, boolean]>([
+    ['pending', 'student', true],
+    ['submitter', 'student', true],
+    ['submitter', 'absolvent', true],
+    ['reviewer', 'student', false],
+    ['headmaster', 'student', false],
+    ['reviewer', 'absolvent', false],
+    ['reviewer', null, true],
+    ['reviewer', 'vedeni', true],
+    ['headmaster', 'reditel', true],
+  ])('%s, tier %s → %s', (role, tier, valid) => {
+    expect(isValidAccess({ role, tier })).toBe(valid);
   });
 });

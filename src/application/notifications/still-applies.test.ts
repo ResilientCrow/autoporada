@@ -35,7 +35,7 @@ const user = (role: Role, status: UserStatus = 'active', id = 'user'): UserRecor
   jobTitle: null,
   department: null,
   role,
-  isStudent: false,
+  tier: null,
   status,
   version: 1,
   createdAt: AT,
@@ -255,7 +255,7 @@ describe('stillApplies', () => {
     it('sends the soft one only to someone who still owes an akce report, a student too', () => {
       expect(stillApplies('reminder.soft', facts(true), MEMBER)).toBe(true);
       expect(stillApplies('reminder.soft', facts(false), MEMBER)).toBe(false);
-      expect(stillApplies('reminder.soft', facts(true), { ...MEMBER, isStudent: true })).toBe(true);
+      expect(stillApplies('reminder.soft', facts(true), { ...MEMBER, tier: 'student' })).toBe(true);
       expect(stillApplies('reminder.soft', facts(true), user('submitter', 'blocked'))).toBe(false);
       expect(stillApplies('reminder.soft', facts(true), user('pending'))).toBe(false);
     });
@@ -263,7 +263,7 @@ describe('stillApplies', () => {
     it('sends the hard one only to someone who still has a draft or returned point', () => {
       expect(stillApplies('reminder.hard', facts(true), MEMBER)).toBe(true);
       expect(stillApplies('reminder.hard', facts(false), MEMBER)).toBe(false);
-      expect(stillApplies('reminder.hard', facts(true), { ...MEMBER, isStudent: true })).toBe(true);
+      expect(stillApplies('reminder.hard', facts(true), { ...MEMBER, tier: 'student' })).toBe(true);
       expect(stillApplies('reminder.hard', facts(true), user('submitter', 'deactivated'))).toBe(
         false,
       );

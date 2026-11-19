@@ -1,5 +1,6 @@
 import { defineSystemUseCase, ok } from '@/application/core';
 import { completeSignInInput, completeSignInOutput } from '@/contracts';
+import { isStudentTier } from '@/domain/actor';
 import { bootstrapsHeadmaster, newSessionTimes } from '@/domain/identity';
 
 import { bootstrapEvent, loginEvent, rejectedEvent } from './events';
@@ -49,9 +50,10 @@ export const completeSignIn = defineSystemUseCase({
     if (bootstrapped) {
       // Before the session: an access change ends the user's sessions.
       const before = user;
+      // A student tier cannot hold the role (users_student_role): it is cleared, as the flag was.
       user = await tx.users.changeAccess(user.id, user.version, {
         role: 'headmaster',
-        isStudent: false,
+        ...(isStudentTier(user.tier) && { tier: null }),
       });
       await tx.audit.record(bootstrapEvent(before, user));
     }

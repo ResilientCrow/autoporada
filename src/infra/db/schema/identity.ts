@@ -1,6 +1,5 @@
 import { sql } from 'drizzle-orm';
 import {
-  boolean,
   check,
   index,
   integer,
@@ -11,6 +10,8 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+
+import { TIERS, type Tier } from '@/domain/actor';
 
 import { at, bytea, createdAt, id } from './columns';
 
@@ -24,6 +25,8 @@ export const accessRequestState = pgEnum('access_request_state', [
   'cancelled',
 ]);
 export const authPurpose = pgEnum('auth_purpose', ['login', 'step_up']);
+
+const tierList = sql.raw(TIERS.map((tier) => `'${tier}'`).join(','));
 
 /**
  * Everyone in the tenant who has signed in. Keyed by Entra (tid, oid); the
@@ -40,7 +43,8 @@ export const users = pgTable(
     jobTitle: text(),
     department: text(),
     role: role().notNull().default('pending'),
-    isStudent: boolean().notNull().default(false),
+    /** Who they are at the school (ADR 0072); empty until the headmaster sets it. */
+    tier: text().$type<Tier>(),
     status: userStatus().notNull().default('active'),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
@@ -51,8 +55,12 @@ export const users = pgTable(
   },
   (t) => [
     unique('users_entra_key').on(t.tid, t.oid),
-    // Students can only ever submit (plan §1); policy.can enforces it too.
-    check('users_student_role', sql`NOT ${t.isStudent} OR ${t.role} IN ('pending', 'submitter')`),
+    check('users_tier', sql`${t.tier} IS NULL OR ${t.tier} IN (${tierList})`),
+    // Students and absolventi can only ever submit (plan §1, ADR 0072); policy.can enforces it too.
+    check(
+      'users_student_role',
+      sql`${t.tier} IS NULL OR ${t.tier} NOT IN ('student', 'absolvent') OR ${t.role} IN ('pending', 'submitter')`,
+    ),
   ],
 );
 

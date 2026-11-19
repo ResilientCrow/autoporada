@@ -626,18 +626,18 @@ log**.
 
    ```sh
    docker compose exec -T postgres psql -U pgadmin -d autoporada -c \
-     "SELECT id, display_name, email, role, status, is_student FROM users ORDER BY display_name;"
+     "SELECT id, display_name, email, role, status, tier FROM users ORDER BY display_name;"
    ```
 
 4. Make the successor a headmaster (put their `id` in):
 
    ```sh
    docker compose exec -T postgres psql -U pgadmin -d autoporada -c \
-     "UPDATE users SET role = 'headmaster', status = 'active', version = version + 1, updated_at = now() WHERE id = '<id>' AND NOT is_student;"
+     "UPDATE users SET role = 'headmaster', status = 'active', version = version + 1, updated_at = now() WHERE id = '<id>' AND tier IS DISTINCT FROM 'student' AND tier IS DISTINCT FROM 'absolvent';"
    ```
 
    It must answer `UPDATE 1`. `UPDATE 0` means the id is wrong or the
-   account is marked as a student's; a student can never hold this role.
+   account is a student's or an absolvent's; they can never hold this role.
 5. The successor signs in again and now has the screen „Lidé“. There they
    take the role from the headmaster who left, or block that account. From
    here on everything is recorded in the audit log again.
@@ -861,7 +861,7 @@ put it into the other queries:
 
 ```sql
 -- who (part of the name or of the address)
-SELECT id, display_name, email, role, status, is_student, created_at
+SELECT id, display_name, email, role, status, tier, created_at
   FROM users WHERE display_name ILIKE '%novák%' OR email ILIKE '%novak%';
 
 -- what they wrote

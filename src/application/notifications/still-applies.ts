@@ -8,7 +8,7 @@ import { isReviewer } from './digest';
 import { isMember as member } from './reminders';
 import { isHeadmaster } from './summary';
 
-type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'isStudent'>;
+type UserFacts = Pick<UserRecord, 'id' | 'role' | 'status' | 'tier'>;
 
 const decided =
   (state: AccessState, recipientFits: (user: UserFacts) => boolean) =>

@@ -193,26 +193,78 @@ describe('UserRepo (port contract)', () => {
   });
 
   it.each([
-    ['blocking them', { status: 'blocked' }],
-    ['marking them a student', { isStudent: true }],
-  ] as const)('ends a user’s sessions when %s', async (_name, patch) => {
+    ['blocking them', {}, { status: 'blocked' }],
+    ['marking them a student', {}, { tier: 'student' }],
+    ['marking a teacher a student', { tier: 'ucitel' }, { tier: 'student' }],
+    ['making a student staff again', { tier: 'student' }, { tier: 'zamestnanec' }],
+  ] as const)('ends a user’s sessions when %s', async (_name, seed, patch) => {
     const head = await world.seed.user({ role: 'headmaster' });
-    const user = await world.seed.user({ role: 'submitter' });
+    const user = await world.seed.user({ role: 'submitter', ...seed });
     const tokenSha256 = createHash('sha256').update('mine').digest('hex');
     await signIn(user, tokenSha256);
     await change(world.as(head), user, patch);
     expect(await world.tx(cli, (tx) => tx.sessions.find(tokenSha256), 'read')).toBeNull();
   });
 
-  it('never lets a student have more than the submitter role', async () => {
+  it.each([
+    ['a teacher joins vedení', { tier: 'ucitel' }, 'vedeni'],
+    ['a student leaves school', { tier: 'student' }, 'absolvent'],
+    ['a staff member gets a tier', {}, 'zamestnanec'],
+  ] as const)('keeps a user’s sessions when %s', async (_name, seed, tier) => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const user = await world.seed.user({ role: 'submitter', ...seed });
+    const tokenSha256 = createHash('sha256').update('mine').digest('hex');
+    await signIn(user, tokenSha256);
+    await expect(change(world.as(head), user, { tier })).resolves.toMatchObject({ tier });
+    expect(await world.tx(cli, (tx) => tx.sessions.find(tokenSha256), 'read')).not.toBeNull();
+  });
+
+  it('sets the tier, and starts with none', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
     const user = await world.seed.user({ role: 'submitter' });
-    await expect(change(cli, user, { role: 'reviewer', isStudent: true })).rejects.toMatchObject({
-      name: 'ConstraintViolation',
-      constraint: 'users_student_role',
+    expect(user.tier).toBeNull();
+    const after = await change(world.as(head), user, { tier: 'ucitel' });
+    expect(after).toMatchObject({ tier: 'ucitel', version: user.version + 1 });
+    expect(await world.tx(cli, (tx) => tx.users.get(user.id), 'read')).toMatchObject({
+      tier: 'ucitel',
     });
-    await expect(change(cli, user, { isStudent: true })).resolves.toMatchObject({
-      isStudent: true,
+  });
+
+  it.each(['student', 'absolvent'] as const)(
+    'never lets the tier %s have more than the submitter role',
+    async (tier) => {
+      const user = await world.seed.user({ role: 'submitter' });
+      await expect(change(cli, user, { role: 'reviewer', tier })).rejects.toMatchObject({
+        name: 'ConstraintViolation',
+        constraint: 'users_student_role',
+      });
+      await expect(change(cli, user, { tier })).resolves.toMatchObject({ tier });
+    },
+  );
+
+  it('lets a reviewer of any staff tier keep the role', async () => {
+    const user = await world.seed.user({ role: 'reviewer' });
+    await expect(change(cli, user, { tier: 'vedeni' })).resolves.toMatchObject({
+      role: 'reviewer',
+      tier: 'vedeni',
     });
+  });
+
+  it('never touches the tier on sign-in', async () => {
+    const student = await world.seed.user({ role: 'submitter', tier: 'absolvent' });
+    const again = await world.tx(cli, async (tx) => {
+      const user = await tx.users.upsertFromClaims({
+        tid: student.tid,
+        oid: student.oid,
+        displayName: 'Eva Malá',
+        email: null,
+        jobTitle: null,
+        department: null,
+      });
+      await tx.audit.record({ action: 'auth.login', target: { type: 'user', id: user.id } });
+      return user;
+    });
+    expect(again).toMatchObject({ tier: 'absolvent', version: student.version });
   });
 
   it.each([

@@ -1,5 +1,7 @@
 /** Branch arch-ui only: how Arch shows people and trail entries the real model keeps differently. */
 
+import { isStudentTier, type Tier } from '@/domain/actor';
+
 export const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
 export const WHAT: Record<string, string> = {
@@ -56,7 +58,7 @@ interface UserRow {
   readonly email: string | null;
   readonly role: string;
   readonly status: string;
-  readonly isStudent: boolean;
+  readonly tier: Tier | null;
   readonly jobTitle: string | null;
   readonly department: string | null;
 }
@@ -82,13 +84,14 @@ export function peopleFor(input: {
       vers[u.id] = u.version;
       const name = splitName(u.displayName);
       const full = head || u.id === actorId;
+      const student = isStudentTier(u.tier);
       return {
         id: u.id,
-        salutation: guessSalutation(name, u.isStudent) as string,
+        salutation: guessSalutation(name, student) as string,
         ...name,
         email: full ? (u.email ?? '') : '',
         role: full ? u.role : 'submitter',
-        isStudent: full ? u.isStudent : false,
+        isStudent: full ? student : false,
         status: full && u.status === 'blocked' ? 'blocked' : 'active',
         ...(full && u.jobTitle && { job: u.jobTitle }),
         ...(full && u.department && { affiliation: u.department }),

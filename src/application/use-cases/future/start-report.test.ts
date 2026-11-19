@@ -208,7 +208,7 @@ describe('future.startReport', () => {
       await user(),
       await user('reviewer'),
       await user('headmaster'),
-      await world.seed.user({ role: 'submitter', isStudent: true }),
+      await world.seed.user({ role: 'submitter', tier: 'student' }),
     ];
     for (const other of others) {
       await refuses(id, () => startReport(other, id), { code: 'not-found' });

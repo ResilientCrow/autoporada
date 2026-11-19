@@ -77,11 +77,11 @@ async function refuses(userId: string, run: () => Promise<unknown>, error: unkno
 
 describe('access.decide', () => {
   it.each([
-    ['approve-staff', false],
-    ['approve-student', true],
+    ['approve-staff', null],
+    ['approve-student', 'student'],
   ] as const)(
     '%s: approves, sets the audience and ends the requester’s sessions',
-    async (decision, isStudent) => {
+    async (decision, tier) => {
       const { head, user, request } = await setup();
       await signedIn(world, user.id, 'requester');
       const logged = (await world.inspect.audit()).length;
@@ -101,7 +101,7 @@ describe('access.decide', () => {
           version: 2,
         },
       ]);
-      expect(after.user).toMatchObject({ role: 'submitter', isStudent, version: user.version + 1 });
+      expect(after.user).toMatchObject({ role: 'submitter', tier, version: user.version + 1 });
       const audit = after.audit.slice(logged);
       expect(audit).toEqual([
         {
@@ -126,7 +126,7 @@ describe('access.decide', () => {
           data: {
             diff: {
               role: { from: 'pending', to: 'submitter' },
-              ...(isStudent && { isStudent: { from: false, to: true } }),
+              ...(tier && { tier: { from: null, to: tier } }),
             },
             meta: { via: 'access.approve' },
           },
@@ -328,7 +328,7 @@ describe('access.decide', () => {
     const reviewer = await world.seed.user({ role: 'reviewer' });
     const blockedHead = await world.seed.user({ role: 'headmaster', status: 'blocked' });
     // A session from before the flag: students never decide, even as a stale headmaster.
-    const studentHead = { ...head, isStudent: true };
+    const studentHead = { ...head, tier: 'student' as const };
     for (const by of [submitter, reviewer, blockedHead, studentHead]) {
       await refuses(user.id, () => decide(by, request, 'approve-staff'), { code: 'not-found' });
     }

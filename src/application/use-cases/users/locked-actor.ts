@@ -1,5 +1,5 @@
 import type { Tx } from '@/application/ports';
-import type { Actor } from '@/domain/actor';
+import { isStudentTier, type Actor } from '@/domain/actor';
 
 /**
  * The actor as their own row says now, with the row locked. The pipeline
@@ -11,5 +11,12 @@ import type { Actor } from '@/domain/actor';
  */
 export async function lockedActor(tx: Tx, actor: Actor): Promise<Actor | null> {
   const row = await tx.users.lock(actor.id);
-  return row && { id: row.id, role: row.role, status: row.status, isStudent: row.isStudent };
+  return (
+    row && {
+      id: row.id,
+      role: row.role,
+      status: row.status,
+      isStudent: isStudentTier(row.tier),
+    }
+  );
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { mailJob } from '@/application/notifications';
 import { system, type UserRecord } from '@/application/ports';
+import { isStudentTier } from '@/domain/actor';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 
 import { signedIn } from '../../../../test/support/sessions';
@@ -20,7 +21,7 @@ const form = (target: UserRecord, patch: Record<string, unknown> = {}) => ({
   userId: target.id,
   version: target.version,
   role: target.role,
-  audience: target.isStudent ? 'student' : 'staff',
+  audience: isStudentTier(target.tier) ? 'student' : 'staff',
   status: target.status,
   ...patch,
 });
@@ -73,7 +74,7 @@ describe('users.changeAccess', () => {
     expect(await change(head, user, { role: 'reviewer' })).toEqual(changed);
 
     const after = await snapshot(user.id);
-    expect(after.user).toMatchObject({ role: 'reviewer', isStudent: false, status: 'active' });
+    expect(after.user).toMatchObject({ role: 'reviewer', tier: null, status: 'active' });
     expect(after.user?.version).toBe(user.version + 1);
     expect(after.audit.slice(logged)).toEqual([
       {
@@ -168,9 +169,9 @@ describe('users.changeAccess', () => {
     }
     const logged = (await world.inspect.audit()).length;
     expect(await change(head, user, { role: 'submitter', audience })).toEqual(changed);
-    const isStudent = audience === 'student';
+    const tier = audience === 'student' ? 'student' : null;
     const after = await snapshot(user.id);
-    expect(after.user).toMatchObject({ role: 'submitter', isStudent });
+    expect(after.user).toMatchObject({ role: 'submitter', tier });
     const { data, dedupeKey } = mailJob('access.granted', {
       userId: user.id,
       versionAfter: user.version + 1,
@@ -180,9 +181,21 @@ describe('users.changeAccess', () => {
     expect(after.audit.slice(logged).map((a) => a.data['diff'])).toEqual([
       {
         role: { from: 'pending', to: 'submitter' },
-        ...(isStudent && { isStudent: { from: false, to: true } }),
+        ...(tier && { tier: { from: null, to: 'student' } }),
       },
     ]);
+  });
+
+  it.each([
+    ['an absolvent stays one as a student', 'absolvent', { audience: 'student' }, 'absolvent'],
+    ['a teacher stays one as staff', 'ucitel', { audience: 'staff', role: 'reviewer' }, 'ucitel'],
+    ['a teacher made a student', 'ucitel', { audience: 'student' }, 'student'],
+    ['a student made staff', 'student', { audience: 'staff' }, null],
+  ] as const)('keeps the tier the audience agrees with: %s', async (_case, from, patch, to) => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const user = await world.seed.user({ role: 'submitter', tier: from });
+    await change(head, user, patch);
+    expect((await snapshot(user.id)).user).toMatchObject({ tier: to });
   });
 
   it.each([
@@ -204,7 +217,7 @@ describe('users.changeAccess', () => {
 
   it('keeps a student a submitter: rule student-role, unless they become staff', async () => {
     const head = await world.seed.user({ role: 'headmaster' });
-    const user = await world.seed.user({ role: 'submitter', isStudent: true });
+    const user = await world.seed.user({ role: 'submitter', tier: 'student' });
     await refuses(user.id, () => change(head, user, { role: 'reviewer' }), {
       code: 'rule',
       rule: 'student-role',

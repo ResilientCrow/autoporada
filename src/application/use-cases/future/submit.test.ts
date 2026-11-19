@@ -258,7 +258,7 @@ describe('future.submit', () => {
 
     it.each([
       ['a colleague', { role: 'submitter' }],
-      ['a student', { role: 'submitter', isStudent: true }],
+      ['a student', { role: 'submitter', tier: 'student' }],
       ['a reviewer', { role: 'reviewer' }],
       ['the headmaster', { role: 'headmaster' }],
     ] as const)(

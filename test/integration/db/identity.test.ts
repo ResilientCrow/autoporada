@@ -34,13 +34,26 @@ describe('users', () => {
     );
   });
 
-  it('never lets a student review', async () => {
-    expect(await pgErrorOf(insertUser({ isStudent: true, role: 'reviewer' }))).toMatchObject(
+  it.each(['student', 'absolvent'] as const)('never lets a %s review', async (tier) => {
+    expect(await pgErrorOf(insertUser({ tier, role: 'reviewer' }))).toMatchObject(
       violation('23514', 'users_student_role'),
     );
-    const id = await insertUser({ isStudent: true, role: 'submitter' });
+    const id = await insertUser({ tier, role: 'submitter' });
     const promote = database.db.update(users).set({ role: 'headmaster' }).where(eq(users.id, id));
     expect(await pgErrorOf(promote)).toMatchObject(violation('23514', 'users_student_role'));
+  });
+
+  it('lets a user without a tier or with a staff tier hold any role', async () => {
+    await insertUser({ role: 'headmaster' });
+    await insertUser({ tier: 'vedeni', role: 'reviewer' });
+    await insertUser({ tier: 'reditel', role: 'headmaster' });
+  });
+
+  it('takes only the known tiers', async () => {
+    const odd = database.owner(
+      `INSERT INTO users (tid, oid, display_name, tier) VALUES ('${TID}', '${randomUUID()}', 'x', 'host')`,
+    );
+    expect(await pgErrorOf(odd)).toMatchObject(violation('23514', 'users_tier'));
   });
 });
 
@@ -185,5 +198,42 @@ describe('ending sessions on access changes', () => {
     expect(await database.db.select().from(sessions).where(eq(sessions.userId, userId))).toEqual(
       [],
     );
+  });
+
+  const signedIn = async (tier: NewUser['tier']) => {
+    const userId = await insertUser({ role: 'submitter', tier });
+    const now = Date.now();
+    await database.db.insert(sessions).values({
+      userId,
+      tokenHash: randomBytes(32),
+      authTime: new Date(now),
+      idleExpiresAt: new Date(now + 3600_000),
+      absExpiresAt: new Date(now + 7200_000),
+    });
+    return userId;
+  };
+  const sessionsOf = async (userId: string) =>
+    (await database.db.select().from(sessions).where(eq(sessions.userId, userId))).length;
+
+  it.each([
+    [null, 'student'],
+    ['ucitel', 'absolvent'],
+    ['student', 'zamestnanec'],
+    ['absolvent', 'ucitel'],
+  ] as const)('signs the user out when the tier goes from %s to %s', async (from, to) => {
+    const userId = await signedIn(from);
+    await database.owner(`UPDATE users SET tier = $1 WHERE id = $2`, [to, userId]);
+    expect(await sessionsOf(userId)).toBe(0);
+  });
+
+  it.each([
+    ['ucitel', 'vedeni'],
+    [null, 'reditel'],
+    ['student', 'absolvent'],
+    ['vedeni', 'reditel'],
+  ] as const)('keeps the user signed in when the tier goes from %s to %s', async (from, to) => {
+    const userId = await signedIn(from);
+    await database.owner(`UPDATE users SET tier = $1 WHERE id = $2`, [to, userId]);
+    expect(await sessionsOf(userId)).toBe(1);
   });
 });

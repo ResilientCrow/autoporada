@@ -1,5 +1,6 @@
 import { defineSystemUseCase, ok } from '@/application/core';
 import { resolveSessionInput, resolveSessionOutput } from '@/contracts';
+import { isStudentTier } from '@/domain/actor';
 import { sessionVerdict, touched } from '@/domain/identity';
 
 /**
@@ -28,7 +29,12 @@ export const resolveSession = defineSystemUseCase({
       found: true,
       sessionId: session.id,
       authTime: session.authTime.toISOString(),
-      actor: { id: user.id, role: user.role, status: user.status, isStudent: user.isStudent },
+      actor: {
+        id: user.id,
+        role: user.role,
+        status: user.status,
+        isStudent: isStudentTier(user.tier),
+      },
     });
   },
 });

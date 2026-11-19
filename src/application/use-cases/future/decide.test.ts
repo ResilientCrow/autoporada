@@ -235,7 +235,7 @@ describe('future.decide', () => {
     // A teacher or a student reads an approved akce of a colleague; deciding on it is not theirs.
     it.each([
       ['a colleague', { role: 'submitter' }],
-      ['a student', { role: 'submitter', isStudent: true }],
+      ['a student', { role: 'submitter', tier: 'student' }],
     ] as const)('does not find an approved akce for %s', async (_who, seed) => {
       const id = await handedIn(await user(), 'approved');
       const who = await world.seed.user(seed);

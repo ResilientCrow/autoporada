@@ -47,7 +47,7 @@ describe('mail:test (the operator checks that mail leaves the server)', () => {
   it.each([
     [
       'a student (the database keeps students below reviewer)',
-      { role: 'submitter', isStudent: true },
+      { role: 'submitter', tier: 'student' },
     ],
     ['a pending user', { role: 'pending' }],
     ['a submitter', { role: 'submitter' }],

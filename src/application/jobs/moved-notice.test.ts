@@ -127,9 +127,9 @@ describe('the audience', () => {
   it('mails whoever owes an akce report or has a draft, once each, and nobody else', async () => {
     const owing = await submitter();
     await owes(owing);
-    const student = await submitter({ isStudent: true });
+    const student = await submitter({ tier: 'student' });
     await owes(student); // a student owes the report of their akce too
-    const writer = await submitter({ isStudent: true });
+    const writer = await submitter({ tier: 'student' });
     await draft(writer);
     const both = await submitter();
     await owes(both);

@@ -23,7 +23,7 @@ export const USER_RECORD = {
   jobTitle: users.jobTitle,
   department: users.department,
   role: users.role,
-  isStudent: users.isStudent,
+  tier: users.tier,
   status: users.status,
   version: users.version,
   createdAt: users.createdAt,
@@ -85,7 +85,7 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
       const [row] = await db
         .insert(users)
         .values({ tid: identity.tid, oid: identity.oid, ...display, createdAt: ctx.now })
-        // Display fields only: role, status and the student flag change through changeAccess.
+        // Display fields only: role, status and the tier change through changeAccess.
         .onConflictDoUpdate({ target: [users.tid, users.oid], set: display })
         .returning(USER_RECORD);
       if (!row) throw new Error('upsertFromClaims: the upsert returned no row');
@@ -94,13 +94,13 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
     async changeAccess(id, expectedVersion, patch) {
       require({ action: 'users.manage' });
       if (principal.kind === 'user' && principal.actor.id === id) throw new ScopeViolation();
-      const { role, isStudent, status } = patch;
+      const { role, tier, status } = patch;
       const [row] = await db
         .update(users)
         .set({
           // Named one by one: a wider object passed as a patch cannot touch other columns.
           ...(role !== undefined && { role }),
-          ...(isStudent !== undefined && { isStudent }),
+          ...(tier !== undefined && { tier }),
           ...(status !== undefined && { status }),
           version: sql`${users.version} + 1`,
           updatedAt: ctx.now,

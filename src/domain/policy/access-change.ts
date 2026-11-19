@@ -1,4 +1,11 @@
-import { atLeast, type Actor, type Role, type UserStatus } from '@/domain/actor';
+import {
+  atLeast,
+  isStudentTier,
+  type Actor,
+  type Role,
+  type Tier,
+  type UserStatus,
+} from '@/domain/actor';
 
 export const AUDIENCES = ['staff', 'student'] as const;
 
@@ -6,14 +13,14 @@ export const AUDIENCES = ['staff', 'student'] as const;
 export interface AccessTarget {
   readonly id: string;
   readonly role: Role;
-  readonly isStudent: boolean;
+  readonly tier: Tier | null;
   readonly status: UserStatus;
   readonly hasPendingRequest: boolean;
 }
 
 export interface AccessValue {
   readonly role: Role;
-  readonly isStudent: boolean;
+  readonly tier: Tier | null;
   readonly status: UserStatus;
 }
 
@@ -57,7 +64,7 @@ export function accessChoices(by: Actor, target: AccessTarget): AccessChoices {
  * `can(users.manage)`, which the use case checks first.
  * - `forbidden`: own account, or a role or status the choices never offer.
  * - `conflict`: a request arrived after the page loaded.
- * - `student-role`: a student above the submitter role.
+ * - `student-role`: a student or absolvent above the submitter role.
  */
 export function refuseAccessChange(
   by: Actor,
@@ -66,7 +73,7 @@ export function refuseAccessChange(
 ): 'forbidden' | 'conflict' | 'student-role' | null {
   if (by.id === target.id) return 'forbidden';
   const roleChanges = next.role !== target.role;
-  if (target.hasPendingRequest && (roleChanges || next.isStudent !== target.isStudent)) {
+  if (target.hasPendingRequest && (roleChanges || next.tier !== target.tier)) {
     return 'conflict';
   }
   const choices = accessChoices(by, target);
@@ -83,7 +90,7 @@ export function lowersAccess(before: AccessValue, after: AccessValue): boolean {
   );
 }
 
-/** A student is at most a submitter. */
-export function isValidAccess(v: Pick<AccessValue, 'role' | 'isStudent'>): boolean {
-  return !v.isStudent || v.role === 'pending' || v.role === 'submitter';
+/** A student or absolvent is at most a submitter. */
+export function isValidAccess(v: Pick<AccessValue, 'role' | 'tier'>): boolean {
+  return !isStudentTier(v.tier) || v.role === 'pending' || v.role === 'submitter';
 }

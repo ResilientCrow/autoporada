@@ -4,6 +4,7 @@ import type { AccessPatch, UserRecord } from '@/application/ports';
 import { changeUserAccessInput, changeUserAccessOutput } from '@/contracts';
 import { can, lowersAccess, refuseAccessChange, type AccessValue } from '@/domain/policy';
 
+import { tierOfAudience } from './audience';
 import { userAccessEvent } from './events';
 import { lockedActor } from './locked-actor';
 
@@ -19,7 +20,7 @@ const REFUSALS: Readonly<
 function patchOf(user: UserRecord, next: AccessValue): AccessPatch {
   return {
     ...(next.role !== user.role && { role: next.role }),
-    ...(next.isStudent !== user.isStudent && { isStudent: next.isStudent }),
+    ...(next.tier !== user.tier && { tier: next.tier }),
     ...(next.status !== user.status && { status: next.status }),
   };
 }
@@ -52,7 +53,7 @@ export const changeUserAccess = defineUseCase({
     const [newest] = await tx.accessRequests.forUser(user.id);
     const next: AccessValue = {
       role: input.role,
-      isStudent: input.audience === 'student',
+      tier: tierOfAudience(input.audience, user.tier),
       status: input.status,
     };
     const refusal = refuseAccessChange(

@@ -1,4 +1,4 @@
-import type { Role, UserStatus } from '@/domain/actor';
+import type { Role, Tier, UserStatus } from '@/domain/actor';
 
 export interface UserRecord {
   readonly id: string;
@@ -9,7 +9,8 @@ export interface UserRecord {
   readonly jobTitle: string | null;
   readonly department: string | null;
   readonly role: Role;
-  readonly isStudent: boolean;
+  /** Who they are at the school (ADR 0072); a student or absolvent tier limits access. */
+  readonly tier: Tier | null;
   readonly status: UserStatus;
   readonly version: number;
   readonly createdAt: Date;
@@ -28,7 +29,7 @@ export interface VerifiedIdentity {
 
 export interface AccessPatch {
   readonly role?: Role;
-  readonly isStudent?: boolean;
+  readonly tier?: Tier | null;
   readonly status?: UserStatus;
 }
 
@@ -45,11 +46,12 @@ export interface UserRepo {
   }): Promise<readonly UserRecord[]>;
   /**
    * Creates the user on first sign-in, or refreshes their display fields.
-   * Never changes role, status or the student flag. System principals only.
+   * Never changes role, status or the tier. System principals only.
    */
   upsertFromClaims(identity: VerifiedIdentity): Promise<UserRecord>;
   /**
-   * Changes role, status or the student flag; throws StaleVersion.
+   * Changes role, status or the tier; throws StaleVersion. Sessions end when
+   * the role, the status or whether the tier is a student one changes.
    * A user principal needs `users.manage` and never changes their own row
    * (ScopeViolation). Approving an access request counts as user management:
    * the step-up lives on the use case's declared check, and a policy test

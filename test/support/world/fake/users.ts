@@ -7,6 +7,7 @@ import {
   type UserRecord,
   type UserRepo,
 } from '@/application/ports';
+import { isStudentTier } from '@/domain/actor';
 import { admits, can } from '@/domain/policy';
 
 import { guard } from './guards';
@@ -71,7 +72,7 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
         oid: identity.oid,
         ...display,
         role: 'pending',
-        isStudent: false,
+        tier: null,
         status: 'active',
         version: 1,
         createdAt: ctx.now,
@@ -85,9 +86,9 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       if (principal.kind === 'user' && principal.actor.id === id) throw new ScopeViolation();
       const user = find(id);
       if (!user || user.version !== expectedVersion) throw new StaleVersion();
-      const { role = user.role, isStudent = user.isStudent, status = user.status } = patch;
+      const { role = user.role, tier = user.tier, status = user.status } = patch;
       // As the users_student_role CHECK.
-      if (isStudent && role !== 'pending' && role !== 'submitter') {
+      if (isStudentTier(tier) && role !== 'pending' && role !== 'submitter') {
         throw new ConstraintViolation('users_student_role');
       }
       // As the deferred users_active_headmaster trigger: checked at commit.
@@ -101,8 +102,9 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
           });
         }
       }
-      // As the users_end_sessions trigger: a change of access ends the user's sessions.
-      if (role !== user.role || isStudent !== user.isStudent || status !== user.status) {
+      // As the users_end_sessions trigger: a change of role, status or student-ness ends the user's sessions.
+      const studentChanges = isStudentTier(tier) !== isStudentTier(user.tier);
+      if (role !== user.role || studentChanges || status !== user.status) {
         for (const [id, session] of tx.draft.sessions) {
           if (session.userId === user.id) tx.draft.sessions.delete(id);
         }
@@ -110,7 +112,7 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       return save({
         ...user,
         role,
-        isStudent,
+        tier,
         status,
         version: user.version + 1,
         updatedAt: ctx.now,

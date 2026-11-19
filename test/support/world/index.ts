@@ -23,6 +23,7 @@ import {
   type UserPrincipal,
   type UserRecord,
 } from '@/application/ports';
+import { isStudentTier } from '@/domain/actor';
 import type { Database } from '@/infra/db';
 
 import { setupTestDatabase, type TestDatabase } from '../database';
@@ -50,7 +51,7 @@ declare module 'vitest' {
 }
 
 type UserSeed = Partial<
-  Pick<UserRecord, 'role' | 'isStudent' | 'status' | 'displayName' | 'tid' | 'oid' | 'email'>
+  Pick<UserRecord, 'role' | 'tier' | 'status' | 'displayName' | 'tid' | 'oid' | 'email'>
 >;
 
 /** A row of someone's request history; `createdAt` defaults to the world's clock. */
@@ -211,10 +212,10 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             jobTitle: null,
             department: null,
           });
-          const { role, isStudent, status } = seed;
+          const { role, tier, status } = seed;
           const patch = {
             ...(role && { role }),
-            ...(isStudent !== undefined && { isStudent }),
+            ...(tier !== undefined && { tier }),
             ...(status && { status }),
           };
           return Object.keys(patch).length > 0
@@ -255,7 +256,12 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
     erase: { user: (id) => backend().deleteUser(id) },
     as: (user, options = {}) => ({
       kind: 'user',
-      actor: { id: user.id, role: user.role, status: user.status, isStudent: user.isStudent },
+      actor: {
+        id: user.id,
+        role: user.role,
+        status: user.status,
+        isStudent: isStudentTier(user.tier),
+      },
       sessionId: `session-${user.id}`,
       authTime: options.authTime ?? clock.now(),
     }),

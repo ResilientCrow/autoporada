@@ -1,15 +1,15 @@
 // `pnpm dev:seed`: the two dev accounts of the mock IdP, ready to use. „Ředitel“ is the headmaster
 // and „Učitelka“ a staff member with approved access, so neither waits for a request to be decided.
 // Identity (tid, oid, name, e-mail) comes from docker/dev/mock-oauth2.json, as in test/e2e/seed.ts.
-// Rerunning it only resets those two roles. Development databases only.
+// Rerunning it only resets those two roles and tiers. Development databases only.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { Client } from 'pg';
 
 const ACCOUNTS = [
-  { subject: 'reditel', role: 'headmaster' },
-  { subject: 'ucitel', role: 'submitter' },
+  { subject: 'reditel', role: 'headmaster', tier: 'reditel' },
+  { subject: 'ucitel', role: 'submitter', tier: 'ucitel' },
 ] as const;
 
 interface Claims {
@@ -47,14 +47,14 @@ const client = new Client({ connectionString: databaseUrl });
 await client.connect();
 try {
   await client.query('BEGIN');
-  for (const { subject, role } of ACCOUNTS) {
+  for (const { subject, role, tier } of ACCOUNTS) {
     const { tid, oid, name, email } = claimsOf(subject);
     const { rows } = await client.query<{ id: string }>(
-      `INSERT INTO users (tid, oid, display_name, email, role) VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO users (tid, oid, display_name, email, role, tier) VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT ON CONSTRAINT users_entra_key
-       DO UPDATE SET role = EXCLUDED.role, status = 'active', is_student = false, version = users.version + 1
+       DO UPDATE SET role = EXCLUDED.role, tier = EXCLUDED.tier, status = 'active', version = users.version + 1
        RETURNING id`,
-      [tid, oid, name, email, role],
+      [tid, oid, name, email, role, tier],
     );
     // A request left open from an earlier try would still sit in the headmaster's queue.
     await client.query(

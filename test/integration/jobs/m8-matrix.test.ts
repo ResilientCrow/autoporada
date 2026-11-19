@@ -182,7 +182,7 @@ async function reminderPeople(week: Week) {
     await submitter(),
     await submitter(),
     await submitter(),
-    await submitter({ isStudent: true }),
+    await submitter({ tier: 'student' }),
     await submitter(),
   ];
   await ended(organiser, shiftDay(toIsoDate(week.monday), -6));

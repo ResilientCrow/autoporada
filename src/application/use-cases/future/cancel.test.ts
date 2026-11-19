@@ -138,7 +138,7 @@ describe('future.cancel', () => {
 
   it.each([
     ['a colleague', { role: 'submitter' }],
-    ['a student', { role: 'submitter', isStudent: true }],
+    ['a student', { role: 'submitter', tier: 'student' }],
   ] as const)('does not find the akce for %s, who may read it', async (_who, seed) => {
     const id = await approved(await user());
     const who = await world.seed.user(seed);
@@ -156,7 +156,7 @@ describe('future.cancel', () => {
       const author = await user();
       const id = await approved(author);
       const colleague = await user();
-      const student = await world.seed.user({ role: 'submitter', isStudent: true });
+      const student = await world.seed.user({ role: 'submitter', tier: 'student' });
       const reviewer = await user('reviewer');
       expect(await seenBy(colleague, id)).toBe('approved');
       await cancel(reviewer, id);

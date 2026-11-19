@@ -96,7 +96,7 @@ describe('POST /api/adresar/hledat', () => {
   });
 
   it('lets a student search', async () => {
-    const { post } = setup(await as({ role: 'submitter', isStudent: true }));
+    const { post } = setup(await as({ role: 'submitter', tier: 'student' }));
     expect((await post()).status).toBe(200);
   });
 
