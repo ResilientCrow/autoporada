@@ -133,6 +133,34 @@ describe('UserRepo (port contract)', () => {
     );
   });
 
+  it('lets a headmaster change their own tier, and nothing else on their row with it', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    await world.seed.user({ role: 'headmaster' });
+    const after = await change(world.as(head), head, { tier: 'reditel' });
+    expect(after).toMatchObject({ role: 'headmaster', tier: 'reditel', version: head.version + 1 });
+    for (const patch of [
+      { tier: 'vedeni', role: 'reviewer' },
+      { tier: 'vedeni', status: 'blocked' },
+    ] as const) {
+      await expect(change(world.as(head), after, patch)).rejects.toBeInstanceOf(ScopeViolation);
+    }
+  });
+
+  it('keeps the own tier from a student tier, by the role check', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    await expect(change(world.as(head), head, { tier: 'student' })).rejects.toMatchObject({
+      name: 'ConstraintViolation',
+      constraint: 'users_student_role',
+    });
+  });
+
+  it('lets nobody but a headmaster change even their own tier', async () => {
+    const reviewer = await world.seed.user({ role: 'reviewer' });
+    await expect(change(world.as(reviewer), reviewer, { tier: 'vedeni' })).rejects.toBeInstanceOf(
+      ScopeViolation,
+    );
+  });
+
   it('reads several users at once, within the principal’s scope', async () => {
     const me = await world.seed.user({ role: 'submitter' });
     const other = await world.seed.user({ role: 'reviewer' });

@@ -1,6 +1,5 @@
 export {
   accessChoices,
-  AUDIENCES,
   isValidAccess,
   lowersAccess,
   refuseAccessChange,

@@ -4,7 +4,6 @@ import type { AccessPatch, UserRecord } from '@/application/ports';
 import { changeUserAccessInput, changeUserAccessOutput } from '@/contracts';
 import { can, lowersAccess, refuseAccessChange, type AccessValue } from '@/domain/policy';
 
-import { tierOfAudience } from './audience';
 import { userAccessEvent } from './events';
 import { lockedActor } from './locked-actor';
 
@@ -26,9 +25,10 @@ function patchOf(user: UserRecord, next: AccessValue): AccessPatch {
 }
 
 /**
- * A headmaster sets a user's role, audience and account status, under
- * step-up (the pipeline asks for it once `can()` passed). The form sends the
- * full desired state; nothing to change writes nothing. Lowering access
+ * A headmaster sets a user's role, tier and account status, under step-up
+ * (the pipeline asks for it once `can()` passed); on their own row only the
+ * tier, to a staff one (ADR 0072, decision A). The form sends the full
+ * desired state; nothing to change writes nothing. Lowering access
  * needs `confirmed`. The user's row is locked first, the one access.request
  * takes first, so a request filed meanwhile is seen here; the headmaster's
  * own row comes next, so `can()` is asked again of it (lockedActor). A
@@ -53,7 +53,7 @@ export const changeUserAccess = defineUseCase({
     const [newest] = await tx.accessRequests.forUser(user.id);
     const next: AccessValue = {
       role: input.role,
-      tier: tierOfAudience(input.audience, user.tier),
+      tier: input.tier,
       status: input.status,
     };
     const refusal = refuseAccessChange(
@@ -64,7 +64,7 @@ export const changeUserAccess = defineUseCase({
     if (refusal) return fail(REFUSALS[refusal]);
 
     const patch = patchOf(user, next);
-    if (Object.keys(patch).length === 0) return ok({ changed: false });
+    if (Object.keys(patch).length === 0) return ok({ changed: false, version: user.version });
     if (lowersAccess(user, next) && !input.confirmed) {
       return fail({ code: 'invalid-input', fields: { confirmed: 'required' } });
     }
@@ -74,6 +74,6 @@ export const changeUserAccess = defineUseCase({
       const mail = mailJob('access.granted', { userId: user.id, versionAfter: after.version });
       await tx.jobs.enqueue('mail.send', mail.data, { dedupeKey: mail.dedupeKey });
     }
-    return ok({ changed: true });
+    return ok({ changed: true, version: after.version });
   },
 });

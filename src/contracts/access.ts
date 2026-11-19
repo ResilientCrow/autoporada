@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { TIERS } from '@/domain/actor';
 import { ACCESS_REASON_MAX, ACCESS_STATES } from '@/domain/review';
 
 /** Why the person needs access, in their own words; only the headmaster reads it. */
@@ -18,12 +19,23 @@ export const cancelAccessOutput = z.object({});
 /** What a decision can leave a request as. */
 const DECIDED_STATES = z.enum(ACCESS_STATES).exclude(['pending', 'cancelled']);
 
-/** The headmaster's answer: approval names the audience, with no default; a block is confirmed. */
-const ACCESS_DECISIONS = ['approve-staff', 'approve-student', 'reject', 'block'] as const;
-export const decideAccessInput = z.strictObject({
-  requestId: z.guid(),
-  version: z.number().int().positive(),
-  decision: z.enum(ACCESS_DECISIONS),
-  confirmed: z.literal(true).optional(),
-});
+/**
+ * The headmaster's answer: an approval names the tier, with no default (ADR 0072 item 2), and
+ * only an approval takes one; a block is confirmed.
+ */
+const ACCESS_DECISIONS = ['approve', 'reject', 'block'] as const;
+export const decideAccessInput = z
+  .strictObject({
+    requestId: z.guid(),
+    version: z.number().int().positive(),
+    decision: z.enum(ACCESS_DECISIONS),
+    tier: z.enum(TIERS).optional(),
+    confirmed: z.literal(true).optional(),
+  })
+  .superRefine(({ decision, tier }, ctx) => {
+    const approves = decision === 'approve';
+    if (approves === (tier !== undefined)) return;
+    const code = approves ? 'required' : 'invalid';
+    ctx.addIssue({ code: 'custom', path: ['tier'], message: code, params: { code } });
+  });
 export const decideAccessOutput = z.object({ state: DECIDED_STATES });

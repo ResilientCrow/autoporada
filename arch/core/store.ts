@@ -1,3 +1,4 @@
+import { isStudentTier, type Tier } from '@/domain/actor';
 import { deadline, planAdd, planDrop, planMove } from '@/domain/calendar';
 import { missingForSubmit, newDraft, openingInput, REPORT_BULLETS, submittedContent, type DraftPerson, type PointContent, type PointKind } from '@/domain/report';
 import { openingSentence } from '@/domain/cs';
@@ -272,14 +273,19 @@ export const newSchoolYear = (keys: string[]): Fx => (s) => audit({ ...s, regist
 export const saveSettings = (patch: Partial<State['settings']>): Fx => (s) => { const n = { ...s, settings: { ...s.settings, ...patch } }; const today = Date.parse(s.now); return { ...n, issues: n.issues.map((i) => (i.status === 'open' && Date.parse(i.deadlineAt) > today + 14 * 864e5 ? { ...i, deadlineAt: deadline(parseIsoDate(i.meetingDate), { dayOffset: n.settings.dayOffset, time: parseWallTime(n.settings.time) }).toISOString() } : i)) }; };
 export const requestAccess = (reason: string): Fx => (s0) => { const u = me(s0)!; const [s, rid] = id(s0, 'req'); const r: AccessReq = { id: rid, name: nameOf(u), email: u.email, reason, at: s.now, state: 'pending', userId: u.id }; return { ...s, requests: [...s.requests, r] }; };
 export const cancelRequest = (rid: string): Fx => (s) => ({ ...s, requests: up(s.requests, rid, (r) => ({ ...r, state: 'cancelled' })) });
-export const decideRequest = (rid: string, to: 'approved' | 'rejected' | 'blocked'): Fx => (s0) => {
+/** An approval names the tier the headmaster picked (ADR 0072 item 2). */
+export const decideRequest = (rid: string, to: 'approved' | 'rejected' | 'blocked', tier?: Tier): Fx => (s0) => {
   const r = s0.requests.find((x) => x.id === rid)!;
+  if (to === 'approved' && !tier) return s0;
+  const placed = { tier: tier ?? null, isStudent: isStudentTier(tier ?? null) };
   let s: State = { ...s0, requests: up(s0.requests, rid, (x) => ({ ...x, state: to, decidedAt: s0.now })) };
-  if (to === 'approved') { const ex = s.users.find((u) => u.email === r.email); if (ex) s = { ...s, users: up(s.users, ex.id, (u) => ({ ...u, role: 'submitter' })) }; else { const [n, uid] = id(s, 'u'); const [givenName = '', familyName = ''] = r.name.split(' '); s = { ...n, users: [...n.users, { id: uid, salutation: 'pan', givenName, familyName, email: r.email, role: 'submitter', isStudent: false, status: 'active', job: 'Učitel' }] }; } }
+  if (to === 'approved') { const ex = s.users.find((u) => u.email === r.email); if (ex) s = { ...s, users: up(s.users, ex.id, (u) => ({ ...u, role: 'submitter', ...placed })) }; else { const [n, uid] = id(s, 'u'); const [givenName = '', familyName = ''] = r.name.split(' '); s = { ...n, users: [...n.users, { id: uid, salutation: 'pan', givenName, familyName, email: r.email, role: 'submitter', status: 'active', job: 'Učitel', ...placed }] }; } }
   const ex = s.users.find((u) => u.email === r.email);
   return ex ? mail(s, ex.id, 'Přístup do Autoporady', to === 'approved' ? 'Přístup byl schválen.' : 'Přístup nebyl schválen.') : s;
 };
-export const setUser = (uid: string, patch: { role?: Role; status?: 'active' | 'blocked'; isStudent?: boolean }): Fx => (s) => {
-  if (uid === s.userId || needsReauth(s)) return s;
-  return audit({ ...s, users: up(s.users, uid, (u) => { const n = { ...u, ...patch }; return n.isStudent && (n.role === 'reviewer' || n.role === 'headmaster') ? { ...n, role: 'submitter' } : n; }) }, `Změna uživatele ${uid}`);
+/** On the own row only a staff tier changes (ADR 0072, decision A); a student or absolvent is at most a submitter. */
+export const setUser = (uid: string, patch: { role?: Role; status?: 'active' | 'blocked'; tier?: Tier }): Fx => (s) => {
+  const own = uid === s.userId && (patch.role !== undefined || patch.status !== undefined || isStudentTier(patch.tier ?? null));
+  if (own || needsReauth(s)) return s;
+  return audit({ ...s, users: up(s.users, uid, (u) => { const n = { ...u, ...patch, ...(patch.tier && { isStudent: isStudentTier(patch.tier) }) }; return n.isStudent && (n.role === 'reviewer' || n.role === 'headmaster') ? { ...n, role: 'submitter' } : n; }) }, `Změna uživatele ${uid}`);
 };

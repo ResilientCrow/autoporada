@@ -6,7 +6,6 @@ import { decideAccessInput, decideAccessOutput } from '@/contracts';
 import { can } from '@/domain/policy';
 import { ACCESS_MACHINE, transition, type DecisionEvent } from '@/domain/review';
 
-import { tierOfAudience } from '../users/audience';
 import { userAccessEvent } from '../users/events';
 import { lockedActor } from '../users/locked-actor';
 import { accessRequestEvent } from './events';
@@ -15,8 +14,7 @@ import { machineActor } from './machine';
 type Decision = z.output<typeof decideAccessInput>['decision'];
 
 const EVENTS: Readonly<Record<Decision, DecisionEvent>> = {
-  'approve-staff': 'approve',
-  'approve-student': 'approve',
+  approve: 'approve',
   reject: 'reject',
   block: 'block',
 };
@@ -28,7 +26,7 @@ const STATES: Readonly<Record<DecisionEvent, z.output<typeof decideAccessOutput>
 
 /**
  * The headmaster decides a request (plan §4: no step-up). Approval names
- * the audience, makes the requester a submitter in the same transaction and
+ * the tier, makes the requester a submitter in the same transaction and
  * so ends their sessions (users_end_sessions). Only the user's newest
  * request can be decided. Lock order: the request (load), then the user,
  * then the headmaster's own row, so `can()` is asked again of it
@@ -68,7 +66,8 @@ export const decideAccess = defineUseCase({
     if (event === 'approve') {
       const changed = await tx.users.changeAccess(user.id, user.version, {
         role: 'submitter',
-        tier: tierOfAudience(input.decision === 'approve-student' ? 'student' : 'staff', user.tier),
+        // The contract makes an approval name the tier.
+        ...(input.tier !== undefined && { tier: input.tier }),
       });
       await tx.audit.record(userAccessEvent(user, changed, { via: 'access.approve' }));
     }

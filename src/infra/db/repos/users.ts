@@ -93,8 +93,12 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
     },
     async changeAccess(id, expectedVersion, patch) {
       require({ action: 'users.manage' });
-      if (principal.kind === 'user' && principal.actor.id === id) throw new ScopeViolation();
       const { role, tier, status } = patch;
+      // The own row takes a tier-only patch (ADR 0072, decision A); the role check keeps it staff.
+      const ownAccess = role !== undefined || status !== undefined;
+      if (principal.kind === 'user' && principal.actor.id === id && ownAccess) {
+        throw new ScopeViolation();
+      }
       const [row] = await db
         .update(users)
         .set({

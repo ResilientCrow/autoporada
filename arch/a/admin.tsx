@@ -1,4 +1,5 @@
 import { isAadstsCode, isFailureCause, isSignInError } from '@/contracts';
+import { isStudentTier, TIERS, type Tier } from '@/domain/actor';
 import { foldForSearch, normalizeClass } from '@/domain/cs';
 import { failures } from '@/ui/copy/failures';
 import { signIn } from '@/ui/copy/sign-in';
@@ -14,26 +15,38 @@ import logo from './logo-dark.svg';
 const Tabs = ({ on }: { on: string }) => { const { s } = useStore(); return <div className="tabs sgm" role="navigation" aria-label="Správa">{[['/lide', `Lidé${Q.pendingRequests(s).length ? ` (${Q.pendingRequests(s).length})` : ''}`], ['/seznamy', 'Seznamy studentů'], ['/nastaveni', 'Nastavení']].map(([to, t]) => <a key={to} className={on === to ? 'on' : ''} href={`#${to}`}>{t}</a>)}</div>; };
 function Pane({ on, children }: { on: string; children: React.ReactNode }) { const { s } = useStore(); return Q.me(s)?.role === 'headmaster' ? <div className="work solo"><Bar /><main className="pane"><Tabs on={on} />{children}</main><PhoneBar /></div> : <NotFound />; }
 const ROLE = { pending: 'Bez přístupu', submitter: 'Píše zprávy', reviewer: 'Vedení', headmaster: 'Ředitel' } as const;
+/** Who a person is at the school (ADR 0072); it grants no rights, the role does. */
+const TIER: Record<Tier, string> = { reditel: 'Ředitel', vedeni: 'Vedení', ucitel: 'Učitel', zamestnanec: 'Zaměstnanec', student: 'Student', absolvent: 'Absolvent' };
+const tierOptions = (tiers: readonly Tier[]) => tiers.map((t) => [t, TIER[t]] as const);
+/** The headmaster's own row takes a staff tier only. */
+const OWN_TIERS = TIERS.filter((t) => !isStudentTier(t));
+const subtitle = (u: { role: keyof typeof ROLE; tier?: Tier | null; status: string }) => `${ROLE[u.role]}${u.tier ? `, ${TIER[u.tier].toLowerCase()}` : ''}${u.status === 'blocked' ? ', zablokovaný účet' : ''}`;
 export function Lide() {
-  const { s, apply } = useStore(); const [q, setQ] = useState(''); const [dlg, setDlg] = useState<string | null>(null);
+  const { s, apply } = useStore(); const [q, setQ] = useState(''); const [dlg, setDlg] = useState<string | null>(null); const [tier, setTier] = useState<Tier | null>(null);
   const f = q.toLowerCase(); const us = s.users.filter((u) => !f || Q.nameOf(u).toLowerCase().includes(f) || u.email.includes(f));
+  // People with access whom nobody placed yet; a search shows everyone in Všichni only.
+  const unplaced = f ? [] : s.users.filter((u) => u.role !== 'pending' && u.tier === null);
   const req = Q.pendingRequests(s); const r = s.requests.find((x) => x.id === dlg);
   return <Pane on="/lide"><Top h="Lidé" />
-    {r ? <Dialog title={`Co s žádostí: ${r.name}?`} onClose={() => setDlg(null)}><div className="stack st8"><button className="btn go lg w" onClick={() => { apply(A.decideRequest(r.id, 'approved')); setDlg(null); }}>Schválit</button><button className="btn lg w" onClick={() => { apply(A.decideRequest(r.id, 'rejected')); setDlg(null); }}>Zamítnout, znovu může za 30 dní</button><button className="q r" onClick={() => { apply(A.decideRequest(r.id, 'blocked')); setDlg(null); }}>Zablokovat další žádosti</button></div></Dialog> : null}
-    {req.length ? <Sec h="Žádosti o přístup">{req.map((x) => <div className="it" key={x.id}><span className="tx"><span className="tt">{x.name}</span><span className="st">{x.reason}</span><span className="st">{x.email}, {WHEN(x.at)}</span></span><button className="btn go" onClick={() => setDlg(x.id)}>Rozhodnout</button></div>)}</Sec> : null}
+    {r ? <Dialog title={`Co s žádostí: ${r.name}?`} onClose={() => setDlg(null)}><div className="stack st8"><p className="sm">Zařazení ve škole</p><Seg label="Zařazení" value={tier} options={tierOptions(TIERS)} onChange={setTier} /><button className={`btn lg w ${tier ? 'go' : 'off'}`} aria-disabled={!tier} onClick={() => { if (!tier) return; apply(A.decideRequest(r.id, 'approved', tier)); setDlg(null); }}>Schválit</button><button className="btn lg w" onClick={() => { apply(A.decideRequest(r.id, 'rejected')); setDlg(null); }}>Zamítnout, znovu může za 30 dní</button><button className="q r" onClick={() => { apply(A.decideRequest(r.id, 'blocked')); setDlg(null); }}>Zablokovat další žádosti</button></div></Dialog> : null}
+    {req.length ? <Sec h="Žádosti o přístup">{req.map((x) => <div className="it" key={x.id}><span className="tx"><span className="tt">{x.name}</span><span className="st">{x.reason}</span><span className="st">{x.email}, {WHEN(x.at)}</span></span><button className="btn go" onClick={() => { setTier(null); setDlg(x.id); }}>Rozhodnout</button></div>)}</Sec> : null}
+    {unplaced.length ? <Sec h={`Bez zařazení (${unplaced.length})`}>{unplaced.map((u) => <Item key={u.id} to={`/lide/${u.id}`} t={Q.nameOf(u)} st={subtitle(u)} />)}</Sec> : null}
     <label className="l">Najít člověka<input className="in" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Jméno nebo e-mail" /></label>
-    <Sec h={`Všichni (${us.length})`}>{us.map((u) => <Item key={u.id} to={`/lide/${u.id}`} t={Q.nameOf(u)} st={`${ROLE[u.role]}${u.isStudent ? ', student' : ''}${u.status === 'blocked' ? ', zablokovaný účet' : ''}`} />)}{us.length === 0 ? <p className="sm">Nikdo takový tu není.</p> : null}</Sec>
+    <Sec h={`Všichni (${us.length})`}>{us.map((u) => <Item key={u.id} to={`/lide/${u.id}`} t={Q.nameOf(u)} st={subtitle(u)} />)}{us.length === 0 ? <p className="sm">Nikdo takový tu není.</p> : null}</Sec>
   </Pane>;
 }
 export function Clovek({ id }: { id: string }) {
   const { s, apply } = useStore(); const u = s.users.find((x) => x.id === id); const [ok, setOk] = useState(false); if (!u) return <NotFound />;
   const self = u.id === s.userId; const need = A.needsReauth(s);
   const set = (p: Parameters<typeof A.setUser>[1]) => { apply(A.setUser(id, p)); setOk(true); };
+  const student = isStudentTier(u.tier ?? null);
+  const stepUp = <section className="stack st8"><Note h="Nejdřív ověříme, že jste to Vy">Změna role nebo zařazení patří k citlivým věcem, proto Vás Microsoft požádá o nové přihlášení. Ověření platí 10 minut.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section>;
+  const placing = (tiers: readonly Tier[]) => <section className="stack st8"><h2>Zařazení</h2><Seg label="Zařazení" value={u.tier ?? null} options={tierOptions(tiers)} onChange={(v) => set({ tier: v })} /></section>;
   return <Pane on="/lide"><Back to="/lide" t="Zpět na lidi" /><Top h={Q.nameOf(u)} lead={u.email} />
     {ok ? <Toast onDone={() => setOk(false)}>Uloženo</Toast> : null}
-    {self ? <Note h="Tohle jste Vy">Svou roli ani účet si sami nezměníte. Jediný ředitel nejdřív povýší zástupce.</Note> : need ? <section className="stack st8"><Note h="Nejdřív ověříme, že jste to Vy">Změna role patří k citlivým věcem, proto Vás Microsoft požádá o nové přihlášení. Ověření platí 10 minut.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section> : <>
-      <section className="stack st8"><h2>Co smí</h2><Seg label="Role" value={u.role} options={(u.isStudent ? (['submitter', 'pending'] as const) : (['submitter', 'reviewer', 'headmaster', 'pending'] as const)).map((r) => [r, ROLE[r]] as const)} onChange={(v) => set({ role: v })} />{u.isStudent ? <p className="sm">Student může jen psát zprávy.</p> : null}</section>
-      <label className="chk"><input type="checkbox" checked={u.isStudent} onChange={(e) => set({ isStudent: e.target.checked })} />Je to student</label>
+    {self ? <><Note h="Tohle jste Vy">Svou roli ani účet si sami nezměníte, jen své zařazení. Jediný ředitel nejdřív povýší zástupce.</Note>{need ? stepUp : placing(OWN_TIERS)}</> : need ? stepUp : <>
+      <section className="stack st8"><h2>Co smí</h2><Seg label="Role" value={u.role} options={(student ? (['submitter', 'pending'] as const) : (['submitter', 'reviewer', 'headmaster', 'pending'] as const)).map((r) => [r, ROLE[r]] as const)} onChange={(v) => set({ role: v })} />{student ? <p className="sm">Student i absolvent smí jen psát zprávy.</p> : null}</section>
+      {placing(TIERS)}
       <section className="stack st8"><h2>Účet</h2><button className="btn" onClick={() => set({ status: u.status === 'blocked' ? 'active' : 'blocked' })}>{u.status === 'blocked' ? 'Odblokovat účet' : 'Zablokovat účet'}</button></section>
     </>}
   </Pane>;

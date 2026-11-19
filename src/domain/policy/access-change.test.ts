@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Actor, Role, Tier, UserStatus } from '@/domain/actor';
+import { TIERS, type Actor, type Role, type Tier, type UserStatus } from '@/domain/actor';
 
 import {
   accessChoices,
@@ -28,47 +28,48 @@ const value = (t: AccessTarget, extra: Partial<AccessValue> = {}): AccessValue =
   ...extra,
 });
 const STAFF: readonly Role[] = ['submitter', 'reviewer', 'headmaster'];
+const OWN_TIERS: readonly Tier[] = ['reditel', 'vedeni', 'ucitel', 'zamestnanec'];
 
 describe('accessChoices', () => {
   it.each<[string, AccessTarget, AccessChoices]>([
     [
-      'own account',
+      'own account: a staff tier only',
       target({ id: by.id, role: 'headmaster' }),
-      { roles: [], audience: false, statuses: [] },
+      { roles: [], tiers: OWN_TIERS, statuses: [] },
     ],
     [
       'pending user with a pending request',
       target({ role: 'pending', hasPendingRequest: true }),
-      { roles: [], audience: false, statuses: ['active', 'blocked'] },
+      { roles: [], tiers: [], statuses: ['active', 'blocked'] },
     ],
     [
       'pending user without a request',
       target({ role: 'pending' }),
-      { roles: ['pending', ...STAFF], audience: true, statuses: ['active', 'blocked'] },
+      { roles: ['pending', ...STAFF], tiers: TIERS, statuses: ['active', 'blocked'] },
     ],
     [
       'deactivated pending user without a request',
       target({ role: 'pending', status: 'deactivated' }),
       {
         roles: ['pending', ...STAFF],
-        audience: true,
+        tiers: TIERS,
         statuses: ['active', 'blocked', 'deactivated'],
       },
     ],
     [
       'active reviewer: never back to pending',
       target({ role: 'reviewer' }),
-      { roles: STAFF, audience: true, statuses: ['active', 'blocked'] },
+      { roles: STAFF, tiers: TIERS, statuses: ['active', 'blocked'] },
     ],
     [
       'blocked submitter',
       target({ status: 'blocked' }),
-      { roles: STAFF, audience: true, statuses: ['active', 'blocked'] },
+      { roles: STAFF, tiers: TIERS, statuses: ['active', 'blocked'] },
     ],
     [
       'deactivated submitter keeps its status on offer',
       target({ status: 'deactivated' }),
-      { roles: STAFF, audience: true, statuses: ['active', 'blocked', 'deactivated'] },
+      { roles: STAFF, tiers: TIERS, statuses: ['active', 'blocked', 'deactivated'] },
     ],
   ])('%s', (_name, t, expected) => {
     expect(accessChoices(by, t)).toEqual(expected);
@@ -79,12 +80,25 @@ describe('refuseAccessChange', () => {
   const t = target();
   const pendingWithRequest = target({ role: 'pending', hasPendingRequest: true });
   const pendingNoRequest = target({ role: 'pending' });
+  const own = target({ id: by.id, role: 'headmaster' });
 
   it.each<[string, AccessTarget, Partial<AccessValue>, string | null]>([
     ['own account, whatever is asked', target({ id: by.id }), { role: 'reviewer' }, 'forbidden'],
     ['own account, no change at all', target({ id: by.id }), {}, 'forbidden'],
+    ['own account, status changes', target({ id: by.id }), { status: 'blocked' }, 'forbidden'],
+    ['own account, tier set', own, { tier: 'reditel' }, null],
+    ['own account, tier changed', target({ ...own, tier: 'vedeni' }), { tier: 'ucitel' }, null],
+    ['own account, a student tier', own, { tier: 'student' }, 'forbidden'],
+    ['own account, an absolvent tier', own, { tier: 'absolvent' }, 'forbidden'],
+    [
+      'own account, tier back to none',
+      target({ ...own, tier: 'reditel' }),
+      { tier: null },
+      'forbidden',
+    ],
+    ['own account, tier and role', own, { tier: 'reditel', role: 'reviewer' }, 'forbidden'],
+    ['own account, tier and status', own, { tier: 'reditel', status: 'blocked' }, 'forbidden'],
     ['request pending, role changes', pendingWithRequest, { role: 'submitter' }, 'conflict'],
-    ['request pending, audience changes', pendingWithRequest, { tier: 'student' }, 'conflict'],
     ['request pending, tier changes', pendingWithRequest, { tier: 'ucitel' }, 'conflict'],
     ['request pending, status changes', pendingWithRequest, { status: 'blocked' }, null],
     ['request pending, nothing changes', pendingWithRequest, {}, null],
@@ -105,6 +119,9 @@ describe('refuseAccessChange', () => {
     ['grant access by hand to a pending user', pendingNoRequest, { role: 'submitter' }, null],
     ['pending user without a request stays pending', pendingNoRequest, {}, null],
     ['employee made a student', t, { tier: 'student' }, null],
+    ['a set tier back to none', target({ tier: 'ucitel' }), { tier: null }, 'forbidden'],
+    ['a student back to none', target({ tier: 'student' }), { tier: null }, 'forbidden'],
+    ['no tier stays none', t, {}, null],
     ['student made reviewer', t, { role: 'reviewer', tier: 'student' }, 'student-role'],
     ['absolvent made reviewer', t, { role: 'reviewer', tier: 'absolvent' }, 'student-role'],
     ['vedení made reviewer', t, { role: 'reviewer', tier: 'vedeni' }, null],

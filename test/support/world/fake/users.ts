@@ -83,7 +83,11 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       if (principal.kind === 'user' && !can(principal.actor, { action: 'users.manage' })) {
         throw new ScopeViolation();
       }
-      if (principal.kind === 'user' && principal.actor.id === id) throw new ScopeViolation();
+      // As the repo: the own row takes a tier-only patch.
+      const ownAccess = patch.role !== undefined || patch.status !== undefined;
+      if (principal.kind === 'user' && principal.actor.id === id && ownAccess) {
+        throw new ScopeViolation();
+      }
       const user = find(id);
       if (!user || user.version !== expectedVersion) throw new StaleVersion();
       const { role = user.role, tier = user.tier, status = user.status } = patch;

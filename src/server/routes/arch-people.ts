@@ -92,6 +92,7 @@ export function peopleFor(input: {
         email: full ? (u.email ?? '') : '',
         role: full ? u.role : 'submitter',
         isStudent: full ? student : false,
+        ...(full && { tier: u.tier }),
         status: full && u.status === 'blocked' ? 'blocked' : 'active',
         ...(full && u.jobTitle && { job: u.jobTitle }),
         ...(full && u.department && { affiliation: u.department }),

@@ -318,6 +318,8 @@ test.describe('the Arch UI', () => {
         status: 'active',
         isStudent: false,
       });
+      // The tier is the headmaster's to read, and each person's own (ADR 0072).
+      expect(other).not.toHaveProperty('tier');
     }
     expect(state.users.length).toBeLessThan(10);
     const returned = state.futures.find((f) => f.id === id)!;

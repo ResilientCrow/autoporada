@@ -101,7 +101,8 @@ describe('the mail.send handler', () => {
         await world.run(decideAccess, world.as(head), {
           requestId: request.id,
           version: request.version,
-          decision: 'approve-staff',
+          decision: 'approve',
+          tier: 'ucitel',
         }),
       ).toEqual({ ok: true, value: { state: 'approved' } });
       const job = mailJob('access.approved', { recipientId: user.id, requestId: request.id });
@@ -118,11 +119,11 @@ describe('the mail.send handler', () => {
           userId: member.id,
           version: member.version,
           role: 'submitter',
-          audience: 'staff',
+          tier: 'ucitel',
           status: 'blocked',
           confirmed: true,
         }),
-      ).toEqual({ ok: true, value: { changed: true } });
+      ).toEqual({ ok: true, value: { changed: true, version: member.version + 1 } });
       const { mail, run } = handler();
       expect(await run(job)).toEqual({ kind: 'done', code: 'skipped.stale' });
       expect(mail.calls).toHaveLength(0);

@@ -1,13 +1,12 @@
 import {
   atLeast,
   isStudentTier,
+  TIERS,
   type Actor,
   type Role,
   type Tier,
   type UserStatus,
 } from '@/domain/actor';
-
-export const AUDIENCES = ['staff', 'student'] as const;
 
 /** The user whose access is about to change, as the page or the use case read it. */
 export interface AccessTarget {
@@ -27,11 +26,17 @@ export interface AccessValue {
 /** What the form may offer; anything else is refused. */
 export interface AccessChoices {
   readonly roles: readonly Role[];
-  readonly audience: boolean;
+  /** A set tier never goes back to none, so none is never on offer (ADR 0072, decision F). */
+  readonly tiers: readonly Tier[];
   readonly statuses: readonly UserStatus[];
 }
 
-const NOTHING: AccessChoices = { roles: [], audience: false, statuses: [] };
+/** The headmaster's own row: a staff tier and nothing else (ADR 0072, decision A). */
+const OWN: AccessChoices = {
+  roles: [],
+  tiers: TIERS.filter((tier) => !isStudentTier(tier)),
+  statuses: [],
+};
 const SETTABLE_STATUSES: readonly UserStatus[] = ['active', 'blocked'];
 const GRANTABLE_ROLES: readonly Role[] = ['submitter', 'reviewer', 'headmaster'];
 
@@ -40,29 +45,30 @@ const statusesFor = (target: AccessTarget): readonly UserStatus[] =>
   target.status === 'deactivated' ? [...SETTABLE_STATUSES, 'deactivated'] : SETTABLE_STATUSES;
 
 /**
- * What `by` may set on `target`. Nobody changes their own access, a pending
- * request is only decided through the request, and nobody returns to pending.
- * Pure rules on top of `can(users.manage)`, which the use case checks first.
+ * What `by` may set on `target`. Nobody changes their own role or status, only
+ * their own tier to a staff one (a tier grants no rights); a pending request is
+ * only decided through the request, and nobody returns to pending. Pure rules
+ * on top of `can(users.manage)`, which the use case checks first.
  */
 export function accessChoices(by: Actor, target: AccessTarget): AccessChoices {
-  if (by.id === target.id) return NOTHING;
+  if (by.id === target.id) return OWN;
   if (target.role === 'pending') {
-    if (target.hasPendingRequest)
-      return { roles: [], audience: false, statuses: SETTABLE_STATUSES };
+    if (target.hasPendingRequest) return { roles: [], tiers: [], statuses: SETTABLE_STATUSES };
     return {
       roles: ['pending', ...GRANTABLE_ROLES],
-      audience: true,
+      tiers: TIERS,
       statuses: statusesFor(target),
     };
   }
-  return { roles: GRANTABLE_ROLES, audience: true, statuses: statusesFor(target) };
+  return { roles: GRANTABLE_ROLES, tiers: TIERS, statuses: statusesFor(target) };
 }
 
 /**
  * Why `by` may not change `target` to `next`, or null. The refusals run in
  * this order. Like `accessChoices`, it is pure rules on top of
  * `can(users.manage)`, which the use case checks first.
- * - `forbidden`: own account, or a role or status the choices never offer.
+ * - `forbidden`: own account other than a tier change, or a role, tier or
+ *   status the choices never offer (a set tier back to none among them).
  * - `conflict`: a request arrived after the page loaded.
  * - `student-role`: a student or absolvent above the submitter role.
  */
@@ -71,13 +77,15 @@ export function refuseAccessChange(
   target: AccessTarget,
   next: AccessValue,
 ): 'forbidden' | 'conflict' | 'student-role' | null {
-  if (by.id === target.id) return 'forbidden';
   const roleChanges = next.role !== target.role;
-  if (target.hasPendingRequest && (roleChanges || next.tier !== target.tier)) {
-    return 'conflict';
-  }
+  const tierChanges = next.tier !== target.tier;
+  if (by.id === target.id && !tierChanges) return 'forbidden';
+  if (target.hasPendingRequest && (roleChanges || tierChanges)) return 'conflict';
   const choices = accessChoices(by, target);
   if (roleChanges && !choices.roles.includes(next.role)) return 'forbidden';
+  if (tierChanges && (next.tier === null || !choices.tiers.includes(next.tier))) {
+    return 'forbidden';
+  }
   if (next.status !== target.status && !choices.statuses.includes(next.status)) return 'forbidden';
   return isValidAccess(next) ? null : 'student-role';
 }

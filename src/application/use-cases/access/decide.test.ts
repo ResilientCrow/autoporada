@@ -12,6 +12,7 @@ const world = setupWorld();
 const DAY = 86_400_000;
 const daysAgo = (days: number) => new Date(world.clock.now().getTime() - days * DAY);
 const RANDOM_ID = '0190f6a0-0000-7000-8000-00000000abcd';
+const STAFF = { tier: 'ucitel' } as const;
 
 /** A headmaster and a pending user whose request, filed yesterday, waits for them. */
 async function setup() {
@@ -76,17 +77,14 @@ async function refuses(userId: string, run: () => Promise<unknown>, error: unkno
 }
 
 describe('access.decide', () => {
-  it.each([
-    ['approve-staff', null],
-    ['approve-student', 'student'],
-  ] as const)(
-    '%s: approves, sets the audience and ends the requester’s sessions',
-    async (decision, tier) => {
+  it.each(['ucitel', 'student', 'absolvent', 'reditel'] as const)(
+    'approves with the tier %s, sets it and ends the requester’s sessions',
+    async (tier) => {
       const { head, user, request } = await setup();
       await signedIn(world, user.id, 'requester');
       const logged = (await world.inspect.audit()).length;
 
-      expect(await decide(head, request, decision)).toEqual({
+      expect(await decide(head, request, 'approve', { tier })).toEqual({
         ok: true,
         value: { state: 'approved' },
       });
@@ -126,7 +124,7 @@ describe('access.decide', () => {
           data: {
             diff: {
               role: { from: 'pending', to: 'submitter' },
-              ...(tier && { tier: { from: null, to: tier } }),
+              tier: { from: null, to: tier },
             },
             meta: { via: 'access.approve' },
           },
@@ -138,6 +136,20 @@ describe('access.decide', () => {
       expect(after.jobs).toEqual([mailFor('access.approved', user, request)]);
     },
   );
+
+  it('approves an absolvent as a submitter only: the tier keeps them below vedení', async () => {
+    const { head, user, request } = await setup();
+    expect((await decide(head, request, 'approve', { tier: 'absolvent' })).ok).toBe(true);
+    expect((await snapshot(user.id)).user).toMatchObject({ role: 'submitter', tier: 'absolvent' });
+  });
+
+  it('refuses an approval without a tier and changes nothing', async () => {
+    const { head, user, request } = await setup();
+    await refuses(user.id, () => decide(head, request, 'approve'), {
+      code: 'invalid-input',
+      fields: { tier: 'required' },
+    });
+  });
 
   it('rejects: the user stays as they were and waits out the cooldown', async () => {
     const { head, user, request } = await setup();
@@ -255,7 +267,7 @@ describe('access.decide', () => {
 
   it('refuses a second decision, from the old form and from the new one', async () => {
     const { head, user, request } = await setup();
-    expect((await decide(head, request, 'approve-staff')).ok).toBe(true);
+    expect((await decide(head, request, 'approve', STAFF)).ok).toBe(true);
     const conflict = { code: 'conflict' };
     await refuses(user.id, () => decide(head, request, 'reject'), conflict);
     await refuses(user.id, () => decide(head, { ...request, version: 2 }, 'reject'), conflict);
@@ -287,8 +299,10 @@ describe('access.decide', () => {
     await world.tx(system('test.seed'), (tx) =>
       tx.users.changeAccess(user.id, user.version, { role: 'submitter' }),
     );
-    for (const decision of ['approve-staff', 'approve-student']) {
-      await refuses(user.id, () => decide(head, request, decision), { code: 'conflict' });
+    for (const tier of ['ucitel', 'student']) {
+      await refuses(user.id, () => decide(head, request, 'approve', { tier }), {
+        code: 'conflict',
+      });
     }
   });
 
@@ -306,7 +320,7 @@ describe('access.decide', () => {
       );
       // `head` is the record the session was resolved from: still an active headmaster.
       for (const [decision, extra] of [
-        ['approve-staff', {}],
+        ['approve', STAFF],
         ['reject', {}],
         ['block', { confirmed: true }],
       ] as const) {
@@ -319,7 +333,7 @@ describe('access.decide', () => {
 
   it('forbids the requester to decide their own request, which they can see', async () => {
     const { user, request } = await setup();
-    await refuses(user.id, () => decide(user, request, 'approve-staff'), { code: 'forbidden' });
+    await refuses(user.id, () => decide(user, request, 'approve', STAFF), { code: 'forbidden' });
   });
 
   it('shows another person’s request to no one but a headmaster: the rest get not-found', async () => {
@@ -330,7 +344,7 @@ describe('access.decide', () => {
     // A session from before the flag: students never decide, even as a stale headmaster.
     const studentHead = { ...head, tier: 'student' as const };
     for (const by of [submitter, reviewer, blockedHead, studentHead]) {
-      await refuses(user.id, () => decide(by, request, 'approve-staff'), { code: 'not-found' });
+      await refuses(user.id, () => decide(by, request, 'approve', STAFF), { code: 'not-found' });
     }
   });
 
@@ -342,7 +356,9 @@ describe('access.decide', () => {
   });
 
   it.each([
-    ['an unknown decision', { decision: 'approve' }, { decision: 'invalid' }],
+    ['an unknown decision', { decision: 'approve-staff' }, { decision: 'invalid' }],
+    ['an unknown tier', { decision: 'approve', tier: 'rodic' }, { tier: 'invalid' }],
+    ['a tier with a rejection', { decision: 'reject', tier: 'ucitel' }, { tier: 'invalid' }],
     // Zod reports a missing enum value as invalid_value, which reads as 'invalid'.
     ['no decision', { decision: undefined }, { decision: 'invalid' }],
     ['confirmed: false', { decision: 'block', confirmed: false }, { confirmed: 'invalid' }],

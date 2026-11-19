@@ -211,15 +211,14 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'requestAccess': return [{ name: 'access.request', input: { reason: a[0] } }];
     case 'cancelRequest': return [{ name: 'access.cancel', input: { requestId: a[0], version: vers[a[0]] ?? 1 } }];
     case 'decideRequest': {
-      const [rid, to] = a as unknown as [string, 'approved' | 'rejected' | 'blocked'];
-      const r = s.requests.find((x) => x.id === rid); const u = s.users.find((x) => x.id === r?.userId);
-      const decision = to === 'approved' ? (u?.isStudent ? 'approve-student' : 'approve-staff') : to === 'rejected' ? 'reject' : 'block';
-      return [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision, confirmed: true } }];
+      const [rid, to, tier] = a as unknown as [string, 'approved' | 'rejected' | 'blocked', string | undefined];
+      if (to === 'approved') return tier ? [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision: 'approve', tier } }] : [];
+      return [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision: to === 'rejected' ? 'reject' : 'block', confirmed: true } }];
     }
     case 'setUser': {
       const [uid] = a as unknown as [string, { role?: Role }];
       const u = s.users.find((x) => x.id === uid); if (!u) return [];
-      return [{ name: 'users.changeAccess', key: uid, input: { userId: uid, version: vers[uid] ?? 1, role: u.role, audience: u.isStudent ? 'student' : 'staff', status: u.status, confirmed: true } }];
+      return [{ name: 'users.changeAccess', key: uid, input: { userId: uid, version: vers[uid] ?? 1, role: u.role, tier: u.tier ?? null, status: u.status, confirmed: true } }];
     }
     default: return [];
   }

@@ -48,7 +48,7 @@ describe('a headmaster demoted while their write waits on their row', () => {
         userId: user.id,
         version: user.version,
         role: 'reviewer',
-        audience: 'staff',
+        tier: null,
         status: 'active',
       }),
     );
@@ -66,7 +66,8 @@ describe('a headmaster demoted while their write waits on their row', () => {
       world.run(decideAccess, world.as(head), {
         requestId: request.id,
         version: request.version,
-        decision: 'approve-staff',
+        decision: 'approve',
+        tier: 'ucitel',
       }),
     );
     expect(result).toEqual({ ok: false, error: { code: 'forbidden' } });

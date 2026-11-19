@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { mailJob } from '@/application/notifications';
 import { system, type UserRecord } from '@/application/ports';
-import { isStudentTier } from '@/domain/actor';
 import { STEP_UP_MAX_AGE_MS } from '@/domain/policy';
 
 import { signedIn } from '../../../../test/support/sessions';
@@ -21,7 +20,7 @@ const form = (target: UserRecord, patch: Record<string, unknown> = {}) => ({
   userId: target.id,
   version: target.version,
   role: target.role,
-  audience: isStudentTier(target.tier) ? 'student' : 'staff',
+  tier: target.tier,
   status: target.status,
   ...patch,
 });
@@ -62,7 +61,11 @@ async function refuses(userId: string, run: () => Promise<unknown>, error: unkno
   expect(await snapshot(userId)).toEqual(before);
 }
 
-const changed = { ok: true, value: { changed: true } };
+/** A change that wrote the row once: Arch follows the version it answers. */
+const changed = (user: UserRecord) => ({
+  ok: true,
+  value: { changed: true, version: user.version + 1 },
+});
 
 describe('users.changeAccess', () => {
   it('promotes a submitter, audits the change and ends their sessions', async () => {
@@ -71,7 +74,7 @@ describe('users.changeAccess', () => {
     await signedIn(world, user.id, 'target');
     const logged = (await world.inspect.audit()).length;
 
-    expect(await change(head, user, { role: 'reviewer' })).toEqual(changed);
+    expect(await change(head, user, { role: 'reviewer' })).toEqual(changed(user));
 
     const after = await snapshot(user.id);
     expect(after.user).toMatchObject({ role: 'reviewer', tier: null, status: 'active' });
@@ -101,7 +104,7 @@ describe('users.changeAccess', () => {
       code: 'step-up-required',
     });
     const fresh = new Date(world.clock.now().getTime() - STEP_UP_MAX_AGE_MS);
-    expect(await change(head, user, { role: 'reviewer' }, fresh)).toEqual(changed);
+    expect(await change(head, user, { role: 'reviewer' }, fresh)).toEqual(changed(user));
   });
 
   it('forbids a headmaster to change their own account', async () => {
@@ -136,7 +139,7 @@ describe('users.changeAccess', () => {
 
     it.each([
       ['a role', { role: 'submitter' }],
-      ['the audience', { audience: 'student' }],
+      ['the tier', { tier: 'student' }],
     ])('keeps %s for the request’s decision: conflict', async (_case, patch) => {
       const { head, user } = await setup();
       await refuses(user.id, () => change(head, user, patch), { code: 'conflict' });
@@ -144,7 +147,7 @@ describe('users.changeAccess', () => {
 
     it('may still have the account blocked, and the request stays', async () => {
       const { head, user } = await setup();
-      expect(await change(head, user, { status: 'blocked', ...CONFIRMED })).toEqual(changed);
+      expect(await change(head, user, { status: 'blocked', ...CONFIRMED })).toEqual(changed(user));
       const after = await snapshot(user.id);
       expect(after.user).toMatchObject({ role: 'pending', status: 'blocked' });
       expect(after.requests.map((r) => r.state)).toEqual(['pending']);
@@ -152,11 +155,11 @@ describe('users.changeAccess', () => {
   });
 
   it.each([
-    ['who never asked', null, 'staff'],
+    ['who never asked', null, null],
     ['after a cancelled request', 'cancelled', 'student'],
-    ['after a rejected request', 'rejected', 'staff'],
-    ['after a blocked request', 'blocked', 'student'],
-  ] as const)('grants access by hand to a pending user %s', async (_case, state, audience) => {
+    ['after a rejected request', 'rejected', 'zamestnanec'],
+    ['after a blocked request', 'blocked', 'absolvent'],
+  ] as const)('grants access by hand to a pending user %s', async (_case, state, tier) => {
     const head = await world.seed.user({ role: 'headmaster' });
     const user = await world.seed.user({ role: 'pending' });
     if (state) {
@@ -168,8 +171,7 @@ describe('users.changeAccess', () => {
       });
     }
     const logged = (await world.inspect.audit()).length;
-    expect(await change(head, user, { role: 'submitter', audience })).toEqual(changed);
-    const tier = audience === 'student' ? 'student' : null;
+    expect(await change(head, user, { role: 'submitter', tier })).toEqual(changed(user));
     const after = await snapshot(user.id);
     expect(after.user).toMatchObject({ role: 'submitter', tier });
     const { data, dedupeKey } = mailJob('access.granted', {
@@ -181,28 +183,38 @@ describe('users.changeAccess', () => {
     expect(after.audit.slice(logged).map((a) => a.data['diff'])).toEqual([
       {
         role: { from: 'pending', to: 'submitter' },
-        ...(tier && { tier: { from: null, to: 'student' } }),
+        ...(tier && { tier: { from: null, to: tier } }),
       },
     ]);
   });
 
   it.each([
-    ['an absolvent stays one as a student', 'absolvent', { audience: 'student' }, 'absolvent'],
-    ['a teacher stays one as staff', 'ucitel', { audience: 'staff', role: 'reviewer' }, 'ucitel'],
-    ['a teacher made a student', 'ucitel', { audience: 'student' }, 'student'],
-    ['a student made staff', 'student', { audience: 'staff' }, null],
-  ] as const)('keeps the tier the audience agrees with: %s', async (_case, from, patch, to) => {
+    ['someone with none gets one', null, { tier: 'ucitel' }, 'ucitel'],
+    ['a teacher joins vedení', 'ucitel', { tier: 'vedeni', role: 'reviewer' }, 'vedeni'],
+    ['a teacher made a student', 'ucitel', { tier: 'student' }, 'student'],
+    ['a student leaves school', 'student', { tier: 'absolvent' }, 'absolvent'],
+    ['a student made staff', 'student', { tier: 'zamestnanec' }, 'zamestnanec'],
+  ] as const)('sets the tier the form sends: %s', async (_case, from, patch, to) => {
     const head = await world.seed.user({ role: 'headmaster' });
     const user = await world.seed.user({ role: 'submitter', tier: from });
-    await change(head, user, patch);
+    expect(await change(head, user, patch)).toEqual(changed(user));
     expect((await snapshot(user.id)).user).toMatchObject({ tier: to });
   });
+
+  it.each(['ucitel', 'student'] as const)(
+    'never takes a set tier %s back to none: forbidden',
+    async (tier) => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'submitter', tier });
+      await refuses(user.id, () => change(head, user, { tier: null }), { code: 'forbidden' });
+    },
+  );
 
   it.each([
     ['a promotion', { role: 'submitter' }, { role: 'reviewer' }],
     ['a demotion', { role: 'reviewer' }, { role: 'submitter', ...CONFIRMED }],
     ['a block', { role: 'submitter' }, { status: 'blocked', ...CONFIRMED }],
-    ['a change of audience', { role: 'submitter' }, { audience: 'student' }],
+    ['a change of tier', { role: 'submitter' }, { tier: 'student' }],
     ['an unblock', { role: 'submitter', status: 'blocked' }, { status: 'active' }],
     ['a block of a pending user', { role: 'pending' }, { status: 'blocked', ...CONFIRMED }],
   ] as const)(
@@ -210,7 +222,7 @@ describe('users.changeAccess', () => {
     async (_case, seed, patch) => {
       const head = await world.seed.user({ role: 'headmaster' });
       const user = await world.seed.user(seed);
-      expect(await change(head, user, patch)).toEqual(changed);
+      expect(await change(head, user, patch)).toEqual(changed(user));
       expect(await world.inspect.jobs()).toEqual([]);
     },
   );
@@ -222,7 +234,9 @@ describe('users.changeAccess', () => {
       code: 'rule',
       rule: 'student-role',
     });
-    expect(await change(head, user, { role: 'reviewer', audience: 'staff' })).toEqual(changed);
+    expect(await change(head, user, { role: 'reviewer', tier: 'zamestnanec' })).toEqual(
+      changed(user),
+    );
   });
 
   it.each([
@@ -236,7 +250,7 @@ describe('users.changeAccess', () => {
       code: 'invalid-input',
       fields: { confirmed: 'required' },
     });
-    expect(await change(head, user, { ...patch, ...CONFIRMED })).toEqual(changed);
+    expect(await change(head, user, { ...patch, ...CONFIRMED })).toEqual(changed(user));
     expect(await userOf(user.id)).toMatchObject(patch);
   });
 
@@ -246,7 +260,7 @@ describe('users.changeAccess', () => {
   ] as const)('needs no confirmation for %s', async (_case, seed, patch) => {
     const head = await world.seed.user({ role: 'headmaster' });
     const user = await world.seed.user(seed);
-    expect(await change(head, user, patch)).toEqual(changed);
+    expect(await change(head, user, patch)).toEqual(changed(user));
     expect(await userOf(user.id)).toMatchObject(patch);
   });
 
@@ -257,7 +271,10 @@ describe('users.changeAccess', () => {
     const head = await world.seed.user({ role: 'headmaster' });
     const user = await world.seed.user(seed);
     const before = await snapshot(user.id);
-    expect(await change(head, user, CONFIRMED)).toEqual({ ok: true, value: { changed: false } });
+    expect(await change(head, user, CONFIRMED)).toEqual({
+      ok: true,
+      value: { changed: false, version: user.version },
+    });
     expect(await snapshot(user.id)).toEqual(before);
     expect(await world.inspect.jobs()).toEqual([]);
   });
@@ -281,6 +298,64 @@ describe('users.changeAccess', () => {
       await refuses(user.id, () => change(by, user, { role: 'reviewer' }), { code: 'not-found' });
     }
     await refuses(user.id, () => change(user, user, { role: 'reviewer' }), { code: 'forbidden' });
+    await refuses(user.id, () => change(user, user, { tier: 'ucitel' }), { code: 'forbidden' });
+  });
+
+  describe('the headmaster’s own tier (ADR 0072, decision A)', () => {
+    it('is set like anyone’s, audited, and keeps their session', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      await signedIn(world, head.id, 'own');
+      const logged = (await world.inspect.audit()).length;
+
+      expect(await change(head, head, { tier: 'reditel' })).toEqual(changed(head));
+
+      const after = await snapshot(head.id);
+      expect(after.user).toMatchObject({ role: 'headmaster', status: 'active', tier: 'reditel' });
+      expect(after.audit.slice(logged).map((a) => [a.action, a.data])).toEqual([
+        [
+          'user.access.change',
+          { diff: { tier: { from: null, to: 'reditel' } }, meta: { via: 'users.changeAccess' } },
+        ],
+      ]);
+      expect(await live('own')).toBe(true);
+      expect(after.jobs).toEqual([]);
+    });
+
+    it('changes from one staff tier to another', async () => {
+      const head = await world.seed.user({ role: 'headmaster', tier: 'vedeni' });
+      expect(await change(head, head, { tier: 'reditel' })).toEqual(changed(head));
+    });
+
+    it('asks a headmaster who signed in too long ago to sign in again', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const stale = new Date(world.clock.now().getTime() - STEP_UP_MAX_AGE_MS - 1);
+      await refuses(head.id, () => change(head, head, { tier: 'reditel' }, stale), {
+        code: 'step-up-required',
+      });
+    });
+
+    it.each([
+      ['a student tier', {}, { tier: 'student' }],
+      ['an absolvent tier', {}, { tier: 'absolvent' }],
+      ['back to none', { tier: 'reditel' }, { tier: null }],
+      ['the tier and the role at once', {}, { tier: 'reditel', role: 'reviewer', ...CONFIRMED }],
+      ['the tier and the status at once', {}, { tier: 'reditel', status: 'blocked', ...CONFIRMED }],
+    ] as const)('is refused as %s: forbidden', async (_case, seed, patch) => {
+      const head = await world.seed.user({ role: 'headmaster', ...seed });
+      await world.seed.user({ role: 'headmaster' });
+      await refuses(head.id, () => change(head, head, patch), { code: 'forbidden' });
+    });
+
+    it('is refused to a session from before the headmaster was demoted, by the locked row', async () => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      await world.seed.user({ role: 'headmaster' });
+      const demoted = await world.tx(system('test.seed'), (tx) =>
+        tx.users.changeAccess(head.id, head.version, { role: 'reviewer' }),
+      );
+      await refuses(head.id, () => change(head, demoted, { tier: 'reditel' }), {
+        code: 'forbidden',
+      });
+    });
   });
 
   it('finds nobody behind a guessed id', async () => {
@@ -326,7 +401,13 @@ describe('users.changeAccess', () => {
 
   it.each([
     ['an unknown role', { role: 'admin' }, { role: 'invalid' }],
-    ['an unknown audience', { audience: 'parent' }, { audience: 'invalid' }],
+    ['an unknown tier', { tier: 'rodic' }, { tier: 'invalid' }],
+    // Zod reports a missing enum value as invalid_value, which reads as 'invalid'.
+    [
+      'an audience instead of the tier',
+      { tier: undefined, audience: 'staff' },
+      { tier: 'invalid' },
+    ],
     ['an unknown status', { status: 'gone' }, { status: 'invalid' }],
     ['confirmed: false', { confirmed: false }, { confirmed: 'invalid' }],
     ['a version below one', { version: 0 }, { version: 'invalid' }],
