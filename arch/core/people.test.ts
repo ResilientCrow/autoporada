@@ -25,9 +25,9 @@ function run(fx: ReturnType<typeof A.setUser>, s0: State) {
 const userIn = (s: State, id: string) => s.users.find((u) => u.id === id)!;
 
 describe('decideRequest: an approval names the tier (ADR 0072)', () => {
-  it('approves with the tier picked and shows the person placed', () => {
+  it('approves with the tier picked and shows the person placed, keyed by the user so their new version is kept', () => {
     const { s, calls } = run(A.decideRequest('r1', 'approved', 'absolvent'), state());
-    expect(calls).toEqual([{ name: 'access.decide', input: { requestId: 'r1', version: 1, decision: 'approve', tier: 'absolvent' } }]);
+    expect(calls).toEqual([{ name: 'access.decide', key: 'new', input: { requestId: 'r1', version: 1, decision: 'approve', tier: 'absolvent' } }]);
     expect(userIn(s, 'new')).toMatchObject({ role: 'submitter', tier: 'absolvent', isStudent: true });
   });
 
@@ -36,6 +36,13 @@ describe('decideRequest: an approval names the tier (ADR 0072)', () => {
     const { s, calls } = run(A.decideRequest('r1', 'approved'), s0);
     expect(calls).toEqual([]);
     expect(s).toBe(s0);
+  });
+
+  it('guesses no salutation for a requester Arch did not know yet', () => {
+    const s0 = state(); const s1 = { ...s0, users: s0.users.filter((u) => u.id !== 'new'), requests: s0.requests.map(({ userId: _u, ...r }) => r) };
+    const { s, calls } = run(A.decideRequest('r1', 'approved', 'ucitel'), s1);
+    expect(s.users.find((u) => u.email === 'new@ssps.cz')).toMatchObject({ role: 'submitter', tier: 'ucitel', salutation: null });
+    expect(calls[0]).not.toHaveProperty('key');
   });
 
   it('rejects and blocks without a tier', () => {

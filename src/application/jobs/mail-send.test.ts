@@ -104,7 +104,10 @@ describe('the mail.send handler', () => {
           decision: 'approve',
           tier: 'ucitel',
         }),
-      ).toEqual({ ok: true, value: { state: 'approved' } });
+      ).toEqual({
+        ok: true,
+        value: { state: 'approved', userId: user.id, version: user.version + 1 },
+      });
       const job = mailJob('access.approved', { recipientId: user.id, requestId: request.id });
       expect(await world.inspect.jobs()).toEqual([
         { name: 'mail.send', data: job.data, options: { dedupeKey: job.dedupeKey } },

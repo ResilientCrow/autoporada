@@ -38,4 +38,12 @@ export const decideAccessInput = z
     const code = approves ? 'required' : 'invalid';
     ctx.addIssue({ code: 'custom', path: ['tier'], message: code, params: { code } });
   });
-export const decideAccessOutput = z.object({ state: DECIDED_STATES });
+/**
+ * An approval also answers the approved user and their new version, which Arch keys by the user
+ * (`version` is the user's, not the request's); a reject or block leaves the user as they were.
+ */
+export const decideAccessOutput = z.object({
+  state: DECIDED_STATES,
+  userId: z.guid().optional(),
+  version: z.number().int().positive().optional(),
+});

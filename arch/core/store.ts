@@ -278,7 +278,7 @@ export const decideRequest = (rid: string, to: 'approved' | 'rejected' | 'blocke
   if (to === 'approved' && !tier) return s0;
   const placed = { tier: tier ?? null, isStudent: isStudentTier(tier ?? null) };
   let s: State = { ...s0, requests: up(s0.requests, rid, (x) => ({ ...x, state: to, decidedAt: s0.now })) };
-  if (to === 'approved') { const ex = s.users.find((u) => u.email === r.email); if (ex) s = { ...s, users: up(s.users, ex.id, (u) => ({ ...u, role: 'submitter', ...placed })) }; else { const [n, uid] = id(s, 'u'); const [givenName = '', familyName = ''] = r.name.split(' '); s = { ...n, users: [...n.users, { id: uid, salutation: 'pan', givenName, familyName, email: r.email, role: 'submitter', status: 'active', job: 'Učitel', ...placed }] }; } }
+  if (to === 'approved') { const ex = s.users.find((u) => u.email === r.email); if (ex) s = { ...s, users: up(s.users, ex.id, (u) => ({ ...u, role: 'submitter', ...placed })) }; else { const [n, uid] = id(s, 'u'); const [givenName = '', familyName = ''] = r.name.split(' '); s = { ...n, users: [...n.users, { id: uid, salutation: null, givenName, familyName, email: r.email, role: 'submitter', status: 'active', job: 'Učitel', ...placed }] }; } }
   const ex = s.users.find((u) => u.email === r.email);
   return ex ? mail(s, ex.id, 'Přístup do Autoporady', to === 'approved' ? 'Přístup byl schválen.' : 'Přístup nebyl schválen.') : s;
 };

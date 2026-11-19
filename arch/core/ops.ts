@@ -215,7 +215,9 @@ export function toCalls(op: Op, { s, vers, real }: Ctx): Call[] {
     case 'cancelRequest': return [{ name: 'access.cancel', input: { requestId: a[0], version: vers[a[0]] ?? 1 } }];
     case 'decideRequest': {
       const [rid, to, tier] = a as unknown as [string, 'approved' | 'rejected' | 'blocked', string | undefined];
-      if (to === 'approved') return tier ? [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision: 'approve', tier } }] : [];
+      // An approval answers the user's new version; keyed by the user, the next change of their access does not conflict.
+      const uid = s.requests.find((x) => x.id === rid)?.userId;
+      if (to === 'approved') return tier ? [{ name: 'access.decide', ...(uid && { key: uid }), input: { requestId: rid, version: vers[rid] ?? 1, decision: 'approve', tier } }] : [];
       return [{ name: 'access.decide', input: { requestId: rid, version: vers[rid] ?? 1, decision: to === 'rejected' ? 'reject' : 'block', confirmed: true } }];
     }
     case 'setAddress': {

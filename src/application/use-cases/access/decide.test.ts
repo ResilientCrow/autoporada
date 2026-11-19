@@ -6,6 +6,7 @@ import { system, type AccessRequestRecord, type UserRecord } from '@/application
 import { signedIn } from '../../../../test/support/sessions';
 import { sha } from '../../../../test/support/sign-in';
 import { setupWorld } from '../../../../test/support/world';
+import { changeUserAccess } from '../users/index';
 import { cancelAccess, decideAccess, requestAccess } from './index';
 
 const world = setupWorld();
@@ -86,7 +87,7 @@ describe('access.decide', () => {
 
       expect(await decide(head, request, 'approve', { tier })).toEqual({
         ok: true,
-        value: { state: 'approved' },
+        value: { state: 'approved', userId: user.id, version: user.version + 1 },
       });
 
       const after = await snapshot(user.id);
@@ -136,6 +137,23 @@ describe('access.decide', () => {
       expect(after.jobs).toEqual([mailFor('access.approved', user, request)]);
     },
   );
+
+  it('answers the user’s new version, so the next change of their access goes through', async () => {
+    const { head, user, request } = await setup();
+    const approved = await decide(head, request, 'approve', STAFF);
+    if (!approved.ok) throw new Error('the approval failed');
+    const { userId, version } = approved.value as { userId: string; version: number };
+    expect(userId).toBe(user.id);
+    expect(
+      await world.run(changeUserAccess, world.as(head), {
+        userId,
+        version,
+        role: 'reviewer',
+        tier: STAFF.tier,
+        status: 'active',
+      }),
+    ).toEqual({ ok: true, value: { changed: true, version: version + 1 } });
+  });
 
   it('approves an absolvent as a submitter only: the tier keeps them below vedení', async () => {
     const { head, user, request } = await setup();

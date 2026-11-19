@@ -31,7 +31,9 @@ const STATES: Readonly<Record<DecisionEvent, z.output<typeof decideAccessOutput>
  * request can be decided. Lock order: the request (load), then the user,
  * then the headmaster's own row, so `can()` is asked again of it
  * (lockedActor); access.request takes the user first and never waits on
- * the request. Every decision queues the requester's mail (ADR 0016).
+ * the request. Every decision queues the requester's mail (ADR 0016). An
+ * approval answers the user's new version, so the page's next change of
+ * their access does not conflict.
  */
 export const decideAccess = defineUseCase({
   name: 'access.decide',
@@ -63,6 +65,7 @@ export const decideAccess = defineUseCase({
     const state = STATES[event];
     const after = await tx.accessRequests.transition(request.id, input.version, state);
     await tx.audit.record(accessRequestEvent(`access.${event}`, request, after));
+    let approved: { userId: string; version: number } | null = null;
     if (event === 'approve') {
       const changed = await tx.users.changeAccess(user.id, user.version, {
         role: 'submitter',
@@ -70,10 +73,11 @@ export const decideAccess = defineUseCase({
         ...(input.tier !== undefined && { tier: input.tier }),
       });
       await tx.audit.record(userAccessEvent(user, changed, { via: 'access.approve' }));
+      approved = { userId: user.id, version: changed.version };
     }
     // The requester hears of it in the same transaction: no decision without its mail, no mail without it.
     const mail = mailJob(DECISION_MAIL[event], { recipientId: user.id, requestId: request.id });
     await tx.jobs.enqueue('mail.send', mail.data, { dedupeKey: mail.dedupeKey });
-    return ok({ state });
+    return ok({ state, ...approved });
   },
 });
