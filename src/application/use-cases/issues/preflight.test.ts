@@ -601,6 +601,37 @@ describe('preflight and assembly', () => {
       expect(byTitle['Bez jmen']?.organizerRole).toBeUndefined();
     });
 
+    it('carries the participants address into the snapshot only with participants (ADR 0071)', async () => {
+      const head = await headmaster();
+      const author = await submitter();
+      await fixtures.future({
+        author,
+        title: 'S oslovením',
+        startDate: d('2026-10-28'),
+        content: { participants: 'Eva Malá (3.B)', participantsAddress: 'slecny' },
+      });
+      await fixtures.future({
+        author,
+        title: 'Starší',
+        startDate: d('2026-10-28'),
+        content: { participants: 'účast slečna Eva Malá (3.B)' },
+      });
+      await fixtures.future({
+        author,
+        title: 'Bez jmen',
+        startDate: d('2026-10-28'),
+        content: { participantsAddress: 'panove' },
+      });
+      const items = (await preview(head)).snapshot?.futureItems ?? [];
+      const byTitle = Object.fromEntries(items.map((i) => [i.title, i]));
+      expect(byTitle['S oslovením']).toMatchObject({
+        participants: 'Eva Malá (3.B)',
+        participantsAddress: 'slecny',
+      });
+      expect(byTitle['Starší']?.participantsAddress).toBeUndefined();
+      expect(byTitle['Bez jmen']?.participantsAddress).toBeUndefined();
+    });
+
     it('reads the items from the meeting date, so a moved porada sees later ones', async () => {
       const head = await headmaster();
       const author = await submitter();

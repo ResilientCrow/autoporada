@@ -374,6 +374,7 @@ describe('the mails’ column grants (ADR 0020: the worker reads no text people 
       'organizer',
       'organizer_role',
       'participants',
+      'participants_address',
       'note',
       'place',
       'client_ref',

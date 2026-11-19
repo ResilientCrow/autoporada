@@ -421,6 +421,13 @@
       "when": 1794785111415,
       "tag": "0059_burly_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795080860889,
+      "tag": "0060_orange_screwball",
+      "breakpoints": true
     }
   ]
 }

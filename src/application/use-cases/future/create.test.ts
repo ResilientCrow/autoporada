@@ -162,6 +162,7 @@ describe('future.create', () => {
               organizer: null,
               organizerRole: null,
               participants: null,
+              participantsAddress: null,
               note: null,
             },
           });

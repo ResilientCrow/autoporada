@@ -220,6 +220,7 @@ export function issueFixtures(world: World) {
       organizer: null,
       organizerRole: null,
       participants: null,
+      participantsAddress: null,
       note: null,
       ...seed.content,
     };

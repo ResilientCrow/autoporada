@@ -4,7 +4,7 @@ import { can } from '@/domain/policy';
 import { futureEditNeedsReview } from '@/domain/review';
 
 import { futureView, futureWriteAccess } from './access';
-import { hasIssues, sameContent, submitIssues, withoutTimesOnMultiDay } from './checks';
+import { hasIssues, kindIssues, sameContent, submitIssues, withoutTimesOnMultiDay } from './checks';
 import { move } from './events';
 
 const notEditable = fail({ code: 'rule', rule: 'future-not-editable' });
@@ -48,10 +48,13 @@ export const saveFuture = defineUseCase({
 
     // The editors hide the times of a multi-day item: a change that makes one multi-day drops them.
     const stored = withoutTimesOnMultiDay(content);
+    // A draft saves anything, but a jednání never takes an address (ADR 0071).
+    const kindFields = kindIssues(stored, item.kind);
+    if (hasIssues(kindFields)) return fail({ code: 'invalid-input', fields: kindFields });
     if (revises) {
       if (sameContent(item.content, stored))
         return ok({ version: item.version, state: item.state });
-      const fields = submitIssues(stored, item.content);
+      const fields = submitIssues(stored, item.kind, item.content);
       if (hasIssues(fields)) return fail({ code: 'invalid-input', fields });
       const revised = await move(tx, item, 'revise', { content: stored, submittedAt: now });
       return ok({ version: revised.version, state: revised.state });

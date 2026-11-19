@@ -293,6 +293,71 @@ describe('future.save', () => {
       });
     });
 
+    it('is a change when only the participants address differs, and asks for one once participants are typed (ADR 0071)', async () => {
+      const author = await user();
+      const typed = { participants: 'Eva Malá (3.B), Jan Novák (2.A)' };
+      const id = await approved(author, readyAkce({ ...typed, participantsAddress: 'slecny' }));
+      expect(
+        await revise(author, id, readyAkce({ ...typed, participantsAddress: 'panove' })),
+      ).toEqual({
+        ok: true,
+        value: { version: 4, state: 'submitted' },
+      });
+      expect(await get(author, id)).toMatchObject({ content: { participantsAddress: 'panove' } });
+      const other = await approved(author, readyAkce({ ...typed, participantsAddress: 'slecny' }));
+      await refuses(other, () => revise(author, other, readyAkce({ ...typed })), {
+        code: 'invalid-input',
+        fields: { 'content.participantsAddress': 'required' },
+      });
+    });
+
+    it('keeps participants typed before the address existed without one, until they change (ADR 0071)', async () => {
+      const author = await user();
+      const legacy = readyAkce({ participants: 'účast slečna Eva Malá (3.B)' });
+      const id = await approved(author, legacy);
+      expect(await revise(author, id, { ...legacy, place: 'Brno' })).toEqual({
+        ok: true,
+        value: { version: 4, state: 'submitted' },
+      });
+      const other = await approved(author, legacy);
+      await refuses(other, () => revise(author, other, { ...legacy, participants: 'Eva Malá' }), {
+        code: 'invalid-input',
+        fields: { 'content.participantsAddress': 'required' },
+      });
+    });
+
+    it('refuses „slečny a pánové“ for one person in a change to an approved akce', async () => {
+      const author = await user();
+      const id = await approved(author);
+      const one = { participants: 'Eva Malá (3.B)', participantsAddress: 'slecny-a-panove' };
+      await refuses(id, () => revise(author, id, readyAkce(one)), {
+        code: 'invalid-input',
+        fields: { 'content.participantsAddress': 'several' },
+      });
+    });
+
+    it('saves a draft with participants and no address, or the wrong address for one person', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      const content = readyAkce({
+        participants: 'Eva Malá (3.B)',
+        participantsAddress: 'slecny-a-panove',
+      });
+      expect(await save(author, id, content, 1)).toMatchObject({ ok: true });
+      expect(await get(author, id)).toMatchObject({
+        content: { participantsAddress: 'slecny-a-panove' },
+      });
+    });
+
+    it('refuses to save an address on a jednání, even as a draft', async () => {
+      const author = await user();
+      const id = await start(author, 'jednani');
+      await refuses(id, () => save(author, id, futureWire({ participantsAddress: 'panove' }), 1), {
+        code: 'invalid-input',
+        fields: { 'content.participantsAddress': 'invalid' },
+      });
+    });
+
     it('keeps an organizer typed before the role existed without a role, until the names change (ADR 0063)', async () => {
       const author = await user();
       const legacy = readyAkce({ organizer: 'zajišťuje paní Nováková', organizerRole: null });

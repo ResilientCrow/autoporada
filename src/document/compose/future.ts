@@ -6,6 +6,7 @@ import {
   formatAgendaDays,
   formatTitleDate,
   organizerPhrase,
+  participantsAgenda,
 } from '@/domain/cs';
 import { compareDates, parseIsoDate, parseWallTime, type CalDate } from '@/domain/time';
 import type { SnapshotFutureItem } from '@/snapshot';
@@ -58,9 +59,9 @@ export function routeFuture(items: readonly SnapshotFutureItem[], meeting: CalDa
 /**
  * The agenda line, every part after the date optional and empty parts left out (ADR 0060):
  * „úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib,
- * téma stáže, organizuje paní Jana Nováková, účast pánové …“. Multi-day items print the day
+ * téma stáže, organizuje paní Jana Nováková, zúčastní se pánové: …“. Multi-day items print the day
  * range and no time. The note, the names and the participants are the author's words; the organizer's
- * verb comes from the role (ADR 0063).
+ * verb comes from the role (ADR 0063), and the participants follow their address (ADR 0071).
  */
 export function futureBullet(item: SnapshotFutureItem): Block {
   const start = parseIsoDate(item.date);
@@ -81,7 +82,7 @@ export function futureBullet(item: SnapshotFutureItem): Block {
     item.title,
     item.note,
     organizerPhrase(item.organizerRole ?? null, item.organizer ?? ''),
-    item.participants,
+    participantsAgenda(item.participantsAddress ?? null, item.participants ?? ''),
   ];
   return { kind: 'bullet', runs: [{ text: finalText(parts.filter(Boolean).join(', ')) }] };
 }

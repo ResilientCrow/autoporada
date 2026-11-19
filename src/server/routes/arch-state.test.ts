@@ -69,6 +69,7 @@ const futureRow = (id: string, state: string, lastDay: [number, number, number])
     organizer: null,
     organizerRole: null,
     participants: null,
+    participantsAddress: null,
     note: null,
   },
   reportState: 'none',

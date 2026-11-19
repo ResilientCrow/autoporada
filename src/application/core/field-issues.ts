@@ -10,6 +10,7 @@ const CODES: ReadonlySet<unknown> = new Set<FieldIssueCode>([
   'too-short',
   'too-long',
   'invalid',
+  'several',
 ]);
 const isFieldIssueCode = (code: unknown): code is FieldIssueCode => CODES.has(code);
 

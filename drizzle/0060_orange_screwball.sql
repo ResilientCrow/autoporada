@@ -1,0 +1,3 @@
+ALTER TABLE "future_items" ADD COLUMN "participants_address" text;--> statement-breakpoint
+ALTER TABLE "future_items" ADD CONSTRAINT "future_items_participants_address" CHECK ("future_items"."participants_address" IS NULL OR "future_items"."participants_address" IN ('slecny-a-panove','slecny','panove','bez-osloveni'));--> statement-breakpoint
+ALTER TABLE "future_items" ADD CONSTRAINT "future_items_address_akce" CHECK ("future_items"."kind" = 'akce' OR "future_items"."participants_address" IS NULL);

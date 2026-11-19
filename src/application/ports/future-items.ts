@@ -1,4 +1,4 @@
-import type { Campus, OrganizerRole } from '@/domain/cs';
+import type { Campus, OrganizerRole, ParticipantsAddress } from '@/domain/cs';
 import type { FutureKind } from '@/domain/calendar';
 import type { FutureState, ReportState } from '@/domain/review';
 import type { CalDate, WallTime } from '@/domain/time';
@@ -19,6 +19,8 @@ export interface FutureContent {
   /** Whether our person organizes or coordinates (ADR 0063); null is an item typed before the role existed. */
   readonly organizerRole: OrganizerRole | null;
   readonly participants: string | null;
+  /** How the participants of an akce are addressed (ADR 0071); null until chosen, for older items and always for a jednání. */
+  readonly participantsAddress: ParticipantsAddress | null;
   readonly note: string | null;
 }
 

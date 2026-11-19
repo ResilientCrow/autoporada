@@ -23,6 +23,7 @@ const akce = (id: string, over: Partial<FutureItemRecord['content']> = {}): Futu
     organizer: null,
     organizerRole: null,
     participants: null,
+    participantsAddress: null,
     note: null,
     ...over,
   },
@@ -97,6 +98,24 @@ describe('archPlaceholders (ADR 0061)', () => {
     );
     expect(was).toContain('Akci zajišťovali: paní Nováková.');
     expect(systemParagraph(withRole)).toContain('Akci za školu koordinovali: paní Nováková.');
+    expect(placeholderChecks).toEqual({ 'f-a': { checked: false, was } });
+  });
+
+  it('un-checks a confirmation once the participants are addressed (ADR 0071)', async () => {
+    const typed = akce('f-a', { participants: 'Eva Malá (3.B), Jan Novák (2.A)' });
+    const was = systemParagraph(typed)!;
+    const addressed = akce('f-a', { ...typed.content, participantsAddress: 'slecny-a-panove' });
+    const { db } = dbWith([row('f-a', { confirmedOriginal: was })]);
+    const { placeholderChecks } = await archPlaceholders(
+      db,
+      { staff: true, head: true },
+      [addressed],
+      {},
+    );
+    expect(was).toContain('Za Smíchovskou střední se zúčastnili: Eva Malá');
+    expect(systemParagraph(addressed)).toContain(
+      'Za Smíchovskou střední se zúčastnili slečny a pánové: Eva Malá',
+    );
     expect(placeholderChecks).toEqual({ 'f-a': { checked: false, was } });
   });
 

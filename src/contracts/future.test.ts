@@ -17,6 +17,7 @@ const wire = (over: Record<string, unknown> = {}) => ({
   organizer: null,
   organizerRole: null,
   participants: null,
+  participantsAddress: null,
   note: null,
   ...over,
 });
@@ -91,6 +92,22 @@ describe('saveFutureInput', () => {
     expect(refusedPaths(save({ organizerRole: 'leads' }))).toEqual(['content.organizerRole']);
     expect(refusedPaths(save({ organizerRole: '' }))).toEqual(['content.organizerRole']);
     const { organizerRole: _omitted, ...without } = wire();
+    expect(saveFutureInput.safeParse({ id, expectedVersion: 1, content: without }).success).toBe(
+      false,
+    );
+  });
+
+  it('takes the four participants addresses and null, and nothing else (ADR 0071)', () => {
+    for (const address of ['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni', null]) {
+      expect(save({ participantsAddress: address }).success).toBe(true);
+    }
+    expect(refusedPaths(save({ participantsAddress: 'damy' }))).toEqual([
+      'content.participantsAddress',
+    ]);
+    expect(refusedPaths(save({ participantsAddress: '' }))).toEqual([
+      'content.participantsAddress',
+    ]);
+    const { participantsAddress: _omitted, ...without } = wire();
     expect(saveFutureInput.safeParse({ id, expectedVersion: 1, content: without }).success).toBe(
       false,
     );

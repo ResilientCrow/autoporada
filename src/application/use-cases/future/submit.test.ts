@@ -115,6 +115,63 @@ describe('future.submit', () => {
       await refuses(id, () => submit(author, id, readyAkce(over)), invalid(fields));
     });
 
+    it('asks for an address when participants are typed (ADR 0071)', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      await refuses(
+        id,
+        () => submit(author, id, readyAkce({ participants: 'Eva Malá (3.B)' })),
+        invalid({ 'content.participantsAddress': 'required' }),
+      );
+    });
+
+    it('asks for several people when the address is „slečny a pánové“, and no more', async () => {
+      const author = await user();
+      const id = await start(author, 'akce');
+      const one = { participants: 'Eva Malá (3.B)', participantsAddress: 'slecny-a-panove' };
+      await refuses(
+        id,
+        () => submit(author, id, readyAkce(one)),
+        invalid({ 'content.participantsAddress': 'several' }),
+      );
+      const many = { participants: 'Eva Malá (3.B), Jan Novák (2.A)' };
+      expect(
+        await submit(author, id, readyAkce({ ...many, participantsAddress: 'slecny-a-panove' })),
+      ).toMatchObject({ ok: true });
+    });
+
+    it.each(['slecny', 'panove', 'bez-osloveni'])(
+      'takes %s for one person and for several',
+      async (participantsAddress) => {
+        const author = await user();
+        for (const participants of ['Eva Malá (3.B)', 'Eva Malá (3.B), Jan Novák (2.A)']) {
+          const id = await start(author, 'akce');
+          const content = readyAkce({ participants, participantsAddress });
+          expect(await submit(author, id, content)).toMatchObject({ ok: true });
+        }
+      },
+    );
+
+    it('asks for no address when no participants are typed', async () => {
+      const author = await user();
+      for (const participants of [null, '', '   ']) {
+        const id = await start(author, 'akce');
+        expect(await submit(author, id, readyAkce({ participants }))).toMatchObject({ ok: true });
+      }
+    });
+
+    it('refuses an address on a jednání: it prints as typed', async () => {
+      const author = await user();
+      const id = await start(author, 'jednani');
+      await refuses(
+        id,
+        () => submit(author, id, readyJednani({ participantsAddress: 'slecny' })),
+        invalid({ 'content.participantsAddress': 'invalid' }),
+      );
+      const typed = readyJednani({ participants: 'vedení školy' });
+      expect(await submit(author, id, typed)).toMatchObject({ ok: true });
+    });
+
     it('asks for no role when nobody is named', async () => {
       const author = await user();
       for (const organizer of [null, '', '   ']) {

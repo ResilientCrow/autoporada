@@ -59,4 +59,13 @@ export {
   organizerPhrase,
   type OrganizerRole,
 } from './sentence/organizer';
+export {
+  PARTICIPANTS_ADDRESSES,
+  participantsAgenda,
+  participantsFits,
+  participantsLabel,
+  participantsPastLead,
+  participantsSeveral,
+  type ParticipantsAddress,
+} from './sentence/participants';
 export { campusLabel, placeholderParagraph, type PlaceholderInput } from './sentence/placeholder';

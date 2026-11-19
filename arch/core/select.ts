@@ -1,5 +1,5 @@
 import { calendarBoundary, eventEnd, issueSlots, owedPorada, reportCloses, workingSlot, deadline, type DeadlineRule, type IssueSlot } from '@/domain/calendar';
-import { formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
+import { formatClose, formatDayMonth, formatWeekdayNumeric, onWeekday, participantsFits, participantsSeveral, placeholderParagraph, schoolYear, weekdayName } from '@/domain/cs';
 import { missingForSubmit, REPORT_BULLETS, type BulletSpec, type DraftPerson } from '@/domain/report';
 import { recentPeople } from '@/domain/people';
 import { isRichDocEmpty, richDocFromText, singleLine } from '@/domain/richtext';
@@ -125,9 +125,16 @@ export function owedTo(s: State, monday: string) {
     return [{ akce: f, point, delivered: reportDelivered(point, monday), notYetOver: !ownerIsOver(s, f) }];
   });
 }
+/** What stops an akce being handed in over its participants (ADR 0071): they need an address, and „slečny a pánové“ needs several names. A jednání prints them as typed. */
+export function participantsProblem(f: Future): string | null {
+  const names = f.participants.trim();
+  if (f.kind !== 'akce' || !names) return null;
+  if (!f.participantsAddress) return 'Vyberte oslovení účastníků.';
+  return participantsFits(f.participantsAddress, participantsSeveral(names)) ? null : 'Slečny a pánové potřebují aspoň dvě jména oddělená čárkou.';
+}
 /** The paragraph the system writes for an akce (ADR 0060), whatever the headmaster wrote instead. */
 export function systemText(f: Future): string {
-  return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), ...(f.timeFrom && { from: f.timeFrom }), campus: f.campus, ...(f.place.trim() && { place: singleLine(f.place) }), title: singleLine(f.title), ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), organizerRole: f.organizerRole, ...(f.participants.trim() && { participants: singleLine(f.participants) }) });
+  return placeholderParagraph({ date: f.date, ...(f.endDate && { endDate: f.endDate }), ...(f.timeFrom && { from: f.timeFrom }), campus: f.campus, ...(f.place.trim() && { place: singleLine(f.place) }), title: singleLine(f.title), ...(f.organizer.trim() && { organizer: singleLine(f.organizer) }), organizerRole: f.organizerRole, ...(f.participants.trim() && { participants: singleLine(f.participants) }), participantsAddress: f.participantsAddress });
 }
 export function placeholderText(s: State, f: Future, monday: string): string {
   return issueOf(s, monday)?.placeholders[f.id] || systemText(f);
@@ -236,7 +243,7 @@ const isoO = (x: Future) => ({ date: toIsoDate(x.date), ...(x.endDate && { endDa
 /** The akce as the document's composer reads it. */
 export const futureSnap = (f: Future) => ({
     id: f.id, kind: f.kind, title: f.title, ...isoO(f), ...(f.campus && { campus: f.campus }), ...(f.place && { place: f.place }),
-    ...(f.organizer.trim() && { organizer: singleLine(f.organizer), ...(f.organizerRole && { organizerRole: f.organizerRole }) }), ...(f.participants.trim() && { participants: singleLine(f.participants) }), ...(f.remark.trim() && { note: singleLine(f.remark) }),
+    ...(f.organizer.trim() && { organizer: singleLine(f.organizer), ...(f.organizerRole && { organizerRole: f.organizerRole }) }), ...(f.participants.trim() && { participants: singleLine(f.participants), ...(f.kind === 'akce' && f.participantsAddress && { participantsAddress: f.participantsAddress }) }), ...(f.remark.trim() && { note: singleLine(f.remark) }),
 });
 // ponytail: last few builds only; every action makes new state, so this just spares repeats within one render.
 const buildCache: { k: unknown[]; v: Built }[] = [];

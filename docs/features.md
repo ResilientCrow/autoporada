@@ -62,7 +62,11 @@ has not built yet is under „Not built yet“.
   user, students included, with its free-text Organizátor, Účastníci and Poznámka
   as typed (ADR 0060). Organizátor first asks „Organizuje“ or „Koordinuje“, then
   the names; the line prints „organizuje …“ / „koordinuje …“, or „organizují …“ /
-  „koordinují …“ when the names hold a comma (ADR 0063). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
+  „koordinují …“ when the names hold a comma (ADR 0063). Under Účastníci of an akce
+  the author picks one address for the whole group: „slečny a pánové“, „slečny“,
+  „pánové“ or „bez oslovení“, nothing preselected; the line prints „zúčastní se
+  slečny a pánové: …“ (one name: „slečna“, „pan“), „slečny a pánové“ needs several
+  names, and a jednání has no address (ADR 0071). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
   Poznámka, then a check); only Název and the day are required, and the day
   cannot be in the past. The place field waits for the areál (Smíchov,
   Radlice, Na Vidouli, Jinde). The printed line is date, time,

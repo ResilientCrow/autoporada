@@ -96,4 +96,42 @@ describe('placeholderParagraph (ADR 0060)', () => {
       placeholderParagraph({ date: d('2026-05-06'), title: 'Výlet', organizerRole: 'organizes' }),
     ).toBe('Ve středu 6. května 2026 proběhl Výlet. Zpráva o akci nebyla dodána.');
   });
+
+  it('agrees the participants sentence with the address (ADR 0071)', () => {
+    const typed = { ...full, participants: 'Eva Malá (3.B), Jan Novák (2.A)' };
+    expect(placeholderParagraph({ ...typed, participantsAddress: 'slecny-a-panove' })).toContain(
+      'Za Smíchovskou střední se zúčastnili slečny a pánové: Eva Malá (3.B), Jan Novák (2.A).',
+    );
+    expect(placeholderParagraph({ ...typed, participantsAddress: 'slecny' })).toContain(
+      'Za Smíchovskou střední se zúčastnily slečny: Eva Malá (3.B), Jan Novák (2.A).',
+    );
+    expect(placeholderParagraph({ ...typed, participantsAddress: 'panove' })).toContain(
+      'se zúčastnili pánové: ',
+    );
+    const one = { ...full, participants: 'Eva Malá (3.B)' };
+    expect(placeholderParagraph({ ...one, participantsAddress: 'slecny' })).toContain(
+      'se zúčastnila slečna: Eva Malá (3.B).',
+    );
+    expect(placeholderParagraph({ ...one, participantsAddress: 'panove' })).toContain(
+      'se zúčastnil pan: Eva Malá (3.B).',
+    );
+  });
+
+  it('keeps „se zúčastnili:“ with no address or „bez oslovení“, as before', () => {
+    const typed = { ...full, participants: 'Eva Malá (3.B)' };
+    const before = placeholderParagraph(typed);
+    expect(before).toContain('Za Smíchovskou střední se zúčastnili: Eva Malá (3.B).');
+    expect(placeholderParagraph({ ...typed, participantsAddress: null })).toBe(before);
+    expect(placeholderParagraph({ ...typed, participantsAddress: 'bez-osloveni' })).toBe(before);
+  });
+
+  it('writes no participants sentence for empty participants, whatever the address', () => {
+    expect(
+      placeholderParagraph({
+        date: d('2026-05-06'),
+        title: 'Výlet',
+        participantsAddress: 'slecny',
+      }),
+    ).toBe('Ve středu 6. května 2026 proběhl Výlet. Zpráva o akci nebyla dodána.');
+  });
 });

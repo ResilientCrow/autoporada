@@ -36,6 +36,7 @@ export const ITEM_ROW = {
   organizer: futureItems.organizer,
   organizerRole: futureItems.organizerRole,
   participants: futureItems.participants,
+  participantsAddress: futureItems.participantsAddress,
   note: futureItems.note,
   reportState: futureItems.reportState,
   reportPointId: futureItems.reportPointId,
@@ -66,6 +67,7 @@ export function toRecord(row: ItemRow): FutureItemRecord {
       organizer: row.organizer,
       organizerRole: row.organizerRole,
       participants: row.participants,
+      participantsAddress: row.participantsAddress,
       note: row.note,
     },
     reportState,
@@ -89,6 +91,7 @@ const contentColumns = (content: FutureContent) => ({
   organizer: content.organizer,
   organizerRole: content.organizerRole,
   participants: content.participants,
+  participantsAddress: content.participantsAddress,
   note: content.note,
 });
 

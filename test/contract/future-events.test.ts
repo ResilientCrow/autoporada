@@ -40,6 +40,7 @@ const CONTENT: FutureContent = {
   organizer: null,
   organizerRole: null,
   participants: null,
+  participantsAddress: null,
   note: null,
 };
 

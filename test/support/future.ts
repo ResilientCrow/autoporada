@@ -25,6 +25,7 @@ export const futureWire = (over: Record<string, unknown> = {}) => ({
   organizer: null,
   organizerRole: null,
   participants: null,
+  participantsAddress: null,
   note: null,
   ...over,
 });

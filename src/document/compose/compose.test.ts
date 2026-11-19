@@ -250,6 +250,26 @@ describe('free-text akce lines (ADR 0060)', () => {
     expect(organizerLine({ organizer: 'zajišťuje paní Nováková' })).toBe('zajišťuje paní Nováková');
   });
 
+  it('puts the address of the participants before the names (ADR 0071)', () => {
+    const participantsLine = (over: Record<string, unknown>) =>
+      lines([akce('f-1', 'Stáž', over)])[0]!.replace(/^.*?Stáž, /, '');
+    const names = 'Eva Malá (3.B), Jan Novák (2.A)';
+    expect(participantsLine({ participants: names, participantsAddress: 'slecny-a-panove' })).toBe(
+      `zúčastní se slečny a pánové: ${names}`,
+    );
+    expect(
+      participantsLine({ participants: 'Eva Malá (3.B)', participantsAddress: 'slecny' }),
+    ).toBe('zúčastní se slečna: Eva Malá (3.B)');
+    expect(
+      participantsLine({ participants: 'Jan Novák (2.A)', participantsAddress: 'panove' }),
+    ).toBe('zúčastní se pan: Jan Novák (2.A)');
+    // No address, or „bez oslovení“: the names as typed, as before.
+    expect(participantsLine({ participants: 'účast pánové z 2.B' })).toBe('účast pánové z 2.B');
+    expect(
+      participantsLine({ participants: 'vedení školy', participantsAddress: 'bez-osloveni' }),
+    ).toBe('vedení školy');
+  });
+
   it('prints a multi-day akce as a range across months and years, and no time', () => {
     expect(
       lines([

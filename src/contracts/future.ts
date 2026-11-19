@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import type { FutureKind } from '@/domain/calendar';
-import { ORGANIZER_ROLES } from '@/domain/cs';
+import { ORGANIZER_ROLES, PARTICIPANTS_ADDRESSES } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import type { FutureState } from '@/domain/review';
 import { compareDates } from '@/domain/time';
@@ -27,6 +27,9 @@ const futureStateSchema = z.enum(FUTURE_STATES);
 /** What the organizer does (ADR 0063). */
 const organizerRoleSchema = z.enum(ORGANIZER_ROLES);
 
+/** How the participants of an akce are addressed as one group (ADR 0071). */
+const participantsAddressSchema = z.enum(PARTICIPANTS_ADDRESSES);
+
 const capped = (max: number) => z.string().max(max);
 
 /**
@@ -46,6 +49,7 @@ const futureContentSchema = z
     organizer: capped(POINT_LIMITS.organizer).nullable(),
     organizerRole: organizerRoleSchema.nullable(),
     participants: capped(POINT_LIMITS.participants).nullable(),
+    participantsAddress: participantsAddressSchema.nullable(),
     note: capped(POINT_LIMITS.futureNote).nullable(),
   })
   .superRefine(({ startDate, endDate }, ctx) => {

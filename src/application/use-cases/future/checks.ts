@@ -1,11 +1,14 @@
 import { MAX_FIELDS } from '@/application/core';
 import type { FutureContent } from '@/application/ports';
 import type { FieldIssueCode, FieldIssues } from '@/contracts';
+import type { FutureKind } from '@/domain/calendar';
+import { participantsFits, participantsSeveral } from '@/domain/cs';
 import { compareDates, compareTimes } from '@/domain/time';
 
 /**
  * What a handed-in item must hold: the pieces the CHECKs and the issue snapshot ask for. Nobody
- * has to be named (ADR 0060), but a named organizer needs a role (ADR 0063).
+ * has to be named (ADR 0060), but a named organizer needs a role (ADR 0063), and the participants
+ * of an akce need an address (ADR 0071).
  */
 const isOneDay = ({ startDate, endDate }: FutureContent): boolean =>
   endDate === null || (startDate !== null && compareDates(endDate, startDate) === 0);
@@ -28,7 +31,35 @@ const namesOf = ({ organizer }: FutureContent): string => (organizer ?? '').trim
 const keepsTypedOrganizer = (content: FutureContent, stored: FutureContent | undefined): boolean =>
   stored !== undefined && stored.organizerRole === null && namesOf(stored) === namesOf(content);
 
-function readinessIssues(content: FutureContent, stored?: FutureContent): FieldIssues {
+const participantsOf = ({ participants }: FutureContent): string => (participants ?? '').trim();
+
+/**
+ * Participants approved before the address existed (ADR 0071) print as typed, with no address,
+ * through a change that leaves the participants alone.
+ */
+const keepsTypedParticipants = (
+  content: FutureContent,
+  stored: FutureContent | undefined,
+): boolean =>
+  stored !== undefined &&
+  stored.participantsAddress === null &&
+  participantsOf(stored) === participantsOf(content);
+
+/**
+ * A jednání never has an address (ADR 0071): it holds for a draft too, as the CHECK
+ * `future_items_address_akce` does.
+ */
+export function kindIssues(content: FutureContent, kind: FutureKind): FieldIssues {
+  return kind === 'jednani' && content.participantsAddress !== null
+    ? { 'content.participantsAddress': 'invalid' }
+    : {};
+}
+
+function readinessIssues(
+  content: FutureContent,
+  kind: FutureKind,
+  stored?: FutureContent,
+): FieldIssues {
   const issues: Record<string, FieldIssueCode> = {};
   const { title, startDate, timeFrom, timeTo, organizerRole } = content;
   if (title.trim() === '') issues['content.title'] = 'required';
@@ -36,6 +67,19 @@ function readinessIssues(content: FutureContent, stored?: FutureContent): FieldI
   // Whoever is named, the document says whether they organize or coordinate (ADR 0063).
   if (namesOf(content) !== '' && organizerRole === null && !keepsTypedOrganizer(content, stored)) {
     issues['content.organizerRole'] = 'required';
+  }
+  // Whoever takes part, an akce says how they are addressed, and „slečny a pánové“ needs several.
+  const { participantsAddress } = content;
+  if (kind === 'akce' && participantsOf(content) !== '') {
+    if (participantsAddress === null) {
+      if (!keepsTypedParticipants(content, stored)) {
+        issues['content.participantsAddress'] = 'required';
+      }
+    } else if (
+      !participantsFits(participantsAddress, participantsSeveral(participantsOf(content)))
+    ) {
+      issues['content.participantsAddress'] = 'several';
+    }
   }
   const oneDay = isOneDay(content);
   // A multi-day item prints no time (ADR 0060): the editors clear it, a submit refuses it.
@@ -50,10 +94,15 @@ function readinessIssues(content: FutureContent, stored?: FutureContent): FieldI
 
 /**
  * The issues of a submit, and of a change to an approved item (`stored`: what it held), which goes
- * back to review: at most MAX_FIELDS.
+ * back to review: at most MAX_FIELDS. A jednání has no address, so it needs none.
  */
-export function submitIssues(content: FutureContent, stored?: FutureContent): FieldIssues {
-  return Object.fromEntries(Object.entries(readinessIssues(content, stored)).slice(0, MAX_FIELDS));
+export function submitIssues(
+  content: FutureContent,
+  kind: FutureKind,
+  stored?: FutureContent,
+): FieldIssues {
+  const issues = { ...readinessIssues(content, kind, stored), ...kindIssues(content, kind) };
+  return Object.fromEntries(Object.entries(issues).slice(0, MAX_FIELDS));
 }
 
 export const hasIssues = (issues: FieldIssues): boolean => Object.keys(issues).length > 0;

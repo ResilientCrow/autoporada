@@ -21,7 +21,7 @@ export const submitFuture = defineUseCase({
   output: submitFutureOutput,
   access: futureWriteAccess(moveCheck('submit')),
   async execute({ tx, now }, { content }, item) {
-    const fields = submitIssues(content);
+    const fields = submitIssues(content, item.kind);
     if (hasIssues(fields)) return fail({ code: 'invalid-input', fields });
     const { pending } = await tx.futureItems.beginSubmit();
     if (pending >= FUTURE_CAP) return fail({ code: 'rule', rule: 'future-pending-cap' });

@@ -67,6 +67,7 @@ export const fieldIssues = {
   'too-short': 'Text je příliš krátký.',
   'too-long': 'Text je příliš dlouhý.',
   invalid: 'Hodnota není platná.',
+  several: 'Tato volba potřebuje více lidí.',
 } as const satisfies Record<FieldIssueCode, string>;
 
 /** Chrome of the form components: optional marker, error prefix, summary title. */

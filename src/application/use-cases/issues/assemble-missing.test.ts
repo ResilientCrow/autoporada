@@ -69,6 +69,34 @@ describe('assembleIssueSnapshot: reports nobody delivered (ADR 0049)', () => {
   });
 
   it.each([
+    ['slecny-a-panove', 'Eva Malá (3.B), Jan Novák (2.A)', 'se zúčastnili slečny a pánové'],
+    ['slecny', 'Eva Malá (3.B), Jan Novák (2.A)', 'se zúčastnily slečny'],
+    ['slecny', 'Eva Malá (3.B)', 'se zúčastnila slečna'],
+    ['panove', 'Jan Novák (2.A), Petr Dvořák (2.A)', 'se zúčastnili pánové'],
+    ['panove', 'Jan Novák (2.A)', 'se zúčastnil pan'],
+    ['bez-osloveni', 'Eva Malá (3.B)', 'se zúčastnili'],
+    [null, 'Eva Malá (3.B)', 'se zúčastnili'],
+  ] as const)(
+    'agrees the participants sentence with the address %s and %s (ADR 0071)',
+    async (participantsAddress, participants, lead) => {
+      const head = await headmaster();
+      const author = await submitter();
+      await fixtures.future({
+        author,
+        title: 'Seminář',
+        startDate: d('2026-10-22'),
+        content: { participants, participantsAddress },
+      });
+
+      const { snapshot } = await assemble(head);
+
+      expect(paragraphOf(snapshot!.reports[0]!)).toBe(
+        `Ve čtvrtek 22. října 2026 proběhl Seminář. Za Smíchovskou střední ${lead}: ${participants}. Zpráva o akci nebyla dodána.`,
+      );
+    },
+  );
+
+  it.each([
     ['organizes', 'Akci organizovali: Jana Nováková, Petr Malý.'],
     ['coordinates', 'Akci za školu koordinovali: Jana Nováková, Petr Malý.'],
     [null, 'Akci zajišťovali: Jana Nováková, Petr Malý.'],

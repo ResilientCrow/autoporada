@@ -112,6 +112,7 @@ const futureWire = (f: Future) => ({
   organizer: f.organizer.trim() || null,
   organizerRole: f.organizerRole,
   participants: f.participants.trim() || null,
+  participantsAddress: f.kind === 'akce' ? f.participantsAddress : null,
   note: f.remark.trim() || null,
 });
 const uuid = () => crypto.randomUUID();

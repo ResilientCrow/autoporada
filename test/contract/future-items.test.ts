@@ -36,6 +36,7 @@ const EMPTY: FutureContent = {
   organizer: null,
   organizerRole: null,
   participants: null,
+  participantsAddress: null,
   note: null,
 };
 
@@ -51,6 +52,7 @@ const FULL: FutureContent = {
   organizer: '2.A pan Mgr. Jan Novák',
   organizerRole: 'coordinates',
   participants: null,
+  participantsAddress: null,
   note: null,
 };
 
@@ -305,6 +307,21 @@ describe('FutureItemRepo (port contract)', () => {
     expect(await read(world.as(author), (tx) => tx.futureItems.get(item.id))).toEqual(written);
   });
 
+  it('stores the participants address of an akce and clears it with null (ADR 0071)', async () => {
+    const author = await world.seed.user({ role: 'submitter' });
+    const content = {
+      ...FULL,
+      participants: 'Eva Malá (3.B)',
+      participantsAddress: 'slecny',
+    } as const;
+    const { item } = await create(world.as(author), { content });
+    expect(item.content.participantsAddress).toBe('slecny');
+    const cleared = await update(world.as(author), item, {
+      content: { ...content, participantsAddress: null },
+    });
+    expect(cleared.content.participantsAddress).toBeNull();
+  });
+
   it('clears an optional field when the content says null', async () => {
     const author = await world.seed.user({ role: 'submitter' });
     const { item } = await create(world.as(author), { content: FULL });
@@ -441,6 +458,20 @@ describe('FutureItemRepo (port contract)', () => {
       const refused = create(world.as(author), { content, ...over });
       expect(await failure(refused)).toEqual(new DatabaseFailure(`db.constraint.${constraint}`));
       expect(await read(cli, (tx) => tx.futureItems.list(10))).toEqual([]);
+    });
+
+    it('future_items_address_akce: an address on a jednání (ADR 0071)', async () => {
+      const author = await world.seed.user({ role: 'submitter' });
+      const content = { ...FULL, participantsAddress: 'panove' } as const;
+      const refused = create(world.as(author), { kind: 'jednani', content });
+      expect(await failure(refused)).toEqual(
+        new DatabaseFailure('db.constraint.future_items_address_akce'),
+      );
+      const { item } = await create(world.as(author), { kind: 'jednani', content: FULL });
+      const updated = update(world.as(author), item, { content });
+      expect(await failure(updated)).toEqual(
+        new DatabaseFailure('db.constraint.future_items_address_akce'),
+      );
     });
 
     it('future_items_report_akce: a report state on a jednání', async () => {

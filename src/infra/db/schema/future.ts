@@ -13,7 +13,13 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import type { FutureEventName } from '@/application/ports';
-import { ORGANIZER_ROLES, type Campus, type OrganizerRole } from '@/domain/cs';
+import {
+  ORGANIZER_ROLES,
+  PARTICIPANTS_ADDRESSES,
+  type Campus,
+  type OrganizerRole,
+  type ParticipantsAddress,
+} from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import { MAX_RETURN_PARTS, type FutureState, type ReportState } from '@/domain/review';
 
@@ -39,6 +45,7 @@ export const reportState = pgEnum('report_state', ['none', 'prompted', 'written'
 const CAMPUSES = ['smichov', 'radlice', 'na-vidouli', 'jinde'] as const satisfies readonly Campus[];
 const campusList = sql.raw(CAMPUSES.map((campus) => `'${campus}'`).join(','));
 const roleList = sql.raw(ORGANIZER_ROLES.map((role) => `'${role}'`).join(','));
+const addressList = sql.raw(PARTICIPANTS_ADDRESSES.map((address) => `'${address}'`).join(','));
 
 /**
  * A jednání or an akce that can appear in a coming issue (design §2, §12). It
@@ -70,6 +77,8 @@ export const futureItems = pgTable(
     /** Organizes or coordinates (ADR 0063); null before the role existed. */
     organizerRole: text().$type<OrganizerRole>(),
     participants: text(),
+    /** How the participants of an akce are addressed (ADR 0071); null before the choice, and always on a jednání. */
+    participantsAddress: text().$type<ParticipantsAddress>(),
     note: text(),
     reportState: reportState().$type<ReportState>().notNull().default('none'),
     /** The report written for this akce; the point's `future_item_id` points back. */
@@ -99,6 +108,12 @@ export const futureItems = pgTable(
       'future_items_organizer_role',
       sql`${t.organizerRole} IS NULL OR ${t.organizerRole} IN (${roleList})`,
     ),
+    check(
+      'future_items_participants_address',
+      sql`${t.participantsAddress} IS NULL OR ${t.participantsAddress} IN (${addressList})`,
+    ),
+    /** A jednání prints its participants as typed (ADR 0071). */
+    check('future_items_address_akce', sql`${t.kind} = 'akce' OR ${t.participantsAddress} IS NULL`),
     check('future_items_campus', sql`${t.campus} IS NULL OR ${t.campus} IN (${campusList})`),
     check(
       'future_items_lengths',

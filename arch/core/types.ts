@@ -1,4 +1,4 @@
-import type { Campus, OrganizerRole, Salutation } from '@/domain/cs';
+import type { Campus, OrganizerRole, ParticipantsAddress, Salutation } from '@/domain/cs';
 import type { PointContent, PointKind } from '@/domain/report';
 import type { FutureState, IssueStatus, PointState, ReportState } from '@/domain/review';
 import type { Statement, SystemSlot } from '@/domain/outline';
@@ -21,7 +21,7 @@ export interface Point {
 }
 export interface Future {
   id: string; kind: 'jednani' | 'akce'; authorId: string; title: string; date: CalDate; endDate: CalDate | null;
-  timeFrom: WallTime | null; timeTo: WallTime | null; campus: Campus | null; place: string; /** Free texts (ADR 0060); `remark` is the Poznámka, `note` is the reviewer's return note. */ organizer: string; /** What the organizer does (ADR 0063); null until chosen, and for an item typed before the role existed. */ organizerRole: OrganizerRole | null; participants: string; remark: string;
+  timeFrom: WallTime | null; timeTo: WallTime | null; campus: Campus | null; place: string; /** Free texts (ADR 0060); `remark` is the Poznámka, `note` is the reviewer's return note. */ organizer: string; /** What the organizer does (ADR 0063); null until chosen, and for an item typed before the role existed. */ organizerRole: OrganizerRole | null; participants: string; /** How an akce's participants are addressed as a group (ADR 0071); null until chosen, for an item typed before it existed, and always for a jednání. */ participantsAddress: ParticipantsAddress | null; remark: string;
   state: FutureState; changed: boolean; /** Approved once, even if back in review since: cancelled, never deleted (ADR 0057). */ wasApproved: boolean; /** The author asked to cancel this approved item; the vedení decides (ADR 0062). */ cancelRequested: boolean; /** When it was asked for: the queue orders by it (ADR 0062 item 5). */ cancelRequestedAt: string | null; /** Why the vedení refused that request, for the author; null otherwise. */ cancelRefusal: string | null; note: string | null; parts: string[] | null; report: ReportState; submittedAt: string | null; savedAt: string; trail: Trail[]; dateSet?: boolean;
 }
 export interface Row {

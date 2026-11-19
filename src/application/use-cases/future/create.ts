@@ -37,6 +37,7 @@ export const createFuture = defineUseCase({
         organizer: null,
         organizerRole: null,
         participants: null,
+        participantsAddress: null,
         note: null,
       },
     });

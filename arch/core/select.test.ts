@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { deadline } from '@/domain/calendar';
 import { emptyRichDoc } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
-import { addable, poradaDates, rowForPoint, type OutlineItem } from './select';
-import type { Row } from './types';
+import { addable, futureSnap, participantsProblem, poradaDates, rowForPoint, systemText, type OutlineItem } from './select';
+import type { Future, Row } from './types';
 
 const row = (id: string, p: Partial<Row> = {}): Row => ({ id, section: 'pokyny', slot: null, persistence: 'standing', title: id, body: emptyRichDoc(), quotes: [], pointId: null, ...p });
 const at = (refId: string, n: number): OutlineItem => ({ key: `n${n}`, n, title: refId, kind: 'item', group: 'Pokyny', refId });
@@ -77,5 +77,41 @@ describe('poradaDates: the day a porada meets and its uzávěrka, apart', () => 
   it('prints a close at midnight as the last minute of the day before', () => {
     const midnight = { meetingDate, deadlineAt: new Date('2026-11-15T23:00:00Z') };
     expect(poradaDates(midnight, saturday).close).toBe('v neděli 15. 11. v 23:59');
+  });
+});
+
+const akce = (p: Partial<Future> = {}): Future => ({ id: 'f1', kind: 'akce', authorId: 'u1', title: 'Seminář', date: calDate(2026, 10, 22), endDate: null, timeFrom: null, timeTo: null, campus: null, place: '', organizer: '', organizerRole: null, participants: '', participantsAddress: null, remark: '', state: 'draft', changed: false, wasApproved: false, cancelRequested: false, cancelRequestedAt: null, cancelRefusal: null, note: null, parts: null, report: 'none', submittedAt: null, savedAt: '', trail: [], ...p });
+
+describe('participantsProblem: what stops an akce over its participants (ADR 0071)', () => {
+  it('asks for an address once participants are typed', () => {
+    expect(participantsProblem(akce({ participants: 'Eva Malá (3.B)' }))).toBe('Vyberte oslovení účastníků.');
+  });
+  it('asks for nothing when nobody is named, or an address is chosen', () => {
+    expect(participantsProblem(akce())).toBeNull();
+    expect(participantsProblem(akce({ participants: '  ' }))).toBeNull();
+    expect(participantsProblem(akce({ participants: 'Eva Malá (3.B)', participantsAddress: 'slecny' }))).toBeNull();
+    expect(participantsProblem(akce({ participants: 'vedení', participantsAddress: 'bez-osloveni' }))).toBeNull();
+  });
+  it('needs several names for „slečny a pánové“', () => {
+    const one = akce({ participants: 'Eva Malá (3.B)', participantsAddress: 'slecny-a-panove' });
+    expect(participantsProblem(one)).toBe('Slečny a pánové potřebují aspoň dvě jména oddělená čárkou.');
+    expect(participantsProblem({ ...one, participants: 'Eva Malá (3.B), Jan Novák (2.A)' })).toBeNull();
+  });
+  it('asks nothing of a jednání', () => {
+    expect(participantsProblem(akce({ kind: 'jednani', participants: 'vedení školy' }))).toBeNull();
+  });
+});
+
+describe('the address in what the preview prints (ADR 0071)', () => {
+  const typed = akce({ participants: 'Eva Malá (3.B), Jan Novák (2.A)', participantsAddress: 'slecny-a-panove' });
+  it('goes into the agenda line snapshot, and not for a jednání', () => {
+    expect(futureSnap(typed)).toMatchObject({ participants: 'Eva Malá (3.B), Jan Novák (2.A)', participantsAddress: 'slecny-a-panove' });
+    expect(futureSnap({ ...typed, kind: 'jednani' })).not.toHaveProperty('participantsAddress');
+    expect(futureSnap({ ...typed, participants: '' })).not.toHaveProperty('participantsAddress');
+    expect(futureSnap({ ...typed, participantsAddress: null })).not.toHaveProperty('participantsAddress');
+  });
+  it('goes into the paragraph of a missing report', () => {
+    expect(systemText(typed)).toContain('Za Smíchovskou střední se zúčastnili slečny a pánové: Eva Malá (3.B), Jan Novák (2.A).');
+    expect(systemText({ ...typed, participantsAddress: null })).toContain('Za Smíchovskou střední se zúčastnili: Eva Malá');
   });
 });

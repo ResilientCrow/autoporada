@@ -160,7 +160,14 @@ test.describe('the Arch UI', () => {
     await page.getByLabel('Jména organizátorů').fill('paní zástupkyně Jana Nováková');
     await expect(page.getByText('Vyberte, jestli organizuje, nebo koordinuje.')).toBeVisible();
     await page.getByRole('radio', { name: 'Organizuje' }).click();
-    await page.getByLabel(/^Účastníci/).fill('účast slečna Tereza Malá (3.B)');
+    await page.getByLabel(/^Účastníci/).fill('Tereza Malá (3.B)');
+    // Participants with no address are not enough either (ADR 0071).
+    await expect(page.getByText('Vyberte oslovení účastníků.')).toBeVisible();
+    await page.getByRole('radio', { name: 'slečny a pánové' }).click();
+    await expect(
+      page.getByText('Slečny a pánové potřebují aspoň dvě jména oddělená čárkou.'),
+    ).toBeVisible();
+    await page.getByRole('radio', { name: 'slečny', exact: true }).click();
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(
       page.getByRole('heading', { name: 'Chcete k tomu ještě něco připsat?' }),
@@ -175,15 +182,22 @@ test.describe('the Arch UI', () => {
     // The draft and the submit reached the server, not only the page's store.
     await expect.poll(async () => (await futureOf(email, title))?.state).toBe('submitted');
     const typed = await withClient((c) =>
-      c.query<{ organizer: string; organizer_role: string; participants: string }>(
-        `SELECT organizer, organizer_role, participants FROM future_items WHERE title = $1`,
+      c.query<{
+        organizer: string;
+        organizer_role: string;
+        participants: string;
+        participants_address: string;
+      }>(
+        `SELECT organizer, organizer_role, participants, participants_address
+           FROM future_items WHERE title = $1`,
         [title],
       ),
     );
     expect(typed.rows[0]).toEqual({
       organizer: 'paní zástupkyně Jana Nováková',
       organizer_role: 'organizes',
-      participants: 'účast slečna Tereza Malá (3.B)',
+      participants: 'Tereza Malá (3.B)',
+      participants_address: 'slecny',
     });
     const id = (await futureOf(email, title))!.id;
 

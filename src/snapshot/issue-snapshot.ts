@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ORGANIZER_ROLES } from '@/domain/cs';
+import { ORGANIZER_ROLES, PARTICIPANTS_ADDRESSES } from '@/domain/cs';
 
 import { campus, dated, refineSnapshot, required, snapshotFields, text, title } from './shape';
 import { upcastV1 } from './upcast-v1';
@@ -31,6 +31,12 @@ const futureItem = z.strictObject({
    */
   organizerRole: z.enum(ORGANIZER_ROLES).optional(),
   participants: text.optional(),
+  /**
+   * How the participants of an akce are addressed (ADR 0071): the document puts „zúčastní se
+   * slečny a pánové:“ before the names. Left out, they print as typed, so a stored snapshot
+   * renders as it did and stays schema 2.
+   */
+  participantsAddress: z.enum(PARTICIPANTS_ADDRESSES).optional(),
   note: text.optional(),
 });
 

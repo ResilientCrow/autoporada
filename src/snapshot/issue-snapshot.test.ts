@@ -210,6 +210,31 @@ describe('IssueSnapshot', () => {
     });
   });
 
+  describe('the participants address of a future item (ADR 0071)', () => {
+    const upcast = parseIssueSnapshot(replica);
+    const v2: unknown = upcast.ok ? structuredClone(upcast.snapshot) : null;
+    const withAddress = (value: unknown) => {
+      const copy = structuredClone(v2) as { futureItems: Record<string, unknown>[] };
+      copy.futureItems[0]!['participantsAddress'] = value;
+      return copy;
+    };
+
+    it('is read, and a snapshot without one stays schema 2 and address-free', () => {
+      for (const address of ['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni']) {
+        expect(errorsOf(withAddress(address))).toEqual([]);
+      }
+      expect(errorsOf(v2)).toEqual([]);
+      expect(upcast.ok && upcast.snapshot.schema).toBe(2);
+      expect(upcast.ok && upcast.snapshot.futureItems.some((f) => f.participantsAddress)).toBe(
+        false,
+      );
+    });
+
+    it.each(['damy', '', null])('rejects the address %j', (value) => {
+      expect(errorsOf(withAddress(value))).not.toEqual([]);
+    });
+  });
+
   describe('the extra annexes of a porada', () => {
     const table = (rows: string[][]) => ({ kind: 'table', rows });
     const image = (alt: string) => ({

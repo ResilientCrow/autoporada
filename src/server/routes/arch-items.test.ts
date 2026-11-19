@@ -234,3 +234,34 @@ describe('the organizer of an akce, as Arch reads it (ADR 0063)', () => {
     });
   });
 });
+
+describe('the participants of an akce, as Arch reads them (ADR 0071)', () => {
+  const withContent = (content: Record<string, unknown>) =>
+    archItems({
+      pointRows: [],
+      futureRows: [{ ...(futureRow('approved') as object), content } as never],
+      pEvents: [],
+      fEvents: [],
+      vers: {},
+      today: calDate(2026, 11, 2),
+      poradas: [],
+      viewerId: AUTHOR,
+      staff: false,
+    }).archFutures[0];
+
+  it('carries the names and the address', () => {
+    expect(
+      withContent({
+        title: 'Výlet',
+        participants: 'Eva Malá (3.B)',
+        participantsAddress: 'slecny',
+      }),
+    ).toMatchObject({ participants: 'Eva Malá (3.B)', participantsAddress: 'slecny' });
+  });
+
+  it('gives no address for an item typed before the address existed', () => {
+    expect(
+      withContent({ title: 'Výlet', participants: 'účast slečna Eva', participantsAddress: null }),
+    ).toMatchObject({ participants: 'účast slečna Eva', participantsAddress: null });
+  });
+});

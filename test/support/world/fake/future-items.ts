@@ -54,6 +54,9 @@ function refuse(state: FakeState, row: FakeFutureItem): void {
   ) {
     throw refusedBy('future_items_lengths');
   }
+  if (c.participantsAddress !== null && row.kind !== 'akce') {
+    throw refusedBy('future_items_address_akce');
+  }
   if (row.reportState !== 'none' && row.kind !== 'akce')
     throw refusedBy('future_items_report_akce');
   const complete = c.title !== '' && c.startDate !== null && row.submittedAt !== null;

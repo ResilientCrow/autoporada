@@ -1,8 +1,11 @@
 import type { FailureCause } from './failure';
 import type { RuleCode } from './rules';
 
-/** What is wrong with one input field; the form shows the Czech text for it. */
-export type FieldIssueCode = 'required' | 'too-short' | 'too-long' | 'invalid';
+/**
+ * What is wrong with one input field; the form shows the Czech text for it. `several`: the choice
+ * needs more than one person (the address „slečny a pánové“, ADR 0071).
+ */
+export type FieldIssueCode = 'required' | 'too-short' | 'too-long' | 'invalid' | 'several';
 
 /** Field path → issue, e.g. `{ 'statements.0.quote': 'required' }`. */
 export type FieldIssues = Readonly<Record<string, FieldIssueCode>>;

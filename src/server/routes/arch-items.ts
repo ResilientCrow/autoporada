@@ -127,6 +127,7 @@ export function archItems({
       organizer: ct.organizer ?? '',
       organizerRole: ct.organizerRole,
       participants: ct.participants ?? '',
+      participantsAddress: ct.participantsAddress,
       remark: ct.note ?? '',
       state: f.state,
       changed: evs.some((e) => e.event === 'revise'),

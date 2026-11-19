@@ -9,6 +9,11 @@ import {
 } from '../dates/format';
 import type { Campus } from './opening';
 import type { OrganizerRole } from './organizer';
+import {
+  participantsPastLead,
+  participantsSeveral,
+  type ParticipantsAddress,
+} from './participants';
 import { titleGender } from './title-gender';
 import { PAST_TENSE } from './title-words';
 
@@ -37,6 +42,8 @@ export interface PlaceholderInput {
   readonly organizerRole?: OrganizerRole | null;
   /** The author's words, quoted after „Za Smíchovskou střední se zúčastnili:“. */
   readonly participants?: string;
+  /** How the participants are addressed (ADR 0071); null or left out keeps „se zúčastnili“. */
+  readonly participantsAddress?: ParticipantsAddress | null;
 }
 
 /** The lead-in of the organizer sentence by role (ADR 0063); no role keeps the old wording. */
@@ -56,7 +63,8 @@ const closed = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`);
  * 5. května 2026 od 14.00 hodin proběhlo předání diplomů (areál Smíchov, Zasedací místnost).
  * Akci organizovali: …. Za Smíchovskou střední se zúčastnili: …. Zpráva o akci nebyla dodána.“ The
  * organizer sentence follows the role (ADR 0063): „Akci organizovali“, „Akci za školu
- * koordinovali“, and with no role „Akci zajišťovali“. A multi-day akce reads „Od pondělí
+ * koordinovali“, and with no role „Akci zajišťovali“; the participants sentence follows the address
+ * (ADR 0071): „se zúčastnili slečny a pánové“, „se zúčastnila slečna“, with none „se zúčastnili“. A multi-day akce reads „Od pondělí
  * 11. května do středy 20. května 2026 proběhla akce …“, with no time. Only the dates are
  * inflected; the verb follows the gender the title reads as (ADR 0067), and a title that does not
  * say it keeps „proběhla akce …“; the typed texts are quoted as they are, and an empty piece leaves its words out.
@@ -88,7 +96,11 @@ export function placeholderParagraph(input: PlaceholderInput): string {
   }
   const participants = clean(input.participants ?? '');
   if (participants) {
-    sentences.push(`Za Smíchovskou střední se zúčastnili: ${closed(participants)}`);
+    const lead = participantsPastLead(
+      input.participantsAddress ?? null,
+      participantsSeveral(participants),
+    );
+    sentences.push(`Za Smíchovskou střední ${lead}: ${closed(participants)}`);
   }
   sentences.push('Zpráva o akci nebyla dodána.');
   return sentences.join(' ');
