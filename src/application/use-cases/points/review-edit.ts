@@ -4,6 +4,7 @@ import { can } from '@/domain/policy';
 import {
   diffPointFields,
   missingForSubmit,
+  PARTICIPANTS_KEY,
   pointFieldValues,
   submittedContent,
 } from '@/domain/report';
@@ -18,7 +19,8 @@ import { kindIssues, readinessIssues, reportSpec } from './checks';
  * never edits here, their own draft included: they change their point through the autosave, or
  * retract it first (SSU-6). Anyone else needs `point.edit` on the locked row: a reviewer edits what
  * waits for review, and an approved point only someone who could have approved it. The point stays
- * handed in, so the content passes the submit's checks (the save's, then readiness) and is stored
+ * handed in, so the content passes the submit's checks (the save's, then readiness; a participants
+ * row handed in with no address, as before ADR 0071, is not asked for one) and is stored
  * as the submit stores it, without its empty optional bullets. An edit that changes no field once
  * stored writes nothing and keeps the version (`changed: false`); otherwise one versioned update,
  * an `edit` event with the names of the changed fields and their previous values, and an audit
@@ -40,7 +42,15 @@ export const reviewEditPoint = defineUseCase({
     // Today, as the submit's: a point handed in before the summer and edited in September goes
     // to a September porada, so its classes must be this year's.
     const today = instantToWallClock(now).date;
-    const { problems } = missingForSubmit(point.kind, content, spec, today);
+    const { problems: found } = missingForSubmit(point.kind, content, spec, today);
+    // A point handed in before ADR 0071 has people with a salutation each and no address; the
+    // reviewer's form cannot choose one, so an edit of its title is not refused for the missing one.
+    const older = point.content.bullets.some(
+      (b) => b.kind === 'people' && b.key === PARTICIPANTS_KEY && b.people.length > 0 && !b.address,
+    );
+    const problems = older
+      ? found.filter((p) => p.code !== 'participants-address-required')
+      : found;
     if (problems.length > 0) {
       return fail({ code: 'invalid-input', fields: readinessIssues(problems) });
     }

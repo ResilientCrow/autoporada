@@ -1,4 +1,4 @@
-import { participantsLabel, renderPeople, type Salutation } from '@/domain/cs';
+import { participantsLabel, participantsWomen, renderPeople, type Salutation } from '@/domain/cs';
 import {
   OPENING_KEYS,
   PARTICIPANTS_KEY,
@@ -38,7 +38,7 @@ function peopleText(
     return renderPeople(bullet.people, {
       join: 'comma',
       order,
-      oneLabel: { label, women: address === 'slecny' },
+      oneLabel: { label, women: participantsWomen(address) },
     });
   }
   // The snapshot gives each person of a row with no address a salutation; the type cannot say so.

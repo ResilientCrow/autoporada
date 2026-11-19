@@ -73,6 +73,7 @@ export {
   participantsLabel,
   participantsPastLead,
   participantsSeveral,
+  participantsWomen,
   type ParticipantsAddress,
 } from './sentence/participants';
 export { campusLabel, placeholderParagraph, type PlaceholderInput } from './sentence/placeholder';

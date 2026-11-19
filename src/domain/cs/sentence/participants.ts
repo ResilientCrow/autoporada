@@ -38,6 +38,9 @@ export function participantsLabel(
   return label ? (several ? label.many : label.one) : null;
 }
 
+/** Whether the label speaks of women only, so the names under it are read as women's. */
+export const participantsWomen = (address: ParticipantsAddress): boolean => address === 'slecny';
+
 /** „Slečny a pánové“ needs several people; every other choice fits one or many. */
 export const participantsFits = (address: ParticipantsAddress | null, several: boolean): boolean =>
   address !== 'slecny-a-panove' || several;

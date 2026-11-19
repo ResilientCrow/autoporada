@@ -49,6 +49,29 @@ async function refuses(id: string, run: () => Promise<unknown>, error: unknown) 
   expect(await run()).toEqual({ ok: false, error });
   expect(await snapshot(id)).toEqual(before);
 }
+/**
+ * A handed-in report from before ADR 0071: its Účastníci row has people with a salutation each and
+ * no address, which the submit now refuses; written past the use cases.
+ */
+async function withOlderParticipants(author: UserRecord, id: string) {
+  await world.tx(world.as(author), async (tx) => {
+    const point = (await tx.points.loadForWrite(id))!;
+    const row = {
+      key: 'participants',
+      label: 'Účastníci',
+      kind: 'people' as const,
+      order: 'input' as const,
+      people: [
+        { salutation: 'pani' as const, givenName: 'Eva', familyName: 'Malá' },
+        { salutation: 'pan' as const, givenName: 'Jan', familyName: 'Novák' },
+      ],
+    };
+    await tx.points.update(id, point.version, {
+      content: { ...point.content, bullets: [...point.content.bullets, row] },
+    });
+    await tx.audit.record({ action: 'point.seeded', target: { type: 'point', id } });
+  });
+}
 const notEditable = { code: 'rule', rule: 'point-not-editable' };
 const forbidden = { code: 'forbidden' };
 
@@ -248,6 +271,68 @@ describe('points.reviewEdit', () => {
       const { point, events } = await snapshot(id);
       expect(point?.content.bullets.map((b) => b.key)).toEqual(['organisers']);
       expect(events[0]?.editedFields).toEqual(['title']);
+    });
+    describe('the participants’ address (ADR 0071)', () => {
+      const addressed = async (id: string, over: Record<string, unknown>) => {
+        const { bullets } = await edited(id);
+        return (bullets as { key: string }[]).map((b) =>
+          b.key === 'participants' ? { ...b, ...over } : b,
+        );
+      };
+
+      it('lets a reviewer edit a report whose participants were handed in with no address', async () => {
+        const author = await user();
+        const id = await handedIn(author);
+        await withOlderParticipants(author, id);
+        const reviewer = await user('reviewer');
+        const result = await edit(reviewer, id, await edited(id, { title: 'Jiný název' }), 3);
+        expect(result).toEqual({ ok: true, value: { version: 4, changed: true } });
+        const { point } = await snapshot(id);
+        const row = point?.content.bullets.find((b) => b.key === 'participants');
+        expect(row).toMatchObject({ people: [{ salutation: 'pani' }, { salutation: 'pan' }] });
+        expect(row).not.toHaveProperty('address', expect.anything());
+      });
+
+      it('still asks for an address on a participants row the point did not have', async () => {
+        const author = await user();
+        const id = await handedIn(author);
+        const reviewer = await user('reviewer');
+        const row = {
+          key: 'participants',
+          label: 'Účastníci',
+          kind: 'people',
+          order: 'input',
+          people: [{ salutation: 'pani', givenName: 'Eva', familyName: 'Malá' }],
+        };
+        const { bullets } = await edited(id);
+        await refuses(
+          id,
+          async () =>
+            edit(reviewer, id, await edited(id, { bullets: [...(bullets as object[]), row] })),
+          { code: 'invalid-input', fields: { 'content.bullets.1.address': 'required' } },
+        );
+      });
+
+      it('refuses „slečny a pánové“ for one person, even on an older row', async () => {
+        const author = await user();
+        const id = await handedIn(author);
+        await withOlderParticipants(author, id);
+        const reviewer = await user('reviewer');
+        const one = [{ salutation: 'pani', givenName: 'Eva', familyName: 'Malá' }];
+        await refuses(
+          id,
+          async () =>
+            edit(
+              reviewer,
+              id,
+              await edited(id, {
+                bullets: await addressed(id, { people: one, address: 'slecny-a-panove' }),
+              }),
+              3,
+            ),
+          { code: 'invalid-input', fields: { 'content.bullets.1.address': 'several' } },
+        );
+      });
     });
   });
 });

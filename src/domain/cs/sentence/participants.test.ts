@@ -7,6 +7,7 @@ import {
   participantsLabel,
   participantsPastLead,
   participantsSeveral,
+  participantsWomen,
 } from '../index';
 
 describe('participants address (ADR 0071)', () => {
@@ -100,5 +101,12 @@ describe('participants address (ADR 0071)', () => {
       expect(participantsPastLead(null, false)).toBe('se zúčastnili');
       expect(participantsPastLead('bez-osloveni', false)).toBe('se zúčastnili');
     });
+  });
+
+  it('says whether the label speaks of women, so the people under it take the feminine surname form', () => {
+    expect(participantsWomen('slecny')).toBe(true);
+    expect(participantsWomen('panove')).toBe(false);
+    expect(participantsWomen('slecny-a-panove')).toBe(false);
+    expect(participantsWomen('bez-osloveni')).toBe(false);
   });
 });
