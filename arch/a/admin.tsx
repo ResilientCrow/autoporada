@@ -66,13 +66,15 @@ export function Clovek({ id }: { id: string }) {
   const self = u.id === s.userId; const need = A.needsReauth(s);
   const set = (p: Parameters<typeof A.setUser>[1]) => { apply(A.setUser(id, p)); setOk(true); };
   const student = isStudentTier(u.tier ?? null);
+  // A grant out of pending needs a tier, as an approval does (the server refuses it otherwise).
+  const untiered = u.role === 'pending' && !u.tier;
   const stepUp = <section className="stack st8"><Note h="Nejdřív ověříme, že jste to Vy">Změna role nebo zařazení patří k citlivým věcem, proto Vás Microsoft požádá o nové přihlášení. Ověření platí 10 minut.</Note><button className="btn go lg" onClick={() => apply(A.stepUp)}>Ověřit přihlášením</button></section>;
   const funkce = <Funkce u={u} onSave={(list) => { apply(A.setFunctions(id, list)); setOk(true); }} />;
   const placing = (tiers: readonly Tier[]) => <section className="stack st8"><h2>Zařazení</h2><Seg label="Zařazení" value={u.tier ?? null} options={tierOptions(tiers)} onChange={(v) => set({ tier: v })} /></section>;
   return <Pane on="/lide"><Back to="/lide" t="Zpět na lidi" /><Top h={Q.nameOf(u)} lead={u.email} />
     {ok ? <Toast onDone={() => setOk(false)}>Uloženo</Toast> : null}
     {self ? <><Note h="Tohle jste Vy">Svou roli ani účet si sami nezměníte, jen své zařazení. Jediný ředitel nejdřív povýší zástupce.</Note>{need ? stepUp : <>{placing(OWN_TIERS)}{funkce}</>}</> : need ? stepUp : <>
-      <section className="stack st8"><h2>Co smí</h2><Seg label="Role" value={u.role} options={(student ? (['submitter', 'pending'] as const) : (['submitter', 'reviewer', 'headmaster', 'pending'] as const)).map((r) => [r, ROLE[r]] as const)} onChange={(v) => set({ role: v })} />{student ? <p className="sm">Student i absolvent smí jen psát zprávy.</p> : null}</section>
+      <section className="stack st8"><h2>Co smí</h2>{untiered ? <p className="sm">Nejdřív zvolte zařazení.</p> : <Seg label="Role" value={u.role} options={(student ? (['submitter', 'pending'] as const) : (['submitter', 'reviewer', 'headmaster', 'pending'] as const)).map((r) => [r, ROLE[r]] as const)} onChange={(v) => set({ role: v })} />}{student ? <p className="sm">Student i absolvent smí jen psát zprávy.</p> : null}</section>
       {placing(TIERS)}
       {funkce}
       <section className="stack st8"><h2>Účet</h2><button className="btn" onClick={() => set({ status: u.status === 'blocked' ? 'active' : 'blocked' })}>{u.status === 'blocked' ? 'Odblokovat účet' : 'Zablokovat účet'}</button></section>

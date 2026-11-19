@@ -155,7 +155,7 @@ describe('users.changeAccess', () => {
   });
 
   it.each([
-    ['who never asked', null, null],
+    ['who never asked', null, 'ucitel'],
     ['after a cancelled request', 'cancelled', 'student'],
     ['after a rejected request', 'rejected', 'zamestnanec'],
     ['after a blocked request', 'blocked', 'absolvent'],
@@ -186,6 +186,24 @@ describe('users.changeAccess', () => {
         ...(tier && { tier: { from: null, to: tier } }),
       },
     ]);
+  });
+
+  it.each(['submitter', 'reviewer', 'headmaster'] as const)(
+    'never grants %s out of pending without a tier: tier required',
+    async (role) => {
+      const head = await world.seed.user({ role: 'headmaster' });
+      const user = await world.seed.user({ role: 'pending' });
+      await refuses(user.id, () => change(head, user, { role }), {
+        code: 'invalid-input',
+        fields: { tier: 'required' },
+      });
+    },
+  );
+
+  it('keeps an older member with no tier changeable', async () => {
+    const head = await world.seed.user({ role: 'headmaster' });
+    const user = await world.seed.user({ role: 'submitter', tier: null });
+    expect(await change(head, user, { role: 'reviewer' })).toEqual(changed(user));
   });
 
   it.each([

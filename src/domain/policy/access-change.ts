@@ -70,13 +70,15 @@ export function accessChoices(by: Actor, target: AccessTarget): AccessChoices {
  * - `forbidden`: own account other than a tier change, or a role, tier or
  *   status the choices never offer (a set tier back to none among them).
  * - `conflict`: a request arrived after the page loaded.
+ * - `tier-required`: a grant out of `pending` with no tier, as an approval
+ *   needs one (an older member with none was staff and stays legal).
  * - `student-role`: a student or absolvent above the submitter role.
  */
 export function refuseAccessChange(
   by: Actor,
   target: AccessTarget,
   next: AccessValue,
-): 'forbidden' | 'conflict' | 'student-role' | null {
+): 'forbidden' | 'conflict' | 'tier-required' | 'student-role' | null {
   const roleChanges = next.role !== target.role;
   const tierChanges = next.tier !== target.tier;
   if (by.id === target.id && !tierChanges) return 'forbidden';
@@ -87,6 +89,9 @@ export function refuseAccessChange(
     return 'forbidden';
   }
   if (next.status !== target.status && !choices.statuses.includes(next.status)) return 'forbidden';
+  if (target.role === 'pending' && next.role !== 'pending' && next.tier === null) {
+    return 'tier-required';
+  }
   return isValidAccess(next) ? null : 'student-role';
 }
 

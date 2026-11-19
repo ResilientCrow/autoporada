@@ -12,6 +12,7 @@ const REFUSALS: Readonly<
 > = {
   forbidden: { code: 'forbidden' },
   conflict: { code: 'conflict' },
+  'tier-required': { code: 'invalid-input', fields: { tier: 'required' } },
   'student-role': { code: 'rule', rule: 'student-role' },
 };
 
