@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PARTICIPANTS_ADDRESSES,
+  REPORT_ADDRESSES,
   participantsAgenda,
   participantsFits,
   participantsLabel,
@@ -12,6 +13,11 @@ import {
 describe('participants address (ADR 0071)', () => {
   it('names the four choices once', () => {
     expect(PARTICIPANTS_ADDRESSES).toEqual(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni']);
+  });
+
+  it('gives a report row the three labels, without „bez oslovení“ (ADR 0074)', () => {
+    expect(REPORT_ADDRESSES).toEqual(['slecny-a-panove', 'slecny', 'panove']);
+    for (const address of REPORT_ADDRESSES) expect(participantsLabel(address, true)).not.toBeNull();
   });
 
   it('counts several people as the organizer does: a comma before a title is no second person', () => {

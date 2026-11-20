@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ParticipantsAddress, Salutation } from '@/domain/cs';
+import type { ReportAddress, Salutation } from '@/domain/cs';
 import { emptyRichDoc, LIMITS, richDocFromText, type RichDoc } from '@/domain/richtext';
 import { parseIsoDate as d, parseWallTime as t } from '@/domain/time';
 
@@ -39,9 +39,7 @@ const petra = person('Petra', 'Dvořáková', 'pani');
 const peopleBullet = (
   key: string,
   people: readonly DraftPerson[],
-  address: ParticipantsAddress | null | undefined = key === 'participants'
-    ? 'bez-osloveni'
-    : undefined,
+  address: ReportAddress | null | undefined = key === 'participants' ? 'panove' : undefined,
 ): DraftBullet => ({
   key,
   label: key === 'organisers' ? 'Organizátoři' : 'Účastníci',
@@ -275,7 +273,7 @@ describe('missingForSubmit: report', () => {
   });
 
   describe('how the participants are addressed (ADR 0071)', () => {
-    const row = (people: readonly DraftPerson[], address?: ParticipantsAddress | null) =>
+    const row = (people: readonly DraftPerson[], address?: ReportAddress | null) =>
       withBullets(peopleBullet('organisers', [eva]), peopleBullet('participants', people, address));
     const nobody = person('Karel', 'Bez', null);
 
@@ -301,7 +299,7 @@ describe('missingForSubmit: report', () => {
       expect(check(row([], null)).problems.map((p) => p.code)).toEqual(['people-required']);
     });
 
-    it.each(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni'] as const)(
+    it.each(['slecny-a-panove', 'slecny', 'panove'] as const)(
       'needs no salutation for anybody once it is %s',
       (address) => {
         expect(check(row([jan, nobody], address)).problems).toEqual([]);
@@ -325,7 +323,7 @@ describe('missingForSubmit: report', () => {
       ]);
     });
 
-    it.each(['slecny', 'panove', 'bez-osloveni'] as const)('lets one person take %s', (address) => {
+    it.each(['slecny', 'panove'] as const)('lets one person take %s', (address) => {
       expect(check(row([nobody], address)).problems).toEqual([]);
     });
 

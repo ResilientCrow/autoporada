@@ -59,7 +59,7 @@ const PEOPLE_BULLETS = [
     label: 'Účastníci',
     kind: 'people',
     order: 'input',
-    address: 'bez-osloveni',
+    address: 'panove',
     people: [{ salutation: null, givenName: 'Ondřej', familyName: 'Pech' }],
   },
 ];

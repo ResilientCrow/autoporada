@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PARTICIPANTS_ADDRESSES, PERSON_HEADS } from '@/domain/cs';
+import { PERSON_HEADS, REPORT_ADDRESSES } from '@/domain/cs';
 import { hasForbiddenCharacters, parseRichDoc, type RichProfile } from '@/domain/richtext';
 import { parseIsoDate, parseWallTime } from '@/domain/time';
 
@@ -107,7 +107,7 @@ const bullet = z.discriminatedUnion('kind', [
       label: required,
       order: z.enum(['input', 'class-surname']),
       /** How the people are addressed as a group; only the Účastníci row has one. Left out, each person has a salutation. */
-      address: z.enum(PARTICIPANTS_ADDRESSES).optional(),
+      address: z.enum(REPORT_ADDRESSES).optional(),
       people: z.array(rowPerson).min(1),
     })
     .refine(

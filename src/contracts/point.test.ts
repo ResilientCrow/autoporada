@@ -111,8 +111,8 @@ describe('draftBulletsSchema', () => {
     expect(ok(draftBulletsSchema, [value])).toBe(false);
   });
 
-  describe('the address of the participants row (ADR 0071)', () => {
-    it.each(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni', null])(
+  describe('the address of the participants row (ADR 0071, 0074)', () => {
+    it.each(['slecny-a-panove', 'slecny', 'panove', null])(
       'accepts %j on the participants row, and keeps it',
       (address) => {
         const bullets = [people({ address, people: [person({ salutation: null })] })];
@@ -124,7 +124,7 @@ describe('draftBulletsSchema', () => {
       expect(ok(draftBulletsSchema, [people()])).toBe(true);
     });
 
-    it.each(['damy', '', 7])('refuses the address %j', (address) => {
+    it.each(['bez-osloveni', 'damy', '', 7])('refuses the address %j', (address) => {
       expect(ok(draftBulletsSchema, [people({ address })])).toBe(false);
     });
 

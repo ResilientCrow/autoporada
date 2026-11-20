@@ -24,9 +24,9 @@ import {
 } from './text';
 
 /**
- * What a people row prints after its heading. A row with an address (ADR 0071) prints its people
- * under one label, with no salutation of their own: „slečny a pánové Eva Malá (3.B), Jan Novák
- * (2.A)“; „bez oslovení“ prints the names alone. Any other row groups its people by salutation.
+ * What a people row prints after its heading. A row with an address (ADR 0071, 0074) prints its
+ * people under one label, with no salutation of their own: „slečny a pánové Eva Malá (3.B), Jan
+ * Novák (2.A)“. Any other row groups its people by salutation.
  */
 function peopleText(
   bullet: Extract<SnapshotBullet, { kind: 'people' }>,

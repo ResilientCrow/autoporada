@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { PARTICIPANTS_ADDRESSES, PERSON_HEADS, type Campus, type Salutation } from '@/domain/cs';
+import { PERSON_HEADS, REPORT_ADDRESSES, type Campus, type Salutation } from '@/domain/cs';
 import {
   contentBytes,
   PARTICIPANTS_KEY,
@@ -79,7 +79,7 @@ const draftBulletSchema = z.discriminatedUnion('kind', [
       kind: z.literal('people'),
       order: z.enum(['input', 'class-surname']),
       people: z.array(draftPersonSchema).max(POINT_LIMITS.peoplePerBullet),
-      address: z.enum(PARTICIPANTS_ADDRESSES).nullable().optional(),
+      address: z.enum(REPORT_ADDRESSES).nullable().optional(),
     })
     // Only the participants row is addressed as a group (ADR 0071).
     .refine((row) => !row.address || row.key === PARTICIPANTS_KEY, {

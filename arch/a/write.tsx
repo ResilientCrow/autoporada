@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { foldForSearch, normalizeClass, parsePeopleList, participantsLabel, headedName, placePhrase, type ParticipantsAddress, type Salutation } from '@/domain/cs';
+import { foldForSearch, normalizeClass, parsePeopleList, participantsLabel, headedName, placePhrase, type ReportAddress, type Salutation } from '@/domain/cs';
 import { displayName, organiserAt, PARTICIPANTS_KEY, POINT_LIMITS, REPORT_BULLETS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
 import { compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
@@ -8,7 +8,7 @@ import * as Q from '../core/select';
 import { directoryPerson } from '../core/directory';
 import * as A from '../core/ops';
 import type { Point } from '../core/types';
-import { ADDRESSES, App, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, WHEN } from './ui';
+import { App, REPORT_ADDRESS_OPTIONS, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, WHEN } from './ui';
 import { NotFound } from './home';
 
 const SAL: readonly (readonly [Salutation, string])[] = [['pan', 'pan'], ['pani', 'paní'], ['slecna', 'slečna']];
@@ -67,9 +67,9 @@ function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson
     {parsed?.rejected.length ? <p className="sm w-err" role="alert">Nerozumíme: {parsed.rejected.map((r) => r.source).join(', ')}. Chybí příjmení.</p> : null}
   </div>;
 }
-/** The Účastníci row's one label for everybody (ADR 0071); what is missing or does not fit shows in the dock hint, as for every step. */
-function AddressChoice({ value, onChange }: { value: ParticipantsAddress | null | undefined; onChange: (v: ParticipantsAddress) => void }) {
-  return <div className="stack st6"><span className="lb">Oslovení účastníků</span><Seg label="Oslovení účastníků" value={value ?? null} options={ADDRESSES} onChange={onChange} /></div>;
+/** The Účastníci row's one label for everybody, one of three (ADR 0071, 0074); what is missing or does not fit shows in the dock hint, as for every step. */
+function AddressChoice({ value, onChange }: { value: ReportAddress | null | undefined; onChange: (v: ReportAddress) => void }) {
+  return <div className="stack st6"><span className="lb">Oslovení účastníků</span><Seg label="Oslovení účastníků" value={value ?? null} options={REPORT_ADDRESS_OPTIONS} onChange={onChange} /></div>;
 }
 /** The Účastníci row names its people without a salutation each (`bare`): the one label above them speaks for all. */
 function PersonRow({ p, bare, onChange, onRemove }: { p: DraftPerson; bare?: boolean; onChange: (p: DraftPerson) => void; onRemove: () => void }) {
@@ -139,7 +139,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     const grouped = bul.key === PARTICIPANTS_KEY; const bare = grouped;
     const noSal = bare ? 0 : bul.people.filter((x) => !x.salutation).length;
     const addr = grouped ? Q.readiness(s, p).problems.find((x) => x.path === `content.bullets.${i}.address`) : undefined;
-    const setAddress = (address: ParticipantsAddress) => set({ bullets: c.bullets.map((b, j) => (j === i ? { ...bul, address } : b)) });
+    const setAddress = (address: ReportAddress) => set({ bullets: c.bullets.map((b, j) => (j === i ? { ...bul, address } : b)) });
     ask = bul.key === 'participants' ? 'Kdo se účastnil?' : `${bul.label}?`; help = 'Napište jména, nebo vložte seznam třeba z Excelu. Třídu napište do závorky, například Tereza Malá (3.B).';
     can = (bul.people.length > 0 || !req) && noSal === 0 && !addr; hint = bul.people.length === 0 && req ? 'Přidejte aspoň jednoho člověka.' : addr ? copy.readiness.problem(addr.code, addr.params) : noSal ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení. Nehádáme ho za Vás.` : '';
     nextText = bul.people.length === 0 && !req ? 'Přeskočit' : 'Pokračovat';
@@ -221,7 +221,7 @@ export function Oprava({ id }: { id: string }) {
   const open = shown.length ? shown : NOTE_ONLY;
   const set = (patch: Partial<PointContent>) => apply(A.savePoint(id, { ...c, ...patch }));
   const setPeople = (i: number, people: readonly DraftPerson[]) => set({ bullets: c.bullets.map((b, j) => (j === i && b.kind === 'people' ? { ...b, people } : b)) });
-  const setAddress = (i: number, address: ParticipantsAddress) => set({ bullets: c.bullets.map((b, j) => (j === i && b.kind === 'people' ? { ...b, address } : b)) });
+  const setAddress = (i: number, address: ReportAddress) => set({ bullets: c.bullets.map((b, j) => (j === i && b.kind === 'people' ? { ...b, address } : b)) });
   const m = p.poradaMonday ?? Q.workingMonday(s);
   const built = focusOn(Q.buildDoc(s, m, { draft: p }), id);
   const can = A.trySubmit(s, id).ok; const problems = Q.readiness(s, p).problems; const problem = problems[0];

@@ -235,7 +235,7 @@ describe('IssueSnapshot', () => {
     });
   });
 
-  describe('the address of a participants row (ADR 0071)', () => {
+  describe('the address of a participants row (ADR 0071, 0074)', () => {
     const upcast = parseIssueSnapshot(replica);
     const v2: unknown = upcast.ok ? structuredClone(upcast.snapshot) : null;
     const bare = [
@@ -250,7 +250,7 @@ describe('IssueSnapshot', () => {
     const withRow = (row: Record<string, unknown>) =>
       withBullet({ kind: 'people', label: 'Účastníci', order: 'class-surname', ...row });
 
-    it.each(['slecny-a-panove', 'slecny', 'panove', 'bez-osloveni'])(
+    it.each(['slecny-a-panove', 'slecny', 'panove'])(
       'reads the people of a row with the address %s without a salutation',
       (address) => {
         expect(errorsOf(withRow({ address, people: bare }))).toEqual([]);
@@ -267,7 +267,7 @@ describe('IssueSnapshot', () => {
       expect(errorsOf(withRow({ address: 'panove', people }))).not.toEqual([]);
     });
 
-    it.each(['damy', '', null])('rejects the address %j', (address) => {
+    it.each(['bez-osloveni', 'damy', '', null])('rejects the address %j', (address) => {
       expect(errorsOf(withRow({ address, people: bare }))).not.toEqual([]);
     });
 

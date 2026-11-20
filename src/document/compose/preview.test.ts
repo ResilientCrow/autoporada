@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ParticipantsAddress } from '@/domain/cs';
+import type { ReportAddress } from '@/domain/cs';
 import type { DraftBullet, DraftPerson, DraftStatement, PointContent } from '@/domain/report';
 import { richDocFromText, type RichDoc } from '@/domain/richtext';
 import { calDate } from '@/domain/time';
@@ -219,7 +219,7 @@ describe('reportFromContent', () => {
     const jan = person({ salutation: null, familyName: 'Novák', affiliation: '2.A' });
     const row = (
       people: readonly DraftPerson[],
-      address: ParticipantsAddress | null | undefined,
+      address: ReportAddress | null | undefined,
       over: Partial<Extract<DraftBullet, { kind: 'people' }>> = {},
     ) =>
       content({
@@ -253,7 +253,6 @@ describe('reportFromContent', () => {
     it.each([
       ['slecny', 'Účastníci: slečny Jan Novák (2.A), Eva Malá (3.B)'],
       ['panove', 'Účastníci: pánové Jan Novák (2.A), Eva Malá (3.B)'],
-      ['bez-osloveni', 'Účastníci: Jan Novák (2.A), Eva Malá (3.B)'],
     ] as const)('prints %s for several people', (address, line) => {
       expect(printed(row([eva, jan], address))).toBe(line);
     });
@@ -261,7 +260,6 @@ describe('reportFromContent', () => {
     it.each([
       ['slecny', eva, 'Účastníci: slečna Eva Malá (3.B)'],
       ['panove', jan, 'Účastníci: pan Jan Novák (2.A)'],
-      ['bez-osloveni', eva, 'Účastníci: Eva Malá (3.B)'],
     ] as const)('prints %s for one person', (address, who, line) => {
       expect(printed(row([who], address))).toBe(line);
     });

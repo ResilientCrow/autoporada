@@ -12,6 +12,17 @@ export const PARTICIPANTS_ADDRESSES = [
 ] as const;
 export type ParticipantsAddress = (typeof PARTICIPANTS_ADDRESSES)[number];
 
+/**
+ * The labels of a report's Účastníci row (ADR 0074). Its people are named one by one, so one of
+ * these always fits; „bez oslovení“ is for an akce, whose participants may be typed as a group.
+ */
+export const REPORT_ADDRESSES = [
+  'slecny-a-panove',
+  'slecny',
+  'panove',
+] as const satisfies readonly ParticipantsAddress[];
+export type ReportAddress = (typeof REPORT_ADDRESSES)[number];
+
 /** A label by number; „bez oslovení“ has none. */
 const LABELS: Readonly<Record<ParticipantsAddress, { one: string; many: string } | null>> = {
   'slecny-a-panove': { one: 'slečny a pánové', many: 'slečny a pánové' },

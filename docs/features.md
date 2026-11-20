@@ -61,6 +61,10 @@ has not built yet is under „Not built yet“.
     types: it reads its grammar from the title and an unknown gender prints
     „akce s názvem …“ (ADR 0067, 0068), and every report starts with the same
     rows (Organizátoři, Účastníci);
+  - the Účastníci row names its people under one label, „slečny a pánové“,
+    „slečny“ or „pánové“, with no salutation each; nothing is preselected,
+    „slečny a pánové“ needs two people, and a report has no „bez oslovení“
+    (ADR 0071, 0074);
   - the place is typed as it is named („místnost S205“, „Národní muzeum“)
     and the opening reads it into the locative („v místnosti S205“); a place
     it cannot read gets „v prostorách …“ or „na adrese …“ (ADR 0069);
