@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRoute, useStore, Sheet } from '../core/react';
 import * as Q from '../core/select';
 import type { Mark } from '../core/marks';
+import { PARTICIPANTS_ADDRESSES, REPORT_ADDRESSES, type ParticipantsAddress } from '@/domain/cs';
 import { POINT_LIMITS } from '@/domain/report';
 import { autosave } from '@/ui/copy/autosave';
 import logo from './logo-dark.svg';
@@ -102,10 +103,11 @@ export function Track({ on, steps }: { on: number; steps: string[] }) {
   return <ol className="trk">{steps.map((t, k) => <li key={t} className={k < on ? 'dn' : k === on ? 'nw2' : ''} {...(k === on ? { 'aria-current': 'step' as const } : {})}><i>{k < on ? <Ic n="chk" /> : null}</i><span>{t}</span></li>)}</ol>;
 }
 export const Stamp = ({ t }: { t: string }) => <span className="stamp">{t}</span>;
+const ADDRESS_LABELS: Readonly<Record<ParticipantsAddress, string>> = { 'slecny-a-panove': 'slečny a pánové', slecny: 'slečny', panove: 'pánové', 'bez-osloveni': 'bez oslovení' };
 /** How a report's Účastníci row addresses its people as one group (ADR 0071, 0074); nothing is preselected. */
-export const REPORT_ADDRESS_OPTIONS = [['slecny-a-panove', 'slečny a pánové'], ['slecny', 'slečny'], ['panove', 'pánové']] as const;
+export const REPORT_ADDRESS_OPTIONS = REPORT_ADDRESSES.map((a) => [a, ADDRESS_LABELS[a]] as const);
 /** An akce's participants may be typed as a group („třída 3.B“), so they can also go „bez oslovení“ (ADR 0071). */
-export const ADDRESSES = [...REPORT_ADDRESS_OPTIONS, ['bez-osloveni', 'bez oslovení']] as const;
+export const ADDRESSES = PARTICIPANTS_ADDRESSES.map((a) => [a, ADDRESS_LABELS[a]] as const);
 export function Seg<T extends string>({ label, value, options, onChange }: { label: string; value: T | null; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
   return <div className="sgm" role="radiogroup" aria-label={label}>{options.map(([v, t]) => <button type="button" key={v} role="radio" aria-checked={value === v} className={value === v ? 'on' : ''} onClick={() => onChange(v)}>{t}</button>)}</div>;
 }
