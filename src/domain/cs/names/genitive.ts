@@ -16,8 +16,9 @@ export interface GenitiveSuggestion {
 const words = (s: string) => s.split(/\s+/).filter(Boolean);
 
 /**
- * Suggests the 2nd case for „vyjádření pana Johna Doe (1.A)“. A head and complement (ADR 0072)
- * stand between the salutation and the name: „pana profesora Mgr. Jana Nováka“. A stored
+ * Suggests the 2nd case for „vyjádření pana Johna Doe (1.A)“. A function and its complement go
+ * before the salutation: „zástupkyně pro majetek paní Mgr. Jany Novákové“; a profesor or a ředitel
+ * after it: „pana profesora Mgr. Jana Nováka“ (ADR 0072, 0073). A stored
  * correction for this person (`override`) always wins. Words the rules are
  * unsure about keep their 1st case and the suggestion is flagged.
  */

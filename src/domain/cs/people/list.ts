@@ -7,7 +7,10 @@ export interface Person extends PersonName {
   readonly affiliation?: string;
   /** Written before the salutation: „absolvent pan Jan Novák“. */
   readonly role?: string;
-  /** A function or a tier that prints between the salutation and the name (ADR 0072): „pan profesor“. */
+  /**
+   * A function or a tier printed with the salutation (ADR 0072, 0073): a function goes before it,
+   * „členka PR oddělení paní“; a profesor after it, „pan profesor“.
+   */
   readonly head?: PersonHead;
   /** After the head noun, never declined: „pro majetek“. */
   readonly complement?: string;

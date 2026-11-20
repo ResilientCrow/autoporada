@@ -74,7 +74,7 @@ export const person = z.strictObject({
 const rowPerson = person
   .extend({
     salutation: salutation.optional(),
-    /** Printed between the salutation and the name (ADR 0072); absent prints as before. */
+    /** Printed with the salutation, a function before it (ADR 0072, 0073); absent prints as before. */
     head: z.enum(PERSON_HEADS).optional(),
     /** After the head noun, never declined; needs a head. */
     complement: text.optional(),
