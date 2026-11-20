@@ -28,7 +28,6 @@ The user interface is in Czech. The documentation and the code are in English.
 - [Documentation](#documentation)
 - [Running it at the school](#running-it-at-the-school)
 - [Development](#development)
-- [If the developer cannot be reached](#if-the-developer-cannot-be-reached)
 - [Licence](#licence)
 
 ## What it does
@@ -260,27 +259,6 @@ every pull request and on every push to `main`.
 
 The layers and what may import what are enforced by `pnpm lint:arch`;
 [CLAUDE.md](CLAUDE.md) lists the rules.
-
-## If the developer cannot be reached
-
-The school can keep running Autoporada, move it and change it without its
-author:
-
-- **Everything needed is in this repository.** There is no hidden service, no
-  licence key and no account that belongs to the developer. The licence (MIT)
-  allows the school to use, copy and change the code.
-- **Keep your own copy of the repository.** The server's clone in
-  `/opt/autoporada` is a full copy with the whole history. Copy it somewhere
-  else too, so the school does not depend on GitHub or on one machine.
-- **The data is one PostgreSQL database.** A backup of it and this repository
-  are enough to rebuild the app on a new server
-  ([docs/OPERATIONS.md](docs/OPERATIONS.md), "Restore").
-- **Day-to-day problems** are covered by the operations guide, including what
-  to do when the headmaster leaves, when a certificate expires and when mail
-  stops.
-- **A new developer** starts with the [Development](#development) section,
-  then reads [CLAUDE.md](CLAUDE.md) and the decision records. The operations
-  guide has a section with what to hand them.
 
 ## Licence
 
