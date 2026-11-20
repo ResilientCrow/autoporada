@@ -21,11 +21,13 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'] }, testIgnore: GENERATE },
     { name: 'mobile', use: { ...devices['Pixel 7'] }, testIgnore: GENERATE },
     // Generating publishes every approved point it prints: it runs once the others are done.
+    // No retry: the first try leaves its porada generated, so a retry fails on its first check.
     {
       name: 'generate',
       use: { ...devices['Desktop Chrome'] },
       testMatch: GENERATE,
       dependencies: ['desktop', 'mobile'],
+      retries: 0,
     },
   ],
   webServer: {
