@@ -15,6 +15,10 @@ const config: NextConfig = {
   cacheComponents: false,
   // The nonce CSP is set per request by src/proxy.ts.
   headers: async () => [{ source: '/:path*', headers: [...STATIC_HEADERS] }],
+  experimental: {
+    // Upgrade reminders only for published security advisories (Next's default, pinned).
+    agentUpgrade: 'security',
+  },
 };
 
 export default config;
