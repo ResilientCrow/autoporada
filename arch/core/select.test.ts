@@ -167,6 +167,6 @@ describe('genitiveFor: a statement speaker’s „vyjádření koho“', () => {
     expect(genitiveFor({ salutation: 'pan', givenName: 'Jan', familyName: 'Novák', titlesBefore: 'Mgr.' })?.text).toBe('pana Mgr. Jana Nováka');
   });
   it('passes the head and complement of a copied person to the sentence', () => {
-    expect(genitiveFor(personFromCard(CARD))?.text).toBe('paní zástupkyně pro majetek Mgr. Jany Novákové, Ph.D.');
+    expect(genitiveFor(personFromCard(CARD))?.text).toBe('zástupkyně pro majetek paní Mgr. Jany Novákové, Ph.D.');
   });
 });

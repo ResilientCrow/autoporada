@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tier, UserFunction } from '@/domain/actor';
+import { FUNCTION_HEADS, type Tier, type UserFunction } from '@/domain/actor';
 
 import { beforeName, headedName, PERSON_HEADS, type NameCase, type PersonHead } from './heads';
 import type { Salutation } from './person';
@@ -40,6 +40,11 @@ describe('the head nouns', () => {
   });
 
   describe.each(NOUNS)('%s', (head, man1, woman1, man2, woman2) => {
+    // A function describes the person and goes before the salutation; „paní ředitelka“ and „pan
+    // profesor“ are how the person is addressed, so the salutation stays first (ADR 0073).
+    const fronted = (FUNCTION_HEADS as readonly PersonHead[]).includes(head);
+    const order = (salutation: string, noun: string, name: string) =>
+      fronted ? `${noun} ${salutation} ${name}` : `${salutation} ${noun} ${name}`;
     const noun = (salutation: Salutation, nameCase: NameCase) =>
       salutation === 'pan'
         ? nameCase === 'nominative'
@@ -52,28 +57,44 @@ describe('the head nouns', () => {
     it.each(['pan', 'pani', 'slecna'] as const)('%s, both cases, no complement', (salutation) => {
       for (const nameCase of ['nominative', 'genitive'] as const)
         expect(headedName({ salutation, head }, 'Jan Novák', nameCase)).toBe(
-          `${SALUTE[nameCase][salutation]} ${noun(salutation, nameCase)} Jan Novák`,
+          order(SALUTE[nameCase][salutation], noun(salutation, nameCase), 'Jan Novák'),
         );
     });
 
     it('puts the complement after the noun, never declined', () => {
       expect(
         headedName({ salutation: 'pani', head, complement: 'pro majetek' }, 'Jana Nováková'),
-      ).toBe(`paní ${woman1} pro majetek Jana Nováková`);
+      ).toBe(order('paní', `${woman1} pro majetek`, 'Jana Nováková'));
       expect(
         headedName(
           { salutation: 'pan', head, complement: 'pro majetek' },
           'Jana Nováka',
           'genitive',
         ),
-      ).toBe(`pana ${man2} pro majetek Jana Nováka`);
+      ).toBe(order('pana', `${man2} pro majetek`, 'Jana Nováka'));
     });
   });
 
   it('reads the sex from the salutation: a slečna takes the woman noun', () => {
     expect(
       headedName({ salutation: 'slecna', head: 'clen', complement: 'PR oddělení' }, 'Eva Malá'),
-    ).toBe('slečna členka PR oddělení Eva Malá');
+    ).toBe('členka PR oddělení slečna Eva Malá');
+  });
+
+  it('writes a function before the salutation, as the absolvent (ADR 0073)', () => {
+    const deputy = { salutation: 'pani', head: 'zastupce', complement: 'pro majetek' } as const;
+    expect(headedName(deputy, 'Mgr. Jana Nováková')).toBe(
+      'zástupkyně pro majetek paní Mgr. Jana Nováková',
+    );
+    expect(headedName(deputy, 'Mgr. Jany Novákové', 'genitive')).toBe(
+      'zástupkyně pro majetek paní Mgr. Jany Novákové',
+    );
+    expect(headedName({ salutation: 'pani', head: 'reditel' }, 'Mgr. Jana Nováková')).toBe(
+      'paní ředitelka Mgr. Jana Nováková',
+    );
+    expect(headedName({ salutation: 'pan', head: 'profesor' }, 'Jana Nováka', 'genitive')).toBe(
+      'pana profesora Jana Nováka',
+    );
   });
 
   it('writes the absolvent before the salutation', () => {
@@ -103,9 +124,9 @@ describe('the head nouns', () => {
   it('trims the complement and ignores a blank one', () => {
     expect(
       headedName({ salutation: 'pan', head: 'clen', complement: '  PR oddělení ' }, 'Jan Novák'),
-    ).toBe('pan člen PR oddělení Jan Novák');
+    ).toBe('člen PR oddělení pan Jan Novák');
     expect(headedName({ salutation: 'pan', head: 'clen', complement: '   ' }, 'Jan Novák')).toBe(
-      'pan člen Jan Novák',
+      'člen pan Jan Novák',
     );
   });
 });

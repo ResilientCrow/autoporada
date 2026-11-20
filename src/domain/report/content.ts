@@ -20,8 +20,9 @@ export interface DraftPerson {
   readonly familyName: string;
   readonly titlesAfter?: string;
   /**
-   * What prints between the salutation and the name, copied when the author picked the person
-   * (ADR 0072 item 7): „pan profesor“, „paní zástupkyně pro majetek“. A head needs a salutation.
+   * The noun that prints with the salutation, copied when the author picked the person (ADR 0072
+   * item 7): „pan profesor Jan Novák“, „zástupkyně pro majetek paní Jana Nováková“ (a function goes
+   * first, ADR 0073). A head needs a salutation.
    */
   readonly head?: PersonHead;
   /** After the head noun, never declined; one line. */

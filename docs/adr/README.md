@@ -77,4 +77,5 @@ record that supersedes it.
 | [0069](0069-a-reports-place-is-read-into-the-opening.md) | A report's place is read into the opening | Accepted; adds to 0067 |
 | [0070](0070-the-state-carries-the-working-set.md) | The state carries the working set, history is read on demand | Accepted; refines 0053 item 2 |
 | [0071](0071-participants-are-addressed-as-one-group.md) | Participants are addressed as one group | Accepted; amends 0060 items 1 and 7, 0067 item 5 |
-| [0072](0072-a-user-has-a-tier-functions-and-a-salutation.md) | A user has a tier, functions and a salutation | Accepted; adds to 0021, builds on 0071 |
+| [0072](0072-a-user-has-a-tier-functions-and-a-salutation.md) | A user has a tier, functions and a salutation | Accepted; adds to 0021, builds on 0071; item 5 amended by 0073 |
+| [0073](0073-a-function-goes-before-the-salutation.md) | A function goes before the salutation | Accepted; amends 0072 item 5 |

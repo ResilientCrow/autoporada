@@ -111,10 +111,10 @@ describe('openingInput', () => {
     };
     const text = sentence({ ...content, bullets: [organisers([deputy, jan])] });
     expect(text).toContain(
-      'organizovali paní zástupkyně pro majetek Jana Nováková a pan Jan Novák (oba\u00a03.B)',
+      'organizovali zástupkyně pro majetek paní Jana Nováková a pan Jan Novák (oba\u00a03.B)',
     );
     expect(sentence({ ...content, bullets: [organisers([deputy])] })).toContain(
-      'organizovala paní zástupkyně pro majetek Jana Nováková (3.B)',
+      'organizovala zástupkyně pro majetek paní Jana Nováková (3.B)',
     );
   });
 

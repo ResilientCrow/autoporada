@@ -352,7 +352,7 @@ describe('reportFromContent', () => {
 
     it('prints it before the name in the row, naming everyone one by one', () => {
       expect(printed(rowOf([deputy, member, person()]))).toBe(
-        'Účastníci: paní zástupkyně pro pedagogickou činnost Mgr.\u00a0Jana Nováková, slečna členka PR oddělení Eva Malá (3.B), pan Jan Novák',
+        'Účastníci: zástupkyně pro pedagogickou činnost paní Mgr.\u00a0Jana Nováková, členka PR oddělení slečna Eva Malá (3.B), pan Jan Novák',
       );
     });
 

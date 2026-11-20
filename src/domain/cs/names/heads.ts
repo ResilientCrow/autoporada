@@ -4,10 +4,17 @@ import { SALUTATION, type Salutation, type Sex } from './person';
 
 /**
  * What can stand before a name (ADR 0072 item 5): the ředitel, the four heads of a function, and
- * the tiers that print a noun of their own. The last, `absolvent`, prints before the salutation.
+ * the tiers that print a noun of their own.
  */
 export const PERSON_HEADS = ['reditel', ...FUNCTION_HEADS, 'profesor', 'absolvent'] as const;
 export type PersonHead = (typeof PERSON_HEADS)[number];
+
+/**
+ * The heads that describe the person and so print before the salutation, as a role does: a
+ * function and an absolvent (ADR 0073). „Paní ředitelka“ and „pan profesor“ are how the person is
+ * addressed, so their salutation stays first.
+ */
+const DESCRIBING: ReadonlySet<PersonHead> = new Set([...FUNCTION_HEADS, 'absolvent']);
 
 /** The cases a person is named in: „pan Jan Novák“, „pana Jana Nováka“. */
 export type NameCase = 'nominative' | 'genitive';
@@ -46,9 +53,10 @@ const NOUNS: Readonly<Record<PersonHead, Nouns>> = {
 /**
  * The person's name with their salutation and head, in the given case. `name` is the name as the
  * caller has it in that case (titles included). The salutation picks the noun's sex, so a slečna
- * takes the woman's noun. The word order is salutation, noun, complement, name: „paní zástupkyně
- * pro pedagogickou činnost Mgr. Jana Nováková“; an absolvent goes before the salutation, as a role
- * does: „absolvent pan Jan Novák“. Without a head, just the salutation and the name.
+ * takes the woman's noun. A function goes before the salutation with its complement: „zástupkyně
+ * pro pedagogickou činnost paní Mgr. Jana Nováková“, „členka PR oddělení slečna Eva Malá“, and so
+ * does an absolvent: „absolvent pan Jan Novák“. A ředitel and a profesor follow the salutation:
+ * „paní ředitelka Mgr. Jana Nováková“. Without a head, just the salutation and the name.
  */
 export function headedName(
   person: HeadedPerson,
@@ -59,9 +67,12 @@ export function headedName(
   const salutation = nameCase === 'genitive' ? genitive : label;
   if (person.head === undefined) return `${salutation} ${name}`;
   const word = NOUNS[person.head][sex][nameCase];
-  if (person.head === 'absolvent') return `${word} ${salutation} ${name}`;
-  const complement = person.complement?.trim();
-  return [salutation, word, complement, name].filter(Boolean).join(' ');
+  // An absolvent has no complement: it is a tier, not a function.
+  const complement = person.head === 'absolvent' ? undefined : person.complement?.trim();
+  const order = DESCRIBING.has(person.head)
+    ? [word, complement, salutation, name]
+    : [salutation, word, complement, name];
+  return order.filter(Boolean).join(' ');
 }
 
 /** What a user prints before their name, if anything: the head and its complement (typed text). */

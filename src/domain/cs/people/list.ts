@@ -144,9 +144,9 @@ function withClassRuns(
 }
 
 /**
- * One person in a list of people named one by one: „absolvent pan Jan Novák“, „pan profesor Jan
- * Novák“, „paní Jana Malá“. A role typed by hand goes first, and then an absolvent head would only
- * repeat it.
+ * One person in a list of people named one by one: „absolvent pan Jan Novák“, „členka PR oddělení
+ * paní Jana Malá“, „pan profesor Jan Novák“, „paní Jana Malá“. A role typed by hand goes first, and
+ * then an absolvent head would only repeat it.
  */
 function namedOnOwn(p: Person): string {
   const role = p.role?.trim();

@@ -35,7 +35,8 @@ has not built yet is under „Not built yet“.
   (Statutární zástupce, Zástupce, Vedoucí, Člen) and a typed complement („pro
   pedagogickou činnost“, „PR oddělení“; it is never declined). The complement
   field suggests complements already used for other people. The highest function
-  prints before the person's name in documents, in the order of the kinds above.
+  prints before the person's name in documents, in the order of the kinds above,
+  and before the salutation („členka PR oddělení paní Jana Nováková“, ADR 0073).
 - Re-authentication (step-up, valid 10 minutes, „Ověřit přihlášením“) for
   changes to users' roles, types and account status, and for „Nový školní rok“.
 - „Odhlásit všude“, which revokes all of a user's sessions.
@@ -70,9 +71,9 @@ has not built yet is under „Not built yet“.
   their salutation, class and genitive form) and the app's own users with
   access (the picker labels them „ze školního adresáře“). Picking a user copies
   their address card into the row: salutation, the function noun and its
-  complement, and degrees („paní zástupkyně pro pedagogickou činnost Mgr. Jana
-  Nováková“; a teacher prints „profesor“, an absolvent „absolvent pan …“ before the
-  salutation). The row is a copy, not a link, and „Bez funkce“ drops the copied
+  complement, and degrees („zástupkyně pro pedagogickou činnost paní Mgr. Jana
+  Nováková“: a function and an absolvent („absolvent pan …“) go before the
+  salutation, a teacher's „profesor“ and the ředitel after it: „pan profesor …“). The row is a copy, not a link, and „Bez funkce“ drops the copied
   head. Staff who write points get everyone's card; a student gets only their
   own. The genitive is prefilled with the head in the 2nd case. It does not search
   the school's Microsoft directory: that route has no caller in Arch (ADR

@@ -69,7 +69,7 @@ export const future = {
     placeNeedsCampus: 'Nejdřív vyberte areál.',
     organizerNames: 'Jména organizátorů',
     organizerHint:
-      'Jména oddělte čárkou, například paní zástupkyně Jana Nováková. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',
+      'Jména oddělte čárkou, například zástupkyně paní Jana Nováková. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',
     participants: 'Účastníci',
     participantsHint:
       'Můžete uvést jména a\u00A0třídy. Vypíše se tak, jak je napíšete. Po schválení je uvidí všichni přihlášení, i\u00A0studenti.',

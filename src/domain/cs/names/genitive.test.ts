@@ -456,7 +456,7 @@ describe('suggestGenitive', () => {
     expect(result.needsCheck).toBe(confidence !== 'high');
   });
 
-  it('puts the head noun and the complement between the salutation and the name', () => {
+  it('puts a function before the salutation and a profesor after it (ADR 0073)', () => {
     const name = (salutation: Salutation, full: string) => splitFullName(full, salutation);
     expect(suggestGenitive({ ...name('pan', 'Mgr. Jan Novák'), head: 'profesor' }).text).toBe(
       'pana profesora Mgr. Jana Nováka',
@@ -467,11 +467,11 @@ describe('suggestGenitive', () => {
         head: 'zastupce',
         complement: 'pro pedagogickou činnost',
       }).text,
-    ).toBe('paní zástupkyně pro pedagogickou činnost Mgr. Jany Novákové');
+    ).toBe('zástupkyně pro pedagogickou činnost paní Mgr. Jany Novákové');
     expect(
       suggestGenitive({ ...name('slecna', 'Eva Malá'), head: 'clen', complement: 'PR oddělení' })
         .text,
-    ).toBe('slečny členky PR oddělení Evy Malé');
+    ).toBe('členky PR oddělení slečny Evy Malé');
   });
 
   it('puts the absolvent noun before the salutation', () => {

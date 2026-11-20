@@ -9,7 +9,7 @@ const cards = [jana, jan, eva];
 
 describe('organizerWith: the picked card replaces the last name typed', () => {
   it('writes the headed name of a card with a salutation', () => {
-    expect(organizerWith('Jana', jana)).toBe('paní zástupkyně pro majetek Mgr. Jana Nováková');
+    expect(organizerWith('Jana', jana)).toBe('zástupkyně pro majetek paní Mgr. Jana Nováková');
     expect(organizerWith('Nov', jan)).toBe('pan Mgr. Jan Novák, Ph.D.');
   });
 

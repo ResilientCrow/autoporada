@@ -493,14 +493,14 @@ describe('people with a function (ADR 0072)', () => {
     complement?: string,
   ): Person => ({ ...person, head, ...(complement && { complement }) });
 
-  it('prints the salutation, the noun and the complement before the name', () => {
+  it('prints a function and its complement before the salutation, a ředitel after it', () => {
     const deputy = headed(
       { ...p('pani', 'Jana', 'Nováková'), titlesBefore: 'Mgr.' },
       'zastupce',
       'pro pedagogickou činnost',
     );
     expect(renderPeople([deputy], organisers)).toBe(
-      'paní zástupkyně pro pedagogickou činnost Mgr. Jana Nováková',
+      'zástupkyně pro pedagogickou činnost paní Mgr. Jana Nováková',
     );
     expect(
       renderPeople([headed(p('pan', 'Jan', 'Novák', undefined, 'Mgr.'), 'reditel')], organisers),
@@ -510,7 +510,7 @@ describe('people with a function (ADR 0072)', () => {
   it('keeps the affiliation after the name', () => {
     expect(
       renderPeople([headed(p('slecna', 'Eva', 'Malá', '3.B'), 'clen', 'PR oddělení')], organisers),
-    ).toBe('slečna členka PR oddělení Eva Malá (3.B)');
+    ).toBe('členka PR oddělení slečna Eva Malá (3.B)');
   });
 
   it('names everyone one by one as soon as anyone has a head', () => {
@@ -520,7 +520,7 @@ describe('people with a function (ADR 0072)', () => {
       p('pan', 'Jan', 'Novák'),
     ];
     expect(renderPeople(list, organisers)).toBe(
-      'paní vedoucí IT oddělení Jana Bílá, paní Eva Malá a pan Jan Novák',
+      'vedoucí IT oddělení paní Jana Bílá, paní Eva Malá a pan Jan Novák',
     );
   });
 
@@ -542,7 +542,7 @@ describe('people with a function (ADR 0072)', () => {
       p('pan', 'Jan', 'Novák', '1.A'),
     ];
     expect(renderPeople(list, organisers)).toBe(
-      `pan člen PR oddělení Petr Dvořák a pan Jan Novák (oba${NB}1.A)`,
+      `člen PR oddělení pan Petr Dvořák a pan Jan Novák (oba${NB}1.A)`,
     );
   });
 
