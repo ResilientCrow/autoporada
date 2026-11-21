@@ -1,5 +1,5 @@
 import type { FutureItemRecord, PointRecord } from '@/application/ports';
-import { reportFromContent } from '@/document';
+import { reportFromContent, reportOnDays } from '@/document';
 import { singleLine } from '@/domain/richtext';
 import { toIsoDate, toIsoTime } from '@/domain/time';
 import type { SnapshotReport } from '@/snapshot';
@@ -12,7 +12,10 @@ import type { AssemblyProblem } from './assemble-types';
  * `reportFromContent` leaves nothing out and changes no date or time (C33 F4); a report that does
  * not hold to that is left out and named as a problem instead of printed wrong. A report that
  * answers an owed akce (`akce`, by the point's id) is dated by the akce, as the porada took it in by
- * the akce's days (ADR 0049): the document's PROVOZ filter and order then follow the same days.
+ * the akce's days (ADR 0049): the document's PROVOZ filter and order then follow the same days. Its
+ * times were checked against its own days, so `reportOnDays` keeps them only as far as the akce's
+ * days allow; without that an end time valid over the report's two days would fail the snapshot on
+ * the akce's one and block the whole porada.
  */
 export function assembleReports(
   points: readonly PointRecord[],
@@ -48,11 +51,5 @@ export function assembleReports(
 /** The report with the days of the akce it answers, when it answers one that has a start date. */
 function datedByAkce(report: SnapshotReport, akce: FutureItemRecord | undefined): SnapshotReport {
   const days = akce && akceDays(akce);
-  if (!days) return report;
-  const { endDate: _own, ...rest } = report;
-  return {
-    ...rest,
-    date: toIsoDate(days.start),
-    ...(days.end && { endDate: toIsoDate(days.end) }),
-  };
+  return days ? reportOnDays(report, days) : report;
 }

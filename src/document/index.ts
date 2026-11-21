@@ -6,6 +6,7 @@ export {
   composePointPreview,
   MISSING_REPORT_LINES,
   reportFromContent,
+  reportOnDays,
   snapshotPerson,
   type Omitted,
 } from './compose';

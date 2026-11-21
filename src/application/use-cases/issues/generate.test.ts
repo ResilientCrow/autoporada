@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { runUseCase } from '@/application/core';
 import { StaleVersion, system, type Tx, type UserRecord } from '@/application/ports';
-import { calDate, parseIsoDate as d, toIsoDate, type CalDate } from '@/domain/time';
+import { calDate, parseIsoDate as d, toIsoDate, wallTime, type CalDate } from '@/domain/time';
 
 import { issueFixtures } from '../../../../test/support/issues';
 import { registryFixtures } from '../../../../test/support/registry';
@@ -204,6 +204,30 @@ describe('issues.generate', () => {
       const actions = (await world.inspect.audit()).map((row) => row.action);
       expect(actions).not.toContain('future.report-missed');
       expect(actions).not.toContain('point.closed');
+    });
+
+    it('generates a report that ran overnight after a one-day akce: the akce dates it, its end time goes', async () => {
+      const head = await headmaster();
+      const author = await world.seed.user({ role: 'submitter' });
+      const akce = await ended(author);
+      // Valid on the report's own two days, impossible on the akce's one.
+      const point = await fixtures.point({
+        author,
+        kind: 'report',
+        eventDate: d('2026-10-22'),
+        endDate: d('2026-10-23'),
+        content: { timeFrom: wallTime(18, 0), timeTo: wallTime(8, 0) },
+        futureItemId: akce,
+      });
+
+      const result = await generate(head);
+      if (!result.ok) throw new Error(JSON.stringify(result.error));
+
+      const stored = await world.tx(seeder, (tx) => tx.documents.snapshot(result.value.documentId));
+      const report = stored?.reports.find((r) => r.id === point);
+      expect(report).toMatchObject({ date: '2026-10-22', timeFrom: '18:00' });
+      expect(report).not.toHaveProperty('endDate');
+      expect(report).not.toHaveProperty('timeTo');
     });
 
     it('does not owe the akce again: the next porada prints no placeholder for it', async () => {

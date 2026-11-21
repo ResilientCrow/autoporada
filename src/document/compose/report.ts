@@ -9,7 +9,15 @@ import {
   type PointContent,
 } from '@/domain/report';
 import { singleLine } from '@/domain/richtext';
-import { compareDates, compareTimes, toIsoDate, toIsoTime } from '@/domain/time';
+import {
+  compareDates,
+  compareTimes,
+  parseWallTime,
+  toIsoDate,
+  toIsoTime,
+  type CalDate,
+  type WallTime,
+} from '@/domain/time';
 import type { SnapshotBullet, SnapshotReport, SnapshotStatement } from '@/snapshot';
 
 import type { Block } from '../model';
@@ -166,6 +174,10 @@ function snapshotBullets(bullets: readonly DraftBullet[]): {
   return { kept, omitted };
 }
 
+/** Whether the snapshot takes this time to: over several days any, on one day only one after the time from. */
+const endsAfterStart = (oneDay: boolean, from: WallTime, to: WallTime): boolean =>
+  !oneDay || compareTimes(to, from) > 0;
+
 /**
  * The dates and times the snapshot accepts: an end before the start, a time to
  * without a time from and a time to that is not after the time from on one day
@@ -178,14 +190,38 @@ function snapshotDates(c: PointContent & { eventDate: NonNullable<PointContent['
   const oneDay = endDate === undefined || endDate === date;
   const timeFrom = c.timeFrom ?? undefined;
   const timeTo =
-    c.timeTo && timeFrom && !(oneDay && compareTimes(c.timeTo, timeFrom) <= 0)
-      ? c.timeTo
-      : undefined;
+    c.timeTo && timeFrom && endsAfterStart(oneDay, timeFrom, c.timeTo) ? c.timeTo : undefined;
   return {
     date,
     ...(endDate !== undefined && { endDate }),
     ...(timeFrom && { timeFrom: toIsoTime(timeFrom) }),
     ...(timeTo && { timeTo: toIsoTime(timeTo) }),
+  };
+}
+
+/**
+ * The report on the days of the akce it answers (ADR 0049) instead of its own. Its times were
+ * checked against its own days, so they stay only as far as the akce's days allow: a time to that
+ * is not after the time from once both fall on one day is left out, the way `snapshotDates` leaves
+ * it out. A report that ran overnight after an akce entered as one day then still gives a snapshot
+ * that parses. The document loses nothing by it: it prints neither time (the opening sentence is
+ * the author's), and only the time from orders PROVOZ.
+ */
+export function reportOnDays(
+  report: SnapshotReport,
+  days: { readonly start: CalDate; readonly end?: CalDate },
+): SnapshotReport {
+  const { endDate: _own, timeTo, ...rest } = report;
+  const end = days.end && compareDates(days.end, days.start) > 0 ? days.end : undefined;
+  const keepsTimeTo =
+    timeTo !== undefined &&
+    rest.timeFrom !== undefined &&
+    endsAfterStart(end === undefined, parseWallTime(rest.timeFrom), parseWallTime(timeTo));
+  return {
+    ...rest,
+    date: toIsoDate(days.start),
+    ...(end && { endDate: toIsoDate(end) }),
+    ...(keepsTimeTo && { timeTo }),
   };
 }
 
