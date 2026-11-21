@@ -28,7 +28,7 @@ Read this before touching anything in `arch/`. Everything below is taken from th
 | `--wash` | `#F5F5F9` | hover and disabled backgrounds |
 | `--on` | `#C9CBE3` | text on the dark desk |
 
-Other literals in use: `#B9BACB` (input border), `#B4B5C8` (open marker ring), `#8A8BA3` and `#6A6B84` (disabled text), `#E5A800` (gold hover), `#F8E9EC` (error background), `#FFF8E0` and `#D29A00` (warning field), `#FFE9A6` (diff insert).
+Other literals in use: `#B9BACB` (input border), `#B4B5C8` (open marker ring), `#8A8BA3` and `#6A6B84` (disabled text; `#8A8BA3` also the cancelled marker), `#E5A800` (gold hover), `#F8E9EC` (error background), `#FFF8E0` and `#D29A00` (warning field), `#FFE9A6` (diff insert).
 
 ### Home tiles (`.tl` + `.t-<tone><0|1|2>`, `app.css`)
 
@@ -90,11 +90,11 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 | `Top` | Page heading: `h` title (`big` for the large one), optional `lead`. |
 | `Back` | „Zpět" link with a back icon; `to`, `t`. |
 | `Sec` | Titled group `.grp` with `h2`, optional `right` link. |
-| `Item` | List row `.it`. With `to`: an `<a>` to a hash route. With `act`: a `<button>` that runs a function (no navigation). With neither: a plain `div`. Props `t` title, `st` sub-line, `mk` marker (`c` done check, `o` open ring, `n` gold dot, `x` red dot), `end` right-hand content, `warn`, `hot` (runs on pointer enter and focus, for a desk that follows the row). |
+| `Item` | List row `.it`. With `to`: an `<a>` to a hash route. With `act`: a `<button>` that runs a function (no navigation). With neither: a plain `div`. Props `t` title, `st` sub-line, `mk` marker (`c` done check, `o` open ring, `n` gold dot, `x` red dot, `z` grey slashed circle for a cancelled akce; `pointMark` and `futureMark` in `core/marks.ts` pick it), `end` right-hand content, `warn`, `hot` (runs on pointer enter and focus, for a desk that follows the row). |
 | `Note` | Gold-soft information box; `err` gives the red `role="alert"` variant. |
 | `Dialog` | Modal `.veil` > `.dlg` with `title`, Escape and outside click close, focus returns to opener. Bottom sheet on phone. |
 | `Toast` | `role="status"` message; with `undo` shows „Vrátit zpět" for 15 s, else 5 s. |
-| `Saved` | „Uloženo" status with check. |
+| `Saved` | Save status from `useStore().saving`: „Ukládám…“ while a typed save waits or runs, „Uloženo“ with check once it lands, „Neuložené změny“ (`.sv.err`) after the server refuses one. |
 | `Seg` | Radio group of pill buttons (`role="radiogroup"`, `role="radio"`), `label` is its accessible name. |
 | `Todo` | Checklist `.todo` of rows with markers `d` done, `n` open, `o` ring, `x` problem. |
 | `Track` | Step tracker `ol.trk` with `on` index and `steps`; `aria-current="step"`. |
@@ -142,10 +142,10 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 ### „Přidat do porady" (`Pridat` in `porada.tsx`, route `pridat`)
 
 - Headmaster only: `main.tsx` renders `<Pridat />` when `head`, else `NotFound`. Entered from the `.add` button on the porada screen.
-- Two groups, sorted by what is added. „Nové": Akce, Jednání, Bod, Zpráva o tom, co proběhlo, Ohlas sociálního partnera, Student do seznamu, Příloha (Bod and Příloha only when the porada has a row, Ohlas only when it has the partners row). Each sub-line says where it lands. „Doplnit do bodu, který v poradě už je": the rows `Q.addable` returns (no row the document fills itself, no approved proposal, partners apart; Pokyny before Hospodaření), titled with the document's number (`5. …`), sub-line „Trvalý bod" or „Jen pro tuto poradu", plus „zatím bez textu". A row the document does not print has no number: it is named by its title, and its sub-line ends „zatím se netiskne", or „bez textu se netiskne" when it is empty. The numbers come from the outline, whose rows are matched to points by `Q.rowForPoint` (the longest printed title, never an empty one).
+- Two groups, sorted by what is added. „Nové": Akce, Jednání, Pokyny a hospodaření (a new point), Zpráva o tom, co proběhlo, Ohlas sociálního partnera, Student do seznamu, Příloha (Pokyny a hospodaření and Příloha only when the porada has a row, Ohlas only when it has the partners row). Each sub-line says where it lands. „Pokyny a hospodaření": the rows `Q.addable` returns (no row the document fills itself, no approved proposal, partners apart; Pokyny before Hospodaření), titled with the document's number (`5. …`), sub-line „Trvalý bod" or „Jen pro tuto poradu", plus „zatím bez textu". A row the document does not print has no number: it is named by its title, and its sub-line ends „zatím se netiskne", or „bez textu se netiskne" when it is empty. The numbers come from the outline, whose rows are matched to points by `Q.rowForPoint` (the longest printed title, never an empty one).
 - A row that creates something ends in the plus icon (`end`), a row that opens a page keeps the chevron.
 - Rows that open a point carry `?z=pridat`: `Pokyny` then returns to `/pridat` after Uložit or Odebrat, and its back link reads „Zpět na přidávání".
-- It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde." On a desktop the desk follows the row under the pointer or focus (`Item hot`, `WholeDesk follow`): it glides to that point without scrolling the page, and does not touch the desk position Porada remembers. A row with no point (Bod, Zpráva, Příloha) clears the mark.
+- It goes straight into the porada without approval. The desk shows the live document with „Přeškrtnuté zatím nevyjde." On a desktop the desk follows the row under the pointer or focus (`Item hot`, `WholeDesk follow`): it glides to that point without scrolling the page, and does not touch the desk position Porada remembers. A row with no point (Pokyny a hospodaření, Zpráva, Příloha) clears the mark.
 
 ### Missing-report placeholders (`Kontrola` in `review.tsx`, `Zpravy` in `porada.tsx`, ADR 0061)
 
@@ -158,9 +158,9 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 
 1. A screen calls `apply(A.someOp(...))` (`arch/core/ops.ts`). Each op is an `Fx`, a pure `State => State` function tagged with `op: { k, a, tmp?, d?, m? }` (`tag`, `simple`).
 2. `useStore().apply` (`core/react.tsx`) runs the function on local state at once (optimistic) and pushes the op on a queue. `core/store.ts` holds the pure state functions the ops wrap; add new state logic there.
-3. `pump` takes ops in order, coalesces superseded saves (`COALESCED`), and asks `toCalls(op, { s, vers, real })` for use-case calls `{ name, input, tmp?, key? }`. Temporary ids (`createWith`, `onId`) become server ids, replacing them in state and in the hash.
+3. `pump` takes ops in order. A save typed on screen (`COALESCED`: `savePoint`, `saveFuture`, `annexes`, `setAnnex2`, stamped with `at`) waits until typing pauses (`headWait` in `core/saves.ts`: `DEBOUNCE_MS` 1.5 s after the last keystroke, at most `MAX_WAIT_MS` 10 s), so typing stays under the `autosave` rate limit; any other op queued behind it, or the tab going hidden, sends it at once. It then coalesces superseded saves and asks `toCalls(op, { s, vers, real })` for use-case calls `{ name, input, tmp?, key? }`. Temporary ids (`createWith`, `onId`) become server ids, replacing them in state and in the hash.
 4. Each call is `POST /api/arch/run` with `{ name, input }`. Failures set `problem` (`code`, `rule?`, `keep`); `unauthenticated` redirects to `/`, `step-up-required` to the step-up page, and typed text stays on screen after a refused autosave.
-5. `GET /api/arch/state` is re-read only when no write is queued or running.
+5. `GET /api/arch/state` is re-read only when no write is queued, waiting or running, and not after a refused save (the typed text stays). `saving` is `'saving'` while a typed save is queued, `'failed'` after a refusal until a later typed save lands, else `'saved'`; `Saved` shows it.
 
 To add a write: a state function in `store.ts`, a tagged op in `ops.ts`, a branch in `toCalls` mapping it to a use case. If no use case fits, add or extend one in `src/application/use-cases` (see rules); if the screen needs data `GET /api/arch/state` does not return, extend `src/server/routes/arch-state.ts`.
 
