@@ -100,6 +100,7 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 | `Track` | Step tracker `ol.trk` with `on` index and `steps`; `aria-current="step"`. |
 | `Stamp` | Gold stamp `.stamp` on the sheet corner (e.g. generated). |
 | `TitleField` | Auto-growing title textarea; Enter moves on. |
+| `SheetPicker` | „Načíst jména ze souboru“ (ADR 0077): a spreadsheet picker with its busy state, red error line, status line and hint; the screen's `read` loads the reader and applies the names (akce Účastníci text, report Účastníci row). |
 | `Desk`, `App`, `Bar`, `PhoneBar`, `Offline` | Layout, see section 3. |
 | `useNav`, `useNarrow`, `goReplace`, `Hash`, `focusOn`, `WHEN`, `diffWords` | Role nav, phone query, no-history redirect, hash link, sheet cut to what matters while writing, clock format, word diff rendered with `ins`/`del`. |
 

@@ -7,11 +7,11 @@ import { createWith, fromText, go, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future } from '../core/types';
-import { ADDRESSES, App, TitleField, Back, Left, Desk, Dialog, goReplace, Ic, Note, Rework, Saved, Seg, Sec, Stamp, Todo, Top, Track, TrailMore, WHEN } from './ui';
+import { ADDRESSES, App, TitleField, Back, Left, Desk, Dialog, goReplace, Ic, Note, Rework, Saved, Seg, Sec, SheetPicker, Stamp, Todo, Top, Track, TrailMore, WHEN, type Said } from './ui';
 import { futureLine, NotFound } from './home';
 import { organizerPicks } from '../core/organizer';
 import { loadChunk } from '../core/import/chunk';
-import { ImportError, NO_NAMES, SHEET_HINT, sheetMessage, tooManyNames } from '../core/import/messages';
+import { NO_NAMES, SHEET_HINT, tooManyNames } from '../core/import/messages';
 
 const CAMPUS = [['smichov', 'Smíchov'], ['radlice', 'Radlice'], ['na-vidouli', 'Na Vidouli'], ['jinde', 'Jinde']] as const;
 /** Místo says where within the chosen areál, so it waits for one. */
@@ -28,35 +28,20 @@ function Line({ f }: { f: Future }) {
 function AkceDesk({ f }: { f: Future }) {
   return <Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn"><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl cur live"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><Line f={f} /></div></div></div></Desk>;
 }
-const SHEETS = '.xlsx,.ods,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv';
 const namesAdded = (added: number, present: number) => (added ? `Přidali jsme ${Q.counts(added, 'jméno', 'jména', 'jmen')}.` : 'Všechna jména ze souboru už v poli jsou.') + (added && present ? ` ${present >= 2 && present <= 4 ? 'Byla' : 'Bylo'} tam už ${Q.counts(present, 'jméno', 'jména', 'jmen')}.` : '');
 /** Účastníci from a spreadsheet, appended to what is typed (ADR 0077). The reader loads on first use; nothing of the file is kept. */
 function NamesFromFile({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<{ err: boolean; t: string } | null>(null);
-  const input = useRef<HTMLInputElement>(null); const latest = useRef(value); useEffect(() => { latest.current = value; });
-  const pick = async (f: File) => {
-    setBusy(true); setMsg(null);
-    try {
-      const { appendNames, readParticipants } = await loadChunk(() => import('../core/import/participants'));
-      const names = await readParticipants(f, new DOMParser());
-      if (!names.length) { setMsg({ err: true, t: NO_NAMES }); return; }
-      const r = appendNames(latest.current, names, POINT_LIMITS.participants); // the person may have typed while the file was read
-      if ('tooLong' in r) { setMsg({ err: true, t: tooManyNames(r.tooLong, POINT_LIMITS.participants) }); return; }
-      if (r.added) onChange(r.text);
-      setMsg({ err: false, t: namesAdded(r.added, r.present) });
-    } catch (x) {
-      setMsg({ err: true, t: sheetMessage(x instanceof ImportError ? x : new ImportError('broken')) });
-    } finally { setBusy(false); }
+  const latest = useRef(value); useEffect(() => { latest.current = value; });
+  const read = async (f: File): Promise<Said> => {
+    const { appendNames, asText, readPeople } = await loadChunk(() => import('../core/import/participants'));
+    const names = (await readPeople(f, new DOMParser())).map(asText);
+    if (!names.length) return { err: true, t: NO_NAMES };
+    const r = appendNames(latest.current, names, POINT_LIMITS.participants); // the person may have typed while the file was read
+    if ('tooLong' in r) return { err: true, t: tooManyNames(r.tooLong, POINT_LIMITS.participants) };
+    if (r.added) onChange(r.text);
+    return { err: false, t: namesAdded(r.added, r.present) };
   };
-  return <div className="stack st8">
-    {/* aria-disabled, not disabled: the button keeps keyboard focus while the file is read */}
-    <div><button type="button" className={`btn${busy ? ' off' : ''}`} aria-disabled={busy} aria-busy={busy} onClick={() => { if (busy) return; setMsg(null); input.current?.click(); }}>{busy ? 'Čtu soubor…' : 'Načíst jména ze souboru'}</button></div>
-    <input ref={input} className="vh" type="file" accept={SHEETS} tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pick(f); }} />
-    {msg?.err ? <p className="sm w-err" role="alert">{msg.t}</p> : null}
-    {/* Mounted before it speaks, so a screen reader announces the count */}
-    <p className={msg && !msg.err ? 'sm' : 'vh'} role="status">{msg && !msg.err ? msg.t : ''}</p>
-    <p className="sm">{SHEET_HINT}</p>
-  </div>;
+  return <SheetPicker read={read} hint={SHEET_HINT} />;
 }
 /** New akce or jednání: one question at a time, the line in the document beside it. */
 export function NovaAkce({ id, step }: { id: string; step?: string }) {

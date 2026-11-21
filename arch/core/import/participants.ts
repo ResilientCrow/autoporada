@@ -38,8 +38,15 @@ function roleOf(cell: string): Role | null {
 }
 const namesSomeone = (cell: string) => { const r = roleOf(cell); return r !== null && NAME_ROLES.includes(r); };
 
-/** A cell as it goes into the list: cleaned, and a comma made a space, as a comma separates people (ADR 0060). */
-const part = (s: string | undefined) => clean(s ?? '').replace(/\s*,\s*/g, ' ').trim();
+/** A person as a sheet row gives them: both names when the sheet has the two columns, else its one name cell as it is. */
+type Named = { givenName: string; familyName: string } | { name: string };
+export type SheetPerson = Named & { cls?: string };
+
+const part = (s: string | undefined) => clean(s ?? '');
+const noComma = (s: string) => s.replace(/\s*,\s*/g, ' ').trim();
+const nameText = (p: Named) => ('name' in p ? p.name : `${p.givenName} ${p.familyName}`);
+/** A person as the Účastníci text prints them, „Tereza Malá (3.B)“; a comma becomes a space, as a comma separates people (ADR 0060). */
+export const asText = (p: SheetPerson): string => { const n = noComma(nameText(p)); const c = p.cls ? noComma(p.cls) : ''; return c ? `${n} (${c})` : n; };
 const isName = (s: string) => /\p{L}/u.test(s) && !/[\d@]/.test(s) && s.length <= MAX_NAME;
 const filled = (rows: Rows) => rows.filter((r) => r.some((c) => clean(c)));
 
@@ -60,16 +67,16 @@ function header(rows: Rows): { at: number; cols: Cols } | null {
   return best && { at: best.at, cols: best.cols };
 }
 
-/** With a header: given and family name in that order when the file has both, else the one name column as it is. */
-function nameBy(cols: Cols): (row: string[]) => string {
+/** With a header: both names when the file has both columns and the row both filled, else the one name cell as it is. */
+function nameBy(cols: Cols): (row: string[]) => Named {
   const { given, family, full } = cols;
   const one = (row: string[], i: number | undefined) => (i === undefined ? '' : part(row[i]));
-  if (given !== undefined && family !== undefined) return (row) => [one(row, given), one(row, family)].filter(Boolean).join(' ') || one(row, full);
-  return (row) => one(row, full ?? given ?? family);
+  if (given !== undefined && family !== undefined) return (row) => { const g = one(row, given); const f = one(row, family); return g && f ? { givenName: g, familyName: f } : { name: g || f || one(row, full) }; };
+  return (row) => ({ name: one(row, full ?? given ?? family) });
 }
 
 /** Without a header the values decide: a column of classes, and the first run of name columns, joined as the file has them. */
-function guess(rows: Rows): { name: (row: string[]) => string; cls: number | undefined } {
+function guess(rows: Rows): { name: (row: string[]) => Named; cls: number | undefined } {
   const sample = rows.slice(0, GUESS_SAMPLE);
   const width = sample.reduce((w, r) => Math.max(w, r.length), 0);
   const kinds = Array.from({ length: width }, (_, j) => {
@@ -82,34 +89,38 @@ function guess(rows: Rows): { name: (row: string[]) => string; cls: number | und
   const names: number[] = [];
   for (let j = first; j >= 0 && j < width && kinds[j] === 'name' && names.length < MAX_NAME_COLS; j++) names.push(j);
   const cls = kinds.indexOf('class');
-  return { name: (row) => names.map((j) => part(row[j])).filter(Boolean).join(' '), cls: cls < 0 ? undefined : cls };
+  return { name: (row) => ({ name: names.map((j) => part(row[j])).filter(Boolean).join(' ') }), cls: cls < 0 ? undefined : cls };
 }
 
 /**
- * The participants a sheet lists, as they go into the Účastníci text: „Tereza Malá (3.B)“, the class only when the
- * row has one. A header row decides the columns (Jméno, Příjmení, Jméno a příjmení, Žák, Třída, ...); without one
- * the values do. Rows whose name is no name (empty, a number, an address, a total) and repeats are left out.
+ * The people a sheet lists, with their class when the row has one. A header row decides the columns (Jméno, Příjmení,
+ * Jméno a příjmení, Žák, Třída, ...); without one the values do. Rows whose name is no name (empty, a number, an
+ * address, a total, a header again) and repeats are left out.
  */
-export function namesFromRows(rows: Rows): string[] {
+export function peopleFromRows(rows: Rows): SheetPerson[] {
   const head = header(rows);
   const data = head ? rows.slice(head.at + 1) : filled(rows);
   const { name, cls } = head ? { name: nameBy(head.cols), cls: head.cols.class } : guess(data);
-  const out = new Set<string>();
+  const out = new Map<string, SheetPerson>();
   for (const row of data) {
-    const n = name(row);
-    if (!isName(n) || namesSomeone(n)) continue; // a header again (on every printed page), or one under a title
+    const n = name(row); const text = nameText(n);
+    if (!isName(text) || namesSomeone(text)) continue; // a header again (on every printed page), or one under a title
     const c = cls === undefined ? '' : part(row[cls]);
-    out.add(c ? `${n} (${c})` : n);
+    const p: SheetPerson = c ? { ...n, cls: c } : n;
+    if (!out.has(asText(p))) out.set(asText(p), p);
   }
-  return [...out];
+  return [...out.values()];
 }
 
-/** The names of the first sheet that has any; empty when none does. Throws `ImportError` for a file it cannot read. */
-export async function readParticipants(file: Blob, parser: HtmlParser): Promise<string[]> {
+/** The participants a sheet lists as the Účastníci text of an akce takes them: „Tereza Malá (3.B)“. */
+export const namesFromRows = (rows: Rows): string[] => peopleFromRows(rows).map(asText);
+
+/** The people of the first sheet that has any; empty when none does. Throws `ImportError` for a file it cannot read. */
+export async function readPeople(file: Blob, parser: HtmlParser): Promise<SheetPerson[]> {
   if (file.size > MAX_FILE) throw new ImportError('file-too-big'); // before the whole file is read into memory
   for (const rows of await readSheets(new Uint8Array(await file.arrayBuffer()), parser)) {
-    const names = namesFromRows(rows);
-    if (names.length) return names;
+    const people = peopleFromRows(rows);
+    if (people.length) return people;
   }
   return [];
 }

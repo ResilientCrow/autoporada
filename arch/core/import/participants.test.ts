@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import JSZip from 'jszip';
 import { describe, expect, it, vi } from 'vitest';
-import { appendNames, namesFromRows, readParticipants } from './participants';
+import { appendNames, asText, namesFromRows, peopleFromRows, readPeople } from './participants';
 
 const ODS_NS = 'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"';
 
@@ -116,28 +116,46 @@ describe('appendNames', () => {
   });
 });
 
-describe('readParticipants', () => {
+describe('peopleFromRows', () => {
+  it('keeps given and family name apart when the sheet has both columns', () => {
+    expect(peopleFromRows([['Příjmení', 'Jméno', 'Třída'], ['Malá', 'Tereza', '3.B'], ['Novák', 'Jan', '']])).toEqual([{ givenName: 'Tereza', familyName: 'Malá', cls: '3.B' }, { givenName: 'Jan', familyName: 'Novák' }]);
+  });
+
+  it('gives one name cell as it is, its comma kept for the people parser', () => {
+    expect(peopleFromRows([['Žák', 'Třída'], ['Novák, Jan', '2.A'], ['Malá Tereza', '']])).toEqual([{ name: 'Novák, Jan', cls: '2.A' }, { name: 'Malá Tereza' }]);
+  });
+
+  it('gives a name cell when only one of the two names is filled', () => {
+    expect(peopleFromRows([['Příjmení', 'Jméno'], ['Malá', ''], ['', 'Jan']])).toEqual([{ name: 'Malá' }, { name: 'Jan' }]);
+  });
+
+  it('prints each as the Účastníci text does', () => {
+    expect([{ givenName: 'Tereza', familyName: 'Malá', cls: '3.B' }, { name: 'Novák, Jan' }].map(asText)).toEqual(['Tereza Malá (3.B)', 'Novák Jan']);
+  });
+});
+
+describe('readPeople', () => {
   it('takes the first sheet that has names', async () => {
     const z = new JSZip();
     const t = (cells: string) => `<table:table><table:table-row>${cells}</table:table-row></table:table>`;
     z.file('mimetype', 'application/vnd.oasis.opendocument.spreadsheet');
     z.file('content.xml', `<office:document-content ${ODS_NS}><office:body><office:spreadsheet>${t('<table:table-cell><text:p>42</text:p></table:table-cell>')}${t('<table:table-cell><text:p>Jan Novák</text:p></table:table-cell>')}${t('<table:table-cell><text:p>Eva Nová</text:p></table:table-cell>')}</office:spreadsheet></office:body></office:document-content>`);
-    expect(await readParticipants(new Blob([await z.generateAsync({ type: 'arraybuffer' })]), new DOMParser())).toEqual(['Jan Novák']);
+    expect((await readPeople(new Blob([await z.generateAsync({ type: 'arraybuffer' })]), new DOMParser())).map(asText)).toEqual(['Jan Novák']);
   });
 
   it('reads the names from a file', async () => {
     const csv = new Blob(['\ufeffPříjmení;Jméno;Třída\r\nMalá;Tereza;3.B\r\nNovák;Jan;2.A\r\n']);
-    expect(await readParticipants(csv, new DOMParser())).toEqual(['Tereza Malá (3.B)', 'Jan Novák (2.A)']);
+    expect((await readPeople(csv, new DOMParser())).map(asText)).toEqual(['Tereza Malá (3.B)', 'Jan Novák (2.A)']);
   });
 
   it('gives an empty list for a file without names', async () => {
-    expect(await readParticipants(new Blob(['1;2\n3;4']), new DOMParser())).toEqual([]);
+    expect(await readPeople(new Blob(['1;2\n3;4']), new DOMParser())).toEqual([]);
   });
 
   it('refuses a file over 5 MB before reading it', async () => {
     const big = new Blob([new Uint8Array(5_000_001)]);
     const read = vi.spyOn(big, 'arrayBuffer');
-    await expect(readParticipants(big, new DOMParser())).rejects.toEqual(expect.objectContaining({ code: 'file-too-big' }));
+    await expect(readPeople(big, new DOMParser())).rejects.toEqual(expect.objectContaining({ code: 'file-too-big' }));
     expect(read).not.toHaveBeenCalled();
   });
 });

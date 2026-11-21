@@ -1,7 +1,8 @@
 # 0077 — Participants from a spreadsheet
 
-Adds to ADR 0060 (Účastníci are free text) and ADR 0066 (the browser reads a
-file and keeps nothing of it).
+Adds to ADR 0060 (Účastníci are free text), ADR 0066 (the browser reads a
+file and keeps nothing of it) and ADR 0074 (a report's Účastníci row).
+Builds on ADR 0076 (no degrees in a pasted list).
 
 ## Context
 
@@ -10,7 +11,10 @@ an export from the school's information system or a sheet kept in Excel.
 Typing twenty names with their classes into Účastníci is slow and invites
 typos. The field is free text printed as typed (ADR 0060), its people are
 labelled as one group (ADR 0071) and it holds at most
-`POINT_LIMITS.participants` (2000) characters.
+`POINT_LIMITS.participants` (2000) characters. The report on the akce names
+its participants again, as people with a given name, a family name and a
+class (ADR 0074), at most `POINT_LIMITS.peoplePerBullet` (200) in a row and
+`peoplePerPoint` (400) in a report.
 
 ## Decision
 
@@ -71,14 +75,29 @@ labelled as one group (ADR 0071) and it holds at most
    is added and the editor says how long it would be: a list cut short would
    print as if it were whole. The group's address (ADR 0071) stays the
    author's choice.
-6. **No new dependency.** jszip is already in the import chunk (ADR 0066);
+6. **The report's Účastníci row takes people from the same reader.** Its
+   „Kdo se účastnil?“ step has the same button (the shared `SheetPicker`,
+   `arch/a/ui.tsx`). A row with both a given-name and a family-name column
+   gives those names as they are; a single name cell is read as a pasted
+   line by `parsePeopleList` (ADR 0076), which picks the order of the names
+   („Malá Tereza“ is Tereza Malá) and a class in parentheses, and a person
+   the author used before settles an order it cannot tell. The class column
+   wins over a class in the cell and is saved in the school's form (3B
+   becomes 3.B) with the school year. People already in the row (same given
+   and family name, ignoring case) are not added again; a cell without a
+   surname, or names longer than a person row takes, is named in the message
+   and left out. No salutation is set: the row has one label for everybody
+   (ADR 0071, 0074). When the new people would pass either limit, none are
+   added (`arch/core/import/draft-people.ts`).
+7. **No new dependency.** jszip is already in the import chunk (ADR 0066);
    the readers are a few hundred lines with their tests.
 
 ## Consequences
 
 - An author fills Účastníci from a class list in one step and edits the text
   as before. The wizard shows the text before it is sent, so a sheet read
-  the wrong way is seen and fixed by hand.
+  the wrong way is seen and fixed by hand. In a report the imported people
+  are ordinary rows: each can be corrected or removed.
 - An `.xlsx` gives a number as stored, not as formatted, and a formula's last
   saved result; an `.ods` gives what the cell shows. Neither matters for
   names and classes.

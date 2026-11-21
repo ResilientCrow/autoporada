@@ -376,6 +376,33 @@ test.describe('the Arch UI', () => {
     await expect(page.getByText('Vyjádření', { exact: true })).toHaveCount(0);
   });
 
+  test('a report takes its participants from a spreadsheet (ADR 0077)', async ({
+    page,
+    signInAs,
+  }, testInfo) => {
+    const project = testInfo.project.name;
+    const id = await seedPoint(emailOf('archa', project), `Zpráva z tabulky ${project}`, 'draft');
+
+    await signInAs(signInAsRe('archa', project));
+    await page.goto(`/#/psat/${id}/lide-1`);
+    await expect(page.getByRole('heading', { name: 'Kdo se účastnil?' })).toBeVisible();
+    // Separate columns keep the names apart; someone already in the list is not added again.
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'ucastnici.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('Příjmení;Jméno;Třída\r\nPech;Ondřej;\r\nMalá;Tereza;3B\r\n'),
+    });
+    await expect(page.getByText('Přidali jsme 1 člověka. Jeden už v seznamu byl.')).toBeVisible();
+    await expect(page.getByLabel('Třída nebo organizace: Tereza Malá')).toHaveValue('3.B');
+    await expect
+      .poll(async () =>
+        (await readPoint(id)).bullets
+          .find((b) => b.key === 'participants')
+          ?.people?.map((p) => p.familyName),
+      )
+      .toEqual(['Pech', 'Malá']);
+  });
+
   test('the annexes endpoint takes only what the snapshot can print', async ({
     page,
     signInAs,

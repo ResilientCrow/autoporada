@@ -8,7 +8,9 @@ import * as Q from '../core/select';
 import { directoryPerson } from '../core/directory';
 import * as A from '../core/ops';
 import type { Point } from '../core/types';
-import { App, REPORT_ADDRESS_OPTIONS, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, WHEN } from './ui';
+import { App, REPORT_ADDRESS_OPTIONS, TitleField, goReplace, Desk, Dialog, focusOn, Hash, Ic, Note, Rework, Saved, Seg, Sheet, SheetPicker, WHEN, type Said } from './ui';
+import { loadChunk } from '../core/import/chunk';
+import { NO_NAMES, PEOPLE_SHEET_HINT, tooManyPeople } from '../core/import/messages';
 import { NotFound } from './home';
 
 const SAL: readonly (readonly [Salutation, string])[] = [['pan', 'pan'], ['pani', 'paní'], ['slecna', 'slečna']];
@@ -45,8 +47,11 @@ function stepsFor(p: Point, org: number): Step[] {
 }
 function Dots({ n, of }: { n: number; of: number }) { return <div className="steps" role="img" aria-label={`Krok ${n} z ${of}`}>{Array.from({ length: of }, (_, k) => <span key={k} className={k < n ? 'on' : ''} />)}</div>; }
 
-function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson[]; onAdd: (p: DraftPerson[]) => void; placeholder: string; autoFocus?: boolean }) {
+const peopleAdded = (added: number, present: number) => (added ? `Přidali jsme ${Q.counts(added, 'člověka', 'lidi', 'lidí')}.` : present ? 'Všichni ze souboru už v seznamu jsou.' : 'Nikoho jsme nepřidali.') + (added && present ? ` ${present === 1 ? 'Jeden už v seznamu byl' : `${present} už v seznamu ${present <= 4 ? 'byli' : 'bylo'}`}.` : '');
+/** With `room` (how many people the row may still take), the list can also come from a spreadsheet (ADR 0077). */
+function PeoplePick({ list, onAdd, placeholder, autoFocus, room }: { list: DraftPerson[]; onAdd: (p: DraftPerson[]) => void; placeholder: string; autoFocus?: boolean; room?: number }) {
   const { s } = useStore(); const [v, set] = useState(''); const me = Q.me(s)!;
+  const latest = useRef({ list, onAdd, room: room ?? 0 }); useEffect(() => { latest.current = { list, onAdd, room: room ?? 0 }; });
   const year = Q.yearOf(s);
   const known = useMemo(() => {
     const r = Q.peopleFor(s, me.id).map((x) => ({ ...x, how: 'uvedli jste v dřívější zprávě' }));
@@ -59,12 +64,25 @@ function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson
   const f = foldForSearch(v.trim());
   const hits = f && !/[,;\n]/.test(v) ? known.filter((x) => foldForSearch(`${x.givenName} ${x.familyName}`).includes(f)).slice(0, 4) : [];
   const parsed = v.trim() ? parsePeopleList(Q.oneOnLine(v), known) : null;
+  /** The reader loads on first use; the people are added to the list as it is when the file has been read. */
+  const readFile = async (f: File): Promise<Said> => {
+    const [{ readPeople }, { addPeople, toDraftPeople }] = await Promise.all([loadChunk(() => import('../core/import/participants')), loadChunk(() => import('../core/import/draft-people'))]);
+    const sheet = await readPeople(f, new DOMParser());
+    if (!sheet.length) return { err: true, t: NO_NAMES };
+    const d = toDraftPeople(sheet, known, year); const now = latest.current;
+    const r = addPeople(now.list, d.people, now.room);
+    if ('tooMany' in r) return { err: true, t: tooManyPeople(r.tooMany, now.room) };
+    if (r.people.length) now.onAdd(r.people);
+    const not = d.rejected.length ? ` Bez příjmení nebo s příliš dlouhým jménem jsme nepřidali: ${d.rejected.join(', ')}.` : '';
+    return { err: !r.people.length && !r.present, t: peopleAdded(r.people.length, r.present) + not };
+  };
   const addParsed = () => { if (!parsed || !parsed.rows.length) return; onAdd(parsed.rows.map((r) => ({ salutation: null, givenName: r.givenName, familyName: r.familyName, ...(r.affiliation && { affiliation: normalizeClass(r.affiliation) ?? r.affiliation, affiliationYear: year }) }))); set(''); };
   return <div className="stack st8">
     <label className="l"><span className="vh">Jména</span><textarea className="in bigi" rows={1} value={v} autoFocus={autoFocus} placeholder={placeholder} onBlur={() => { if (!hits.length && parsed?.rows.length && !parsed.rejected.length) addParsed(); }} onChange={(e) => set(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (hits.length === 1) { onAdd([draftPersonOf(hits[0]!)]); set(''); } else addParsed(); } }} /></label>
     {hits.length ? <div className="picks">{hits.map((h) => { const { how } = h; return <button type="button" className="pick" key={`${h.givenName}${h.familyName}`} onClick={() => { onAdd([draftPersonOf(h)]); set(''); }}><b>{h.givenName} {h.familyName}</b><span>{h.affiliation ? `${h.affiliation}, ` : ''}{how}</span></button>; })}</div> : null}
     {parsed?.rows.length ? <button type="button" className="btn lg w" onClick={addParsed}>{parsed.rows.length === 1 ? `Přidat: ${parsed.rows[0]!.givenName} ${parsed.rows[0]!.familyName}${parsed.rows[0]!.affiliation ? ` (${parsed.rows[0]!.affiliation})` : ''}` : `Přidat ${parsed.rows.length} ${parsed.rows.length < 5 ? 'lidi' : 'lidí'}`}</button> : null}
     {parsed?.rejected.length ? <p className="sm w-err" role="alert">Nerozumíme: {parsed.rejected.map((r) => r.source).join(', ')}. Chybí příjmení.</p> : null}
+    {room === undefined ? null : <SheetPicker read={readFile} hint={PEOPLE_SHEET_HINT} />}
   </div>;
 }
 /** The Účastníci row's one label for everybody, one of three (ADR 0071, 0074); what is missing or does not fit shows in the dock hint, as for every step. */
@@ -143,7 +161,7 @@ export function Wizard({ id, step }: { id: string; step?: string }) {
     ask = bul.key === 'participants' ? 'Kdo se účastnil?' : `${bul.label}?`; help = 'Napište jména, nebo vložte seznam třeba z Excelu. Třídu napište do závorky, například Tereza Malá (3.B).';
     can = (bul.people.length > 0 || !req) && noSal === 0 && !addr; hint = bul.people.length === 0 && req ? 'Přidejte aspoň jednoho člověka.' : addr ? copy.readiness.problem(addr.code, addr.params) : noSal ? `U ${noSal === 1 ? 'jednoho člověka' : `${noSal} lidí`} ještě vyberte oslovení. Nehádáme ho za Vás.` : '';
     nextText = bul.people.length === 0 && !req ? 'Přeskočit' : 'Pokračovat';
-    body = <>{noSal > 1 ? <button type="button" className="btn lg w" onClick={() => setPeople(bul.people.map((x) => (x.salutation ? x : { ...x, salutation: Q.guessSalutation(x) })))}>Doplnit oslovení podle jmen</button> : null}{noSal > 1 ? <p className="sm">Je to jen odhad, po doplnění je prosím zkontrolujte.</p> : null}<PeoplePick list={[...bul.people]} autoFocus placeholder="Například: Tereza Malá (3.B), Jakub Veselý (3.B)" onAdd={(x) => setPeople([...bul.people, ...(grouped ? x.map(Q.unaddressed) : x)])} />{grouped && bul.people.length ? <AddressChoice value={bul.address} onChange={setAddress} /> : null}{bul.people.length ? <ul className="prs">{bul.people.map((x, j) => <PersonRow key={j} p={x} bare={bare} onChange={(n) => setPeople(bul.people.map((y, q) => (q === j ? n : y)))} onRemove={() => setPeople(bul.people.filter((_, q) => q !== j))} />)}</ul> : null}</>;
+    body = <>{noSal > 1 ? <button type="button" className="btn lg w" onClick={() => setPeople(bul.people.map((x) => (x.salutation ? x : { ...x, salutation: Q.guessSalutation(x) })))}>Doplnit oslovení podle jmen</button> : null}{noSal > 1 ? <p className="sm">Je to jen odhad, po doplnění je prosím zkontrolujte.</p> : null}<PeoplePick list={[...bul.people]} autoFocus room={grouped ? Math.min(POINT_LIMITS.peoplePerBullet - bul.people.length, POINT_LIMITS.peoplePerPoint - c.bullets.reduce((n, b) => n + (b.kind === 'people' ? b.people.length : 0), 0)) : undefined} placeholder="Například: Tereza Malá (3.B), Jakub Veselý (3.B)" onAdd={(x) => setPeople([...bul.people, ...(grouped ? x.map(Q.unaddressed) : x)])} />{grouped && bul.people.length ? <AddressChoice value={bul.address} onChange={setAddress} /> : null}{bul.people.length ? <ul className="prs">{bul.people.map((x, j) => <PersonRow key={j} p={x} bare={bare} onChange={(n) => setPeople(bul.people.map((y, q) => (q === j ? n : y)))} onRemove={() => setPeople(bul.people.filter((_, q) => q !== j))} />)}</ul> : null}</>;
   } else if (cur.key.startsWith('text-')) {
     const i = Number(cur.key.split('-')[1]); const bul = c.bullets[i] as Extract<DraftBullet, { kind: 'text' }>;
     ask = `${bul.label}?`; help = 'Nepovinné. Když není co psát, klidně přeskočte.'; nextText = bul.text.trim() ? 'Pokračovat' : 'Přeskočit';

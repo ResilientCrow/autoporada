@@ -40,3 +40,6 @@ const SHEET_TEXTS: Partial<Record<ImportCode, string>> = {
 /** A spreadsheet is read in the browser only, so the server's answers (sign-in, rate limit) never come; the rest is `broken`. */
 export const sheetMessage = (e: ImportError): string => SHEET_TEXTS[e.code] ?? TEXTS.broken;
 export const tooManyNames = (length: number, max: number): string => `Tolik jmen se do pole nevejde: vejde se do něj ${max} znaků, se jmény ze souboru by jich bylo ${length}. Zkraťte seznam v souboru.`;
+/** The report's Účastníci row: people, not text. */
+export const PEOPLE_SHEET_HINT = 'Lidé z tabulky Excel, OpenDocument nebo CSV se přidají do seznamu, i s třídou, když ji tabulka má.';
+export const tooManyPeople = (count: number, room: number): string => `Tolik lidí se do zprávy nevejde: v souboru je ${count} nových, přidat jde ještě ${room}. Zkraťte seznam v souboru.`;

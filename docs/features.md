@@ -82,7 +82,12 @@ has not built yet is under „Not built yet“.
   own. The genitive is prefilled with the head in the 2nd case. It does not search
   the school's Microsoft directory: that route has no caller in Arch (ADR
   0065 item 7). A list of people can be pasted, with the class in brackets
-  („Tereza Malá (3.B)“); degrees in it („Mgr.“, „Ph.D.“) are dropped (ADR 0076). Class codes are saved in the school's form („1. a“
+  („Tereza Malá (3.B)“); degrees in it („Mgr.“, „Ph.D.“) are dropped (ADR 0076).
+  „Kdo se účastnil?“ also reads a spreadsheet (.xlsx, .ods, .csv) with
+  „Načíst jména ze souboru“: separate name columns are taken as they are, a
+  single name cell is read like a pasted line, the class column fills the
+  class, people already listed are skipped, and a file that would pass 200
+  people in the row is not added at all (ADR 0077). Class codes are saved in the school's form („1. a“
   becomes „1.A“). „Doplnit oslovení podle jmen“ guesses salutations for typed
   people to check; a user's own salutation is never guessed.
 - Genitive suggestion with an indicator when it was only guessed. The author
