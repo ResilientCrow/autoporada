@@ -4,6 +4,7 @@ import type { Salutation } from '@/domain/cs';
 
 import {
   displayName,
+  draftPersonOf,
   isParticipant,
   nameKey,
   participantsOf,
@@ -162,5 +163,48 @@ describe('isParticipant', () => {
     expect(isParticipant(several, person('Jan', 'Novák', { graphId: 'g-2' }))).toBe(true);
     expect(isParticipant(several, person('Jan', 'Novák', { graphId: 'g-9' }))).toBe(false);
     expect(isParticipant({ bullets: [text] }, person('Jan', 'Novák'))).toBe(false);
+  });
+});
+
+describe('draftPersonOf', () => {
+  it('keeps only the fields a stored person has (the people memory adds lastUsed and genitive)', () => {
+    const remembered = {
+      ...person('Jana', 'Oborová', {
+        salutation: null,
+        affiliation: '4.GC',
+        affiliationYear: '2026/2027',
+      }),
+      lastUsed: '2026-11-20T09:09:18.015Z',
+      genitive: 'Jany Oborové',
+      how: 'uvedli jste v dřívější zprávě',
+    };
+    expect(draftPersonOf(remembered)).toStrictEqual({
+      salutation: null,
+      givenName: 'Jana',
+      familyName: 'Oborová',
+      affiliation: '4.GC',
+      affiliationYear: '2026/2027',
+    });
+  });
+
+  it('keeps every DraftPerson field and leaves out the ones not set', () => {
+    const full: DraftPerson = {
+      graphId: '01a15559-04d8-705c-96a3-c3c67ecd5caf',
+      salutation: 'pani',
+      titlesBefore: 'Mgr.',
+      givenName: 'Jana',
+      familyName: 'Nováková',
+      titlesAfter: 'Ph.D.',
+      head: 'clen',
+      complement: 'PR oddělení',
+      affiliation: '4.GC',
+      affiliationYear: '2026/2027',
+    };
+    expect(draftPersonOf(full)).toStrictEqual(full);
+    expect(Object.keys(draftPersonOf(person('Jan', 'Novák')))).toStrictEqual([
+      'salutation',
+      'givenName',
+      'familyName',
+    ]);
   });
 });

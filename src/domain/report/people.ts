@@ -18,6 +18,31 @@ export function displayName(p: DraftPerson): string {
   return formatName(name);
 }
 
+/** Every field a stored person may have; the point contract refuses any other. */
+const PERSON_KEYS = [
+  'graphId',
+  'salutation',
+  'titlesBefore',
+  'givenName',
+  'familyName',
+  'titlesAfter',
+  'head',
+  'complement',
+  'affiliation',
+  'affiliationYear',
+] as const satisfies readonly (keyof DraftPerson)[];
+
+/**
+ * The person alone, without what a picker carries beside it (the people memory's `lastUsed`
+ * and `genitive`, a hint's label): the point contract is strict, so one extra key would refuse
+ * the whole save. Fields not set stay out.
+ */
+export function draftPersonOf(p: DraftPerson): DraftPerson {
+  const kept: Record<string, unknown> = {};
+  for (const key of PERSON_KEYS) if (p[key] !== undefined) kept[key] = p[key];
+  return kept as unknown as DraftPerson;
+}
+
 /** The person by given and family name, ignoring case and titles; the two names stay apart. */
 export function nameKey(p: DraftPerson): string {
   return `${p.givenName.trim()}|${p.familyName.trim()}`.toLocaleLowerCase('cs');

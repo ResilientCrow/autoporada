@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { foldForSearch, normalizeClass, parsePeopleList, participantsLabel, headedName, placePhrase, type ReportAddress, type Salutation } from '@/domain/cs';
-import { displayName, organiserAt, PARTICIPANTS_KEY, POINT_LIMITS, REPORT_BULLETS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
+import { displayName, draftPersonOf, organiserAt, PARTICIPANTS_KEY, POINT_LIMITS, REPORT_BULLETS, samePerson, type DraftBullet, type DraftPerson, type PointContent } from '@/domain/report';
 import { compareDates, parseIsoDate, toIsoDate } from '@/domain/time';
 import { points as copy } from '@/ui/copy/points';
 import { fromText, go, toText, useStore } from '../core/react';
@@ -61,8 +61,8 @@ function PeoplePick({ list, onAdd, placeholder, autoFocus }: { list: DraftPerson
   const parsed = v.trim() ? parsePeopleList(Q.oneOnLine(v), known) : null;
   const addParsed = () => { if (!parsed || !parsed.rows.length) return; onAdd(parsed.rows.map((r) => ({ salutation: null, givenName: r.givenName, familyName: r.familyName, ...(r.titlesBefore && { titlesBefore: r.titlesBefore }), ...(r.titlesAfter && { titlesAfter: r.titlesAfter }), ...(r.affiliation && { affiliation: normalizeClass(r.affiliation) ?? r.affiliation, affiliationYear: year }) }))); set(''); };
   return <div className="stack st8">
-    <label className="l"><span className="vh">Jména</span><textarea className="in bigi" rows={1} value={v} autoFocus={autoFocus} placeholder={placeholder} onBlur={() => { if (!hits.length && parsed?.rows.length && !parsed.rejected.length) addParsed(); }} onChange={(e) => set(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (hits.length === 1) { const { how: _h, ...h } = hits[0]!; onAdd([h as DraftPerson]); set(''); } else addParsed(); } }} /></label>
-    {hits.length ? <div className="picks">{hits.map((h) => { const { how, ...x } = h; return <button type="button" className="pick" key={`${h.givenName}${h.familyName}`} onClick={() => { onAdd([x as DraftPerson]); set(''); }}><b>{h.givenName} {h.familyName}</b><span>{h.affiliation ? `${h.affiliation}, ` : ''}{how}</span></button>; })}</div> : null}
+    <label className="l"><span className="vh">Jména</span><textarea className="in bigi" rows={1} value={v} autoFocus={autoFocus} placeholder={placeholder} onBlur={() => { if (!hits.length && parsed?.rows.length && !parsed.rejected.length) addParsed(); }} onChange={(e) => set(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (hits.length === 1) { onAdd([draftPersonOf(hits[0]!)]); set(''); } else addParsed(); } }} /></label>
+    {hits.length ? <div className="picks">{hits.map((h) => { const { how } = h; return <button type="button" className="pick" key={`${h.givenName}${h.familyName}`} onClick={() => { onAdd([draftPersonOf(h)]); set(''); }}><b>{h.givenName} {h.familyName}</b><span>{h.affiliation ? `${h.affiliation}, ` : ''}{how}</span></button>; })}</div> : null}
     {parsed?.rows.length ? <button type="button" className="btn lg w" onClick={addParsed}>{parsed.rows.length === 1 ? `Přidat: ${parsed.rows[0]!.givenName} ${parsed.rows[0]!.familyName}${parsed.rows[0]!.affiliation ? ` (${parsed.rows[0]!.affiliation})` : ''}` : `Přidat ${parsed.rows.length} ${parsed.rows.length < 5 ? 'lidi' : 'lidí'}`}</button> : null}
     {parsed?.rejected.length ? <p className="sm w-err" role="alert">Nerozumíme: {parsed.rejected.map((r) => r.source).join(', ')}. Chybí příjmení.</p> : null}
   </div>;
