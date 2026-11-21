@@ -9,6 +9,8 @@ const config: NextConfig = {
   // Only TypeScript is served, so the entry-point inventory sees every route (ADR 0011).
   pageExtensions: ['ts', 'tsx'],
   reactStrictMode: true,
+  // No AGENTS.md: CLAUDE.md already points agents to node_modules/next/dist/docs.
+  agentRules: false,
   // Every page is per-user and the CSP uses per-request nonces: no Cache
   // Components. The root layout calls connection(), so no route is
   // prerendered either (ADR 0001).
