@@ -128,13 +128,24 @@ The app must live in `/opt/autoporada`.
 sudo mkdir /opt/autoporada
 sudo chown "$USER": /opt/autoporada
 git clone <repository address> /opt/autoporada
-cd /opt/autoporada/deploy
+cd /opt/autoporada
+git tag --sort=-v:refname | head -5   # the releases, newest first
+git checkout v0.9.0                   # the newest release; write it down
+cd deploy
 ```
 
 `<repository address>` is where the school keeps the repository. At the time
 of writing the project lives at `github.com/ResilientCrow/autoporada`. If the
 repository is not public, the server needs a read-only access key for it, or
 you copy the repository onto the server by hand.
+
+**Install a release, never `main`.** A release is a tag such as `v0.9.0`; the
+repository's Releases page (`github.com/ResilientCrow/autoporada/releases`)
+lists them with notes on what changed. `main` is where the app is developed
+and may hold unfinished work. Use the newest release; this guide writes
+`v0.9.0` for it. After `git checkout`, git says the repository is in
+"detached HEAD" state: that is expected, and it is how the server stays on
+exactly that release.
 
 **Everything from here on runs in `/opt/autoporada/deploy`.**
 
@@ -251,7 +262,7 @@ sudoedit .env
 
 | Name | Required | What to put there |
 |---|---|---|
-| `APP_VERSION` | yes | A label for the images you are about to build. Use the commit you are installing: the output of `git -C /opt/autoporada rev-parse --short HEAD`, for example `d701b7b`. It changes with every update. |
+| `APP_VERSION` | yes | The release you checked out in step 2, for example `v0.9.0` (`git -C /opt/autoporada describe --tags` prints it). It names the images you are about to build and changes with every update. |
 | `APP_HOST` | yes | The DNS name alone, without `https://`: `autoporada.ssps.cz`. It must be the name in the redirect URI of the web registration. |
 | `ACME_EMAIL` | yes | The IT department's e-mail address. Let's Encrypt uses it for the certificate account. |
 | `HSTS_MAX_AGE` | no | Leave `86400` (one day) for now. Step 13 raises it. |

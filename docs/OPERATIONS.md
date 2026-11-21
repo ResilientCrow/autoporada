@@ -366,8 +366,9 @@ Use this when the server is lost, and for
 
 1. Install the new server with [DEPLOYMENT.md](DEPLOYMENT.md), steps 1 to 8
    (up to and including `docker compose build`), with these differences:
-   - Use the repository as it is now, or newer. Never restore a dump into
-     code that is **older** than the code that wrote it.
+   - Check out the release the old server ran (its `APP_VERSION`), or a newer
+     one. Never restore a dump into code that is **older** than the code that
+     wrote it.
    - The Entra certificates: if the old server's `deploy/secrets/` still
      exists, copy its four files `entra_key`, `entra_cert`, `web_entra_key`
      and `web_entra_cert` to the new server's `deploy/secrets/` and run
@@ -416,10 +417,12 @@ volume:
 
 ## Updating
 
-An update is a newer state of the repository: the app's own changes together
-with newer versions of what it is built from. Every version number is pinned
-in the repository, so building again **without** a newer repository changes
-nothing.
+An update is a newer release: a tag such as `v0.9.1`, listed with its notes
+on the repository's Releases page (`github.com/ResilientCrow/autoporada/releases`).
+It carries the app's own changes together with newer versions of what it is
+built from. Every version number is pinned in the repository, so building
+again **without** a newer release changes nothing. Read the release's notes
+before you install it. Never install `main`: it may hold unfinished work.
 
 Plan an update outside school hours. The app is away for about a minute.
 
@@ -427,18 +430,18 @@ Plan an update outside school hours. The app is away for about a minute.
 # 1. A backup first. Always.
 sudo /usr/local/sbin/autoporada-backup
 
-# 2. What will change?
+# 2. What will change? <now> is the release you run, <new> the one you install.
 cd /opt/autoporada
-git rev-parse --short HEAD            # write this down: the version you run now
-git fetch
-git log --oneline HEAD..origin/main   # the changes you are about to install
-git diff --stat HEAD origin/main -- drizzle/   # any output: the database will be changed
+git describe --tags                   # <now>, for example v0.9.0: write it down
+git fetch --tags
+git tag --sort=-v:refname | head -5   # the releases, newest first: pick <new>
+git log --oneline <now>..<new>        # the changes you are about to install
+git diff --stat <now> <new> -- drizzle/   # any output: the database will be changed
 
-# 3. Get the code and name the new version.
-git pull --ff-only
-git rev-parse --short HEAD            # the new version
+# 3. Get the new release and name it.
+git checkout <new>
 cd deploy
-sudoedit .env                         # APP_VERSION=<the new version>
+sudoedit .env                         # APP_VERSION=<new>
 
 # 4. Build and start.
 sudo ./install.sh
@@ -451,7 +454,7 @@ Afterwards: all services are in their normal state, `migrate` shows
 `Exited (0)`, the sign-in works, and
 `docker compose run --rm cli jobs:status` ends with `dead: 0`.
 
-If `git pull --ff-only` refuses, somebody changed files in `/opt/autoporada`.
+If `git checkout` refuses, somebody changed files in `/opt/autoporada`.
 `git status` shows which. Do not force it; find out why first.
 
 Old images stay on the disk. Once the new version has run for a week, remove
@@ -466,9 +469,9 @@ If the new version does not work:
 
 ```sh
 cd /opt/autoporada
-git checkout <the version you wrote down>
+git checkout <now>                    # the release you wrote down
 cd deploy
-sudoedit .env                         # APP_VERSION=<the version you wrote down>
+sudoedit .env                         # APP_VERSION=<now>
 docker compose up -d                  # the old images are still there
 ```
 
@@ -478,11 +481,12 @@ code may not work with the changed tables. In that case also restore the
 backup of step 1 ([Restore on the same server](#restore-on-the-same-server)),
 which loses what people wrote since.
 
-To return to normal updates later: `git checkout main`.
+The next update checks out a newer release as usual.
 
 ### Who makes the updates
 
-Updates appear in the repository only while somebody maintains it. The file
+Updates appear in the repository only while somebody maintains it, and the
+maintainer publishes each one as a release. The file
 `renovate.json` configures Renovate, a service that proposes newer versions
 of the app's building blocks as pull requests; it works only while it is
 switched on for the repository and somebody reviews and merges what it
@@ -997,6 +1001,6 @@ not in its normal state: `docker compose logs --tail 100 <service>`.
 
 If none of this helps, collect before you ask anybody: the output of
 `docker compose ps -a`, the last 200 lines of the log of each service that
-is not in its normal state, the output of `git -C /opt/autoporada rev-parse
---short HEAD`, and what changed on the server or in Microsoft 365 just
+is not in its normal state, the output of `git -C /opt/autoporada describe
+--tags` (the release you run), and what changed on the server or in Microsoft 365 just
 before the problem began.
