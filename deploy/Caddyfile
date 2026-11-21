@@ -1,6 +1,6 @@
 # The only way in (ADR 0008): TLS with Let's Encrypt, HSTS, a fresh request
 # id, and the app behind it. Stock Caddy 2.11; HSTS_MAX_AGE starts at a day
-# and goes to a year once the smoke test passes.
+# and goes to a year at go-live (DEPLOYMENT.md step 13).
 
 # What Entra puts in the callback URL and what the users list is searched
 # for (names, e-mails), removed from every log line that carries the

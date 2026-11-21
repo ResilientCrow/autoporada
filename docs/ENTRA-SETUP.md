@@ -198,8 +198,8 @@ in [DEPLOYMENT.md](DEPLOYMENT.md). In short:
 - Linux with Docker Engine 27+, the Compose plugin, git and openssl.
 - At least 2 vCPU, 6 GB RAM and 40 GB disk.
 - The repository is cloned to `/opt/autoporada`. Its `deploy/` directory holds
-  the compose stack; `deploy/SMOKE-TEST.md` is the checklist for the first
-  start.
+  the compose stack; `deploy/SMOKE-TEST.md` is the recommended checklist for
+  the first start.
 - Named people:
   - an **IT contact** who does the weekly check
     ([OPERATIONS.md](OPERATIONS.md), "The weekly check"). The app sends no

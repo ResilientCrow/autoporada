@@ -13,7 +13,8 @@ Two roles do the work. They can be one person:
 
 Plan for one to two weeks from start to go-live. The work itself is a few
 hours, but it waits on DNS, on the Microsoft 365 changes (a change in Exchange
-takes up to two hours to apply) and on the test with real people.
+takes up to two hours to apply) and, if you run the recommended smoke test,
+on the test with real people.
 
 After the installation, [OPERATIONS.md](OPERATIONS.md) is the guide for
 running the app.
@@ -33,7 +34,7 @@ running the app.
 - [Step 9. Check that Microsoft accepts the server](#step-9-check-that-microsoft-accepts-the-server)
 - [Step 10. Start](#step-10-start)
 - [Step 11. The first headmaster](#step-11-the-first-headmaster)
-- [Step 12. The smoke test](#step-12-the-smoke-test)
+- [Step 12. The smoke test (recommended)](#step-12-the-smoke-test-recommended)
 - [Step 13. Go-live](#step-13-go-live)
 - [Optional settings](#optional-settings)
 - [If a step fails](#if-a-step-fails)
@@ -376,26 +377,30 @@ the last one. With two, the school is not locked out when one of them leaves
 or is ill. What to do when it happens anyway is in
 [OPERATIONS.md](OPERATIONS.md), "The headmaster has left".
 
-## Step 12. The smoke test
+## Step 12. The smoke test (recommended)
 
-[deploy/SMOKE-TEST.md](../deploy/SMOKE-TEST.md) is the checklist that proves
-the installation against the school's real Microsoft 365: sign-in, the guest
-check, the cookies, the e-mail, the reminders, a generated document. Work
-through it in order with a few real accounts (the headmaster, a teacher, a
-student). Steps 1 to 6 repeat what you have just done; tick them off.
+[deploy/SMOKE-TEST.md](../deploy/SMOKE-TEST.md) is a checklist that tries the
+installation against the school's real Microsoft 365: sign-in, the guest
+check, the cookies, the e-mail, the reminders, a generated document. It is
+recommended, not required: it finds setup problems before people rely on the
+app. If you run it, work through it in order with a few real accounts (the
+headmaster, a teacher, a student). Steps 1 to 6 repeat what you have just
+done; tick them off.
 
 Stop at the first step that fails and look it up in the table at the end of
-that document.
+that document. The table helps without the smoke test too, whenever Microsoft
+refuses a sign-in with an `AADSTS` code.
 
 ## Step 13. Go-live
 
-When the smoke test has passed:
+Once the headmaster has signed in and the app works (and the smoke test has
+passed, if you ran it):
 
 - [ ] Set `HSTS_MAX_AGE=31536000` in `.env` and run `docker compose up -d`.
       Browsers then insist on HTTPS for this name for a year.
-- [ ] Set `DIRECTORY=graph` in `.env` if step 29 of the smoke test passed,
-      and run `docker compose up -d`. Otherwise leave it `off`: people then
-      type names by hand.
+- [ ] Only if you ran the smoke test and its step 29 passed: set
+      `DIRECTORY=graph` in `.env` and run `docker compose up -d`. Otherwise
+      leave it `off`: people then type names by hand.
 - [ ] **Schedule the backup** and test a restore once
       ([OPERATIONS.md](OPERATIONS.md), "Backup" and "Restore"). Until you do,
       nothing protects the school's data.

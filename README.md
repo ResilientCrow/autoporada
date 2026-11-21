@@ -15,9 +15,9 @@ The user interface is in Czech. The documentation and the code are in English.
 > **Status, November 2026.** The application is built and tested end to end
 > against local stand-ins for Microsoft 365. It has not been installed on the
 > school server yet: the first installation
-> ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) and the test against the real
-> school tenant ([deploy/SMOKE-TEST.md](deploy/SMOKE-TEST.md)) are still to be
-> done. What is not built is listed under [Status in detail](#status-in-detail).
+> ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)) and the recommended test against the
+> real school tenant ([deploy/SMOKE-TEST.md](deploy/SMOKE-TEST.md)) are still to
+> be done. What is not built is listed under [Status in detail](#status-in-detail).
 
 ## Contents
 
@@ -141,7 +141,7 @@ Built and covered by automated tests:
 
 | If you are… | Read |
 |---|---|
-| School IT, installing the app for the first time | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), which leads you through [docs/ENTRA-SETUP.md](docs/ENTRA-SETUP.md) (the Microsoft 365 part) and [deploy/SMOKE-TEST.md](deploy/SMOKE-TEST.md) (the test of a new installation) |
+| School IT, installing the app for the first time | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), which leads you through [docs/ENTRA-SETUP.md](docs/ENTRA-SETUP.md) (the Microsoft 365 part) and [deploy/SMOKE-TEST.md](deploy/SMOKE-TEST.md) (the recommended test of a new installation) |
 | School IT, keeping it running | [docs/OPERATIONS.md](docs/OPERATIONS.md): backups, restore, updates, certificates, emergencies, troubleshooting |
 | Anybody who wants to know what the app does | [docs/features.md](docs/features.md) and [docs/glossary.md](docs/glossary.md) |
 | The data protection officer | [docs/gdpr/privacy-review.md](docs/gdpr/privacy-review.md) |

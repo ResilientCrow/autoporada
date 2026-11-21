@@ -7,8 +7,8 @@
 > (`pnpm test:e2e`) and `scripts/check-deploy.sh`, which boots this compose
 > stack with throwaway secrets.
 
-Run it once on the school server before go-live, and again after any change
-to the Entra registration. Each step says what to check; stop at the first
+It is recommended, not required: run it once on the school server before
+go-live, and again after any change to the Entra registration. Each step says what to check; stop at the first
 one that fails and look it up in [Troubleshooting](#troubleshooting).
 
 `psql` below means:
