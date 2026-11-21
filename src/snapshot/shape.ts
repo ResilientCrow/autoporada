@@ -59,10 +59,8 @@ const salutation = z.enum(['pan', 'pani', 'slecna']);
 
 export const person = z.strictObject({
   salutation,
-  titlesBefore: text.optional(),
   givenName: text,
   familyName: required,
-  titlesAfter: text.optional(),
   affiliation: text.optional(),
 });
 

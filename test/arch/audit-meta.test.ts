@@ -51,8 +51,6 @@ const TEXT_FIELDS = new Set([
   'department',
   'salutation',
   'complement',
-  'titlesBefore',
-  'titlesAfter',
   'bullets',
   'organizer',
   'participants',

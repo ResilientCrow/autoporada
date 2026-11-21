@@ -599,10 +599,10 @@ test.describe('the Arch UI', () => {
     const email = emailOf('osloveni', project);
     const answer = () =>
       withClient(async (client) => {
-        const { rows } = await client.query<{
-          salutation: string | null;
-          titles_after: string | null;
-        }>('SELECT salutation, titles_after FROM users WHERE email = $1', [email]);
+        const { rows } = await client.query<{ salutation: string | null }>(
+          'SELECT salutation FROM users WHERE email = $1',
+          [email],
+        );
         return rows[0] ?? null;
       });
     expect(await answer()).toMatchObject({ salutation: null });
@@ -629,17 +629,16 @@ test.describe('the Arch UI', () => {
     await expect(page.getByRole('radio', { name: 'paní' })).toHaveAttribute('aria-checked', 'true');
     await expect.poll(async () => (await answer())?.salutation).toBe('pani');
 
-    // Účet shows the answer and changes it, with a degree.
+    // Účet shows the answer and changes it; it has no degrees (ADR 0076).
     await page.getByRole('radio', { name: 'pan', exact: true }).click();
-    await page.getByLabel('Titul za jménem').fill('Ph.D.');
+    await expect(page.getByLabel('Titul za jménem')).toHaveCount(0);
     await page.getByRole('button', { name: 'Uložit', exact: true }).click();
     await expect(page.getByText('Uloženo.')).toBeVisible();
-    await expect.poll(answer).toMatchObject({ salutation: 'pan', titles_after: 'Ph.D.' });
+    await expect.poll(answer).toMatchObject({ salutation: 'pan' });
     await page.reload();
     await expect(page.getByRole('radio', { name: 'pan', exact: true })).toHaveAttribute(
       'aria-checked',
       'true',
     );
-    await expect(page.getByLabel('Titul za jménem')).toHaveValue('Ph.D.');
   });
 });

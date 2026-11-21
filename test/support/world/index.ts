@@ -53,16 +53,7 @@ declare module 'vitest' {
 type UserSeed = Partial<
   Pick<
     UserRecord,
-    | 'role'
-    | 'tier'
-    | 'status'
-    | 'displayName'
-    | 'tid'
-    | 'oid'
-    | 'email'
-    | 'salutation'
-    | 'titlesBefore'
-    | 'titlesAfter'
+    'role' | 'tier' | 'status' | 'displayName' | 'tid' | 'oid' | 'email' | 'salutation'
   >
 >;
 
@@ -234,13 +225,8 @@ function buildWorld(kind: World['kind'], backend: () => Backend): World {
             Object.keys(patch).length > 0
               ? await tx.users.changeAccess(user.id, user.version, patch)
               : user;
-          const { salutation, titlesBefore, titlesAfter } = seed;
-          return salutation || titlesBefore || titlesAfter
-            ? tx.users.setAddress(user.id, {
-                salutation: salutation ?? null,
-                titlesBefore: titlesBefore ?? null,
-                titlesAfter: titlesAfter ?? null,
-              })
+          return seed.salutation
+            ? tx.users.setAddress(user.id, { salutation: seed.salutation })
             : placed;
         }),
       accessRequest: (seed) => backend().insertAccessRequest(accessRequestRow(seed, clock.now())),

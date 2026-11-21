@@ -52,10 +52,10 @@ describe('upcasting a schema 1 snapshot', () => {
         : [],
     );
     expect(byId).toMatchObject({
-      'f-rodice': 'vede třídní učitelka paní Mgr. Jana Nováková',
+      'f-rodice': 'vede třídní učitelka paní Jana Nováková',
       'f-piskvorky': 'organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)',
       'f-vaib': 'za Next Zone Event Space koordinuje absolvent pan Jan Absolon',
-      'f-cern': 'organizuje pan Mgr. Petr Dvořák',
+      'f-cern': 'organizuje pan Petr Dvořák',
       'f-mc': undefined,
     });
   });
@@ -117,6 +117,6 @@ describe('upcasting a schema 1 snapshot', () => {
       .flatMap((b) => (b.kind === 'bullet' ? [b.runs.map((r) => r.text).join('')] : []))
       .join('\n')
       .replaceAll('\u00a0', ' ');
-    expect(printed).toContain('organizuje pan Mgr. Petr Dvořák');
+    expect(printed).toContain('organizuje pan Petr Dvořák');
   });
 });

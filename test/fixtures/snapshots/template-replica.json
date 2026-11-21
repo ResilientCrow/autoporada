@@ -614,7 +614,6 @@
         "people": [
           {
             "salutation": "pani",
-            "titlesBefore": "Mgr.",
             "givenName": "Jana",
             "familyName": "Nováková",
             "role": "třídní učitelka"
@@ -688,7 +687,6 @@
         "people": [
           {
             "salutation": "pan",
-            "titlesBefore": "Mgr.",
             "givenName": "Petr",
             "familyName": "Dvořák"
           }

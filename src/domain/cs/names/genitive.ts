@@ -5,7 +5,7 @@ import { SALUTATION, type PersonName, type Salutation } from './person';
 import { isTitleAfter, isTitleBefore } from './titles';
 
 export interface GenitiveSuggestion {
-  /** „pana Mgr. Jana Nováka, Ph.D.“ */
+  /** „pana Jana Nováka“ */
   readonly text: string;
   readonly confidence: Confidence;
   /** True when a person should look at the suggestion before it is used. */
@@ -17,8 +17,8 @@ const words = (s: string) => s.split(/\s+/).filter(Boolean);
 
 /**
  * Suggests the 2nd case for „vyjádření pana Johna Doe (1.A)“. A function and its complement go
- * before the salutation: „zástupkyně pro majetek paní Mgr. Jany Novákové“; a profesor or a ředitel
- * after it: „pana profesora Mgr. Jana Nováka“ (ADR 0072, 0073). A stored
+ * before the salutation: „zástupkyně pro majetek paní Jany Novákové“; a profesor or a ředitel
+ * after it: „pana profesora Jana Nováka“ (ADR 0072, 0073). A stored
  * correction for this person (`override`) always wins. Words the rules are
  * unsure about keep their 1st case and the suggestion is flagged.
  */
@@ -35,10 +35,7 @@ export function suggestGenitive(
   );
   const family = words(person.familyName).map((w) => declineToken(w, sex, 'family'));
   const tokens = [...given, ...family];
-  const name = [person.titlesBefore?.trim(), ...tokens.map((t) => t.form)]
-    .filter(Boolean)
-    .join(' ');
-  const full = `${name}${person.titlesAfter?.trim() ? `, ${person.titlesAfter.trim()}` : ''}`;
+  const full = tokens.map((t) => t.form).join(' ');
   const text = headedName(person, full, 'genitive');
   const confidence = lowest(tokens.map((t) => t.confidence));
   return { text, confidence, needsCheck: confidence === 'medium' || confidence === 'low', tokens };
@@ -46,33 +43,29 @@ export function suggestGenitive(
 
 /**
  * Best-effort split of a typed full name, for people not found in the school
- * directory (which provides given name and surname separately).
+ * directory (which provides given name and surname separately). Degrees are
+ * recognised and dropped: the school uses none (ADR 0076).
  */
 export function splitFullName(raw: string, salutation: Salutation): PersonName {
-  const [beforeComma = '', ...afterComma] = raw.split(',');
+  const [beforeComma = ''] = raw.split(',');
   const all = words(beforeComma);
-  // „Mgr. et Mgr. Jana“: titles, joined by „et“.
-  const titles: string[] = [];
+  // „Mgr. et Mgr. Jana“: degrees, joined by „et“.
+  let dropped = 0;
   while (all.length > 1) {
     const [word = '', next = ''] = all;
-    if (isTitleBefore(word) || (word === 'et' && titles.length > 0 && isTitleBefore(next))) {
-      titles.push(word);
+    if (isTitleBefore(word) || (word === 'et' && dropped > 0 && isTitleBefore(next))) {
+      dropped++;
       all.shift();
     } else break;
   }
   // „Petr Dvořák Ph.D.“ typed without the comma.
-  const trailing: string[] = [];
-  while (all.length > 1 && isTitleAfter(all[all.length - 1] ?? ''))
-    trailing.unshift(all.pop() ?? '');
-  const titlesAfter = [...trailing, afterComma.join(',').trim()].filter(Boolean).join(', ');
+  while (all.length > 1 && isTitleAfter(all[all.length - 1] ?? '')) all.pop();
   const particle = all.findIndex((w, i) => i > 0 && PARTICLES.has(w.toLowerCase()));
   // A lone word is a surname: „pan Novák“.
   const familyStart = particle > 0 ? particle : Math.max(all.length - 1, 0);
   return {
     salutation,
-    ...(titles.length > 0 && { titlesBefore: titles.join(' ') }),
     givenName: all.slice(0, familyStart).join(' '),
     familyName: all.slice(familyStart).join(' '),
-    ...(titlesAfter && { titlesAfter }),
   };
 }

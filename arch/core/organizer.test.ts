@@ -2,28 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { organizerPicks, organizerWith } from './organizer';
 import type { Card } from './types';
 
-const jana: Card = { id: 'a', salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', titlesBefore: 'Mgr.', head: 'zastupce', complement: 'pro majetek' };
-const jan: Card = { id: 'b', salutation: 'pan', givenName: 'Jan', familyName: 'Novák', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' };
-const eva: Card = { id: 'c', salutation: null, givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Ing.' };
+const jana: Card = { id: 'a', salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', head: 'zastupce', complement: 'pro majetek' };
+const jan: Card = { id: 'b', salutation: 'pan', givenName: 'Jan', familyName: 'Novák' };
+const eva: Card = { id: 'c', salutation: null, givenName: 'Eva', familyName: 'Malá' };
 const cards = [jana, jan, eva];
 
 describe('organizerWith: the picked card replaces the last name typed', () => {
   it('writes the headed name of a card with a salutation', () => {
-    expect(organizerWith('Jana', jana)).toBe('zástupkyně pro majetek paní Mgr. Jana Nováková');
-    expect(organizerWith('Nov', jan)).toBe('pan Mgr. Jan Novák, Ph.D.');
+    expect(organizerWith('Jana', jana)).toBe('zástupkyně pro majetek paní Jana Nováková');
+    expect(organizerWith('Nov', jan)).toBe('pan Jan Novák');
   });
 
   it('writes only the name when the card has no salutation, for the author to add theirs', () => {
-    expect(organizerWith('mal', eva)).toBe('Ing. Eva Malá');
+    expect(organizerWith('mal', eva)).toBe('Eva Malá');
   });
 
   it('keeps the names before the last comma as they were typed', () => {
-    expect(organizerWith('paní ředitelka Alena Dvořáková,  jan', jan)).toBe('paní ředitelka Alena Dvořáková, pan Mgr. Jan Novák, Ph.D.');
-    expect(organizerWith('A, B,', eva)).toBe('A, B, Ing. Eva Malá');
+    expect(organizerWith('paní ředitelka Alena Dvořáková,  jan', jan)).toBe('paní ředitelka Alena Dvořáková, pan Jan Novák');
+    expect(organizerWith('A, B,', eva)).toBe('A, B, Eva Malá');
   });
 
   it('works on an empty field', () => {
-    expect(organizerWith('', eva)).toBe('Ing. Eva Malá');
+    expect(organizerWith('', eva)).toBe('Eva Malá');
   });
 });
 
@@ -49,12 +49,12 @@ describe('organizerPicks: cards that match the last name typed', () => {
   });
 
   it('carries the text the field would hold after the pick', () => {
-    expect(organizerPicks(cards, 'x, eva', 200)).toEqual([{ card: eva, text: 'x, Ing. Eva Malá' }]);
+    expect(organizerPicks(cards, 'x, eva', 200)).toEqual([{ card: eva, text: 'x, Eva Malá' }]);
   });
 
   it('leaves out a pick that would not fit the field', () => {
-    expect(organizerPicks(cards, 'jan', 20)).toEqual([]);
-    expect(organizerPicks(cards, 'jan', 'pan Mgr. Jan Novák, Ph.D.'.length).map((p) => p.card.id)).toEqual(['b']);
+    expect(organizerPicks(cards, 'jan', 10)).toEqual([]);
+    expect(organizerPicks(cards, 'jan', 'pan Jan Novák'.length).map((p) => p.card.id)).toEqual(['b']);
   });
 
   it('offers at most four', () => {

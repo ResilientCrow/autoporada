@@ -1,7 +1,7 @@
 /** Branch arch-ui only: how Arch shows people and trail entries the real model keeps differently. */
 
 import { isStudentTier, type Tier, type UserFunction } from '@/domain/actor';
-import { beforeName, type BeforeName, type Salutation } from '@/domain/cs';
+import { beforeName, splitFullName, type BeforeName, type Salutation } from '@/domain/cs';
 
 export const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -21,10 +21,16 @@ export const WHAT: Record<string, string> = {
   'retract-cancel': 'Žádost o zrušení vzata zpět',
 };
 
+/**
+ * The directory's display name as given and family name, its degrees dropped like a typed
+ * name's (ADR 0076): „Mgr. Jana Nováková, Ph.D.“ is Jana Nováková. A lone word stays the given
+ * name, as before. The salutation passed is unused by the split.
+ */
 function splitName(displayName: string) {
-  const parts = displayName.trim().split(/\s+/);
-  const familyName = parts.length > 1 ? parts.pop()! : '';
-  return { givenName: parts.join(' ') || displayName, familyName };
+  const { givenName, familyName } = splitFullName(displayName, 'pan');
+  return givenName
+    ? { givenName, familyName }
+    : { givenName: familyName || displayName.trim(), familyName: '' };
 }
 
 /** A reviewer's edit keeps the previous fields; Arch shows them as text. */
@@ -46,8 +52,6 @@ interface UserRow {
   readonly status: string;
   readonly tier: Tier | null;
   readonly salutation: Salutation | null;
-  readonly titlesBefore: string | null;
-  readonly titlesAfter: string | null;
   readonly jobTitle: string | null;
   readonly department: string | null;
 }
@@ -55,7 +59,7 @@ interface UserRow {
 /**
  * The people a viewer's state holds: the headmaster sees the directory (`users.view`); anyone else
  * only the names their own view already mentions, and role, status and contact of nobody but
- * themselves, and their tier, functions, salutation and degrees (ADR 0072); what prints in a
+ * themselves, and their tier, functions, salutation (ADR 0072); what prints in a
  * document comes from the cards (`cardsFor`). Who of the vedení returned or edited a point is not
  * shown to its author (`points.get`): they see „Vedení“.
  */
@@ -82,8 +86,6 @@ export function peopleFor(input: {
         // The person's own answer, never guessed (ADR 0072 item 6): none yet comes without one.
         // Only they and the headmaster see it; a document gets it from the cards.
         salutation: full ? (u.salutation as string | null) : null,
-        ...(full && u.titlesBefore && { titlesBefore: u.titlesBefore }),
-        ...(full && u.titlesAfter && { titlesAfter: u.titlesAfter }),
         ...name,
         email: full ? (u.email ?? '') : '',
         role: full ? u.role : 'submitter',
@@ -112,8 +114,8 @@ export function peopleFor(input: {
 }
 
 /**
- * A person as a people row copies them (ADR 0072 item 7): the name, the person's own salutation
- * and degrees, and what prints before the name. Nothing else: no email, role, status, tier or
+ * A person as a people row copies them (ADR 0072 item 7): the name, the person's own salutation,
+ * and what prints before the name. Nothing else: no email, role, status, tier or
  * function list, so a colleague's card tells a submitter no more than a printed document would.
  */
 export interface Card extends BeforeName {
@@ -121,8 +123,6 @@ export interface Card extends BeforeName {
   readonly salutation: Salutation | null;
   readonly givenName: string;
   readonly familyName: string;
-  readonly titlesBefore?: string;
-  readonly titlesAfter?: string;
 }
 
 /**
@@ -147,8 +147,6 @@ export function cardsFor(input: {
       id: u.id,
       salutation: u.salutation,
       ...splitName(u.displayName),
-      ...(u.titlesBefore && { titlesBefore: u.titlesBefore }),
-      ...(u.titlesAfter && { titlesAfter: u.titlesAfter }),
       ...beforeName(u.tier, functions.get(u.id) ?? []),
     }));
 }

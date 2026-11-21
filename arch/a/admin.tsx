@@ -142,18 +142,17 @@ const salutationOptions = (u: User) => salutationsFor(isStudentTier(u.tier ?? nu
 export function Osloveni() {
   const { s, apply } = useStore(); const u = Q.me(s)!;
   return <Entry><Top h="Jak Vás máme oslovovat v dokumentech?" lead="Použijeme to všude, kde se v dokumentu píše o Vás jménem. Změnit to můžete kdykoli na stránce Účet." />
-    <Seg label="Oslovení" value={null} options={salutationOptions(u)} onChange={(v) => apply(A.setAddress({ salutation: v, titlesBefore: u.titlesBefore ?? null, titlesAfter: u.titlesAfter ?? null }))} />
+    <Seg label="Oslovení" value={null} options={salutationOptions(u)} onChange={(v) => apply(A.setAddress({ salutation: v }))} />
     {/* The question cannot be skipped, but whoever will not answer can leave. */}
     <button className="q" onClick={() => { apply(A.signOut); go('/'); }}>Zpět na přihlášení</button></Entry>;
 }
 export function Ucet() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const [all, setAll] = useState(false);
-  const [sal, setSal] = useState<Salutation | null>(u.salutation); const [before, setBefore] = useState(u.titlesBefore ?? ''); const [after, setAfter] = useState(u.titlesAfter ?? ''); const [ok, setOk] = useState(false);
+  const [sal, setSal] = useState<Salutation | null>(u.salutation); const [ok, setOk] = useState(false);
   return <div className="work solo"><Bar /><main className="pane narrow"><Back to="/" t="Zpět" /><Top h={Q.nameOf(u)} lead={`${u.email}. Přihlašujete se školním účtem, heslo u nás nemáte.`} />
     {ok ? <Toast onDone={() => setOk(false)}>Uloženo.</Toast> : null}
     <section className="stack st8"><h2>Oslovení v dokumentech</h2><Seg label="Oslovení" value={sal} options={salutationOptions(u)} onChange={setSal} />
-      <div className="two"><label className="l">Titul před jménem<input className="in" maxLength={PERSON_FIELD_MAX.title} placeholder="Mgr." value={before} onChange={(e) => setBefore(typedLine(e.target.value))} /></label><label className="l">Titul za jménem<input className="in" maxLength={PERSON_FIELD_MAX.title} placeholder="Ph.D." value={after} onChange={(e) => setAfter(typedLine(e.target.value))} /></label></div>
-      <button type="button" className={`btn lg w ${sal ? 'go' : 'off'}`} aria-disabled={!sal} onClick={() => { if (!sal) return; apply(A.setAddress({ salutation: sal, titlesBefore: before, titlesAfter: after })); setOk(true); }}>Uložit</button></section>
+      <button type="button" className={`btn lg w ${sal ? 'go' : 'off'}`} aria-disabled={!sal} onClick={() => { if (!sal) return; apply(A.setAddress({ salutation: sal })); setOk(true); }}>Uložit</button></section>
     <div className="stack st8"><button className="btn lg w" onClick={() => { apply(A.signOut); go('/'); }}>Odhlásit se</button><button className="btn lg w" onClick={() => setAll(true)}>Odhlásit všude</button></div>{all ? <Dialog title="Odhlásit všude?" onClose={() => setAll(false)}><p>Odhlásíme Vás na všech zařízeních.</p><button className="btn dk lg w" onClick={() => { apply(A.signOutAll); go('/'); }}>Odhlásit všude</button></Dialog> : null}</main><PhoneBar /></div>;
 }
 /** The sign-in leaves through the server, which never sees the #address a mail link opened. */

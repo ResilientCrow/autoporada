@@ -60,10 +60,8 @@ const draftPersonSchema = z.strictObject({
   // The directory's id: a GUID, as Graph and the dev directory give it (`directoryHit`).
   graphId: z.guid().max(POINT_LIMITS.graphId).optional(),
   salutation: salutationSchema.nullable(),
-  titlesBefore: capped(PERSON.title).optional(),
   givenName: capped(PERSON.name),
   familyName: capped(PERSON.name),
-  titlesAfter: capped(PERSON.title).optional(),
   head: z.enum(PERSON_HEADS).optional(),
   complement: capped(PERSON.complement).optional(),
   affiliation: capped(PERSON.affiliation).optional(),

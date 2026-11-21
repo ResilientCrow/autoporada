@@ -36,15 +36,15 @@ export const atLeast = (r: Role | undefined, m: Role) => { const o: Role[] = ['p
 export const ruleOf = (s: State): DeadlineRule => ({ dayOffset: s.settings.dayOffset, time: parseWallTime(s.settings.time) });
 export const yearOf = (s: State) => schoolYear(todayOf(s));
 /** A user copied into a people row (ADR 0072 item 7): the address as it is now, written into the row and never linked to the user again. The class or job, when both are given, is the one for this school year. */
-export const personFromCard = (c: Card, year?: string, affiliation?: string): DraftPerson => ({ salutation: c.salutation, givenName: c.givenName, familyName: c.familyName, ...(c.titlesBefore && { titlesBefore: c.titlesBefore }), ...(c.titlesAfter && { titlesAfter: c.titlesAfter }), ...(c.head && { head: c.head }), ...(c.complement && { complement: c.complement }), ...(year && affiliation && { affiliation, affiliationYear: year }) });
+export const personFromCard = (c: Card, year?: string, affiliation?: string): DraftPerson => ({ salutation: c.salutation, givenName: c.givenName, familyName: c.familyName, ...(c.head && { head: c.head }), ...(c.complement && { complement: c.complement }), ...(year && affiliation && { affiliation, affiliationYear: year }) });
 /** A person of the Účastníci row, where one label speaks for all (ADR 0071): no salutation, head or complement of their own. */
 export const unaddressed = (p: DraftPerson): DraftPerson => { const { head: _h, complement: _c, ...rest } = p; return { ...rest, salutation: null }; };
 /** The person without the function or tier noun a card brought (decision „Bez funkce“): the salutation stays. */
 export const withoutFunction = (p: DraftPerson): DraftPerson => { const { head: _h, complement: _c, ...rest } = p; return rest; };
 /** A statement speaker's second case, as proposed for checking (ADR 0072 item 7): the head and complement a person was copied with print in it; none until the salutation is chosen. */
-export const genitiveFor = (p: DraftPerson) => p.salutation ? suggestGenitive({ salutation: p.salutation, givenName: p.givenName, familyName: p.familyName, ...(p.titlesBefore && { titlesBefore: p.titlesBefore }), ...(p.titlesAfter && { titlesAfter: p.titlesAfter }), ...(p.head && { head: p.head }), ...(p.complement && { complement: p.complement }) }) : null;
+export const genitiveFor = (p: DraftPerson) => p.salutation ? suggestGenitive({ salutation: p.salutation, givenName: p.givenName, familyName: p.familyName, ...(p.head && { head: p.head }), ...(p.complement && { complement: p.complement }) }) : null;
 /** The signed-in user as a person of a report: their own card, else their row, with their class or job for this school year. */
-export const mePerson = (s: State): DraftPerson => { const u = me(s)!; const card = s.cards.find((c) => c.id === u.id) ?? { id: u.id, salutation: u.salutation, givenName: u.givenName, familyName: u.familyName, ...(u.titlesBefore && { titlesBefore: u.titlesBefore }), ...(u.titlesAfter && { titlesAfter: u.titlesAfter }) }; return personFromCard(card, yearOf(s), u.affiliation); };
+export const mePerson = (s: State): DraftPerson => { const u = me(s)!; const card = s.cards.find((c) => c.id === u.id) ?? { id: u.id, salutation: u.salutation, givenName: u.givenName, familyName: u.familyName }; return personFromCard(card, yearOf(s), u.affiliation); };
 
 const row = (i: Issue) => ({ monday: parseIsoDate(i.monday), meetingDate: parseIsoDate(i.meetingDate), deadlineAt: new Date(i.deadlineAt), status: i.status });
 const rowsOf = (s: State) => s.issues.map(row);

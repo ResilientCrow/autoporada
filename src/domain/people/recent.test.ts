@@ -86,7 +86,6 @@ describe('recentPeople', () => {
     ['diacritics', jan, { ...jan, familyName: 'Novak' }],
     ['spaces around', jan, { ...jan, givenName: ' Jan ', familyName: 'Novák ' }],
     ['the case of the class', eva, { ...eva, affiliation: '3.b' }],
-    ['titles', jan, { ...jan, titlesBefore: 'Mgr.' }],
   ])('treats a typed person differing only in %s as one', (_, a, b) => {
     expect(recentPeople([point(1, [bullet(a)]), point(2, [bullet(b)])], 300)).toEqual([
       { ...b, lastUsed: iso(2) },
@@ -140,8 +139,6 @@ describe('recentPeople', () => {
       { ...jan, graphId: GRAPH, familyName: 'Nováková', salutation: 'pani' },
     ],
     ['a changed salutation', jan, { ...jan, salutation: null }],
-    ['an added title before', jan, { ...jan, titlesBefore: 'Mgr.' }],
-    ['an added title after', jan, { ...jan, titlesAfter: 'Ph.D.' }],
     ['a changed given name', jan, { ...jan, givenName: 'JAN' }],
   ])('drops an older genitive after %s', (_, older, newer) => {
     const got = recentPeople(
@@ -152,11 +149,11 @@ describe('recentPeople', () => {
   });
 
   it('stops at the first copy that renders the person differently', () => {
-    const titled = { ...jan, titlesBefore: 'Mgr.' };
+    const unaddressed = { ...jan, salutation: null };
     const got = recentPeople(
       [
         point(1, [], [said(jan, 'pana Jana Nováka')]),
-        point(3, [bullet(titled)]),
+        point(3, [bullet(unaddressed)]),
         point(5, [bullet({ ...jan, givenName: ' Jan ', affiliationYear: '2026/2027' })]),
       ],
       300,

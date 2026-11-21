@@ -51,8 +51,6 @@ describe('draftBulletsSchema', () => {
   it('accepts what a draft holds, unfinished parts too', () => {
     const full = person({
       graphId: '6f1c3d0e-0000-4000-8000-000000000001',
-      titlesBefore: 'Mgr.',
-      titlesAfter: 'Ph.D.',
       affiliation: '3.B',
       affiliationYear: '2026/2027',
     });
@@ -88,7 +86,6 @@ describe('draftBulletsSchema', () => {
       (n: number) => [people({ people: [person({ familyName: x(n) })] })],
       PERSON.name,
     ],
-    ['titles', (n: number) => [people({ people: [person({ titlesAfter: x(n) })] })], PERSON.title],
     [
       'affiliation',
       (n: number) => [people({ people: [person({ affiliation: x(n) })] })],
@@ -197,6 +194,8 @@ describe('draftBulletsSchema', () => {
       ['a school year of two years', { affiliationYear: '2026/2028' }],
       ['a school year backwards', { affiliationYear: '2027/2026' }],
       ['a school year with spaces', { affiliationYear: ' 2026/2027' }],
+      ['a degree before the name (ADR 0076)', { titlesBefore: 'Mgr.' }],
+      ['a degree after the name (ADR 0076)', { titlesAfter: 'Ph.D.' }],
     ])('refuses %s', (_name, over) => {
       expect(parses(over)).toBe(false);
     });

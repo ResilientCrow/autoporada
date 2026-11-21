@@ -34,7 +34,7 @@ export const POINT_LIMITS = {
   note: 2000,
   bulletLabel: 60,
   bulletKey: 40,
-  /** `givenName` and `familyName` share `name`; `titlesBefore` and `titlesAfter` share `title`. */
+  /** `givenName` and `familyName` share `name`. */
   person: PERSON_FIELD_MAX,
   /** „2026/2027“ */
   affiliationYear: 9,

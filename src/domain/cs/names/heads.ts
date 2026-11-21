@@ -54,9 +54,9 @@ const NOUNS: Readonly<Record<PersonHead, Nouns>> = {
  * The person's name with their salutation and head, in the given case. `name` is the name as the
  * caller has it in that case (titles included). The salutation picks the noun's sex, so a slečna
  * takes the woman's noun. A function goes before the salutation with its complement: „zástupkyně
- * pro pedagogickou činnost paní Mgr. Jana Nováková“, „členka PR oddělení slečna Eva Malá“, and so
+ * pro pedagogickou činnost paní Jana Nováková“, „členka PR oddělení slečna Eva Malá“, and so
  * does an absolvent: „absolvent pan Jan Novák“. A ředitel and a profesor follow the salutation:
- * „paní ředitelka Mgr. Jana Nováková“. Without a head, just the salutation and the name.
+ * „paní ředitelka Jana Nováková“. Without a head, just the salutation and the name.
  */
 export function headedName(
   person: HeadedPerson,

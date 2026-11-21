@@ -45,8 +45,8 @@ has not built yet is under „Not built yet“.
   past it. Employees (every tier but student and absolvent) choose pan or paní,
   students and absolventi pan or slečna. The question comes back if a tier
   change makes the saved answer invalid. On „Účet“ the person can change their
-  salutation and write their degrees before and after the name. Only the person
-  sets these; they are never guessed from the name or read from Entra.
+  salutation. The school uses no degrees (ADR 0076). Only the person sets it;
+  it is never guessed from the name or read from Entra.
 
 ### Submitting
 
@@ -75,14 +75,14 @@ has not built yet is under „Not built yet“.
   their salutation, class and genitive form) and the app's own users with
   access (the picker labels them „ze školního adresáře“). Picking a user copies
   their address card into the row: salutation, the function noun and its
-  complement, and degrees („zástupkyně pro pedagogickou činnost paní Mgr. Jana
+  complement („zástupkyně pro pedagogickou činnost paní Jana
   Nováková“: a function and an absolvent („absolvent pan …“) go before the
   salutation, a teacher's „profesor“ and the ředitel after it: „pan profesor …“). The row is a copy, not a link, and „Bez funkce“ drops the copied
   head. Staff who write points get everyone's card; a student gets only their
   own. The genitive is prefilled with the head in the 2nd case. It does not search
   the school's Microsoft directory: that route has no caller in Arch (ADR
   0065 item 7). A list of people can be pasted, with the class in brackets
-  („Tereza Malá (3.B)“). Class codes are saved in the school's form („1. a“
+  („Tereza Malá (3.B)“); degrees in it („Mgr.“, „Ph.D.“) are dropped (ADR 0076). Class codes are saved in the school's form („1. a“
   becomes „1.A“). „Doplnit oslovení podle jmen“ guesses salutations for typed
   people to check; a user's own salutation is never guessed.
 - Genitive suggestion with an indicator when it was only guessed. The author

@@ -15,10 +15,8 @@ export interface DraftPerson {
   readonly graphId?: string;
   /** `null` until the author picks one. */
   readonly salutation: Salutation | null;
-  readonly titlesBefore?: string;
   readonly givenName: string;
   readonly familyName: string;
-  readonly titlesAfter?: string;
   /**
    * The noun that prints with the salutation, copied when the author picked the person (ADR 0072
    * item 7): „pan profesor Jan Novák“, „zástupkyně pro majetek paní Jana Nováková“ (a function goes

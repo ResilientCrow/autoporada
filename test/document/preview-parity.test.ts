@@ -57,7 +57,7 @@ const FIXTURES: Record<string, { content: PointContent; groupOrder?: readonly Sa
           people: [
             person('Jan', 'Novák', { affiliation: '2.A' }),
             person('Eva', 'Malá', { salutation: 'slecna', affiliation: '1.B' }),
-            person('Petra', 'Dvořáková', { salutation: 'pani', titlesBefore: 'Mgr.' }),
+            person('Petra', 'Dvořáková', { salutation: 'pani' }),
             person('Bez', 'Oslovení', { salutation: null }),
           ],
         },

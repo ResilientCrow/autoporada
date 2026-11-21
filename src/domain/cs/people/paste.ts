@@ -12,7 +12,7 @@ import {
   stripBullet,
   takeClass,
   takeParenthesis,
-  takeTitlesBefore,
+  skipTitlesBefore,
   words,
   type NameReading,
 } from './paste-shapes';
@@ -109,28 +109,21 @@ function parseEntry(
   };
   let core = head.rest.join(' ');
   let inverted = false;
-  const titlesBefore: string[] = [];
-  const titlesAfter: string[] = [];
+  // Degrees are recognised and left out: the school uses none (ADR 0076).
   for (const part of parts.slice(1)) {
-    if (words(part).every(isTitleAfter)) {
-      titlesAfter.push(part);
-      continue;
-    }
-    const lead = takeTitlesBefore(words(part));
-    titlesBefore.push(...lead.titles);
-    const text = lead.rest.join(' ');
-    if (!text) continue;
-    if (lead.rest.every(isTitleAfter)) titlesAfter.push(text);
+    if (words(part).every(isTitleAfter)) continue;
+    const rest = skipTitlesBefore(words(part));
+    const text = rest.join(' ');
+    if (!text || rest.every(isTitleAfter)) continue;
     // „Novák, Jan“: a given name after a lone surname (core stops being lone, so once).
-    else if (splitFullName(core, 'pan').givenName === '' && looksGiven(text)) {
+    if (splitFullName(core, 'pan').givenName === '' && looksGiven(text)) {
       core = `${core} ${text}`;
       inverted = true;
     } else note(text);
   }
   if (inner !== undefined) note(inner);
   const affiliation = pickAffiliation(classes, organisations);
-  const person = splitFullName([core, ...titlesAfter].join(', '), 'pan');
-  const before = [person.titlesBefore, ...titlesBefore].filter(Boolean).join(' ');
+  const person = splitFullName(core, 'pan');
   const all = words(`${person.givenName} ${person.familyName}`);
   if (all.length < 2 || !all.every(isNameWord)) return 'no-surname';
 
@@ -147,16 +140,12 @@ function parseEntry(
     line,
     source,
     ...name,
-    ...(before && { titlesBefore: before }),
-    ...(person.titlesAfter && { titlesAfter: person.titlesAfter }),
     ...(affiliation && { affiliation }),
     uncertainOrder: !certain,
   };
   const tooLong =
     name.givenName.length > PERSON_FIELD_MAX.name ||
     name.familyName.length > PERSON_FIELD_MAX.name ||
-    (row.titlesBefore?.length ?? 0) > PERSON_FIELD_MAX.title ||
-    (row.titlesAfter?.length ?? 0) > PERSON_FIELD_MAX.title ||
     (affiliation?.length ?? 0) > PERSON_FIELD_MAX.affiliation;
   return tooLong ? 'too-long' : row;
 }

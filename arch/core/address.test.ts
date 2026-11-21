@@ -53,29 +53,21 @@ describe('needsAddress: the question Arch asks once (ADR 0072 item 6)', () => {
 });
 
 describe('setAddress', () => {
-  const ask = { salutation: 'pani', titlesBefore: 'Mgr.', titlesAfter: null } as const;
+  const ask = { salutation: 'pani' } as const;
 
   it('puts the answer on the own row at once, and clears the question', () => {
     const viewer = person('me', { salutation: null, tier: 'ucitel' });
     const fx = A.setAddress(ask);
     const s = fx(state(viewer));
-    expect(me(s)).toMatchObject({ salutation: 'pani', titlesBefore: 'Mgr.' });
-    expect(me(s)).not.toHaveProperty('titlesAfter');
+    expect(me(s)).toMatchObject({ salutation: 'pani' });
     expect(needsAddress(me(s)!)).toBe(false);
   });
 
-  it('drops a degree that was cleared', () => {
-    const viewer = person('me', { titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' });
-    const s = A.setAddress({ salutation: 'pan', titlesBefore: '  ', titlesAfter: null })(state(viewer));
-    expect(me(s)).not.toHaveProperty('titlesBefore');
-    expect(me(s)).not.toHaveProperty('titlesAfter');
-  });
-
   it('the own card follows, so a new report pre-fills the new address', () => {
-    const viewer = person('me', { salutation: null, titlesBefore: 'Bc.', givenName: 'Eva', familyName: 'Malá' });
-    const s0 = { ...state(viewer), cards: [{ id: 'me', salutation: null, givenName: 'Eva', familyName: 'Malá', titlesBefore: 'Bc.', head: 'profesor' as const }, { id: 'kolega', salutation: null, givenName: 'Jan', familyName: 'kolega' }] };
-    const s = A.setAddress({ salutation: 'pani', titlesBefore: null, titlesAfter: 'Ph.D.' })(s0);
-    expect(mePerson(s)).toEqual({ salutation: 'pani', givenName: 'Eva', familyName: 'Malá', titlesAfter: 'Ph.D.', head: 'profesor' });
+    const viewer = person('me', { salutation: null, givenName: 'Eva', familyName: 'Malá' });
+    const s0 = { ...state(viewer), cards: [{ id: 'me', salutation: null, givenName: 'Eva', familyName: 'Malá', head: 'profesor' as const }, { id: 'kolega', salutation: null, givenName: 'Jan', familyName: 'kolega' }] };
+    const s = A.setAddress({ salutation: 'pani' })(s0);
+    expect(mePerson(s)).toEqual({ salutation: 'pani', givenName: 'Eva', familyName: 'Malá', head: 'profesor' });
     expect(s.cards.find((c) => c.id === 'kolega')).toEqual(s0.cards[1]);
   });
 
@@ -85,11 +77,11 @@ describe('setAddress', () => {
     expect(s.users.find((u) => u.id === 'kolega')).toEqual(s0.users.find((u) => u.id === 'kolega'));
   });
 
-  it('asks the server for users.setAddress with the typed values', () => {
+  it('asks the server for users.setAddress with the salutation', () => {
     const s0 = state(person('me', { salutation: null }));
-    const fx = A.setAddress({ salutation: 'pan', titlesBefore: ' Ing. ', titlesAfter: '' });
+    const fx = A.setAddress({ salutation: 'pan' });
     const calls = A.toCalls(fx.op!, ctx(fx(s0)));
-    expect(calls).toEqual([{ name: 'users.setAddress', input: { salutation: 'pan', titlesBefore: 'Ing.', titlesAfter: null } }]);
+    expect(calls).toEqual([{ name: 'users.setAddress', input: { salutation: 'pan' } }]);
   });
 });
 

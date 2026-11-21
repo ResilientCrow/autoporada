@@ -299,7 +299,6 @@ describe('reportFromContent', () => {
       salutation: 'pani',
       givenName: 'Jana',
       familyName: 'Nováková',
-      titlesBefore: 'Mgr.',
       head: 'zastupce',
       complement: ' pro pedagogickou činnost ',
     });
@@ -330,7 +329,6 @@ describe('reportFromContent', () => {
       expect(bullet?.kind === 'people' && bullet.people).toEqual([
         {
           salutation: 'pani',
-          titlesBefore: 'Mgr.',
           givenName: 'Jana',
           familyName: 'Nováková',
           head: 'zastupce',
@@ -350,7 +348,7 @@ describe('reportFromContent', () => {
 
     it('prints it before the name in the row, naming everyone one by one', () => {
       expect(printed(rowOf([deputy, member, person()]))).toBe(
-        'Účastníci: zástupkyně pro pedagogickou činnost paní Mgr.\u00a0Jana Nováková, členka PR oddělení slečna Eva Malá (3.B), pan Jan Novák',
+        'Účastníci: zástupkyně pro pedagogickou činnost paní Jana Nováková, členka PR oddělení slečna Eva Malá (3.B), pan Jan Novák',
       );
     });
 
@@ -498,16 +496,14 @@ describe('reportFromContent', () => {
       parses(report);
     });
 
-    it('collapses a tab in every part of a name and in an affiliation', () => {
+    it('collapses a tab in a name and in an affiliation', () => {
       const { report } = reportOf(
         content({
           bullets: [
             peopleBullet([
               person({
-                titlesBefore: 'Ing.\tMgr.',
                 givenName: 'Jan\tKarel',
                 familyName: 'Novák\tz Lhoty',
-                titlesAfter: 'Ph.D.,\nMBA',
                 affiliation: '3.\tB',
               }),
             ]),
@@ -518,10 +514,8 @@ describe('reportFromContent', () => {
         people: [
           {
             salutation: 'pan',
-            titlesBefore: 'Ing. Mgr.',
             givenName: 'Jan Karel',
             familyName: 'Novák z Lhoty',
-            titlesAfter: 'Ph.D., MBA',
             affiliation: '3. B',
           },
         ],
@@ -582,16 +576,14 @@ describe('reportFromContent', () => {
   });
 
   describe('padded fields', () => {
-    it('trims names, titles and affiliations exactly', () => {
+    it('trims names and affiliations exactly', () => {
       const { report } = reportOf(
         content({
           bullets: [
             peopleBullet([
               person({
-                titlesBefore: '  Ing. ',
                 givenName: '  Jan ',
                 familyName: ' Novák  ',
-                titlesAfter: ' Ph.D. ',
                 affiliation: '  3.B ',
               }),
             ]),
@@ -603,10 +595,8 @@ describe('reportFromContent', () => {
         people: [
           {
             salutation: 'pan',
-            titlesBefore: 'Ing.',
             givenName: 'Jan',
             familyName: 'Novák',
-            titlesAfter: 'Ph.D.',
             affiliation: '3.B',
           },
         ],
@@ -616,12 +606,10 @@ describe('reportFromContent', () => {
       ]);
     });
 
-    it('leaves out a whitespace-only title, affiliation and given name part', () => {
+    it('leaves out a whitespace-only affiliation and given name part', () => {
       const { report } = reportOf(
         content({
-          bullets: [
-            peopleBullet([person({ titlesBefore: ' \t', titlesAfter: '\n', affiliation: '   ' })]),
-          ],
+          bullets: [peopleBullet([person({ affiliation: '   ' })])],
           statements: [statement({ affiliation: ' \n ' })],
         }),
       );

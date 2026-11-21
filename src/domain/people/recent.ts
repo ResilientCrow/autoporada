@@ -43,10 +43,10 @@ const keyOf = ({ graphId, givenName, familyName, affiliation }: DraftPerson) =>
     graphId ? ['id', graphId] : ['name', fold(givenName), fold(familyName), fold(affiliation)],
   );
 
-/** Whether two copies give the same 2nd case: salutation, titles and names. */
+/** Whether two copies give the same 2nd case: salutation and names. */
 const readsSame = (a: DraftPerson, b: DraftPerson) =>
   a.salutation === b.salutation &&
-  (['titlesBefore', 'givenName', 'familyName', 'titlesAfter'] as const).every(
+  (['givenName', 'familyName'] as const).every(
     (field) => (a[field] ?? '').trim() === (b[field] ?? '').trim(),
   );
 
@@ -69,8 +69,8 @@ function copiesIn({ bullets, statements }: RecentSource): Copy[] {
  * The people of the author's points, newest first and each once, at most
  * `max`. The newest copy of a person wins with its salutation and class. The
  * genitive is the newest one written for them while their copies still read
- * the same (salutation, titles, names): a later bullet naming them the same
- * way keeps it, a renamed or retitled person drops it, since a remembered
+ * the same (salutation, names): a later bullet naming them the same
+ * way keeps it, a renamed person drops it, since a remembered
  * genitive is prefilled unchecked. A copy at the same instant loses to the
  * one listed first (bullets before speakers). A person without a family name
  * is not remembered: readiness would refuse them anyway.

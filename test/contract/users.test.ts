@@ -323,7 +323,7 @@ describe('UserRepo (port contract)', () => {
   });
 
   describe('setAddress (ADR 0072 item 6)', () => {
-    const ADDRESS = { salutation: 'pani', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' } as const;
+    const ADDRESS = { salutation: 'pani' } as const;
     const set = (by: Principal, id: string, patch: Parameters<Tx['users']['setAddress']>[1]) =>
       world.tx(by, async (tx) => {
         const after = await tx.users.setAddress(id, patch);
@@ -334,7 +334,7 @@ describe('UserRepo (port contract)', () => {
 
     it('starts without an address', async () => {
       const user = await world.seed.user({ role: 'submitter' });
-      expect(user).toMatchObject({ salutation: null, titlesBefore: null, titlesAfter: null });
+      expect(user).toMatchObject({ salutation: null });
     });
 
     it('writes the own row, leaves the version and the access alone, and signs nobody out', async () => {
@@ -354,15 +354,11 @@ describe('UserRepo (port contract)', () => {
       expect(await world.tx(cli, (tx) => tx.sessions.find(sha), 'read')).not.toBeNull();
     });
 
-    it('clears a field when it is given as null', async () => {
+    it('clears the salutation when it is given as null', async () => {
       const user = await world.seed.user({ role: 'submitter' });
       await set(world.as(user), user.id, ADDRESS);
-      const after = await set(world.as(user), user.id, {
-        salutation: 'pan',
-        titlesBefore: null,
-        titlesAfter: null,
-      });
-      expect(after).toMatchObject({ salutation: 'pan', titlesBefore: null, titlesAfter: null });
+      const after = await set(world.as(user), user.id, { salutation: null });
+      expect(after).toMatchObject({ salutation: null });
     });
 
     it('writes nobody else’s row, not even a headmaster’s', async () => {

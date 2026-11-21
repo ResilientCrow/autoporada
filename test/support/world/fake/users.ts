@@ -74,8 +74,6 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
         role: 'pending',
         tier: null,
         salutation: null,
-        titlesBefore: null,
-        titlesAfter: null,
         status: 'active',
         version: 1,
         createdAt: ctx.now,
@@ -138,8 +136,6 @@ export function fakeUserRepo(tx: FakeTxState, ctx: TxContext): UserRepo {
       return save({
         ...user,
         salutation: patch.salutation,
-        titlesBefore: patch.titlesBefore,
-        titlesAfter: patch.titlesAfter,
         updatedAt: ctx.now,
       });
     },

@@ -63,36 +63,19 @@ describe('a user’s own address (ADR 0072 item 6)', () => {
       `INSERT INTO users (tid, oid, display_name, ${columns}) VALUES ('${TID}', '${randomUUID()}', 'x', ${values})`,
     );
 
-  it('starts empty, and keeps a salutation and both degrees', async () => {
+  it('starts empty, and keeps a salutation', async () => {
     const id = await insertUser();
     const [fresh] = await database.db.select().from(users).where(eq(users.id, id));
-    expect(fresh).toMatchObject({ salutation: null, titlesBefore: null, titlesAfter: null });
-    const withAddress = await insertUser({
-      salutation: 'slecna',
-      titlesBefore: 'Mgr.',
-      titlesAfter: 'Ph.D.',
-    });
+    expect(fresh).toMatchObject({ salutation: null });
+    const withAddress = await insertUser({ salutation: 'slecna' });
     const [row] = await database.db.select().from(users).where(eq(users.id, withAddress));
-    expect(row).toMatchObject({ salutation: 'slecna', titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' });
+    expect(row).toMatchObject({ salutation: 'slecna' });
   });
 
   it('takes only the three salutations', async () => {
     expect(await pgErrorOf(insertOwner('salutation', `'pane'`))).toMatchObject(
       violation('23514', 'users_salutation'),
     );
-  });
-
-  it.each([
-    ['titles_before', 'users_titles_before'],
-    ['titles_after', 'users_titles_after'],
-  ] as const)('caps %s at 40 characters and refuses control characters', async (column, name) => {
-    await insertOwner(column, `'${'x'.repeat(40)}'`);
-    expect(await pgErrorOf(insertOwner(column, `'${'x'.repeat(41)}'`))).toMatchObject(
-      violation('23514', name),
-    );
-    for (const bad of [`E'Mgr.\\n'`, `E'Mgr.\\t'`, `E'Mgr.\\u0007'`]) {
-      expect(await pgErrorOf(insertOwner(column, bad))).toMatchObject(violation('23514', name));
-    }
   });
 });
 

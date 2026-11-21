@@ -51,9 +51,6 @@ export const users = pgTable(
     tier: text().$type<Tier>(),
     /** How documents address them (ADR 0072 item 6): the person's own answer, never guessed. */
     salutation: text().$type<Salutation>(),
-    /** „Mgr.“ before and „Ph.D.“ after the name, as the person types them. */
-    titlesBefore: text(),
-    titlesAfter: text(),
     status: userStatus().notNull().default('active'),
     version: integer().notNull().default(1),
     createdAt: createdAt(),
@@ -68,14 +65,6 @@ export const users = pgTable(
     check(
       'users_salutation',
       sql`${t.salutation} IS NULL OR ${t.salutation} IN (${salutationList})`,
-    ),
-    check(
-      'users_titles_before',
-      sql`${t.titlesBefore} IS NULL OR (char_length(${t.titlesBefore}) <= ${sql.raw(String(PERSON_FIELD_MAX.title))} AND ${t.titlesBefore} !~ '[[:cntrl:]]')`,
-    ),
-    check(
-      'users_titles_after',
-      sql`${t.titlesAfter} IS NULL OR (char_length(${t.titlesAfter}) <= ${sql.raw(String(PERSON_FIELD_MAX.title))} AND ${t.titlesAfter} !~ '[[:cntrl:]]')`,
     ),
     // Students and absolventi can only ever submit (plan §1, ADR 0072); policy.can enforces it too.
     check(

@@ -37,9 +37,9 @@ describe('samePerson', () => {
     expect(samePerson(listed, person('Jan', 'Novák', { graphId: 'g-2' }))).toBe(false);
   });
 
-  it('compares by name when either side has no graphId, ignoring case, spaces and titles', () => {
+  it('compares by name when either side has no graphId, ignoring case and spaces', () => {
     const listed = person('Jan', 'Novák', { graphId: 'g-1' });
-    const typed = person('JAN ', ' novák', { titlesBefore: 'Ing.' });
+    const typed = person('JAN ', ' novák');
     expect(samePerson(listed, typed)).toBe(true);
     expect(samePerson(typed, listed)).toBe(true);
   });
@@ -63,16 +63,8 @@ describe('nameKey', () => {
 });
 
 describe('displayName', () => {
-  it('writes titles and names in the nominative, trimmed, with no salutation', () => {
-    expect(
-      displayName(
-        person(' Jan ', 'Novák', {
-          titlesBefore: ' Mgr. ',
-          titlesAfter: 'Ph.D.',
-          salutation: null,
-        }),
-      ),
-    ).toBe('Mgr. Jan Novák, Ph.D.');
+  it('writes the names in the nominative, trimmed, with no salutation', () => {
+    expect(displayName(person(' Jan ', 'Novák', { salutation: null }))).toBe('Jan Novák');
   });
 });
 
@@ -191,10 +183,8 @@ describe('draftPersonOf', () => {
     const full: DraftPerson = {
       graphId: '01a15559-04d8-705c-96a3-c3c67ecd5caf',
       salutation: 'pani',
-      titlesBefore: 'Mgr.',
       givenName: 'Jana',
       familyName: 'Nováková',
-      titlesAfter: 'Ph.D.',
       head: 'clen',
       complement: 'PR oddělení',
       affiliation: '4.GC',

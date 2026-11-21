@@ -282,10 +282,9 @@ export const decideRequest = (rid: string, to: 'approved' | 'rejected' | 'blocke
   const ex = s.users.find((u) => u.email === r.email);
   return ex ? mail(s, ex.id, 'Přístup do Autoporady', to === 'approved' ? 'Přístup byl schválen.' : 'Přístup nebyl schválen.') : s;
 };
-/** The viewer's own salutation and degrees (ADR 0072 item 6); a degree left empty is none. */
-export const setAddress = (a: { salutation: Salutation; titlesBefore: string | null; titlesAfter: string | null }): Fx => (s) => {
-  const before = a.titlesBefore?.trim(); const after = a.titlesAfter?.trim();
-  const put = <T extends { titlesBefore?: string; titlesAfter?: string; salutation: Salutation | null }>({ titlesBefore: _b, titlesAfter: _a, ...u }: T): T => ({ ...u, salutation: a.salutation, ...(before && { titlesBefore: before }), ...(after && { titlesAfter: after }) }) as T;
+/** The viewer's own salutation (ADR 0072 item 6; the school uses no degrees, ADR 0076). */
+export const setAddress = (a: { salutation: Salutation }): Fx => (s) => {
+  const put = <T extends { salutation: Salutation | null }>(u: T): T => ({ ...u, salutation: a.salutation });
   return { ...s, users: up(s.users, s.userId!, put), cards: s.cards.map((c) => (c.id === s.userId ? put(c) : c)) };
 };
 /** On the own row only a staff tier changes (ADR 0072, decision A); a student or absolvent is at most a submitter. */

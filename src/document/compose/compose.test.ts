@@ -97,13 +97,13 @@ describe('composeDocument on the template replica', () => {
     const plain = (n: number) => pointContent(replica, n).map((b) => text(b).replaceAll(NB, ' '));
     expect(plain(1)).toEqual([
       'pondělí 12. října 2026, 10.00 až 11.00 hodin, ředitelna, Preslova, jednání s MČ Praha 5 o rekonstrukci dvora',
-      'středa 14. října 2026, 14.00 až 16.00 hodin, areál Smíchov, učebna S206, schůzka s rodiči 1.A, vede třídní učitelka paní Mgr. Jana Nováková',
+      'středa 14. října 2026, 14.00 až 16.00 hodin, areál Smíchov, učebna S206, schůzka s rodiči 1.A, vede třídní učitelka paní Jana Nováková',
     ]);
     expect(plain(2)).toEqual([
       'pondělí 12. října 2026, 8.00 až 12.00 hodin, areál Smíchov, celoškolní piškvorkový turnaj, kvalifikace do oblastního kola celostátní soutěže plšQworky, organizují pánové Jakub Svoboda a Martin Král (oba 2.GB)',
       'úterý 13. října 2026, 7.00 až 14.00 hodin, areál Smíchov, Next Zone Event Space, akce Vaib, za Next Zone Event Space koordinuje absolvent pan Jan Absolon',
       'úterý 13. října 2026, areál Smíchov, Den otevřených dveří',
-      'úterý 20. října až čtvrtek 22. října 2026, exkurze 2.B do CERNu, organizuje pan Mgr. Petr Dvořák',
+      'úterý 20. října až čtvrtek 22. října 2026, exkurze 2.B do CERNu, organizuje pan Petr Dvořák',
     ]);
     expect(plain(17)).toEqual([
       'čtvrtek 12. listopadu 2026, 8.00 hodin, areál Radlice, školní kolo matematické olympiády',

@@ -8,13 +8,11 @@ const p = (
   givenName: string,
   familyName: string,
   affiliation?: string,
-  titlesBefore?: string,
 ): Person => ({
   salutation,
   givenName,
   familyName,
   ...(affiliation && { affiliation }),
-  ...(titlesBefore && { titlesBefore }),
 });
 
 const participants = { join: 'comma', order: 'class-surname' } as const;
@@ -32,13 +30,7 @@ describe('participant lists', () => {
       [p('pan', 'John', 'Doe', '1.A'), p('pan', 'Petr', 'Dvořák', '3.C')],
       'pánové John Doe (1.A), Petr Dvořák (3.C)',
     ],
-    [
-      [
-        p('pani', 'Jana', 'Nováková', undefined, 'Mgr.'),
-        p('pani', 'Petra', 'Malá', undefined, 'Ing.'),
-      ],
-      'paní Ing. Petra Malá, Mgr. Jana Nováková',
-    ],
+    [[p('pani', 'Jana', 'Nováková'), p('pani', 'Petra', 'Malá')], 'paní Petra Malá, Jana Nováková'],
   ])('%#: %s', (people, text) => {
     expect(renderPeople(people, participants)).toBe(text);
   });
@@ -208,17 +200,17 @@ describe('next to a name with no class', () => {
 
   it('does not let „(všichni …)“ reach back over a group label', () => {
     const people = [
-      p('pani', 'Jana', 'Nováková', undefined, 'Mgr.'),
+      p('pani', 'Jana', 'Nováková'),
       p('pan', 'Adam', 'A', '1.A'),
       p('pan', 'Bořek', 'B', '1.A'),
       p('pan', 'Cyril', 'C', '1.A'),
     ];
     expect(renderPeople(people, participants)).toBe(
-      'paní Mgr. Jana Nováková, pánové Adam A (1.A), Bořek B (1.A), Cyril C (1.A)',
+      'paní Jana Nováková, pánové Adam A (1.A), Bořek B (1.A), Cyril C (1.A)',
     );
     expect(
       renderPeople([{ ...people[0]!, affiliation: '1.A' }, ...people.slice(1)], participants),
-    ).toBe(`paní Mgr. Jana Nováková, pánové Adam A, Bořek B, Cyril C (všichni${NB}1.A)`);
+    ).toBe(`paní Jana Nováková, pánové Adam A, Bořek B, Cyril C (všichni${NB}1.A)`);
     const women = [
       p('slecna', 'Eva', 'Malá'),
       p('pani', 'Alena', 'A', '2.B'),
@@ -253,14 +245,14 @@ describe('next to a name with no class', () => {
       'absolventka slečna Eva Malá, učitel pan Jan Novák, slečna Alena A (2.B), slečna Běla B (2.B) a slečna Cecílie C (2.B)',
     );
     const grouped = [
-      p('pani', 'Jana', 'Bílá', undefined, 'Mgr.'),
+      p('pani', 'Jana', 'Bílá'),
       p('pan', 'Jan', 'Novák'),
       p('slecna', 'Alena', 'A', '2.B'),
       p('slecna', 'Běla', 'B', '2.B'),
       p('slecna', 'Cecílie', 'C', '2.B'),
     ];
     expect(renderPeople(grouped, { ...participants, groupOrder: ['pani', 'pan'] })).toBe(
-      'paní Mgr. Jana Bílá, pan Jan Novák, slečny Alena A (2.B), Běla B (2.B), Cecílie C (2.B)',
+      'paní Jana Bílá, pan Jan Novák, slečny Alena A (2.B), Běla B (2.B), Cecílie C (2.B)',
     );
   });
 
@@ -354,8 +346,8 @@ describe('next to a name with no class', () => {
 
 describe('affiliations as stored', () => {
   it.each([
-    [[p('pani', 'Jana', 'Bílá', '3M', 'Ing.')], 'paní Ing. Jana Bílá (3M)'],
-    [[p('pani', 'Jana', 'Bílá', 'TU 1.A', 'Mgr.')], 'paní Mgr. Jana Bílá (TU 1.A)'],
+    [[p('pani', 'Jana', 'Bílá', '3M')], 'paní Jana Bílá (3M)'],
+    [[p('pani', 'Jana', 'Bílá', 'TU 1.A')], 'paní Jana Bílá (TU 1.A)'],
     [[p('pani', 'Jana', 'Bílá', ' učitelka fyziky ')], 'paní Jana Bílá (učitelka fyziky)'],
     [
       [p('pan', 'Adam', 'A', '1.A'), p('pan', 'Bořek', 'B', '1a')],
@@ -494,17 +486,13 @@ describe('people with a function (ADR 0072)', () => {
   ): Person => ({ ...person, head, ...(complement && { complement }) });
 
   it('prints a function and its complement before the salutation, a ředitel after it', () => {
-    const deputy = headed(
-      { ...p('pani', 'Jana', 'Nováková'), titlesBefore: 'Mgr.' },
-      'zastupce',
-      'pro pedagogickou činnost',
-    );
+    const deputy = headed(p('pani', 'Jana', 'Nováková'), 'zastupce', 'pro pedagogickou činnost');
     expect(renderPeople([deputy], organisers)).toBe(
-      'zástupkyně pro pedagogickou činnost paní Mgr. Jana Nováková',
+      'zástupkyně pro pedagogickou činnost paní Jana Nováková',
     );
-    expect(
-      renderPeople([headed(p('pan', 'Jan', 'Novák', undefined, 'Mgr.'), 'reditel')], organisers),
-    ).toBe('pan ředitel Mgr. Jan Novák');
+    expect(renderPeople([headed(p('pan', 'Jan', 'Novák'), 'reditel')], organisers)).toBe(
+      'pan ředitel Jan Novák',
+    );
   });
 
   it('keeps the affiliation after the name', () => {

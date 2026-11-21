@@ -77,10 +77,10 @@ export const isNameWord = (word: string): boolean =>
   !isTitleAfter(word);
 
 /**
- * The titles at the start of `tokens`, joined by „et“ as in „Mgr. et Mgr.“,
- * and the words after them. Used for a comma part: „Novák, Ing. Jan“.
+ * The words of `tokens` after the degrees at its start, which may be joined by
+ * „et“ as in „Mgr. et Mgr.“. Used for a comma part: „Novák, Ing. Jan“.
  */
-export function takeTitlesBefore(tokens: readonly string[]): { titles: string[]; rest: string[] } {
+export function skipTitlesBefore(tokens: readonly string[]): string[] {
   let at = 0;
   while (at < tokens.length) {
     const word = tokens[at] ?? '';
@@ -88,7 +88,7 @@ export function takeTitlesBefore(tokens: readonly string[]): { titles: string[];
     if (!isTitleBefore(word) && !joined) break;
     at++;
   }
-  return { titles: tokens.slice(0, at), rest: tokens.slice(at) };
+  return tokens.slice(at);
 }
 
 /**

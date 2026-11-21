@@ -3,7 +3,7 @@ import type { DraftPerson } from '@/domain/report';
 import { directoryPerson } from './directory';
 import type { Card, State } from './types';
 
-const CARD: Card = { id: 'k', salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', titlesBefore: 'Mgr.' };
+const CARD: Card = { id: 'k', salutation: 'pani', givenName: 'Jana', familyName: 'Nováková' };
 const s = { now: '2026-11-19T09:00:00.000Z', users: [] } as unknown as State;
 const was: DraftPerson = { salutation: 'pani', givenName: 'Jana', familyName: 'Nováková', affiliation: 'Matematika', affiliationYear: '2025/2026' };
 

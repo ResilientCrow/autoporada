@@ -13,7 +13,7 @@ function splitLast(text: string): { before: string; typing: string } {
 /** What a card writes into the organizer field (ADR 0072 item 7): the headed name, or only the name when the card has no salutation (the author adds theirs). Free text from then on (ADR 0060). */
 function phraseOf(card: Card): string {
   const { salutation, head, complement } = personFromCard(card);
-  const name = formatName({ salutation: salutation ?? 'pan', givenName: card.givenName, familyName: card.familyName, ...(card.titlesBefore && { titlesBefore: card.titlesBefore }), ...(card.titlesAfter && { titlesAfter: card.titlesAfter }) });
+  const name = formatName({ salutation: salutation ?? 'pan', givenName: card.givenName, familyName: card.familyName });
   return salutation ? headedName({ salutation, ...(head && { head }), ...(complement && { complement }) }, name) : name;
 }
 

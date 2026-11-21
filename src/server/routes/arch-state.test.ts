@@ -102,8 +102,6 @@ const userRow = (
   status: over.status ?? 'active',
   tier,
   salutation: over.salutation ?? null,
-  titlesBefore: null,
-  titlesAfter: null,
   jobTitle: null,
   department: null,
 });

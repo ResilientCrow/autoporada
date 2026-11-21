@@ -115,10 +115,8 @@ export function snapshotPerson(p: DraftPerson, addressed = false): SnapshotPerso
   if (familyName === '' || (p.salutation === null && !addressed)) return null;
   return {
     ...(!addressed && p.salutation !== null && { salutation: p.salutation }),
-    ...optional('titlesBefore', p.titlesBefore),
     givenName: singleLine(p.givenName),
     familyName,
-    ...optional('titlesAfter', p.titlesAfter),
     ...(!addressed &&
       p.head !== undefined && { head: p.head, ...optional('complement', p.complement) }),
     ...optional('affiliation', p.affiliation),

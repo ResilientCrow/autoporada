@@ -20,7 +20,29 @@ const person = (
 
 describe('person field caps', () => {
   it('are the form limits, exported for the point content to reuse', () => {
-    expect(PERSON_FIELD_MAX).toEqual({ name: 80, title: 40, affiliation: 120, complement: 80 });
+    expect(PERSON_FIELD_MAX).toEqual({ name: 80, affiliation: 120, complement: 80 });
+  });
+});
+
+describe('degrees', () => {
+  // The school uses no degrees (ADR 0076): a pasted list may carry them, the row drops them.
+  it.each([
+    ['Mgr. Jana Nováková (3.B)', person('Jana', 'Nováková', { affiliation: '3.B' })],
+    ['Ing. Petr Dvořák, Ph.D.', person('Petr', 'Dvořák')],
+  ])('drops them silently from %j', (line, expected) => {
+    expect(parse(line)).toEqual(expected);
+  });
+
+  it('drops them from a list that mixes both', () => {
+    const { rows, rejected } = parsePeopleList(
+      'Mgr. Jana Nováková (3.B)\nIng. Petr Dvořák, Ph.D.\nEva Černá',
+    );
+    expect(rejected).toEqual([]);
+    expect(rows.map(({ line: _l, source: _s, ...fields }) => fields)).toEqual([
+      person('Jana', 'Nováková', { affiliation: '3.B' }),
+      person('Petr', 'Dvořák'),
+      person('Eva', 'Černá'),
+    ]);
   });
 });
 
@@ -32,35 +54,23 @@ describe('name shapes', () => {
     ['Novák Jan 3.B', person('Jan', 'Novák', { affiliation: '3.B' })],
     ['Jan Novák, 3.B', person('Jan', 'Novák', { affiliation: '3.B' })],
     ['Jan Novák (3.B)', person('Jan', 'Novák', { affiliation: '3.B' })],
-    ['Mgr. Jana Nová', person('Jana', 'Nová', { titlesBefore: 'Mgr.' })],
-    ['Jana Nová, Ph.D.', person('Jana', 'Nová', { titlesAfter: 'Ph.D.' })],
-    ['Jana Nová Ph.D.', person('Jana', 'Nová', { titlesAfter: 'Ph.D.' })],
-    [
-      'Ing. Petr Dvořák, Ph.D., 2.A',
-      person('Petr', 'Dvořák', { titlesBefore: 'Ing.', titlesAfter: 'Ph.D.', affiliation: '2.A' }),
-    ],
-    [
-      '2.A Ing. Petr Dvořák, Ph.D.',
-      person('Petr', 'Dvořák', { titlesBefore: 'Ing.', titlesAfter: 'Ph.D.', affiliation: '2.A' }),
-    ],
-    ['Mgr. et Mgr. Eva Černá', person('Eva', 'Černá', { titlesBefore: 'Mgr. et Mgr.' })],
-    [
-      'doc. Ing. Karel Blažek, CSc.',
-      person('Karel', 'Blažek', { titlesBefore: 'doc. Ing.', titlesAfter: 'CSc.' }),
-    ],
-    ['Ing. arch. Tomáš Veselý', person('Tomáš', 'Veselý', { titlesBefore: 'Ing. arch.' })],
-    ['Prof. Marie Horáková', person('Marie', 'Horáková', { titlesBefore: 'Prof.' })],
-    ['Jana Nová, Ph.D., MBA', person('Jana', 'Nová', { titlesAfter: 'Ph.D., MBA' })],
+    ['Mgr. Jana Nová', person('Jana', 'Nová')],
+    ['Jana Nová, Ph.D.', person('Jana', 'Nová')],
+    ['Jana Nová Ph.D.', person('Jana', 'Nová')],
+    ['Ing. Petr Dvořák, Ph.D., 2.A', person('Petr', 'Dvořák', { affiliation: '2.A' })],
+    ['2.A Ing. Petr Dvořák, Ph.D.', person('Petr', 'Dvořák', { affiliation: '2.A' })],
+    ['Mgr. et Mgr. Eva Černá', person('Eva', 'Černá')],
+    ['doc. Ing. Karel Blažek, CSc.', person('Karel', 'Blažek')],
+    ['Ing. arch. Tomáš Veselý', person('Tomáš', 'Veselý')],
+    ['Prof. Marie Horáková', person('Marie', 'Horáková')],
+    ['Jana Nová, Ph.D., MBA', person('Jana', 'Nová')],
     // a title that belongs before the name, written after a comma
-    ['Jan Novák, Bc.', person('Jan', 'Novák', { titlesBefore: 'Bc.' })],
-    ['Novák Jan, Mgr.', person('Jan', 'Novák', { titlesBefore: 'Mgr.' })],
-    ['Novák, Ing. Jan', person('Jan', 'Novák', { titlesBefore: 'Ing.' })],
-    ['Novák, Mgr. et Mgr. Jana', person('Jana', 'Novák', { titlesBefore: 'Mgr. et Mgr.' })],
-    [
-      'Novák, Ing. Jan, Ph.D.',
-      person('Jan', 'Novák', { titlesBefore: 'Ing.', titlesAfter: 'Ph.D.' }),
-    ],
-    ['Mgr. Jan Novák, Bc.', person('Jan', 'Novák', { titlesBefore: 'Mgr. Bc.' })],
+    ['Jan Novák, Bc.', person('Jan', 'Novák')],
+    ['Novák Jan, Mgr.', person('Jan', 'Novák')],
+    ['Novák, Ing. Jan', person('Jan', 'Novák')],
+    ['Novák, Mgr. et Mgr. Jana', person('Jana', 'Novák')],
+    ['Novák, Ing. Jan, Ph.D.', person('Jan', 'Novák')],
+    ['Mgr. Jan Novák, Bc.', person('Jan', 'Novák')],
     ['Novák, J.', person('J.', 'Novák')],
     ['Petr Dvořák, Gymnázium Praha', person('Petr', 'Dvořák', { affiliation: 'Gymnázium Praha' })],
   ])('reads %j', (line, expected) => {
@@ -264,9 +274,9 @@ describe('recent people', () => {
     );
   });
 
-  it('keeps titles and class when it swaps', () => {
+  it('keeps the class when it swaps', () => {
     expect(parse('Ing. Vlk Bořivoj, Ph.D., 4.C', recents)).toEqual(
-      person('Bořivoj', 'Vlk', { titlesBefore: 'Ing.', titlesAfter: 'Ph.D.', affiliation: '4.C' }),
+      person('Bořivoj', 'Vlk', { affiliation: '4.C' }),
     );
   });
 });
@@ -276,7 +286,7 @@ describe('decomposed text', () => {
   it('reads the same as the precomposed text, and returns it precomposed', () => {
     const decomposed = parse('Nova\u0301kova\u0301 Bo\u0072\u030civoj, Ing.');
     expect(decomposed).toEqual(parse('Nováková Bořivoj, Ing.'));
-    expect(decomposed).toEqual(person('Bořivoj', 'Nováková', { titlesBefore: 'Ing.' }));
+    expect(decomposed).toEqual(person('Bořivoj', 'Nováková'));
   });
 
   it('keeps the source precomposed too', () => {
@@ -336,9 +346,6 @@ describe('lines and separators', () => {
 });
 
 describe('rejected lines', () => {
-  const titles = (title: string, count: number, glue: string) =>
-    Array.from({ length: count }, () => title).join(glue);
-
   it.each([
     ['Jan', 'a lone given name'],
     ['Novák', 'a lone surname'],
@@ -372,12 +379,6 @@ describe('rejected lines', () => {
   it.each([
     ['given name', `${'A'.repeat(81)} Novák`, `${'A'.repeat(80)} Novák`],
     ['family name', `Jan ${'A'.repeat(81)}`, `Jan ${'A'.repeat(80)}`],
-    ['title before', `${titles('Ing.', 9, ' ')} Jan Novák`, `${titles('Ing.', 8, ' ')} Jan Novák`],
-    [
-      'title after',
-      `Jan Novák, ${titles('Ph.D.', 7, ', ')}`,
-      `Jan Novák, ${titles('Ph.D.', 6, ', ')}`,
-    ],
     ['organisation', `Jan Novák (${'x'.repeat(121)})`, `Jan Novák (${'x'.repeat(120)})`],
   ])('rejects a %s over its cap as too-long, and accepts the cap itself', (_what, over, at) => {
     expect(parsePeopleList(over).rejected).toMatchObject([{ line: 1, code: 'too-long' }]);
@@ -496,12 +497,10 @@ describe('a list pasted from a staff room', () => {
     expect(truncated).toBe(false);
     expect(rejected).toEqual([{ line: 1, code: 'no-surname', source: 'Seznam hostů:' }]);
     expect(rows.map(({ line, source: _source, ...fields }) => [line, fields])).toEqual([
-      [2, person('Hana', 'Králová', { titlesBefore: 'Mgr.', affiliation: 'učitelka dějepisu' })],
+      [2, person('Hana', 'Králová', { affiliation: 'učitelka dějepisu' })],
       [
         3,
         person('Libor', 'Šimek', {
-          titlesBefore: 'Ing.',
-          titlesAfter: 'Ph.D.',
           affiliation: 'ČVUT',
         }),
       ],

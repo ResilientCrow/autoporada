@@ -9,11 +9,7 @@ const row = (
   id: string,
   tier: Tier | null,
   role = 'submitter',
-  address: {
-    salutation?: Salutation;
-    titlesBefore?: string;
-    titlesAfter?: string;
-  } = {},
+  address: { salutation?: Salutation } = {},
 ) => ({
   id,
   version: 3,
@@ -23,8 +19,6 @@ const row = (
   status: 'active',
   tier,
   salutation: address.salutation ?? null,
-  titlesBefore: address.titlesBefore ?? null,
-  titlesAfter: address.titlesAfter ?? null,
   jobTitle: null,
   department: null,
 });
@@ -57,15 +51,11 @@ describe('peopleFor: the tier (ADR 0072)', () => {
   });
 });
 
-describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
+describe('peopleFor: the salutation (ADR 0072 item 6)', () => {
   const addressed = [
-    row('me', 'ucitel', 'submitter', {
-      salutation: 'pani',
-      titlesBefore: 'Mgr.',
-      titlesAfter: 'Ph.D.',
-    }),
+    row('me', 'ucitel', 'submitter', { salutation: 'pani' }),
     // The name reads as a woman's, and the person said „pan“: their answer stands.
-    row('kolega', 'zamestnanec', 'submitter', { salutation: 'pan', titlesBefore: 'Ing.' }),
+    row('kolega', 'zamestnanec', 'submitter', { salutation: 'pan' }),
     row('eva', 'student', 'submitter', { salutation: 'slecna' }),
     // Named „Jana“, which reads as a woman's: nothing is guessed from it.
     row('nikdo', null),
@@ -83,40 +73,25 @@ describe('peopleFor: the salutation and the degrees (ADR 0072 item 6)', () => {
 
   it('gives the headmaster every row’s own answer', () => {
     const people = list(true);
-    expect(byId(people, 'me')).toMatchObject({
-      salutation: 'pani',
-      titlesBefore: 'Mgr.',
-      titlesAfter: 'Ph.D.',
-    });
-    expect(byId(people, 'kolega')).toMatchObject({ salutation: 'pan', titlesBefore: 'Ing.' });
+    expect(byId(people, 'me')).toMatchObject({ salutation: 'pani' });
+    expect(byId(people, 'kolega')).toMatchObject({ salutation: 'pan' });
     expect(byId(people, 'eva')).toMatchObject({ salutation: 'slecna' });
   });
 
-  it('gives anyone else their own answer only: others’ salutation and degrees stay theirs', () => {
+  it('gives anyone else their own answer only: others’ salutation stays theirs', () => {
     for (const actorId of ['me', 'eva']) {
       const people = list(false, actorId);
       const own = byId(people, actorId);
       expect(own).toMatchObject({ salutation: actorId === 'me' ? 'pani' : 'slecna' });
       for (const other of people.filter((p) => p.id !== actorId && p.id !== 'vedeni')) {
         expect(other).toMatchObject({ salutation: null });
-        expect(other).not.toHaveProperty('titlesBefore');
-        expect(other).not.toHaveProperty('titlesAfter');
       }
     }
-    expect(byId(list(false), 'me')).toMatchObject({ titlesBefore: 'Mgr.', titlesAfter: 'Ph.D.' });
   });
 
   it('guesses nothing: a user without a salutation comes without one', () => {
     const nikdo = byId(list(true), 'nikdo');
     expect(nikdo).toMatchObject({ salutation: null });
-    expect(nikdo).not.toHaveProperty('titlesBefore');
-    expect(nikdo).not.toHaveProperty('titlesAfter');
-  });
-
-  it('leaves out an absent degree instead of sending null', () => {
-    const eva = byId(list(true), 'eva');
-    expect(eva).not.toHaveProperty('titlesBefore');
-    expect(eva).not.toHaveProperty('titlesAfter');
   });
 });
 
@@ -161,8 +136,8 @@ describe('cardsFor: what a person writing a point may copy of a colleague (ADR 0
     role,
   });
   const ROWS = [
-    row('me', 'ucitel', 'submitter', { salutation: 'pani', titlesBefore: 'Mgr.' }),
-    row('reditel', 'reditel', 'headmaster', { salutation: 'pan', titlesAfter: 'Ph.D.' }),
+    row('me', 'ucitel', 'submitter', { salutation: 'pani' }),
+    row('reditel', 'reditel', 'headmaster', { salutation: 'pan' }),
     row('zastupkyne', 'vedeni', 'reviewer', { salutation: 'pani' }),
     row('eva', 'student', 'submitter', { salutation: 'slecna' }),
     row('bez-osloveni', 'zamestnanec'),
@@ -171,16 +146,7 @@ describe('cardsFor: what a person writing a point may copy of a colleague (ADR 0
     withStatus(row('odesel', 'ucitel', 'submitter', { salutation: 'pan' }), 'deactivated'),
   ];
   const FUNCTIONS = new Map([['zastupkyne', [ZASTUPCE]]]);
-  const CARD_KEYS = new Set([
-    'id',
-    'salutation',
-    'givenName',
-    'familyName',
-    'titlesBefore',
-    'titlesAfter',
-    'head',
-    'complement',
-  ]);
+  const CARD_KEYS = new Set(['id', 'salutation', 'givenName', 'familyName', 'head', 'complement']);
   const cards = (viewer: 'staff' | 'student' | 'none', actorId = 'me') =>
     cardsFor({ rows: ROWS, actorId, viewer, functions: FUNCTIONS });
   const ids = (list: ReturnType<typeof cards>) => list.map((c) => c.id).sort();
@@ -206,16 +172,32 @@ describe('cardsFor: what a person writing a point may copy of a colleague (ADR 0
     expect(cards('student', 'nobody')).toEqual([]);
   });
 
-  it('copies name, salutation and degrees', () => {
+  it('copies name and salutation', () => {
     const card = cards('staff').find((c) => c.id === 'me');
     expect(card).toMatchObject({
       salutation: 'pani',
       givenName: 'Jana',
       familyName: 'me',
-      titlesBefore: 'Mgr.',
     });
-    expect(card).not.toHaveProperty('titlesAfter');
-    expect(cards('staff').find((c) => c.id === 'reditel')).toMatchObject({ titlesAfter: 'Ph.D.' });
+  });
+
+  it('drops degrees from the directory name: the school uses none (ADR 0076)', () => {
+    const named = (displayName: string) =>
+      cardsFor({
+        rows: [{ ...row('me', 'ucitel'), displayName }],
+        actorId: 'me',
+        viewer: 'staff',
+        functions: new Map(),
+      })[0];
+    expect(named('Mgr. Jana Nováková, Ph.D.')).toMatchObject({
+      givenName: 'Jana',
+      familyName: 'Nováková',
+    });
+    expect(named('Ing. et Ing. Petr Dvořák')).toMatchObject({
+      givenName: 'Petr',
+      familyName: 'Dvořák',
+    });
+    expect(named('Jana')).toMatchObject({ givenName: 'Jana', familyName: '' });
   });
 
   it('guesses nothing: a user without a salutation keeps null', () => {

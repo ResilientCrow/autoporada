@@ -373,10 +373,8 @@ function worstCase() {
   const full = {
     graphId: randomUUID(),
     salutation: 'pan',
-    titlesBefore: x(cap.title),
     givenName: x(cap.name),
     familyName: x(cap.name),
-    titlesAfter: x(cap.title),
     affiliation: x(cap.affiliation),
     affiliationYear: '2026/2027', // a school year is always POINT_LIMITS.affiliationYear long
   };
@@ -402,7 +400,11 @@ function worstCase() {
     statements,
   });
   const bytes = () => utf8(JSON.stringify(content));
-  for (let i = 0; bytes() < POINT_LIMITS.contentBytes - 1000; i++) {
+  for (
+    let i = 0;
+    i < POINT_LIMITS.peoplePerPoint && bytes() < POINT_LIMITS.contentBytes - 1000;
+    i++
+  ) {
     bullets[i % bullets.length]!.people.push(full);
   }
   const pad = POINT_LIMITS.contentBytes - bytes();

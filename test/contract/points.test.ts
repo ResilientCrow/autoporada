@@ -29,7 +29,7 @@ const PEOPLE: DraftBullet = {
   order: 'class-surname',
   people: [
     { salutation: 'pan', givenName: 'Jan', familyName: 'Novák', affiliation: '3.B' },
-    { salutation: null, titlesBefore: 'Mgr.', givenName: 'Eva', familyName: 'Malá' },
+    { salutation: null, givenName: 'Eva', familyName: 'Malá' },
   ],
 };
 

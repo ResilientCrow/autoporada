@@ -456,14 +456,14 @@ describe('missingForSubmit: report', () => {
     ]);
   });
 
-  it('formats the name with its titles', () => {
-    const doc = person('Jana', 'Nová', null, { titlesBefore: 'Mgr.', titlesAfter: ' Ph.D. ' });
+  it('formats the name without degrees', () => {
+    const doc = person('Jana', 'Nová', null);
     const content = withBullets(
       peopleBullet('organisers', [doc]),
       peopleBullet('participants', [jan]),
     );
     expect(check(content).problems).toMatchObject([
-      { code: 'salutation-required', params: { name: 'Mgr. Jana Nová, Ph.D.' } },
+      { code: 'salutation-required', params: { name: 'Jana Nová' } },
     ]);
   });
 
@@ -578,9 +578,9 @@ describe('missingForSubmit: report', () => {
       ).toEqual([warning(1, 'Jan Novák')]);
     });
 
-    it('matches by name when either side has no graphId, ignoring case and titles', () => {
+    it('matches by name when either side has no graphId, ignoring case', () => {
       const listed = person('Jan', 'Novák', 'pan', { graphId: 'g-1' });
-      const typed = person('JAN ', ' novák', 'pan', { titlesBefore: 'Ing.' });
+      const typed = person('JAN ', ' novák', 'pan');
       const bullets = [peopleBullet('participants', [listed])];
       expect(
         check({ ...ready, bullets, statements: [statement({ speaker: typed })] }).warnings,

@@ -26,8 +26,6 @@ export const USER_RECORD = {
   role: users.role,
   tier: users.tier,
   salutation: users.salutation,
-  titlesBefore: users.titlesBefore,
-  titlesAfter: users.titlesAfter,
   status: users.status,
   version: users.version,
   createdAt: users.createdAt,
@@ -128,8 +126,6 @@ export function createUserRepo(db: TxDatabase, ctx: TxContext): UserRepo {
         .update(users)
         .set({
           salutation: patch.salutation,
-          titlesBefore: patch.titlesBefore,
-          titlesAfter: patch.titlesAfter,
           updatedAt: ctx.now,
         })
         .where(and(eq(users.id, id), visible()))

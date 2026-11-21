@@ -5,15 +5,13 @@ import type { DraftPerson, PointContent } from './content';
 /** The part of a point that says who took part: its bullets. */
 type Bullets = Pick<PointContent, 'bullets'>;
 
-/** The person's titles and names in the nominative, trimmed (formatName leaves the salutation out, so any serves for a person who has none yet). */
+/** The person's names in the nominative, trimmed (formatName leaves the salutation out, so any serves for a person who has none yet). */
 export function displayName(p: DraftPerson): string {
   const trim = (s: string | undefined) => s?.trim() ?? '';
   const name: PersonName = {
     salutation: p.salutation ?? 'pan',
-    titlesBefore: trim(p.titlesBefore),
     givenName: trim(p.givenName),
     familyName: trim(p.familyName),
-    titlesAfter: trim(p.titlesAfter),
   };
   return formatName(name);
 }
@@ -22,10 +20,8 @@ export function displayName(p: DraftPerson): string {
 const PERSON_KEYS = [
   'graphId',
   'salutation',
-  'titlesBefore',
   'givenName',
   'familyName',
-  'titlesAfter',
   'head',
   'complement',
   'affiliation',
@@ -43,14 +39,14 @@ export function draftPersonOf(p: DraftPerson): DraftPerson {
   return kept as unknown as DraftPerson;
 }
 
-/** The person by given and family name, ignoring case and titles; the two names stay apart. */
+/** The person by given and family name, ignoring case; the two names stay apart. */
 export function nameKey(p: DraftPerson): string {
   return `${p.givenName.trim()}|${p.familyName.trim()}`.toLocaleLowerCase('cs');
 }
 
 /**
  * The same person: by graphId when both have one, else by given and family
- * name, ignoring case and titles (a typed copy of a listed person still matches).
+ * name, ignoring case (a typed copy of a listed person still matches).
  * The two names stay apart in the key: „Jan Novák“ „Svoboda“ is not „Jan“
  * „Novák Svoboda“.
  */

@@ -37,8 +37,6 @@ const user = (role: Role, status: UserStatus = 'active', id = 'user'): UserRecor
   role,
   tier: null,
   salutation: null,
-  titlesBefore: null,
-  titlesAfter: null,
   status,
   version: 1,
   createdAt: AT,

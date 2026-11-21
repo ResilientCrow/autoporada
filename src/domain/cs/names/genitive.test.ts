@@ -429,9 +429,9 @@ describe('suggestGenitive', () => {
     ['pan', 'Jean-Paul Dupont', 'pana Jeana-Paula Duponta', 'high'],
     ['pan', 'Ludwig van Beethoven', 'pana Ludwiga van Beethovena', 'high'],
     ['pan', 'Jan Novák-Dvořák', 'pana Jana Nováka-Dvořáka', 'high'],
-    ['pan', 'Mgr. Jan Novák', 'pana Mgr. Jana Nováka', 'high'],
-    ['pan', 'Ing. Petr Dvořák, Ph.D.', 'pana Ing. Petra Dvořáka, Ph.D.', 'high'],
-    ['pan', 'prof. Ing. Josef Veselý, CSc.', 'pana prof. Ing. Josefa Veselého, CSc.', 'high'],
+    ['pan', 'Mgr. Jan Novák', 'pana Jana Nováka', 'high'],
+    ['pan', 'Ing. Petr Dvořák, Ph.D.', 'pana Petra Dvořáka', 'high'],
+    ['pan', 'prof. Ing. Josef Veselý, CSc.', 'pana Josefa Veselého', 'high'],
     ['pan', 'JAN NOVÁK', 'pana JANA NOVÁKA', 'high'],
     ['pani', 'Jana Nováková', 'paní Jany Novákové', 'high'],
     ['slecna', 'Eva Malá', 'slečny Evy Malé', 'high'],
@@ -444,8 +444,8 @@ describe('suggestGenitive', () => {
     ['slecna', 'Emma Watson', 'slečny Emmy Watson', 'high'],
     ['slecna', 'Anna Marie Horáková', 'slečny Anny Marie Horákové', 'high'],
     ['pani', 'Alice Nováková-Dvořáková', 'paní Alice Novákové-Dvořákové', 'high'],
-    ['pani', 'Mgr. Petra Svobodová, Ph.D.', 'paní Mgr. Petry Svobodové, Ph.D.', 'high'],
-    ['pani', 'Ing. arch. Klára Šťastná', 'paní Ing. arch. Kláry Šťastné', 'high'],
+    ['pani', 'Mgr. Petra Svobodová, Ph.D.', 'paní Petry Svobodové', 'high'],
+    ['pani', 'Ing. arch. Klára Šťastná', 'paní Kláry Šťastné', 'high'],
     ['slecna', 'María Garcia', 'slečny María Garcia', 'low'],
   ];
 
@@ -459,7 +459,7 @@ describe('suggestGenitive', () => {
   it('puts a function before the salutation and a profesor after it (ADR 0073)', () => {
     const name = (salutation: Salutation, full: string) => splitFullName(full, salutation);
     expect(suggestGenitive({ ...name('pan', 'Mgr. Jan Novák'), head: 'profesor' }).text).toBe(
-      'pana profesora Mgr. Jana Nováka',
+      'pana profesora Jana Nováka',
     );
     expect(
       suggestGenitive({
@@ -467,7 +467,7 @@ describe('suggestGenitive', () => {
         head: 'zastupce',
         complement: 'pro pedagogickou činnost',
       }).text,
-    ).toBe('zástupkyně pro pedagogickou činnost paní Mgr. Jany Novákové');
+    ).toBe('zástupkyně pro pedagogickou činnost paní Jany Novákové');
     expect(
       suggestGenitive({ ...name('slecna', 'Eva Malá'), head: 'clen', complement: 'PR oddělení' })
         .text,
@@ -509,10 +509,7 @@ describe('splitFullName', () => {
     ['Jan Novák', { givenName: 'Jan', familyName: 'Novák' }],
     ['Anna Marie Horáková', { givenName: 'Anna Marie', familyName: 'Horáková' }],
     ['Ludwig van Beethoven', { givenName: 'Ludwig', familyName: 'van Beethoven' }],
-    [
-      'prof. Ing. Josef Veselý, CSc.',
-      { titlesBefore: 'prof. Ing.', givenName: 'Josef', familyName: 'Veselý', titlesAfter: 'CSc.' },
-    ],
+    ['prof. Ing. Josef Veselý, CSc.', { givenName: 'Josef', familyName: 'Veselý' }],
     ['Novák', { givenName: '', familyName: 'Novák' }],
   ])('%s', (raw, expected) => {
     expect(splitFullName(raw, 'pan')).toEqual({ salutation: 'pan', ...expected });
@@ -597,10 +594,10 @@ describe('review regressions (IJP ids 320, 321, 323, 324, 350)', () => {
     ['pan', 'Ben Novák', 'pana Bena Nováka'],
     ['pan', 'Al Pacino', 'pana Ala Pacina'],
     ['pan', 'Ludwig van Beethoven', 'pana Ludwiga van Beethovena'],
-    ['pani', 'Mgr. et Mgr. Jana Nováková', 'paní Mgr. et Mgr. Jany Novákové'],
-    ['pan', 'Dr. John Smith', 'pana Dr. Johna Smitha'],
-    ['pan', 'Petr Dvořák Ph.D.', 'pana Petra Dvořáka, Ph.D.'],
-    ['pan', 'ThMgr. Jan Kříž', 'pana ThMgr. Jana Kříže'],
+    ['pani', 'Mgr. et Mgr. Jana Nováková', 'paní Jany Novákové'],
+    ['pan', 'Dr. John Smith', 'pana Johna Smitha'],
+    ['pan', 'Petr Dvořák Ph.D.', 'pana Petra Dvořáka'],
+    ['pan', 'ThMgr. Jan Kříž', 'pana Jana Kříže'],
   ] as const)('%s %s → %s', (salutation, full, expected) => {
     expect(suggestGenitive(splitFullName(full, salutation)).text).toBe(expected);
   });

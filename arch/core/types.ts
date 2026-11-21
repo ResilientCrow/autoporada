@@ -8,7 +8,7 @@ import type { CalDate, WallTime } from '@/domain/time';
 
 export type Role = 'pending' | 'submitter' | 'reviewer' | 'headmaster';
 export interface User {
-  id: string; /** The person's own answer (ADR 0072 item 6); null until they gave it, never guessed. */ salutation: Salutation | null; givenName: string; familyName: string; titlesBefore?: string; titlesAfter?: string;
+  id: string; /** The person's own answer (ADR 0072 item 6); null until they gave it, never guessed. */ salutation: Salutation | null; givenName: string; familyName: string;
   email: string; role: Role; isStudent: boolean; status: 'active' | 'blocked'; affiliation?: string; job?: string;
   /** Who they are at the school (ADR 0072): only on full rows (the headmaster's view, the own row); null until set. */
   tier?: Tier | null;
@@ -17,7 +17,7 @@ export interface User {
 }
 /** What a people row may copy of a user (ADR 0072 item 7): the address as printed, never contact, role, tier or the function list. `head` and `complement` are what prints before the name. */
 export interface Card {
-  id: string; salutation: Salutation | null; givenName: string; familyName: string; titlesBefore?: string; titlesAfter?: string; head?: PersonHead; complement?: string;
+  id: string; salutation: Salutation | null; givenName: string; familyName: string; head?: PersonHead; complement?: string;
 }
 export interface Trail { at: string; who: string; what: string; note?: string; parts?: string[]; original?: Record<string, string> }
 export interface Point {

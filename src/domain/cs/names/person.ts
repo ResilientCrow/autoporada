@@ -14,14 +14,10 @@ export function salutationsFor(student: boolean): readonly Salutation[] {
 
 export interface PersonName {
   readonly salutation: Salutation;
-  /** „Mgr.“, „Ing. arch.“ — written before the name, never declined. */
-  readonly titlesBefore?: string;
   /** One or more given names: „Anna Marie“. */
   readonly givenName: string;
   /** May include particles and hyphens: „van Beethoven“, „Nováková-Dvořáková“. */
   readonly familyName: string;
-  /** „Ph.D.“, „CSc.“ — written after the name, separated by a comma. */
-  readonly titlesAfter?: string;
 }
 
 /**
@@ -29,7 +25,7 @@ export interface PersonName {
  * reuse them, and the paste parser checks its rows against them, so a pasted
  * row never fails the form's own validation later.
  */
-export const PERSON_FIELD_MAX = { name: 80, title: 40, affiliation: 120, complement: 80 } as const;
+export const PERSON_FIELD_MAX = { name: 80, affiliation: 120, complement: 80 } as const;
 
 export const SALUTATION: Readonly<
   Record<Salutation, { label: string; genitive: string; plural: string; sex: Sex }>
@@ -39,8 +35,7 @@ export const SALUTATION: Readonly<
   slecna: { label: 'slečna', genitive: 'slečny', plural: 'slečny', sex: 'f' },
 };
 
-/** „Mgr. Jan Novák, Ph.D.“ — the name as written in lists (nominative). */
+/** „Jan Novák“ — the name as written in lists (nominative); the school uses no degrees (ADR 0076). */
 export function formatName(p: PersonName): string {
-  const core = [p.titlesBefore, p.givenName, p.familyName].filter(Boolean).join(' ');
-  return p.titlesAfter ? `${core}, ${p.titlesAfter}` : core;
+  return [p.givenName, p.familyName].filter(Boolean).join(' ');
 }

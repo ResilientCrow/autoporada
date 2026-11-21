@@ -23,30 +23,11 @@ export const changeUserAccessOutput = z.object({
 });
 
 /**
- * A degree on one line, as typed: trimmed, and empty is none. Control characters, line breaks,
- * tabs and direction marks are refused, as the snapshot's `text` rule does, and the length cap is
- * the one of the column's CHECK.
- */
-const degree = z
-  .string()
-  .trim()
-  .max(PERSON_FIELD_MAX.title)
-  .refine(
-    (value) => !hasForbiddenCharacters(value, { allowTab: false }),
-    'contains control or direction characters',
-  )
-  .transform((value) => value || null)
-  .nullable();
-
-/**
- * A person's own answer to how documents address them (ADR 0072 item 6): the whole address, since
- * the form sends all of it. Whether the salutation suits the tier is the use case's to check. It
- * names no user: it is always the signed-in one's own row.
+ * A person's own answer to how documents address them (ADR 0072 item 6): their salutation (the school uses
+ * no degrees, ADR 0076). Whether it suits the tier is the use case's to check. It names no user: it is always the signed-in one's own row.
  */
 export const setAddressInput = z.strictObject({
   salutation: z.enum(SALUTATIONS),
-  titlesBefore: degree,
-  titlesAfter: degree,
 });
 /** Whether anything was written; the version stays, since an address is not access. */
 export const setAddressOutput = z.object({ changed: z.boolean() });

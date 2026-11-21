@@ -14,9 +14,6 @@ export interface UserRecord {
   readonly tier: Tier | null;
   /** How documents address them (ADR 0072 item 6): their own answer, null until given. */
   readonly salutation: Salutation | null;
-  /** Degrees as they typed them: before the name („Mgr.“) and after it („Ph.D.“). */
-  readonly titlesBefore: string | null;
-  readonly titlesAfter: string | null;
   readonly status: UserStatus;
   readonly version: number;
   readonly createdAt: Date;
@@ -39,11 +36,9 @@ export interface AccessPatch {
   readonly status?: UserStatus;
 }
 
-/** A person's own answer to how documents address them; all three fields are written together. */
+/** A person's own answer to how documents address them (the school uses no degrees, ADR 0076). */
 export interface AddressPatch {
   readonly salutation: Salutation | null;
-  readonly titlesBefore: string | null;
-  readonly titlesAfter: string | null;
 }
 
 /** Users, as the transaction's principal may see them (scope `user`). */
@@ -73,7 +68,7 @@ export interface UserRepo {
    */
   changeAccess(id: string, expectedVersion: number, patch: AccessPatch): Promise<UserRecord>;
   /**
-   * Writes the salutation and the degrees of the row `id`. Not access: the version stays and no
+   * Writes the salutation of the row `id`. Not access: the version stays and no
    * session ends. A user principal writes only their own row (`profile.manage`, else
    * ScopeViolation); of the system only `test.seed` does. ScopeViolation too for a row the
    * principal does not see.
