@@ -77,7 +77,6 @@ button.pick:hover{border-color:var(--ink);background:var(--wash)}
 /* správa */
 .work.solo{min-height:100vh}.pane.narrow{max-width:600px}
 .tabs.sgm{flex-wrap:wrap;gap:6px;overflow:visible}
-.prose{display:flex;flex-direction:column;gap:14px;max-width:62ch}
 .nw-t td{font-weight:700}
 .col.mid{justify-content:center}
 .err-w{justify-content:center}

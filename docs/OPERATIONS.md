@@ -924,11 +924,10 @@ something the IT department does by hand, or lives without:
 | Making a generated porada or its PDF again | [Documents and the PDF](#documents-and-the-pdf) |
 | A command for a lost headmaster, and for requests about personal data | [The headmaster has left](#the-headmaster-has-left), [Requests about personal data](#requests-about-personal-data) |
 
-The page „Jak s údaji zacházíme“ that the app shows to its users says that
-drafts and requests are deleted at the end of the school year and that the
-record of who did what is kept for three years. No part of the app does
-either today. Tell the data protection officer; either the text or the app
-has to change.
+The app shows its users no privacy notice (ADR 0075). The school publishes
+its GDPR notice itself, for example on its website. Tell the data protection
+officer, and make sure the notice does not promise a clean-up the app does
+not do.
 
 ## If the developer cannot be reached
 

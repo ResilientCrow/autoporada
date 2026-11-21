@@ -1,13 +1,13 @@
 # Privacy notice: review hand-over
 
-> **Status (2026-11-13, ADR 0065).** The full privacy notice page described below was removed with the classic UI: `/ochrana-osobnich-udaju`, `src/ui/copy/privacy*.ts` and the test that enforced the approval rules no longer exist. The text and the review flags are kept here as the draft record for the DPO. What people read in the app now is Arch's short „Jak s údaji zacházíme“ at `#/soukromi` (a few sentences, no review flags, no effective date).
+> **Status (2026-11-13, ADR 0065).** The full privacy notice page described below was removed with the classic UI: `/ochrana-osobnich-udaju`, `src/ui/copy/privacy*.ts` and the test that enforced the approval rules no longer exist. The text and the review flags are kept here as the draft record for the DPO. Arch's short „Jak s údaji zacházíme“ at `#/soukromi` was removed too (2026-11-21, ADR 0075): the app shows no privacy text.
 >
-> **Open, for the user and the DPO:** the school's GDPR notice (GDPR Art. 13 and 14) has no home yet. It must be published in Arch at `#/soukromi` or on the school's site, with its own approval. Until then the short text is the only notice, and items 1 to 22 below are unresolved drafts, not the published wording. The app text is not checked against this list.
+> **Open, for the user and the DPO:** the school's GDPR notice (GDPR Art. 13 and 14) has no home yet. The school publishes it outside the app (for example on its site), with its own approval. Until then there is no notice, and items 1 to 22 below are unresolved drafts, not the published wording.
 
 > **Status (2026-11-19): what the app does today.** Checked against the code. Where an item below says otherwise, this note holds.
 >
 > - **Nothing is deleted on 1 September, and nothing deletes the audit log after 3 years.** The rules are written (`src/domain/retention`), but the only clean-up that runs is `mail.prune` (a mail ledger row goes 91 days after it settled, item 14b). Drafts, decided requests, the audit log and the rows of ended sessions stay until somebody deletes them by hand. This touches items 14, 14b, 23 and 39.
-> - **The short text at `#/soukromi` promises that clean-up all the same** („Rozepsané zprávy a žádosti se mažou na konci školního roku. Záznam o tom, kdo co udělal, držíme 3 roky.“). Either the text or the app has to change before go-live.
+> - **The school's notice must not promise that clean-up.** The short in-app text that did („Rozepsané zprávy a žádosti se mažou na konci školního roku. Záznam o tom, kdo co udělal, držíme 3 roky.“) was removed (ADR 0075).
 > - **The app makes no backups and encrypts none** (items 10 and 13 say „šifrované zálohy“). The school's IT sets up a nightly dump and its copy as [OPERATIONS.md](../OPERATIONS.md), "Backup", describes; the dump is not encrypted unless IT encrypts the copy.
 > - **There is no command-line tool for data-subject requests** (item 19). A request is answered by hand with the read queries in [OPERATIONS.md](../OPERATIONS.md), "Requests about personal data". Correcting and erasing have no procedure yet (item 30 is still open).
 > - **Job title and department are not read from Entra** (item 25): sign-in stores the name and the e-mail address only, and the two columns stay empty.

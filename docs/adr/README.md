@@ -70,7 +70,7 @@ record that supersedes it.
 | [0062](0062-cancelling-an-approved-akce-waits-for-vedeni.md) | Cancelling an approved akce waits for vedení | Accepted; adds to 0057 |
 | [0063](0063-the-organizer-organizes-or-coordinates.md) | The organizer organizes or coordinates | Accepted; amends 0060 items 1 and 7 |
 | [0064](0064-report-types-are-a-fixed-list-in-code.md) | Report types are a fixed list in code | Superseded by 0067; it had superseded 0055 and the `point_types` part of 0018 item 3 |
-| [0065](0065-the-classic-ui-is-removed.md) | The classic UI is removed | Accepted; supersedes 0013, 0024, 0025, 0027, 0031, 0043, most of 0012 and parts of 0004, 0017, 0019, 0044, 0045, 0047 and 0053 |
+| [0065](0065-the-classic-ui-is-removed.md) | The classic UI is removed | Accepted; supersedes 0013, 0024, 0025, 0027, 0031, 0043, most of 0012 and parts of 0004, 0017, 0019, 0044, 0045, 0047 and 0053; item 8 amended by 0075 |
 | [0066](0066-an-annex-from-a-file.md) | An annex from a file | Accepted; adds to 0039 |
 | [0067](0067-report-grammar-comes-from-the-title.md) | Report grammar comes from the title | Accepted; supersedes 0064; amends 0061; items 3 and 4 amended by 0068 |
 | [0068](0068-an-unknown-title-is-named-not-quoted.md) | An unknown title is named, not quoted | Accepted; amends 0067 items 3 and 4 |
@@ -80,3 +80,4 @@ record that supersedes it.
 | [0072](0072-a-user-has-a-tier-functions-and-a-salutation.md) | A user has a tier, functions and a salutation | Accepted; adds to 0021, builds on 0071; item 5 amended by 0073 |
 | [0073](0073-a-function-goes-before-the-salutation.md) | A function goes before the salutation | Accepted; amends 0072 item 5 |
 | [0074](0074-a-reports-participants-take-one-of-three-labels.md) | A report's participants take one of three labels | Accepted; amends 0071 item 5 |
+| [0075](0075-the-app-shows-no-privacy-text.md) | The app shows no privacy text | Accepted; amends 0065 item 8 |

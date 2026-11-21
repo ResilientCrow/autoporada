@@ -144,7 +144,7 @@ export function Osloveni() {
   return <Entry><Top h="Jak Vás máme oslovovat v dokumentech?" lead="Použijeme to všude, kde se v dokumentu píše o Vás jménem. Změnit to můžete kdykoli na stránce Účet." />
     <Seg label="Oslovení" value={null} options={salutationOptions(u)} onChange={(v) => apply(A.setAddress({ salutation: v, titlesBefore: u.titlesBefore ?? null, titlesAfter: u.titlesAfter ?? null }))} />
     {/* The question cannot be skipped, but whoever will not answer can leave. */}
-    <button className="q" onClick={() => { apply(A.signOut); go('/'); }}>Zpět na přihlášení</button><a className="q" href="#/soukromi">Jak s údaji zacházíme</a></Entry>;
+    <button className="q" onClick={() => { apply(A.signOut); go('/'); }}>Zpět na přihlášení</button></Entry>;
 }
 export function Ucet() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const [all, setAll] = useState(false);
@@ -154,11 +154,10 @@ export function Ucet() {
     <section className="stack st8"><h2>Oslovení v dokumentech</h2><Seg label="Oslovení" value={sal} options={salutationOptions(u)} onChange={setSal} />
       <div className="two"><label className="l">Titul před jménem<input className="in" maxLength={PERSON_FIELD_MAX.title} placeholder="Mgr." value={before} onChange={(e) => setBefore(typedLine(e.target.value))} /></label><label className="l">Titul za jménem<input className="in" maxLength={PERSON_FIELD_MAX.title} placeholder="Ph.D." value={after} onChange={(e) => setAfter(typedLine(e.target.value))} /></label></div>
       <button type="button" className={`btn lg w ${sal ? 'go' : 'off'}`} aria-disabled={!sal} onClick={() => { if (!sal) return; apply(A.setAddress({ salutation: sal, titlesBefore: before, titlesAfter: after })); setOk(true); }}>Uložit</button></section>
-    <div className="stack st8"><button className="btn lg w" onClick={() => { apply(A.signOut); go('/'); }}>Odhlásit se</button><button className="btn lg w" onClick={() => setAll(true)}>Odhlásit všude</button><a className="q" href="#/soukromi">Jak s údaji zacházíme</a></div>{all ? <Dialog title="Odhlásit všude?" onClose={() => setAll(false)}><p>Odhlásíme Vás na všech zařízeních.</p><button className="btn dk lg w" onClick={() => { apply(A.signOutAll); go('/'); }}>Odhlásit všude</button></Dialog> : null}</main><PhoneBar /></div>;
+    <div className="stack st8"><button className="btn lg w" onClick={() => { apply(A.signOut); go('/'); }}>Odhlásit se</button><button className="btn lg w" onClick={() => setAll(true)}>Odhlásit všude</button></div>{all ? <Dialog title="Odhlásit všude?" onClose={() => setAll(false)}><p>Odhlásíme Vás na všech zařízeních.</p><button className="btn dk lg w" onClick={() => { apply(A.signOutAll); go('/'); }}>Odhlásit všude</button></Dialog> : null}</main><PhoneBar /></div>;
 }
 /** The sign-in leaves through the server, which never sees the #address a mail link opened. */
 const rememberAddress = () => { try { sessionStorage.setItem('arch-after-login', location.hash); } catch { /* soukromé okno */ } };
-export function Soukromi() { return <div className="work solo"><main className="pane narrow"><Back to="/" t="Zpět" /><Top h="Jak s údaji zacházíme" /><div className="prose"><p>Autoporada slouží k přípravě týdenní porady vedení školy. Zpracovává jména a e-maily zaměstnanců a studentů a texty, které do ní napíšete.</p><p>Hesla neukládáme, přihlašujete se školním účtem Microsoft. Rozepsané zprávy a žádosti se mažou na konci školního roku. Záznam o tom, kdo co udělal, držíme 3 roky.</p><p>Studenti vidí jen své zprávy a schválené akce. Celou poradu vidí jen zaměstnanci ve vedení.</p></div></main></div>; }
 /** Sign-in and access: the only screens before you have a place on the desk. */
 function Entry({ children }: { children: React.ReactNode }) {
   return <div className="lay"><div className="work"><header className="bar"><span className="logo"><img src={logo} alt="Smíchovská střední" /></span></header><main className="col mid" tabIndex={-1} data-focus-top>{children}</main></div><Desk cls="tall"><div className="wrapm wrapn"><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div></div></div></Desk></div>;
@@ -194,8 +193,7 @@ export function Login() {
     {shared ? <p className="sm">{signIn.loggedOut.sharedComputer}</p> : null}
     {/* After a sign-out Entra still knows the browser: on a shared computer the next person must choose (risk 12). */}
     <a className="btn go lg w" href={shared ? SWITCH : LOGIN} onClick={rememberAddress}>{signIn.button}</a>
-    <a className="q" href={SWITCH} onClick={rememberAddress}>{signIn.switchAccount}</a>
-    <a className="q" href="#/soukromi">Jak s údaji zacházíme</a></Entry>;
+    <a className="q" href={SWITCH} onClick={rememberAddress}>{signIn.switchAccount}</a></Entry>;
 }
 export function Pristup() {
   const { s, apply } = useStore(); const u = Q.me(s)!; const [r, setR] = useState('');

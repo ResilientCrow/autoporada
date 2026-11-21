@@ -305,8 +305,8 @@ has not built yet is under „Not built yet“.
   the dead-letter queue), `jobs:redrive` (replay dead jobs), `jobs:run`
   (queue one timed job now), `mail:test` (a test e-mail to a reviewer or the
   headmaster), `render-snapshot` and `auth:probe`.
-- A short privacy text, „Jak s údaji zacházíme“ (`#/soukromi`), open without
-  signing in. The full privacy notice is not built (ADR 0065).
+- No privacy text in the app (ADR 0075). The school publishes its GDPR
+  notice itself.
 
 ### Not built yet
 
@@ -316,7 +316,7 @@ Planned for v1, but not in the code:
   The compose stack has no backup service.
 - Retention jobs: purging drafts and requests at the end of the school year
   and the audit log after 3 years. The rules exist in `domain/retention` and
-  only the mail-ledger prune uses them. The privacy text at `#/soukromi` still states them.
+  only the mail-ledger prune uses them.
 - A health endpoint (the web healthcheck fetches `/`), a daily ops check and
   alert e-mails to the IT contact.
 - A break-glass CLI to generate a porada, revoke sessions, set a role and
