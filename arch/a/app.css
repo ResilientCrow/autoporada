@@ -44,7 +44,7 @@ button.pick:hover{border-color:var(--ink);background:var(--wash)}
 .pick b{font-size:18px;font-weight:600}.pick span{color:var(--mut);font-size:15.5px}
 .q.in-l{min-height:0;display:inline;font-size:inherit;margin-left:8px}
 .chk-it{border-color:#D29A00;background:#FFF8E0}
-.w-err{color:var(--red)}
+.w-err,.sm.w-err,label.l small.w-err{color:var(--red)}
 .op summary{cursor:pointer;font-weight:500;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}
 .pl{display:block}.stmt{display:flex;flex-direction:column;gap:6px}
 .pvh{font-weight:600;font-size:15px;padding:0 0 6px}
