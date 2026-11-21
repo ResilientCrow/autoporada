@@ -29,7 +29,7 @@ export const importMessage = (e: ImportError): string => (e.code === 'rate-limit
 
 // Participants from a spreadsheet (ADR 0077): the Účastníci field of an akce or jednání, and a report's Účastníci row.
 /** The table the reader expects, said under both buttons (ADR 0077 item 3). */
-const SHEET_FORMAT = 'Vyberte tabulku Excel, OpenDocument nebo CSV. V prvním řádku mají být nadpisy sloupců Příjmení, Jméno a Třída, nebo jen Jméno a příjmení. Třída je nepovinná.';
+const SHEET_FORMAT = 'Vyberte tabulku Excel, OpenDocument nebo CSV. V prvním řádku mají být nadpisy sloupců Třída, Příjmení a Jméno. Místo Příjmení a Jméno může být jeden sloupec Jméno a příjmení. Třída je nepovinná.';
 export const SHEET_HINT = `${SHEET_FORMAT} Jména se přidají za to, co už je napsané.`;
 export const NO_NAMES = 'V souboru jsme nenašli žádná jména. Sloupec se jmény nadepište třeba „Jméno a příjmení“ a sloupec s třídou „Třída“.';
 const SHEET_TOO_BIG = 'Soubor je na seznam účastníků příliš velký.';

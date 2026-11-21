@@ -6,6 +6,17 @@ import { appendNames, asText, namesFromRows, peopleFromRows, readPeople } from '
 const ODS_NS = 'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"';
 
 describe('namesFromRows with a header row', () => {
+  it('reads the layout Třída, Příjmení, Jméno by its header', () => {
+    const rows = [['Třída', 'Příjmení', 'Jméno'], ['3.B', 'Malá', 'Tereza'], ['2.A', 'Novák', 'Jan']];
+    expect(namesFromRows(rows)).toEqual(['Tereza Malá (3.B)', 'Jan Novák (2.A)']);
+    expect(peopleFromRows(rows)).toEqual([{ givenName: 'Tereza', familyName: 'Malá', cls: '3.B' }, { givenName: 'Jan', familyName: 'Novák', cls: '2.A' }]);
+    expect(namesFromRows([['Třída', 'Jméno a příjmení'], ['3.B', 'Tereza Malá']])).toEqual(['Tereza Malá (3.B)']);
+  });
+
+  it('keeps the names in the order of the file when that layout comes without its header', () => {
+    expect(peopleFromRows([['3.B', 'Malá', 'Tereza'], ['2.A', 'Novák', 'Jan']])).toEqual([{ name: 'Malá Tereza', cls: '3.B' }, { name: 'Novák Jan', cls: '2.A' }]);
+  });
+
   it('puts the given name first from separate columns, with the class in parentheses', () => {
     expect(namesFromRows([['Příjmení', 'Jméno', 'Třída'], ['Malá', 'Tereza', '3.B'], ['Novák', 'Jan', '2.A']])).toEqual(['Tereza Malá (3.B)', 'Jan Novák (2.A)']);
   });
