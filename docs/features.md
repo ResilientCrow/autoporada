@@ -97,7 +97,11 @@ has not built yet is under „Not built yet“.
   the author picks one address for the whole group: „slečny a pánové“, „slečny“,
   „pánové“ or „bez oslovení“, nothing preselected; the line prints „zúčastní se
   slečny a pánové: …“ (one name: „slečna“, „pan“), „slečny a pánové“ needs several
-  names, and a jednání has no address (ADR 0071). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
+  names, and a jednání has no address (ADR 0071). „Načíst jména ze souboru“
+  under Účastníci reads a spreadsheet (.xlsx, .ods, .csv) in the browser and
+  appends its people as „Tereza Malá (3.B)“, joined by commas, after what is
+  typed; names already there are not repeated, and a list that would not fit
+  is not added at all (ADR 0077). Akce and jednání share one wizard (Název, Kdy, Kde, Kdo,
   Poznámka, then a check); only Název and the day are required, and the day
   cannot be in the past. The place field waits for the areál (Smíchov,
   Radlice, Na Vidouli, Jinde). The printed line is date, time,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { compareDates, parseIsoDate, parseWallTime, toIsoDate, toIsoTime } from '@/domain/time';
 import { organizerOnOneLine, organizerPhrase, participantsAgenda } from '@/domain/cs';
 import { futureBullet } from '@/document/compose/future';
@@ -10,6 +10,8 @@ import type { Future } from '../core/types';
 import { ADDRESSES, App, TitleField, Back, Left, Desk, Dialog, goReplace, Ic, Note, Rework, Saved, Seg, Sec, Stamp, Todo, Top, Track, TrailMore, WHEN } from './ui';
 import { futureLine, NotFound } from './home';
 import { organizerPicks } from '../core/organizer';
+import { loadChunk } from '../core/import/chunk';
+import { ImportError, NO_NAMES, SHEET_HINT, sheetMessage, tooManyNames } from '../core/import/messages';
 
 const CAMPUS = [['smichov', 'Smíchov'], ['radlice', 'Radlice'], ['na-vidouli', 'Na Vidouli'], ['jinde', 'Jinde']] as const;
 /** Místo says where within the chosen areál, so it waits for one. */
@@ -25,6 +27,36 @@ function Line({ f }: { f: Future }) {
 }
 function AkceDesk({ f }: { f: Future }) {
   return <Desk cls="tall wzd" note={<b>Takhle to vyjde v dokumentu</b>}><div className="wrapm wrapn"><div className="arch"><div className="t">Porada vedení školy</div><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl cur live"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><Line f={f} /></div></div></div></Desk>;
+}
+const SHEETS = '.xlsx,.ods,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.oasis.opendocument.spreadsheet,text/csv';
+const namesAdded = (added: number, present: number) => (added ? `Přidali jsme ${Q.counts(added, 'jméno', 'jména', 'jmen')}.` : 'Všechna jména ze souboru už v poli jsou.') + (added && present ? ` ${present >= 2 && present <= 4 ? 'Byla' : 'Bylo'} tam už ${Q.counts(present, 'jméno', 'jména', 'jmen')}.` : '');
+/** Účastníci from a spreadsheet, appended to what is typed (ADR 0077). The reader loads on first use; nothing of the file is kept. */
+function NamesFromFile({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<{ err: boolean; t: string } | null>(null);
+  const input = useRef<HTMLInputElement>(null); const latest = useRef(value); useEffect(() => { latest.current = value; });
+  const pick = async (f: File) => {
+    setBusy(true); setMsg(null);
+    try {
+      const { appendNames, readParticipants } = await loadChunk(() => import('../core/import/participants'));
+      const names = await readParticipants(f, new DOMParser());
+      if (!names.length) { setMsg({ err: true, t: NO_NAMES }); return; }
+      const r = appendNames(latest.current, names, POINT_LIMITS.participants); // the person may have typed while the file was read
+      if ('tooLong' in r) { setMsg({ err: true, t: tooManyNames(r.tooLong, POINT_LIMITS.participants) }); return; }
+      if (r.added) onChange(r.text);
+      setMsg({ err: false, t: namesAdded(r.added, r.present) });
+    } catch (x) {
+      setMsg({ err: true, t: sheetMessage(x instanceof ImportError ? x : new ImportError('broken')) });
+    } finally { setBusy(false); }
+  };
+  return <div className="stack st8">
+    {/* aria-disabled, not disabled: the button keeps keyboard focus while the file is read */}
+    <div><button type="button" className={`btn${busy ? ' off' : ''}`} aria-disabled={busy} aria-busy={busy} onClick={() => { if (busy) return; setMsg(null); input.current?.click(); }}>{busy ? 'Čtu soubor…' : 'Načíst jména ze souboru'}</button></div>
+    <input ref={input} className="vh" type="file" accept={SHEETS} tabIndex={-1} aria-hidden="true" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void pick(f); }} />
+    {msg?.err ? <p className="sm w-err" role="alert">{msg.t}</p> : null}
+    {/* Mounted before it speaks, so a screen reader announces the count */}
+    <p className={msg && !msg.err ? 'sm' : 'vh'} role="status">{msg && !msg.err ? msg.t : ''}</p>
+    <p className="sm">{SHEET_HINT}</p>
+  </div>;
 }
 /** New akce or jednání: one question at a time, the line in the document beside it. */
 export function NovaAkce({ id, step }: { id: string; step?: string }) {
@@ -43,7 +75,7 @@ export function NovaAkce({ id, step }: { id: string; step?: string }) {
   if (cur === 'kde') { ask = 'Kde to bude?'; help = 'Nepovinné. Když to nevíte, přeskočte.'; nx = f.campus || f.place.trim() ? 'Pokračovat' : 'Přeskočit'; body = <div className="stack"><Seg label="Areál" value={f.campus} options={CAMPUS} onChange={(v) => set({ campus: v })} /><label className="l">Místo<small>{f.campus ? 'Nepovinné, například učebna S206' : PLACE_NEEDS_CAMPUS}</small><input className="in bigi" maxLength={POINT_LIMITS.place} autoCapitalize="none" value={f.place} disabled={!f.campus} onChange={(e) => set({ place: e.target.value })} /></label></div>; }
   // Staff see their colleagues as they type the last name; a pick writes the finished phrase and the field stays free text (ADR 0060, 0072 item 7).
   const orgPicks = cur === 'kdo' ? organizerPicks(s.cards, organizerOnOneLine(f.organizer), POINT_LIMITS.organizer) : [];
-  if (cur === 'kdo') { ask = 'Kdo to organizuje a kdo se zúčastní?'; help = 'Nepovinné.'; nx = f.organizer.trim() || f.participants.trim() ? 'Pokračovat' : 'Přeskočit'; { const bad = f.organizer.trim() && !f.organizerRole; const pb = Q.participantsProblem(f); can = !bad && !pb; hint = bad ? 'Vyberte, jestli organizuje, nebo koordinuje.' : pb ?? ''; } body = <div className="stack"><div className="stack st6"><span className="lb">Organizátor</span><Seg label="Organizátor" value={f.organizerRole} options={ROLES} onChange={(v) => set({ organizerRole: v })} /><label className="l"><span className="vh">Jména organizátorů</span><small>Jména oddělte čárkou, například zástupkyně paní Jana Nováková</small><TitleField max={POINT_LIMITS.organizer} value={organizerOnOneLine(f.organizer)} onChange={(v) => set({ organizer: v })} onEnter={() => { if (orgPicks.length === 1) set({ organizer: orgPicks[0]!.text }); }} /></label>{orgPicks.length ? <div className="picks">{orgPicks.map((x) => <button type="button" className="pick" key={x.card.id} onClick={() => set({ organizer: x.text })}><b>{x.card.givenName} {x.card.familyName}</b><span>{Q.userById(s, x.card.id)?.affiliation ? `${Q.userById(s, x.card.id)?.affiliation}, ` : ''}ze školního adresáře</span></button>)}</div> : null}</div><label className="l">Účastníci<small>{f.kind === 'akce' ? 'Nepovinné, například Tereza Malá (3.B), Jan Novák (2.A). Jména oddělte čárkou, vypíšou se přesně tak, jak je napíšete.' : 'Nepovinné. Vypíše se přesně tak, jak to napíšete.'}</small><textarea className="in big" maxLength={POINT_LIMITS.participants} value={f.participants} onChange={(e) => set({ participants: e.target.value })} /><Left max={POINT_LIMITS.participants} value={f.participants} /></label>{f.kind === 'akce' && f.participants.trim() ? <div className="stack st6"><span className="lb">Oslovení účastníků</span><Seg label="Oslovení účastníků" value={f.participantsAddress} options={ADDRESSES} onChange={(v) => set({ participantsAddress: v })} /></div> : null}</div>; }
+  if (cur === 'kdo') { ask = 'Kdo to organizuje a kdo se zúčastní?'; help = 'Nepovinné.'; nx = f.organizer.trim() || f.participants.trim() ? 'Pokračovat' : 'Přeskočit'; { const bad = f.organizer.trim() && !f.organizerRole; const pb = Q.participantsProblem(f); can = !bad && !pb; hint = bad ? 'Vyberte, jestli organizuje, nebo koordinuje.' : pb ?? ''; } body = <div className="stack"><div className="stack st6"><span className="lb">Organizátor</span><Seg label="Organizátor" value={f.organizerRole} options={ROLES} onChange={(v) => set({ organizerRole: v })} /><label className="l"><span className="vh">Jména organizátorů</span><small>Jména oddělte čárkou, například zástupkyně paní Jana Nováková</small><TitleField max={POINT_LIMITS.organizer} value={organizerOnOneLine(f.organizer)} onChange={(v) => set({ organizer: v })} onEnter={() => { if (orgPicks.length === 1) set({ organizer: orgPicks[0]!.text }); }} /></label>{orgPicks.length ? <div className="picks">{orgPicks.map((x) => <button type="button" className="pick" key={x.card.id} onClick={() => set({ organizer: x.text })}><b>{x.card.givenName} {x.card.familyName}</b><span>{Q.userById(s, x.card.id)?.affiliation ? `${Q.userById(s, x.card.id)?.affiliation}, ` : ''}ze školního adresáře</span></button>)}</div> : null}</div><label className="l">Účastníci<small>{f.kind === 'akce' ? 'Nepovinné, například Tereza Malá (3.B), Jan Novák (2.A). Jména oddělte čárkou, vypíšou se přesně tak, jak je napíšete.' : 'Nepovinné. Vypíše se přesně tak, jak to napíšete.'}</small><textarea className="in big" maxLength={POINT_LIMITS.participants} value={f.participants} onChange={(e) => set({ participants: e.target.value })} /><Left max={POINT_LIMITS.participants} value={f.participants} /></label><NamesFromFile value={f.participants} onChange={(v) => set({ participants: v })} />{f.kind === 'akce' && f.participants.trim() ? <div className="stack st6"><span className="lb">Oslovení účastníků</span><Seg label="Oslovení účastníků" value={f.participantsAddress} options={ADDRESSES} onChange={(v) => set({ participantsAddress: v })} /></div> : null}</div>; }
   if (cur === 'poznamka') { ask = 'Chcete k tomu ještě něco připsat?'; help = 'Nepovinné, například téma nebo kdo píše texty. Vypíše se přesně tak, jak to napíšete.'; nx = f.remark.trim() ? 'Pokračovat' : 'Přeskočit'; body = <label className="l"><span className="vh">Poznámka</span><textarea className="in big" autoFocus maxLength={POINT_LIMITS.futureNote} value={f.remark} onChange={(e) => set({ remark: e.target.value })} /><Left max={POINT_LIMITS.futureNote} value={f.remark} /></label>; }
   if (cur === 'hotovo') { ask = head ? 'Takhle to vyjde. Zařadíme to?' : 'Takhle to vyjde. Můžeme to poslat?'; help = head ? 'Jde to rovnou do porady, bez schvalování.' : f.kind === 'akce' ? 'Po schválení akci uvidí celá škola. Až skončí, připomeneme Vám zprávu.' : 'Po schválení se objeví v poradě. Zprávu po jednání nepíšete.'; nx = head ? 'Zařadit do porady' : 'Odeslat vedení'; { const bad = f.organizer.trim() && !f.organizerRole; const pb = Q.participantsProblem(f); can = !bad && !pb; hint = bad ? 'U organizátora vyberte, jestli organizuje, nebo koordinuje.' : pb ?? ''; } body = <div className="anss">{([['Název', f.title, 'nazev'], ['Kdy', whenText(f), 'kdy'], ['Kde', [CAMPUS.find((c) => c[0] === f.campus)?.[1], f.place.trim()].filter(Boolean).join(', '), 'kde'], ['Kdo', [organizerPhrase(f.organizerRole, f.organizer), participantsAgenda(f.kind === 'akce' ? f.participantsAddress : null, f.participants)].filter(Boolean).join(', '), 'kdo'], ['Poznámka', f.remark.trim(), 'poznamka']] as const).filter(([t, v]) => v || t === 'Název' || t === 'Kdy').map(([t, v, to]) => <div className="ans" key={t}><span className="tx"><span className="st">{t}</span><span className="tt">{v}</span></span><a className="btn" href={`#/nova-akce/${id}/${to}`} aria-label={`Změnit: ${t}`}>Změnit</a></div>)}</div>; }
   const nav = (x?: string) => go(x ? `/nova-akce/${id}/${x}` : '/');

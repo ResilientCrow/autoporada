@@ -82,3 +82,4 @@ record that supersedes it.
 | [0074](0074-a-reports-participants-take-one-of-three-labels.md) | A report's participants take one of three labels | Accepted; amends 0071 item 5 |
 | [0075](0075-the-app-shows-no-privacy-text.md) | The app shows no privacy text | Accepted; amends 0065 item 8 |
 | [0076](0076-no-academic-degrees.md) | No academic degrees | Accepted; amends 0072 item 6 (degrees) |
+| [0077](0077-participants-from-a-spreadsheet.md) | Participants from a spreadsheet | Accepted; adds to 0060 and 0066 |

@@ -169,6 +169,14 @@ test.describe('the Arch UI', () => {
       page.getByText('Slečny a pánové potřebují aspoň dvě jména oddělená čárkou.'),
     ).toBeVisible();
     await page.getByRole('radio', { name: 'slečny', exact: true }).click();
+    // Names from a spreadsheet are appended to what is typed, a name already there not again (ADR 0077).
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'ucastnici.csv',
+      mimeType: 'text/csv',
+      buffer: Buffer.from('Příjmení;Jméno;Třída\r\nMalá;Tereza;3.B\r\nNová;Eva;2.A\r\n'),
+    });
+    await expect(page.getByText('Přidali jsme 1 jméno. Bylo tam už 1 jméno.')).toBeVisible();
+    await expect(page.getByLabel(/^Účastníci/)).toHaveValue('Tereza Malá (3.B), Eva Nová (2.A)');
     await page.getByRole('button', { name: 'Pokračovat' }).click();
     await expect(
       page.getByRole('heading', { name: 'Chcete k tomu ještě něco připsat?' }),
@@ -197,7 +205,7 @@ test.describe('the Arch UI', () => {
     expect(typed.rows[0]).toEqual({
       organizer: 'paní zástupkyně Jana Nováková',
       organizer_role: 'organizes',
-      participants: 'Tereza Malá (3.B)',
+      participants: 'Tereza Malá (3.B), Eva Nová (2.A)',
       participants_address: 'slecny',
     });
     const id = (await futureOf(email, title))!.id;

@@ -26,3 +26,17 @@ const TEXTS: Record<Exclude<ImportCode, 'rate-limited'>, string> = {
   'step-up': SIGNED_OUT,
 };
 export const importMessage = (e: ImportError): string => (e.code === 'rate-limited' ? rateLimitedText(e.retryAfterSeconds) : TEXTS[e.code]);
+
+/** Participants from a spreadsheet (ADR 0077): the Účastníci field of an akce or jednání. */
+export const SHEET_HINT = 'Jména z tabulky Excel, OpenDocument nebo CSV se přidají za to, co už je napsané.';
+export const NO_NAMES = 'V souboru jsme nenašli žádná jména. Sloupec se jmény nadepište třeba „Jméno a příjmení“ a sloupec s třídou „Třída“.';
+const SHEET_TOO_BIG = 'Soubor je na seznam účastníků příliš velký.';
+const SHEET_TEXTS: Partial<Record<ImportCode, string>> = {
+  unknown: 'Tenhle soubor neumíme přečíst. Vyberte tabulku Excel (.xlsx), OpenDocument (.ods) nebo CSV. Starší soubor .xls uložte v Excelu jako .xlsx.',
+  'too-big': SHEET_TOO_BIG,
+  'file-too-big': SHEET_TOO_BIG,
+  stale: TEXTS.stale,
+};
+/** A spreadsheet is read in the browser only, so the server's answers (sign-in, rate limit) never come; the rest is `broken`. */
+export const sheetMessage = (e: ImportError): string => SHEET_TEXTS[e.code] ?? TEXTS.broken;
+export const tooManyNames = (length: number, max: number): string => `Tolik jmen se do pole nevejde: vejde se do něj ${max} znaků, se jmény ze souboru by jich bylo ${length}. Zkraťte seznam v souboru.`;

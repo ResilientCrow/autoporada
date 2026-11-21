@@ -4,9 +4,15 @@ import { assertZipSize, declaredSize, MAX_MIMETYPE } from './zipguard';
 export type Format = 'docx' | 'odt' | 'pdf' | 'doc' | 'unknown';
 
 const OLE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
-const ZIP = [0x50, 0x4b, 0x03, 0x04];
+export const ZIP = [0x50, 0x4b, 0x03, 0x04];
 const PDF = new TextEncoder().encode('%PDF-');
-const startsWith = (b: Uint8Array, magic: ArrayLike<number>) => b.length >= magic.length && Array.from({ length: magic.length }, (_, i) => b[i] === magic[i]).every(Boolean);
+export const startsWith = (b: Uint8Array, magic: ArrayLike<number>) => b.length >= magic.length && Array.from({ length: magic.length }, (_, i) => b[i] === magic[i]).every(Boolean);
+
+/** The `mimetype` entry of an OpenDocument zip, read only when it is tiny; '' when there is none or it is not. */
+export async function odfMimetype(zip: JSZip): Promise<string> {
+  if ((declaredSize(zip, 'mimetype') ?? Infinity) > MAX_MIMETYPE) return '';
+  try { return (await zip.file('mimetype')?.async('string'))?.trim() ?? ''; } catch { return ''; }
+}
 
 /** What a file is by its content (magic bytes, zip entries), never by its name. */
 export async function detectFormat(bytes: Uint8Array): Promise<Format> {
@@ -16,11 +22,7 @@ export async function detectFormat(bytes: Uint8Array): Promise<Format> {
     try { zip = await JSZip.loadAsync(bytes); } catch { return 'unknown'; }
     assertZipSize(zip); // before any entry is inflated; throws ImportError('too-big')
     if (zip.file('word/document.xml')) return 'docx';
-    if ((declaredSize(zip, 'mimetype') ?? Infinity) > MAX_MIMETYPE) return 'unknown';
-    try {
-      const mime = await zip.file('mimetype')?.async('string');
-      return mime?.trim().startsWith('application/vnd.oasis.opendocument.text') ? 'odt' : 'unknown';
-    } catch { return 'unknown'; }
+    return (await odfMimetype(zip)).startsWith('application/vnd.oasis.opendocument.text') ? 'odt' : 'unknown';
   }
   // The spec lets a PDF start within its first kilobyte.
   const head = bytes.subarray(0, 1024);
