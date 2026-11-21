@@ -150,13 +150,13 @@ export function Pridat() {
     <Sec h="Nové">
       <Item act={() => future('akce')} t="Akce" st="Podle data se zařadí sama" end={PLUS} {...hv(slotId('events'))} />
       <Item act={() => future('jednani')} t="Jednání" st={meetRow ? until(meetings, meetRow.title) : 'Zařadí se mezi jednání'} end={PLUS} {...hv(meetRow?.id)} />
-      {iss ? <Item to="/porada/pokyny-novy?z=pridat" t="Bod" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} {...hv()} /> : null}
+      {iss ? <Item to="/porada/pokyny-novy?z=pridat" t="Pokyny a hospodaření" st="Vlastní nadpis a text, do Pokynů nebo Hospodaření" end={PLUS} {...hv()} /> : null}
       <Item act={report} t="Zpráva o tom, co proběhlo" st="Do Provozu školy, s účastníky a vyjádřením" end={PLUS} {...hv()} />
       {partners ? <Item to={`/porada/pokyny/${partners.row.id}?z=pridat`} t="Ohlas sociálního partnera" st={`${until(partners.n, partners.row.title)}, teď ${partners.row.quotes.length}`} end={PLUS} {...hv(partners.row.id)} /> : null}
       <Item to="/seznamy" t="Student do seznamu" st="Talentovaní studenti nebo uvolnění z výuky" {...hv(slotId('talent'))} />
       {iss ? <Item to="/porada/prilohy" t="Příloha" st="Text, tabulka nebo obrázek" {...hv()} /> : null}
     </Sec>
-    {points.length ? <Sec h="Doplnit do bodu, který v poradě už je">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}?z=pridat`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} {...hv(r.id)} />)}</Sec> : null}
+    {points.length ? <Sec h="Pokyny a hospodaření">{points.map(({ row: r, n }) => <Item key={r.id} to={`/porada/pokyny/${r.id}?z=pridat`} t={n === undefined ? r.title : `${n}. ${r.title}`} st={pointLine(r, n)} {...hv(r.id)} />)}</Sec> : null}
   </>} />;
 }
 export function Pokyny({ rowId, adding, section, from }: { rowId?: string; adding?: boolean; section?: 'pokyny' | 'hospodareni'; from?: 'pridat' }) {
