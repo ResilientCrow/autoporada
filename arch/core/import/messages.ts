@@ -27,8 +27,10 @@ const TEXTS: Record<Exclude<ImportCode, 'rate-limited'>, string> = {
 };
 export const importMessage = (e: ImportError): string => (e.code === 'rate-limited' ? rateLimitedText(e.retryAfterSeconds) : TEXTS[e.code]);
 
-/** Participants from a spreadsheet (ADR 0077): the Účastníci field of an akce or jednání. */
-export const SHEET_HINT = 'Jména z tabulky Excel, OpenDocument nebo CSV se přidají za to, co už je napsané.';
+// Participants from a spreadsheet (ADR 0077): the Účastníci field of an akce or jednání, and a report's Účastníci row.
+/** The table the reader expects, said under both buttons (ADR 0077 item 3). */
+const SHEET_FORMAT = 'Vyberte tabulku Excel, OpenDocument nebo CSV. V prvním řádku mají být nadpisy sloupců Příjmení, Jméno a Třída, nebo jen Jméno a příjmení. Třída je nepovinná.';
+export const SHEET_HINT = `${SHEET_FORMAT} Jména se přidají za to, co už je napsané.`;
 export const NO_NAMES = 'V souboru jsme nenašli žádná jména. Sloupec se jmény nadepište třeba „Jméno a příjmení“ a sloupec s třídou „Třída“.';
 const SHEET_TOO_BIG = 'Soubor je na seznam účastníků příliš velký.';
 const SHEET_TEXTS: Partial<Record<ImportCode, string>> = {
@@ -41,5 +43,5 @@ const SHEET_TEXTS: Partial<Record<ImportCode, string>> = {
 export const sheetMessage = (e: ImportError): string => SHEET_TEXTS[e.code] ?? TEXTS.broken;
 export const tooManyNames = (length: number, max: number): string => `Tolik jmen se do pole nevejde: vejde se do něj ${max} znaků, se jmény ze souboru by jich bylo ${length}. Zkraťte seznam v souboru.`;
 /** The report's Účastníci row: people, not text. */
-export const PEOPLE_SHEET_HINT = 'Lidé z tabulky Excel, OpenDocument nebo CSV se přidají do seznamu, i s třídou, když ji tabulka má.';
+export const PEOPLE_SHEET_HINT = `${SHEET_FORMAT} Lidé se přidají do seznamu.`;
 export const tooManyPeople = (count: number, room: number): string => `Tolik lidí se do zprávy nevejde: v souboru je ${count} nových, přidat jde ještě ${room}. Zkraťte seznam v souboru.`;
