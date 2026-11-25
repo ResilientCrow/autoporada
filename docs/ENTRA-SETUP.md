@@ -183,12 +183,16 @@ an Exchange retention policy on it.
     which the stack does not fix; the three-host rule on `ap-edge` is what
     the stack supports. Two stacks cannot share one host with either bridge
     name;
-  - during installs and updates, which build the images on the server:
-    `github.com` (the source), `registry.npmjs.org` (packages), and the
-    container registries `registry-1.docker.io`, `auth.docker.io`,
-    `production.cloudflare.docker.com`, `gcr.io`, `ghcr.io`,
-    `pkg-containers.githubusercontent.com`, and `deb.debian.org` over plain
-    HTTP (port 80; one font package for the PDF image).
+  - during installs and updates: `registry-1.docker.io`, `auth.docker.io`
+    and `production.cloudflare.docker.com` (the database and Caddy images),
+    and either the school's Gitea, when the server clones from it and pulls
+    the released images (`IMAGE_PREFIX`, [GITEA.md](GITEA.md)), or, when it
+    builds the images itself, `github.com` (the source),
+    `registry.npmjs.org` (packages), `gcr.io`, `ghcr.io`,
+    `pkg-containers.githubusercontent.com` and `deb.debian.org` over plain
+    HTTP (port 80; one font package for the PDF image). A school that adds
+    its own fonts rebuilds the PDF image after each pull, so it needs
+    `deb.debian.org` either way.
 
 ## 5. Server
 

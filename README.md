@@ -143,6 +143,7 @@ Built and covered by automated tests:
 |---|---|
 | School IT, installing the app for the first time | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), which leads you through [docs/ENTRA-SETUP.md](docs/ENTRA-SETUP.md) (the Microsoft 365 part) and [deploy/SMOKE-TEST.md](deploy/SMOKE-TEST.md) (the recommended test of a new installation) |
 | School IT, keeping it running | [docs/OPERATIONS.md](docs/OPERATIONS.md): backups, restore, updates, certificates, emergencies, troubleshooting |
+| Whoever runs the school's Gitea | [docs/GITEA.md](docs/GITEA.md): the runner, the registry token, publishing a release's images |
 | Anybody who wants to know what the app does | [docs/features.md](docs/features.md) and [docs/glossary.md](docs/glossary.md) |
 | The data protection officer | [docs/gdpr/privacy-review.md](docs/gdpr/privacy-review.md) |
 | A developer taking the project over | [Development](#development) below, then [CLAUDE.md](CLAUDE.md) (the rules of the code base on two pages), [docs/plan.md](docs/plan.md) (the original plan; later decisions override it), [docs/adr/README.md](docs/adr/README.md) (every decision and its reason) and [DESIGN.md](DESIGN.md) (the user interface) |

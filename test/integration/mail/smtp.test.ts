@@ -1,6 +1,7 @@
 /**
  * The SMTP transport (development only, ADR 0016) against Mailpit on
- * 127.0.0.1:1025, and against a scripted SMTP server for the answers Mailpit
+ * 127.0.0.1:1025 (another host from MAILPIT_HOST, e.g. a CI service name),
+ * and against a scripted SMTP server for the answers Mailpit
  * never gives. Each test mails its own address and reads only that address:
  * other suites share the Mailpit, so nothing here deletes its messages.
  */
@@ -13,7 +14,8 @@ import type { MailResult, OutgoingMail } from '@/application/ports';
 import { createSmtpMail } from '@/infra/mail';
 import { inTransactionScope } from '@/infra/system';
 
-const MAILPIT = 'http://127.0.0.1:8025/api/v1';
+const MAILPIT_HOST = process.env['MAILPIT_HOST'] ?? '127.0.0.1';
+const MAILPIT = `http://${MAILPIT_HOST}:8025/api/v1`;
 const FROM = 'autoporada@ssps.cz';
 const mailTo = (to: string): OutgoingMail => ({
   to,
@@ -73,7 +75,9 @@ describe('the SMTP transport', () => {
   it('delivers a Czech subject and body to Mailpit exactly, with our headers', async () => {
     const to = unique();
     const mail = mailTo(to);
-    const result = await createSmtpMail({ url: 'smtp://127.0.0.1:1025', from: FROM }).send(mail);
+    const result = await createSmtpMail({ url: `smtp://${MAILPIT_HOST}:1025`, from: FROM }).send(
+      mail,
+    );
     expect(result).toEqual({ kind: 'sent', requestId: null });
 
     const id = await received(to);

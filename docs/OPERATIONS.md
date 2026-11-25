@@ -365,7 +365,7 @@ Use this when the server is lost, and for
 [Moving to another server](#moving-to-another-server).
 
 1. Install the new server with [DEPLOYMENT.md](DEPLOYMENT.md), steps 1 to 8
-   (up to and including `docker compose build`), with these differences:
+   (up to and including step 8, the images), with these differences:
    - Check out the release the old server ran (its `APP_VERSION`), or a newer
      one. Never restore a dump into code that is **older** than the code that
      wrote it.
@@ -443,9 +443,10 @@ git checkout <new>
 cd deploy
 sudoedit .env                         # APP_VERSION=<new>
 
-# 4. Build and start.
+# 4. Get the images and start.
 sudo ./install.sh
-docker compose build
+docker compose pull                   # with IMAGE_PREFIX in .env; without it: docker compose build
+docker compose build gotenberg        # only after a pull, and only if docker/gotenberg/fonts/ holds the school's fonts
 docker compose up -d
 docker compose ps -a
 ```
@@ -458,10 +459,9 @@ If `git checkout` refuses, somebody changed files in `/opt/autoporada`.
 `git status` shows which. Do not force it; find out why first.
 
 Old images stay on the disk. Once the new version has run for a week, remove
-the ones you no longer need: `docker image ls 'autoporada-*'` lists them,
-`docker image rm autoporada-web:<old version>` (and the same for
-`autoporada-worker`, `autoporada-tools`, `autoporada-gotenberg`) removes
-one.
+the ones you no longer need: `docker image ls | grep autoporada-` lists them,
+`docker image rm <name>:<old version>` with a name from that list (the
+`autoporada-web`, `-worker`, `-tools` and `-gotenberg` images) removes one.
 
 ### Going back
 
@@ -795,7 +795,7 @@ update does not collide with a local edit.
 
 ## Moving to another server
 
-1. Install the new server up to `docker compose build`
+1. Install the new server up to its images (DEPLOYMENT.md step 8)
    ([Restore on a new server](#restore-on-a-new-server), step 1).
 2. Tell people when the app will be away (about half an hour).
 3. On the old server, stop the app but leave the database running, and take

@@ -1,7 +1,8 @@
 # Production stack for the school server (ADR 0008). The repository is
 # cloned to /opt/autoporada; run everything from this directory:
 #   sudo ./install.sh                  secrets and state, once and after changes
-#   docker compose build               the web, worker and tools images, from ..
+#   docker compose pull                the released images, when .env sets IMAGE_PREFIX
+#   docker compose build               or build them here instead, from ..
 #   docker compose up -d               migrate, then web and worker, then Caddy
 #   docker compose run --rm cli auth:probe
 # Configuration is .env (see .env.example; root owns it, so edit it with
@@ -39,7 +40,7 @@ x-app-env: &app-env
 # Listed before *hardened in a merge: the first map wins, and a one-shot
 # must not restart.
 x-tools: &tools
-  image: autoporada-tools:${APP_VERSION:?set APP_VERSION in .env}
+  image: ${IMAGE_PREFIX:-}autoporada-tools:${APP_VERSION:?set APP_VERSION in .env}
   build: { context: .., dockerfile: docker/app/Dockerfile, target: tools }
   user: '65532:65532'
   restart: 'no'
@@ -70,7 +71,7 @@ services:
 
   web:
     <<: *hardened
-    image: autoporada-web:${APP_VERSION:?set APP_VERSION in .env}
+    image: ${IMAGE_PREFIX:-}autoporada-web:${APP_VERSION:?set APP_VERSION in .env}
     build: { context: .., dockerfile: docker/app/Dockerfile, target: web }
     user: '65532:65532'
     init: true
@@ -108,7 +109,7 @@ services:
   # gate in the database is a safety net, not a licence to scale.
   worker:
     <<: *hardened
-    image: autoporada-worker:${APP_VERSION:?set APP_VERSION in .env}
+    image: ${IMAGE_PREFIX:-}autoporada-worker:${APP_VERSION:?set APP_VERSION in .env}
     build: { context: .., dockerfile: docker/app/Dockerfile, target: worker }
     user: '65532:65532'
     init: true
@@ -142,7 +143,7 @@ services:
   # down. The routes and features a DOCX conversion never uses are off.
   gotenberg:
     <<: *hardened
-    image: autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
+    image: ${IMAGE_PREFIX:-}autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
     build: { context: ../docker/gotenberg }
     user: '1001:1001'
     command:
@@ -169,7 +170,7 @@ services:
   # and a small box around it.
   gotenberg-import:
     <<: *hardened
-    image: autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
+    image: ${IMAGE_PREFIX:-}autoporada-gotenberg:${APP_VERSION:?set APP_VERSION in .env}
     build: { context: ../docker/gotenberg }
     user: '1001:1001'
     command:

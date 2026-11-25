@@ -13,7 +13,7 @@ record that supersedes it.
 | [0005](0005-document-engine.md) | Snapshot → DocumentModel → DOCX / HTML | Accepted |
 | [0006](0006-background-jobs.md) | pg-boss worker with transactional enqueue | Accepted; partly superseded by 0015 |
 | [0007](0007-rich-text.md) | Restricted rich text as flat indented paragraphs | Accepted; refined by 0031 |
-| [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted |
+| [0008](0008-self-hosting.md) | Docker compose on school infrastructure | Accepted; images from the school's Gitea added by 0078 |
 | [0009](0009-template-deviations.md) | Deliberate deviations from the Word template | Accepted |
 | [0010](0010-database-roles.md) | Database roles, migrations and test databases | Accepted; partly superseded by 0015 |
 | [0011](0011-application-core.md) | Application core: principal-bound transactions and one pipeline | Accepted; database error codes superseded in part by 0022; errors reach the client as a named cause, superseded in part by 0044 |
@@ -83,3 +83,4 @@ record that supersedes it.
 | [0075](0075-the-app-shows-no-privacy-text.md) | The app shows no privacy text | Accepted; amends 0065 item 8 |
 | [0076](0076-no-academic-degrees.md) | No academic degrees | Accepted; amends 0072 item 6 (degrees) |
 | [0077](0077-participants-from-a-spreadsheet.md) | Participants from a spreadsheet | Accepted; adds to 0060 and 0066 |
+| [0078](0078-images-from-the-school-gitea.md) | Images from the school's Gitea | Accepted; adds to 0008 |

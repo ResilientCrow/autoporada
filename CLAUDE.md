@@ -18,6 +18,7 @@ Then, when the change warrants it:
 
 - `pnpm test:e2e`: needs dev services up and port 3100 free. Its global setup runs `dist/worker.mjs`, which must not be older than `src/`, so run `pnpm build:node` first. Never run it together with `check-deploy.sh`. `m10-generate.spec.ts` runs in its own `generate` project after `desktop` and `mobile` (a generation publishes every approved point).
 - `pnpm test:render` needs `dev:services` (Gotenberg, poppler-utils); not part of the gate.
+- Gitea (ADR 0078, `docs/GITEA.md`): `.gitea/workflows/ci.yml` mirrors `.github/workflows/ci.yml` without e2e, render and the stack boot (keep the two in step); `images.yml` publishes the images on `v*` tags; `IMAGE_PREFIX` in `deploy/.env` makes the server pull them. Never commit the Gitea's address.
 - Docker checks: build the web, worker and tools images as `:check` (commands in the header of `scripts/check-deploy.sh`), then `pnpm -s lint:compose`, `scripts/check-web-image.sh autoporada-web:check` and `scripts/check-deploy.sh` (needs ports 80 and 443).
 
 ## Layers (enforced by `.dependency-cruiser.cjs`; changing a rule means updating ADR 0004)
@@ -69,4 +70,4 @@ Then, when the change warrants it:
 - `docs/adr/`: decisions (index in README). An ADR is never edited; add one that supersedes it.
 - `docs/features.md`, `docs/glossary.md`: product behavior and terms.
 - `docs/DEPLOYMENT.md` (install on the school server, step by step), `docs/OPERATIONS.md` (runbook for IT: backup, restore, updates, certificates, emergencies; it also lists what is not built: backups, alerts, retention purges, health endpoint). A change to `deploy/`, the CLI, log names or queues must keep both true.
-- `deploy/SMOKE-TEST.md`, `docs/ENTRA-SETUP.md`: first-start checklist and tenant setup. `docs/gdpr/privacy-review.md`: GDPR review.
+- `deploy/SMOKE-TEST.md`, `docs/ENTRA-SETUP.md`, `docs/GITEA.md`: first-start checklist, tenant setup, the Gitea's runner and registry. `docs/gdpr/privacy-review.md`: GDPR review.

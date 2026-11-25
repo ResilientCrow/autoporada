@@ -1,0 +1,116 @@
+# The checks on Gitea Actions (docs/GITEA.md, ADR 0078). They mirror .github/workflows/ci.yml
+# where a standard runner allows it: each job runs in its own container, so services are reached
+# by name, not on localhost, and no step bind-mounts a path of the job (the Docker daemon is the
+# host's). The browser tests, the PDF render check and the production-stack boot need localhost
+# and stay on GitHub only.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm lint:arch
+      - run: pnpm lint:chars
+      - run: pnpm lint:unused
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm build
+
+  integration:
+    name: Integration (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: autoporada
+          POSTGRES_PASSWORD: autoporada
+          POSTGRES_DB: autoporada
+      # The SMTP transport's test (test/integration/mail); the same image as compose.dev.yaml.
+      mailpit:
+        image: axllent/mailpit:v1.31.6
+    env:
+      DATABASE_URL: postgres://autoporada:autoporada@postgres:5432/autoporada
+      MAILPIT_HOST: mailpit
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      # A runner may start the job before the services answer.
+      - name: Wait for PostgreSQL and Mailpit
+        shell: bash
+        run: |
+          for target in postgres/5432 mailpit/1025 mailpit/8025; do
+            for _ in $(seq 1 60); do (exec 3<>"/dev/tcp/$target") 2>/dev/null && break; sleep 1; done
+            (exec 3<>"/dev/tcp/$target") 2>/dev/null || { echo "::error::$target does not answer"; exit 1; }
+          done
+      - run: pnpm test:integration
+      - run: pnpm test:golden
+
+  deploy:
+    name: Deployment files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: node scripts/check-compose.mjs
+      # The files go in on stdin: a bind mount would name a path of the host, not of this job.
+      - name: Caddyfile is valid and formatted (the pinned Caddy)
+        run: |
+          image=$(grep -o 'caddy:[^ ]*@sha256:[0-9a-f]*' deploy/compose.yaml)
+          docker run --rm -i -e APP_HOST=autoporada.example -e ACME_EMAIL=it@example.org "$image" \
+            sh -c 'cat > /tmp/Caddyfile && caddy validate --config /tmp/Caddyfile --adapter caddyfile' \
+            < deploy/Caddyfile
+          docker run --rm -i "$image" caddy fmt - < deploy/Caddyfile | diff -u deploy/Caddyfile -
+      # A tar stream keeps the paths, so the scripts are checked as on GitHub.
+      - name: Shell scripts (shellcheck)
+        run: |
+          tar -cf - deploy/install.sh deploy/postgres/initdb/10-roles.sh scripts/*.sh |
+            docker run --rm -i --entrypoint sh koalaman/shellcheck-alpine:v0.10.0 \
+              -c 'mkdir /src && tar -xf - -C /src && cd /src && shellcheck deploy/install.sh deploy/postgres/initdb/10-roles.sh scripts/*.sh'
+
+  security:
+    name: Secrets and dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # The repository goes in as a tar stream, for the same reason as the Caddyfile above.
+      - name: gitleaks (full history)
+        run: |
+          tar -cf - . | docker run --rm -i --entrypoint sh zricethezav/gitleaks:v8.28.0 \
+            -c 'mkdir /repo && tar -xf - -C /repo && git config --global --add safe.directory /repo && gitleaks git /repo --redact'
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      # osv-scanner cannot read pnpm 12's multi-document lockfile; pnpm audit can.
+      - name: Audit production dependencies (blocking)
+        run: pnpm audit --prod --audit-level high
+      - name: Audit all dependencies (report only)
+        run: pnpm audit
+        continue-on-error: true

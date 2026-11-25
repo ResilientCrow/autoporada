@@ -37,7 +37,7 @@ docker compose exec postgres psql -U pgadmin -d autoporada
          the mail registration's are `entra_key` and `entra_cert`.
    - [ ] `sudo ./install.sh` ends with „ready“, and `.env` is filled in with
          `HSTS_MAX_AGE=86400` and `BOOTSTRAP_HEADMASTER_OID` set.
-   - [ ] `docker compose build` succeeds.
+   - [ ] `docker compose pull` (with `IMAGE_PREFIX`) or `docker compose build` succeeds.
 3. **Entra accepts the mail certificate.** `docker compose run --rm cli auth:probe`
    probes the mail registration (the web's is proved by step 6 and step 29) and shows:
    - [ ] the issuer `https://login.microsoftonline.com/<tenant>/v2.0`;

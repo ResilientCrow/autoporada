@@ -30,7 +30,7 @@ running the app.
 - [Step 5. Microsoft 365](#step-5-microsoft-365)
 - [Step 6. Finish the secrets](#step-6-finish-the-secrets)
 - [Step 7. Fill in the configuration](#step-7-fill-in-the-configuration)
-- [Step 8. Build the images](#step-8-build-the-images)
+- [Step 8. Get the images](#step-8-get-the-images)
 - [Step 9. Check that Microsoft accepts the server](#step-9-check-that-microsoft-accepts-the-server)
 - [Step 10. Start](#step-10-start)
 - [Step 11. The first headmaster](#step-11-the-first-headmaster)
@@ -80,11 +80,16 @@ Have these ready. The installation stops without any one of them.
 
 - [ ] Always: `login.microsoftonline.com`, `graph.microsoft.com`,
       `acme-v02.api.letsencrypt.org`.
-- [ ] While installing and updating, because the images are built on the
-      server: `github.com`, `registry.npmjs.org`, `registry-1.docker.io`,
-      `auth.docker.io`, `production.cloudflare.docker.com`, `gcr.io`,
-      `ghcr.io`, `pkg-containers.githubusercontent.com`, and
-      `deb.debian.org` over plain HTTP (port 80).
+- [ ] While installing and updating, `registry-1.docker.io`,
+      `auth.docker.io` and `production.cloudflare.docker.com` (the database
+      and Caddy images), and either:
+      - when the server pulls the released images (step 8): the school's
+        Gitea, where it also clones the repository from (step 2), and
+        `deb.debian.org` over plain HTTP (port 80) if you add the school's
+        own fonts ([below](#the-schools-own-fonts-in-the-pdf));
+      - when it builds them itself: `github.com`, `registry.npmjs.org`,
+        `gcr.io`, `ghcr.io`, `pkg-containers.githubusercontent.com`, and
+        `deb.debian.org` over plain HTTP (port 80).
 - [ ] If the school's network allows the internet only through a proxy, read
       [A proxy](#a-proxy) first.
 
@@ -135,10 +140,12 @@ git checkout v0.9.0                   # the newest release; write it down
 cd deploy
 ```
 
-`<repository address>` is where the school keeps the repository. At the time
-of writing the project lives at `github.com/ResilientCrow/autoporada`. If the
-repository is not public, the server needs a read-only access key for it, or
-you copy the repository onto the server by hand.
+`<repository address>` is where the school keeps the repository. When the
+server will pull the released images from the school's Gitea (step 8), clone
+from that Gitea too, so the server needs no way out to GitHub. Otherwise, at
+the time of writing the project lives at `github.com/ResilientCrow/autoporada`.
+If the repository is not public, the server needs a read-only access key for
+it, or you copy the repository onto the server by hand.
 
 **Install a release, never `main`.** A release is a tag such as `v0.9.0`; the
 repository's Releases page (`github.com/ResilientCrow/autoporada/releases`)
@@ -263,7 +270,8 @@ sudoedit .env
 
 | Name | Required | What to put there |
 |---|---|---|
-| `APP_VERSION` | yes | The release you checked out in step 2, for example `v0.9.0` (`git -C /opt/autoporada describe --tags` prints it). It names the images you are about to build and changes with every update. |
+| `APP_VERSION` | yes | The release you checked out in step 2, for example `v0.9.0` (`git -C /opt/autoporada describe --tags` prints it). It names the images you pull or build and changes with every update. |
+| `IMAGE_PREFIX` | no | Where the released images come from: `<gitea host>/<owner>/` in lowercase, with the slash at the end; the Images run on the Gitea prints it („Publishing to …“, [GITEA.md](GITEA.md)). Empty: step 8 builds them on this server. |
 | `APP_HOST` | yes | The DNS name alone, without `https://`: `autoporada.ssps.cz`. It must be the name in the redirect URI of the web registration. |
 | `ACME_EMAIL` | yes | The IT department's e-mail address. Let's Encrypt uses it for the certificate account. |
 | `HSTS_MAX_AGE` | no | Leave `86400` (one day) for now. Step 13 raises it. |
@@ -281,16 +289,25 @@ No password and no key goes into this file. Any command that starts with
 `docker compose` refuses to run while a required value is empty, and names it
 (`set TENANT_ID in .env`).
 
-## Step 8. Build the images
+## Step 8. Get the images
+
+When `.env` sets `IMAGE_PREFIX`, download the images that the school's Gitea
+built for this release ([GITEA.md](GITEA.md)):
+
+```sh
+docker compose pull
+```
+
+Without `IMAGE_PREFIX`, build them on this server instead:
 
 ```sh
 docker compose build
 ```
 
-This downloads the base images and the packages and compiles the app. It
-takes several minutes and needs the outbound addresses listed under
-[Before you start](#before-you-start). It ends without an error and
-`docker image ls 'autoporada-*'` then lists `autoporada-web`,
+Pulling takes a minute or two; building downloads the base images and the
+packages and compiles the app, which takes several minutes. Both need the
+outbound addresses listed under [Before you start](#before-you-start). Either
+way, `docker image ls | grep autoporada-` then lists `autoporada-web`,
 `autoporada-worker`, `autoporada-tools` and `autoporada-gotenberg`, each with
 the tag you put in `APP_VERSION`.
 
@@ -434,9 +451,11 @@ The DOCX is the document of record and uses the fonts named in the school's
 template. The PDF is made on the server, where the licensed fonts are
 missing, so it uses free fonts of the same widths. To get the original fonts
 into the PDF, copy their `.ttf` or `.otf` files into
-`/opt/autoporada/docker/gotenberg/fonts/` and run `docker compose build` and
-`docker compose up -d`. The school must hold a licence for them; they are not
-part of the repository.
+`/opt/autoporada/docker/gotenberg/fonts/` and run `docker compose build gotenberg`
+and `docker compose up -d`. The school must hold a licence for them; they are
+not part of the repository. When `IMAGE_PREFIX` is set, `docker compose pull`
+brings back the image without them, so run `docker compose build gotenberg`
+after every pull.
 
 ### A proxy
 
@@ -462,7 +481,7 @@ depend on it.
 | `docker compose …` prints `set APP_HOST in .env` (or another name) | A required value in `.env` is empty | Fill it in (step 7) |
 | `install.sh: run as root` | The script was started without `sudo` | `sudo ./install.sh` |
 | `install.sh` ends with `missing Entra certificate files` | One of the four files of step 4 is absent or empty | Repeat step 4 for the missing pair |
-| `docker compose build` cannot download | An outbound address is closed | Open the build-time addresses under [Before you start](#before-you-start) |
+| `docker compose pull` or `docker compose build` cannot download | An outbound address is closed, or `IMAGE_PREFIX` names no published release | Open the addresses under [Before you start](#before-you-start); check that the Gitea's Packages page has the images with the tag in `APP_VERSION` |
 | `web` or `worker` keeps restarting; its log says `Invalid configuration` | A value in `.env` or a secret file is wrong. The message names the setting. | Correct it. A common cause: the thumbprint of the other pair, or one with colons. Then `docker compose up -d`. |
 | `caddy` is `Up` but the browser gets a certificate error | Let's Encrypt could not reach the server | Check DNS and that port 80 is open from the internet; read `docker compose logs caddy` |
 | `caddy` never starts | It waits for `web` to become healthy | `docker compose logs web` |
