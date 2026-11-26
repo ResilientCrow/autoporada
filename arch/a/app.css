@@ -57,7 +57,7 @@ button.pick:hover{border-color:var(--ink);background:var(--wash)}
 .dock .row>.btn{flex:1}.dec2>.btn{flex:1 1 auto}
 .qi{min-height:56px}.qi.on .tt{text-decoration:underline}
 .chkl li{padding:8px 0}
-.veil .sgm button{min-height:40px;font-size:14px}
+.veil .sgm button{min-height:40px;padding:0 12px}
 /* porada */
 .rowi{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
 .rowi .tx{flex:1;min-width:0;display:flex;flex-direction:column;text-decoration:none}.rowi .tt{font-weight:600;font-size:16.5px;line-height:1.3}.rowi .st{font-size:15px;color:var(--mut)}
@@ -216,3 +216,52 @@ html{scroll-padding-bottom:150px}
 .store-load{padding:40px 16px;text-align:center;color:var(--mut,#585a75);font-size:15px}
 .store-full button{margin-left:12px;height:30px;padding:0 12px;border-radius:6px;border:1px solid #fff;background:transparent;color:#fff;font:inherit;cursor:pointer}
 .wzh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0 16px}
+
+/* doladění detailů po velké prohlídce */
+/* značka „čeká na Vás“ je tečka, ne celý žlutý kotouč (třída .n patří počitadlu) */
+.mk.n{background:none;padding:0;min-width:0;border-radius:0}
+h1,.dlg h2,.ask,.tl-t,.trk span{text-wrap:balance}
+.grp>h2 a{padding:12px 0;margin:-12px 0}
+.toast{width:max-content;max-width:calc(100vw - 32px);white-space:normal}
+.lay.full>.toast{background:var(--desk2);box-shadow:0 0 0 1px #6A6D9C,0 12px 30px rgba(0,0,0,.4)}
+/* list a jeho záhlaví mají stejnou šířku, ať se píše cokoli */
+.wrapn{width:100%}.wrapn .arch{max-width:760px}.desk:has(.wrapn) .dhd{max-width:760px}
+.wzh .q.r{color:var(--red)}
+.dock .wzb>.btn:first-child{flex:0 0 34%}
+.dlg .x{margin:-6px -6px -6px auto}
+.op summary,.qd summary{width:fit-content}
+textarea.in{field-sizing:content;max-height:65vh}
+.ol-f>.l{font-size:16px}.ol-f>.l small{font-size:15px;color:var(--mut)}
+.col>.q+.q{margin-top:-30px}
+.pane .row>.btn:only-child,.col .row>.btn:only-child{flex:none}
+.dec2>.q:only-child{margin-left:auto}
+.qi.on{background:var(--wash);margin:0 -12px;padding-left:12px;padding-right:12px;border-radius:12px;border-top-color:transparent}.qi.on+.qi{border-top-color:transparent}
+.big.m.long{font-size:28px;line-height:1.14}
+.pick-r{flex-direction:row;align-items:center;gap:12px}.pick-r .tx{flex:1;min-width:0;display:flex;flex-direction:column}.pick-r .btn{flex:none}.pick-r .tx{color:var(--ink)}
+@media (min-width:901px){
+ .offl{padding:8px 40px}
+ .nar .dock{padding-left:36px;padding-right:36px}
+ .ax-add{display:grid;grid-template-columns:1fr 1fr}.ax-add .btn{padding:0 8px}
+}
+@media (max-width:900px){
+ .work.solo>.pane{order:2}
+ .pb a{font-size:12.5px}
+ .arch-wrap:has(.stamp)>.arch{padding-top:52px}
+ .wzh .q{min-height:44px}
+ .trk li{padding-right:6px}.trk li:nth-child(3){flex-grow:1.3}
+ .jr .tx{flex:1 1 150px;overflow-wrap:break-word}
+ .updn button{width:44px;height:38px} .updn{min-width:44px} .lay.full>.toast{top:auto;bottom:76px}
+ .dn-b:hover,.dn-nx:hover{background:var(--ink)}
+ .lay:has(.dec2) .dec2 .btn{min-height:44px}
+ .dec2>.q{margin-left:auto}
+ .chk{min-height:44px;align-items:center}.chk input{margin:0}
+ .veil .sgm button{min-height:44px}
+ .tb .q{min-height:44px}.tb td .row{gap:16px}
+ .big.m.long{font-size:25px}
+}
+@media (max-width:480px){.two:has(select){grid-template-columns:1fr}.sgm button{padding:0 11px}}
+.nbr{white-space:nowrap}
+.in.one{min-height:54px;resize:none;overflow:hidden}
+.sv.dn{color:var(--ink);font-weight:600}
+.tabs.sgm .n{min-height:0;height:20px;padding:0 6px;border:0;margin-left:7px;font-size:12.5px;font-weight:700}
+.pane section.stack>.btn:only-of-type:not(.w):not(.lg){align-self:flex-start}

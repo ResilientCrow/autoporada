@@ -311,7 +311,7 @@ test.describe('the Arch UI', () => {
 
     await page.goto(`/#/akce/${id}`);
     await page.reload();
-    await expect(page.getByText('Upravte: Místo')).toBeVisible();
+    await expect(page.getByText('Upravte: místo')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Opravit a poslat znovu' })).toHaveAttribute(
       'href',
       `#/nova-akce/${id}/kde`,
@@ -363,7 +363,7 @@ test.describe('the Arch UI', () => {
 
     await signInAs(signInAsRe('archa', project));
     await page.goto(`/#/oprava/${id}`);
-    await expect(page.getByText('Upravte: Název a\u00a0datum, Seznam účastníků')).toBeVisible();
+    await expect(page.getByText('Upravte: název a\u00a0datum, seznam účastníků')).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Název' })).toBeVisible();
     await expect(page.getByLabel('Kdy')).toBeVisible();
     await expect(page.getByRole('button', { name: /^Odebrat: .*Ondřej Pech$/ })).toBeVisible();

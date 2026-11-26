@@ -60,7 +60,7 @@ export function handInTo(s: State): IssueSlot {
   const n = nowOf(s).getTime();
   return slotsOf(s).find((x) => x.status === 'open' && x.deadlineAt.getTime() > n)!;
 }
-export const clock = (at: string | Date) => { const c = formatClose(typeof at === 'string' ? new Date(at) : at); return { ...c, day: formatDayMonth(c.date), weekday: weekdayName(c.date), full: `${formatWeekdayNumeric(c.date)} v ${c.time}` }; };
+export const clock = (at: string | Date) => { const c = formatClose(typeof at === 'string' ? new Date(at) : at); return { ...c, day: formatDayMonth(c.date), weekday: weekdayName(c.date), full: `${formatWeekdayNumeric(c.date).replace(/(\d\.) (?=\d)/g, '$1\u00a0')}\u00a0v\u00a0${c.time}` }; };
 export const dm = (x: string | CalDate) => formatDayMonth(typeof x === 'string' ? parseIsoDate(x) : x);
 /** The day a porada meets and its uzávěrka, apart, so a line never names the uzávěrka as the porada's date: „ve středu 18. 11.“, „v pondělí 16. 11. v 20:00“. */
 export function poradaDates(slot: Pick<IssueSlot, 'meetingDate' | 'deadlineAt'>, now: Date) {
@@ -95,10 +95,10 @@ export const guessSalutation = (p: { givenName: string; familyName: string; affi
 };
 const lastDayOf = (f: Future) => f.endDate ?? f.date;
 const futureEnd = (f: Future) => eventEnd({ lastDay: lastDayOf(f), timeTo: f.timeTo });
-const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).getTime();
+export const ownerIsOver = (s: State, f: Future) => futureEnd(f).getTime() <= nowOf(s).getTime();
 export const owedMonday = (s: State, f: Future) => toIsoDate(owedPorada(lastDayOf(f), rowsOf(s), plannedOf(s)));
 /** The report an akce started and still has: any but a withdrawn one, so a refused report too (it closes the akce, ADR 0056). */
-const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn');
+export const pointOfAkce = (s: State, id: string) => s.points.find((p) => p.akceId === id && p.state !== 'withdrawn');
 /** Deleting this report brings its akce back to „Čeká na Vás“: only while the report was never handed in. */
 export const asksAgain = (s: State, p: Point) => { const f = p.akceId ? s.futures.find((x) => x.id === p.akceId) : undefined; return !!f && (f.report === 'none' || f.report === 'prompted'); };
 const closeFor = (s: State, f: Future, monday: string) => {
@@ -320,7 +320,7 @@ export function outlineOf(b: Built): OutlineItem[] {
   const out: OutlineItem[] = []; let group = '';
   for (const seg of b.segments) {
     const sec = seg.blocks.find((x) => x.kind === 'section');
-    if (sec && sec.kind === 'section') group = Object.entries(GROUP).find(([k]) => sec.text.startsWith(k))?.[1] ?? sec.text;
+    if (sec && sec.kind === 'section') group = Object.entries(GROUP).find(([k]) => sec.text.replace(/\u00a0/g, ' ').startsWith(k))?.[1] ?? cap(sec.text.toLowerCase());
     const pt = seg.blocks.find((x) => x.kind === 'point');
     if (pt && pt.kind === 'point') { out.push({ key: seg.key, n: pt.number, title: pt.text, kind: seg.kind, state: seg.state, group, ...(seg.refId && { refId: seg.refId }) }); continue; }
     const an = seg.blocks.find((x) => x.kind === 'annex');

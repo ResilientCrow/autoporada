@@ -11,6 +11,10 @@ import logo from './logo-dark.svg';
 const I: Record<string, string> = { plus: 'M12 5v14M5 12h14', chk: 'M5 12.5l4.5 4.5L19 7.5', chev: 'M9 6l6 6-6 6', back: 'M15 6l-6 6 6 6', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c1-4 4-6 8-6s7 2 8 6', x: 'M6 6l12 12M18 6L6 18', ban: 'M12 20a8 8 0 100-16 8 8 0 000 16zM6.35 6.35l11.3 11.3', up: 'M12 19V5M6 11l6-6 6 6', down: 'M12 5v14M6 13l6 6 6-6', home: 'M3 11l9-8 9 8M5 9.5V21h14V9.5', doc: 'M14 3H6v18h12V7zM14 3v4h4', rev: 'M9 12l2 2 4-4M4 4h16v16H4z', stack: 'M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4', gear: 'M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M6 15v4', pen: 'M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4', cal: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4', calp: 'M4 6h16v15H4zM4 10h16M8 3v4M16 3v4M12 13v5M9.5 15.5h5', talk: 'M4 5h16v11H10l-5 4v-4H4z', ppl: 'M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20c.8-3.5 3.3-5 6.5-5s5.7 1.5 6.5 5M16 4.5a3.5 3.5 0 010 6.5M18 15c2 .6 3.2 2.2 3.5 5', list: 'M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01', tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01', bell: 'M6 16v-5a6 6 0 0112 0v5l2 2H4zM10 21h4', flag: 'M5 21V4h12l-2.5 4 2.5 4H5', book: 'M4 4h6a2 2 0 012 2v15a2 2 0 00-2-2H4zM20 4h-6a2 2 0 00-2 2v15a2 2 0 012-2h6z' };
 export const Ic = ({ n }: { n: keyof typeof I | string }) => <svg className="i" viewBox="0 0 24 24" aria-hidden="true"><path d={I[n]} /></svg>;
 export const Hash = (to: string) => `#${to}`;
+/** The nav item a path belongs to: „Přidat do porady“ and „Hotovo“ are part of Porada. */
+const isOn = (to: string, path: string) => path === to || (to !== '/' && path.startsWith(`${to}/`)) || (to === '/porada' && /^\/(pridat|hotovo)(\/|$)/.test(path));
+/** A one-letter preposition or conjunction never ends a line: the space after it does not break. */
+export const nb = <T,>(x: T): T => (typeof x === 'string' ? x.replace(/(^|[\s„(])([KkSsVvZzOoUuAaIi])[ \t]+(?=\S)/g, '$1$2\u00a0') as T : x);
 
 function useNav() {
   const { s } = useStore(); const u = Q.me(s);
@@ -25,7 +29,7 @@ export function Bar() {
   return (
     <>
       <header className="bar"><a className="logo" href="#/"><img src={logo} alt="Smíchovská střední, domů" /></a><a className="uu" href="#/ucet" aria-label="Můj účet"><Ic n="user" /></a></header>
-      <nav className="nav" aria-label="Hlavní">{nav.map(([to, , t, n]) => { const on = r.path === to || (to !== '/' && r.path.startsWith(`${to}/`)); return <a key={to} href={Hash(to)} className={on ? 'on' : ''} {...(on ? { 'aria-current': 'page' as const } : {})}>{t}{n ? <span className="n">{n}</span> : null}</a>; })}</nav>
+      <nav className="nav" aria-label="Hlavní">{nav.map(([to, , t, n]) => { const on = isOn(to, r.path); return <a key={to} href={Hash(to)} className={on ? 'on' : ''} {...(on ? { 'aria-current': 'page' as const } : {})}>{t}{n ? <span className="n">{n}</span> : null}</a>; })}</nav>
     </>
   );
 }
@@ -33,7 +37,7 @@ export function Bar() {
 export const goReplace = (to: string) => location.replace(`#${to}`);
 export function PhoneBar() {
   const nav = useNav(); const r = useRoute();
-  return <nav className="pb" aria-label="Hlavní">{nav.map(([to, ic, t, n]) => { const on = r.path === to || (to !== '/' && r.path.startsWith(`${to}/`)); return <a key={to} href={Hash(to)} className={on ? 'on' : ''} {...(on ? { 'aria-current': 'page' as const } : {})}><Ic n={ic} /><span>{t}</span>{n ? <span className="n">{n}</span> : null}</a>; })}</nav>;
+  return <nav className="pb" aria-label="Hlavní">{nav.map(([to, ic, t, n]) => { const on = isOn(to, r.path); return <a key={to} href={Hash(to)} className={on ? 'on' : ''} {...(on ? { 'aria-current': 'page' as const } : {})}><Ic n={ic} /><span>{t}</span>{n ? <span className="n">{n}</span> : null}</a>; })}</nav>;
 }
 function Offline() {
   const [off, set] = useState(!navigator.onLine);
@@ -86,24 +90,25 @@ export function Desk({ note, children, cls = '', right, fold }: { note?: ReactNo
   const shut = !!fold && narrow && !open;
   return <aside className={`desk ${cls}${shut ? ' shut' : ''}`} aria-label="Dokument">{note || right ? <div className="dhd"><span>{note}</span>{shut ? null : right}</div> : null}{shut ? <button type="button" className="btn lg w on-desk" onClick={() => setOpen(true)}>{fold}</button> : children}</aside>;
 }
-export function Top({ h, lead, big }: { h: ReactNode; lead?: ReactNode; big?: boolean }) { return <div className="top"><h1 className={big ? 'big' : 'big m'}>{h}</h1>{lead ? <p className="lead">{lead}</p> : null}</div>; }
+export function Top({ h, lead, big }: { h: ReactNode; lead?: ReactNode; big?: boolean }) { return <div className="top"><h1 className={big ? 'big' : `big m${typeof h === 'string' && h.length > 60 ? ' long' : ''}`}>{nb(h)}</h1>{lead ? <p className="lead">{nb(lead)}</p> : null}</div>; }
 export const Back = ({ to, t }: { to: string; t: string }) => <a className="back" href={Hash(to)}><Ic n="back" />{t}</a>;
 export const Sec = ({ h, right, children }: { h: string; right?: ReactNode; children: ReactNode }) => <section className="grp"><h2>{h}{right}</h2>{children}</section>;
 /** `hot` runs when the pointer or the focus reaches the row, for a desk that follows it. */
 export function Item({ to, act, t, st, mk, end, warn, hot }: { to?: string; act?: () => void; t: ReactNode; st?: ReactNode; mk?: Mark; end?: ReactNode; warn?: boolean; hot?: () => void }) {
-  const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : mk === 'z' ? <Ic n="ban" /> : <i />}</span> : null}<span className="tx"><span className="tt">{t}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{st}</span> : null}</span>{end ?? (to || act ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
+  const inner = <>{mk ? <span className={`mk ${mk === 'c' ? '' : mk}`}>{mk === 'c' ? <Ic n="chk" /> : mk === 'z' ? <Ic n="ban" /> : <i />}</span> : null}<span className="tx"><span className="tt">{nb(t)}</span>{st ? <span className={`st${warn ? ' w' : ''}`}>{nb(st)}</span> : null}</span>{end ?? (to || act ? <span className="gl"><Ic n="chev" /></span> : null)}</>;
   const on = hot ? { onMouseEnter: hot, onFocus: hot } : {};
   if (act) return <button type="button" className="it" onClick={act} {...on}>{inner}</button>;
   return to ? <a className="it" href={Hash(to)} {...on}>{inner}</a> : <div className="it">{inner}</div>;
 }
 export const Note = ({ h, children, err }: { h?: string; children: ReactNode; err?: boolean }) => <div className={`note${err ? ' err' : ''}`} {...(err ? { role: 'alert' } : {})}>{h ? <b>{h}</b> : null}{children}</div>;
 /** What a return asked of the author (ADR 0058): the parts to rework as the heading, the reviewer's note below. */
+const inLine = (labels: readonly string[]) => labels.map((l) => l.charAt(0).toLocaleLowerCase('cs') + l.slice(1)).join(', ');
 export function Rework({ labels, note }: { labels: readonly string[]; note: string | null }) {
   if (!labels.length) return note ? <Note h="Poznámka vedení">{note}</Note> : null;
-  return <Note h={`Upravte: ${labels.join(', ')}`}>{note}</Note>;
+  return <Note h={`Upravte: ${inLine(labels)}`}>{note}</Note>;
 }
 /** A „Co se dělo“ line's tail: the parts a return named and the note, each on a line of its own. */
-export const TrailMore = ({ labels, note }: { labels: readonly string[]; note: string | undefined }) => <>{labels.length ? <><br /><span className="sm">{`K\u00a0přepracování: ${labels.join(', ')}`}</span></> : null}{note ? <><br /><span className="sm">{note}</span></> : null}</>;
+export const TrailMore = ({ labels, note }: { labels: readonly string[]; note: string | undefined }) => <>{labels.length ? <><br /><span className="sm">{`K\u00a0přepracování: ${inLine(labels)}`}</span></> : null}{note ? <><br /><span className="sm">{note}</span></> : null}</>;
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const close = useRef(onClose); useEffect(() => { close.current = onClose; });
   useEffect(() => { const opener = document.activeElement as HTMLElement | null; const f = (e: KeyboardEvent) => { if (e.key === 'Escape') close.current(); }; addEventListener('keydown', f); document.querySelector<HTMLElement>('.dlg')?.focus(); return () => { removeEventListener('keydown', f); opener?.focus?.(); }; }, []);
