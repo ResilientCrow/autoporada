@@ -5,7 +5,7 @@ import { fromText, go, Sheet, toText, useStore } from '../core/react';
 import * as Q from '../core/select';
 import * as A from '../core/ops';
 import type { Future, Point, User } from '../core/types';
-import { App, Back, Desk, Dialog, diffWords, focusOn, Note, Sec, Top, WHEN, Toast } from './ui';
+import { App, Back, Desk, Dialog, diffWords, focusOn, Ic, Note, Sec, Top, Toast } from './ui';
 import { NotFound } from './home';
 import { RefuseCancel } from './akce';
 
@@ -17,7 +17,7 @@ const PH = 'chybi-';
 const idOf = (i: It) => (i.kind === 'p' ? i.p.id : i.kind === 'f' ? i.f.id : PH + i.h.akce.id);
 const MARKER = 'Vygenerováno automaticky (zpráva nedodána)';
 const days = (f: Future) => (f.endDate ? `${Q.dm(f.date)} až ${Q.dm(f.endDate)}` : Q.dm(f.date));
-const STATUS_LINE = (h: Q.PlaceholderItem) => h.status === 'checked' ? 'Zkontrolováno.' : h.status === 'handed-in' ? 'Autor zprávu odevzdal, čeká na rozhodnutí.' : h.status === 'open' ? `Autor může zprávu odevzdat do ${Q.clock(h.close).full}.` : 'Termín na odevzdání zprávy minul.';
+const STATUS_LINE = (h: Q.PlaceholderItem) => h.status === 'checked' ? 'Zkontrolováno.' : h.status === 'handed-in' ? 'Autor zprávu odevzdal, čeká na rozhodnutí.' : h.status === 'open' ? `Zprávu může odevzdat do ${Q.fromDay(Q.clock(h.close).full)}.` : 'Termín na odevzdání zprávy minul.';
 type Parts = readonly (readonly [string, string])[];
 
 /** „Vrátit autorovi“ or „Zamítnout“: a return ticks the parts to rework and may add a note (ADR 0058); a refusal needs the note. */
@@ -27,7 +27,7 @@ function Decide({ title, placeholder, verb, parts, onClose, onDone }: { title: s
   const tick = (c: string, on: boolean) => setTicked(on ? [...ticked, c] : ticked.filter((x) => x !== c));
   return <Dialog title={title} onClose={onClose}>
     {parts ? <div className="stack st8" role="group" aria-label="Co upravit"><span className="lb">Co upravit</span>{parts.map(([c, l]) => <label className="chk" key={c}><input type="checkbox" checked={ticked.includes(c)} onChange={(e) => tick(c, e.target.checked)} />{l}</label>)}</div> : null}
-    <label className="l">Co má autor vědět<small>{parts ? 'Nepovinné, když zaškrtnete, co upravit.' : 'Autor to dostane e-mailem.'}</small><textarea className="in" autoFocus={!parts} value={n} onChange={(e) => set(e.target.value)} placeholder={placeholder} /></label>
+    <label className="l">Co má autor vědět<small>{parts ? 'Nepovinné, když zaškrtnete, co upravit.' : 'Povinné. Autor to dostane e-mailem.'}</small><textarea className="in" autoFocus={!parts} value={n} onChange={(e) => set(e.target.value)} placeholder={placeholder} /></label>
     <button type="button" className={`btn lg w ${ok ? 'dk' : 'off'}`} aria-disabled={!ok} onClick={() => ok && onDone(n.trim(), (parts ?? []).map(([c]) => c).filter((c) => ticked.includes(c)))}>{verb}</button>
   </Dialog>;
 }
@@ -44,7 +44,7 @@ export function Kontrola({ id }: { id?: string }) {
   if (!Q.atLeast(u.role, 'reviewer')) return <NotFound />;
   const home = '/';
   if (!cur) return <App desk={<Desk cls="mg clip" note={<b>Porada {Q.dm(Q.working(s).meetingDate)}</b>}><div className="wrapm wrapn"><Sheet built={Q.buildDoc(s, Q.workingMonday(s))} /></div></Desk>} col={<><Top big h="Všechno je rozhodnuté" lead={done ? `Právě jste rozhodli ${done === 1 ? '1 položku' : done < 5 ? `${done} položky` : `${done} položek`}. Autoři dostanou e-mail.` : 'Teď tu nic nečeká.'} /><a className="btn go lg w" href={`#${home}`}>Zpět domů</a>{u.role === 'headmaster' ? <a className="btn lg w" href="#/porada/nahled">Otevřít náhled porady</a> : null}</>} />;
-  const list = <details className="qd"><summary>Celá fronta ({q.length})</summary><div className="grp">{q.map((x) => <a key={idOf(x)} className={`it qi${idOf(x) === idOf(cur) ? ' on' : ''}`} href={`#/kontrola/${idOf(x)}`}><span className="tx"><span className="tt">{x.kind === 'p' ? x.p.content.title || 'Bez názvu' : x.kind === 'f' ? x.f.title : x.h.akce.title}</span><span className="st">{x.kind === 'ph' ? `${MARKER}, ${days(x.h.akce)}` : <>{x.kind === 'p' ? (x.p.kind === 'report' ? 'Zpráva' : 'Návrh') : x.f.cancelRequested ? 'Žádost o zrušení' : x.f.changed ? (x.f.kind === 'akce' ? 'Změna akce' : 'Změna jednání') : x.f.kind === 'akce' ? 'Akce' : 'Jednání'}, {Q.nameOf(Q.userById(s, x.kind === 'p' ? x.p.authorId : x.f.authorId))}</>}</span></span></a>)}</div></details>;
+  const list = <details className="qd"><summary>Celá fronta ({q.length})</summary><div className="grp">{q.map((x) => <a key={idOf(x)} className={`it qi${idOf(x) === idOf(cur) ? ' on' : ''}`} {...(idOf(x) === idOf(cur) ? { 'aria-current': 'true' as const } : {})} href={`#/kontrola/${idOf(x)}`}><span className="tx"><span className="tt">{x.kind === 'p' ? x.p.content.title || 'Bez názvu' : x.kind === 'f' ? x.f.title : x.h.akce.title}</span><span className="st">{x.kind === 'ph' ? `${MARKER}, ${days(x.h.akce)}` : <>{x.kind === 'p' ? (x.p.kind === 'report' ? 'Zpráva' : 'Návrh') : x.f.cancelRequested ? 'Žádost o zrušení' : x.f.changed ? (x.f.kind === 'akce' ? 'Změna akce' : 'Změna jednání') : x.f.kind === 'akce' ? 'Akce' : 'Jednání'}, {Q.nameOf(Q.userById(s, x.kind === 'p' ? x.p.authorId : x.f.authorId))}</>}</span></span></a>)}</div></details>;
   if (cur.kind === 'ph') {
     const { akce: f, monday: m, status, point } = cur.h; const chk = s.placeholderChecks[f.id]; const current = Q.placeholderText(s, f, m);
     const own = !!Q.issueOf(s, m)?.placeholders[f.id]; const moved = !chk?.checked && !!chk?.was && chk.was !== Q.systemText(f);
@@ -56,8 +56,8 @@ export function Kontrola({ id }: { id?: string }) {
       col={<>
         <Back to={home} t="Zpět domů" />
         {q.some((x) => idOf(x) === idOf(cur)) ? <p className="stn">{q.findIndex((x) => idOf(x) === idOf(cur)) + 1}. z {q.length} ke kontrole</p> : null}
-        <Top h={f.title} lead={`${MARKER}. ${days(f)}. Autor: ${Q.nameOf(Q.userById(s, f.authorId))}.`} />
-        <p className="sm">{point ? `Zpráva je ${point.state === 'submitted' ? 'u kontroly' : point.state === 'returned' ? 'vrácená autorovi' : 'rozepsaná'}. ` : 'Autor zatím nezačal. '}{STATUS_LINE(cur.h)}</p>
+        <Top h={f.title} lead={`${MARKER}. ${days(f)} Autor: ${Q.nameOf(Q.userById(s, f.authorId))}.`} />
+        <p className="sm">{point ? `Zpráva je ${point.state === 'submitted' ? 'u kontroly' : point.state === 'returned' ? 'vrácená autorovi' : 'rozepsaná'}. ` : 'Autor zatím nezačal. '}{cur.h.status === 'checked' ? '' : STATUS_LINE(cur.h)}</p>{cur.h.status === 'checked' ? <p className="sv dn"><Ic n="chk" />Zkontrolováno</p> : null}
         {moved ? <Note h="Akce se od vaší kontroly změnila"><p className="diff">{diffWords(chk!.was!, Q.systemText(f))}</p></Note> : null}
         {phEdit ? <label className="l">Odstavec<textarea className="in big" autoFocus value={phText} onChange={(e) => setPhText(e.target.value)} /></label> : <><p className="ppar">{current}</p><div className="row wr"><button className="btn" onClick={() => { setPhText(current); setPhEdit(true); }}>Přepsat odstavec</button>{own ? <button className="q" onClick={() => apply(A.setPlaceholder(m, f.id, null))}>Vrátit původní text</button> : null}</div></>}
         {list}
@@ -84,7 +84,7 @@ export function Kontrola({ id }: { id?: string }) {
       col={<>
         <Back to={home} t="Zpět domů" />
         <p className="stn">{idx}. z {q.length} ke kontrole</p>
-        <Top h={edit ? 'Upravit text' : p.content.title} lead={edit ? 'Původní znění se uloží do historie a autor ho uvidí.' : `${p.kind === 'report' ? 'Zpráva' : p.kind === 'finance' ? 'Návrh do hospodaření' : 'Návrh do pokynů'}. Autor: ${Q.nameOf(au)}, posláno ${p.submittedAt ? WHEN(p.submittedAt) : ''}.`} />
+        <Top h={edit ? 'Upravit text' : p.content.title} lead={edit ? 'Původní znění se uloží do historie a autor ho uvidí.' : `${p.kind === 'report' ? 'Zpráva' : p.kind === 'finance' ? 'Návrh do hospodaření' : 'Návrh do pokynů'}. Autor: ${Q.nameOf(au)}${p.submittedAt ? `, posláno ${Q.clock(p.submittedAt).day} v\u00a0${Q.clock(p.submittedAt).time}` : ''}.`} />
         {own ? <Note h="Tohle je Vaše zpráva">Svou zprávu si sami neschválíte. Rozhodne někdo jiný z vedení.</Note> : null}
         {edit ? <div className="stack"><label className="l">Název<input className="in" value={title} onChange={(e) => setTitle(e.target.value)} /></label>{p.kind === 'report' ? <label className="l">Úvodní věta<textarea className="in" value={tt} onChange={(e) => setTt(e.target.value)} /></label> : null}<label className="l">Text<textarea className="in big" value={body} onChange={(e) => setBody(e.target.value)} /></label></div> : null}
         {orig.map((t, i) => <Note key={i} h={`Úprava: ${Q.nameOf(Q.userById(s, t.who))}`}>{Object.entries(t.original!).map(([k, v]) => <p key={k} className="diff"><span className="sm">{k}</span><br />{k === 'Text' ? diffWords(v, toText(p.content.body)) : k === 'Název' ? diffWords(v, p.content.title) : diffWords(v, p.content.opening)}</p>)}</Note>)}
@@ -96,8 +96,8 @@ export function Kontrola({ id }: { id?: string }) {
   return <App nar over={over} dock={dock} desk={<Desk cls="tall" note={<b>Takhle to vyjde</b>}><div className="wrapm wrapn"><div className="arch"><div className="s">Pokyny pro zaměstnance, organizační záležitosti</div><div className="bl cur"><span className="h">{f.kind === 'akce' ? 'Zatím známé akce' : 'Zatím známá jednání'}</span><p className="ln0">{'\u2022 '}{(futureBullet(Q.futureSnap(f) as never) as unknown as { runs: { text: string }[] }).runs[0]!.text}</p></div></div></div></Desk>} col={<>
     <Back to={home} t="Zpět domů" />
     <p className="stn">{idx}. z {q.length} ke kontrole</p>
-    <Top h={f.title} lead={`${f.cancelRequested ? 'Žádost o zrušení' : f.changed ? (f.kind === 'akce' ? 'Změna schválené akce' : 'Změna schváleného jednání') : f.kind === 'akce' ? 'Nová akce' : 'Nové jednání'}, ${Q.dm(f.date)} Autor: ${Q.nameOf(au)}.`} />
-    {f.cancelRequested ? <Note h="Autor žádá o zrušení akce">Do rozhodnutí akce dál platí a zůstává v poradě.</Note> : null}
+    <Top h={f.title} lead={`${f.cancelRequested ? 'Žádost o zrušení' : f.changed ? (f.kind === 'akce' ? 'Změna schválené akce' : 'Změna schváleného jednání') : f.kind === 'akce' ? 'Nová akce' : 'Nové jednání'}. ${days(f)} Autor: ${Q.nameOf(au)}.`} />
+    {f.cancelRequested ? <Note h="Autor žádá o zrušení akce">Do rozhodnutí akce dál platí a zůstává v{'\u00a0'}poradě.</Note> : null}
     {f.changed ? <Note h="Schválená akce se změnila">Do rozhodnutí jde znovu ke kontrole.</Note> : null}
     {list}
   </>} />;

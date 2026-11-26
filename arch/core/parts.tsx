@@ -79,7 +79,7 @@ export function DocNav({ built, attention, notes }: { built: Q.Built; attention?
     <button type="button" ref={btn} className="dn-b" aria-expanded={open} onClick={() => setOpen(!open)}>{curI?.n ? <>Bod {curI.n}<span> z {items.filter((i) => i.n).length}</span></> : curI ? 'Přílohy' : <>Body dokumentu<span> ({items.filter((i) => i.n).length})</span></>}</button>
     {open ? <div className="dn-p" role="dialog" aria-label="Body dokumentu">
       <input className="dn-q" type="search" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Hledat bod nebo číslo" aria-label="Hledat v bodech" />
-      {attention && hits.length ? <label className="dn-o"><input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} />Jen: {attention.label.toLowerCase()} ({hits.length})</label> : null}
+      {attention && hits.length ? <label className="dn-o"><input type="checkbox" checked={only} onChange={(e) => setOnly(e.target.checked)} />{attention.label.startsWith('Čeká') ? 'Jen co čeká na Vás' : `Jen ${attention.label}`} ({hits.length})</label> : null}
       <div className="dn-l" role="list">{shown.length ? shown.map((i, k) => <div key={i.key} role="listitem">{(k === 0 || shown[k - 1]!.group !== i.group) && i.group ? <p className="dn-g">{i.group}</p> : null}<button type="button" className={`dn-i${i.key === cur ? ' dn-cur' : ''}`} onClick={() => goTo(i.key)}><b>{i.n ?? ''}</b><span>{i.title}{notes?.(i)}</span></button></div>) : <p className="dn-e">Nic takového v dokumentu není.</p>}</div>
     </div> : null}
   </div>;

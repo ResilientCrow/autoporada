@@ -94,6 +94,7 @@ One real breakpoint: `max-width:900px` is phone (14 rules), `min-width:901px` de
 | `Note` | Gold-soft information box; `err` gives the red `role="alert"` variant. |
 | `Dialog` | Modal `.veil` > `.dlg` with `title`, Escape and outside click close, focus returns to opener. Bottom sheet on phone. |
 | `Toast` | `role="status"` message; with `undo` shows „Vrátit zpět" for 15 s, else 5 s. |
+| `nb` | Text helper: a one-letter preposition or conjunction (v, s, k, z, o, u, a, i) keeps its word on the same line (NBSP). `Top` and `Item` run their strings through it; write `{'\u00a0'}` by hand in JSX text and inside dates. |
 | `Saved` | Save status from `useStore().saving`: „Ukládám…“ while a typed save waits or runs, „Uloženo“ with check once it lands, „Neuložené změny“ (`.sv.err`) after the server refuses one. |
 | `Seg` | Radio group of pill buttons (`role="radiogroup"`, `role="radio"`), `label` is its accessible name. |
 | `Todo` | Checklist `.todo` of rows with markers `d` done, `n` open, `o` ring, `x` problem. |
@@ -175,6 +176,9 @@ History is not in the state (ADR 0070): it carries the live working set, and a g
 5. **Real porada documents in `/work/ssps/porady` hold real names.** Never copy content or names from them into the repo; use fictional samples.
 6. **Every UI change**: check 375 px and desktop for horizontal overflow, and keep labels accessible. The e2e tests in `test/e2e/arch.spec.ts` find controls by role and name (for example `getByRole('button', { name: 'Nová akce' })`, `getByLabel('Den', { exact: true })`), so renaming a label breaks them.
 7. Only the headmaster sees management screens; there are two roles in the user's eyes (headmaster and everyone else), plus the reviewer for Ke kontrole.
+- A list after a colon is lower case throughout („Upravte: název a datum, seznam účastníků“); `Rework` and `TrailMore` do it for the part labels.
+- On phone every tap target is at least 44px high, including `.q` links in wizard heads, tables and dialogs.
+- A page title over 60 characters takes `.big.m.long` (28px, 25px on phone); `Top` adds the class.
 
 ## 7. Verify
 
